@@ -1,0 +1,11 @@
+{
+    "routes": [
+        {
+            "url_regex": "^page1/$",
+            "type": "page",
+            "page": "first_page"
+        }
+
+    ]
+
+}

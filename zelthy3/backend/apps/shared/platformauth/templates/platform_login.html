@@ -1,0 +1,274 @@
+{% load i18n %} {% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
+    />
+
+    <meta
+      name="viewport"
+      content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
+    />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Remove Tap Highlight on Windows Phone IE -->
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- Primary Meta Tags -->
+    <title>Zelthy - Health Cloud</title>
+    <meta name="title" content="Zelthy - Therapy Cloud" />
+    <meta
+      name="description"
+      content="Zelthy is a Health Cloud that enables quick development of secure and compliant healthcare applications."
+    />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.zelthy.com/" />
+    <meta property="og:title" content="Zelthy - Therapy Cloud" />
+    <meta
+      property="og:description"
+      content="Zelthy is a Health Cloud that enables quick development of secure and compliant healthcare applications."
+    />
+    <meta
+      property="og:image"
+      content="{% static 'login/platform/images/og-image.jpeg' %}"
+    />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://www.zelthy.com/" />
+    <meta property="twitter:title" content="Zelthy - Therapy Cloud" />
+    <meta
+      property="twitter:description"
+      content="Zelthy is a Health Cloud that enables quick development of secure and compliant healthcare applications"
+    />
+    <meta
+      property="twitter:image"
+      content="{% static 'login/images/og-image.jpeg' %}"
+    />
+
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'login/images/Zelthy.svg' %}"
+      sizes="32x32"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'login/platform/css/style.css' %}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  </head>
+  <body>
+    <div class="main">
+      <div id="content">
+        <div class="content-value">
+          <div class="banner-container">
+            <div class="logo">
+              <img
+                id="desktop-logo"
+                src="{% static '/login/images/zelthyLogo.svg' %}"
+                alt="#"
+              />
+              <img
+                id="ipad-logo"
+                src="{% static '/login/images/zelthyLogoIpad.svg' %}"
+                alt="#"
+              />
+              <img
+                id="iphone-logo"
+                src="{% static '/login/images/zelthyLogoIphone.svg' %}"
+                alt="#"
+              />
+            </div>
+            <p class="content-heading">
+              the world’s most customisable healthcare platform
+            </p>
+          </div>
+        </div>
+
+        <div id="AuthCard">
+          <form action="" method="POST" id="form-forget">
+            <div class="signup-header">Forgot Password?</div>
+            <div id="forgot-initial"></div>
+            <label class="signup-email" for="email"
+              >Email ID or Mobile Number</label
+            >
+            <input type="email" id="email-forgot" name="email" required />
+
+            <div id="captcha_container" class="google-cpatcha">
+              <div
+                class="g-recaptcha"
+                data-sitekey="6LeYzpgUAAAAAHUJbrryhoWBN66DF5Sr1rwiToDT"
+                data-callback="correctCaptcha"
+              ></div>
+            </div>
+
+            <button id="submit-Link" value="Send Otp">Send Otp</button>
+            <div class="space-creater"></div>
+            <button id="getForgot" class="return-value">
+              Return to log in
+            </button>
+          </form>
+
+          <form action="" method="POST" id="initial-login">
+            <div class="signup-header">Log in to your account</div>
+
+            <div class="forgot-container"></div>
+
+            <label class="signup-email" for="email"
+              >Email ID or Mobile Number</label
+            >
+            <input type="email" id="email" name="email" required />
+
+            <label class="signup-password" for="Password">Password</label>
+            <input
+              type="Password"
+              id="Password"
+              name="Password"
+              placeholder="﹡﹡﹡﹡﹡﹡﹡﹡"
+              required
+            />
+            <button type="button" class="signup-forgot">
+              Forgot password?
+            </button>
+            <button type="submit" value="Submit" id="initialLogin">
+              Log In
+            </button>
+          </form>
+
+          <div id="otp-content">
+            <div class="content-value-one">
+              <div class="banner-container">
+                <div class="logo">
+                  <img
+                    id="desktop-logo"
+                    src="{% static '/login/images/zelthyLogo.svg' %}"
+                    alt="#"
+                  />
+                  <img
+                    id="ipad-logo"
+                    src="{% static '/login/images/zelthyLogoIpad.svg' %}"
+                    alt="#"
+                  />
+                  <img
+                    id="iphone-logo"
+                    src="{% static '/login/images/zelthyLogoIphone.svg' %}"
+                    alt="#"
+                  />
+                </div>
+                <p class="content-heading">
+                  the world’s most customisable healthcare platform
+                </p>
+              </div>
+            </div>
+
+            <div id="AuthCard">
+              <form action="" method="POST" id="final-otp">
+                <div class="signup-header">Log in to your account</div>
+                <div id="login-otp-container"></div>
+                <label class="signup-email" for="otp"
+                  >Please enter OTP sent to <span id="get-otp-on"></span>
+                </label>
+                <input
+                  id="otp"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  required
+                />
+                <button id="final-login" type="submit">Log In</button>
+                <div class="space-creater"></div>
+              </form>
+            </div>
+          </div>
+
+          <div id="reset-otp-content">
+            <form action="" method="POST" id="reset-otp-form">
+              <div class="signup-header">Forgot Password?</div>
+              <div id="forgot-otp-container"></div>
+              <label class="signup-email" for="otp"
+                >Please enter OTP sent to <span id="forgot-otp-on"></span>
+              </label>
+              <input
+                id="reset-otp"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                required
+              />
+
+              <label class="signup-password" for="Password">New Password</label>
+              <input
+                type="Password"
+                id="reset-Password"
+                name="Password"
+                placeholder="﹡﹡﹡﹡﹡﹡﹡﹡"
+                required
+              />
+
+              <button id="final-reset" type="submit">Set a new Password</button>
+              <div class="space-creater"></div>
+            </form>
+          </div>
+        </div>
+
+        <div id="role-whole">
+          <div class="logo-container">
+            <img src="{% static '/login/images/zelthyLogo.svg' %}" alt="#" />
+          </div>
+          <form action="" method="POST" id="role-login-form">
+            <div id="role-content">
+              <div id="error-message"></div>
+
+              <div class="role-header">Select a role</div>
+              <div id="role-container"></div>
+              <button type="submit" id="role-login">Log In</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="footer-Copyright">
+          Copyright © <span id="getYear"></span> Zelthy
+        </div>
+        <div class="footer-content">
+          <a
+            href="https://www.zelthy.com/privacy/"
+            class="footer-term"
+            target="_blank"
+            rel="noopener"
+            >Terms</a
+          >
+          <a
+            href="https://www.zelthy.com/terms/"
+            class="footer-privacy"
+            target="_blank"
+            rel="noopener"
+            >PRIVACY</a
+          >
+        </div>
+      </div>
+    </div>
+    <script
+      type="module"
+      src="{% static 'login/platform/js/login_script.js' %}"
+    ></script>
+  </body>
+</html>
