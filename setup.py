@@ -15,6 +15,7 @@ setup(
     ],
     install_requires=[
         'django>=3.0',
+        "psycopg2-binary",
         'django-tenants',
         'djangorestframework',
         'django-rest-knox'

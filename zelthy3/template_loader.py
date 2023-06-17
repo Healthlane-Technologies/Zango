@@ -23,22 +23,14 @@ class AppTemplateLoader(BaseLoader):
 
 
     def _load_template_source(self, template_name, template_dirs=None):
-        print(template_name)
         try:
             app_dir = settings.BASE_DIR / "zelthy_apps" / connection.tenant.name
             pages_dir = app_dir / "pages"
             for path in pages_dir.rglob('*'):
                 if path.is_file() and path.name == template_name:
-                    print(path)
                     with path.open('r') as f:
                         content = f.read()
-                    print(content)
-                    print(type(content))
                     return content
-            # model = apps.get_model('customization', 'zelthyapptemplate')
-            # template = model.objects.get(
-            #                 name__exact=template_name)
-            # return (template.get_code(connection.request_object, interface="app"), template_name)
 
         except Exception as e:
             try:
