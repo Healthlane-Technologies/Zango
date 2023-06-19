@@ -1,7 +1,7 @@
 {
     "routes": [
         {
-            "url_regex": "^page1/$",
+            "url_regex": "^page1/(?P<code>[\\w-]*)/$",
             "type": "page",
             "page": "first_page"
         }

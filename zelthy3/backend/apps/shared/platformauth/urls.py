@@ -1,18 +1,18 @@
-from django.conf.urls import url
+from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
 
 from .views import *
 
 
 urlpatterns = [
-    url(
-        regex=r'^login/', 
-        view=PlatformUserLoginView.as_view(),
+    re_path(
+        r'^login/', 
+        PlatformUserLoginView.as_view(),
         name='platform-login'
     ),
-    url(
-        regex=r'^api/v1/login/', 
-        view=PlatformUserLoginAPIV1.as_view(),
+    re_path(
+        r'^api/v1/login/', 
+        PlatformUserLoginAPIV1.as_view(),
         name='platform-api-v1-login'
     ),
     # url(
@@ -20,9 +20,9 @@ urlpatterns = [
     #     view=PlatformUserRegisterAPIV1.as_view(),
     #     name='platform-api-v1-registeruser'
     # ),
-    url(
-        regex=r'^api/v1/profile/', 
-        view=PlatformUserProfileAPIV1.as_view(),
+    re_path(
+        r'^api/v1/profile/', 
+        PlatformUserProfileAPIV1.as_view(),
         name='platform-api-v1-userprofile'
     )
 

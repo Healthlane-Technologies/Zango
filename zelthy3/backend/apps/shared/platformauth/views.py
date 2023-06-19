@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.views.generic.base import TemplateView
 from rest_framework.views import APIView
-from backend.core.api import ZelthySessionPlatformAPIView, get_api_response
+from zelthy3.backend.core.api import ZelthySessionPlatformAPIView, get_api_response
 
 
 
