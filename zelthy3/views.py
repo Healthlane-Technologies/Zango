@@ -7,6 +7,20 @@ from django.http import Http404
 from .zelthy_preprocessor import *
 
 
+def get_module_path(app_settings, module_name):
+    modules = app_settings['modules']
+    for mod in modules:
+        if mod['name'] == module_name:
+            return mod['path']
+    packages = app_settings['packages']
+    for pkg in packages:
+        module_name.split("/")[0] == pkg["name"]
+        return "zelthy_packages" + "/" + module_name
+    return None
+
+
+
+
 def zelthy_dynamic_views(request, *args, **kwargs):
 
     """
@@ -36,22 +50,39 @@ def zelthy_dynamic_views(request, *args, **kwargs):
     with app_settings_file.open() as f:
         app_settings = json.load(f)
     routes = app_settings['routes']
-    path = request.path.lstrip('/')
-    match_found = False
+    path = request.path.lstrip('/')    
     for r in routes:
-        r_regex = re.compile(r['url_regex'])
+        match_found = False
+        r_regex = re.compile(r['re_path'])
         if r_regex.search(path):
-            match_found = True
-            if r['type'] == 'page':
-                view_file = app_dir / "pages"/ r['page'] / "view.py"
-            elif r['type'] == 'api':
-                view_file = app_dir / "apis" / r['api'] / "view.dpy"
-            match = r_regex.search(path)
+            module = r['module']
+            module_path = get_module_path(app_settings, module)
+            mod_settings_path = app_dir / module_path / "mod_settings.json"
+            with mod_settings_path.open() as f:
+                mod_settings = json.load(f)
+            mod_routes = mod_settings['routes']
+            for route in mod_routes:
+                if route['re_path'].startswith('^'):
+                    route['re_path'] = route['re_path'][1:]
+                r_regex = re.compile(r['re_path']+route['re_path'])
+                if r_regex.search(path):
+                    match_found = True
+                    match = r_regex.search(path)
+                    view_file = app_dir / module_path /  route['view_path']
             break
     if match_found:
+        print("path")
+        print(view_file.parent)
+        parent_path = view_file.parent
         with view_file.open() as f:
             view_file = f.read()    
-        zcode = ZPreprocessor(view_file, request=request)
+        zcode = ZPreprocessor(
+            view_file, 
+            request=request, 
+            parent_path=parent_path, 
+            app_dir=app_dir,
+            app_settings=app_settings
+            )
         c = ZimportStack(zcode, request=request)
         c.process_import_and_execute()
         kwargs = match.groupdict()

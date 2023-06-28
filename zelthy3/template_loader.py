@@ -5,6 +5,11 @@ from django.template.loaders.base import Loader as BaseLoader
 
 from django.apps import apps
 
+"""
+the html must be inside the page folder or in the templates folder
+
+"""
+
 
 class AppTemplateLoader(BaseLoader):
 
@@ -25,8 +30,10 @@ class AppTemplateLoader(BaseLoader):
     def _load_template_source(self, template_name, template_dirs=None):
         try:
             app_dir = settings.BASE_DIR / "zelthy_apps" / connection.tenant.name
-            pages_dir = app_dir / "pages"
-            for path in pages_dir.rglob('*'):
+            print(template_name)
+            for path in app_dir.rglob('*'):
+                print(path.name)
+                
                 if path.is_file() and path.name == template_name:
                     with path.open('r') as f:
                         content = f.read()

@@ -1,23 +1,30 @@
 
-
-
-
 class ZPreprocessor:
     """
-    Handles zfrom and zimport
+    Handles import dynamically from within app
     """
 
     def __init__(self, file_obj, **kwargs):
         request = kwargs.get('request')
-        # code_string = file_obj.get_code(request, interface="app")
+        self.parent_path = kwargs.get('parent_path')
+        self.app_settings = kwargs.get('app_settings')
+        self.app_dir = kwargs.get('app_dir')
         code_string = file_obj
-        # self.folder = file_obj.parentFolder
         lines = code_string.split("\n")
         zfroms = []
         _lines = []
         for l in lines:
-            if "zfrom" in l:
-                zfroms.append(l.strip())
+            if l.startswith('from'):
+                try:
+                    mod_name = l.split(" ")[1]
+                    import importlib.util
+                    spec = importlib.util.find_spec(mod_name)
+                    if spec:
+                        _lines.append(l)
+                    else:
+                        zfroms.append(l)
+                except Exception as e:
+                    zfroms.append(l)
             else:
                 _lines.append(l)
         self.lines = _lines
@@ -33,22 +40,20 @@ class ZimportStack:
 	
     def __init__(self, zcode, **kwargs):
         self.request = kwargs.get('request')    
-        # self.folder = None
         self.zcode = None
         self.elements = [] #stores zfrom import statements
         self._globals = None
         self._processed = []
         self.zcode = zcode
-        # self.folder = zcode.folder
-        # self._globals = globals()
         self.load_globals()
-        self.add_safe_functions()
         self._imported_objects = {}
         for z in zcode.zfroms:
-            _split = z.strip().split(" ") 
+            _split = z.strip().split(" ")
             self.elements.append(
                     {
-                    'zpath': _split[1], 'obj': [o.replace(",","") for o in _split[3:-1]]
+                    'zpath': _split[1], 
+                    'obj': [_split[-1]],
+                    'parent': self.zcode.parent_path
                     })
 
     def load_globals(self):
@@ -60,8 +65,13 @@ class ZimportStack:
             del self._globals[k]
         return 
 
-    def add_safe_functions(self):
-        pass
+    def is_package(self, app_settings, package_name):
+        package_list = app_settings['packages']
+        for package in package_list:
+            if package["name"] == package_name:
+                return True
+        return False
+
     
     def get_top(self):
         if len(self.elements) > 0:
@@ -69,43 +79,49 @@ class ZimportStack:
         else:
             return None
     
-    def get_zfileobj(self, path):
-        if "." not in path:
-            filemodel = self.folder.filemodel_set.all().filter(
-                                            fileName=path
-                                            ).first()
-            return filemodel
+    def get_zfileobj(self, path, parent_path):
+        if path.startswith('..'):
+            module_filepath = parent_path.parent / path[2:]            
+        elif path.startswith('.'):
+            module_filepath = parent_path / path[1:]
         else:
-            _split = path.split(".")
-            from django.apps import apps
-            file_model = apps.get_model('customization', 'FileModel')
-            filemodel = file_model.objects.filter(fileName=_split[-1])
-            for f in filemodel:
-                folders = []
-                folder = f.parentFolder
-                while folder:
-                    folders.append(folder.folderName)
-                    folder = folder.parentFolder
-                folders.reverse()
-                _path = ".".join(folders)+"."+_split[-1]
-                if _path == path:
-                    return f
-            return None
+            mod1 = path.split(".")[0]
+            if self.is_package(self.zcode.app_settings, mod1):
+                module_filepath = self.zcode.app_dir / "zelthy_packages" / "/".join(path.split("."))
+            else:
+                module_filepath = self.zcode.app_dir /  "/".join(path.split("."))
+        module_filepath = module_filepath.with_suffix('.py')
+        with module_filepath.open() as f:
+            content = f.read()
+        return content, module_filepath
+
     
     def process_import_and_execute(self):
-        top = self.get_top()        
+        top = self.get_top()
         if top:
-            file_obj = self.get_zfileobj(top['zpath'])
-            zcode = ZPreprocessor(file_obj, request=self.request)
+            file_obj, module_filepath = self.get_zfileobj(top['zpath'], top['parent'])
+            zcode = ZPreprocessor(
+                        file_obj, 
+                        request=self.request,
+                        parent_path=module_filepath.parent, 
+                        app_dir=self.zcode.app_dir,
+                        app_settings=self.zcode.app_settings
+                        )
             if zcode.has_zimport():
                 all_imports_available = True
                 for z in zcode.zfroms:
                     _split = z.strip().split(" ")
-                    if {'zpath': _split[1], 'obj': _split[3:-1]} not in \
+                    if {
+                        'zpath': _split[1], 
+                        'obj': [_split[3]], 
+                        'parent': module_filepath.parent
+                        } not in \
                         self._processed:            
                         self.elements.append(
                             {
-                            'zpath': _split[1], 'obj': _split[3:-1]
+                            'zpath': _split[1], 
+                            'obj': [_split[3]],
+                            'parent': module_filepath.parent
                             })
                         all_imports_available = False
                 if all_imports_available:
