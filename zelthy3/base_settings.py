@@ -1,7 +1,5 @@
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)c3(unqe=siu7j&=ew+_o^fec9sujmik*mh4es)v^_&bpiy^b*'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -44,6 +42,7 @@ TENANT_APPS = [
     # The following Django contrib apps must be in TENANT_APPS
     'django.contrib.contenttypes',
     'zelthy3.backend.apps.tenants.appauth',
+    'corsheaders',
 
 ]
 
@@ -64,6 +63,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
@@ -79,11 +80,13 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
-           
+            # 'builtins': [
+            #     'django.contrib.staticfiles',  # Add this line
+            # ],           
             'loaders': [
+                'zelthy3.template_loader.AppTemplateLoader',
                 'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',                
-                'zelthy3.template_loader.AppTemplateLoader'
+                'django.template.loaders.app_directories.Loader',                                             
             ]
         },
     },

@@ -1,0 +1,30 @@
+{% load static %}
+{% load i18n %}
+
+<body class=" sidebar_main_open sidebar_main_swipe">
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div id="status">&nbsp;</div>
+    </div>
+
+
+    {% include 'frames/condense_legacy/_mainheader.html' %}
+
+    {% block sidebar %}
+    {% include 'frames/condense_legacy/_mainsidebar.html' %}
+    {% endblock %}
+
+
+    <div id="page_content">
+        {% if env == 'dev' %}
+        <div class="md-fab-wrapper md-fab-speed-dial">
+            <a class="md-fab md-fab-primary" href="javascript:void(0)"><i class="material-icons">&#xE89C;</i></a>
+            <div class="md-fab-wrapper-small">
+                <a class="md-fab md-fab-small delete-cookie" href="javascript:deleteDevCookie()"
+                    data-uk-tooltip="{pos:'left'}" title="Delete Dev Cookie"><i class="material-icons">&#xE92B;</i></a>
+                <a class="md-fab md-fab-small" href="#dynamic-cookie-modal" data-uk-modal data-uk-tooltip="{pos:'left'}"
+                    title="Add / Change Dev Cookie"><i class="material-icons">&#xE145;</i></a>
+            </div>
+        </div>
+        {% endif %}

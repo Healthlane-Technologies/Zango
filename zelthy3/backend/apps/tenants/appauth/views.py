@@ -22,13 +22,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import login, logout
 from django.core.exceptions import ImproperlyConfigured
 
-from tenant_schemas.utils import schema_context
 
 # from backend.core.common_utils import get_company_tenant
 
 from django.utils.decorators import method_decorator
-from backend.core.api import ZelthySessionAppAPIView
-
+from zelthy3.backend.core.api import ZelthySessionAppAPIView
+from zelthy3.backend.core.api import get_api_response
 
 
 USER_AUTH_BACKEND = 'backend.apps.tenants.appauth.auth_backend.AppUserModelBackend'
@@ -133,7 +132,7 @@ class AppUserLoginAPI(APIView):
 
 
 
-from backend.core.api import get_api_response
+
 class InitializeAppAPIV1(ZelthySessionAppAPIView):
 
     """

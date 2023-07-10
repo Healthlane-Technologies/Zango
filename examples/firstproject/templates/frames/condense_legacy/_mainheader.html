@@ -1,0 +1,98 @@
+{% load static %}
+{% load i18n %}
+
+<header id="header_main" class="frame-top_bar_color">
+    <div class="header_main_content">
+        <nav class="uk-navbar" >
+
+            <!-- main sidebar switch -->
+            <a href="#" id="sidebar_main_toggle" class="sSwitch sSwitch_left">
+                <span class="sSwitchIcon" style="background:#FFFFFF;">
+                    <svg width="27" height="18" viewBox="0 0 27 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 9H25.43M1 1H25.43M1 17H25.43" stroke="#1C1E27" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+            </a>
+
+            <div class="condense-brand-title-box">
+                <a href = "/">
+                    <img src="{{profile.company_logo}}" style="max-height: 34.58px;">
+                </a>
+            </div>
+
+            <!-- secondary sidebar switch -->
+            <a href="#" id="sidebar_secondary_toggle" class="sSwitch sSwitch_right sidebar_secondary_check">
+                <span class="sSwitchIcon" style="background:#2A3F54;"></span>
+            </a>
+
+            <div class="uk-navbar-flip">
+                <ul class="uk-navbar-nav user_actions">
+                   <li data-uk-dropdown="{mode:'click',pos:'bottom-right'}">                  
+                      
+                            <a href="#" class="user_action_image frame-profile_icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12.0001 0.599609C5.71234 0.599609 0.600098 5.71185 0.600098 11.9996C0.600098 18.2874 5.71234 23.3996 12.0001 23.3996C18.2879 23.3996 23.4001 18.2874 23.4001 11.9996C23.4001 5.71185 18.2879 0.599609 12.0001 0.599609ZM12.0001 7.12737C13.9679 7.12737 15.5756 8.73518 15.5756 10.7029C15.5756 12.6707 13.9678 14.2784 12.0001 14.2784C10.0324 14.2784 8.42458 12.6706 8.42458 10.7029C8.42458 8.73508 10.0324 7.12737 12.0001 7.12737ZM5.7601 18.9118V18.384C5.7601 16.8718 6.98448 15.624 8.5201 15.624H15.4801C16.9923 15.624 18.2401 16.8484 18.2401 18.384V18.9118C16.5845 20.3997 14.4001 21.3119 12.0001 21.3119C9.6001 21.3119 7.41562 20.3997 5.7601 18.9118Z"/>
+                                </svg>
+                            </a>
+                      
+                      
+                        <div class="uk-dropdown profile-dropdown-menu">
+                            <div class="uk-grid uk-dropdown-grid">
+                                <div class="uk-width-1-1 uk-margin-small-bottom">
+                                    <p class="condense-title-p" style="font-size:14px;"> 
+                                        {% if LANGUAGE_CODE != 'ko' %}
+                                        {% trans "Welcome" %} 
+                                        {% endif %}
+                                        {{profile.user_name}}
+                                        {% if LANGUAGE_CODE == 'ko' %}
+                                        {% trans "Welcome" %} 
+                                        {% endif %}
+                                        <br>
+                                        
+                                        <span style="font-size:12px; line-height: inherit;"><i>
+                                            {% if LANGUAGE_CODE != 'ko' %}    
+                                            {% trans "Logged in as" %}
+                                            {% endif %}
+                                            {{profile.current_role}}
+                                            {% if LANGUAGE_CODE == 'ko' %}    
+                                            {% trans "Logged in as" %}
+                                            {% endif %} 
+                                        </i></span>  
+                                        
+                                    </p>
+                                    {% if profile.all_therapies|length > 0 %}
+                                    <ul class="uk-nav uk-nav-dropdown uk-panel">
+                                        <li class="uk-nav-divider"></li>
+                                    </ul>
+                                    {% endif %}
+                                </div>
+                                <div class="uk-width-1-1 uk-all-roles-box">
+                                    <ul class="uk-nav uk-nav-dropdown uk-panel">
+                                        {% if profile.all_therapies|length > 0 %}
+                                        <li><span style="margin-left:15px;">{% trans "Switch to a different Role:" %}<br>  </span></li>
+                                        <li class="uk-nav-divider"></li>
+                                        {% endif %}
+                                        {% for r in profile.all_therapies %}
+                                        <li><a href="{{r.0}}">{{r.1}}</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="uk-width-1-1">
+                                    <ul class="uk-nav uk-nav-dropdown uk-panel">
+                                        <li class="uk-nav-divider"></li>
+                                        <li><a href="#" style="color: #ED2651 !important;">Logout</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+    <div>
+</div>
+</header>
+
+
+

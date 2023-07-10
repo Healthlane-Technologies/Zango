@@ -29,10 +29,9 @@ class AppTemplateLoader(BaseLoader):
 
     def _load_template_source(self, template_name, template_dirs=None):
         try:
-            app_dir = settings.BASE_DIR / "zelthy_apps" / connection.tenant.name
-            print(template_name)
+            app_dir = settings.BASE_DIR / "zelthy_apps" / connection.tenant.name            
             for path in app_dir.rglob('*'):
-                print(path.name)
+                # print(path.name)
                 
                 if path.is_file() and path.name == template_name:
                     with path.open('r') as f:

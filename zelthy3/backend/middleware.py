@@ -26,10 +26,7 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
         return remove_www(request.get_host().split(':')[0])
 
     def get_tenant(self, domain_model, hostname):
-        print(domain_model)
-        print(hostname)
         domain = domain_model.objects.select_related('tenant').get(domain=hostname)
-        print(domain)
         return domain.tenant
 
     def process_request(self, request):
@@ -42,7 +39,6 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
         except DisallowedHost:
             from django.http import HttpResponseNotFound
             return HttpResponseNotFound()
-        print("hello")
         domain_model = get_tenant_domain_model()
         try:
             tenant = self.get_tenant(domain_model, hostname)

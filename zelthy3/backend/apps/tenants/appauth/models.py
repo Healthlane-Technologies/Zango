@@ -6,27 +6,24 @@ from zelthy3.backend.apps.shared.platformauth.abstract_model import AbstractZelt
 from knox.models import AuthToken
 
 from django.contrib.auth.models import User
-# from django.contrib.postgres.fields import JSONField
 from django.db.models import JSONField
 
 from zelthy3.backend.core.model_mixins import FullAuditMixin
 from zelthy3.backend.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
-# from ..customization.model_mixin import ZelthyDynamicVersionsMixin
 
-class UserRoleModel(FullAuditMixin): #, ZelthyDynamicVersionsMixin):
+class UserRoleModel(FullAuditMixin):
 
   name = models.CharField(
                 "Unique Name of the User Role",
                 max_length = 50,
                 unique=True
-                )
-  versions = JSONField(
+                )  
+  config = JSONField(
                 null=True,
                 blank=True
                 )
   """
-    versions will store the details of user roles and frames following the ZelthyDynamicVersionsMixin 
-    pattern. 
+    sample config
       {'mfa': {'enabled': True, 'method': 'totp', 'allow_bypass': True, 'bypass_carry_forward_days': 7},
       'auth_token': {'enabled': true, 'default_ttl': 10}, # default expiry in hours
       'whitelist_ips': '',

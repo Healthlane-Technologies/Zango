@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-print(find_packages())
+
 setup(
     name='zelthy3',
     version='0.1',
@@ -29,7 +29,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'zelthy3=zelthy3.zelthy3:main',
+            'zelthy3=zelthy3.cli:main',
         ],
     },
 )

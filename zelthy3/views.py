@@ -43,7 +43,6 @@ def zelthy_dynamic_views(request, *args, **kwargs):
     :rtype: django.views.generic.base.View
     :raises Http404: If no match is found in the `routes`.
     """
-
     from pathlib import Path
     app_dir = settings.BASE_DIR / "zelthy_apps" / request.tenant.name
     app_settings_file = app_dir / "settings.json" 
@@ -52,40 +51,29 @@ def zelthy_dynamic_views(request, *args, **kwargs):
     routes = app_settings['routes']
     path = request.path.lstrip('/')    
     for r in routes:
-        match_found = False
         r_regex = re.compile(r['re_path'])
-        if r_regex.search(path):
+        if r_regex.search(path): # match module
             module = r['module']
-            module_path = get_module_path(app_settings, module)
-            mod_settings_path = app_dir / module_path / "mod_settings.json"
-            with mod_settings_path.open() as f:
-                mod_settings = json.load(f)
-            mod_routes = mod_settings['routes']
-            for route in mod_routes:
-                if route['re_path'].startswith('^'):
-                    route['re_path'] = route['re_path'][1:]
-                r_regex = re.compile(r['re_path']+route['re_path'])
-                if r_regex.search(path):
-                    match_found = True
-                    match = r_regex.search(path)
-                    view_file = app_dir / module_path /  route['view_path']
-            break
-    if match_found:
-        print("path")
-        print(view_file.parent)
-        parent_path = view_file.parent
-        with view_file.open() as f:
-            view_file = f.read()    
-        zcode = ZPreprocessor(
-            view_file, 
-            request=request, 
-            parent_path=parent_path, 
-            app_dir=app_dir,
-            app_settings=app_settings
-            )
-        c = ZimportStack(zcode, request=request)
-        c.process_import_and_execute()
-        kwargs = match.groupdict()
-        ZelthyCustomView = c._globals['ZelthyCustomView']
-        return ZelthyCustomView.as_view()(request, *args, **kwargs)
+            module_path = get_module_path(app_settings, module)            
+            mod_url_path = path[len(r['re_path'].strip("^")):]
+            url_file = app_dir / module_path / r["url"]
+            url_file = url_file.with_suffix(".py")
+            with url_file.open() as f:
+                _url_file = f.read()  
+            zcode = ZPreprocessor(
+                    _url_file, 
+                    request=request, 
+                    parent_path=url_file.parent, 
+                    app_dir=app_dir,
+                    app_settings=app_settings
+                    )
+            c = ZimportStack(zcode, request=request)
+            c.process_import_and_execute()
+            urlpatterns = c._globals['urlpatterns']
+            for pattern in urlpatterns:                
+                resolve = pattern.resolve(mod_url_path) # find view
+                if resolve:
+                    match = pattern.pattern.regex.search(mod_url_path)
+                    kwargs = match.groupdict()
+                    return pattern.callback(request, *args, **kwargs)
     raise Http404()

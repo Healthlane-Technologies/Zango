@@ -8,20 +8,23 @@
         {
             "name": "module2",
             "path": "dir1/dir2/module2"
+        },
+        {
+            "name": "landingPage",
+            "path": "landingPage"
         }
 
-    ],
-    "packages":[
-        {
-            "name": "zel-email",
-            "version": "1.1.0",
-            "path": "zelthy_packages/zel-email"
-        }
     ],    
     "routes": [
         {
+            "re_path": "^",
+            "module": "landingPage",
+            "url": "urls"
+        },
+        {
             "re_path": "^mod1/",
-            "module": "module1"
+            "module": "module1",
+            "url": "urls"
         },
         {
             "re_path": "^mod2/",
@@ -30,12 +33,14 @@
         {
             "re_path": "^email/",
             "module": "zel-email/module1"
-        }
+        },
+        // {
+        //     "re_path": "^auth/",
+        //     "module": "zel-login-signup"
+        // }
 
     ]
     
-
-
 }
 
 

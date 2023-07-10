@@ -81,9 +81,9 @@ class ZimportStack:
     
     def get_zfileobj(self, path, parent_path):
         if path.startswith('..'):
-            module_filepath = parent_path.parent / path[2:]            
+            module_filepath = parent_path.parent / "/".join(path[2:].split("."))
         elif path.startswith('.'):
-            module_filepath = parent_path / path[1:]
+            module_filepath = parent_path / "/".join(path[1:].split("."))
         else:
             mod1 = path.split(".")[0]
             if self.is_package(self.zcode.app_settings, mod1):
