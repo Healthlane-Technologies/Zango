@@ -36,6 +36,8 @@ def new_view(request, *args, **kwargs):
 
 def foreign_view(request, *args, **kwargs):
     ref = TenantUser.objects.get(id=1)
-    inst = TenantRole(usr=ref, role="a")
+    inst = TenantRole(usr_id=ref.id, role="a")
     inst.save()
-    return JsonResponse({ "res": inst.role})
+    ins = TenantRole.objects.filter(usr=ref)
+    print(ins.usr.name)
+    return JsonResponse({ "res": ins.role})
