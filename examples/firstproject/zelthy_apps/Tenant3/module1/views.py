@@ -1,6 +1,9 @@
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 
+from .models import TenantUser
+from .models import TenantRole
+
 from .helpers import x
 from .helpers import y
 from .helpers import z
@@ -25,3 +28,14 @@ class View2(TemplateView):
         context.update(z=z)        
         return context
 
+def new_view(request, *args, **kwargs):
+    a = TenantUser(name="zelthy")
+    a.save()
+    response = {"content": TenantUser.objects.first().name}
+    return JsonResponse(response)
+
+def foreign_view(request, *args, **kwargs):
+    ref = TenantUser.objects.get(id=1)
+    inst = TenantRole(usr=ref, role="a")
+    inst.save()
+    return JsonResponse({ "res": inst.role})

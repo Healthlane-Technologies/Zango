@@ -42,6 +42,7 @@ TENANT_APPS = [
     # The following Django contrib apps must be in TENANT_APPS
     'django.contrib.contenttypes',
     'zelthy3.backend.apps.tenants.appauth',
+    'zelthy3.backend.apps.tenants.datamodel',
     'corsheaders',
 
 ]
