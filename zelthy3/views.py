@@ -5,20 +5,28 @@ from django.conf import settings
 from django.http import Http404
 
 from .zelthy_preprocessor import *
+from .helpers import get_app_base_dir, get_module_path, get_userrole_model, get_view_unique_name
 
 
-def get_module_path(app_settings, module_name):
-    modules = app_settings['modules']
-    for mod in modules:
-        if mod['name'] == module_name:
-            return mod['path']
-    packages = app_settings['packages']
-    for pkg in packages:
-        module_name.split("/")[0] == pkg["name"]
-        return "zelthy_packages" + "/" + module_name
-    return None
+def check_userAccessPerm(request):
+    if request.user.is_anonymous:
+        user_role = get_userrole_model().objects.get(name='AnonymousUsers')
+        return user_role.has_perm(request, 'userAccess')
+    else:
+        return request.user.has_perm(request, 'userAccess') \
+                or request.user_role.has_perm(request, 'userAccess')
+
+def check_view_perm(request, view_name):
+    if request.user.is_anonymous:
+        user_role = get_userrole_model().objects.get(name='AnonymousUsers')
+        return user_role.has_perm(request, 'view', view_name)
+    else:
+        return request.user.has_perm(request, 'view', view_name) \
+                or request.user_role.has_perm(request, 'view', view_name)
 
 
+
+    
 
 
 def zelthy_dynamic_views(request, *args, **kwargs):
@@ -43,8 +51,9 @@ def zelthy_dynamic_views(request, *args, **kwargs):
     :rtype: django.views.generic.base.View
     :raises Http404: If no match is found in the `routes`.
     """
-    from pathlib import Path
-    app_dir = settings.BASE_DIR / "zelthy_apps" / request.tenant.name
+    if not check_userAccessPerm(request):
+        return HttpResponse('Permission denied!', status=403)
+    app_dir = get_app_base_dir(request.tenant)
     app_settings_file = app_dir / "settings.json" 
     with app_settings_file.open() as f:
         app_settings = json.load(f)
@@ -54,7 +63,7 @@ def zelthy_dynamic_views(request, *args, **kwargs):
         r_regex = re.compile(r['re_path'])
         if r_regex.search(path): # match module
             module = r['module']
-            module_path = get_module_path(app_settings, module)            
+            module_path = get_module_path(request.tenant, module)            
             mod_url_path = path[len(r['re_path'].strip("^")):]
             url_file = app_dir / module_path / r["url"]
             url_file = url_file.with_suffix(".py")
@@ -75,5 +84,12 @@ def zelthy_dynamic_views(request, *args, **kwargs):
                 if resolve:
                     match = pattern.pattern.regex.search(mod_url_path)
                     kwargs = match.groupdict()
-                    return pattern.callback(request, *args, **kwargs)
+                    view_unique_name = get_view_unique_name(r['module'], pattern.callback)
+                    if check_view_perm(request, view_unique_name):
+                        return pattern.callback(request, *args, **kwargs)
+                    else:
+                        return HttpResponse('Permission denied!', status=403)
+
+
+                    
     raise Http404()

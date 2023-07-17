@@ -18,7 +18,8 @@ setup(
         "psycopg2-binary",
         'django-tenants',
         'djangorestframework',
-        'django-rest-knox'
+        'django-rest-knox',
+        'celery==5.3.1'
 
         # Other dependencies...
     ],

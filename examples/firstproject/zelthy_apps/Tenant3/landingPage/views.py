@@ -2,7 +2,6 @@
 from typing import Any, Dict
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from .models import Patient
 
 
 class AppLandingPageView(TemplateView):

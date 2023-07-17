@@ -42,6 +42,7 @@ TENANT_APPS = [
     # The following Django contrib apps must be in TENANT_APPS
     'django.contrib.contenttypes',
     'zelthy3.backend.apps.tenants.appauth',
+    'zelthy3.backend.apps.tenants.permissions',
     'corsheaders',
 
 ]
@@ -54,13 +55,14 @@ TENANT_DOMAIN_MODEL = "apps.Domain"
 
 
 MIDDLEWARE = [
-    'zelthy3.backend.middleware.ZelthyTenantMainMiddleware',
+    'zelthy3.middleware.ZelthyTenantMainMiddleware',    
     # 'django_tenants.middleware.main.TenantMainMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',    
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'zelthy3.middleware.SetUserRoleMiddleWare',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -97,5 +99,4 @@ TEMPLATES = [
 DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',
 )
-
 

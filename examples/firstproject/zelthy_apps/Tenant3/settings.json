@@ -13,8 +13,8 @@
             "name": "landingPage",
             "path": "landingPage"
         }
-
-    ],    
+    ],
+    "packages": [],    
     "routes": [
         {
             "re_path": "^",
@@ -25,19 +25,7 @@
             "re_path": "^mod1/",
             "module": "module1",
             "url": "urls"
-        },
-        {
-            "re_path": "^mod2/",
-            "module": "module2"
-        },
-        {
-            "re_path": "^email/",
-            "module": "zel-email/module1"
-        },
-        // {
-        //     "re_path": "^auth/",
-        //     "module": "zel-login-signup"
-        // }
+        }
 
     ]
     
