@@ -1,18 +1,20 @@
 from django.db import models
-from zelthy3.backend.apps.tenants.datamodel.fields import DataModelForeignKey
+from zelthy3.backend.apps.tenants.datamodel.fields import DataModelForeignKey, DataModelForeignKeyRef
 from zelthy3.backend.apps.tenants.datamodel.models import SimpleMixim
 
 class TenantUser(SimpleMixim):
     name = models.CharField(max_length=10)
 
     class Meta:
+        app_label = 'zelthy3.backend.apps.tenants.datamodel'
         db_table = "datamodel_tenantuser"
 
 class TenantRole(SimpleMixim):
-    usr = models.ForeignKey("TenantUser", on_delete=models.PROTECT)
+    usr = DataModelForeignKey(TenantUser, on_delete=models.PROTECT)
     role = models.CharField(max_length=30)
-    foreign_key_1 = DataModelForeignKey(related_model="datamodel_tenantuser", field_name="usr")
+    foreign_key_1 = DataModelForeignKeyRef(related_model="datamodel_tenantuser", field_name="usr")
 
 
     class Meta:
+        app_label = 'zelthy3.backend.apps.tenants.datamodel'
         db_table = "datamodel_tenantrole"

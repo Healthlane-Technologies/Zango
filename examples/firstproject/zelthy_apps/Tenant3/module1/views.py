@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views.generic import TemplateView
-
+from zelthy3.backend.apps.tenants.datamodel.models import DynamicTable
 from .models import TenantUser
 from .models import TenantRole
 
@@ -29,15 +29,13 @@ class View2(TemplateView):
         return context
 
 def new_view(request, *args, **kwargs):
-    a = TenantUser(name="zelthy")
-    a.save()
-    response = {"content": TenantUser.objects.first().name}
-    return JsonResponse(response)
+    # a = TenantUser(name="zelthy")
+    # a.save()
+    # response = {"content": TenantUser.objects.first().name}
+    return JsonResponse({})
 
 def foreign_view(request, *args, **kwargs):
-    ref = TenantUser.objects.get(id=1)
-    inst = TenantRole(usr_id=ref.id, role="a")
+    ref = TenantUser.objects.first()
+    inst = TenantRole(usr=ref, role="test")
     inst.save()
-    ins = TenantRole.objects.filter(usr=ref)
-    print(ins.usr.name)
-    return JsonResponse({ "res": ins.role})
+    return JsonResponse({ "res": inst.role })

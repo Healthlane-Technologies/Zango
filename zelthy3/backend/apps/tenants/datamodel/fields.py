@@ -22,7 +22,6 @@ from django.db.models.constants import LOOKUP_SEP
 from django.db.models.deletion import CASCADE, SET_DEFAULT, SET_NULL
 from django.db.models.query_utils import PathInfo
 from django.db.models.utils import make_model_tuple
-from django.utils.deprecation import RemovedInDjango60Warning
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
@@ -64,18 +63,18 @@ class DataModelFileField(models.FileField):
         if make_public is False:
           self.storage.default_acl = "private"
 
-class DataModelForeignKey:
+class DataModelForeignKeyRef:
    
    def __init__(self, related_model, field_name):
       self.related_model = related_model
       self.field_name = field_name
 
-class DataModelOneToOneField:
+class DataModelOneToOneFieldRef:
    def __init__(self, related_model, field_name):
       self.related_model = related_model
       self.field_name = field_name
 
-class DataModelManyToManyField:
+class DataModelManyToManyFieldRef:
    def __init__(self, related_model, field_name):
       self.related_model = related_model
       self.field_name = field_name
@@ -141,6 +140,14 @@ class DataModelForwardManyToOneDescriptor(ForwardManyToOneDescriptor):
 
 class DataModelForeignObject(ForeignObject):
 	forward_related_accessor_class = DataModelForwardManyToOneDescriptor
+
+	@classmethod
+	@functools.cache
+	def get_class_lookups(cls):
+		bases = inspect.getmro(cls)
+		bases = bases[: bases.index(DataModelForeignObject) + 1]
+		class_lookups = [parent.__dict__.get("class_lookups", {}) for parent in bases]
+		return cls.merge_dicts(class_lookups)
 
 DataModelForeignObject.register_lookup(RelatedIn)
 DataModelForeignObject.register_lookup(RelatedExact)

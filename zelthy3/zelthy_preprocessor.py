@@ -137,6 +137,9 @@ class ZimportStack:
         else:
             #Final Execution
             self._globals = globals()
+            print(self._imported_objects.items())
             for k,v in self._imported_objects.items():
                 self._globals[k] = v
+                if k == "TenantRole" or k == "TenantUser":
+                    self._globals[k].__module__ = "zelthy_apps.Tenant3.module1.models"
             exec("\n".join(self.zcode.lines), self._globals, self._globals)

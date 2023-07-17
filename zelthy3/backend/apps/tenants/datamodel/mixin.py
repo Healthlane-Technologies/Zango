@@ -109,9 +109,9 @@ class DynamicModelMixin(object):
         return dynamic_model
 
     def _get_model_alt(self):
-        usr = importlib.import_module("zelthy3.zelthy_apps.Tenant.ddm.user").TenantUser
+        usr = importlib.import_module("zelthy_apps.Tenant3.module1.models").TenantUser
 
-        rol = importlib.import_module("zelthy3.zelthy_apps.Tenant.ddm.user").TenantRole
+        rol = importlib.import_module("zelthy_apps.Tenant3.module1.models").TenantRole
         # rol._meta.app_label = 'zelthy3.backend.apps.tenants.datamodel'
         # rol._meta.db_table = "datamodel_tenantrole"
         return rol, usr

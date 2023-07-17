@@ -13,13 +13,14 @@ class Command(BaseCommand):
     help = "Performs the migration operation for the datamodels in the project"
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument("teanant_name", help="Name of the tenant")
+        parser.add_argument("tenant_name", help="Name of the tenant")
         parser.add_argument("module_name", help="Name of the module containing the model")
 
     def handle(self, *args, **options):
         tenant_name = options["tenant_name"]
         tenant_model = get_tenant_model()
-        env = tenant_model.objects.get(schema_name=tenant_name)
+        env = tenant_model.objects.get(name=tenant_name)
+        print(env)
         connection.set_tenant(env)
         with connection.cursor() as c:
             sys.path.append(os.getcwd())
@@ -31,7 +32,7 @@ class Command(BaseCommand):
             for module in modules:
             
                 models = importlib.import_module(f"zelthy_apps.{tenant_name}.{module}.models")
-                models = { name: obj for name, obj in inspect.getmembers(models) if inspect.isclass(obj) and name not in ["DataModelManyToManyField", "DataModelForeignKey", "DatamodelOneToOneField"] }
+                models = { name: obj for name, obj in inspect.getmembers(models) if inspect.isclass(obj) and name not in ["DataModelManyToManyField", "DataModelForeignKey", "DatamodelOneToOneField", "SimpleMixim"] }
 
                 for desc, dataclass in models.items():
                     field_specs = []
@@ -95,7 +96,6 @@ class Command(BaseCommand):
                     try:
                         obj = DynamicTable.objects.get(label=desc)
                     except:
-                        traceback.print_exc()
                         obj = DynamicTable(label=desc, description="", field_specs={})
                         obj.full_clean()
                         obj.save()
