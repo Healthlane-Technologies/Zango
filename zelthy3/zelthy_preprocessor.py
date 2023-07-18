@@ -1,4 +1,4 @@
-
+from django.apps import apps
 class ZPreprocessor:
     """
     Handles import dynamically from within app
@@ -132,14 +132,23 @@ class ZimportStack:
                 processed = self.elements.pop()
                 self._processed.append(processed)
                 for o in processed['obj']:
-                    self._imported_objects[o] = self._globals[o]
+                    self._imported_objects[o, str(module_filepath)] = self._globals[o]
             self.process_import_and_execute()
         else:
             #Final Execution
             self._globals = globals()
-            print(self._imported_objects.items())
             for k,v in self._imported_objects.items():
-                self._globals[k] = v
-                if k == "TenantRole" or k == "TenantUser":
-                    self._globals[k].__module__ = "zelthy_apps.Tenant3.module1.models"
+                print("any")
+                if k[0] not in ["ModelBase", "SimpleMixim", "DynamicTable"]:
+                    self._globals[k[0]] = v
+                    if "ModelBase" in str(type(v)):
+                        self._globals[k[0]].__module__ = ".".join(k[1][k[1].find("zelthy_apps"):].split("/"))
+                # if "ModelBase" in str(type(v)):
+                #     self._globals[k].__module__ = "zelthy_apps.Tenant3.module1.models"
             exec("\n".join(self.zcode.lines), self._globals, self._globals)
+            for k,v in self._imported_objects.items():
+                print("any")
+                if k[0] not in ["ModelBase", "SimpleMixim", "DynamicTable"]:
+                    self._globals[k[0]] = v
+                    if "ModelBase" in str(type(v)):
+                        self._globals[k[0]].__module__ = "zelthy3.zelthy_preprocessor"

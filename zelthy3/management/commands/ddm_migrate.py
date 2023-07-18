@@ -6,8 +6,12 @@ import inspect
 from zelthy3.backend.apps.tenants.datamodel.models import DynamicTable
 import traceback
 from django.db import connection
-
+from django.db import models
+from django.db.models.base import ModelBase
 from django_tenants.utils import get_tenant_model
+from zelthy3.zelthy_preprocessor import ZimportStack, ZPreprocessor
+from zelthy3.backend.apps.tenants.datamodel.models import SimpleMixim
+from django.apps import apps
 
 class Command(BaseCommand):
     help = "Performs the migration operation for the datamodels in the project"
@@ -20,7 +24,6 @@ class Command(BaseCommand):
         tenant_name = options["tenant_name"]
         tenant_model = get_tenant_model()
         env = tenant_model.objects.get(name=tenant_name)
-        print(env)
         connection.set_tenant(env)
         with connection.cursor() as c:
             sys.path.append(os.getcwd())
@@ -30,11 +33,18 @@ class Command(BaseCommand):
                 modules = [options["module_name"]]
             
             for module in modules:
-            
-                models = importlib.import_module(f"zelthy_apps.{tenant_name}.{module}.models")
-                models = { name: obj for name, obj in inspect.getmembers(models) if inspect.isclass(obj) and name not in ["DataModelManyToManyField", "DataModelForeignKey", "DatamodelOneToOneField", "SimpleMixim"] }
 
-                for desc, dataclass in models.items():
+                ddms = {}
+            
+                with open(f"./zelthy_apps/{tenant_name}/{module}/models.py") as f:
+                    content = f.read()
+                    exec(content, globals())
+                    for name, obj in globals().items():
+                        if type(obj) == ModelBase and name not in ["ModelBase", "DynamicTable", "SimpleMixim"]:
+                            obj.__module__ = f"zelthy_apps.{tenant_name}.{module}.models"
+                            ddms[name] = obj
+
+                for desc, dataclass in ddms.items():
                     field_specs = []
                     for field_name, specs in vars(dataclass).items():
                         if field_name == "one_to_one_1":
@@ -90,7 +100,7 @@ class Command(BaseCommand):
                             }
                             field_specs.append(field_spec)
                     model_name = "".join(desc)
-                    # print(field_specs)
+                    print(field_specs)
                     obj = None
                     
                     try:

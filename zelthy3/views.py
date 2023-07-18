@@ -5,6 +5,7 @@ from django.conf import settings
 from django.http import Http404
 
 from .zelthy_preprocessor import *
+from django.db.models.base import ModelBase
 
 
 def get_module_path(app_settings, module_name):

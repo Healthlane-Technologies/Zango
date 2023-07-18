@@ -29,10 +29,10 @@ class View2(TemplateView):
         return context
 
 def new_view(request, *args, **kwargs):
-    # a = TenantUser(name="zelthy")
-    # a.save()
-    # response = {"content": TenantUser.objects.first().name}
-    return JsonResponse({})
+    a = TenantUser(name="zelthy")
+    a.save()
+    response = {"content": TenantUser.objects.first().name}
+    return JsonResponse(response)
 
 def foreign_view(request, *args, **kwargs):
     ref = TenantUser.objects.first()
