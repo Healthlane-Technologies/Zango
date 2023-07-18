@@ -1,11 +1,11 @@
 
+
 class ZPreprocessor:
     """
     Handles import dynamically from within app
     """
 
     def __init__(self, file_obj, **kwargs):
-        request = kwargs.get('request')
         self.parent_path = kwargs.get('parent_path')
         self.app_settings = kwargs.get('app_settings')
         self.app_dir = kwargs.get('app_dir')
@@ -39,7 +39,8 @@ class ZPreprocessor:
 class ZimportStack:
 	
     def __init__(self, zcode, **kwargs):
-        self.request = kwargs.get('request')    
+        self.request = kwargs.get('request')
+        self.tenant = kwargs.get('tenant')    
         self.zcode = None
         self.elements = [] #stores zfrom import statements
         self._globals = None
@@ -65,10 +66,11 @@ class ZimportStack:
             del self._globals[k]
         return 
 
-    def is_package(self, app_settings, package_name):
-        package_list = app_settings['packages']
-        for package in package_list:
-            if package["name"] == package_name:
+    def is_package(self, tenant, package_name):
+        from .helpers import get_packages
+        packages = get_packages(tenant)
+        for p in packages:
+            if p['name'] == package_name:
                 return True
         return False
 
@@ -84,9 +86,10 @@ class ZimportStack:
             module_filepath = parent_path.parent / "/".join(path[2:].split("."))
         elif path.startswith('.'):
             module_filepath = parent_path / "/".join(path[1:].split("."))
-        else:
+        else:            
             mod1 = path.split(".")[0]
-            if self.is_package(self.zcode.app_settings, mod1):
+            print("here", self.is_package(self.tenant, mod1))
+            if self.is_package(self.tenant, mod1):
                 module_filepath = self.zcode.app_dir / "zelthy_packages" / "/".join(path.split("."))
             else:
                 module_filepath = self.zcode.app_dir /  "/".join(path.split("."))

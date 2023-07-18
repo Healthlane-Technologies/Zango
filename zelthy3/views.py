@@ -5,7 +5,8 @@ from django.conf import settings
 from django.http import Http404
 
 from .zelthy_preprocessor import *
-from .helpers import get_app_base_dir, get_module_path, get_userrole_model, get_view_unique_name
+from .helpers import get_app_base_dir, get_module_path, get_userrole_model, \
+        get_view_unique_name, get_root_routes
 
 
 def check_userAccessPerm(request):
@@ -57,7 +58,7 @@ def zelthy_dynamic_views(request, *args, **kwargs):
     app_settings_file = app_dir / "settings.json" 
     with app_settings_file.open() as f:
         app_settings = json.load(f)
-    routes = app_settings['routes']
+    routes = get_root_routes(request.tenant)
     path = request.path.lstrip('/')    
     for r in routes:
         r_regex = re.compile(r['re_path'])
@@ -71,12 +72,12 @@ def zelthy_dynamic_views(request, *args, **kwargs):
                 _url_file = f.read()  
             zcode = ZPreprocessor(
                     _url_file, 
-                    request=request, 
+                    tenant=request.tenant, 
                     parent_path=url_file.parent, 
                     app_dir=app_dir,
                     app_settings=app_settings
                     )
-            c = ZimportStack(zcode, request=request)
+            c = ZimportStack(zcode, tenant=request.tenant)
             c.process_import_and_execute()
             urlpatterns = c._globals['urlpatterns']
             for pattern in urlpatterns:                
@@ -89,7 +90,5 @@ def zelthy_dynamic_views(request, *args, **kwargs):
                         return pattern.callback(request, *args, **kwargs)
                     else:
                         return HttpResponse('Permission denied!', status=403)
-
-
                     
     raise Http404()

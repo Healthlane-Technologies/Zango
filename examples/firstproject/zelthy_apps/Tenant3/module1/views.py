@@ -12,13 +12,17 @@ def view1(request, *args, **kwargs):
     return JsonResponse(response)
 
 
-
-class View2(TemplateView):
+from condense-frame.frame.views.base import CondenseFrameBase
+class View2(TemplateView, CondenseFrameBase):
 
     template_name = 'hello_world.html'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)       
+        context = super().get_context_data(**kwargs)
+        # frame_context = self.get_frame_context(**kwargs)
+        print("request", self.request)
+        # print(frame_context)
+        context['frame'] = self.get_frame_context(**kwargs)
         context.update(**kwargs)
         context.update(x=x)
         context.update(y=y)

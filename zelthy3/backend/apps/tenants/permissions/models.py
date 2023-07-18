@@ -5,8 +5,7 @@ from django.db.models.query import QuerySet
 
 from zelthy3.zelthy_preprocessor import ZPreprocessor, ZimportStack
 from zelthy3.backend.core.model_mixins import FullAuditMixin
-from zelthy3.helpers import get_app_base_dir, get_app_settings, get_mod_url_filepath
-
+from zelthy3.helpers import get_app_base_dir, get_app_settings, get_mod_url_filepath, get_root_routes
 
 
 class PermissionsModel(FullAuditMixin):
@@ -39,20 +38,22 @@ class PermissionsModel(FullAuditMixin):
     app_dir = get_app_base_dir(connection.tenant)
     # iterate through all views and add view perms
     app_settings = get_app_settings(connection.tenant)
-    routes = get_app_settings(connection.tenant)['routes']
-    
+    # routes = get_app_settings(connection.tenant)['routes']
+    routes = get_root_routes(connection.tenant)
+    print("root_routes", routes)
     for route in routes:
+      print("route", route)
       url_file = get_mod_url_filepath(connection.tenant, route["module"])
       with url_file.open() as f:
         _url_file = f.read()  
       zcode = ZPreprocessor(
                     _url_file, 
-                    request=None, 
+                    tenant=connection.tenant, 
                     parent_path=url_file.parent, 
                     app_dir=app_dir,
                     app_settings=app_settings
                     )
-      c = ZimportStack(zcode, request=None)
+      c = ZimportStack(zcode, tenant=connection.tenant)
       c.process_import_and_execute()
       urlpatterns = c._globals['urlpatterns']
       for pattern in urlpatterns:
