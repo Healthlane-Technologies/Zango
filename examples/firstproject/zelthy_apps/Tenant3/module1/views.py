@@ -1,8 +1,8 @@
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 from zelthy3.backend.apps.tenants.datamodel.models import DynamicTable
-from .models import TenantUser
 from .models import TenantRole
+from .models import TenantUser
 
 from .helpers import x
 from .helpers import y
@@ -35,7 +35,7 @@ def new_view(request, *args, **kwargs):
     return JsonResponse(response)
 
 def foreign_view(request, *args, **kwargs):
-    ref = TenantUser.objects.first()
-    inst = TenantRole(usr=ref, role="test")
-    inst.save()
-    return JsonResponse({ "res": inst.role })
+    # ref = TenantUser.objects.first()
+    # inst = TenantRole(usr=ref, role="test")
+    # inst.save()
+    return JsonResponse({ "user": TenantRole.__module__ })

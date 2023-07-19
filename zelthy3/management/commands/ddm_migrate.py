@@ -9,9 +9,49 @@ from django.db import connection
 from django.db import models
 from django.db.models.base import ModelBase
 from django_tenants.utils import get_tenant_model
-from zelthy3.zelthy_preprocessor import ZimportStack, ZPreprocessor
 from zelthy3.backend.apps.tenants.datamodel.models import SimpleMixim
 from django.apps import apps
+from django.db.models.fields import NOT_PROVIDED
+
+"""
+    
+"""
+
+field_map = {
+    "CharField": {
+        "name": ("NR", None),
+        "verbose_name": ("NR", None),
+        "max_length": ("R", None),
+        "blank": ("NR", False),
+        "null": ("NR", False),
+        "default": ("NR", NOT_PROVIDED),
+        "choices": ("NR", None),
+        "unique": ("NR", False)
+    },
+    "IntegerField": {
+        "name": ("NR", None),
+        "verbose_name": ("NR", None),
+        "blank": ("NR", False),
+        "null": ("NR", False),
+        "default": ("NR", NOT_PROVIDED),
+        "unique": ("NR", False)
+    },
+    "FloatField": {
+        "name": ("NR", None),
+        "verbose_name": ("NR", None),
+        "max_length": ("R", None),
+        "blank": ("NR", False),
+        "null": ("NR", False),
+        "default": ("NR", NOT_PROVIDED),
+        "unique": ("NR", False)
+    }
+}
+
+rel_field_map = {
+    "one_to_one": "DataModelOneToOneField",
+    "foreign_key": "DataModelForeignKey",
+    "many_to_many": "DataModelManyToManyField"
+}
 
 class Command(BaseCommand):
     help = "Performs the migration operation for the datamodels in the project"
@@ -47,9 +87,9 @@ class Command(BaseCommand):
                 for desc, dataclass in ddms.items():
                     field_specs = []
                     for field_name, specs in vars(dataclass).items():
-                        if field_name == "one_to_one_1":
+                        if any(rel_field in field_name for rel_field in rel_field_map.keys()):
                             attrs = {}
-                            field_type = "DataModelOneToOneField"
+                            field_type = rel_field_map[field_name[:-2]]
                             for field, val in vars(specs).items():
                                 attrs[field] = val
                             field_spec = {
@@ -58,47 +98,32 @@ class Command(BaseCommand):
                                 "field_type": field_type
                             }
                             field_specs.append(field_spec)
-                        elif field_name == "foreign_key_1":
+                        else:
                             attrs = {}
-                            field_type = "DataModelForeignKey"
-                            for field, val in vars(specs).items():
-                                attrs[field] = val
-                            field_spec = {
-                                "field_name": field_name,
-                                "attrs": attrs,
-                                "field_type": field_type
-                            }
-                            field_specs.append(field_spec)
-                        elif field_name == "many_to_many_1":
-                            attrs = {}
-                            field_type = "DataModelManyToManyField"
-                            for field, val in vars(specs).items():
-                                attrs[field] = val
-                            field_spec = {
-                                "field_name": field_name,
-                                "attrs": attrs,
-                                "field_type": field_type
-                            }
-                            field_specs.append(field_spec)
-                        elif field_name in ["name", "dota", "jame", "role"]:
-                            attrs = {}
+                            try:
+                                vars(specs)
+                            except Exception:
+                                continue
                             if vars(specs).get("field"):
                                 field_type = str(vars(specs)["field"].__class__)
                                 field_type = field_type[field_type.rfind(".") + 1:field_type.rfind("'")]
+                                if field_type not in field_map.keys():
+                                    continue
                                 attrs = {}
                                 for field, val in vars(vars(specs)["field"]).items():
                                     # if field != "_unique" or field != 'is_relation':
                                     #     if type(val) in [ int, bool, float, str, dict, None]:
                                     #         attrs[field] = val
-                                    if field == "max_length" or field == "default":
+                                    if field in field_map[field_type].keys():
                                         if type(val) in [ int, bool, float, str, dict, None]:
-                                            attrs[field] = val
-                            field_spec = {
-                                "field_name": field_name,
-                                "attrs": attrs,
-                                "field_type": field_type
-                            }
-                            field_specs.append(field_spec)
+                                            if field_map[field_type][field][1] != val:
+                                                attrs[field] = val
+                                field_spec = {
+                                    "field_name": field_name,
+                                    "attrs": attrs,
+                                    "field_type": field_type
+                                }
+                                field_specs.append(field_spec)
                     model_name = "".join(desc)
                     print(field_specs)
                     obj = None
