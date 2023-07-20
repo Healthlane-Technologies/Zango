@@ -10,7 +10,7 @@ urlpatterns = [
         name='view1'
     ),
     re_path(
-        r'^view2/(?P<id>\d+)/(?P<uuid>[\w-]+)/$',
+        r'^view2/(?P<id>\d+)/$',
         View2.as_view(),
         name='view1'
     ),

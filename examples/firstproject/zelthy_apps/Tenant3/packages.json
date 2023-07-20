@@ -1,14 +1,15 @@
 {
  "packages": [
     {
-      "name": "zel-email",
-      "version": "1.1.0"
+      "name": "frame",
+      "version": "0.1.0",
+      "repo": "https://github.com/Healthlane-Technologies/package-frame/archive/refs/tags/0.1.0.zip"
     },
     {
-      "name": "condense-frame",
-      "version": "1.0.0"
+      "name": "login-signup",
+      "version": "0.1.0",
+      "repo": "https://github.com/Healthlane-Technologies/package-userauth"
     }
-
- ]   
+ ]
 }
 
