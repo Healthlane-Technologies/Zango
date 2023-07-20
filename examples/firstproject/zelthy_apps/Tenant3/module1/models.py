@@ -22,6 +22,6 @@ class TenantRole(SimpleMixim):
     role = models.CharField(max_length=30)
     foreign_key_1 = DataModelForeignKeyRef(related_model="datamodel_tenantuser", field_name="usr")
 
-    class Meta:
-        app_label = 'zelthy3.backend.apps.tenants.datamodel'
-        db_table = "datamodel_tenantrole"
+#     class Meta:
+#         app_label = 'zelthy3.backend.apps.tenants.datamodel'
+#         db_table = "datamodel_tenantrole"
