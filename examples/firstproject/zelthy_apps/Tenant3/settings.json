@@ -13,24 +13,22 @@
             "name": "landingPage",
             "path": "landingPage"
         }
-
-    ],    
-    "routes": [
+    ],
+    "app_routes": [
         {
             "re_path": "^mod1/",
             "module": "module1",
             "url": "urls"
-        },
-        {
-            "re_path": "^mod2/",
-            "module": "module2"
-        },
-        {
-            "re_path": "^email/",
-            "module": "zel-email/module1"
         }
+        
     ],
-    "packages": []
+    "package_routes": [
+        {
+            "re_path": "^frame/",
+            "package": "condense-frame"    
+        }
+    ]
+    
 }
 
 

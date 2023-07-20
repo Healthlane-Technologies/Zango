@@ -83,3 +83,25 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
             if (hasattr(settings, 'PUBLIC_SCHEMA_URLCONF') and
                     (force_public or request.tenant.schema_name == get_public_schema_name())):
                 request.urlconf = settings.PUBLIC_SCHEMA_URLCONF
+
+from .helpers import get_userrole_model
+class SetUserRoleMiddleWare:
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Code to be executed for each request before the view is called
+        print(request, "R")
+        userrole_model = get_userrole_model()
+        if request.user.is_anonymous:
+            request.user_role = userrole_model.objects.get(name='AnonymousUsers')
+        else:
+            #TODO
+            #check the role from session and set
+            pass
+        response = self.get_response(request)
+
+        # Code to be executed for each request/response after the view is called
+
+        return response
