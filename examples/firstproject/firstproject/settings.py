@@ -23,7 +23,7 @@ DATABASES = {
         'ENGINE':'django_tenants.postgresql_backend',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': 'zelthy3pass',
+        'PASSWORD': 'postgres',
         'HOST': '127.0.0.1',
         'PORT': '5432',
         'ATOMIC_REQUESTS':True

@@ -22,7 +22,7 @@ from django.db.models.constants import LOOKUP_SEP
 from django.db.models.deletion import CASCADE, SET_DEFAULT, SET_NULL
 from django.db.models.query_utils import PathInfo
 from django.db.models.utils import make_model_tuple
-from django.utils.functional import cached_property
+# from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from django.db.models.fields import Field
@@ -142,7 +142,7 @@ class DataModelForeignObject(ForeignObject):
 	forward_related_accessor_class = DataModelForwardManyToOneDescriptor
 
 	@classmethod
-	@functools.cache
+	@functools.lru_cache
 	def get_class_lookups(cls):
 		bases = inspect.getmro(cls)
 		bases = bases[: bases.index(DataModelForeignObject) + 1]
