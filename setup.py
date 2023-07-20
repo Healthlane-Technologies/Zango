@@ -7,7 +7,12 @@ setup(
     author='Zelthy ("Healthlane Technologies")',
     author_email='platform@zelthy.com',
     url='https://github.com/Healthlane-Technologies/zelthy3',
-    packages=find_packages(),
+    # packages=find_packages(),
+    packages=[
+        'zelthy3',
+        'zelthy3.management',
+        'zelthy3.management.commands'
+    ],
     install_requires=[
         'django>=3.0',
         "psycopg2-binary",
