@@ -1,9 +1,8 @@
-from zelthy3.backend.datamodels import zmodels
+from zelthy3.backend.apps.tenants.datamodel.models import SimpleMixim
+from django.db import models
 
-class Patient(zmodels.Model):
-
+class TestDdm(SimpleMixim):
     name = models.CharField(max_length=100)
-    dob = models.DateField()
 
 
 

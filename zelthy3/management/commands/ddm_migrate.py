@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument("tenant_name", help="Name of the tenant")
-        parser.add_argument("module_name", help="Name of the module containing the model")
+        parser.add_argument("--module-name", default=None, help="Name of the module containing the model")
 
     def handle(self, *args, **options):
         tenant_name = options["tenant_name"]
@@ -69,20 +69,21 @@ class Command(BaseCommand):
             sys.path.append(os.getcwd())
             
             modules = os.listdir(f"./zelthy_apps/{tenant_name}")
-            if options["module_name"]:
+            if options.get("module_name"):
                 modules = [options["module_name"]]
             
             for module in modules:
 
                 ddms = {}
-            
-                with open(f"./zelthy_apps/{tenant_name}/{module}/models.py") as f:
-                    content = f.read()
-                    exec(content, globals())
-                    for name, obj in globals().items():
-                        if type(obj) == ModelBase and name not in ["ModelBase", "DynamicTable", "SimpleMixim"]:
-                            obj.__module__ = f"zelthy_apps.{tenant_name}.{module}.models"
-                            ddms[name] = obj
+
+                if os.path.exists(f"./zelthy_apps/{tenant_name}/{module}/models.py"):
+                    with open(f"./zelthy_apps/{tenant_name}/{module}/models.py") as f:
+                        content = f.read()
+                        exec(content, globals())
+                        for name, obj in globals().items():
+                            if type(obj) == ModelBase and name not in ["ModelBase", "DynamicTable", "SimpleMixim"]:
+                                obj.__module__ = f"zelthy_apps.{tenant_name}.{module}.models"
+                                ddms[name] = obj
 
                 for desc, dataclass in ddms.items():
                     field_specs = []
