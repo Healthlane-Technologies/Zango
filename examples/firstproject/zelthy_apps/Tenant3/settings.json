@@ -16,6 +16,11 @@
     ],
     "app_routes": [
         {
+            "re_path": "^",
+            "module": "landingPage",
+            "url": "urls"
+        },
+        {
             "re_path": "^mod1/",
             "module": "module1",
             "url": "urls"
