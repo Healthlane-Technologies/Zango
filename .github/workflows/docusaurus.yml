@@ -18,8 +18,8 @@ jobs:
         with:
           node-version: 14  # Adjust the Node.js version as needed
           
-      - name: Change working directory to zelthy3/zelthy3/documentation/zelthy/
-        run: cd zelthy3/zelthy3/documentation/zelthy/
+      - name: Change working directory to zelthy3/documentation/zelthy/
+        run: cd zelthy3/documentation/zelthy/
 
       - name: Install dependencies
         run: npm install
