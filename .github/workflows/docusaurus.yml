@@ -3,7 +3,7 @@ name: Docusaurus Deployment to S3
 on:
   push:
     branches:
-      - main  # Adjust this branch name if necessary
+      - documentation  # Adjust this branch name if necessary
 
 jobs:
   deploy_to_s3:
