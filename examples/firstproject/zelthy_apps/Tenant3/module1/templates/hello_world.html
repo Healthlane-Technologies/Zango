@@ -1,7 +1,14 @@
 {% extends '_base.html' %}
 
 {% block page_content %}
-Hello
+    Hello
+    <div style="display:inline-block">
+        <span>Inbox</span>
+        <!-- Import a component -->
+<script src="https://unpkg.com/@polymer/paper-checkbox@next/paper-checkbox.js?module" type="module" ></script>
+
+<!-- Use it like any other HTML element -->
+<paper-checkbox>Web Components!</paper-checkbox>
 
 
 {% endblock %}
