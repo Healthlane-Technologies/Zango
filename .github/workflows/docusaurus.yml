@@ -22,7 +22,7 @@ jobs:
           node-version: 20.3.1  # Use the latest Node.js version available (e.g., 14.x.x)
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build Docusaurus site
         run: npm run build
