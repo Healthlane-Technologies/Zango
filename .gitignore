@@ -17,7 +17,6 @@ develop-eggs/
 **/dist/
 node_modules/
 downloads/
-static/
 eggs/
 .eggs/
 **/lib/
