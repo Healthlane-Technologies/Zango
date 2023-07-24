@@ -3,7 +3,7 @@ name: Docusaurus Deployment to S3
 on:
   push:
     branches:
-      - documentation  # Adjust this branch name if necessary
+      - main  # Adjust this branch name if necessary
 
 jobs:
   deploy_to_s3:
@@ -13,22 +13,25 @@ jobs:
       run:
         working-directory: zelthy3/documentation/zelthy
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: "20.3.1"
-          cache: yarn
+          node-version: 20.3.1  # Use the latest Node.js version available (e.g., 14.x.x)
 
       - name: Install dependencies
-        run: yarn
-      - name: Build website
-        run: yarn build
+        run: npm ci
+
+      - name: Build Docusaurus site
+        run: npm run build
 
       - name: Configure AWS credentials
         run: |
-          aws configure set aws_access_key_id AKIAV7644DV5DYJ2FTCQ
-          aws configure set aws_secret_access_key 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
-          aws configure set region ap-south-1  # Adjust the AWS region if necessary
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region us-east-1  # Adjust the AWS region if necessary
 
       - name: Deploy to S3 bucket
-        run: aws s3 sync ./build s3://rajat-test-zelthy --delete  # Adjust your S3 bucket name here
+        run: aws s3 sync ./build s3://your-s3-bucket-name --delete  # Adjust your S3 bucket name here
