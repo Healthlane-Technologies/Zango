@@ -50,16 +50,8 @@ jobs:
           args: --acl public-read
         env:
           AWS_S3_BUCKET: zelthystatichosting
-          AWS_ACCESS_KEY_ID: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY}}
+          AWS_ACCESS_KEY_ID: AKIAV7644DV5DYJ2FTCQ
+          AWS_SECRET_ACCESS_KEY: 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
           AWS_REGION: ap-south-1
           SOURCE_DIR: "build"
           DEST_DIR: ${{ github.event.repository.name }}/documentation/${{ steps.extract_branch.outputs.branch }}
-
-      - name: Notify on z-deployment_notifs slack channel
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
-          SLACK_TITLE: New deployment in ${{ steps.extract_branch.outputs.branch }} environment of ${{ github.event.repository.name }}
-          SLACK_CHANNEL: "z-deployment-notifs"
-    secrets: inherit
