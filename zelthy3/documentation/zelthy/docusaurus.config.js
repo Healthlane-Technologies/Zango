@@ -6,8 +6,8 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'My Site',
-  tagline: 'Dinosaurs are cool',
+  title: 'Zelthy for Devs',
+  tagline: 'Next-Gen HealthCare App Development Platform',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
@@ -62,14 +62,20 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       // Replace with your project's social card
-      image: 'img/docusaurus-social-card.jpg',
+      image: 'img/zelthy-social-card.jpg',
       navbar: {
-        title: 'My Site',
+        title: 'Zelthy for Devs',
         logo: {
-          alt: 'My Site Logo',
-          src: 'img/logo.svg',
+          alt: 'Zelthy Logo',
+          src: 'img/zelthy_logo.png',
         },
         items: [
+          {
+            type: 'docSidebar',
+            sidebarId: 'docsSidebar',
+            position: 'left',
+            label: 'Docs',
+          },
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
@@ -78,7 +84,7 @@ const config = {
           },
           {to: '/blog', label: 'Blog', position: 'left'},
           {
-            href: 'https://github.com/facebook/docusaurus',
+            href: 'https://github.com/Healthlane-Technologies/zelthy3',
             label: 'GitHub',
             position: 'right',
           },
@@ -91,43 +97,56 @@ const config = {
             title: 'Docs',
             items: [
               {
+                label: 'Documentation',
+                to: '/docs/documentation/intro',
+              },
+              {
                 label: 'Tutorial',
-                to: '/docs/intro',
+                to: '/docs/tutorials/intro',
               },
             ],
           },
           {
-            title: 'Community',
+            title: 'Others',
             items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
+                label: 'Blogs',
+                to: '/blog',
               },
             ],
           },
+          // {
+          //   title: 'Community',
+          //   items: [
+          //     {
+          //       label: 'Stack Overflow',
+          //       href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+          //     },
+          //     {
+          //       label: 'Discord',
+          //       href: 'https://discordapp.com/invite/docusaurus',
+          //     },
+          //     {
+          //       label: 'Twitter',
+          //       href: 'https://twitter.com/docusaurus',
+          //     },
+          //   ],
+          // },
           {
             title: 'More',
             items: [
               {
-                label: 'Blog',
-                to: '/blog',
+                label: 'Zelthy',
+                href: 'https://zelthy.com',
               },
               {
                 label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
+                href: 'https://github.com/Healthlane-Technologies/zelthy3',
               },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Healthlane Technologies Pvt. Ltd.`,
       },
       prism: {
         theme: lightCodeTheme,
