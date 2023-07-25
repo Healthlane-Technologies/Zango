@@ -20,6 +20,8 @@ setup(
         'djangorestframework',
         'django-rest-knox',
         'celery==5.3.1'
+        'alembic==1.11.1',
+        'SQLAlchemy==1.4.44'
 
         # Other dependencies...
     ],
