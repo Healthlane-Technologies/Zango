@@ -49,7 +49,7 @@ jobs:
         with:
           args: --acl public-read
         env:
-          AWS_S3_BUCKET: zelthystatichosting
+          AWS_S3_BUCKET: rajat-test-zelthy
           AWS_ACCESS_KEY_ID: AKIAV7644DV5DYJ2FTCQ
           AWS_SECRET_ACCESS_KEY: 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
           AWS_REGION: ap-south-1
