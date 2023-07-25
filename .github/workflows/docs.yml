@@ -1,29 +1,37 @@
-name: Create build of Docusaurus app and push to Zelthy's Static Hosting Bucket
+# Name of workflow as seen in Github actions tab
+name: docs-build-and-deploy
+# Run workflow only on push to dev branch
 on:
   push:
     branches:
       - documentation
-
+  workflow_dispatch: # Put here!!
 jobs:
-  build-z-react-app:
+  # To build the project
+  build-tambola:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./zelthy3/documentation/zelthy
     steps:
-      - name: Checkout code
+      - name: Checking out code
         uses: actions/checkout@v3
-
-      - name: Install Node.js
+      - name: Installing Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "16"
-
-      - name: Install dependencies
+      - name: Installing dependencies
         run: yarn install
-
-      - name: Building app
+      - name: Building project
         run: CI=false yarn build
-
-     - name: Deploy to S3 bucket
-        run: aws s3 sync ./build s3://rajat-test-zelthy --delete # Adjust your S3 bucket name here
+      - name: Deploy to S3
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_BUCKET_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SOURCE_DIR: "build"
+          DEST_DIR: "zelthy3/docs"
