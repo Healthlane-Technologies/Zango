@@ -2,9 +2,6 @@ name: Create build of Docusaurus app and push to Zelthy's Static Hosting Bucket
 on:
   push:
     branches:
-      - development
-      - staging
-      - main
       - documentation
 
 jobs:
@@ -15,10 +12,10 @@ jobs:
         working-directory: ./zelthy3/documentation/zelthy
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "16"
 
@@ -28,30 +25,5 @@ jobs:
       - name: Building app
         run: CI=false yarn build
 
-      - name: Extract branch name
-        id: extract_branch
-        run: |
-          if [[ ${{ github.ref }} == "refs/heads/development" ]]; then
-            echo "::set-output name=branch::dev"
-          elif [[ ${{ github.ref }} == "refs/heads/staging" ]]; then
-            echo "::set-output name=branch::staging"
-          elif [[ ${{ github.ref }} == "refs/heads/main" ]]; then
-            echo "::set-output name=branch::prod"
-          elif [[ ${{ github.ref }} == "refs/heads/documentation" ]]; then
-            echo "::set-output name=branch::docs"
-          else
-            echo "Error: Invalid branch name"
-            exit 1
-          fi
-
-      - name: Deploy to S3
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl public-read
-        env:
-          AWS_S3_BUCKET: rajat-test-zelthy
-          AWS_ACCESS_KEY_ID: AKIAV7644DV5DYJ2FTCQ
-          AWS_SECRET_ACCESS_KEY: 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
-          AWS_REGION: ap-south-1
-          SOURCE_DIR: "build"
-          DEST_DIR: ${{ github.event.repository.name }}/documentation/${{ steps.extract_branch.outputs.branch }}
+     - name: Deploy to S3 bucket
+        run: aws s3 sync ./build s3://rajat-test-zelthy --delete # Adjust your S3 bucket name here
