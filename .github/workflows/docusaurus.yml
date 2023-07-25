@@ -1,37 +1,37 @@
-name: Docusaurus Deployment to S3
+# name: Docusaurus Deployment to S3
 
-on:
-  push:
-    branches:
-      - documentation  # Adjust this branch name if necessary
+# on:
+#   push:
+#     branches:
+#       - documentation  # Adjust this branch name if necessary
 
-jobs:
-  deploy_to_s3:
-    name: Deploy to S3
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: zelthy3/documentation/zelthy
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+# jobs:
+#   deploy_to_s3:
+#     name: Deploy to S3
+#     runs-on: ubuntu-latest
+#     defaults:
+#       run:
+#         working-directory: zelthy3/documentation/zelthy
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20.3.1  # Use the latest Node.js version available (e.g., 14.x.x)
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: 20.3.1  # Use the latest Node.js version available (e.g., 14.x.x)
 
-      - name: Install dependencies
-        run: npm install
+#       - name: Install dependencies
+#         run: npm install
 
-      - name: Build Docusaurus site
-        run: npm run build
+#       - name: Build Docusaurus site
+#         run: npm run build
 
-      - name: Configure AWS credentials
-        run: |
-          aws configure set aws_access_key_id AKIAV7644DV5DYJ2FTCQ
-          aws configure set aws_secret_access_key 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
-          aws configure set region ap-south-1  # Adjust the AWS region if necessary
+#       - name: Configure AWS credentials
+#         run: |
+#           aws configure set aws_access_key_id AKIAV7644DV5DYJ2FTCQ
+#           aws configure set aws_secret_access_key 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
+#           aws configure set region ap-south-1  # Adjust the AWS region if necessary
 
-      - name: Deploy to S3 bucket
-        run: aws s3 sync ./build s3://rajat-test-zelthy --delete  # Adjust your S3 bucket name here
+#       - name: Deploy to S3 bucket
+#         run: aws s3 sync ./build s3://rajat-test-zelthy --delete  # Adjust your S3 bucket name here
