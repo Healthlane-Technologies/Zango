@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato&family=Open+Sans:wght@400;600&family=Source+Sans+Pro:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+	display: flex;
+	margin: 0;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+		'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+		sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	min-height: var(--app-height);
+}
+
+#root {
+	display: flex;
+	flex-grow: 1;
+	flex-direction: column;
+}
+
+code {
+	font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+		monospace;
+}
+
+.first-app-text {
+	font-size: 4rem;
+	font-weight: 700;
+	background: -webkit-linear-gradient(left, #b084cc, #ff8276);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* Firefox */
+input[type='number'] {
+	-moz-appearance: textfield;
+}
+
+/* Absolute Center Spinner */
+.overlay-spinner {
+	position: fixed;
+	z-index: 1051;
+	overflow: show;
+	margin: auto;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0;
+	width: 50px;
+	height: 50px;
+}
+
+/* Transparent Overlay */
+.overlay-spinner:before {
+	content: '';
+	display: block;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* :not(:required) hides these rules from IE9 and below */
+.overlay-spinner:not(:required) {
+	/* hide "loading..." text */
+	font: 0/0 a;
+	color: transparent;
+	text-shadow: none;
+	background-color: transparent;
+	border: 0;
+}
+
+.overlay-spinner:not(:required):after {
+	content: '';
+	display: block;
+	font-size: 10px;
+	width: 50px;
+	height: 50px;
+	margin-top: -0.5em;
+	border: 5px solid #00857c;
+	border-radius: 100%;
+	border-bottom-color: transparent;
+	-webkit-animation: spinner 1s linear 0s infinite;
+	animation: spinner 1s linear 0s infinite;
+}
+
+/* Animation */
+
+@-webkit-keyframes spinner {
+	0% {
+		-webkit-transform: rotate(0deg);
+		-moz-transform: rotate(0deg);
+		-ms-transform: rotate(0deg);
+		-o-transform: rotate(0deg);
+		transform: rotate(0deg);
+	}
+	100% {
+		-webkit-transform: rotate(360deg);
+		-moz-transform: rotate(360deg);
+		-ms-transform: rotate(360deg);
+		-o-transform: rotate(360deg);
+		transform: rotate(360deg);
+	}
+}
+@-moz-keyframes spinner {
+	0% {
+		-webkit-transform: rotate(0deg);
+		-moz-transform: rotate(0deg);
+		-ms-transform: rotate(0deg);
+		-o-transform: rotate(0deg);
+		transform: rotate(0deg);
+	}
+	100% {
+		-webkit-transform: rotate(360deg);
+		-moz-transform: rotate(360deg);
+		-ms-transform: rotate(360deg);
+		-o-transform: rotate(360deg);
+		transform: rotate(360deg);
+	}
+}
+@-o-keyframes spinner {
+	0% {
+		-webkit-transform: rotate(0deg);
+		-moz-transform: rotate(0deg);
+		-ms-transform: rotate(0deg);
+		-o-transform: rotate(0deg);
+		transform: rotate(0deg);
+	}
+	100% {
+		-webkit-transform: rotate(360deg);
+		-moz-transform: rotate(360deg);
+		-ms-transform: rotate(360deg);
+		-o-transform: rotate(360deg);
+		transform: rotate(360deg);
+	}
+}
+@keyframes spinner {
+	0% {
+		-webkit-transform: rotate(0deg);
+		-moz-transform: rotate(0deg);
+		-ms-transform: rotate(0deg);
+		-o-transform: rotate(0deg);
+		transform: rotate(0deg);
+	}
+	100% {
+		-webkit-transform: rotate(360deg);
+		-moz-transform: rotate(360deg);
+		-ms-transform: rotate(360deg);
+		-o-transform: rotate(360deg);
+		transform: rotate(360deg);
+	}
+}
+
+.complete-hidden-scroll-style::-webkit-scrollbar-track {
+	-webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+	border-radius: 10px;
+	background-color: transparent;
+}
+
+.complete-hidden-scroll-style::-webkit-scrollbar {
+	width: 0px;
+	background-color: transparent;
+}
+
+.complete-hidden-scroll-style::-webkit-scrollbar-thumb {
+	border-radius: 10px;
+	-webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+	background-color: #555;
+}
+
+.DateInput_input__focused {
+	border-bottom: 0px !important;
+}
+
+.DateInput_input {
+	font-family: 'Invention App';
+	font-style: normal;
+	font-weight: 400 !important;
+	font-size: 14px !important;
+	border: 1px solid #d5d5d5 !important;
+	padding: 14px 12px !important;
+}
+
+.DateRangePickerInput_clearDates {
+	right: auto !important;
+}
+
+.DateRangePickerInput_arrow {
+	display: none !important;
+}
+
+.DateInput_input::placeholder {
+	color: #9a9a9a;
+	font-size: 14px;
+	font-style: italic;
+	opacity: 1; /* Firefox */
+}
+
+.DateInput_input:-ms-input-placeholder {
+	/* Internet Explorer 10-11 */
+	color: #9a9a9a;
+	font-size: 14px;
+	font-style: italic;
+}
+
+.DateInput_input::-ms-input-placeholder {
+	/* Microsoft Edge */
+	color: #9a9a9a;
+	font-size: 14px;
+	font-style: italic;
+}
+
+.small-device-height-fix {
+	max-height: 100vh;
+	max-height: calc((var(--vh, 1vh) * 100) - 84px);
+}
+
+@layer components {
+	.header-underline {
+		background-color: theme('colors.primary');
+		border-radius: theme('borderRadius.sm');
+		height: theme('spacing.1');
+		width: theme('spacing.7');
+	}
+}

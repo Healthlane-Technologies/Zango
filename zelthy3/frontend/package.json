@@ -1,0 +1,67 @@
+{
+	"name": "apps-msd-ind-order-tracking-platform-fe",
+	"version": "1.0.0",
+	"private": true,
+	"proxy": "https://msdodtrack038.in.zelthy.dev/",
+	"dependencies": {
+		"@headlessui/react": "^1.7.7",
+		"@popperjs/core": "^2.11.6",
+		"@tanstack/react-table": "^8.9.3",
+		"@tanstack/react-virtual": "^3.0.0-alpha.0",
+		"@testing-library/jest-dom": "^5.14.1",
+		"@testing-library/react": "^13.0.0",
+		"@testing-library/user-event": "^13.2.1",
+		"browser-image-compression": "^2.0.0",
+		"env-cmd": "^10.1.0",
+		"formik": "^2.2.9",
+		"global": "^4.4.0",
+		"just-debounce-it": "^3.2.0",
+		"lodash": "^4.17.21",
+		"moment": "^2.29.4",
+		"react": "^18.2.0",
+		"react-dates": "^21.8.0",
+		"react-dom": "^18.2.0",
+		"react-popper": "^2.3.0",
+		"react-router-dom": "^6.6.1",
+		"react-scripts": "5.0.1",
+		"react-window": "^1.8.8",
+		"react-zxing": "^1.1.0",
+		"uglifyjs-webpack-plugin": "^2.2.0",
+		"web-vitals": "^2.1.0",
+		"yup": "^0.32.11"
+	},
+	"scripts": {
+		"start": "react-scripts start",
+		"build": "node generate-build.js && env-cmd -f .env npm run build:react && npm run build:bundle",
+		"build:react": "react-scripts build",
+		"build:bundle": "webpack --config webpack.config.js",
+		"test": "react-scripts test",
+		"eject": "react-scripts eject"
+	},
+	"eslintConfig": {
+		"extends": [
+			"react-app",
+			"react-app/jest"
+		]
+	},
+	"browserslist": {
+		"production": [
+			">0.2%",
+			"not dead",
+			"not op_mini all"
+		],
+		"development": [
+			"last 1 chrome version",
+			"last 1 firefox version",
+			"last 1 safari version"
+		]
+	},
+	"devDependencies": {
+		"autoprefixer": "^10.4.13",
+		"postcss": "^8.4.20",
+		"prettier": "^2.8.1",
+		"prettier-plugin-tailwindcss": "^0.2.1",
+		"tailwindcss": "^3.2.4",
+		"webpack-cli": "^5.0.1"
+	}
+}
