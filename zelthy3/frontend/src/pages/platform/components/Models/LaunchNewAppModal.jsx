@@ -7,10 +7,8 @@ import { get } from 'lodash';
 import { transformToFormDataOrder } from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
-// import {
-// 	useDashboard,
-// 	useDashboardDispatch,
-// } from '../../context/DashboardContextProvider';
+import { useSelector, useDispatch } from 'react-redux';
+import { close, selectIsLaunchNewAppModalOpen } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
@@ -124,36 +122,16 @@ const LaunchNewAppForm = ({ closeModal }) => {
 };
 
 export default function LaunchNewAppModal() {
-	// const { isAddOrderModalOpen } = useDashboard();
-	// const dashboardDispatch = useDashboardDispatch();
-
-	let isAddOrderModalOpen = false;
+	const isLaunchNewAppModalOpen = useSelector(selectIsLaunchNewAppModalOpen);
+	const dispatch = useDispatch();
 
 	function closeModal() {
-		// dashboardDispatch({
-		// 	type: 'SET_NEW_ORDER_MODAL_VISIBLE',
-		// 	payload: false,
-		// });
+		dispatch(close());
 	}
-
-	// function openModal() {
-	// 	dashboardDispatch({
-	// 		type: 'SET_NEW_ORDER_MODAL_VISIBLE',
-	// 		payload: true,
-	// 	});
-	// }
-
-	// useEffect(() => {
-	// 	if (isAddOrderModalOpen) {
-	// 		openModal();
-	// 	} else {
-	// 		closeModal();
-	// 	}
-	// }, [isAddOrderModalOpen]);
 
 	return (
 		<>
-			<Transition appear show={isAddOrderModalOpen} as={Fragment}>
+			<Transition appear show={isLaunchNewAppModalOpen} as={Fragment}>
 				<Dialog as="div" className="relative z-10" onClose={closeModal}>
 					<Transition.Child
 						as={Fragment}

@@ -12,7 +12,7 @@ export default function Layout({ children }) {
 		<>
 			<nav className="flex items-center justify-between border-b-[1px] border-[#DDE2E5] py-[8px] pl-[24px] pr-[40px]">
 				<div className="flex items-center justify-between gap-[48px]">
-					<Link to="/msdodtrack038/orders">
+					<Link to="/platform">
 						<ZelthyIcon />
 					</Link>
 					<NavSearchForm />
@@ -21,7 +21,9 @@ export default function Layout({ children }) {
 					<ProfileMenu />
 				</div>
 			</nav>
-			<main className="small-device-height-fix flex grow">{children}</main>
+			<main className="small-device-height-fix flex grow overflow-y-auto">
+				{children}
+			</main>
 			<footer className="flex items-center justify-center gap-[8px] border-t-[1px] border-[#DDE2E5] p-[8px]">
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
 					V 2.0

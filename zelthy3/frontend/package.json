@@ -6,6 +6,7 @@
 	"dependencies": {
 		"@headlessui/react": "^1.7.7",
 		"@popperjs/core": "^2.11.6",
+		"@reduxjs/toolkit": "^1.9.5",
 		"@tanstack/react-table": "^8.9.3",
 		"@tanstack/react-virtual": "^3.0.0-alpha.0",
 		"@testing-library/jest-dom": "^5.14.1",
@@ -22,6 +23,7 @@
 		"react-dates": "^21.8.0",
 		"react-dom": "^18.2.0",
 		"react-popper": "^2.3.0",
+		"react-redux": "^8.1.1",
 		"react-router-dom": "^6.6.1",
 		"react-scripts": "5.0.1",
 		"react-window": "^1.8.8",

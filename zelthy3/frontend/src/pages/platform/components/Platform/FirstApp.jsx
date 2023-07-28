@@ -1,6 +1,14 @@
+import { useSelector, useDispatch } from 'react-redux';
+import { open } from '../../slice';
 import { ReactComponent as LaunchNewAppIcon } from '../../../../assets/images/svg/launch-new-app-icon.svg';
 
 export default function FirstApp() {
+	const dispatch = useDispatch();
+
+	const handleLaunchNewApp = () => {
+		dispatch(open());
+	};
+
 	return (
 		<div className="flex grow flex-col px-[48px] py-[24px]">
 			<span className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
@@ -16,7 +24,10 @@ export default function FirstApp() {
 					</p>
 				</div>
 				<div>
-					<button className="flex grow gap-[8px] rounded-[4px] bg-[#5048ED] px-[16px] py-[7px]">
+					<button
+						onClick={handleLaunchNewApp}
+						className="flex grow gap-[8px] rounded-[4px] bg-[#5048ED] px-[16px] py-[7px]"
+					>
 						<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
 							Launch New App
 						</span>

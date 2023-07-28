@@ -7,15 +7,16 @@ import debounce from 'just-debounce-it';
 import useApi from '../../../../../hooks/useApi';
 import { get } from 'lodash';
 
-import { ReactComponent as SearchIcon } from '../../../../../assets/images/svg/search-icon.svg';
 import SelectField from './SelectField';
+import { useRef } from 'react';
+import { useLayoutEffect } from 'react';
 
 const AutoSave = ({ debounceMs }) => {
 	const formik = useFormikContext();
 	const [lastSaved, setLastSaved] = useState(null);
 	const debouncedSubmit = useCallback(
 		debounce(() => {
-			if (formik.isValid) {
+			if (formik.touched && formik.isValid) {
 				formik.submitForm().then(() => setLastSaved(new Date().toISOString()));
 			}
 		}, debounceMs),
@@ -33,10 +34,9 @@ const AutoSave = ({ debounceMs }) => {
 	);
 };
 
-export default function NavSearchForm() {
+export default function Filters() {
 	let initialValues = {
-		searchValue: '',
-		searchType: 'Apps',
+		sort: 'Alphabetical',
 	};
 
 	let validationSchema = Yup.object().shape({});
@@ -74,43 +74,21 @@ export default function NavSearchForm() {
 		>
 			{(formik) => {
 				return (
-					<form
-						className="complete-hidden-scroll-style flex flex-col gap-4"
-						onSubmit={formik.handleSubmit}
-					>
+					<form className="flex flex-col gap-4" onSubmit={formik.handleSubmit}>
 						<AutoSave debounceMs={300} />
-						<div className="flex flex-col rounded-[4px] bg-[#F0F3F4] md:flex-row">
-							<div className="flex flex-col gap-[4px]">
-								<div className="flex items-center gap-[12px] rounded-[4px] bg-[#F0F3F4] py-[6px] px-[12px]">
-									<SearchIcon />
-									<input
-										id="searchValue"
-										name="searchValue"
-										type="text"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.searchValue}
-										className="w-full bg-transparent font-lato text-sm outline-0 ring-0 placeholder:text-[#6C747D] md:w-[300px] lg:w-[537px]"
-										placeholder="Search in Apps"
-									/>
-								</div>
-								{formik.touched.searchValue && formik.errors.searchValue ? (
-									<div className="font-open-sans text-form-xs text-[#cc3300]">
-										{formik.errors.searchValue}
-									</div>
-								) : null}
-							</div>
+						<div className="flex gap-4 rounded-[4px]">
 							<SelectField
-								key="searchType"
-								label="Stockist"
-								name="searchType"
-								id="searchType"
+								key="sort"
+								label="Sort:"
+								name="sort"
+								id="sort"
 								placeholder="Select"
-								value={get(formik.values, 'searchType', '')}
-								optionsDataName="searchType"
+								value={get(formik.values, 'sort', '')}
+								optionsDataName="sort"
 								optionsData={[
-									{ id: 'Apps', label: 'Apps' },
-									{ id: 'User Management', label: 'User Management' },
+									{ id: 'Alphabetical', label: 'Alphabetical' },
+									{ id: 'Date Created', label: 'Date Created' },
+									{ id: 'Last Modified', label: 'Last Modified' },
 								]}
 								onChange={formik.handleChange}
 								formik={formik}

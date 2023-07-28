@@ -7,7 +7,6 @@ export const PlatformRoutes = () => {
 		<Layout>
 			<Routes>
 				<Route path="" element={<Platform />} />
-				<Route path=":platformId" element={<div>Platform Details</div>} />
 				<Route path="*" element={<Navigate to="." />} />
 			</Routes>
 		</Layout>

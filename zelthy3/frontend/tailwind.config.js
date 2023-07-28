@@ -91,8 +91,9 @@ module.exports = {
 				'primary-card': '0px 0px 12px rgba(0, 0, 0, 0.08)',
 				'infusion-card': '0px 0px 12px rgba(0, 0, 0, 0.08)',
 				'primary-menu': ' 0px 0px 12px rgba(0, 0, 0, 0.12)',
-
 				top: '0px -8px 20px rgba(40, 58, 70, 0.08);',
+				eachApp: '0px 4px 20px 0px rgba(0, 0, 0, 0.12)',
+				appSort: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 			},
 			height: {
 				screen: 'var(--app-height)',
