@@ -6,7 +6,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Zelthy for Devs',
+  title: 'ZOSP',
   tagline: 'Next-Gen HealthCare App Development Platform',
   favicon: 'img/favicon.ico',
 
@@ -62,7 +62,7 @@ const config = {
       // Replace with your project's social card
       image: 'img/zelthy-social-card.jpg',
       navbar: {
-        title: 'Zelthy for Devs',
+        title: 'ZOSP',
         logo: {
           alt: 'Zelthy Logo',
           src: 'img/zelthy_logo.png',
@@ -96,11 +96,11 @@ const config = {
             items: [
               {
                 label: 'Documentation',
-                to: '/docs/documentation/intro',
+                to: '/docs/documentation/introduction',
               },
               {
                 label: 'Tutorial',
-                to: '/docs/tutorials/intro',
+                to: '/docs/tutorials/todo-app/overview',
               },
             ],
           },
