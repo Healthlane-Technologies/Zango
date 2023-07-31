@@ -3,6 +3,7 @@ import re
 from django.http import HttpResponse
 from django.conf import settings
 from django.http import Http404
+from django.apps import apps
 
 from .zelthy_preprocessor import *
 from .helpers import get_app_base_dir, get_module_path, get_userrole_model, \
@@ -11,6 +12,7 @@ from .helpers import get_app_base_dir, get_module_path, get_userrole_model, \
 
 def check_userAccessPerm(request):
     if request.user.is_anonymous:
+        return True
         user_role = get_userrole_model().objects.get(name='AnonymousUsers')
         return user_role.has_perm(request, 'userAccess')
     else:
@@ -19,6 +21,7 @@ def check_userAccessPerm(request):
 
 def check_view_perm(request, view_name):
     if request.user.is_anonymous:
+        return True
         user_role = get_userrole_model().objects.get(name='AnonymousUsers')
         return user_role.has_perm(request, 'view', view_name)
     else:
@@ -26,6 +29,9 @@ def check_view_perm(request, view_name):
                 or request.user_role.has_perm(request, 'view', view_name)
 
 
+from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 
     
 
@@ -52,6 +58,10 @@ def zelthy_dynamic_views(request, *args, **kwargs):
     :rtype: django.views.generic.base.View
     :raises Http404: If no match is found in the `routes`.
     """
+    # print(apps.get_models('dynamic_models'))
+    # app_cfg = apps.get_app_config('dynamic_models')
+    # print(app_cfg.apps.register_model)
+    # print(apps.get_models('dynamic_models'))
     if not check_userAccessPerm(request):
         return HttpResponse('Permission denied!', status=403)
     app_dir = get_app_base_dir(request.tenant)
@@ -69,13 +79,17 @@ def zelthy_dynamic_views(request, *args, **kwargs):
             url_file = app_dir / module_path / r["url"]
             url_file = url_file.with_suffix(".py")
             with url_file.open() as f:
-                _url_file = f.read()  
+                _url_file = f.read()
+            
+            Base = declarative_base()
+
             zcode = ZPreprocessor(
                     _url_file, 
                     tenant=request.tenant, 
                     parent_path=url_file.parent, 
                     app_dir=app_dir,
-                    app_settings=app_settings
+                    app_settings=app_settings,
+                    base = Base
                     )
             c = ZimportStack(zcode, tenant=request.tenant)
             c.process_import_and_execute()
@@ -86,6 +100,7 @@ def zelthy_dynamic_views(request, *args, **kwargs):
                     match = pattern.pattern.regex.search(mod_url_path)
                     kwargs = match.groupdict()
                     view_unique_name = get_view_unique_name(r['module'], pattern.callback)
+                    # print("----", apps.get_models('dynamic_models'))
                     if check_view_perm(request, view_unique_name):
                         return pattern.callback(request, *args, **kwargs)
                     else:

@@ -8,6 +8,7 @@ class ZPreprocessor:
     def __init__(self, file_obj, **kwargs):
         self.parent_path = kwargs.get('parent_path')
         self.app_settings = kwargs.get('app_settings')
+        self.BASE = kwargs.get('base')
         self.app_dir = kwargs.get('app_dir')
         code_string = file_obj
         lines = code_string.split("\n")
@@ -88,7 +89,6 @@ class ZimportStack:
             module_filepath = parent_path / "/".join(path[1:].split("."))
         else:            
             mod1 = path.split(".")[0]
-            print("here", self.is_package(self.tenant, mod1))
             if self.is_package(self.tenant, mod1):
                 module_filepath = self.zcode.app_dir / "zelthy_packages" / "/".join(path.split("."))
             else:
@@ -100,9 +100,10 @@ class ZimportStack:
 
     
     def process_import_and_execute(self):
+        from zelthy3.sql_alchemy import sa_base
         top = self.get_top()
         if top:
-            file_obj, module_filepath = self.get_zfileobj(top['zpath'], top['parent'])
+            file_obj, module_filepath = self.get_zfileobj(top['zpath'], top['parent'])            
             zcode = ZPreprocessor(
                         file_obj, 
                         request=self.request,
@@ -131,6 +132,7 @@ class ZimportStack:
                     exec("\n".join(zcode.lines), self._globals, self._globals)
                     self._processed.append(self.elements.pop())    
             else:
+                self._globals.update(Base=self.zcode.BASE)
                 exec("\n".join(zcode.lines), self._globals, self._globals)
                 processed = self.elements.pop()
                 self._processed.append(processed)

@@ -29,6 +29,7 @@ def run_migrations_offline() -> None:
         target_metadata=None,
         literal_binds=True,
         dialect_opts={ "paramstyle": "named" },
+        version_table_schema="apps2"
     )
 
     with context.begin_transaction():
@@ -43,6 +44,7 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     current_tenant = context.get_x_argument(as_dictionary=True).get("apps2")
+    current_tenant = "apps2"
     with connectable.connect() as connection:
         connection.execute(text('set search_path to "%s"' % current_tenant))
         connection.dialect.default_schema_name = current_tenant
@@ -51,6 +53,7 @@ def run_migrations_online() -> None:
             target_metadata=None, 
             include_object=include_object,
             version_table_schema="apps2",
+            transaction_per_migration=False
         )
 
         with context.begin_transaction():

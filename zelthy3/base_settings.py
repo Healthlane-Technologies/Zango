@@ -1,5 +1,6 @@
 
-
+import sys
+print(any("zelthy_apps" in m for m in sys.modules.keys()))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -43,6 +44,7 @@ TENANT_APPS = [
     'django.contrib.contenttypes',
     'zelthy3.backend.apps.tenants.appauth',
     'zelthy3.backend.apps.tenants.permissions',
+    'zelthy3.backend.apps.tenants.dynamic_models',
     'corsheaders',
 
 ]
@@ -67,6 +69,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'zelthy3.middleware.ClearModulesMiddleware'
 ]
 
 
@@ -100,3 +103,5 @@ DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',
 )
 
+MIGRATION_MODULES = {}
+RUNNING_ZMAKEMIGRATIONS = False

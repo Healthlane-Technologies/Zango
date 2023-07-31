@@ -1,3 +1,7 @@
-{% for user in users %}
-<p>{{user.id}} - {{user.name}} - {{user.email}} - {{user.city}} </p>
+
+Hello
+{{new_user.id}}- {{new_user.name}} - {{new_user.email}} - {{new_user.city}} <br>
+
+{% for address in addresses %}
+{{address.id}} - {{address.address}}<br>
 {% endfor %}

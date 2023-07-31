@@ -1,29 +1,34 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table, \
+    MetaData, DateTime, JSON, BigInteger, Sequence
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
 class DjangoModelConverter:
+
     def __init__(self, django_model):
         self.django_model = django_model
         self.sqlalchemy_model = None
 
     def convert_to_sqlalchemy(self):
-        fields = {
-            'id': Column(Integer, primary_key=True),
-        }
-
+        # fields = {
+        #     'id': Column(Integer, primary_key=True),
+        # }
+        columns = []
         for field in self.django_model._meta.fields:
-            if field.name == 'id':
-                continue
-
+            # if field.name == 'id':
+            #     continue
             field_type = self._get_sqlalchemy_field_type(field)
             kwargs = self._get_sqlalchemy_field_kwargs(field)
-            fields[field.name] = Column(field_type, **kwargs)
+            if field.name == 'id':
+                columns.append(Column(field.name, field_type, Sequence("%s_%s_seq"%(self.django_model._meta.db_table, field.name)), **kwargs))
+            else:
+                columns.append(Column(field.name, field_type, **kwargs))
+        table = Table(self.django_model._meta.db_table, MetaData(), *columns)
+        self.sqlalchemy_model = table
 
-        self.sqlalchemy_model = type(self.django_model.__name__, (Base,), fields)
-
+        
         # Handle many-to-many relationships
         for field in self.django_model._meta.many_to_many:
             if isinstance(field.remote_field.model, str):
@@ -45,6 +50,9 @@ class DjangoModelConverter:
             'CharField': String,
             'IntegerField': Integer,
             'BooleanField': Boolean,
+            'DateTimeField': DateTime,
+            'JSONField': JSON,
+            'BigAutoField': BigInteger
             # Add more mappings for other field types as needed
         }
         field_type = django_to_sqlalchemy.get(field.__class__.__name__)
@@ -57,6 +65,7 @@ class DjangoModelConverter:
 
         if field.primary_key:
             kwargs['primary_key'] = True
+            kwargs['autoincrement'] = True
 
         if not field.null:
             kwargs['nullable'] = False

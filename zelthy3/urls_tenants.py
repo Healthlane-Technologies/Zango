@@ -7,5 +7,6 @@ urlpatterns = [
     re_path(r'^', include('zelthy3.backend.apps.tenants.appauth.urls')),
     # path('your_app/', include('your_app.urls')),
     re_path(r'api/auth/', include('knox.urls')),
-    re_path(r'^((?:[\w\-:.,]+/)*)$', zelthy_dynamic_views)
+    # re_path(r'^((?:[\w\-:.,]+/)*)$', zelthy_dynamic_views)
+    re_path(r'^((?:[\w\-:.,]+/)*)$', include('zelthy3.backend.apps.tenants.dynamic_models.urls'))
 ]

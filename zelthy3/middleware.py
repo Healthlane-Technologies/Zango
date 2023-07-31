@@ -9,6 +9,18 @@ from django_tenants.utils import remove_www, get_public_schema_name, get_tenant_
     has_multi_type_tenants, get_tenant_domain_model, get_public_schema_urlconf
 
 from django_tenants.middleware.main import TenantMainMiddleware
+# from sqlalchemy.ext.declarative import declarative_base
+
+from zelthy3.sql_alchemy import sa_base, Base
+from sqlalchemy.ext.declarative import declarative_base
+
+
+from collections import OrderedDict
+from django.apps import apps
+from django.conf import settings
+from django.core import management
+
+
 
 class ZelthyTenantMainMiddleware(TenantMainMiddleware):
     TENANT_NOT_FOUND_EXCEPTION = Http404
@@ -50,6 +62,15 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
         request.tenant = tenant
         connection.set_tenant(request.tenant)
         self.setup_url_routing(request)
+        # sa_base.base = declarative_base()
+        # new_app_name = "zelthy_apps.Tenant3"
+
+        # settings.INSTALLED_APPS += (new_app_name, )
+        # apps.app_configs = OrderedDict()
+        # apps.apps_ready = apps.models_ready = apps.loading = apps.ready = False
+        # apps.clear_cache()
+        # apps.populate(settings.INSTALLED_APPS)
+
 
     def no_tenant_found(self, request, hostname):
         """ What should happen if no tenant is found.
@@ -103,5 +124,22 @@ class SetUserRoleMiddleWare:
         response = self.get_response(request)
 
         # Code to be executed for each request/response after the view is called
+
+        return response
+
+
+import sys
+
+class ClearModulesMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Before processing the request, we'll clear the modules
+        modules_to_delete = [m for m in sys.modules if 'zelthy_apps' in m]
+        for module in modules_to_delete:
+            del sys.modules[module]
+
+        response = self.get_response(request)
 
         return response
