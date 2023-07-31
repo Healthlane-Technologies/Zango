@@ -1,37 +1,13 @@
-# Name of workflow as seen in Github actions tab
-name: docs-build-and-deploy
-# Run workflow only on push to dev branch
+name: ci-cd-workflow
 on:
   push:
     branches:
       - documentation
-  workflow_dispatch: # Put here!!
+
 jobs:
-  # To build the project
-  build-tambola:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./zelthy3/documentation/zelthy
-    steps:
-      - name: Checking out code
-        uses: actions/checkout@v3
-      - name: Installing Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-      - name: Installing dependencies
-        run: yarn install
-      - name: Building project
-        run: CI=false yarn build
-      - name: Deploy to S3
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl public-read
-        env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_BUCKET_NAME }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          SOURCE_DIR: "build"
-          DEST_DIR: "zelthy3/docs"
+  my-job:
+    uses: Healthlane-Technologies/zelthy-ci-cd-workflows/.github/workflows/deploy_docusaurus_build_to_s3.yml@v4
+    with:
+      static-bucket: zelthystatichosting
+      AWS_REGION: ap-south-1
+    secrets: inherit
