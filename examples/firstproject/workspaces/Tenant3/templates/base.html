@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello</title>
+    
+    {% block css %}
+    <!-- Put global CSS links here -->
+    {% endblock %}
+</head>
+<body>
+    <header>
+        <!-- Your header content goes here -->
+    </header>
+
+    <nav>
+        <!-- Your navigation content goes here -->
+    </nav>
+
+    <main>
+        {% block content %}
+        <!-- Default content can go here if needed -->
+        {% endblock %}
+    </main>
+
+    <footer>
+        <!-- Your footer content goes here -->
+    </footer>
+
+    {% block js %}
+    <!-- Put global JS links or scripts here -->
+    {% endblock %}
+</body>
+</html>

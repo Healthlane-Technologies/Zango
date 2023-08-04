@@ -67,3 +67,42 @@ PUBLIC_SCHEMA_URLCONF = 'firstproject.urls_public'
 ROOT_URLCONF = 'firstproject.urls_tenants'
 
 ENV='dev'
+
+
+# import os
+# import importlib
+# import sys
+# import sys
+# from watchdog.observers import Observer
+# from watchdog.events import FileSystemEventHandler
+
+# class FileChangeHandler(FileSystemEventHandler):
+#     def on_modified(self, event):
+#         print(f'File {event.src_path} has been modified')
+#         if event.src_path.endswith('.py'):
+#             module_name = os.path.basename(event.src_path)[:-3]  # Remove ".py" from the end
+#             if module_name in sys.modules:
+#                 print(f'Reloading module {module_name}')
+#                 importlib.reload(sys.modules[module_name])
+
+# # Directory you want to watch for changes
+# path_to_watch = os.getcwd()  # this will watch the current working directory
+# event_handler = FileChangeHandler()
+
+# observer = Observer()
+# observer.schedule(event_handler, path_to_watch, recursive=True)
+
+# observer.start()
+# import time
+# try:
+#     while True:
+#         time.sleep(1)
+#         print("h")
+# except KeyboardInterrupt:
+#     observer.stop()
+
+# observer.join()
+
+
+
+
