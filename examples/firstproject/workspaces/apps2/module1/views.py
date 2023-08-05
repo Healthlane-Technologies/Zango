@@ -48,9 +48,9 @@ permModel = DjangoModelConverter(PermissionsModel)
 policyModel = DjangoModelConverter(PolicyModel)
 # from .models import Address
 # from .models import MyUser
-from .models import TestModel1
-from .models import FrameModel
-from .models import FrameModel, FrameModel
+# from .models import TestModel1
+# from .models import FrameModel
+# from .models import FrameModel, FrameModel
 from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
 
 # from .models_1 import Patient
@@ -62,7 +62,7 @@ from landingPage.models import LandingPageModel
 
 # from frame.configure.models import Instance
 from datetime import datetime, date
-from .models import Patient, Address
+from .models import Address
 class View2(TemplateView):
 
     template_name = 'hello_world.html'
@@ -83,9 +83,11 @@ class View2(TemplateView):
         #         identifier="kdodi", name='Test', telecom='sodio', birthDate=date.today(), address=address)
         # # patient.address_1.add(address)
         # patient.save()
+        print(Address)
         address1 = Address.objects.get(id=5)
-        print(address1.patient_set.all())
+        # print(address1.patient_set.all())
         print(address1.landingpagemodel_set.all())
         # print(patient.address.remote_field)
+        context['landingpage'] = address1.landingpagemodel_set.all()
         return context  
         

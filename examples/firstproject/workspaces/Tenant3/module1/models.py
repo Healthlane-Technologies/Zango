@@ -3,19 +3,21 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZManyToManyField, ZOneToOneField
 
 
 class Address(DynamicModelBase):
     use = models.CharField(max_length=50)
     type = models.CharField(max_length=50, null=True)
     text = models.CharField(max_length=255, null=True)
-    # line = ArrayField(models.CharField(max_length=100, null=True))
     city = models.CharField(max_length=100, null=True)
     district = models.CharField(max_length=100, null=True)
     state = models.CharField(max_length=100, null=True)
     postalCode = models.CharField(max_length=50, null=True)
     country = models.CharField(max_length=50, null=True)
     
+
+
 class Patient(DynamicModelBase):
     GENDER_CHOICES = [
         ('male', 'Male'),
@@ -31,8 +33,9 @@ class Patient(DynamicModelBase):
     birthDate = models.DateField()
     deceasedBoolean = models.BooleanField(default=False)
     deceasedDateTime = models.DateTimeField(null=True, blank=True)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    address_1 = models.ManyToManyField(Address)
+    address = ZForeignKey(Address, on_delete=models.CASCADE)
+    # address_1 = models.ManyToManyField(Address)
+    address_1 = ZManyToManyField(Address)
 
 
 

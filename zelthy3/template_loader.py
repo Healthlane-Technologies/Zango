@@ -30,7 +30,7 @@ class AppTemplateLoader(BaseLoader):
 
     def _load_template_source(self, template_name, template_dirs=None):
         try:
-            app_dir = settings.BASE_DIR / "zelthy_apps" / connection.tenant.name  
+            app_dir = settings.BASE_DIR / "workspaces" / connection.tenant.name  
             ##new
             template_folders = list(app_dir.glob('**/templates'))
             # print(template_folders)

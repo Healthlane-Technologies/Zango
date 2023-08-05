@@ -23,8 +23,18 @@
         }
         
     ],
-    "package_routes": [
-        
+    "plugin_routes": [
+        {
+            "re_path": "^frame/",
+            "plugin": "frame",
+            "url": "urls"
+        },
+        {
+            "re_path": "^email/",
+            "plugin": "zel-email",
+            "url": "urls"
+        }
+
     ]
     
 }

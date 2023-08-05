@@ -4,8 +4,10 @@ from django.apps import AppConfig
 
 
 class DynamicModelsConfig(AppConfig):
+
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'zelthy3.backend.apps.tenants.dynamic_models'
+    
 
     def ready(self):
         # thanks to Baserow for this hack

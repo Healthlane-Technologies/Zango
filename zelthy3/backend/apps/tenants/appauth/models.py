@@ -100,6 +100,7 @@ class UserRoleModel(FullAuditMixin, PolicyQsMixin):
                 null=True,
                 blank=True
                 )
+  temp_field = models.CharField(max_length=20, null=True)
   is_default = models.BooleanField(default=False)
   """
     sample config

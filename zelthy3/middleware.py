@@ -127,7 +127,6 @@ class SetUserRoleMiddleWare:
 
         return response
 
-
 import sys
 
 class ClearModulesMiddleware:
@@ -136,7 +135,15 @@ class ClearModulesMiddleware:
 
     def __call__(self, request):
         # Before processing the request, we'll clear the modules
-        modules_to_delete = [m for m in sys.modules if 'zelthy_apps' in m]
+        modules_to_delete = []
+        for module_name, module in sys.modules.items():
+            try:
+                if 'workspaces' in module.__file__:
+                    modules_to_delete.append(module_name)
+            except:
+                # print(type(m))
+                pass
+
         for module in modules_to_delete:
             del sys.modules[module]
 
