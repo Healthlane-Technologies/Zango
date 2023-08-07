@@ -35,5 +35,5 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY}}
           AWS_REGION: "ap-south-1"
-          SOURCE_DIR: "build"
+          SOURCE_DIR: "build/"
           DEST_DIR: "${{ github.event.repository.name }}/docs"
