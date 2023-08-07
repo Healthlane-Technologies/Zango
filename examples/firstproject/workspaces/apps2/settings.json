@@ -33,7 +33,13 @@
             "re_path": "^email/",
             "plugin": "zel-email",
             "url": "urls"
+        },
+        {
+            "re_path": "^program/",
+            "plugin": "program-benefit",
+            "url": "urls"
         }
+
 
     ]
     

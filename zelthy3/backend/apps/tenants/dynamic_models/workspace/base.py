@@ -262,7 +262,6 @@ class Workspace:
         for r in routes:
             r_regex = re.compile(r['re_path'])
             if r_regex.search(path): # match module
-                print("matching module: ", r['module'])
                 module = r['module'] + "." + r['url']
                 urlpatterns = getattr(import_module(module), "urlpatterns")
                 mod_url_path = path[len(r['re_path'].strip("^")):] or "/"

@@ -64,7 +64,6 @@ class DefaultAppsProxy:
         """
         Adds a model to the default apps registry.
         """
-        print("dynamic_models", dynamic_models)
         self._extra_models.extend(dynamic_models)
 
     def get_models(self, *args, **kwargs):

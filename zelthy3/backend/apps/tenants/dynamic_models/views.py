@@ -109,7 +109,6 @@ class DynamicView(View):
 
     def dispatch(self, request, *args, **kwargs):
         # And here
-        print("In dispatch", request.path)
         # with meta_path_lock:
         #     sys.meta_path.insert(0, BlockingFinder)
 

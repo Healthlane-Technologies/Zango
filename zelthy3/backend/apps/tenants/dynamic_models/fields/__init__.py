@@ -5,10 +5,12 @@ class ZForeignKey(models.ForeignKey):
 
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        print(cls)
         if all(arg not in sys.argv for arg in ('zmigrate', 'zmakemigrations')):    
             cls._meta.apps.add_models(cls, self.related_model)
-            self.related_model._meta.apps.add_models(self.related_model, cls)
+            try:
+                self.related_model._meta.apps.add_models(self.related_model, cls)
+            except:
+                pass
 
             apps = cls._meta.apps
             apps.do_pending_operations(cls)

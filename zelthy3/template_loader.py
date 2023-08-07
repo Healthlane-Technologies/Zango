@@ -33,7 +33,6 @@ class AppTemplateLoader(BaseLoader):
             app_dir = settings.BASE_DIR / "workspaces" / connection.tenant.name  
             ##new
             template_folders = list(app_dir.glob('**/templates'))
-            # print(template_folders)
             for folder in template_folders:
                 _file =  str(folder) + "/" + template_name
                 if os.path.exists(_file):
