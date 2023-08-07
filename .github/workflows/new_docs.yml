@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: zelthy3/docs
+        working-directory: docs
     steps:
       - name: Checking out code
         uses: actions/checkout@v3
