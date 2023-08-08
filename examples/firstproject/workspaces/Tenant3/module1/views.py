@@ -48,15 +48,15 @@ permModel = DjangoModelConverter(PermissionsModel)
 policyModel = DjangoModelConverter(PolicyModel)
 # from .models import Address
 # from .models import MyUser
-from .models import TestModel1
-from .models import FrameModel
-from .models import FrameModel, FrameModel
+# from .models import TestModel1
+# from .models import FrameModel
+# from .models import FrameModel, FrameModel
 from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
 
 # from .models_1 import Patient
 # from .models_1 import Doctor
 import sys
-from frame.frame.views.configure import frameconfigureview
+# from frame.frame.views.configure import frameconfigureview
 
 from landingPage.models import LandingPageModel
 
@@ -78,14 +78,15 @@ class View2(TemplateView):
         # frame1.many_test.add(role)
         # role2 = UserRoleModel.objects.get(id=2)
         # frame1.many_test.add(role2)        
-        # address = Address.objects.create(use='90849')
-        # patient = Patient.objects.create(
-        #         identifier="kdodi", name='Test', telecom='sodio', birthDate=date.today(), address=address)
+        address = Address.objects.create(use='90849')
+        context.update({"data": address.id})
+        patient = Patient.objects.create(
+                identifier="kdodi", name='Test', telecom='sodio', birthDate=date.today(), address=address)
         # # patient.address_1.add(address)
         # patient.save()
-        address1 = Address.objects.get(id=5)
-        print(address1.patient_set.all())
-        print(address1.landingpagemodel_set.all())
+        # address1 = Address.objects.get(id=5)
+        # print(address1.patient_set.all())
+        # print(address1.landingpagemodel_set.all())
         # print(patient.address.remote_field)
         return context  
         

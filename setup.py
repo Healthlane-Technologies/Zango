@@ -7,19 +7,19 @@ setup(
     author='Zelthy ("Healthlane Technologies")',
     author_email='platform@zelthy.com',
     url='https://github.com/Healthlane-Technologies/zelthy3',
-    # packages=find_packages(),
-    packages=[
-        'zelthy3',
-        'zelthy3.management',
-        'zelthy3.management.commands'
-    ],
+    packages=find_packages(),
+    # packages=[
+    #     'zelthy3',
+    #     'zelthy3.management',
+    #     'zelthy3.management.commands'
+    # ],
     install_requires=[
         'django>=3.0',
         "psycopg2-binary",
         'django-tenants',
         'djangorestframework',
         'django-rest-knox',
-        'celery==5.3.1'
+        'celery==5.3.1',
         'alembic==1.11.1',
         'SQLAlchemy==1.4.44'
 

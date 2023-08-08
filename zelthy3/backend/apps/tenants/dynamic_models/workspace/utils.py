@@ -1,11 +1,12 @@
 
 import sys
+from typing import List
 from contextlib import contextmanager
 from django.conf import settings
 
 
 @contextmanager
-def workspace_sys_paths(wname: str) -> list[str]:
+def workspace_sys_paths(wname: str) -> List[str]:
     """
         Ensures that sys.path does not contain any other tenant's paths
         Adds the path of the workspace and its plugins to sys.path

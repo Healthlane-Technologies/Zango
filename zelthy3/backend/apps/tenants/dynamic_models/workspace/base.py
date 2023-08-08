@@ -1,6 +1,8 @@
 import json
 import os
 import re
+from typing import List, Dict, Tuple
+
 from django.conf import settings
 from importlib import import_module
 
@@ -80,21 +82,21 @@ class Workspace:
             return True
 
 
-    def get_workspace_settings(self)-> dict:
+    def get_workspace_settings(self)-> Dict:
         with open(self.path + "settings.json") as f:
             return json.loads(f.read())
     
     def get_version(self):
         return self.get_workspace_settings()['version']
         
-    def get_ws_modules(self) -> list[dict]:
+    def get_ws_modules(self) -> List[Dict]:
         """
             returns workspaces' modules
         """
         _settings = self.get_workspace_settings()
         return _settings['modules']
     
-    def get_all_module_paths(self) ->list[str]:
+    def get_all_module_paths(self) -> List[str]:
         """
             returns path of all ws modules as well as plugin modules
         """
@@ -114,7 +116,7 @@ class Workspace:
                         modules.append(path)
         return modules
     
-    def get_models(self) -> list[str]:
+    def get_models(self) -> List[str]:
         """
             returns sorted list of model modules (dependency first, then plugin then modules)
         """
@@ -130,9 +132,9 @@ class Workspace:
                     
 
 
-    def get_plugins(self) -> list[dict]:
+    def get_plugins(self) -> List[Dict]:
         """
-            returns list of plugins
+            returns List of plugins
         """
         with open(self.path + "plugins.json") as f:
             return json.loads(f.read())['plugins']
@@ -140,18 +142,18 @@ class Workspace:
     def get_plugin_path(self, plugin_name: str) -> str:
         return self.path + f"plugins/{plugin_name}/"
     
-    def get_plugin_settings(self, plugin_name: str) -> dict:
+    def get_plugin_settings(self, plugin_name: str) -> Dict:
         _path = self.get_plugin_path(plugin_name) + "settings.json"
         with open(_path) as f:
             return json.loads(f.read())
     
 
-    def get_plugin_modules(self, plugin_name: str) -> list[dict]:
+    def get_plugin_modules(self, plugin_name: str) -> List[Dict]:
         _settings = self.get_plugin_settings(plugin_name)
         return _settings['modules']
 
 
-    def get_plugin_dependencies(self, plugin_name: str) -> list[dict]:
+    def get_plugin_dependencies(self, plugin_name: str) -> List[Dict]:
         _path = self.get_plugin_path(plugin_name) + "settings.json"
         with open(_path) as f:
             _settings = json.loads(f.read())
@@ -181,7 +183,7 @@ class Workspace:
         return True
 
 
-    def get_workspace_root_urls(self)-> list[dict]:
+    def get_workspace_root_urls(self)-> List[Dict]:
         pass
     
 
@@ -213,7 +215,7 @@ class Workspace:
             wtree.add_child(wtree_plugin)
         return wtree
     
-    def serve_request(self, request) -> tuple[str, str, str]:
+    def serve_request(self, request) -> Tuple[str, str, str]:
         """
         returns the tuple of module, view name, view type (class or function)
         """
@@ -222,7 +224,7 @@ class Workspace:
     
     def load_models(self) -> None:
         """
-            get topologically sorted list of models from packages and modules and
+            get topologically sorted List of models from packages and modules and
             import models.py files in that order
         """
         for m in self.get_models():
@@ -242,7 +244,7 @@ class Workspace:
         return
     
 
-    def get_root_urls(self) -> list[dict]:
+    def get_root_urls(self) -> List[Dict]:
         _settings = self.get_workspace_settings()
         routes = _settings['app_routes']
         package_routes = _settings['plugin_routes']
@@ -275,7 +277,7 @@ class Workspace:
 
 
 
-    def launch(self, params: dict) -> None:
+    def launch(self, params: Dict) -> None:
         """
             launch workspace, provision folders with boilerplate code, run migration 
         """

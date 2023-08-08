@@ -33,31 +33,31 @@ class Patient(DynamicModelBase):
     birthDate = models.DateField()
     deceasedBoolean = models.BooleanField(default=False)
     deceasedDateTime = models.DateTimeField(null=True, blank=True)
-    address = ZForeignKey(Address, on_delete=models.CASCADE)
+    address = ZForeignKey(Address, on_delete=models.CASCADE, null=True)
     # address_1 = models.ManyToManyField(Address)
-    address_1 = ZManyToManyField(Address)
+    # address_1 = ZManyToManyField(Address)
 
 
 
-class TestModel1(DynamicModelBase):
-    name = models.CharField(max_length=100)
-    city = models.CharField(max_length=100, null=True)
-    state = models.CharField(max_length=100, null=True)
+# class TestModel1(DynamicModelBase):
+#     name = models.CharField(max_length=100)
+#     city = models.CharField(max_length=100, null=True)
+#     state = models.CharField(max_length=100, null=True)
 
 
 
-class TestModel2(DynamicModelBase):
-    name = models.CharField(max_length=100)
-    city = models.CharField(max_length=100, null=True)
+# class TestModel2(DynamicModelBase):
+#     name = models.CharField(max_length=100)
+#     city = models.CharField(max_length=100, null=True)
 
 
-from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
-from django.db.models import JSONField
+# from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
+# from django.db.models import JSONField
 
-class FrameModel(DynamicModelBase):
-    role = models.ForeignKey("appauth.UserRoleModel", null=True, on_delete=models.CASCADE)
-    config = JSONField()
-    timestamp = models.DateField(null=True)
-    many_test = models.ManyToManyField("appauth.UserRoleModel")
-    test = models.CharField(max_length=100, null=True)
+# class FrameModel(DynamicModelBase):
+#     role = models.ForeignKey("appauth.UserRoleModel", null=True, on_delete=models.CASCADE)
+#     config = JSONField()
+#     timestamp = models.DateField(null=True)
+#     many_test = models.ManyToManyField("appauth.UserRoleModel")
+#     test = models.CharField(max_length=100, null=True)
  

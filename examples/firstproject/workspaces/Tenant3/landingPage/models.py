@@ -7,5 +7,5 @@ from module1.models import Address
 
 class LandingPageModel(DynamicModelBase):
     page = models.CharField(max_length=20)
-    address = ZForeignKey(Address, on_delete=models.CASCADE, null=True)
+    # address = ZForeignKey(Address, on_delete=models.CASCADE, null=True)
 
