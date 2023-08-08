@@ -42,40 +42,62 @@ class ZOneToOneField(models.OneToOneField):
 
 class ZManyToManyField(models.ManyToManyField):
     
-    
-    # def m2m_field_name(self):
-    #     print("m2m_field_name being called..")
+    def m2m_field_name(self):
+        """
+        Function that can be curried to provide the source accessor or DB
+        column name for the m2m table.
+        """
+        attr = "name"
+        cache_attr = "_m2m_%s_cache" % attr
+        related = self.remote_field
 
-    # def m2m_reverse_field_name(self):
-    #     print("m2m_reverse_field_name being called..")
-
-    # def m2m_field_name(self):
-    #     return 'address_1'
-    
-    # def m2m_reverse_field_name(self):
-    # def contribute_to_related_class(self, cls, related):
-    #     print("Inside contribute to related class")
-    #     super().contribute_to_related_class(cls, related)
-
-    # def contribute_to_class(self, cls, related):
-    #     print("here", self, cls, related, type(related))
-    #     super().contribute_to_class(cls, related)
-    #     model_field = cls._meta.get_field(related)
-    #     through_model = model_field.remote_field.through
-    #     print("model_field--> ", model_field)
-    #     print("through_model-->", through_model)
+        if hasattr(self, cache_attr):
+            return getattr(self, cache_attr)
+        if self.remote_field.through_fields is not None:
+            link_field_name = self.remote_field.through_fields[0]
+        else:
+            link_field_name = None
         
+        for f in self.remote_field.through._meta.fields:
+            if (
+                f.is_relation
+                and f.remote_field.model == related.related_model
+                and (link_field_name is None or link_field_name == f.name)
+            ):
+                setattr(self, cache_attr, getattr(f, attr))
+                return getattr(self, cache_attr)
+    
 
-    #     cls._meta.apps.add_models(cls, self.related_model)
-    #     self.related_model._meta.apps.add_models(self.related_model, cls)
+    def m2m_reverse_field_name(self):
+        """
+        Function that can be curried to provide the related accessor or DB
+        column name for the m2m table.
+        """
+        attr = "name"
+        cache_attr = "_m2m_reverse_%s_cache" % attr
+        related = self.remote_field
         
-    #     apps = cls._meta.apps
-    #     app_config = apps.get_app_config('dynamic_models')
-    #     setattr(app_config, 'models', {'patient': cls, 'address': self.related_model, 'patient_address_1': through_model})
-    #     print(app_config)
-    #     print(app_config.models)
-    #     apps.do_pending_operations(cls)
-    #     apps.do_pending_operations(self.related_model)
-    #     apps.do_pending_operations(through_model)
-    #     apps.clear_cache()
-    pass
+        if hasattr(self, cache_attr):
+            return getattr(self, cache_attr)
+        
+        found = False
+        if self.remote_field.through_fields is not None:
+            link_field_name = self.remote_field.through_fields[1]
+        else:
+            link_field_name = None
+        for f in self.remote_field.through._meta.fields:
+            if f.is_relation and f.remote_field.model == related.model:
+                if link_field_name is None and related.related_model == related.model:
+                    # If this is an m2m-intermediate to self,
+                    # the first foreign key you find will be
+                    # the source column. Keep searching for
+                    # the second foreign key.
+                    if found:
+                        setattr(self, cache_attr, getattr(f, attr))
+                        break
+                    else:
+                        found = True
+                elif link_field_name is None or link_field_name == f.name:
+                    setattr(self, cache_attr, getattr(f, attr))
+                    break
+        return getattr(self, cache_attr)
