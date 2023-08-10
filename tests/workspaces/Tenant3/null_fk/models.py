@@ -1,4 +1,6 @@
-# Create your models here.
+"""
+Regression tests for proper working of ForeignKey(null=True).
+"""
 
 from django.db import models
 from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
@@ -47,4 +49,3 @@ class Property(DynamicModelBase):
     item = ZForeignKey(Item, models.CASCADE, related_name="props")
     key = models.CharField(max_length=100)
     value = ZForeignKey(PropertyValue, models.SET_NULL, null=True)
-    

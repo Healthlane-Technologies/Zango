@@ -45,7 +45,7 @@ class RegisterOnceModeMeta(type(models.Model)):
                 return model # Model already registered. Won't register twice
             except LookupError:
                 model = super().__new__(mcs, name, bases, attrs)
-                patch_meta_get_field(model._meta)
+                # patch_meta_get_field(model._meta)
                 return model
         model = super().__new__(mcs, name, bases, attrs) 
         return model

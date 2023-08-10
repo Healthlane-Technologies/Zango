@@ -69,7 +69,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'zelthy3.middleware.ClearModulesMiddleware'
+    # 'zelthy3.middleware.ClearModulesMiddleware'
 ]
 
 

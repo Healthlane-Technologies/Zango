@@ -8,8 +8,9 @@ import zelthy3.backend.apps.tenants.dynamic_models.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('appauth', '0007_userrolemodel_temp_field'),
-        ('dynamic_models', '0006_crudconfigurationsmodel'),
+        ('appauth', '0007_userrolemodel_temp_field'),        
+        ('dynamic_models', '0005_programmodel_programapplicationvalidator'),
+        
     ]
 
     operations = [

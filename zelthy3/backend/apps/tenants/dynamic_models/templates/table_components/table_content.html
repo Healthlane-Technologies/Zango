@@ -1,0 +1,96 @@
+<div id="table_div">
+    <table id="zelthytable" class="uk-table uk-table-striped display" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+                {% for h in headings %}
+                <th><strong>{{h}}</strong></th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tfoot style="display: table-row-group;">
+            <tr>
+                {% for h in headings %}
+                <form class="uk-form">
+                <th><strong>{{h}}</strong></th>
+                </form>
+                {% endfor %}
+            </tr>
+        </tfoot>
+    </table>
+    </div>
+    
+    
+    
+    
+    
+    <!-- <script>
+    $(document).ready(function() {
+        // Setup - add a text input to each footer cell
+        window.onbeforeunload = null;
+        var table = $('#zelthytable').DataTable();
+        var search_col = {{search_cols|safe}} ;
+        var index = 0;  
+    
+        $('#zelthytable tfoot th').each( function () {
+          var title = $(this).text();
+          if(search_col[title] === true){
+            if (title.indexOf('Date') == -1){
+                $(this).html( "<form class='uk-form'><input class='uk-input' placeholder='Search "+ title+ "'/></form>" );	
+            }
+            else{
+                $(this).html( "<form class='uk-form'><input class='dateselector'></form>" );
+                column = table.column(index);
+                $(this).daterangepicker({
+                     initialText : 'Search by '+title,
+                     datepickerOptions : {
+                     numberOfMonths : 1,
+                     },
+                     datepickerOptions: {
+                         minDate: null,
+                         maxDate: null
+                     }
+                });
+                //Apply search on date fields
+                $(this).change(function(){
+                    var that = this;
+                    var search_index = 0
+                    table.columns().every( function () {
+                        if (this.footer() == that){
+                            search_column = table.column(search_index);
+                            search_column
+                                .search( that.value )
+                                .draw();
+                        }
+                        search_index = search_index + 1 
+                    });
+                });
+    
+            }
+        }
+        else{
+            $(this).html("");
+        }
+    
+         index = index +1;   
+        });
+    
+    
+        // Apply the search for non date fields
+        table.columns().every( function () {        
+            var that = this;
+    
+            $( 'input', this.footer() ).on( 'keyup change paste', function () {
+                if ( that.search() !== this.value ) {
+                    that
+                        .search( this.value )
+                        .draw();
+                }
+                });
+    
+            });
+    
+    
+       
+    } ); -->
+    
+    <!-- </script> -->

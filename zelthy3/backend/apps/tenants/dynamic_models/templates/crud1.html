@@ -1,0 +1,30 @@
+{% extends '_base.html' %}
+
+{% block page_content %}
+
+<div id="page_content_inner">	
+  
+<div class="uk-width-large-1-1">
+  <div class="uk-grid">
+    <div class="uk-width-large-1-2">
+        <h4 class="heading_a uk-margin-bottom" style="color:{{profile.colors.table_title_color}};">{{title}}</h4>
+    </div>
+      
+
+  </div>
+  <div class="md-card uk-margin-medium-bottom">
+      <div class="md-card-content">		
+          {% include "table_components/table_content.html" %}
+      </div>
+  </div>
+
+</div>
+</div>
+
+
+{% endblock %}
+
+{% block js %}
+
+{% include "table_components/table_script.html" %}
+{% endblock %}

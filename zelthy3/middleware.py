@@ -113,7 +113,6 @@ class SetUserRoleMiddleWare:
 
     def __call__(self, request):
         # Code to be executed for each request before the view is called
-        print(request, "R")
         userrole_model = get_userrole_model()
         if request.user.is_anonymous:
             request.user_role = userrole_model.objects.get(name='AnonymousUsers')

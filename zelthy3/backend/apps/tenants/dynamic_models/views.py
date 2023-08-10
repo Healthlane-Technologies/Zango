@@ -1,6 +1,6 @@
 import sys
 import types
-
+import time
 from django.shortcuts import render
 from django.views.generic import View
 from django.http import Http404
@@ -11,6 +11,8 @@ import threading
 import sys
 import importlib.machinery
 import os
+import threading
+lock = threading.Lock()
 
 from .workspace.base import Workspace
 meta_path_lock = threading.Lock()
@@ -75,6 +77,20 @@ def import_with_timestamp(module_name):
 
 
 
+def reset_modules():
+    modules_to_delete = []
+    for module_name, module in sys.modules.items():
+        try:
+            if 'workspaces' in module.__file__:
+                modules_to_delete.append(module_name)
+        except:
+            # print(type(m))
+            pass
+
+    for module in modules_to_delete:
+        del sys.modules[module]
+    
+
 # Create your views here.
 class DynamicView(View):
     """
@@ -83,45 +99,39 @@ class DynamicView(View):
     
     """
     tenant = None
+    _lock = threading.Lock()
+    path = []
+    modules = None
+    
 
 
-    def get_tenant_settings(self):
-        pass
-
-    def get_tenant_urls(self):
-        """
-            builds the url patterns from the Apps' settings.py 
-        """
-        pass
-
-    def match_route(self, path):
-        """
-            matches the path to the url patterns
-        """
-        pass
-
-    def get_view_module(self):
-        """
-            set sys.path to the module path                            
-            dynamically import view module and get view class
-        """
-        pass
-
-    def dispatch(self, request, *args, **kwargs):
-        # And here
-        # with meta_path_lock:
-        #     sys.meta_path.insert(0, BlockingFinder)
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):        
-         with tenant_sys_path(request.tenant.name):
-            ws = Workspace(request.tenant, request)
-            view =  ws.match_view(request)            
-            if view:
-                return view(request, *args, **kwargs)
+    def get(self, request, *args, **kwargs):
+        
+        with self._lock:
+            if not self.path:
+                self.path = sys.path[:]
             else:
-                raise Http404()
+                sys.path = self.path
+            if not self.modules:
+                self.modules = sys.modules.copy()
+            else:
+                sys.modules = self.modules.copy()
+            # print("Lock acquired: ", threading.current_thread())
+        #     # time.sleep(5)
+            reset_modules()        
+            with tenant_sys_path(request.tenant.name):
+                print("Current thread:", threading.current_thread())
+                ws = Workspace(request.tenant, request)
+                ws.ready()
+                view =  ws.match_view(request)            
+                if view:
+                    resp =  view(request, *args, **kwargs)
+                else:
+                    resp =  Http404()
+            reset_modules()
+            return resp
+
+                
             
                 
     def post(self, request, *args, **kwargs):

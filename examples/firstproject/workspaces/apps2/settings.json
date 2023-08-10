@@ -35,6 +35,11 @@
             "url": "urls"
         },
         {
+            "re_path": "^crud/",
+            "plugin": "crud",
+            "url": "urls"
+        },
+        {
             "re_path": "^program/",
             "plugin": "program-benefit",
             "url": "urls"

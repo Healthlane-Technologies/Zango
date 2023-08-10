@@ -35,15 +35,22 @@ class Command(MakeMigrationsCommand):
             "workspace",
             help="The workspace name to be used.",
         )
+         parser.add_argument(
+             "--test",
+             action='store_true',
+             help="Run the migration for test database"
+         )
                   
     @no_translations
-    def handle(self, *app_labels, **options):        
+    def handle(self, *app_labels, **options):
+        is_test_mode = options['test']
+        if is_test_mode:
+            connection.settings_dict['NAME'] = "test_"+ connection.settings_dict['NAME']        
         settings.MIGRATION_MODULES = { f'dynamic_models': f"workspaces.{options['workspace']}.dmigrations" }
-        wks_obj = AppModel.objects.get(name=options['workspace'])        
+        wks_obj = AppModel.objects.get(name=options['workspace']) 
         with tenant_sys_path(options['workspace']):
             w = Workspace(wks_obj, None,  True)
             w.load_models()
-            # print(sys.path)
             super().handle('dynamic_models', **options)        
 
 
