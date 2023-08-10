@@ -13,6 +13,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+INSTALLED_APPS.append("firstproject")
+
 
 
 WSGI_APPLICATION = 'firstproject.wsgi.application'
@@ -23,7 +25,7 @@ DATABASES = {
         'ENGINE':'django_tenants.postgresql_backend',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'PASSWORD': 'zelthy3pass',
         'HOST': '127.0.0.1',
         'PORT': '5432',
         'ATOMIC_REQUESTS':True

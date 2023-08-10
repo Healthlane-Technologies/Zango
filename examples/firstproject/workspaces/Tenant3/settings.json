@@ -8,6 +8,10 @@
         {
             "name": "landingPage",
             "path": "landingPage"
+        },
+        {
+            "name": "foreign_key",
+            "path": "foreign_key"
         }
     ],
     "app_routes": [

@@ -6,6 +6,7 @@ from django.db import connection
 
 from django.core.management.commands.makemigrations import Command as MakeMigrationsCommand
 from zelthy3.backend.apps.shared.apps.models import AppModel
+# ls
 from zelthy3.backend.apps.tenants.dynamic_models.workspace.base import Workspace
 from importlib import import_module
 from zelthy3.backend.apps.tenants.dynamic_models.views import tenant_sys_path

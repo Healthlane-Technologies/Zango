@@ -42,8 +42,8 @@ class Workspace:
 
     def __new__(cls, wobj: object, request=None, as_systemuser=False, **kwargs) -> object:
         # perform your permissions check here and tries to return the object from cache            
-        if not cls.check_perms(request, as_systemuser):
-            raise ValueError("Permission denied.")
+        # if not cls.check_perms(request, as_systemuser):
+        #     raise ValueError("Permission denied.")
         key = wobj.name
         if key in cls._instances:
             return cls._instances[key]
