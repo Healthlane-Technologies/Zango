@@ -23,7 +23,7 @@ INSTALLED_APPS.append("tests")
 DATABASES = {
     'default': {
         'ENGINE':'django_tenants.postgresql_backend',
-        'NAME': 'postgres',
+        'NAME': 'postgres24',
         'USER': 'postgres',
         'PASSWORD': 'zelthy3pass',
         'HOST': '127.0.0.1',

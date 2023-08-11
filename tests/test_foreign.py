@@ -102,7 +102,7 @@ class TestForeignKey(unittest.TestCase):
             self.assertEqual(u1.name, "John Doe")
 
             u2 = FUser.objects.get(poll__question__exact="What's the second question?")
-            self.assertEqual(u2.name, "Jim Bo")
+            self.assertEqual(u2.name, "Jim Bo") 
     
     def test_reverse_by_related_name(self):
         with connection.cursor() as c:
