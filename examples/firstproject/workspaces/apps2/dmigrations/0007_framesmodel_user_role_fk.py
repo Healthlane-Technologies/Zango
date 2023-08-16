@@ -2,7 +2,7 @@
 
 from django.db import migrations
 import django.db.models.deletion
-import zelthy3.backend.apps.tenants.dynamic_models.fields
+import zelthy.backend.apps.tenants.dynamic_models.fields
 
 
 class Migration(migrations.Migration):
@@ -17,6 +17,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='framesmodel',
             name='user_role_fk',
-            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='appauth.userrolemodel'),
+            field=zelthy.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='appauth.userrolemodel'),
         ),
     ]

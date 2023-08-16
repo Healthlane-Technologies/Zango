@@ -1,6 +1,6 @@
 # from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Table
 # from sqlalchemy.orm import relationship
-# from zelthy3.sql_alchemy import sa_base
+# from zelthy.sql_alchemy import sa_base
 
 # if 'Tickets' not in sa_base.base.metadata.tables.keys():
 #     class Tickets(sa_base.base):

@@ -1,0 +1,35 @@
+{% load i18n %}
+
+<script>
+    function makeURL(replace) {
+        var url = window.location.href;
+        return url.replace('/view/', replace)
+    }
+
+</script>
+
+
+
+<script>
+    $('#zelthytable').DataTable({
+        "bSort": false,
+        "filter": true,
+        "processing": true,
+        "serverSide": true,
+        // "language": translations["{{LANGUAGE_CODE}}"],
+        "ajax": window.location.href
+    });
+
+    function ExcelURL(){
+        var table = $('#zelthytable').DataTable();
+        var url = '/get-excel/?'
+        var col_index = 0;
+        table.columns().every( function () {        
+            var exp = 'columns['+col_index.toString()+'][search][value]='+this.search(this.value)+'&';
+            url = url + exp;
+            col_index = col_index + 1;        
+            });
+        window.location = makeURL(url);
+    }
+
+</script>

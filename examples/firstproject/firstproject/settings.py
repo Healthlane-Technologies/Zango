@@ -1,5 +1,5 @@
 import os
-from zelthy3.base_settings import *
+from zelthy.config.settings.base import *
 
 from pathlib import Path
 
@@ -21,7 +21,7 @@ WSGI_APPLICATION = 'firstproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE':'django_tenants.postgresql_backend',
-        'NAME': 'postgres',
+        'NAME': 'zelthy1',
         'USER': 'postgres',
         'PASSWORD': 'zelthy3pass',
         'HOST': '127.0.0.1',

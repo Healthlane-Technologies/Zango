@@ -5,7 +5,7 @@ from django.apps import apps
 from .helpers import x
 from .helpers import y
 from .helpers import z
-
+import threading
 
 
 def view1(request, *args, **kwargs):
@@ -16,10 +16,6 @@ def view1(request, *args, **kwargs):
 # from condense-frame.frame.views.base import CondenseFrameBase
 
 
-from zelthy3.sql_alchemy import engine
-from sqlalchemy.orm import sessionmaker
-Session = sessionmaker(bind=engine)
-session = Session()
 
 import random
 import string
@@ -40,54 +36,21 @@ def generate_random_email():
     return f"{name}@{domain}"
 
 
-from sqlalchemy import insert
 
-from zelthy3.backend.apps.tenants.permissions.models import PermissionsModel, PolicyModel
-from zelthy3.backend.core.django_alchemy import DjangoModelConverter
-permModel = DjangoModelConverter(PermissionsModel)
-policyModel = DjangoModelConverter(PolicyModel)
-# from .models import Address
-# from .models import MyUser
-# from .models import TestModel1
-# from .models import FrameModel
-# from .models import FrameModel, FrameModel
-from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
-
-# from .models_1 import Patient
-# from .models_1 import Doctor
-import sys
-from frame.frame.views.configure import frameconfigureview
-
-from landingPage.models import LandingPageModel
-
-# from frame.configure.models import Instance
-from datetime import datetime, date
-from .models import Address
 class View2(TemplateView):
 
     template_name = 'hello_world.html'
 
     def get_context_data(self, **kwargs):        
         context = super().get_context_data(**kwargs)
-        # test = TestModel1(name='test').save()
-        # role = UserRoleModel.objects.get(id=1)                
-        # frame = FrameModel(role=role, config={'a':1}, timestamp=date.today()).save()
-        # frame1 = FrameModel.objects.get(id=28)
-        
-        # print(FrameModel)
-        # frame1.many_test.add(role)
-        # role2 = UserRoleModel.objects.get(id=2)
-        # frame1.many_test.add(role2)        
-        # address = Address.objects.create(use='90849')
-        # patient = Patient.objects.create(
-        #         identifier="kdodi", name='Test', telecom='sodio', birthDate=date.today(), address=address)
-        # # patient.address_1.add(address)
-        # patient.save()
-        print(Address)
-        address1 = Address.objects.get(id=5)
-        # print(address1.patient_set.all())
-        print(address1.landingpagemodel_set.all())
-        # print(patient.address.remote_field)
-        context['landingpage'] = address1.landingpagemodel_set.all()
         return context  
+    
+    def get(self, request, *args, **kwargs):
+        qs = request.GET.get('query')
+        if qs == 'thread':
+            current_thread = threading.current_thread()
+            thread_id = current_thread.ident
+            return JsonResponse({"thread_id": thread_id})
+        return super().get(request, *args, **kwargs)
+
         

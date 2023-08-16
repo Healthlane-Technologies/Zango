@@ -8,67 +8,29 @@ from .helpers import z
 from django.db.models import Q
 
 
-def view1(request, *args, **kwargs):
-    response = {"msg": "hello world"}    
-    return JsonResponse(response)
-
-
-# from condense-frame.frame.views.base import CondenseFrameBase
-
-
-from zelthy3.sql_alchemy import engine
-from sqlalchemy.orm import sessionmaker
-Session = sessionmaker(bind=engine)
-session = Session()
-
-import random
-import string
-
-def generate_random_email():
-    # define the email domains and name lengths
-    domains = ["gmail.com", "yahoo.com", "hotmail.com", "aol.com"]
-    min_name_length = 4
-    max_name_length = 10
-
-    # generate a random name
-    name_length = random.randint(min_name_length, max_name_length)
-    name = ''.join(random.choices(string.ascii_lowercase, k=name_length))
-
-    # pick a random domain
-    domain = random.choice(domains)
-
-    return f"{name}@{domain}"
-
-
-from sqlalchemy import insert
-
-from zelthy3.backend.apps.tenants.permissions.models import PermissionsModel, PolicyModel
-from zelthy3.backend.core.django_alchemy import DjangoModelConverter
-permModel = DjangoModelConverter(PermissionsModel)
-policyModel = DjangoModelConverter(PolicyModel)
-# from .models import Address
-# from .models import MyUser
-# from .models import TestModel1
-# from .models import FrameModel
-# from .models import FrameModel, FrameModel
-from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
-
-# from .models_1 import Patient
-# from .models_1 import Doctor
-import sys
-from frame.frame.views.configure import frameconfigureview
-
-from landingPage.models import LandingPageModel
-
-# from frame.configure.models import Instance
-from datetime import datetime, date
-from .models import *
-
+from .models import Item, Property, PropertyValue
+from ..landingPage.models import LandingPageModel
 class View2(TemplateView):
 
     template_name = 'hello_world.html'
 
     def get_context_data(self, **kwargs):        
-        context = super().get_context_data(**kwargs)        
+        context = super().get_context_data(**kwargs)
+        # print("Property", PropertyValue)
+        val = PropertyValue.objects.create(label="testProp1")        
+        item = Item.objects.create(title='MyItem')
+        
+        
+        # ite = Item.objects.get(id=2)
+        pg = LandingPageModel.objects.create(page="123")
+        p = Property.objects.create(item=item, key="123", value=val, pg=pg)
+        p.values.add(val)
+        p.save()
+        print(p.values.all())
+        # print("pp--->", p.values.all())
+        # print(ite.props.all()[0].item.title)
+        # print(p)
+        pg1 = LandingPageModel.objects.get(id=1)
+        # print(pg1.property_set.all())
         return context  
         

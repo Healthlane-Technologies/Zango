@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import zelthy3.backend.apps.tenants.dynamic_models.fields
+import zelthy.backend.apps.tenants.dynamic_models.fields
 
 
 class Migration(migrations.Migration):
@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('config', models.JSONField()),
-                ('user_role', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='frame', to='appauth.userrolemodel')),
+                ('user_role', zelthy.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='frame', to='appauth.userrolemodel')),
             ],
             options={
                 'abstract': False,

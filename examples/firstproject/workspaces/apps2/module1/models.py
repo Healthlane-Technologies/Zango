@@ -2,8 +2,8 @@
 
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZManyToManyField, ZOneToOneField
+from zelthy.apps.dynamic_models.models import DynamicModelBase
+from zelthy.apps.dynamic_models.fields import ZForeignKey, ZManyToManyField, ZOneToOneField
 
 
 class Address(DynamicModelBase):

@@ -1,4 +1,4 @@
-from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+from zelthy.backend.apps.tenants.dynamic_models.models import DynamicModelBase
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 

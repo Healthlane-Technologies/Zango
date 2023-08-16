@@ -5,3 +5,37 @@ Hello World from Apps 2
 {% for address in addresses %}
 {{address.id}} - {{address.address}}<br>
 {% endfor %}
+
+{% block js %}
+<script>
+    for (let i = 0; i < 20; i++) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/mod1/view2/1/?query=thread', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                console.log(xhr.responseText);
+            }
+        };
+        xhr.send();
+    }
+</script>
+
+<!-- <script>
+        async function makeSequentialRequests() {
+        for (let i = 0; i < 10; i++) {
+            try {
+                let response = await fetch('/mod1/view2/1/?query=thread');
+                let data = await response.text();
+                console.log(data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    }
+
+    makeSequentialRequests();
+
+
+</script> -->
+
+{% endblock %}

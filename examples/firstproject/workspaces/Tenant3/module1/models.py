@@ -1,8 +1,8 @@
 # Create your models here.
 
 from django.db import models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
-from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField, ZManyToManyField
+from zelthy.apps.dynamic_models.models import DynamicModelBase
 
 class SystemDetails(DynamicModelBase):
     details = models.TextField()
@@ -42,9 +42,11 @@ class Item(DynamicModelBase):
 class PropertyValue(DynamicModelBase):
     label = models.CharField(max_length=100)
 
-
+from ..landingPage.models import LandingPageModel
 class Property(DynamicModelBase):
     item = ZForeignKey(Item, models.CASCADE, related_name="props")
     key = models.CharField(max_length=100)
     value = ZForeignKey(PropertyValue, models.SET_NULL, null=True)
+    pg = ZForeignKey(LandingPageModel, null=True, on_delete=models.CASCADE)
+    values = ZManyToManyField(PropertyValue)
     

@@ -1,0 +1,270 @@
+{% load i18n %} 
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+
+  <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <!-- Remove Tap Highlight on Windows Phone IE -->
+  <meta name="msapplication-tap-highlight" content="no" />
+
+  <!-- Primary Meta Tags -->
+  <title>Zelthy - Health Cloud</title>
+  <meta name="title" content="Zelthy - Therapy Cloud" />
+  <meta name="description"
+    content="Zelthy is a Health Cloud that enables quick development of secure and compliant healthcare applications." />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.zelthy.com/" />
+  <meta property="og:title" content="Zelthy - Therapy Cloud" />
+  <meta property="og:description"
+    content="Zelthy is a Health Cloud that enables quick development of secure and compliant healthcare applications." />
+  <meta property="og:image" content="{% static 'login/images/og-image.jpeg' %}" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://www.zelthy.com/" />
+  <meta property="twitter:title" content="Zelthy - Therapy Cloud" />
+  <meta property="twitter:description"
+    content="Zelthy is a Health Cloud that enables quick development of secure and compliant healthcare applications" />
+  <meta property="twitter:image" content="{% static 'login/images/og-image.jpeg' %}" />
+
+  <link rel="icon" type="image/png" href="{% static 'login/images/Zelthy.svg' %}" sizes="32x32" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'auth/apps/css/style.css' %}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <script src="{% static '/login/apps/js/jquery-3.6.0.min.js' %}"></script>
+
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+
+<body>
+  <div class="main">
+    <div id="content">
+      <div class="content-value">
+        <div class="banner-container">
+          <div class="logo">
+            <img id="desktop-logo" src="{% static '/login/apps/images/zelthyLogo.svg' %}" alt="#" />
+            <img id="ipad-logo" src="{% static '/login/apps/images/zelthyLogoIpad.svg' %}" alt="#" />
+            <img id="iphone-logo" src="{% static '/login/apps/images/zelthyLogoIphone.svg' %}" alt="#" />
+          </div>
+          <p class="content-heading">
+            the world’s most customisable healthcare platform
+          </p>
+        </div>
+      </div>
+
+      <div id="AuthCard" class="auth-card-box">
+        <form action="" method="POST" id="form-forget">
+          <div class="signup-header">Forgot Password?</div>
+          <div id="forgot-initial"></div>
+          <label class="signup-email" for="email">Email ID or Mobile Number</label>
+          <input type="email" id="email-forgot" name="email" required />
+
+          <div id="captcha_container" class="google-cpatcha">
+            <div class="g-recaptcha" data-sitekey="6LeYzpgUAAAAAHUJbrryhoWBN66DF5Sr1rwiToDT"
+              data-callback="correctCaptcha"></div>
+          </div>
+
+          <button id="submit-Link" value="Send Otp">Send Otp</button>
+          <div class="space-creater"></div>
+          <button id="getForgot" class="return-to-login">
+            Return to log in
+          </button>
+        </form>
+
+        <form action="" method="POST" id="initial-login">
+          <div class="signup-header">Log in to your account</div>
+
+          <div class="forgot-container"></div>
+
+          <label class="signup-email" for="email">Email ID or Mobile Number</label>
+          <input type="email" id="email" name="email" required />
+
+          <label class="signup-password" for="Password">Password</label>
+          <input type="Password" id="Password" name="Password" placeholder="﹡﹡﹡﹡﹡﹡﹡﹡" required />
+          <button type="button" class="signup-forgot">
+            Forgot password?
+          </button>
+          <button type="submit" value="Submit" id="initialLogin">
+            Log In
+          </button>
+          <div class="login-options-box login-options-open-id">
+            <div class="login-options-title-box">
+              <span class="login-options-divider"></span>
+              <span class="login-options-title">OR Log in with Open Id</span>
+              <span class="login-options-divider"></span>
+            </div>
+            <div class="login-options">
+              <a href="http://localhost:1443/openid-router/azure/" class="each-login-option"
+                title="Login with Microsoft">
+                <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+              </a>
+              <a href="http://localhost:1443/openid-router/azure/" class="each-login-option"
+                title="Login with Microsoft">
+                <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+              </a>
+              <a href="http://localhost:1443/openid-router/azure/" class="each-login-option"
+                title="Login with Microsoft">
+                <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+              </a>
+            </div>
+          </div>
+          <div class="login-options-box login-options-sso">
+            <div class="login-options-title-box">
+              <span class="login-options-divider"></span>
+              <span class="login-options-title">OR Log in with SSO</span>
+              <span class="login-options-divider"></span>
+            </div>
+            <div id="login-options-sso-message" style="display: none;">
+            </div>
+            <div class="login-options">
+              <a href="http://localhost:1443/openid-router/azure/" class="each-login-option each-sso-login-option"
+                title="Login with Microsoft">
+                <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <div id="otp-content">
+          <form action="" method="POST" id="final-otp">
+            <div class="signup-header">Log in to your account</div>
+            <div id="login-otp-container"></div>
+            <label class="signup-email" for="otp">Please enter OTP sent to <span id="get-otp-on"></span>
+            </label>
+            <input id="otp" type="number" placeholder="" required />
+            <button id="final-login" type="submit">Log In</button>
+            <div class="login-options-box login-options-open-id">
+              <div class="login-options-title-box">
+                <span class="login-options-divider"></span>
+                <span class="login-options-title">OR Log in with Open Id</span>
+                <span class="login-options-divider"></span>
+              </div>
+              <div class="login-options">
+                <a href="http://localhost:1443/openid-router/azure/" class="each-login-option"
+                  title="Login with Microsoft">
+                  <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+                </a>
+                <a href="http://localhost:1443/openid-router/azure/" class="each-login-option"
+                  title="Login with Microsoft">
+                  <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+                </a>
+                <a href="http://localhost:1443/openid-router/azure/" class="each-login-option"
+                  title="Login with Microsoft">
+                  <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+                </a>
+              </div>
+            </div>
+            <div class="login-options-box login-options-sso">
+              <div class="login-options-title-box">
+                <span class="login-options-divider"></span>
+                <span class="login-options-title">OR Log in with SSO</span>
+                <span class="login-options-divider"></span>
+              </div>
+              <div id="login-options-sso-message" style="display: none;">
+              </div>
+              <div class="login-options">
+                <a href="http://localhost:1443/openid-router/azure/" class="each-login-option each-sso-login-option"
+                  title="Login with Microsoft">
+                  <img src="{% static 'login/apps/images/microsoft_logo.svg' %}" class="each-login-option-img" alt="azure" />
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div id="reset-otp-content">
+          <form action="" method="POST" id="reset-otp-form">
+            <div class="signup-header">Forgot Password?</div>
+            <div id="forgot-otp-container"></div>
+            <label class="signup-email" for="otp">Please enter OTP sent to <span id="forgot-otp-on"></span>
+            </label>
+            <input id="reset-otp" type="text" inputmode="numeric" autocomplete="one-time-code" required />
+
+            <label class="signup-password" for="Password">New Password</label>
+            <input type="Password" id="reset-Password" name="Password" placeholder="﹡﹡﹡﹡﹡﹡﹡﹡" required />
+
+            <button id="final-reset" type="submit">Set a new Password</button>
+            <div class="space-creater"></div>
+          </form>
+        </div>
+
+        <div id="enable_two_factor_auth">
+          <form id="enable_two_factor_auth_form">
+            <h3 class="form-title">Enable two-factor authentication</h2>
+              <h5 class="form-subtitle">Two-factor authentication increases the security of your Zelthy account.</h5>
+              <div>
+
+                <span class="form-message">All you need is a compatible app on your smartphone, example:</span>
+                <ul>
+                  <li class="each-auth-example"><a href="">Google Authenticator</a></li>
+                  <li class="each-auth-example"><a href="">Duo</a></li>
+                  <li class="each-auth-example"><a href="">Authy</a></li>
+                </ul>
+              </div>
+              <div class="auth-qr-code-box">
+                <svg id="auth-qr-code-img"></svg>
+              </div>
+              <p class="form-message">Scan this image with your app. You will see a 6-digit code on your screen. Enter
+                the code below to verify your phone and complete the setup.</p>
+              <div id="enable-auth-error-message"></div>
+              <input type="number" id="enable_two_factor_auth_input" name="enable_two_factor_auth_input" placeholder=""
+                required />
+              <button id="enable_two_factor_auth_submit_button" type="submit">Submit</button>
+          </form>
+        </div>
+
+        <div id="two_factor_auth">
+          <form id="two_factor_auth_form">
+            <h3 class="form-title">Two-factor authentication</h2>
+
+              <label class="input-label" for="two_factor_auth_input">Enter the one time code shown in your authenticator
+                app.</label>
+              <div id="two-factor-auth-auth-error-message"></div>
+              <input type="number" id="two_factor_auth_input" name="two_factor_auth_input" placeholder="" required />
+              <button id="two_factor_auth_submit_button" type="submit">Verify</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="role-whole">
+        <div class="logo-container">
+          <img src="{% static '/login/apps/images/zelthyLogoIphone.svg' %}" alt="#" class="role_container_img" />
+        </div>
+        <form action="" method="POST" id="role-login-form">
+          <div id="role-content">
+            <div id="error-message"></div>
+
+            <div class="role-header">Select a role</div>
+            <div id="role-container"></div>
+            <button type="submit" id="role-login" disabled>Log In</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="footer-Copyright">
+        Copyright © <span id="getYear"></span> Zelthy
+      </div>
+      <div class="footer-content">
+        <a href="https://www.zelthy.com/privacy/" class="footer-term" target="_blank" rel="noopener">Terms</a>
+        <a href="https://www.zelthy.com/terms/" class="footer-privacy" target="_blank" rel="noopener">PRIVACY</a>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="{% static 'login/apps/js/login_script.js' %}"></script>
+</body>
+
+</html>

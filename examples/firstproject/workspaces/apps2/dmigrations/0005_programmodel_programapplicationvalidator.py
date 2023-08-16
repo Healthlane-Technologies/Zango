@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import zelthy3.backend.apps.tenants.dynamic_models.fields
+import zelthy.backend.apps.tenants.dynamic_models.fields
 
 
 class Migration(migrations.Migration):
@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('is_delivered_as_camp', models.BooleanField(default=False, verbose_name='Is the program delivered as camp')),
                 ('program_delivered_through', models.CharField(blank=True, choices=[('hospital', 'Hospital'), ('doctor', 'Doctor')], max_length=50, verbose_name='Camp delivery mode')),
                 ('jsonfield_extra1', models.JSONField(blank=True, null=True)),
-                ('therapy_roles', zelthy3.backend.apps.tenants.dynamic_models.fields.ZManyToManyField(to='appauth.userrolemodel')),
+                ('therapy_roles', zelthy.backend.apps.tenants.dynamic_models.fields.ZManyToManyField(to='appauth.userrolemodel')),
             ],
             options={
                 'abstract': False,

@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import zelthy3.backend.apps.tenants.dynamic_models.fields
+import zelthy.backend.apps.tenants.dynamic_models.fields
 
 
 class Migration(migrations.Migration):
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('page', models.CharField(max_length=20)),
-                ('address', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.address')),
+                ('address', zelthy.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.address')),
             ],
             options={
                 'abstract': False,
