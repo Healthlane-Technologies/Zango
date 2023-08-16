@@ -1,6 +1,7 @@
 from django.db import models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
-from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+from zelthy.apps.dynamic_models.models import DynamicModelBase
+from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
+
 
 class DataPoint(DynamicModelBase):
     name = models.CharField(max_length=20)
@@ -41,9 +42,9 @@ class C(DynamicModelBase):
 #     x = models.IntegerField(default=0)
 
 
-class UniqueNumber(DynamicModelBase):
-    number = models.IntegerField(unique=True)
+# class UniqueNumber(DynamicModelBase):
+#     number = models.IntegerField(unique=True)
 
 
-class UniqueNumberChild(UniqueNumber):
-    pass
+# class UniqueNumberChild(UniqueNumber):
+#     pass

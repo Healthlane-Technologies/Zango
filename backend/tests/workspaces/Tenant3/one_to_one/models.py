@@ -6,8 +6,8 @@ To define a one-to-one relationship, use ``OneToOneField()``.
 In this example, a ``Place`` optionally can be a ``Restaurant``.
 """
 from django.db import models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
-from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+from zelthy.apps.dynamic_models.models import DynamicModelBase
+from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
 
 
 class Place(DynamicModelBase):
@@ -27,7 +27,7 @@ class Restaurant(DynamicModelBase):
         return "%s the restaurant" % self.place.name
 
 
-class OneBar(DynamicModelBase):
+class OBar(DynamicModelBase):
     place = ZOneToOneField(Place, models.CASCADE)
     serves_cocktails = models.BooleanField(default=True)
 
@@ -45,8 +45,9 @@ class Waiter(DynamicModelBase):
         return "%s the waiter at %s" % (self.name, self.restaurant)
 
 
-class Favorites(DynamicModelBase):
-    name = models.CharField(max_length=50)
+# class Favorites(DynamicModelBase):
+#     name = models.CharField(max_length=50)
+#     restaurants = models.ManyToManyField(Restaurant)
 
 
 class ManualPrimaryKey(DynamicModelBase):
@@ -111,86 +112,11 @@ class Director(DynamicModelBase):
     school = ZOneToOneField(School, models.CASCADE)
     objects = DirectorManager()
 
+class OneUsr(DynamicModelBase):
+    username = models.CharField(max_length=50, unique=True)
+    email = models.EmailField(unique=True)
 
-
-
-
-
-
-
-
-class OUser(DynamicModelBase):
-    username = models.CharField(max_length=100)
-    email = models.EmailField()
-
-
-class UserProfile(DynamicModelBase):
-    user = ZOneToOneField(OUser, models.CASCADE)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=2)
-
-
-class UserStatResult(DynamicModelBase):
-    results = models.CharField(max_length=50)
-
-
-class UserStat(DynamicModelBase):
-    user = ZOneToOneField(OUser, models.CASCADE, primary_key=True)
-    posts = models.IntegerField()
-    results = ZForeignKey(UserStatResult, models.CASCADE)
-
-
-class StatDetails(DynamicModelBase):
-    base_stats = ZOneToOneField(UserStat, models.CASCADE)
-    comments = models.IntegerField()
-
-
-# class AdvancedUserStat(UserStat):
-#     karma = models.IntegerField()
-
-
-class Image(DynamicModelBase):
-    name = models.CharField(max_length=100)
-
-
-class Product(DynamicModelBase):
-    name = models.CharField(max_length=100)
-    image = ZOneToOneField(Image, models.SET_NULL, null=True)
-
-
-class Parent1(DynamicModelBase):
-    name1 = models.CharField(max_length=50)
-
-
-class Parent2(DynamicModelBase):
-    # Avoid having two "id" fields in the Child1 subclass
-    id2 = models.AutoField(primary_key=True)
-    name2 = models.CharField(max_length=50)
-
-
-# class Child1(Parent1, Parent2):
-#     value = models.IntegerField()
-
-
-# class Child2(Parent1):
-#     parent2 = ZOneToOneField(Parent2, models.CASCADE)
-#     value = models.IntegerField()
-
-
-# class Child3(Child2):
-#     value3 = models.IntegerField()
-
-
-# class Child4(Child1):
-#     value4 = models.IntegerField()
-
-
-# class LinkedList(DynamicModelBase):
-#     name = models.CharField(max_length=50)
-#     previous_item = ZOneToOneField(
-#         "self",
-#         models.CASCADE,
-#         related_name="next_item",
-#         blank=True,
-#         null=True,
-#     )
+class OneProfile(DynamicModelBase):
+    user = ZOneToOneField(OneUsr, on_delete=models.CASCADE)
+    bio = models.TextField(blank=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True)

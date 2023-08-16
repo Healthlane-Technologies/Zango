@@ -16,6 +16,58 @@
         {
             "name": "null_fk",
             "path": "null_fk"
+        },
+        {
+            "name": "select_related",
+            "path": "select_related"
+        },
+        {
+            "name": "integer_field",
+            "path": "integer_field"
+        },
+        {
+            "name": "charfield",
+            "path": "charfield"
+        },
+        {
+            "name": "boolean",
+            "path": "boolean"
+        },
+        {
+            "name": "expressions",
+            "path": "expressions"
+        },
+        {
+            "name": "related",
+            "path": "related"
+        },
+        {
+            "name": "reverse_lookup",
+            "path": "reverse_lookup"
+        },
+        {
+            "name": "aggregate",
+            "path": "aggregate"
+        },
+        {
+            "name": "annotate",
+            "path": "annotate"
+        },
+        {
+            "name": "bulk_create",
+            "path": "bulk_create"
+        },
+        {
+            "name": "null_ordering",
+            "path": "null_ordering"
+        },
+        {
+            "name": "force_insert",
+            "path": "force_insert"
+        },
+        {
+            "name": "known_related_objects",
+            "path": "known_related_objects"
         }
     ]
 

@@ -1,16 +1,15 @@
+
 import os
 from django.conf import settings
 from django.core.management.base import no_translations
 from django.db import connection
 
-from django.core.management.commands.makemigrations import Command \
-    as MakeMigrationsCommand
+from django.core.management.commands.makemigrations import Command as MakeMigrationsCommand
 from zelthy.apps.shared.tenancy.models import TenantModel
 from zelthy.apps.dynamic_models.workspace.base import Workspace
 from importlib import import_module
 from zelthy.apps.dynamic_models.views import tenant_sys_path
 import sys
-
 
 
 class Command(MakeMigrationsCommand):
@@ -48,9 +47,9 @@ class Command(MakeMigrationsCommand):
         if is_test_mode:
             connection.settings_dict['NAME'] = "test_"+ connection.settings_dict['NAME']        
         settings.MIGRATION_MODULES = { f'dynamic_models': f"workspaces.{options['workspace']}.dmigrations" }
-        wks_obj = TenantModel.objects.get(name=options['workspace']) 
-        connection.set_tenant(wks_obj)
-        # with tenant_sys_path(options['workspace']):
-        w = Workspace(wks_obj, None,  True)
-        w.load_models()
-        super().handle('dynamic_models', **options)        
+        wks_obj = TenantModel.objects.get(name=options['workspace'])
+        connection.set_tenant(wks_obj) 
+        with tenant_sys_path(options['workspace']):
+            w = Workspace(wks_obj, None,  True)
+            w.ready()
+            super().handle('dynamic_models', **options)        

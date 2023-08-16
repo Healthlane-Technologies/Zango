@@ -18,14 +18,12 @@ class Command(MigrateSchemasCommand):
          )
 
     def handle(self, *args, **options):
-        print("Inside ws_migrate...")
         is_test_mode = options['test']
         if is_test_mode:
             connection.settings_dict['NAME'] = "test_"+ connection.settings_dict['NAME']
-        print("here")
+        
         # get sorted plugins and migrate plugins' migrations then the main workspace migration
         settings.MIGRATION_MODULES = { f'dynamic_models': f"workspaces.{options['workspace']}.dmigrations" }
-        # print(options['workspace'])
         options['schema_name'] = options['workspace']
         
         super().handle(*args, **options)
