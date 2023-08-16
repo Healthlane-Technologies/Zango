@@ -129,4 +129,4 @@ package-lock.json
 .vscode/
 *-workspacebin/
 
-**/zelthy_packages/
+**/plugins/
