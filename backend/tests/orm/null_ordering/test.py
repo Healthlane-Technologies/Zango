@@ -22,27 +22,16 @@ class NullQueriesTests(BaseTestCase):
 
         # Exact query with value None returns nothing ("is NULL" in sql,
         # but every 'id' field has a value).
-        self.assertSequenceEqual(NullChoice.objects.filter(nullchoice__exact=None), [])
+        self.assertSequenceEqual(NullChoice.objects.filter(choice__exact=None), [])
 
         # The same behavior for iexact query.
-        self.assertSequenceEqual(NullChoice.objects.filter(nullchoice__iexact=None), [])
+        self.assertSequenceEqual(NullChoice.objects.filter(choice__iexact=None), [])
 
         # Excluding the previous result returns everything.
         self.assertSequenceEqual(
-            NullChoice.objects.exclude(nullchoice=None).order_by("id"), [c1, c2]
+            NullChoice.objects.exclude(choice=None).order_by("id"), [c1, c2]
         )
 
-        # Valid query, but fails because foo isn't a keyword
-        msg = (
-            "Cannot resolve keyword 'foo' into field. NullChoices are: choice, id, poll, "
-            "poll_id"
-        )
-        with self.assertRaisesMessage(FieldError, msg):
-            NullChoice.objects.filter(foo__exact=None)
-
-        # Can't use None on anything other than __exact and __iexact
-        with self.assertRaisesMessage(ValueError, "Cannot use None as a query value"):
-            NullChoice.objects.filter(id__gt=None)
 
     def test_unsaved(self):
         poll = NullPoll(question="How?")

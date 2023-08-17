@@ -6,13 +6,13 @@ from django.db.models import Count, Subquery, OuterRef, F, Q
 
 class OneToOneFieldTest(BaseTestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.user1 = OneUsr.objects.create(username="user1", email="user1@example.com")
-        cls.user2 = OneUsr.objects.create(username="user2", email="user2@example.com")
 
-        cls.profile1 = OneProfile.objects.create(user=cls.user1, bio="Bio for user1")
-        cls.profile2 = OneProfile.objects.create(user=cls.user2, bio="Bio for user2")
+    def setUp(self):
+        self.user1 = OneUsr.objects.create(username="user1", email="user1@example.com")
+        self.user2 = OneUsr.objects.create(username="user2", email="user2@example.com")
+
+        self.profile1 = OneProfile.objects.create(user=self.user1, bio="Bio for user1")
+        self.profile2 = OneProfile.objects.create(user=self.user2, bio="Bio for user2")
     
     def test_one_to_one_relationship(self):
         self.assertEqual(self.profile1.user, self.user1)
@@ -31,7 +31,7 @@ class OneToOneFieldTest(BaseTestCase):
 
         profile_with_bio = OneProfile.objects.get(user__username="user2")
         self.assertEqual(profile_with_bio, self.profile2)
-    
+
     def test_related_object_bulk_create(self):
         new_users = [
             OneUsr(username="newuser1", email="newuser1@example.com"),

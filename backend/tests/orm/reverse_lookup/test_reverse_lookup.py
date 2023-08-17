@@ -4,14 +4,13 @@ from django.db.models import Count
 
 class ReverseLookupTest(BaseTestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.author1 = ReverseAuthor.objects.create(name="Author 1")
-        cls.author2 = ReverseAuthor.objects.create(name="Author 2")
+    def setUp(self):
+        self.author1 = ReverseAuthor.objects.create(name="Author 1")
+        self.author2 = ReverseAuthor.objects.create(name="Author 2")
 
-        cls.book1 = ReverseBook.objects.create(title="Book 1", author=cls.author1)
-        cls.book2 = ReverseBook.objects.create(title="Book 2", author=cls.author1)
-        cls.book3 = ReverseBook.objects.create(title="Book 3", author=cls.author2)
+        self.book1 = ReverseBook.objects.create(title="Book 1", author=self.author1)
+        self.book2 = ReverseBook.objects.create(title="Book 2", author=self.author1)
+        self.book3 = ReverseBook.objects.create(title="Book 3", author=self.author2)
     
     def test_reverse_lookup_books(self):
         self.assertEqual(self.author1.reverse_books.count(), 2)

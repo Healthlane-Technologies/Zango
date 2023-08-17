@@ -6,17 +6,17 @@ from zelthy.test.base import BaseTestCase
 
 class ForeignKeyTest(BaseTestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.author1 = FAuthor.objects.create(name="Author 1", bio="Bio for Author 1")
-        cls.author2 = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+    
+    def setUp(self):
+        self.author1 = FAuthor.objects.create(name="Author 1", bio="Bio for Author 1")
+        self.author2 = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
 
-        cls.publisher1 = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
-        cls.publisher2 = FPublisher.objects.create(name="Publisher 2", website="https://publisher2.com")
+        self.publisher1 = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        self.publisher2 = FPublisher.objects.create(name="Publisher 2", website="https://publisher2.com")
 
-        cls.book1 = FBook.objects.create(title="Book 1", author=cls.author1, publisher=cls.publisher1, publication_date="2023-01-01")
-        cls.book2 = FBook.objects.create(title="Book 2", author=cls.author1, publisher=cls.publisher2, publication_date="2023-02-01")
-        cls.book3 = FBook.objects.create(title="Book 3", author=cls.author2, publisher=cls.publisher1, publication_date="2023-03-01")
+        self.book1 = FBook.objects.create(title="Book 1", author=self.author1, publisher=self.publisher1, publication_date="2023-01-01")
+        self.book2 = FBook.objects.create(title="Book 2", author=self.author1, publisher=self.publisher2, publication_date="2023-02-01")
+        self.book3 = FBook.objects.create(title="Book 3", author=self.author2, publisher=self.publisher1, publication_date="2023-03-01")
 
 
     def test_foreign_key_relationship(self):
@@ -32,14 +32,18 @@ class ForeignKeyTest(BaseTestCase):
         self.assertEqual(books_by_author2.count(), 1)
 
     def test_queries(self):
-        books_by_author1 = FBook.objects.filter(author=self.author1)
+        author = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=author, publisher=publisher, publication_date="2023-01-01")
+        book2 = FBook.objects.create(title="Book 2", author=author, publisher=publisher, publication_date="2023-02-01")
+        books_by_author1 = FBook.objects.filter(author=author)
         self.assertEqual(books_by_author1.count(), 2)
 
-        authors_of_book1 = self.book1.author
-        self.assertEqual(authors_of_book1, self.author1)
+        authors_of_book1 = book1.author
+        self.assertEqual(authors_of_book1, author)
 
         recent_books = FBook.objects.filter(publication_date__gte="2023-02-01")
-        self.assertEqual(recent_books.count(), 2)
+        self.assertEqual(recent_books.count(), 3)
 
     def test_cascade_delete(self):
         author_id = self.author1.id
@@ -50,14 +54,20 @@ class ForeignKeyTest(BaseTestCase):
 
     def test_update_related_objects(self):
         new_author = FAuthor.objects.create(name="New Author", bio="Bio for New Author")
-        self.book1.author = new_author
-        self.book1.save()
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=self.author1, publisher=publisher, publication_date="2023-01-01")
+        book1.author = new_author
+        book1.save()
 
-        updated_book = FBook.objects.get(id=self.book1.id)
+        updated_book = FBook.objects.get(id=book1.id)
         self.assertEqual(updated_book.author, new_author)
 
     def test_reverse_related_query(self):
-        author1_books = self.author1.fbook_set.all()
+        author = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=author, publisher=publisher, publication_date="2023-01-01")
+        book2 = FBook.objects.create(title="Book 2", author=author, publisher=publisher, publication_date="2023-02-01")
+        author1_books = author.fbook_set.all()
         self.assertEqual(author1_books.count(), 2)
 
     def test_create_with_foreign_key(self):
@@ -98,8 +108,11 @@ class ForeignKeyTest(BaseTestCase):
 
 
     def test_set_null_on_delete(self):
-        publisher_id = self.publisher1.id
-        self.publisher1.delete()
+        author = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=author, publisher=publisher, publication_date="2023-01-01")
+        publisher_id = publisher.id
+        publisher.delete()
 
         books_with_deleted_publisher = FBook.objects.filter(publisher_id=publisher_id)
         self.assertEqual(books_with_deleted_publisher.count(), 0)
@@ -116,8 +129,13 @@ class ForeignKeyTest(BaseTestCase):
         self.assertEqual(books_by_author1_publisher2.count(), 1)
     
     def test_related_object_bulk_update(self):
+        author = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=author, publisher=publisher, publication_date="2023-01-01")
+        book2 = FBook.objects.create(title="Book 2", author=author, publisher=publisher, publication_date="2023-02-01")
+
         updated_publisher = FPublisher.objects.create(name="Updated Publisher", website="https://updated-publisher.com")
-        updated_books_count = FBook.objects.filter(publisher=self.publisher1).update(publisher=updated_publisher)
+        updated_books_count = FBook.objects.filter(publisher=publisher).update(publisher=updated_publisher)
         self.assertEqual(updated_books_count, 2)
 
     def test_related_object_ordering(self):
@@ -169,8 +187,8 @@ class ForeignKeyTest(BaseTestCase):
 
     def test_related_object_update_or_create(self):
         # Test using update_or_create() with related objects
-        existing_author, created = FAuthor.objects.get_or_create(name="Author 1", bio="Author ")
-        existing_book, book_created = existing_author.fbook_set.update_or_create(name="Author 1", bio="Bio for Author 1",
+        existing_author, created = FAuthor.objects.get_or_create(name="Author 1")
+        existing_book, book_created = existing_author.fbook_set.update_or_create(
             title="Book 1", defaults={"publication_date": "2023-08-21"}
         )
         self.assertFalse(created)
@@ -210,9 +228,12 @@ class ForeignKeyTest(BaseTestCase):
         self.assertEqual(updated_publisher.website, "https://updated-publisher2.com")
 
     def test_update_book(self):
-        self.book3.title = "Updated Book Title"
-        self.book3.save()
-        updated_book = FBook.objects.get(id=self.book3.id)
+        author = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=author, publisher=publisher, publication_date="2020-01-01")
+        book1.title = "Updated Book Title"
+        book1.save()
+        updated_book = FBook.objects.get(id=book1.id)
         self.assertEqual(updated_book.title, "Updated Book Title")
 
     def test_delete_author(self):
@@ -238,7 +259,11 @@ class ForeignKeyTest(BaseTestCase):
         self.assertEqual(author1_books.count(), 2)
 
     def test_related_publisher_books(self):
-        publisher_books = self.publisher1.fbook_set.all()
+        author = FAuthor.objects.create(name="Author 2", bio="Bio for Author 2")
+        publisher = FPublisher.objects.create(name="Publisher 1", website="https://publisher1.com")
+        book1 = FBook.objects.create(title="Book 1", author=author, publisher=publisher, publication_date="2023-01-01")
+        book2 = FBook.objects.create(title="Book 2", author=author, publisher=publisher, publication_date="2023-02-01")
+        publisher_books = publisher.fbook_set.all()
         self.assertEqual(publisher_books.count(), 2)
 
     def test_related_author_name_filtering(self):

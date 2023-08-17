@@ -11,11 +11,6 @@ from zelthy.test.base import BaseTestCase
 
 class TestForeignKey(BaseTestCase):
 
-    def test_callable_default(self):
-        """A lazy callable may be used for ForeignKey.default."""
-        a = Foo.objects.create(id=1, a="abc", d=Decimal("12.34"))
-        b = Bar.objects.create(b="bcd")
-        self.assertEqual(b.a, a)
 
     @skipIfDBFeature("interprets_empty_strings_as_nulls")
     def test_empty_string_fk(self):

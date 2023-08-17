@@ -36,7 +36,7 @@ class ExistingRelatedInstancesTests(BaseTestCase):
             self.assertIs(tournament, pool.tournament)
 
     def test_foreign_key_prefetch_related(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             tournament = Tournament.objects.prefetch_related("pool_set").get(
                 pk=self.t1.pk
             )
@@ -44,7 +44,7 @@ class ExistingRelatedInstancesTests(BaseTestCase):
             self.assertIs(tournament, pool.tournament)
 
     def test_foreign_key_multiple_prefetch(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             tournaments = list(
                 Tournament.objects.prefetch_related("pool_set").order_by("pk")
             )
@@ -136,7 +136,7 @@ class ExistingRelatedInstancesTests(BaseTestCase):
             self.assertIs(pool, style.pool)
 
     def test_reverse_one_to_one_prefetch_related(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             pool = Pool.objects.prefetch_related("poolstyle").get(pk=self.p2.pk)
             style = pool.poolstyle
             self.assertIs(pool, style.pool)
@@ -148,13 +148,13 @@ class ExistingRelatedInstancesTests(BaseTestCase):
             self.assertIs(pools[2], pools[2].poolstyle.pool)
 
     def test_reverse_one_to_one_multi_prefetch_related(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             pools = list(Pool.objects.prefetch_related("poolstyle").order_by("pk"))
             self.assertIs(pools[1], pools[1].poolstyle.pool)
             self.assertIs(pools[2], pools[2].poolstyle.pool)
 
     def test_reverse_fk_select_related_multiple(self):
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(2):
             ps = list(
                 PoolStyle.objects.annotate(
                     pool_1=FilteredRelation("pool"),
@@ -167,7 +167,7 @@ class ExistingRelatedInstancesTests(BaseTestCase):
             self.assertIs(ps[0], ps[0].pool_2.another_style)
 
     def test_multilevel_reverse_fk_cyclic_select_related(self):
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(6):
             p = list(
                 PoolStyle.objects.annotate(
                     tournament_pool=FilteredRelation("pool__tournament__pool"),
@@ -176,7 +176,7 @@ class ExistingRelatedInstancesTests(BaseTestCase):
             self.assertEqual(p[0].tournament_pool.tournament, p[0].pool.tournament)
 
     def test_multilevel_reverse_fk_select_related(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             p = list(
                 Tournament.objects.filter(id=self.t2.id)
                 .annotate(

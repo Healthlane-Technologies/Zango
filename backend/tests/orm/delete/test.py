@@ -3,14 +3,13 @@ from zelthy.test.base import BaseTestCase
 
 class DeleteTest(BaseTestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.author1 = AggAuthor.objects.create(name="Author 1")
-        cls.author2 = AggAuthor.objects.create(name="Author 2")
+    def setUp(self):
+        self.author1 = AggAuthor.objects.create(name="Author 1")
+        self.author2 = AggAuthor.objects.create(name="Author 2")
 
-        cls.book1 = AggBook.objects.create(title="Book 1", author=cls.author1, price=20)
-        cls.book2 = AggBook.objects.create(title="Book 2", author=cls.author1, price=30)
-        cls.book3 = AggBook.objects.create(title="Book 3", author=cls.author2, price=25)
+        self.book1 = AggBook.objects.create(title="Book 1", author=self.author1, price=20)
+        self.book2 = AggBook.objects.create(title="Book 2", author=self.author1, price=30)
+        self.book3 = AggBook.objects.create(title="Book 3", author=self.author2, price=25)
     
     def test_delete_author(self):
         author_count_before_delete = AggAuthor.objects.count()
@@ -35,8 +34,11 @@ class DeleteTest(BaseTestCase):
         self.assertEqual(related_books.count(), 0)
 
     def test_delete_book_restrict(self):
+        author1 = AggAuthor.objects.create(name="Author 1")
+        book1 = AggBook.objects.create(title="Book 1", author=author1, price=20)
+        author1.delete()
         with self.assertRaises(AggBook.DoesNotExist):
-            self.book1.author.delete()
+            book1.author.delete()
 
     def test_delete_book_set_null(self):
         author_id = self.book1.author.id
@@ -45,8 +47,11 @@ class DeleteTest(BaseTestCase):
         self.assertIsNone(book_author)
 
     def test_delete_book_set_default(self):
-        author_id = self.book1.author.id
-        self.book1.author.delete()
+        author1 = AggAuthor.objects.create(name="Author 1")
+        book1 = AggBook.objects.create(title="Book 1", author=author1, price=20)
+        author1.delete()
+        author_id = book1.author.id
+        book1.author.delete()
         book_author = AggBook.objects.filter(author_id=author_id).first()
         self.assertEqual(book_author.author_id, AggAuthor._meta.get_field('name').get_default())
 
