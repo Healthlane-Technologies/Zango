@@ -2,7 +2,7 @@ from django.db.models import FilteredRelation
 from django.test import TestCase
 
 from workspaces.Tenant3.known_related_objects.models import Organiser, Pool, PoolStyle, Tournament
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 
 class ExistingRelatedInstancesTests(BaseTestCase):

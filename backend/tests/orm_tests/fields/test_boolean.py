@@ -5,7 +5,7 @@ from django.db import IntegrityError, models, transaction
 from django.test import SimpleTestCase, TestCase
 
 from workspaces.Tenant3.boolean.models import BooleanModel, FksToBooleans, NullBooleanModel
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 
 class BooleanFieldTests(BaseTestCase):

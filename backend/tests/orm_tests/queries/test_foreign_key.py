@@ -2,7 +2,7 @@
 from django.test import TestCase
 from workspaces.Tenant3.foreign_key.models import FAuthor, FBook, FPublisher
 from django.db.models import Count, Subquery, OuterRef
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class ForeignKeyTest(BaseTestCase):
 

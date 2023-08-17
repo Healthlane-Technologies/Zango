@@ -1,6 +1,6 @@
 from django.db import models
 from workspaces.Tenant3.related.models import RelatedAuthor, RelatedPublisher, RelatedBook, RelatedChapter
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 from django.db.models import Count, Subquery, OuterRef, F, Q
 
 class ForeignKeyTest(BaseTestCase):
@@ -48,10 +48,6 @@ class ForeignKeyTest(BaseTestCase):
         books_with_chapter_count = RelatedBook.objects.annotate(num_chapters=Count('relatedchapter'))
         for book in books_with_chapter_count:
             self.assertTrue(hasattr(book, 'num_chapters'))
-
-    # def test_related_object_does_not_exist(self):
-    #     with self.assertRaises(RelatedAuthor.DoesNotExist):
-    #         author_without_book = RelatedAuthor.objects.get(relatedbook=self.book2)
 
     def test_related_object_exists(self):
         books_with_author = RelatedBook.objects.filter(author__isnull=False).distinct()

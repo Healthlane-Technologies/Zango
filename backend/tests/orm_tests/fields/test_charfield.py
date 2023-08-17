@@ -3,7 +3,7 @@ from django.db import models
 from django.test import SimpleTestCase, TestCase
 
 from workspaces.Tenant3.charfield.models import CPost
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class TestCharField(BaseTestCase):
     def test_max_length_passed_to_formfield(self):
@@ -73,16 +73,6 @@ class ValidationTests(BaseTestCase):
         msg = "Value 'not a' is not a valid choice."
         with self.assertRaisesMessage(ValidationError, msg):
             f.clean("not a", None)
-
-    # def test_enum_choices_cleans_valid_string(self):
-    #     f = models.CharField(choices=self.Choices, max_length=1)
-    #     self.assertEqual(f.clean("c", None), "c")
-
-    # def test_enum_choices_invalid_input(self):
-    #     f = models.CharField(choices=self.Choices, max_length=1)
-    #     msg = "Value 'a' is not a valid choice."
-    #     with self.assertRaisesMessage(ValidationError, msg):
-    #         f.clean("a", None)
 
     def test_charfield_raises_error_on_empty_input(self):
         f = models.CharField(null=False)

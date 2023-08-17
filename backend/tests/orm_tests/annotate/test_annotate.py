@@ -1,7 +1,7 @@
 from django.test import TestCase
 from workspaces.Tenant3.annotate.models import AnnotateAuthor, AnnotateBook
 from django.db.models import Count, Sum, Avg, Min, Max
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class AnnotateTest(BaseTestCase):
 

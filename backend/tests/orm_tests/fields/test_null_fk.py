@@ -1,6 +1,6 @@
 
 from workspaces.Tenant3.null_fk.models import Comment, Forum, Item, NPost, PropertyValue, SystemDetails, SystemInfo, Zywoo
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 from django.db.models import Q
 
 class NullFkTests(BaseTestCase):
@@ -23,28 +23,10 @@ class NullFkTests(BaseTestCase):
         self.assertEqual(c.post, p)
         self.assertIsNone(Comment.objects.select_related().get(id=c2.id).post)
 
-        # self.assertQuerySetEqual(
-        #     Comment.objects.select_related("post__forum__system_info").all(),
-        #     [
-        #         (c1.id, "My first comment", "<Post: First Post>"),
-        #         (c2.id, "My second comment", "None"),
-        #     ],
-        #     transform=lambda c: (c.id, c.comment_text, repr(c.post)),
-        # )
-
         # Regression test for #7530, #7716.
         self.assertIsNone(
             Comment.objects.select_related("post").filter(post__isnull=True)[0].post
         )
-
-        # self.assertQuerySetEqual(
-        #     Comment.objects.select_related("post__forum__system_info__system_details"),
-        #     [
-        #         (c1.id, "My first comment", "<Post: First Post>"),
-        #         (c2.id, "My second comment", "None"),
-        #     ],
-        #     transform=lambda c: (c.id, c.comment_text, repr(c.post)),
-        # )
 
     def test_combine_isnull(self):
         item = Item.objects.create(title="Some Item")

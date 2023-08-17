@@ -1,5 +1,5 @@
 from workspaces.Tenant3.force_insert.models import ForceInsertAuthor, ForceInsertBook
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 from django.db import IntegrityError
 
 class ForceInsertTest(BaseTestCase):

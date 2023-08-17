@@ -15,7 +15,7 @@ from workspaces.Tenant3.integer_field.models import (
     PositiveSmallIntegerModel,
     SmallIntegerModel,
 )
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 
 class IntegerFieldTests(BaseTestCase):
@@ -302,14 +302,3 @@ class ValidationTests(BaseTestCase):
         f = models.IntegerField(choices=((1, 1),))
         with self.assertRaises(ValidationError):
             f.clean("0", None)
-
-    # def test_enum_choices_cleans_valid_string(self):
-    #     f = models.IntegerField(choices=self.Choices)
-    #     self.assertEqual(f.clean("1", None), 1)
-
-    # def test_enum_choices_invalid_input(self):
-    #     f = models.IntegerField(choices=self.Choices)
-    #     with self.assertRaises(ValidationError):
-    #         f.clean("A", None)
-    #     with self.assertRaises(ValidationError):
-    #         f.clean("3", None)

@@ -1,5 +1,5 @@
 from workspaces.Tenant3.reverse_lookup.models import ReverseAuthor, ReverseBook
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 from django.db.models import Count
 
 class ReverseLookupTest(BaseTestCase):

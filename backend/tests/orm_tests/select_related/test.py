@@ -1,5 +1,5 @@
 from workspaces.Tenant3.select_related.models import SelectAuthor, SelectBook, SelectUserProfile
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class SelectRelatedTest(BaseTestCase):
 

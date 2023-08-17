@@ -7,7 +7,7 @@ from django.core import checks
 
 from zelthy.apps.dynamic_models.models import DynamicModelBase
 from zelthy.apps.dynamic_models.fields import ZForeignKey
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class TestForeignKey(BaseTestCase):
 
@@ -73,34 +73,6 @@ class TestForeignKey(BaseTestCase):
 
         col = Baz._meta.get_field("bar").get_col("alias")
         self.assertIs(col.output_field, Foo._meta.pk)
-
-    # def test_recursive_fks_get_col(self):
-    #     class Foo(DynamicModelBase):
-    #         bar = ZForeignKey("Bar", models.CASCADE, primary_key=True)
-
-    #     class Bar(DynamicModelBase):
-    #         foo = ZForeignKey(Foo, models.CASCADE, primary_key=True)
-
-    #     with self.assertRaisesMessage(ValueError, "Cannot resolve output_field"):
-    #         Foo._meta.get_field("bar").get_col("alias")
-
-
-    # def test_non_local_to_field(self):
-    #     class Parent(DynamicModelBase):
-    #         key = models.IntegerField(unique=True)
-
-    #     class Child(Parent):
-    #         pass
-
-    #     class Related(DynamicModelBase):
-    #         child = ZForeignKey(Child, on_delete=models.CASCADE, to_field="key")
-
-    #     msg = (
-    #         "'model_fields.Related.child' refers to field 'key' which is not "
-    #         "local to model 'model_fields.Child'."
-    #     )
-    #     with self.assertRaisesMessage(FieldError, msg):
-    #         Related._meta.get_field("child").related_fields
 
     def test_invalid_to_parameter(self):
         msg = (

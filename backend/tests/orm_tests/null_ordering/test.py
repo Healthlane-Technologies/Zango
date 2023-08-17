@@ -1,7 +1,7 @@
 from django.core.exceptions import FieldError
 
 from workspaces.Tenant3.null_fk.models import NullChoice, NullInner, NullOuterA, NullOuterB, NullPoll
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class NullQueriesTests(BaseTestCase):
 

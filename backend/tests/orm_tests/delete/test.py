@@ -1,5 +1,5 @@
 from workspaces.Tenant3.aggregate.models import AggAuthor, AggBook
-from zelthy.test.base import BaseTestCase
+from zelthy.test_utils.base import BaseTestCase
 
 class DeleteTest(BaseTestCase):
 
