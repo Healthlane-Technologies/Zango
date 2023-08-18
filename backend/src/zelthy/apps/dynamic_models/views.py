@@ -126,6 +126,8 @@ class DynamicView(View):
             resp =  view(request, *args, **kwargs)
         else:
             resp =  Http404()
+            print(resp)
+            raise resp
             # reset_modules()
         return resp
 
