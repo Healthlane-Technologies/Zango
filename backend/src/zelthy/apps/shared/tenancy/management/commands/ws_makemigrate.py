@@ -49,6 +49,7 @@ class Command(MakeMigrationsCommand):
             connection.settings_dict['NAME'] = "test_"+ connection.settings_dict['NAME']        
         settings.MIGRATION_MODULES = { f'dynamic_models': f"workspaces.{options['workspace']}.dmigrations" }
         wks_obj = TenantModel.objects.get(name=options['workspace']) 
+        connection.set_tenant(wks_obj)
         # with tenant_sys_path(options['workspace']):
         w = Workspace(wks_obj, None,  True)
         w.load_models()

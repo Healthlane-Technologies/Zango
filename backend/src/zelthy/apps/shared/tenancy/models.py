@@ -144,14 +144,14 @@ class TenantModel(TenantMixin, FullAuditMixin):
                 description, 
                 **other_params
                 ):
-        obj = cls(
+        obj = cls.objects.create(
             name=name,
             schema_name=schema_name,
             description=description,
             **other_params
-        ).save()
+        )
         # initialize tenant's workspace
-        obj.initialize_workspace()
+        # obj.initialize_workspace()
         
 class Domain(DomainMixin, FullAuditMixin):
     """
