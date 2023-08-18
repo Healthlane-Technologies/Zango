@@ -15,7 +15,6 @@
         }
     ],
     "app_routes": [
-       
         {
             "re_path": "^mod1/",
             "module": "module1",
@@ -24,17 +23,6 @@
         
     ],
     "plugin_routes": [
-        {
-            "re_path": "^frame/",
-            "plugin": "frame",
-            "url": "urls"
-        },
-        {
-            "re_path": "^email/",
-            "plugin": "zel-email",
-            "url": "urls"
-        }
-
     ]
     
 }

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import os
 import re
@@ -291,9 +292,12 @@ class Workspace:
         """
             get topologically sorted list of models from packages and modules and
             import models.py files in that order
-        """        
+        """
+        print("self.get_models(): ", self.get_models())        
         for m in self.get_models():
+            print("m :", m)
             split = m.split(".")[2:]
+            print("split: ", split)
             self.plugin_source.load_plugin(".".join(split))
         return    
     

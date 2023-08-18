@@ -10,6 +10,7 @@ from django.db.models import Q
 
 from .models import Item, Property, PropertyValue
 from ..landingPage.models import LandingPageModel
+
 class View2(TemplateView):
 
     template_name = 'hello_world.html'
@@ -24,13 +25,14 @@ class View2(TemplateView):
         # ite = Item.objects.get(id=2)
         pg = LandingPageModel.objects.create(page="123")
         p = Property.objects.create(item=item, key="123", value=val, pg=pg)
-        p.values.add(val)
-        p.save()
-        print(p.values.all())
+
+        # p.values.add(val)
+        # p.save()
+        # print(p.values.all())
         # print("pp--->", p.values.all())
         # print(ite.props.all()[0].item.title)
         # print(p)
-        pg1 = LandingPageModel.objects.get(id=1)
+        # pg1 = LandingPageModel.objects.get(id=1)
         # print(pg1.property_set.all())
         return context  
         

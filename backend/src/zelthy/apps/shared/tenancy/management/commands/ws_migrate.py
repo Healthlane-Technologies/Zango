@@ -26,7 +26,7 @@ class Command(MigrateSchemasCommand):
         # get sorted plugins and migrate plugins' migrations then the main workspace migration
         settings.MIGRATION_MODULES = { f'dynamic_models': f"workspaces.{options['workspace']}.dmigrations" }
         # print(options['workspace'])
-        options['schema_name'] = "tenant3" #options['workspace']
+        options['schema_name'] = options['workspace']
         
         super().handle(*args, **options)
         # settings.MIGRATION_MODULES = { f'dynamic_models': f"workspaces.{options['workspace']}.plugins.crud.migrations" }

@@ -21,11 +21,11 @@ WSGI_APPLICATION = 'firstproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE':'django_tenants.postgresql_backend',
-        'NAME': 'zelthy1',
+        'NAME': 'postgres',
         'USER': 'postgres',
         'PASSWORD': 'zelthy3pass',
         'HOST': '127.0.0.1',
-        'PORT': '5432',
+        'PORT': '5000',
         'ATOMIC_REQUESTS':True
     }
 }

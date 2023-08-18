@@ -48,5 +48,5 @@ class Property(DynamicModelBase):
     key = models.CharField(max_length=100)
     value = ZForeignKey(PropertyValue, models.SET_NULL, null=True)
     pg = ZForeignKey(LandingPageModel, null=True, on_delete=models.CASCADE)
-    values = ZManyToManyField(PropertyValue)
+    # values = ZManyToManyField(PropertyValue)
     
