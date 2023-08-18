@@ -68,6 +68,10 @@
         {
             "name": "known_related_objects",
             "path": "known_related_objects"
+        },
+        {
+            "name": "raw_query",
+            "path": "raw_query"
         }
     ]
 
