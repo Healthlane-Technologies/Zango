@@ -1,4 +1,4 @@
-from workspaces.Tenant3.bulk_create.models import BulkAuthor, BulkBook
+from workspaces.test_tenant.bulk_create.models import BulkAuthor, BulkBook
 from zelthy.test_utils.base import BaseTestCase
 
 class BulkCreateTest(BaseTestCase):

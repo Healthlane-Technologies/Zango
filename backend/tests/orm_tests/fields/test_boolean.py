@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.test import SimpleTestCase, TestCase
 
-from workspaces.Tenant3.boolean.models import BooleanModel, FksToBooleans, NullBooleanModel
+from workspaces.test_tenant.boolean.models import BooleanModel, FksToBooleans, NullBooleanModel
 from zelthy.test_utils.base import BaseTestCase
 
 

@@ -1,5 +1,5 @@
 
-from workspaces.Tenant3.null_fk.models import Comment, Forum, Item, NPost, PropertyValue, SystemDetails, SystemInfo, Zywoo
+from workspaces.test_tenant.null_fk.models import Comment, Forum, Item, NPost, PropertyValue, SystemDetails, SystemInfo, Zywoo
 from zelthy.test_utils.base import BaseTestCase
 from django.db.models import Q
 

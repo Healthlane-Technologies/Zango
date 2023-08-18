@@ -1,4 +1,4 @@
-from workspaces.Tenant3.aggregate.models import AggAuthor, AggBook
+from workspaces.test_tenant.aggregate.models import AggAuthor, AggBook
 from zelthy.test_utils.base import BaseTestCase
 
 class DeleteTest(BaseTestCase):

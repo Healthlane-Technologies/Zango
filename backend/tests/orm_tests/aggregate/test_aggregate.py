@@ -1,5 +1,5 @@
 from zelthy.test_utils.base import BaseTestCase
-from workspaces.Tenant3.aggregate.models import AggAuthor, AggBook
+from workspaces.test_tenant.aggregate.models import AggAuthor, AggBook
 from django.db.models import Count, Sum, Avg, Min, Max
 
 

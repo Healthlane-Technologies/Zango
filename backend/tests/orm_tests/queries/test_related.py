@@ -1,5 +1,5 @@
 from django.db import models
-from workspaces.Tenant3.related.models import RelatedAuthor, RelatedPublisher, RelatedBook, RelatedChapter
+from workspaces.test_tenant.related.models import RelatedAuthor, RelatedPublisher, RelatedBook, RelatedChapter
 from zelthy.test_utils.base import BaseTestCase
 from django.db.models import Count, Subquery, OuterRef, F, Q
 

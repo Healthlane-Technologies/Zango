@@ -1,4 +1,4 @@
-from workspaces.Tenant3.force_insert.models import ForceInsertAuthor, ForceInsertBook
+from workspaces.test_tenant.force_insert.models import ForceInsertAuthor, ForceInsertBook
 from zelthy.test_utils.base import BaseTestCase
 from django.db import IntegrityError
 

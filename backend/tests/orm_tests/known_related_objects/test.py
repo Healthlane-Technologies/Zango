@@ -1,7 +1,7 @@
 from django.db.models import FilteredRelation
 from django.test import TestCase
 
-from workspaces.Tenant3.known_related_objects.models import Organiser, Pool, PoolStyle, Tournament
+from workspaces.test_tenant.known_related_objects.models import Organiser, Pool, PoolStyle, Tournament
 from zelthy.test_utils.base import BaseTestCase
 
 

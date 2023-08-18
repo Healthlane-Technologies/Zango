@@ -38,10 +38,10 @@ class BaseTestCase(TestCase):
         # cls.add_allowed_test_domain()
         tenant_model = get_tenant_model()
         try:
-            cls.tenant = tenant_model.objects.get(name="Tenant3")
+            cls.tenant = tenant_model.objects.get(name=cls.get_test_schema_name())
             cls.zoperations()
         except Exception:
-            cls.tenant = get_tenant_model()(schema_name=cls.get_test_schema_name(), name="Tenant3", description="desc")
+            cls.tenant = get_tenant_model()(schema_name=cls.get_test_schema_name(), name=cls.get_test_schema_name(), description="desc")
             cls.setup_tenant(cls.tenant)
             cls.tenant.save()
             cls.zoperations()
@@ -71,7 +71,7 @@ class BaseTestCase(TestCase):
     @classmethod
     def zoperations(cls):
         settings.TEST_MIGRATION_RUNNING = True
-        tenant = "Tenant3"
+        tenant = cls.get_test_schema_name()
         command1 = f"python manage.py ws_makemigrate {tenant} --test"
         subprocess.run(command1, shell=True)  
         command2 = f"python manage.py ws_migrate {tenant} --test"
@@ -84,7 +84,7 @@ class BaseTestCase(TestCase):
 
     @classmethod
     def get_test_schema_name(cls):
-        return 'Tenant3'
+        return "test_tenant"
     
     @classmethod
     def setUpTestData(cls) -> None:

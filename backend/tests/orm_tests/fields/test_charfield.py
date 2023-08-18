@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.test import SimpleTestCase, TestCase
 
-from workspaces.Tenant3.charfield.models import CPost
+from workspaces.test_tenant.charfield.models import CPost
 from zelthy.test_utils.base import BaseTestCase
 
 class TestCharField(BaseTestCase):

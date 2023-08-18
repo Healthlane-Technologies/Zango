@@ -1,6 +1,6 @@
 # tests.py
 from django.test import TestCase
-from workspaces.Tenant3.foreign_key.models import FAuthor, FBook, FPublisher
+from workspaces.test_tenant.foreign_key.models import FAuthor, FBook, FPublisher
 from django.db.models import Count, Subquery, OuterRef
 from zelthy.test_utils.base import BaseTestCase
 

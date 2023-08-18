@@ -1,5 +1,5 @@
 from decimal import Decimal
-from workspaces.Tenant3.foreign_key.models import Foo, Bar, FkToChar, PrimaryKeyCharModel
+from workspaces.test_tenant.foreign_key.models import Foo, Bar, FkToChar, PrimaryKeyCharModel
 from django.core.exceptions import FieldError
 from django.test import skipIfDBFeature
 from django.db import models

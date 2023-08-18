@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, models
 from django.test import SimpleTestCase, TestCase
 
-from workspaces.Tenant3.integer_field.models import (
+from workspaces.test_tenant.integer_field.models import (
     BigIntegerModel,
     IntegerModel,
     PositiveBigIntegerModel,

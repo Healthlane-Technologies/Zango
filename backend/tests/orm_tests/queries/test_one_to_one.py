@@ -1,5 +1,5 @@
 from django.test import TestCase
-from workspaces.Tenant3.one_to_one.models import OneUsr, OneProfile
+from workspaces.test_tenant.one_to_one.models import OneUsr, OneProfile
 from zelthy.test_utils.base import BaseTestCase
 from django.db import models
 from django.db.models import Count, Subquery, OuterRef, F, Q
