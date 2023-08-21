@@ -120,7 +120,7 @@ table.stats tr.total td {
 
         <div class="info">
             
-            <p>During: <span class="l10n datetime">2023-08-18 15:42:10</span> - <span class="l10n datetime">2023-08-18 15:43:10</span></p>
+            <p>During: <span class="l10n datetime">2023-08-21 05:13:10</span> - <span class="l10n datetime">2023-08-21 05:14:09</span></p>
             <p>Target Host: <span>http://app1.zelthy.com:8000/</span></p>
             <p>Script: <span>loadtest.py</span></p>
         </div>
@@ -147,27 +147,27 @@ table.stats tr.total td {
                         <tr>
                             <td>GET</td>
                             <td>/mod1/view1/2/</td>
-                            <td>169</td>
-                            <td>161</td>
-                            <td>17337</td>
-                            <td>930</td>
-                            <td>56158</td>
-                            <td>157916</td>
-                            <td>2.8</td>
-                            <td>2.7</td>
+                            <td>128</td>
+                            <td>125</td>
+                            <td>25730</td>
+                            <td>39</td>
+                            <td>57068</td>
+                            <td>162375</td>
+                            <td>2.2</td>
+                            <td>2.1</td>
                         </tr>
                     
                         <tr class="total">
                             <td></td>
                             <td>Aggregated</td>
-                            <td>169</td>
-                            <td>161</td>
-                            <td>17337</td>
-                            <td>930</td>
-                            <td>56158</td>
-                            <td>157916</td>
-                            <td>2.8</td>
-                            <td>2.7</td>
+                            <td>128</td>
+                            <td>125</td>
+                            <td>25730</td>
+                            <td>39</td>
+                            <td>57068</td>
+                            <td>162375</td>
+                            <td>2.2</td>
+                            <td>2.1</td>
                         </tr>
                     
                 </tbody>
@@ -196,27 +196,27 @@ table.stats tr.total td {
                         <tr>
                             <td>GET</td>
                             <td>/mod1/view1/2/</td>
-                            <td>16000</td>
-                            <td>19000</td>
-                            <td>20000</td>
-                            <td>21000</td>
-                            <td>24000</td>
-                            <td>51000</td>
-                            <td>55000</td>
-                            <td>56000</td>
+                            <td>23000</td>
+                            <td>26000</td>
+                            <td>35000</td>
+                            <td>41000</td>
+                            <td>42000</td>
+                            <td>49000</td>
+                            <td>54000</td>
+                            <td>57000</td>
                         </tr>
                     
                         <tr class="total">
                             <td></td>
                             <td>Aggregated</td>
-                            <td>16000</td>
-                            <td>19000</td>
-                            <td>20000</td>
-                            <td>21000</td>
-                            <td>24000</td>
-                            <td>51000</td>
-                            <td>55000</td>
-                            <td>56000</td>
+                            <td>23000</td>
+                            <td>26000</td>
+                            <td>35000</td>
+                            <td>41000</td>
+                            <td>42000</td>
+                            <td>49000</td>
+                            <td>54000</td>
+                            <td>57000</td>
                         </tr>
                     
                 </tbody>
@@ -241,7 +241,14 @@ table.stats tr.total td {
                                 <td>GET</td>
                                 <td>/mod1/view1/2/</td>
                                 <td>500 Server Error: Internal Server Error for url: /mod1/view1/2/</td>
-                                <td>161</td>
+                                <td>124</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>GET</td>
+                                <td>/mod1/view1/2/</td>
+                                <td>[Errno 104] Connection reset by peer</td>
+                                <td>1</td>
                             </tr>
                         
                     </tbody>
@@ -536,12 +543,12 @@ function fillTasksFromRequest() {
     <script>
         
 var stats_history = {
-    "time": ["15:42:15", "15:42:20", "15:42:25", "15:42:30", "15:42:35", "15:42:40", "15:42:45", "15:42:50", "15:42:55", "15:43:00", "15:43:05"].map(server_time => new Date(new Date().setUTCHours(...(server_time.split(":")))).toLocaleTimeString()),
+    "time": ["05:13:15", "05:13:20", "05:13:25", "05:13:30", "05:13:35", "05:13:40", "05:13:45", "05:13:50", "05:13:55", "05:14:00", "05:14:05"].map(server_time => new Date(new Date().setUTCHours(...(server_time.split(":")))).toLocaleTimeString()),
     "user_count": [{"value": 50}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}],
-    "current_rps": [{"users": 50, "value": 2.0}, {"users": 100, "value": 2.0}, {"users": 100, "value": 2.7}, {"users": 100, "value": 2.7}, {"users": 100, "value": 2.9}, {"users": 100, "value": 1.9}, {"users": 100, "value": 1.9}, {"users": 100, "value": 2.4}, {"users": 100, "value": 3.6}, {"users": 100, "value": 3.0}, {"users": 100, "value": 2.1}],
-    "current_fail_per_sec": [{"users": 50, "value": 0}, {"users": 100, "value": 1.0}, {"users": 100, "value": 2.5}, {"users": 100, "value": 2.7}, {"users": 100, "value": 2.9}, {"users": 100, "value": 1.9}, {"users": 100, "value": 1.9}, {"users": 100, "value": 2.4}, {"users": 100, "value": 3.5}, {"users": 100, "value": 2.9}, {"users": 100, "value": 2.1}],
-    "response_time_percentile_1": [{"users": 50, "value": 1500.0}, {"users": 100, "value": 5700.0}, {"users": 100, "value": 7700.0}, {"users": 100, "value": 11000.0}, {"users": 100, "value": 13000.0}, {"users": 100, "value": 19000.0}, {"users": 100, "value": 19000.0}, {"users": 100, "value": 18000.0}, {"users": 100, "value": 20000.0}, {"users": 100, "value": 22000.0}, {"users": 100, "value": 46000.0}],
-    "response_time_percentile_2": [{"users": 50, "value": 2200.0}, {"users": 100, "value": 7700.0}, {"users": 100, "value": 9600.0}, {"users": 100, "value": 14000.0}, {"users": 100, "value": 16000.0}, {"users": 100, "value": 20000.0}, {"users": 100, "value": 21000.0}, {"users": 100, "value": 22000.0}, {"users": 100, "value": 24000.0}, {"users": 100, "value": 47000.0}, {"users": 100, "value": 52000.0}],
+    "current_rps": [{"users": 50, "value": 0}, {"users": 100, "value": 0.3333333333333333}, {"users": 100, "value": 0.6}, {"users": 100, "value": 0.6}, {"users": 100, "value": 1.0}, {"users": 100, "value": 1.0}, {"users": 100, "value": 2.4}, {"users": 100, "value": 2.4}, {"users": 100, "value": 1.6}, {"users": 100, "value": 1.7}, {"users": 100, "value": 4.2}],
+    "current_fail_per_sec": [{"users": 50, "value": 0}, {"users": 100, "value": 0}, {"users": 100, "value": 0.4}, {"users": 100, "value": 0.4}, {"users": 100, "value": 1.0}, {"users": 100, "value": 1.0}, {"users": 100, "value": 2.4}, {"users": 100, "value": 2.4}, {"users": 100, "value": 1.6}, {"users": 100, "value": 1.7}, {"users": 100, "value": 4.2}],
+    "response_time_percentile_1": [{"users": 50, "value": 3500.0}, {"users": 100, "value": 6800.0}, {"users": 100, "value": 12000.0}, {"users": 100, "value": 12000.0}, {"users": 100, "value": 19000.0}, {"users": 100, "value": 21000.0}, {"users": 100, "value": 23000.0}, {"users": 100, "value": 32000.0}, {"users": 100, "value": 33000.0}, {"users": 100, "value": 41000.0}, {"users": 100, "value": 41000.0}],
+    "response_time_percentile_2": [{"users": 50, "value": 3500.0}, {"users": 100, "value": 7300.0}, {"users": 100, "value": 14000.0}, {"users": 100, "value": 14000.0}, {"users": 100, "value": 21000.0}, {"users": 100, "value": 24000.0}, {"users": 100, "value": 33000.0}, {"users": 100, "value": 36000.0}, {"users": 100, "value": 41000.0}, {"users": 100, "value": 43000.0}, {"users": 100, "value": 44000.0}],
     "markers": [],
 };
         var percentile1 = 0.5

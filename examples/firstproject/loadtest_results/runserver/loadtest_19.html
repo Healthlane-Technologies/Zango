@@ -120,7 +120,7 @@ table.stats tr.total td {
 
         <div class="info">
             
-            <p>During: <span class="l10n datetime">2023-08-18 15:23:30</span> - <span class="l10n datetime">2023-08-18 15:24:30</span></p>
+            <p>During: <span class="l10n datetime">2023-08-21 04:50:49</span> - <span class="l10n datetime">2023-08-21 04:51:48</span></p>
             <p>Target Host: <span>http://app19.zelthy.com:8000/</span></p>
             <p>Script: <span>loadtest.py</span></p>
         </div>
@@ -147,12 +147,12 @@ table.stats tr.total td {
                         <tr>
                             <td>GET</td>
                             <td>/mod1/view1/2/</td>
-                            <td>64</td>
-                            <td>64</td>
-                            <td>21831</td>
-                            <td>829</td>
-                            <td>52676</td>
-                            <td>175352</td>
+                            <td>66</td>
+                            <td>66</td>
+                            <td>21454</td>
+                            <td>627</td>
+                            <td>54090</td>
+                            <td>168966</td>
                             <td>1.1</td>
                             <td>1.1</td>
                         </tr>
@@ -160,12 +160,12 @@ table.stats tr.total td {
                         <tr class="total">
                             <td></td>
                             <td>Aggregated</td>
-                            <td>64</td>
-                            <td>64</td>
-                            <td>21831</td>
-                            <td>829</td>
-                            <td>52676</td>
-                            <td>175352</td>
+                            <td>66</td>
+                            <td>66</td>
+                            <td>21454</td>
+                            <td>627</td>
+                            <td>54090</td>
+                            <td>168966</td>
                             <td>1.1</td>
                             <td>1.1</td>
                         </tr>
@@ -196,27 +196,27 @@ table.stats tr.total td {
                         <tr>
                             <td>GET</td>
                             <td>/mod1/view1/2/</td>
-                            <td>20000</td>
-                            <td>24000</td>
-                            <td>28000</td>
-                            <td>40000</td>
+                            <td>17000</td>
+                            <td>22000</td>
+                            <td>32000</td>
+                            <td>37000</td>
                             <td>48000</td>
-                            <td>49000</td>
-                            <td>53000</td>
-                            <td>53000</td>
+                            <td>50000</td>
+                            <td>54000</td>
+                            <td>54000</td>
                         </tr>
                     
                         <tr class="total">
                             <td></td>
                             <td>Aggregated</td>
-                            <td>20000</td>
-                            <td>24000</td>
-                            <td>28000</td>
-                            <td>40000</td>
+                            <td>17000</td>
+                            <td>22000</td>
+                            <td>32000</td>
+                            <td>37000</td>
                             <td>48000</td>
-                            <td>49000</td>
-                            <td>53000</td>
-                            <td>53000</td>
+                            <td>50000</td>
+                            <td>54000</td>
+                            <td>54000</td>
                         </tr>
                     
                 </tbody>
@@ -241,7 +241,14 @@ table.stats tr.total td {
                                 <td>GET</td>
                                 <td>/mod1/view1/2/</td>
                                 <td>500 Server Error: Internal Server Error for url: /mod1/view1/2/</td>
-                                <td>64</td>
+                                <td>65</td>
+                            </tr>
+                        
+                            <tr>
+                                <td>GET</td>
+                                <td>/mod1/view1/2/</td>
+                                <td>[Errno 104] Connection reset by peer</td>
+                                <td>1</td>
                             </tr>
                         
                     </tbody>
@@ -536,12 +543,12 @@ function fillTasksFromRequest() {
     <script>
         
 var stats_history = {
-    "time": ["15:23:35", "15:23:40", "15:23:45", "15:23:50", "15:23:55", "15:24:00", "15:24:05", "15:24:10", "15:24:15", "15:24:20", "15:24:25"].map(server_time => new Date(new Date().setUTCHours(...(server_time.split(":")))).toLocaleTimeString()),
+    "time": ["04:50:54", "04:50:59", "04:51:04", "04:51:09", "04:51:14", "04:51:19", "04:51:24", "04:51:29", "04:51:34", "04:51:39", "04:51:44"].map(server_time => new Date(new Date().setUTCHours(...(server_time.split(":")))).toLocaleTimeString()),
     "user_count": [{"value": 50}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}, {"value": 100}],
-    "current_rps": [{"users": 50, "value": 1.3333333333333333}, {"users": 100, "value": 1.375}, {"users": 100, "value": 1.3}, {"users": 100, "value": 1.0}, {"users": 100, "value": 0.9}, {"users": 100, "value": 0.9}, {"users": 100, "value": 1.5}, {"users": 100, "value": 0.9}, {"users": 100, "value": 0.9}, {"users": 100, "value": 1.1}, {"users": 100, "value": 0.8}],
-    "current_fail_per_sec": [{"users": 50, "value": 1.3333333333333333}, {"users": 100, "value": 1.375}, {"users": 100, "value": 1.3}, {"users": 100, "value": 1.0}, {"users": 100, "value": 0.9}, {"users": 100, "value": 0.9}, {"users": 100, "value": 1.5}, {"users": 100, "value": 0.9}, {"users": 100, "value": 0.9}, {"users": 100, "value": 1.1}, {"users": 100, "value": 0.8}],
-    "response_time_percentile_1": [{"users": 50, "value": 890.0}, {"users": 100, "value": 4800.0}, {"users": 100, "value": 7800.0}, {"users": 100, "value": 11000.0}, {"users": 100, "value": 15000.0}, {"users": 100, "value": 20000.0}, {"users": 100, "value": 25000.0}, {"users": 100, "value": 30000.0}, {"users": 100, "value": 34000.0}, {"users": 100, "value": 38000.0}, {"users": 100, "value": 48000.0}],
-    "response_time_percentile_2": [{"users": 50, "value": 4800.0}, {"users": 100, "value": 9800.0}, {"users": 100, "value": 11000.0}, {"users": 100, "value": 18000.0}, {"users": 100, "value": 19000.0}, {"users": 100, "value": 25000.0}, {"users": 100, "value": 28000.0}, {"users": 100, "value": 38000.0}, {"users": 100, "value": 44000.0}, {"users": 100, "value": 44000.0}, {"users": 100, "value": 53000.0}],
+    "current_rps": [{"users": 50, "value": 1.0}, {"users": 100, "value": 0.875}, {"users": 100, "value": 1.8}, {"users": 100, "value": 1.5}, {"users": 100, "value": 0.8}, {"users": 100, "value": 1.1}, {"users": 100, "value": 1.1}, {"users": 100, "value": 0.5}, {"users": 100, "value": 0.9}, {"users": 100, "value": 1.1}, {"users": 100, "value": 0.6}],
+    "current_fail_per_sec": [{"users": 50, "value": 1.0}, {"users": 100, "value": 0.875}, {"users": 100, "value": 1.8}, {"users": 100, "value": 1.5}, {"users": 100, "value": 0.8}, {"users": 100, "value": 1.1}, {"users": 100, "value": 1.1}, {"users": 100, "value": 0.5}, {"users": 100, "value": 0.9}, {"users": 100, "value": 1.1}, {"users": 100, "value": 0.6}],
+    "response_time_percentile_1": [{"users": 50, "value": 2500.0}, {"users": 100, "value": 2500.0}, {"users": 100, "value": 8500.0}, {"users": 100, "value": 9300.0}, {"users": 100, "value": 14000.0}, {"users": 100, "value": 16000.0}, {"users": 100, "value": 18000.0}, {"users": 100, "value": 31000.0}, {"users": 100, "value": 32000.0}, {"users": 100, "value": 35000.0}, {"users": 100, "value": 38000.0}],
+    "response_time_percentile_2": [{"users": 50, "value": 4700.0}, {"users": 100, "value": 7900.0}, {"users": 100, "value": 14000.0}, {"users": 100, "value": 14000.0}, {"users": 100, "value": 22000.0}, {"users": 100, "value": 30000.0}, {"users": 100, "value": 30000.0}, {"users": 100, "value": 37000.0}, {"users": 100, "value": 37000.0}, {"users": 100, "value": 48000.0}, {"users": 100, "value": 48000.0}],
     "markers": [],
 };
         var percentile1 = 0.5
