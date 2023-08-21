@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato&family=Open+Sans:wght@400;600&family=Source+Sans+Pro:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;600;700;900&family=Open+Sans:wght@400;600&family=Source+Sans+Pro:wght@400;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -226,6 +226,11 @@ input[type='number'] {
 .small-device-height-fix {
 	max-height: 100vh;
 	max-height: calc((var(--vh, 1vh) * 100) - 84px);
+}
+
+.small-device-height-fix2 {
+	max-height: 100vh;
+	max-height: calc((var(--vh, 1vh) * 100) - 49px);
 }
 
 @layer components {

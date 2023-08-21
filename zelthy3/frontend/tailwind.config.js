@@ -5,7 +5,6 @@ module.exports = {
 		extend: {
 			fontFamily: {
 				'open-sans': ['"Open Sans"', 'sans-serif'],
-				'invention-app': ['"Invention App"', 'sans-serif'],
 				'source-sans-pro': ['"Source Sans Pro"', 'sans-serif'],
 				lato: ['"Lato"', 'sans-serif'],
 			},
@@ -67,8 +66,8 @@ module.exports = {
 				3: 3,
 			},
 			colors: {
-				primary: '#00857C',
-				secondary: '#6ECEB2',
+				primary: '#5048ED',
+				secondary: '#E1D6AE',
 				'dark-gray': '#696969',
 				'medium-gray': '#9A9A9A',
 				'light-gray': '#D4D4D4',
@@ -94,6 +93,7 @@ module.exports = {
 				top: '0px -8px 20px rgba(40, 58, 70, 0.08);',
 				eachApp: '0px 4px 20px 0px rgba(0, 0, 0, 0.12)',
 				appSort: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
+				'table-row': '0px 2px 8px 0px rgba(0, 0, 0, 0.16)',
 			},
 			height: {
 				screen: 'var(--app-height)',

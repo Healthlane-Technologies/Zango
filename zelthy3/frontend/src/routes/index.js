@@ -6,7 +6,7 @@ export const AppRoutes = () => {
 	return (
 		<Routes>
 			<Route path="/platform/*" element={<PlatformRoutes />}></Route>
-			<Route path="/platform/app/*" element={<PlatformAppRoutes />} />
+			<Route path="/platform/apps/:appId/*" element={<PlatformAppRoutes />} />
 			<Route path="*" element={<Navigate to="./platform" />} />
 		</Routes>
 	);

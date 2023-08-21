@@ -5,8 +5,8 @@ import Apps from './Apps';
 export default function Platform() {
 	return (
 		<>
-			<FirstApp />
-			{/* <Apps /> */}
+			{/* <FirstApp /> */}
+			<Apps />
 			<LaunchNewAppModal />
 		</>
 	);

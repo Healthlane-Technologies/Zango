@@ -3,20 +3,24 @@ import { Link } from 'react-router-dom';
 import { ReactComponent as EachAppIcon } from '../../../../../assets/images/svg/each-app-icon.svg';
 import { ReactComponent as EachAppRocketIcon } from '../../../../../assets/images/svg/each-app-rocket-icon.svg';
 import { ReactComponent as EachAppStarBookmarkIcon } from '../../../../../assets/images/svg/each-app-star-bookmark.svg';
-import { formatLaunchDate, getTimeFromNow } from '../../../../../utils/formats';
+import {
+	formatLaunchDate,
+	getTimeFromNow,
+	isRecentlyLaunched,
+} from '../../../../../utils/formats';
 
 export default function EachApp({ data }) {
 	const [isBookmarked, setIsBookmarked] = useState(false);
 
 	const {
-		launched_date,
-		is_recently_launched,
 		app_id,
-		app_name,
+		name,
+		status,
+		domain_url,
 		description,
-		modified_date,
-		app_url,
-		app_icon_url,
+		logo,
+		launched_at,
+		updated_at,
 	} = data;
 
 	const handleToggleBookmark = (event) => {
@@ -31,12 +35,12 @@ export default function EachApp({ data }) {
 
 	return (
 		<Link
-			to="app/123"
+			to="apps/123"
 			className="group relative flex w-full flex-col rounded-[8px] border border-[#DDE2E5] hover:border-[#8485F6] hover:shadow-eachApp"
 		>
 			<div className="relative flex flex-col border-b border-[#F0F3F4] px-[16px] py-[22px]">
-				{app_icon_url ? (
-					<img src={app_icon_url} alt="#" />
+				{logo ? (
+					<img src={logo} alt="#" />
 				) : (
 					<EachAppIcon className="mt-[6px] min-h-[32px] min-w-[32px]" />
 				)}
@@ -45,10 +49,10 @@ export default function EachApp({ data }) {
 					<div className="flex items-center gap-[4px] rounded-[16px] bg-[#F0F3F4] px-[8px] py-[4px]">
 						<EachAppRocketIcon className="min-h-[12px] min-w-[12px]" />
 						<span className="font-lato text-[9px] font-bold leading-[8px] tracking-[0.2px] text-[#495057]">
-							{formatLaunchDate(launched_date)}
+							{formatLaunchDate(launched_at)}
 						</span>
 					</div>
-					{is_recently_launched ? (
+					{isRecentlyLaunched(launched_at) ? (
 						<div className="flex items-center gap-[4px] rounded-[16px] bg-[#E4F9F2] px-[8px] py-[6px]">
 							<span className="font-lato text-[9px] font-bold leading-[8px] tracking-[0.2px] text-[#186A50]">
 								Recently Launched
@@ -63,7 +67,7 @@ export default function EachApp({ data }) {
 						App ID: {app_id}
 					</span>
 					<span className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
-						{app_name}
+						{name}
 					</span>
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						{description}
@@ -71,16 +75,16 @@ export default function EachApp({ data }) {
 				</div>
 				<div className="flex flex-col gap-[8px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#000000]">
-						Modified {getTimeFromNow(modified_date)}
+						Modified {getTimeFromNow(updated_at)}
 					</span>
 					<button
 						type="button"
-						onClick={(event) => handleUrlButtonClick(event, app_url)}
-						data-url={app_url}
+						onClick={(event) => handleUrlButtonClick(event, domain_url)}
+						data-url={domain_url}
 						className="w-fit"
 					>
-						<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#5048ED]">
-							{app_url}
+						<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
+							{domain_url}
 						</span>
 					</button>
 				</div>

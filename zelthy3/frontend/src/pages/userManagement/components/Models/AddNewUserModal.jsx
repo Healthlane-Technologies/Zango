@@ -8,24 +8,32 @@ import { transformToFormDataOrder } from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
-import { close, selectIsLaunchNewAppModalOpen } from '../../slice';
+import { close, selectIsAddNewUserModalOpen } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
-const LaunchNewAppForm = ({ closeModal }) => {
+const AddNewUserForm = ({ closeModal }) => {
 	const triggerApi = useApi();
 	let initialValues = {
-		app_name: '',
-		description: '',
+		full_name: '',
+		email: '',
+		phone: '',
 	};
 
 	let validationSchema = Yup.object({
-		app_name: Yup.string().required('Required'),
-		description: Yup.string().required('Required'),
+		full_name: Yup.string().required('Required'),
+		email: Yup.string().email('Invalid email address').required('Required'),
+		phone: Yup.string()
+			.min(9, 'Must be 9 digits')
+			.max(9, 'Must be 9 digits')
+			.required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
+		if (tempValues['phone']) {
+			tempValues['phone'] = '+91' + tempValues['phone'];
+		}
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
 
@@ -60,47 +68,73 @@ const LaunchNewAppForm = ({ closeModal }) => {
 						<div className="flex grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="app_name"
+									htmlFor="full_name"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
-									App Name
+									Full Name
 								</label>
 								<input
-									id="app_name"
-									name="app_name"
+									id="full_name"
+									name="full_name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.app_name}
-									className="rounded-[6px] rounded-[6px] border border border-[#DDE2E5] border-[#DDE2E5] px-[16px] px-[16px] py-[14px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Enter"
+									value={formik.values.full_name}
+									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+									placeholder="Enter full name of the user"
 								/>
-								{formik.touched.app_name && formik.errors.app_name ? (
+								{formik.touched.full_name && formik.errors.full_name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.app_name}
+										{formik.errors.full_name}
 									</div>
 								) : null}
 							</div>
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="description"
+									htmlFor="email"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
-									Description
+									Email
 								</label>
-								<textarea
-									id="description"
-									name="description"
+								<input
+									id="email"
+									name="email"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.description}
-									className="min-h-[89px] rounded-[6px] rounded-[6px] border border border-[#DDE2E5] border-[#DDE2E5] px-[16px] px-[16px] py-[14px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Write an app description"
+									value={formik.values.email}
+									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+									placeholder="Enter"
 								/>
-								{formik.touched.description && formik.errors.description ? (
+								{formik.touched.email && formik.errors.email ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.description}
+										{formik.errors.email}
+									</div>
+								) : null}
+							</div>
+							<div className="flex flex-col gap-[4px]">
+								<label
+									htmlFor="phone"
+									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+								>
+									Phone (optional)
+								</label>
+								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
+									<span className="font-lato text-[#6C747D]">+91</span>
+									<input
+										id="phone"
+										name="phone"
+										type="number"
+										onChange={formik.handleChange}
+										onBlur={formik.handleBlur}
+										value={formik.values.phone}
+										className="font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+										placeholder="000000000"
+									/>
+								</div>
+								{formik.touched.phone && formik.errors.phone ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.phone}
 									</div>
 								) : null}
 							</div>
@@ -121,8 +155,8 @@ const LaunchNewAppForm = ({ closeModal }) => {
 	);
 };
 
-export default function LaunchNewAppModal() {
-	const isLaunchNewAppModalOpen = useSelector(selectIsLaunchNewAppModalOpen);
+export default function AddNewUserModal() {
+	const isAddNewUserModalOpen = useSelector(selectIsAddNewUserModalOpen);
 	const dispatch = useDispatch();
 
 	function closeModal() {
@@ -131,7 +165,7 @@ export default function LaunchNewAppModal() {
 
 	return (
 		<>
-			<Transition appear show={isLaunchNewAppModalOpen} as={Fragment}>
+			<Transition appear show={isAddNewUserModalOpen} as={Fragment}>
 				<Dialog as="div" className="relative z-10" onClose={closeModal}>
 					<Transition.Child
 						as={Fragment}
@@ -169,11 +203,11 @@ export default function LaunchNewAppModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Launch New App
+												Add New User
 											</h4>
 										</div>
 									</Dialog.Title>
-									<LaunchNewAppForm closeModal={closeModal} />
+									<AddNewUserForm closeModal={closeModal} />
 								</Dialog.Panel>
 							</Transition.Child>
 						</div>

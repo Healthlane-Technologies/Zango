@@ -1,9 +1,19 @@
 import moment from 'moment';
 
 export function formatLaunchDate(date) {
-	return moment(date, 'DD/MM/YYYY').format("DD MMM' YY");
+	return moment(date).format("DD MMM' YY");
 }
 
 export function getTimeFromNow(date) {
-	return moment(date, 'DD/MM/YYYY').fromNow();
+	return moment(date).fromNow();
+}
+
+export function isRecentlyLaunched(date) {
+	let presentDate = moment();
+	let differenceInDays = presentDate.diff(moment(date), 'days');
+	if (differenceInDays <= 7) {
+		return true;
+	} else {
+		return false;
+	}
 }

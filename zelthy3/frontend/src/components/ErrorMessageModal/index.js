@@ -58,7 +58,7 @@ export default function ErrorMessageModal({
 							<div className="flex w-full flex-col items-center rounded-[6px] bg-white">
 								<Dialog.Title
 									as="h3"
-									className="font-lato text-xxs text-modal-title w-full px-6 pt-8 pb-[32px] font-extrabold uppercase"
+									className="text-xxs text-modal-title w-full px-6 pt-8 pb-[32px] font-lato font-black uppercase"
 								>
 									Error
 								</Dialog.Title>
