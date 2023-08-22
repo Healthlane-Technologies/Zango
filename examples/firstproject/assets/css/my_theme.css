@@ -1,0 +1,310 @@
+
+/*Custome CSS*/
+
+<style>
+    .menu_zelthy_unselected{
+      color: #40C4E0 !important;
+    }
+
+    .menu_zelthy_selected{
+      color: #7cb342 !important;
+    }
+
+
+</style>
+<style>
+    .invoice_header>img {
+        max-height: 180% !important;
+    }
+    .errorlist {
+        list-style: none !important;
+        text-shadow: none !important;
+        color: #ffffff;
+        font-size: 13px;
+        text-align: center;
+    }
+</style>
+
+<style>
+    .inv_table>table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .inv-table>th,
+    td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+</style>
+
+
+
+<style>
+    span.sSwitchIcon::before {
+        background: #FFFFFF !important;
+    }
+    span.sSwitchIcon::after {
+        background: #FFFFFF !important;
+    }
+    .uk-subnav-pill>.uk-active>* {
+        background: #a6ce39;
+    }
+    .uk-table tfoot td,
+    .uk-table tfoot th,
+    .uk-table thead th {
+        color: #000 !important;
+    }
+</style>
+<style>
+    ::-webkit-scrollbar {
+        width: 12px;
+        /* for vertical scrollbars */
+        
+        height: 12px;
+        /* for horizontal scrollbars */
+    }
+    ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<style>
+    body {
+        overflow: hidden;
+    }
+    /* Preloader */
+    
+    #preloader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #fff;
+        /* change if the mask should have another color then white */
+        
+        z-index: 9999;
+        /* makes sure it stays on top */
+    }
+    #status {
+        width: 200px;
+        height: 200px;
+        position: absolute;
+        left: 50%;
+        /* centers the loading animation horizontally one the screen */
+        
+        top: 50%;
+        /* centers the loading animation vertically one the screen */
+        
+        background-image:url({%static 'img/Loader1.gif' %});
+        /* path to your loading animation */
+        
+        background-repeat: no-repeat;
+        background-position: center;
+        margin: -100px 0 0 -100px;
+        /* is width and height divided by two */
+    }
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*Original Theme CSS*/
+.app_my_theme .uk-alert {
+  background: #3f51b5;
+}
+.app_my_theme .md-btn-primary,
+.app_my_theme .md-btn-primary:hover,
+.app_my_theme .md-btn-primary:focus,
+.app_my_theme .md-btn-primary:active {
+  background: #3f51b5;
+  color: #fff;
+}
+.app_my_theme .md-btn-flat-primary,
+.app_my_theme .md-btn-flat-primary:hover,
+.app_my_theme .md-btn-flat-primary:focus,
+.app_my_theme .md-btn-flat-primary:active {
+  color: #303f9f;
+}
+.app_my_theme .md-btn-flat-primary:hover,
+.app_my_theme .md-btn-flat-primary:focus,
+.app_my_theme .md-btn-flat-primary:active {
+  background: #d1d6ef;
+}
+.app_my_theme .uk-badge-primary {
+  background: #3f51b5;
+}
+.app_my_theme .md-card-list-wrapper .md-card-list > ul > li.item-shown.md-card-list-item-selected:before {
+  background: #e8eaf6;
+}
+.app_my_theme .md-card-list-wrapper .md-card-list .md-card-list-item-selected {
+  background: #e8eaf6;
+}
+.app_my_theme .md-card-list-wrapper .md-card-list .md-card-list-item-selected.item-shown {
+  background: #fff;
+}
+.app_my_theme .md-card-list-wrapper .md-card-list .md-card-list-item-selected.item-shown:before {
+  background: #e8eaf6;
+}
+.app_my_theme .md-fab.md-fab-accent {
+  background: #ff4081;
+}
+.app_my_theme .md-list .uk-nestable-list > li.md-list-item-active,
+.app_my_theme .md-list > li.md-list-item-active {
+  color: #ff4081;
+}
+.app_my_theme .md-list-addon > li.md-list-item-active .md-list-addon-element,
+.app_my_theme .md-list-addon > li.md-list-item-active .md-list-addon-element .material-icons {
+  color: #ff4081;
+}
+.app_my_theme .uk-pagination > li > a:hover {
+  background: #ffd9e6;
+}
+.app_my_theme .uk-pagination > li.uk-active > a,
+.app_my_theme .uk-pagination > li.uk-active > span {
+  background: #ff4081;
+  color: #fff;
+}
+.app_my_theme .uk-subnav-pill > .uk-active > * {
+  background: #ff4081;
+}
+.app_my_theme .uk-tab > li > a:hover,
+.app_my_theme .uk-tab > li > a:focus {
+  border-bottom-color: #abb4e2;
+}
+.app_my_theme .uk-tab > li.uk-active > a {
+  border-bottom-color: #3f51b5;
+}
+.app_my_theme .uk-tab-bottom li > a:hover,
+.app_my_theme .uk-tab-bottom li > a:focus {
+  border-top-color: #abb4e2;
+}
+.app_my_theme .uk-tab-bottom li.uk-active > a {
+  border-top-color: #3f51b5;
+}
+.app_my_theme .uk-tab-left li > a:hover,
+.app_my_theme .uk-tab-left li > a:focus {
+  border-right-color: #abb4e2;
+}
+.app_my_theme .uk-tab-left li.uk-active > a {
+  border-right-color: #3f51b5;
+}
+.app_my_theme .uk-tab-right li > a:hover,
+.app_my_theme .uk-tab-right li > a:focus {
+  border-left-color: #abb4e2;
+}
+.app_my_theme .uk-tab-right li.uk-active > a {
+  border-left-color: #3f51b5;
+}
+.app_my_theme .uk-tab-double-header li a:hover,
+.app_my_theme .uk-tab-double-header li a:focus {
+  border-bottom-color: #606fc7;
+}
+.app_my_theme .uk-tab-double-header li.uk-active > a {
+  border-bottom-color: #ff4081;
+}
+.app_my_theme #header_main {
+  background: #3f51b5;
+}
+.app_my_theme.header_double_height:after {
+  background: #3f51b5;
+}
+.app_my_theme #top_bar .top_bar_nav > li > a:hover {
+  box-shadow: inset 0 -3px 0 #3f51b5;
+}
+.app_my_theme #top_bar .top_bar_nav > li.uk-active a {
+  box-shadow: inset 0 -3px 0 #3f51b5;
+}
+.app_my_theme .user_heading {
+  background: #303f9f;
+}
+.app_my_theme #sidebar_main .menu_section > ul > li ul li.act_item a {
+  color: #ff4081;
+}
+.app_my_theme #sidebar_main .menu_section > ul > li.current_section > a > .menu_icon .material-icons {
+  color: #ff4081;
+}
+.app_my_theme #sidebar_main .menu_section > ul > li.current_section > a .menu_title {
+  color: #ff4081;
+}
+.app_my_theme.sidebar_mini #sidebar_main .menu_section > ul > li > a > .menu_title {
+  background: #ff4081;
+  color: #fff;
+}
+.app_my_theme.sidebar_mini #sidebar_main .menu_section > ul > li:hover.sidebar_submenu {
+  background: #ff4081;
+}
+.app_my_theme.sidebar_mini #sidebar_main .menu_section > ul > li:hover.sidebar_submenu > a .menu_icon .material-icons {
+  color: #fff;
+}
+.app_my_theme.sidebar_mini #sidebar_main .menu_section > ul > li:hover.sidebar_submenu ul {
+  border-left-color: #ff4081;
+}
+.app_my_theme.sidebar_mini #sidebar_main .menu_section > ul > li.current_section > a > .menu_icon .material-icons {
+  color: #ff4081;
+}
+.app_my_theme .clndr .clndr_days .clndr_days_grid .day.today > span {
+  background: #ff4081;
+}
+.app_my_theme .DTTT_print_info h6 {
+  color: #ff4081;
+}
+.app_my_theme .fc-unthemed .fc-button.fc-state-active:after {
+  color: #ff4081;
+}
+.app_my_theme .fc-unthemed .fc-highlight {
+  box-shadow: inset 0 0 0 2px #3f51b5, inset 0 -1px 0 2px #3f51b5;
+}
+.app_my_theme .tablesorter-altair tbody > tr.row_highlighted > td {
+  background: #e8eaf6;
+}
+.app_my_theme .tablesorter-altair .headerSortUp,
+.app_my_theme .tablesorter-altair .tablesorter-headerSortUp,
+.app_my_theme .tablesorter-altair .tablesorter-headerAsc,
+.app_my_theme .tablesorter-altair .headerSortDown,
+.app_my_theme .tablesorter-altair .tablesorter-headerSortDown,
+.app_my_theme .tablesorter-altair .tablesorter-headerDesc {
+  color: #ff4081;
+}
+.app_my_theme .wizard > .steps {
+  background: #3f51b5;
+}
+.app_my_theme .wizard > .steps > ul > li.current a,
+.app_my_theme .wizard > .steps > ul > li.current a:hover,
+.app_my_theme .wizard > .steps > ul > li.current a:active {
+  background: #606fc7;
+}
+.app_my_theme .wizard > .steps > ul > li.done a,
+.app_my_theme .wizard > .steps > ul > li.done a:hover,
+.app_my_theme .wizard > .steps > ul > li.done a:active {
+  background: #303f9f;
+}
+.app_my_theme .md-card-primary {
+  border-left-color: #3f51b5;
+}
+.app_my_theme .waves-effect.md-btn-flat-primary {
+  background: none;
+}
+.app_my_theme .waves-effect.md-btn-flat-primary .waves-ripple {
+  background: rgba(63, 81, 181, 0.4);
+}
+.app_my_theme .search_list_link {
+  color: #ff4081;
+}
+
+
+

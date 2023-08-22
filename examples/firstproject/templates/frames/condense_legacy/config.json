@@ -1,0 +1,58 @@
+{
+  "primary_color": {
+    "title": "Primary Color",
+    "color": "#5048ED",
+    "opacity": "100"
+    },
+  "secondary_color": {
+    "title": "Secondary Color",
+    "color": "#E1D6AE",
+    "opacity": "100"
+    },
+  "cta_text_color": {
+    "title": "CTA Text Color",
+    "color": "#ffffff",
+    "opacity": "100"
+    },
+  "sidebar": {
+    "title": "Siderbar",
+    "color": "#E1D6AE",
+    "opacity": "100"
+  },
+  "page_background": {
+    "title": "Page Background",
+    "color": "#F0F3F4",
+    "opacity": "100"
+  },
+  "menu_icon": {
+    "title": "Menu Icon",
+    "color": "#000000",
+    "opacity": "100",
+    "type": "svg"
+  },
+  "badge_color": {
+    "title": "Badge Color",
+    "color": "#1C1E27",
+    "opacity": "100"
+  },
+  "badge_color_primary": {
+    "title": "Badge Primary Color",
+    "color": "#5048ED",
+    "opacity": "100"
+  },
+  "badge_color_danger": {
+    "title": "Badge Danger Color",
+    "color": "#d52918",
+    "opacity": "100"
+  },
+  "badge_color_warning": {
+    "title": "Badge Warning Color",
+    "color": "#bd7701",
+    "opacity": "100"
+  },
+  "badge_color_success": {
+    "title": "Badge Success Color",
+    "color": "#229470",
+    "opacity": "100"
+  }
+}
