@@ -5,3 +5,5 @@ djangorestframework
 django-rest-knox
 celery==5.3.1
 flake8==6.1.0
+django-cors-headers==4.2.0
+pluginbase==1.0.1
