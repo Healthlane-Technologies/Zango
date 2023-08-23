@@ -13,6 +13,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+INSTALLED_APPS += ["channels"]
+
 
 
 WSGI_APPLICATION = 'firstproject.wsgi.application'
@@ -102,6 +104,7 @@ ENV='dev'
 #     observer.stop()
 
 # observer.join()
+
 
 
 

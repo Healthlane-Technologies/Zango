@@ -50,6 +50,7 @@ class CustomPluginBase(PluginBase):
         """Creates a plugin source for this plugin base and returns it.
         All parameters are forwarded to :class:`PluginSource`.
         """
+        kwargs["persist"] = True
         return CustomPluginSource(self, *args, **kwargs)
 
 
