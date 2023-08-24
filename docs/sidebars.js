@@ -73,6 +73,8 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/user-roles/creating-a-user-role',
+        'documentation/user-roles/assigning-policies',
+        'documentation/user-roles/deactivating-a-user-role',
       ],
     },
     {
