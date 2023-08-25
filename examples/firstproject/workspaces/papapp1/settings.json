@@ -1,0 +1,49 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+            "name": "test_module",
+            "path": "test_module"
+        },
+        {
+            "name": "therapy_module",
+            "path": "therapy_module"
+        },
+        {
+            "name": "program_module",
+            "path": "program_module"
+        },
+        {
+            "name": "benefits_module",
+            "path": "benefits_module"
+        }
+    ],
+    "app_routes": [
+
+        {
+            "re_path": "^test_module/",
+            "module": "test_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^therapy_module/",
+            "module": "therapy_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^program_module/",
+            "module": "program_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^benefits_module/",
+            "module": "benefits_module",
+            "url": "urls"
+        }
+
+    ],
+    "plugin_routes": []
+    
+}
+
+

@@ -339,9 +339,9 @@ class Workspace:
                 mod_url_path = path[len(r['re_path'].strip("^")):] or "/"
                 for pattern in urlpatterns:
                     resolve = pattern.resolve(mod_url_path) # find view
-                if resolve:
-                    match = pattern.pattern.regex.search(mod_url_path)
-                    return pattern.callback
+                    if resolve:
+                        match = pattern.pattern.regex.search(mod_url_path)
+                        return pattern.callback
                 return # return 404
                 
 
