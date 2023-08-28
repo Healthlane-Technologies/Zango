@@ -7,6 +7,8 @@ from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField, ZMany
 
 from .global_config import ORDER_STATUS, BENEFIT_TYPE, CREDIT_UPDATE_TYPE, CREDIT_LIMIT_TYPE, DOC_CREDIT_EXPIRY_TYPES, BENEFIT_CATEGORY
 from ..program_module.models import ProgramModel
+from ..supplychainnode_module.models import SupplyChainNodes
+from ..skus_module.models import OrderItemsModel
 
 
 class BenefitsModel(DynamicModelBase):
@@ -188,3 +190,105 @@ class BenefitsModel(DynamicModelBase):
 
     def __str_(self):    
         return self.label
+    
+
+class BenefitsSupplyChainNodes(DynamicModelBase):
+    benefit = ZForeignKey(
+                    BenefitsModel,
+                    on_delete=models.CASCADE,
+                )
+    scn_executor_nodes = ZForeignKey(
+                    SupplyChainNodes,
+                    on_delete=models.CASCADE,
+                )
+    
+
+
+
+class DispensingOptionsModel(DynamicModelBase):
+
+  label = models.CharField(
+                   "Label",
+                   max_length=255,
+                   )
+#   items = models.ManyToManyField(OrderItemsModel)
+  dose = models.IntegerField(
+                       "Dose",
+                       null=True,
+                       blank=True)
+  min_dose = models.IntegerField(
+                       "Min Dose",
+                       null=True,
+                       blank=True)
+  max_dose = models.IntegerField(
+                       "Max Dose",
+                       null=True,
+                       blank=True)
+  min_income = models.BigIntegerField(
+                        "Minimum Salary",
+                        null=True,
+                        blank=True
+                        )
+  max_income = models.BigIntegerField(
+                        "Maximum Salary",
+                        null=True,
+                        blank=True
+                        )
+  order_number = models.CharField(
+                      "Order Number",
+                      max_length=255,
+                      blank=True
+                          )
+  days_since_approval = models.IntegerField(
+                      "Days since approval",
+                      null=True,
+                      blank=True
+                      )
+  days_of_supply = models.IntegerField(
+                       "Days of supply",
+                       blank=True,
+                       null=True
+                       )
+  credit_required = models.FloatField(
+                      "Credit required",
+                      null=True,
+                      blank=True
+                      )
+  credit_deducted = models.FloatField(
+                      "Credit deducted",
+                      null=True,
+                      blank=True
+                      )
+  mrp = models.FloatField(
+                      "MRP",
+                      null=True,
+                      blank=True
+                      )
+  jsonfield_extra1 = JSONField(null=True, blank=True)
+
+
+  def __str__(self):
+    return self.label
+  
+
+
+class DispensingOptionsOrderItemsModel(DynamicModelBase):
+   dispensingoption = ZForeignKey(
+                        DispensingOptionsModel,
+                        on_delete=models.CASCADE
+                    )
+   items = ZForeignKey(
+                OrderItemsModel,
+                on_delete=models.CASCADE
+            )
+    
+
+class BenefitsDispensingModel(DynamicModelBase):
+   benefit = ZForeignKey(
+                        BenefitsModel,
+                        on_delete=models.CASCADE
+                    )
+   dispensingoption = ZForeignKey(
+                DispensingOptionsModel,
+                on_delete=models.CASCADE
+            )

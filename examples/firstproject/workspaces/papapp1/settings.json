@@ -16,6 +16,14 @@
         {
             "name": "benefits_module",
             "path": "benefits_module"
+        },
+        {
+            "name": "supplychainnode_module",
+            "path": "supplychainnode_module"
+        },
+        {
+            "name": "skus_module",
+            "path": "skus_module"
         }
     ],
     "app_routes": [
@@ -38,6 +46,16 @@
         {
             "re_path": "^benefits_module/",
             "module": "benefits_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^supplychainnode_module/",
+            "module": "supplychainnode_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^skus_module/",
+            "module": "skus_module",
             "url": "urls"
         }
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import BenefitsModel
+from .models import BenefitsModel, DispensingOptionsModel
 
 
 class BenefitsModelSerializer(serializers.ModelSerializer):
@@ -12,3 +12,9 @@ class BenefitsModelSerializer(serializers.ModelSerializer):
     #     if len(value) < 5:
     #         raise serializers.ValidationError("Program name is to short.")
     #     return value
+
+
+class DispensingOptionsModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DispensingOptionsModel
+        fields = '__all__'
