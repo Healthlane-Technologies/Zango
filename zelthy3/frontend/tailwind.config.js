@@ -68,6 +68,7 @@ module.exports = {
 			colors: {
 				primary: '#5048ED',
 				secondary: '#E1D6AE',
+				'danger-red': '#AA2113',
 				'dark-gray': '#696969',
 				'medium-gray': '#9A9A9A',
 				'light-gray': '#D4D4D4',
@@ -94,6 +95,7 @@ module.exports = {
 				eachApp: '0px 4px 20px 0px rgba(0, 0, 0, 0.12)',
 				appSort: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 				'table-row': '0px 2px 8px 0px rgba(0, 0, 0, 0.16)',
+				'table-menu': '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 			},
 			height: {
 				screen: 'var(--app-height)',

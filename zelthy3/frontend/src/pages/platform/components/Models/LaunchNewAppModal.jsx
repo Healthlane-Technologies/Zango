@@ -108,7 +108,7 @@ const LaunchNewAppForm = ({ closeModal }) => {
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
 								type="submit"
-								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:bg-[#9A9A9A]"
+								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Launch App</span>

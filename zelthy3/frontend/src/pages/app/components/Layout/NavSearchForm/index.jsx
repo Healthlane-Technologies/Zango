@@ -36,7 +36,6 @@ const AutoSave = ({ debounceMs }) => {
 export default function NavSearchForm() {
 	let initialValues = {
 		searchValue: '',
-		searchType: 'Apps',
 	};
 
 	let validationSchema = Yup.object().shape({});
@@ -100,21 +99,7 @@ export default function NavSearchForm() {
 									</div>
 								) : null}
 							</div>
-							<SelectField
-								key="searchType"
-								label="Stockist"
-								name="searchType"
-								id="searchType"
-								placeholder="Select"
-								value={get(formik.values, 'searchType', '')}
-								optionsDataName="searchType"
-								optionsData={[
-									{ id: 'Apps', label: 'Apps' },
-									{ id: 'User Management', label: 'User Management' },
-								]}
-								onChange={formik.handleChange}
-								formik={formik}
-							/>
+							<SelectField />
 						</div>
 					</form>
 				);
