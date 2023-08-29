@@ -79,6 +79,17 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'User Management',
+      link: {
+        type: 'doc',
+        id: 'documentation/user-management/overview',
+      },
+      collapsed: true,
+      items: [
+      ],
+    },
+    {
+      type: 'category',
       label: 'Modules',
       link: {
         type: 'doc',
@@ -128,13 +139,44 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Permissions',
+      label: 'Permission Framework',
       link: {
         type: 'doc',
-        id: 'documentation/permissions/overview',
+        id: 'documentation/permission-framework/overview',
       },
       collapsed: true,
       items: [
+        {
+          type: 'category',
+          label: 'Permissions',
+          link: {
+            type: 'doc',
+            id: 'documentation/permission-framework/permissions/overview',
+          },
+          collapsed: true,
+          items: [
+            'documentation/permission-framework/permissions/creating-permissions',
+            'documentation/permission-framework/permissions/syncing-and-viewing-permissions',
+            'documentation/permission-framework/permissions/using-permissions',
+            'documentation/permission-framework/permissions/custom-permissions',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Policies',
+          link: {
+            type: 'doc',
+            id: 'documentation/permission-framework/policies/overview',
+          },
+          collapsed: true,
+          items: [
+            'documentation/permission-framework/policies/viewing-policies',
+            'documentation/permission-framework/policies/creating-a-policy',
+            'documentation/permission-framework/policies/assigning-policies',
+            'documentation/permission-framework/policies/editing-a-policy',
+            'documentation/permission-framework/policies/deleting-a-policy',
+          ],
+        },
       ],
     },
     {
