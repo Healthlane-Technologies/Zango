@@ -124,6 +124,7 @@ class DynamicView(View):
         view =  ws.match_view(request)            
         if view:
             resp =  view(request, *args, **kwargs)
+            # reset_modules()
         else:
             resp =  Http404()
             print(resp)

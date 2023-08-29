@@ -1,0 +1,308 @@
+25M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+51M 398833M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398409M grep gunicorn
+
+
+
+25M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+51M 398833M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398409M grep gunicorn
+
+
+
+25M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+51M 398833M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+25M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+51M 398833M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398547M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+25M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+51M 398833M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+806M 405720M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398539M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398409M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+816M 405050M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+831M 404864M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+835M 404768M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+883M 401809M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+946M 401885M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398409M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398409M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398547M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398547M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398546M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398539M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398548M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398481M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398547M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398539M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398547M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+996M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398547M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+994M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+994M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398539M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+13M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+994M 400623M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+15M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+994M 400430M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+
+15M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+989M 400430M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398540M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398400M grep gunicorn
+
+
+
+15M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+983M 400430M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+0M 398409M grep gunicorn
+
+
+
+15M 398659M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+983M 400430M /opt/homebrew/Cellar/python@3.11/3.11.4_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python /Users/zelthy/Deepak/pyenvs/zelthy4/bin/gunicorn -k uvicorn.workers.UvicornWorker firstproject.asgi
+1M 398538M /bin/sh -c ps x -o rss,vsz,command | awk 'NR>1 {$1=int($1/1024)"M"; $2=int($2/1024)"M";}{ print ;}' | grep gunicorn
+1M 398537M grep gunicorn
+
+
+

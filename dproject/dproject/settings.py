@@ -68,9 +68,6 @@ TENANT_APPS = [
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
-TENANT_APPS.extend(["loadtest_0", "loadtest_1", "loadtest_2", "loadtest_3"])
-INSTALLED_APPS.extend(["loadtest_0", "loadtest_1", "loadtest_2", "loadtest_3"])
-
 
 
 WSGI_APPLICATION = 'dproject.wsgi.application'
