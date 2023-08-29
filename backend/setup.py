@@ -24,6 +24,7 @@ setup(
     # packages=find_packages(),
     package_dir={"": "src"},
     packages=find_packages("src"),
+    package_data={'zelthy': ['cli/project_template/**/*']},
     install_requires=install_requires,
     classifiers=[
         "Framework :: Django",
