@@ -116,27 +116,27 @@ export default function DeactivateUserModal() {
 				<Dialog as="div" className="relative z-10" onClose={closeModal}>
 					<Transition.Child
 						as={Fragment}
-						enter="ease-out duration-300"
+						enter="ease-in-out duration-700"
 						enterFrom="opacity-0"
 						enterTo="opacity-100"
-						leave="ease-in duration-200"
+						leave="ease-in-out duration-700"
 						leaveFrom="opacity-100"
 						leaveTo="opacity-0"
 					>
 						<div className="fixed inset-0 bg-black bg-opacity-[.67]" />
 					</Transition.Child>
 
-					<div className="fixed inset-0 overflow-y-auto">
-						<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
-							<Transition.Child
-								as={Fragment}
-								enter="ease-out duration-300"
-								enterFrom="opacity-0 scale-95"
-								enterTo="opacity-100 scale-100"
-								leave="ease-in duration-200"
-								leaveFrom="opacity-100 scale-100"
-								leaveTo="opacity-0 scale-95"
-							>
+					<Transition.Child
+						as={Fragment}
+						enter="transform transition ease-in-out duration-500"
+						enterFrom="translate-x-full"
+						enterTo="translate-x-0"
+						leave="transform transition ease-in-out duration-500"
+						leaveFrom="translate-x-0"
+						leaveTo="translate-x-full"
+					>
+						<div className="fixed inset-0 overflow-y-auto">
+							<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
 								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[498px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pt-[52px] pb-[40px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[72px] md:pt-[32px]">
 									<div className="flex justify-end md:absolute md:top-0 md:right-0">
 										<button
@@ -156,9 +156,9 @@ export default function DeactivateUserModal() {
 									</Dialog.Title>
 									<DeactivateUserForm closeModal={closeModal} />
 								</Dialog.Panel>
-							</Transition.Child>
+							</div>
 						</div>
-					</div>
+					</Transition.Child>
 				</Dialog>
 			</Transition>
 		</>

@@ -6,7 +6,7 @@ import { ReactComponent as SidemenuArrowIcon } from '../../../../assets/images/s
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
-export default function SideMenuDropdown({ label, Icon }) {
+export default function SideMenuDropdown({ label, Icon, sublinks }) {
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -51,31 +51,36 @@ export default function SideMenuDropdown({ label, Icon }) {
 				>
 					<Menu.Items className="absolute top-[30px] right-0 w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
 						<div className="flex flex-col gap-[6px] px-[20px] py-[12px]">
-							<Menu.Item>
-								{({ active }) => (
-									<NavLink
-										to={`app-settings/app-configuration/`}
-										className="flex flex-col items-center justify-center bg-transparent"
-										children={({ isActive }) => {
-											return (
-												<div
-													className={`${
-														active ? '' : ''
-													} relative flex w-full flex-col rounded-[2px]`}
-												>
-													{isActive ? (
-														<span className="absolute top-[6px] left-[-8px] h-[4px] w-[4px] rounded bg-black"></span>
-													) : null}
-													<span className="text-start font-lato text-[11px] font-bold leading-[16px] tracking-[0.2px] text-[#212429]">
-														App Configuration
-													</span>
-												</div>
-											);
-										}}
-									/>
-								)}
-							</Menu.Item>
-							<Menu.Item>
+							{sublinks?.map(({ url, label }) => {
+								return (
+									<Menu.Item>
+										{({ active }) => (
+											<NavLink
+												to={url}
+												className="flex flex-col items-center justify-center bg-transparent"
+												children={({ isActive }) => {
+													return (
+														<div
+															className={`${
+																active ? '' : ''
+															} relative flex w-full flex-col rounded-[2px]`}
+														>
+															{isActive ? (
+																<span className="absolute top-[6px] left-[-8px] h-[4px] w-[4px] rounded bg-black"></span>
+															) : null}
+															<span className="text-start font-lato text-[11px] font-bold leading-[16px] tracking-[0.2px] text-[#212429]">
+																{label}
+															</span>
+														</div>
+													);
+												}}
+											/>
+										)}
+									</Menu.Item>
+								);
+							})}
+
+							{/* <Menu.Item>
 								{({ active }) => (
 									<NavLink
 										to={`app-settings/app-theme-configuration/`}
@@ -98,7 +103,7 @@ export default function SideMenuDropdown({ label, Icon }) {
 										}}
 									/>
 								)}
-							</Menu.Item>
+							</Menu.Item> */}
 						</div>
 					</Menu.Items>
 				</Transition>

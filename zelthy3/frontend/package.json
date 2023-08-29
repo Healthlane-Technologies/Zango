@@ -5,6 +5,7 @@
 	"proxy": "https://msdodtrack038.in.zelthy.dev/",
 	"dependencies": {
 		"@headlessui/react": "^1.7.7",
+		"@monaco-editor/react": "^4.5.2",
 		"@popperjs/core": "^2.11.6",
 		"@reduxjs/toolkit": "^1.9.5",
 		"@tanstack/react-table": "^8.9.3",

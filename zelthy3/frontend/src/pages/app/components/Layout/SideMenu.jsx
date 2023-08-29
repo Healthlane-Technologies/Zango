@@ -31,8 +31,37 @@ export default function SideMenu() {
 					User Management
 				</span>
 			</NavLink>
-			<SideMenuDropdown Icon={EachSideMenuIcon} label="App Settings" />
-			<NavLink
+			<SideMenuDropdown
+				Icon={EachSideMenuIcon}
+				label="App Settings"
+				sublinks={[
+					{
+						url: `app-settings/app-configuration/`,
+						label: 'App Configuration',
+					},
+					{
+						url: `app-settings/app-theme-configuration/`,
+						label: 'App Theme Configuration',
+					},
+				]}
+			/>
+
+			<SideMenuDropdown
+				Icon={EachSideMenuIcon}
+				label="Permission Management"
+				sublinks={[
+					{
+						url: `permission-management/permissions/`,
+						label: 'Permissions',
+					},
+					{
+						url: `permission-management/policies/`,
+						label: 'Policies',
+					},
+				]}
+			/>
+
+			{/* <NavLink
 				to={`permission-management/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -44,7 +73,7 @@ export default function SideMenu() {
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					Permission Management
 				</span>
-			</NavLink>
+			</NavLink> */}
 			<NavLink
 				to={`tasks-management/`}
 				className={({ isActive, isPending }) =>
