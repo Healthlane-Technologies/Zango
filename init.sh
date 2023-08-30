@@ -31,6 +31,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -nmv | --no_of_models_in_view)
             no_of_models_in_view="$2"
+            shift 2
             ;;
         -s | --server)
             server="$2"
