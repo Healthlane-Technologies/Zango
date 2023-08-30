@@ -2,10 +2,7 @@ import uuid
 from django.db import models
 from django.db.models import JSONField
 from django.db.models.query import QuerySet
-
-# from zelthy.zelthy_preprocessor import ZPreprocessor, ZimportStack
 from zelthy.core.model_mixins import FullAuditMixin
-# from zelthy.helpers import get_app_base_dir, get_app_settings, get_mod_url_filepath, get_root_routes
 
 
 class PermissionsModel(FullAuditMixin):
@@ -40,9 +37,7 @@ class PermissionsModel(FullAuditMixin):
     app_settings = get_app_settings(connection.tenant)
     # routes = get_app_settings(connection.tenant)['routes']
     routes = get_root_routes(connection.tenant)
-    print("root_routes", routes)
     for route in routes:
-      print("route", route)
       url_file = get_mod_url_filepath(connection.tenant, route["module"])
       with url_file.open() as f:
         _url_file = f.read()  
@@ -67,12 +62,6 @@ class PermissionsModel(FullAuditMixin):
     # iterate through all datamodels and add datamodel perms
 
     return
-
-from django.utils import timezone
-
-
-
-    
 
 class PolicyModel(FullAuditMixin):
   
@@ -109,9 +98,6 @@ class PolicyModel(FullAuditMixin):
     valid_policies = cls.get_valid_policies()
     return valid_policies.filter(statement__permissions__contains=[{"type": "userAccess"}])
   
-
-  
-
 class PolicyGroupModel(FullAuditMixin):
   
   name = models.CharField(

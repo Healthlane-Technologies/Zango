@@ -39,7 +39,7 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
     def process_request(self, request):
         # Connection needs first to be at the public schema, as this is where
         # the tenant metadata is stored.
-
+        
         connection.set_schema_to_public()
         try:
             hostname = self.hostname_from_request(request)

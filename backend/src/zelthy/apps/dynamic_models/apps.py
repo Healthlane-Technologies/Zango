@@ -14,7 +14,7 @@ class DynamicModelsConfig(AppConfig):
         # thanks to Baserow for this hack
         original_register_model = self.apps.register_model
         def register_model(app_label, model):
-            if 'ws_makemigrate' in sys.argv or getattr(settings, "TEST_MIGRATION_RUNNING", False):
+            if 'ws_makemigration' in sys.argv or getattr(settings, "TEST_MIGRATION_RUNNING", False):
                 original_register_model(app_label, model)
             else:
                 self.apps.do_pending_operations(model)

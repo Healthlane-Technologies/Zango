@@ -1,80 +1,49 @@
 import json
 import os
 import re
-import sys
 
-from functools import partial
 from django.conf import settings
-from importlib import import_module
 from django.db import connection
+# from zelthy.core.pluginbase1 import PluginBase, PluginSource
 
 from zelthy.apps.appauth.models import UserRoleModel
 from .lifecycle import Lifecycle
 from .wtree import WorkspaceTreeNode
 
+# class CustomPluginSource(PluginSource):
+#     def load_plugin(self, name):
+#         with self:
+#             return __import__(self.base.package + '.' + name,
+#                               globals(), {}, ['__name__'])
 
-import sys
-from contextlib import contextmanager
+# class CustomPluginBase(PluginBase):
 
-# @contextmanager
-# def isolated_modules():
-#     original_modules = sys.modules.copy()
-#     try:
-#         sys.modules.clear()
-#         yield sys.modules
-#     finally:
-#         sys.modules.update(original_modules)
+#     def make_plugin_source(self, *args, **kwargs):
+#         """Creates a plugin source for this plugin base and returns it.
+#         All parameters are forwarded to :class:`PluginSource`.
+#         """
+#         return CustomPluginSource(self, *args, **kwargs)
 
-# # Usage:
-# with isolated_modules():
-#     # sys.modules is isolated in this block
-#     pass
-
-from pluginbase import PluginBase, PluginSource, _setup_base_package, _IntentionallyEmptyModule
-
-class CustomPluginSource(PluginSource):
-    def load_plugin(self, name):
-        # You can adjust this method to handle dotted names
-        # However, you need to be careful with nested module names and packages.
-        print("--->", self.base.package, name)
-        with self:
-            return __import__(self.base.package + '.' + name,
-                              globals(), {}, ['__name__'])
+# from zelthy.core.custom_pluginbase import CustomPluginSource, CustomPluginBase
+# # dummy python package to act as container for plugins
+# plugin_base = CustomPluginBase(package='_workspaces') 
 
 
+# def get_plugin_source(name):
+#     path = str(settings.BASE_DIR) + "/workspaces/" + name
+#     return plugin_base.make_plugin_source(searchpath=[path])
 
-class CustomPluginBase(PluginBase):
-
-
-    def make_plugin_source(self, *args, **kwargs):
-        """Creates a plugin source for this plugin base and returns it.
-        All parameters are forwarded to :class:`PluginSource`.
-        """
-        return CustomPluginSource(self, *args, **kwargs)
-
-
-
-plugin_base = CustomPluginBase(package='_workspaces') # dummy python package to act as container for plugins
-
-
-
-def get_plugin_source(name):
-    path = str(settings.BASE_DIR) + "/workspaces/" + name
-    return plugin_base.make_plugin_source(searchpath=[path])
-
-
-
-
-
+from zelthy.core.custom_pluginbase import get_plugin_source
 class Workspace:
     
     """
     This is the main interface for interacting with the workspace codebase. 
-    Workspace is initialized under the request response cycle. It is reponsible for checking the
-    integrity of the codebase and its dependencies. It also returns the view module and the name for
-    the incoming request.
+    Workspace is initialized under the request response cycle. It is 
+    reponsible for checking the integrity of the codebase and its dependencies. 
+    It also returns the view module and the name for the incoming request.
 
     Typical usage:
+
         For serving requests:
         ws = Workspace(request.tenant) Workspace(request=None, as_systemuser=False)
         ws.ready() #  loads the workspace models, sets sys.path, check etc. 
@@ -89,28 +58,20 @@ class Workspace:
         inside django shell (python manage.py tenant_command shell)
             ws = Workspace(connection.tenant)
             ws.ready() # loads the workspace models, sets sys.path, check etc.
-
-
     """
-    _instances = {}
-    _modules = {}
 
+    _instances = {}
 
     def __new__(cls, wobj: object, request=None, as_systemuser=False, **kwargs) -> object:
         # perform your permissions check here and tries to return the object from cache
-        #             
-        # return super().__new__(cls)
         if not cls.check_perms(request, as_systemuser):
             raise ValueError("Permission denied.")
         key = wobj.name
         if key in cls._instances:
-            sys.modules = cls._modules[key]
             return cls._instances[key]
         instance = super().__new__(cls)
         cls._instances[key] = instance
-        cls._modules[key] = sys.modules
         return instance
-
 
 
     def __init__(self, wobj: object, request=None, as_systemuser=False) -> None:
@@ -120,7 +81,6 @@ class Workspace:
         self.plugins = self.get_plugins()
         self.models = [] # sorted with bfs
         self.plugin_source = self.get_plugin_source()
-        print(self.plugin_source)       
         # self.wtee = self.get_wtree()
 
     def get_plugin_source(self):
@@ -292,7 +252,7 @@ class Workspace:
             get topologically sorted list of models from packages and modules and
             import models.py files in that order
         """        
-        for m in self.get_models():
+        for m in self.get_models():            
             split = m.split(".")[2:]
             self.plugin_source.load_plugin(".".join(split))
         return    
@@ -326,7 +286,6 @@ class Workspace:
     
     def match_view(self, request) -> object:
         routes = self.get_root_urls()
-        # print(routes)
         path = request.path.lstrip('/')
         for r in routes:
             r_regex = re.compile(r['re_path'])

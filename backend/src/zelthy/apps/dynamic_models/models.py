@@ -1,38 +1,14 @@
-from django.db import models
+from typing import Any
+from django.db import models, connection
+from django.db.models import Q
+from functools import reduce
+from operator import and_
+
 from django.apps import apps
 
 from django.core.exceptions import FieldDoesNotExist as DjangoFieldDoesNotExist
+from django.core.exceptions import PermissionDenied
 from types import MethodType
-
-def patch_meta_get_field(_meta):
-    original_get_field = _meta.get_field
-
-    def get_field(self, field_name, *args, **kwargs):
-        try:
-            return original_get_field(field_name, *args, **kwargs)
-        except DjangoFieldDoesNotExist as exc:
-            print("Inside DjangoFieldDoesNotExist")
-            try:
-                field_object = self.model.get_field_object(
-                    field_name, include_trash=True
-                )
-
-            except ValueError:
-                raise exc
-
-            field_type = field_object["type"]
-            # logger.debug(
-            #     "Lazy load missing {} of type {} for table {}",
-            #     field_name,
-            #     field_type.type,
-            #     self.model.pk,
-            # )
-            field_type.after_model_generation(
-                field_object["field"], self.model, field_object["name"]
-            )
-            return original_get_field(field_name, *args, **kwargs)
-
-    _meta.get_field = MethodType(get_field, _meta)
 
 
 class RegisterOnceModeMeta(type(models.Model)):
@@ -45,7 +21,6 @@ class RegisterOnceModeMeta(type(models.Model)):
                 return model # Model already registered. Won't register twice
             except LookupError:
                 model = super().__new__(mcs, name, bases, attrs)
-                # patch_meta_get_field(model._meta)
                 return model
         model = super().__new__(mcs, name, bases, attrs) 
         return model
@@ -72,9 +47,252 @@ class DefaultAppsProxy:
     def __getattr__(self, attr):
         return getattr(apps, attr)
         
+
+
+from zelthy.core.utils import get_current_request, get_current_role
+from functools import lru_cache
+
+class ORMPemissions:
+
+    permissions = {}
+
+
+    @property
+    def request(self):
+        return get_current_request()
+
+    def update_model_perm(self, model_name):
+        self.model_name = model_name
+        self.user_role = get_current_role()
+        actions = []
+        allowed_attrs = []
+        records = []
+        for perm in self.get_permissions(model_name):
+            actions += perm["actions"]
+            # allowed_attrs += self.get_allowed_attrs(perm["attributes"])
+            records.append(perm["records"])
+        self.permissions[self.request.tenant.name] = {self.user_role.id:{
+                model_name:{
+                    "actions":  list(set(actions)),
+                    # "allowed_attrs": allowed_attrs,
+                    "records": records
+                    }
+        }}
+        # print(self.permissions)
+    
+    def get_permissions(self, model_name):
+        permissions = []
+        policies = self.user_role.get_policies("model", model=model_name)
+        for policy in policies:
+            perms = policy.statement["permissions"]            
+            for perm in perms:
+                if perm["type"] == "model" and perm["name"] == self.model_name:
+                    permissions.append(perm)
+        return permissions
+
+    # def get_allowed_attrs(self, attr_perm):
+    #     """
+    #         either all fields are permissioned or only specified fields are permissioned
+    #         not supporting all_except
+    #     """
+    #     if "only" in attr_perm:
+    #         return attr_perm["only"]
+    #     elif "all" in attr_perm and attr_perm["all"]:
+    #         return "__all__"
+    #     else:
+    #         return [] # block all attributes by default
+
+
+def build_q_from_spec(spec):
+    """
+    simple filtering
+        "records": {"field": "f", "operation": "icontains", "value": "val"}
+    complex filtering
+        "records": {
+            "logical_operator": "or", "conditions": [{"field": "username", "operation": "equals",
+        "value": "john_doe"},{"field": "email", "operation": "icontains", "value": "@example.com"}
+        }
+    nested:
+        "records": { "logical_operator": "or", "conditions": [ { "field": "username", "operation": "equals", "value": "john_doe" }, { "logical_operator": "and", "conditions": [ { "field": "first_name", "operation": "equals", "value": "John" }, { "field": "last_name", "operation": "equals", "value": "Doe" } ] } ] }
+    conditions:    
+    """
+    if "field" in spec:
+        if spec['operation'] and spec['operation'] != 'equals':
+            operation = f"{spec['field']}__{spec['operation']}"
+        else:
+            operation = f"{spec['field']}"
+        return Q(**{operation: spec['value']})
+    
+    if "logical_operator" in spec:
+        q_objects = [build_q_from_spec(condition) for condition in spec["conditions"]]
+        if spec["logical_operator"] == "and":
+            return Q(*q_objects)
+        elif spec["logical_operator"] == "or":
+            return reduce(lambda x, y: x | y, q_objects)
+
+    raise ValueError("Invalid specification")
+        
+
+class RestrictedQuerySet(models.QuerySet, ORMPemissions):
+
+    permissions = None
+
+    def __init__(self, model=None, query=None, using=None, hints=None):
+        super().__init__(model=model, query=query, using=using, hints=hints)
+        ormPermObj = ORMPemissions()
+        ormPermObj.update_model_perm(model.__name__)
+        self.permissions = ormPermObj.permissions
+        self.tenant_name = connection.tenant.name
+        self.user_role_id = get_current_role().id    
+        
+    def has_perm(self, perm_type):
+        return perm_type in \
+        self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["actions"]
+    
+    def prefilter(self):
+        specs = self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["records"]
+        filter_qs = [build_q_from_spec(spec) for spec in specs]
+        combined_q = reduce(and_, filter_qs)
+        return super().filter(combined_q)
+
+     
+    def get(self, *args, **kwargs):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            obj =  super(RestrictedQuerySet, prefiltered_qs).get(*args, **kwargs)
+            return obj
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
+
+    def all(self):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            qs =  super(RestrictedQuerySet, prefiltered_qs).all()
+            return qs
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
+
+    def exclude(self, *args, **kwargs):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            qs =  super(RestrictedQuerySet, prefiltered_qs).exclude(*args, **kwargs)
+            return qs
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
+    
+    def filter(self, *args, **kwargs):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            qs =  super(RestrictedQuerySet, prefiltered_qs).filter(*args, **kwargs)
+            return qs
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
+    
+    def annotate(self, *args, **kwargs):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            qs =  super(RestrictedQuerySet, prefiltered_qs).annotate(*args, **kwargs)
+            return qs
+        return super().annotate(*args, **kwargs)
+    
+    def aggregate(self, *args, **kwargs):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            qs =  super(RestrictedQuerySet, prefiltered_qs).aggregate(*args, **kwargs)
+            return qs
+        return super().annotate(*args, **kwargs)
+    
+    def create(self, *args, **kwargs):
+        if self.has_perm('create'):
+            return super().create(*args, **kwargs)
+        raise PermissionDenied(f"Create permission not available for {self.model.__name__}")
+
+    def bulk_create(self, *args, **kwargs):
+        if self.has_perm('create'):
+            return super().bulk_create(*args, **kwargs)
+        raise PermissionDenied(f"Create permission not available for {self.model.__name__}")
+    
+    def update(self, *args, **kwargs):
+        if self.has_perm('edit'):
+            return super().update(*args, **kwargs)
+        raise PermissionDenied(f"Edit permission not available for {self.model.__name__}")
+    
+    def bulk_update(self, *args, **kwargs):
+        if self.has_perm('edit'):
+            return super().bulk_update(*args, **kwargs)
+        raise PermissionDenied(f"Edit permission not available for {self.model.__name__}")
+
+    def delete(self):
+        if self.has_perm('delete'):
+            return super().delete()
+        raise PermissionDenied(f"Delete permission not available for {self.model.__name__}")
+    
+    def values(self, *fields, **expressions):        
+        return super().values(*fields, **expressions)
+
+
+
+
+class RestrictedManager(models.Manager):
+
+    def get_queryset(self):
+        qs = RestrictedQuerySet(self.model, using=self._db)
+        return qs
+
+    def all(self):
+        qs = RestrictedQuerySet(self.model, using=self._db)
+        return qs.all()
+
+
+
 class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
+
+    objects = RestrictedManager()
 
     class Meta:
         app_label = 'dynamic_models'
         apps = DefaultAppsProxy()
-        abstract = True
+        abstract = True    
+
+    def has_perm(self, perm_type):
+        model_name = self.__class__.__name__
+        perm_obj = ORMPemissions()
+        perm_obj.update_model_perm(model_name)
+        permissions = perm_obj.permissions
+        current_role_id = get_current_role().id
+        tenant_name = connection.tenant.name
+        if perm_type in permissions[tenant_name][current_role_id][type(self).__name__]["actions"]:
+            return True
+        return False
+        
+    #TODO: Attribute level permission
+    # def __getattribute__(self, key):
+    #     """
+    #         returns AttributeError if view perm is not available for the field 
+    #         being accessed
+    #         if `create` or `edit` perm is available then this check is not required
+    #     """
+    #     whitelisted_keys = ['__class__', '_meta', '__dict__', '_state', 'id', 'pk'] + \
+    #         list(vars(models.Model).keys())
+        
+    #     if key not in whitelisted_keys:
+    #         perm_obj = ORMPemissions()
+    #         perm_obj.update_model_perm(type(self).__name__)
+    #         permissions = perm_obj.permissions
+    #         current_role_id = get_current_role().id
+    #         tenant_name = connection.tenant.name
+    #         allowed_attrs =permissions[tenant_name]\
+    #             [current_role_id][type(self).__name__]["allowed_attrs"]
+    #         actions = permissions[tenant_name][current_role_id][type(self).__name__]["actions"]
+    #         if not any(action in actions for action in ["create", "edit"]):
+    #             if key not in allowed_attrs:
+    #                 raise AttributeError(f"'{type(self).__name__}' permission not available for '{key}'")
+    #     return super().__getattribute__(key)
+    
+    def save(self, *args, **kwargs):
+        if not self.pk and self.has_perm('create'):
+            return super().save(*args, **kwargs)
+        if self.pk and self.has_perm('edit'):
+            return super().save(*args, **kwargs)
+        raise PermissionDenied(f"Create/Edit Permission not available for {self.__class__.__name__}")
+    
+    def delete(self, *args, **kwargs):
+        if self.has_perm('delete'):
+            super().delete(*args, **kwargs)
+        raise PermissionDenied(f"Delete Permission not available for {self.__class__.__name__}")

@@ -6,7 +6,7 @@ class ZForeignKey(models.ForeignKey):
 
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigrate')):    
+        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigration')):
             cls._meta.apps.add_models(cls, self.related_model)
             try:
                 self.related_model._meta.apps.add_models(self.related_model, cls)
@@ -24,7 +24,7 @@ class ZOneToOneField(models.OneToOneField):
 
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigrate')):
+        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigration')):
             # dont need it if related model is of core
             # try:
             cls._meta.apps.add_models(cls, self.related_model)
@@ -112,7 +112,7 @@ class ZManyToManyField(models.ManyToManyField):
 
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigrate')):
+        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigration')):
 
             apps = cls._meta.apps
             
