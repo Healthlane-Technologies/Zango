@@ -7,6 +7,7 @@
     - -nmod -- number of modules in each tenant (in case of zelthy)
     - -p -- the platform to use (zelthy or django)
     - -s -- the server to use (gunicorn, daphne, etc)
+    - -nmv -- number of models in each view
 - Run the `loadtest.sh` script to loadtest and obtain the results
 - The script takes the arguments
     - -t -- number of tenants
