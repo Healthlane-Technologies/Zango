@@ -1,0 +1,4 @@
+gunicorn
+daphne
+locust
+memory-profiler

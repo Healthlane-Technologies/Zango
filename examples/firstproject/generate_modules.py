@@ -3,6 +3,7 @@ import json
 import random
 import subprocess
 import django
+import argparse
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'firstproject.settings')
 django.setup()
@@ -38,13 +39,12 @@ fields = [
     # Add more field definitions here
 ]
 
-def generate_models(path: str, module_num):
+def generate_models(path: str, module_num, no_of_models):
     with open(path, "a") as f:
         # Generate code for 20 models with the specified fields
-        num_models = 20
 
         models_code = []
-        for i in range(num_models+1):
+        for i in range(no_of_models+1):
             model_code = f"class Model{i}Mod{module_num}(DynamicModelBase):\n"
             for field in fields:
                 model_code += f"    {field}\n"
@@ -58,16 +58,34 @@ def generate_models(path: str, module_num):
         f.write(f"class ModelBook{module_num}(DynamicModelBase):\n")
         f.write(f"    author = ZForeignKey(ModelAuthor{module_num}, on_delete=models.CASCADE)\n")
 
-def generate_modules(num: int, tenant: str):
-    for i in range(2, num+2):
+def create_tenant_folder(tenant):
+    os.makedirs(f"workspaces/{tenant}")
+    settings = {
+        "version": "1.0.0",
+        "modules": [],
+        "app_routes": [],
+        "plugin_routes": []
+    }
+    plugins = {
+        "plugins": []
+    }
+    with open(f"workspaces/{tenant}/settings.json", "w") as f:
+        json.dump(settings, f, indent=4)
+    with open(f"workspaces/{tenant}/plugins.json", "w") as f:
+        json.dump(plugins, f, indent=4)
+
+def generate_modules(no_of_modules: int, tenant: str, no_of_models, no_of_models_in_view):
+    for i in range(no_of_modules):
+        if not os.path.exists(f"workspaces/{tenant}"):
+            create_tenant_folder(tenant)
         os.makedirs(f"workspaces/{tenant}/mod{i}")
         
         with open(f"workspaces/{tenant}/mod{i}/models.py", "w") as f:
             f.writelines(["from django.db import models\n", "from zelthy.apps.dynamic_models.models import DynamicModelBase\n", "from zelthy.apps.dynamic_models.fields import ZForeignKey\n\n\n"])
         
-        generate_models(f"workspaces/{tenant}/mod{i}/models.py", i)
+        generate_models(f"workspaces/{tenant}/mod{i}/models.py", i, no_of_models)
 
-        model_nums = generate_unique_random_numbers(num_numbers, start_range, end_range)
+        model_nums = generate_unique_random_numbers(no_of_models_in_view, 0, no_of_models)
         with open(f"workspaces/{tenant}/mod{i}/views.py", "w") as f:
             f.write("from django.views import View\n")
             f.write("from django.http import JsonResponse\n")
@@ -93,7 +111,7 @@ def generate_modules(num: int, tenant: str):
 def update_settings(tenant_name, num:int):
     new_routes = []
     new_paths = []
-    for i in range(2, num+2):
+    for i in range(num):
         route = {
             "re_path": f"^mod{i}/",
             "module": f"mod{i}",
@@ -115,18 +133,37 @@ def update_settings(tenant_name, num:int):
         json.dump(data, f, indent=4)
 
 def migration_operations(tenant: str):
-    subprocess.run(f"python manage.py ws_makemigrate {tenant}")
-    subprocess.run(f"python manage.py ws_migrate {tenant}")
+    subprocess.run(f"python manage.py ws_makemigrate {tenant}", shell=True)
+    subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
 
 def create_tenant_and_domain(tenant, index):
     ten = TenantModel.objects.create(name=tenant, schema_name=tenant, description="desc")
     domain = Domain.objects.create(tenant=ten, domain=f"app{index}.zelthy.com")
 
 if __name__ == "__main__":
-    num_tenants = 4
-    tenants = [f"loadtest_{i}" for i in range(num_tenants)]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--nt", help="No of tenants", type=int)
+    parser.add_argument("--nm", help="No of models in each module", type=int)
+    parser.add_argument("--nmod", help="No of modules in each tenant", type=int)
+    parser.add_argument("--nmv", help="No of model in each view", type=int)
+    args = parser.parse_args()
+    tenant_num = args.nt
+    no_of_models = args.nm
+    no_of_modules = args.nmod
+    no_of_models_in_view = args.nmv
+    if tenant_num is None:
+        tenant_num = 1
+    if no_of_models is None:
+        no_of_models = 20
+    if no_of_modules is None:
+        no_of_modules = 100
+    if no_of_models_in_view is None:
+        no_of_models_in_view = 5
+    tenants = [f"loadtest_{i}" for i in range(tenant_num)]
+    subprocess.run("python manage.py migrate_schemas", shell=True)
     for index, tenant in enumerate(tenants):
-        generate_modules(100, tenant)
-        update_settings(tenant, 100)
+        create_tenant_folder(tenant)
+        generate_modules(no_of_modules, tenant, no_of_models, no_of_models_in_view)
+        update_settings(tenant, no_of_modules)
         create_tenant_and_domain(tenant, index)
         migration_operations(tenant)

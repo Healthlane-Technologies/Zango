@@ -1,22 +1,30 @@
 #!/bin/bash
 
-upper_bound=4
-arg1=""
-arg2=""
+servers=("runserver" "gunicorn" "gunicorn_async" "daphne")
+cur=$(date +"%y_%m_%d")
+if [ ! -d "loadtest_results/$cur" ]; then
+    mkdir -p "loadtest_results/$cur"
+    mkdir -p "loadtest_results/$cur/django"
+    mkdir -p "loadtest_results/$cur/zelthy"
 
-# Parse flags
+    for server in "${servers[@]}"; do
+        mkdir -p "loadtest_results/$cur/django/$server"
+        mkdir -p "loadtest_results/$cur/zelthy/$server"
+    done
+fi
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -t|--tenants)
-            upper_bound="$2"
+            tenants="$2"
             shift 2
             ;;
         -p|--platform)
-            arg1="$2"
+            platform="$2"
             shift 2
             ;;
         -s|--server)
-            arg2="$2"
+            server="$2"
             shift 2
             ;;
         *)
@@ -26,7 +34,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-
-for ((i = 0; i < upper_bound; i++)); do
-    nohup locust --config=locust.conf --host="http://app${i}.zelthy.com:8000/" --html "loadtest_results/{$1}/{$2}/loadtest_${i}.html" &
+for ((i = 0; i < tenants; i++)); do
+    nohup locust --config=locust.conf --host="http://app${i}.zelthy.com:8000/" --html "loadtest_results/${cur}/${platform}/${server}/loadtest_${i}.html" &
 done
+
+sleep 80
+
+# docker stop zelthy_postgres
+# docker rm zelthy_postgres
