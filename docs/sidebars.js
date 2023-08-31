@@ -73,8 +73,9 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/user-roles/creating-a-user-role',
-        'documentation/user-roles/assigning-policies',
+        'documentation/user-roles/assigning-policies-to-user-roles',
         'documentation/user-roles/deactivating-a-user-role',
+        'documentation/user-roles/reserved-user-roles',
       ],
     },
     {
@@ -86,6 +87,10 @@ const sidebars = {
       },
       collapsed: true,
       items: [
+        'documentation/user-management/viewing-users',
+        'documentation/user-management/adding-users',
+        'documentation/user-management/assigning-policies-to-users',
+        'documentation/user-management/updating-user-roles',
       ],
     },
     {
