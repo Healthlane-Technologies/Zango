@@ -64,28 +64,34 @@ def generate_modules(tenant: str, no_of_models, no_of_models_in_view):
     
     generate_models(f"{tenant}/models.py", no_of_models)
 
-    model_nums = generate_unique_random_numbers(no_of_models_in_view, 0, no_of_models)
+    
     with open(f"{tenant}/views.py", "w") as f:
         f.write("from django.views import View\n")
         f.write("from django.http import JsonResponse\n")
-        for model_num in model_nums:
-            f.write(f"from .models import Model{model_num}\n")
+        for i in range(no_of_models):
+            f.write(f"from .models import Model{i}\n")
         f.write(f"from .models import ModelAuthor\n")
-        f.write(f"from .models import ModelBook\n")
-
-        f.write("\n\n")
-        f.write("class View1(View):\n")
-        f.write("    def get(self, request, *args, **kwargs):\n")
-        for model_num in model_nums:
-            f.write(f"        mod = Model{model_num}.objects.create(field1='dota', field2=2)\n")
-        f.write(f"        mod = ModelAuthor.objects.create(name='a')\n")
-        f.write(f"        bok= ModelBook.objects.create(author=mod)\n")
-        f.write("        return JsonResponse({})")
+        f.write(f"from .models import ModelBook\n\n\n")
+        for i in range(100):
+            model_nums = generate_unique_random_numbers(no_of_models_in_view, 0, no_of_models)
+            f.write("\n\n")
+            f.write(f"class View{i}(View):\n")
+            f.write("    def get(self, request, *args, **kwargs):\n")
+            for model_num in model_nums:
+                f.write(f"        mod = Model{model_num}.objects.create(field1='dota', field2=2)\n")
+            f.write(f"        mod = ModelAuthor.objects.create(name='a')\n")
+            f.write(f"        bok= ModelBook.objects.create(author=mod)\n")
+            f.write("        return JsonResponse({})")
     
     with open(f"{tenant}/urls.py", "w") as f:
         f.write("from django.urls import re_path\n")
-        f.write("from .views import View1\n\n")
-        f.write("urlpatterns = [re_path(r'^view1/$', View1.as_view(), name='view1')]\n")
+        for i in range(100):
+            f.write(f"from .views import View{i}\n\n")
+        f.write(f"urlpatterns = [\n")
+        for i in range(100):
+            f.write(f"    re_path(r'^view{i}/$', View{i}.as_view(), name='view{i}'),\n")
+        f.write("]\n")
+        
 
 def append_tenant_apps(tenants):
     tenants = ','.join(f'"{tenant}"' for tenant in tenants)

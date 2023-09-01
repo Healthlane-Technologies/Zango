@@ -1,15 +1,12 @@
 # Steps to loadtest
 
-- Run the `init.sh` script to create the postgres docker container and initialize the project
-- The script takes the arguments
-    - -t -- number of tenants
-    - -nm -- number of models in each tenant
-    - -nmod -- number of modules in each tenant (in case of zelthy)
-    - -p -- the platform to use (zelthy or django)
-    - -s -- the server to use (gunicorn, daphne, etc)
-    - -nmv -- number of models in each view
-- Run the `loadtest.sh` script to loadtest and obtain the results
-- The script takes the arguments
-    - -t -- number of tenants
-    - -p -- the platform to use (zelthy or django)
-    - -s -- the server to use
+- Set the desired platform, server and other variables in the docker compose file
+- Run `docker compose up`
+- After verifying that all the migrations have been applied 
+- In a new shell run the command `bash loadtest.bash`
+    the command takes the following arguments
+    - -t - number of tenants to run the loadtest against
+    - -p - specify the platform against which your are performing loadtest
+    - -s - specify the server against which you are performing loadtest
+
+**Note:** Before running the test again make sure to run the `docker compose down` command to make sure that a fresh database is used

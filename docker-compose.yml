@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  # locust:
+  #   build:
+  #     context: .
+  #     dockerfile: dockerfiles/locust.dockerfile
+  #   depends_on:
+  #     - postgres
+  #     - server
+  #   volumes:
+  #     - ./loadtest_results:/loadtest_results
+  
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: zelthy3pass
+      POSTGRES_DB: zelthy1
+    ports:
+      - "5432:5432"
+    
+  server:
+    build:
+      context: .
+      dockerfile: dockerfiles/server.dockerfile
+    environment:
+      SERVER: gunicorn_sync
+      PLATFORM: django
+      MODELS: 100
+      MODULES: 10
+      MODELS_IN_VIEWS: 5
+      TENANTS: 1
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"

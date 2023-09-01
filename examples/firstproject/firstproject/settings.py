@@ -26,7 +26,7 @@ DATABASES = {
         'NAME': 'zelthy1',
         'USER': 'postgres',
         'PASSWORD': 'zelthy3pass',
-        'HOST': '127.0.0.1',
+        'HOST': 'postgres',
         'PORT': '5432',
         'ATOMIC_REQUESTS':True
     }

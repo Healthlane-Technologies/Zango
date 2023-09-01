@@ -79,7 +79,7 @@ DATABASES = {
         'NAME': 'zelthy1',
         'USER': 'postgres',
         'PASSWORD': 'zelthy3pass',
-        'HOST': '127.0.0.1',
+        'HOST': 'postgres',
         'PORT': '5432',
         'ATOMIC_REQUESTS':True
     }
@@ -190,5 +190,3 @@ TEMPLATES = [
 ]
 
 
-TENANT_APPS += ["loadtest_0"]
-INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
