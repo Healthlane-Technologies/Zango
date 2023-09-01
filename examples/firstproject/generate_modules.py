@@ -146,6 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--nm", help="No of models in each module", type=int)
     parser.add_argument("--nmod", help="No of modules in each tenant", type=int)
     parser.add_argument("--nmv", help="No of model in each view", type=int)
+    # parser.add_argument("--nv", help="No of views ")
     args = parser.parse_args()
     tenant_num = args.nt
     no_of_models = args.nm
