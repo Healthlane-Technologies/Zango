@@ -318,7 +318,10 @@ class Workspace:
                 routes.append(
                     {
                         "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": route["plugin"] + "." + pkg_route["module"],
+                        "module": "plugins."
+                        + route["plugin"]
+                        + "."
+                        + pkg_route["module"],
                         "url": pkg_route["url"],
                     }
                 )

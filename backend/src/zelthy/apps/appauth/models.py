@@ -109,6 +109,10 @@ class UserRoleModel(FullAuditMixin, PolicyQsMixin):
     def __str__(self):
         return self.name
 
+    @property
+    def no_of_users(self):
+        return self.users.all().count()
+
     def save(self, *args, **kwargs):
         if self.pk and self.is_default:
             # Prevent modification of the default object's name
@@ -159,6 +163,10 @@ class AppUserModel(AbstractZelthyUserModel, PolicyQsMixin):
             return True
         return False
 
+    def add_roles(self, role_ids):
+        roles = UserRoleModel.objects.filter(id__in=role_ids)
+        self.roles.add(*roles)
+
     @classmethod
     def create_user(
         cls,
@@ -166,6 +174,7 @@ class AppUserModel(AbstractZelthyUserModel, PolicyQsMixin):
         email,
         mobile,
         password,
+        role_ids=[],
         force_password_reset=True,
         require_verification=True,
     ):
@@ -175,7 +184,13 @@ class AppUserModel(AbstractZelthyUserModel, PolicyQsMixin):
             message = "Email and mobile both cannot be empty"
         else:
             try:
-                user = cls.objects.filter(Q(email=email) | Q(mobile=mobile))
+                user_query = Q()
+                if email:
+                    user_query = user_query | Q(email=email)
+                if mobile:
+                    user_query = user_query | Q(mobile=mobile)
+
+                user = cls.objects.filter(user_query)
                 if user.exists():
                     message = (
                         "Another user already exists matching the provided credentials"
@@ -192,6 +207,7 @@ class AppUserModel(AbstractZelthyUserModel, PolicyQsMixin):
                                 username=str(uuid.uuid4()), is_active=True
                             ),
                         )
+                        app_user.add_roles(role_ids)
                         app_user.set_password(password)
                         app_user.user.set_unusable_password()
                         if require_verification:
@@ -203,4 +219,55 @@ class AppUserModel(AbstractZelthyUserModel, PolicyQsMixin):
                         message = "App User created successfully."
             except Exception as e:
                 message = str(e)
+        return {"success": success, "message": message}
+
+    def update_user(self, data):
+        success = False
+        try:
+            user_query = Q()
+            email = data.get("email")
+            mobile = data.get("mobile")
+            if email:
+                user_query = user_query | Q(email=email)
+            if mobile:
+                user_query = user_query | Q(mobile=mobile)
+
+            user = AppUserModel.objects.filter(user_query).exclude(id=self.id)
+            print("user: ", user)
+            if user.exists():
+                message = (
+                    "Another user already exists matching the provided email or mobile"
+                )
+                return {"success": False, "message": message}
+
+            password = data.get("password")
+            if password:
+                if not self.validate_password(password):
+                    message = "Invalid password. Password must follow rules xyz"
+                    return {"success": False, "message": message}
+
+                self.set_password(password)
+                ##Add old password logic, force_reset
+
+            if email:
+                self.email = email
+            if mobile:
+                self.mobile = mobile
+
+            name = data.get("name")
+            if name:
+                self.name = name
+
+            role_ids = data.get("roles", [])
+            if role_ids:
+                self.add_roles(role_ids)
+
+            is_active = data.get("is_active", self.is_active)
+            self.is_active = is_active
+
+            self.save()
+            success = True
+            message = "App User updated successfully."
+        except Exception as e:
+            message = str(e)
         return {"success": success, "message": message}
