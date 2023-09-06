@@ -8,6 +8,12 @@ from ..benefits_module.global_config import *
 
 from zelthy.apps.dynamic_models.models import DynamicModelBase
 from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField, ZManyToManyField
+from zelthy.apps.appauth.models import AppUserModel
+
+from ..benefits_module.models import ProgramModel, BenefitsModel
+
+
+
 
 
 
@@ -76,11 +82,6 @@ class TempOrderModel(AbstractTempOrderModel):
                     "Address",
                     max_length=255,
                     )
-  slug_code = models.UUIDField(
-                          default=uuid.uuid4,
-                          unique=True,
-                          editable=False
-                          )
   
 
 
@@ -272,13 +273,13 @@ class Patient(DynamicModelBase):
                   max_length=100,
                   blank=True
                   )
-  # preferred_language = models.ForeignKey(
+  # preferred_language = ZForeignKey(
   #                LanguageModel,
   #                related_name='pref_language',
   #                null=True,
   #                blank=True,
   #                 )
-  # second_language = models.ForeignKey(
+  # second_language = ZForeignKey(
   #                 LanguageModel,
   #                 related_name='second_language',
   #                 null=True,
@@ -471,7 +472,7 @@ class Patient(DynamicModelBase):
                  on_delete = models.CASCADE,
                  null=True,
                  blank=True,
-                 limit_choices_to={'is_active':True}
+                #  limit_choices_to={'is_active':True} # TODO Try this 
                  )
   # customoption1 = ZForeignKey(
   #                     PatientCustomOptionModel1,
@@ -570,7 +571,7 @@ class PatientProgramModel(DynamicModelBase):
                       default='applied'
                       )
   is_approved = models.BooleanField(default=False)
-  # approved_by = models.ForeignKey(
+  # approved_by = ZForeignKey(
   #                     Users,
   #                     null=True
   #                     )
@@ -578,7 +579,7 @@ class PatientProgramModel(DynamicModelBase):
                         null=True
                         )
   is_suspended = models.BooleanField(default=False)
-  # suspended_by = models.ForeignKey(
+  # suspended_by = ZForeignKey(
   #                      Users,
   #                      related_name='suspended_by',
   #                      null=True
@@ -656,3 +657,45 @@ class PatientProgramModel(DynamicModelBase):
 
 
 
+
+
+class PatientBenefitModel(DynamicModelBase):
+  """
+  Model to store applied benefits
+  """
+  slug_code = models.UUIDField(
+                          default=uuid.uuid4,
+                          unique=True,
+                          editable=False
+                          )
+  program = ZForeignKey(PatientProgramModel, on_delete=models.CASCADE)
+  benefit = ZForeignKey(BenefitsModel, on_delete=models.CASCADE)
+  status = models.CharField(
+                      "Benefit Status",
+                      max_length=200,
+                      choices=BENEFIT_STATUS,
+                      default='applied'
+                      )
+  credits = models.BigIntegerField(
+                      "Credits",
+                      null=True
+                      )
+  is_approved = models.BooleanField(default=False)
+  approved_by = ZForeignKey(
+                      AppUserModel,
+                      null=True,
+                      on_delete=models.CASCADE
+                      )
+  approval_date = models.DateTimeField(null=True)
+  is_suspended = models.BooleanField(default=False)
+  suspended_by = ZForeignKey(
+                       AppUserModel,
+                       related_name='benefit_suspended_by',
+                       null=True,
+                       on_delete=models.CASCADE
+                       )
+  # case = models.OneToOneField(
+  #                       CaseModel,
+  #                       related_name='case_benefit',
+  #                       null=True
+  #                        )

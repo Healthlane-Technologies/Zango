@@ -9,6 +9,7 @@ from rest_framework.views import APIView # Not woring properly : for get kwargs 
 
 from .models import OrderModel
 from .serializers import OrderModelSerializer
+from .forms import OrderForm
 
 
 
@@ -40,3 +41,26 @@ class OrderView(View):
         else:
             context = {"success": False, "msg": "Order addedd failed..!", "error": serializer.errors}
         return JsonResponse(context, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+
+class OrderFormView(View):
+    template_name = 'program_form.html'
+
+    def get(self, request, *args, **kwargs):
+        form = OrderForm()
+        context = {"form": form}
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        print("kwargs ---------==> ", kwargs)
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            form.save()
+            context = {"msg": "Data saved..!"}
+        else:
+            context = {"msg": "Data NOT saved..!"}
+        context["form"] = OrderForm()
+        return render(request, self.template_name, context)

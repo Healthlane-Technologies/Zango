@@ -12,8 +12,8 @@ urlpatterns = [
     path("add_dispensig_option/", DispensingOptionsView.as_view(), name="add_dispensig_option"),
     path("get_dispensig_option/", DispensingOptionsView.as_view(), name="get_dispensig_option"),
 
-    path("run/<int:id>/",RunScript.as_view(), name="run_script"),
-    # path("run/",RunScript.as_view(), name="run_script"),
+    # path("run/<int:id>/",RunScript.as_view(), name="run_script"),
+    path("run/",RunScript.as_view(), name="run_script"),
 
     # re_path(
     #     r'^run/(?P<id>\d+)/$',

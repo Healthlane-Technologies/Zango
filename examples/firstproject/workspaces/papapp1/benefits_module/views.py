@@ -10,6 +10,7 @@ from . serializers import BenefitsModelSerializer
 from ..program_module.models import ProgramModel
 from .models import DispensingOptionsModel, DispensingOptionsOrderItemsModel, OrderItemsModel, BenefitsSupplyChainNodes
 from ..supplychainnode_module.models import SupplyChainNodes
+from ..order_module.models import OrderModel
 # from .. patient_module.models import DoctorModel, Patient
 from ..test_module.models import CityModel
 
@@ -287,7 +288,11 @@ class RunScript(View):
 
 
 
-        # CityModel.objects.get(id=1).delete()
+        CityModel.objects.get(id=1).delete()
+
+        order=OrderModel.objects.get(id=1)
+        print("get_patient ===> ", order.get_patient())
+        print("patient ---> ", order.patient)
 
 
 

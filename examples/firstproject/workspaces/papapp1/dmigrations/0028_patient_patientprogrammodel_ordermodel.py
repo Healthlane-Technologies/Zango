@@ -3,7 +3,6 @@
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import django.db.models.deletion
-import pluginbase._internalspace._sp012aa7005c0c842645f1ffa334f9611a.order_module.models
 import uuid
 import zelthy.apps.dynamic_models.fields
 
@@ -109,7 +108,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug_code', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
-                ('ordercode', models.CharField(default=pluginbase._internalspace._sp012aa7005c0c842645f1ffa334f9611a.order_module.models.random_unique_code, max_length=6, verbose_name='Order Code')),
+                ('ordercode', models.CharField(max_length=6, verbose_name='Order Code')),
                 ('order_generation_date', models.DateTimeField(auto_now_add=True, verbose_name='Order Generation Date')),
                 ('order_dispense_date', models.DateTimeField(null=True, verbose_name='Order Dispense Date')),
                 ('order_closure_date', models.DateTimeField(null=True, verbose_name='Order Closure Date')),
