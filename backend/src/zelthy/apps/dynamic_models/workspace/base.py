@@ -108,6 +108,7 @@ class Workspace:
             sys.modules = cls._modules[key]
             return cls._instances[key]
         instance = super().__new__(cls)
+        instance.plugin_source = get_plugin_source(connection.tenant.name)
         cls._instances[key] = instance
         cls._modules[key] = sys.modules
         return instance
@@ -120,7 +121,6 @@ class Workspace:
         self.modules = self.get_ws_modules()
         self.plugins = self.get_plugins()
         self.models = [] # sorted with bfs
-        self.plugin_source = self.get_plugin_source()
         print(self.plugin_source)       
         # self.wtee = self.get_wtree()
 
