@@ -68,7 +68,7 @@ def generate_modules(tenant: str, no_of_models, no_of_models_in_view, no_of_view
     with open(f"{tenant}/views.py", "w") as f:
         f.write("from django.views import View\n")
         f.write("from django.http import JsonResponse\n")
-        for i in range(no_of_models):
+        for i in range(no_of_models+1):
             f.write(f"from .models import Model{i}\n")
         f.write(f"from .models import ModelAuthor\n")
         f.write(f"from .models import ModelBook\n\n\n")

@@ -26,12 +26,13 @@ services:
       dockerfile: dockerfiles/server.dockerfile
     environment:
       SERVER: gunicorn_sync
-      PLATFORM: django
-      MODELS: 1280
+      PLATFORM: zelthy
+      MODELS: 160
       MODULES: 8
       MODELS_IN_VIEWS: 80
       NO_OF_VIEWS: 8
       TENANTS: 1
+      DEBUG: false
     depends_on:
       - postgres
     ports:
