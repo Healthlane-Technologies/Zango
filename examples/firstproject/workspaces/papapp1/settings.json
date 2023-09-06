@@ -24,6 +24,14 @@
         {
             "name": "skus_module",
             "path": "skus_module"
+        },
+        {
+            "name": "patient_module",
+            "path": "patient_module"
+        },
+        {
+            "name": "order_module",
+            "path": "order_module"
         }
     ],
     "app_routes": [
@@ -56,6 +64,16 @@
         {
             "re_path": "^skus_module/",
             "module": "skus_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^patient_module/",
+            "module": "patient_module",
+            "url": "urls"
+        },
+        {
+            "re_path": "^order_module/",
+            "module": "order_module",
             "url": "urls"
         }
 

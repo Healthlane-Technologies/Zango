@@ -5,5 +5,5 @@ from .views import SupplyChainNodesView
 
 urlpatterns = [
     path("add_scn/", SupplyChainNodesView.as_view(), name="add_scn"),
-    path("get_scn_detials/", SupplyChainNodesView.as_view(), name="get_scn_detials")
+    path("get_scn_details/", SupplyChainNodesView.as_view(), name="get_scn_details")
 ]

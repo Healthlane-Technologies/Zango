@@ -1,6 +1,6 @@
 from django.urls import re_path, path, include
 
-from .views import TestView, AddSystemDetails
+from .views import TestView, AddSystemDetails, get_fun, MyView
 urlpatterns = [
     
     # re_path(
@@ -17,6 +17,22 @@ urlpatterns = [
         AddSystemDetails.as_view(),
         name="add_details"
     ),
+    # re_path(
+    #     r'^get_fun/(?P<id>\d+)/$',
+    #     get_fun,
+    #     name='get_fun'
+    # ),
+    path("get_fun/<int:id>/", get_fun, name="get_fun"),
+
+    # path("get_fun/<int:id>/", MyView.as_view(), name="get_fun"),
+
+
+    # re_path(
+    #     r'^get_fun/(?P<id>\d+)/$',
+    #     MyView.as_view(),
+    #     name='get_fun'
+    # )
+
     # re_path(
     #     r'^get_data/$',
     #     AddSystemDetails.as_view(),

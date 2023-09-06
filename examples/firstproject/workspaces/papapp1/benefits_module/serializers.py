@@ -5,7 +5,7 @@ from .models import BenefitsModel, DispensingOptionsModel
 class BenefitsModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = BenefitsModel
-        fields = '__all__'
+        fields = ('short_code', 'id')#'__all__'
     
 
     # def validate_program_name(self, value):

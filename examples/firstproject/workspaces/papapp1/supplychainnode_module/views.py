@@ -36,3 +36,13 @@ class SupplyChainNodesView(View):
         else:
             context = {"success": False, "msg": "Benefit addedd failed..!", "error": serializer.errors}
         return JsonResponse(context, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+##############
+
+
+# class RunScript(View):
+#     def post(self, request, *args, **kwargs):
+
+#         return JsonResponse({"success": True}, status=status.HTTP_200_OK)

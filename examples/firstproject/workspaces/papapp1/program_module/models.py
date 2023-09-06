@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
+# from django.core.urlresolvers import reverse # old reverse
+from django.urls import reverse # new reverse
+from django.utils.html import format_html
 
 from zelthy.apps.dynamic_models.models import DynamicModelBase
 
@@ -78,5 +81,30 @@ class ProgramModel(DynamicModelBase):
   jsonfield_extra1 = JSONField(null=True, blank=True)
 
 
-  def __str_(self):
+  def __str__(self):
     return self.program_name
+
+  # def generate_patient_condition(self):
+  #   url = reverse('program-eligibility-rule', kwargs={'id':self.id})
+  #   return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+  def generate_program_condition(self):
+    url = reverse('get-program-details')  #< ------------- NOT Working reverse()
+    return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+  def has_free_benefits(self):
+    free_benefits = self.benefits.all().filter(benefit_category='free')
+    if free_benefits:
+      return True
+    return False
+  
+  # @property
+  def get_all_linked_benefits(self):
+    all_benefits = self.benefits.all()
+    return all_benefits
+
+# def get_program_options():
+#   try:
+#     return ProgramModel.objects.all_therapies()
+#   except:
+#     return []

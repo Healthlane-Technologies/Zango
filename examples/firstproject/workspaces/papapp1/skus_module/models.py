@@ -89,6 +89,7 @@ class SkuTypes(DynamicModelBase):
     return self.label
   
 
+
 class OrderItemsModel(DynamicModelBase):
   """
   Model for order Items

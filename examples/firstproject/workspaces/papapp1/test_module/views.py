@@ -5,6 +5,8 @@ from django.views.generic import TemplateView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view
+
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -12,6 +14,21 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import SystemDetails
 
 from .serializers import SystemDetailsSerializers
+
+
+
+def get_fun(request, id):
+    print("id inside get_fun ===> ", id)
+    print("request.GET ==> ", request.GET)
+    print("kwargs ==> ")
+    return JsonResponse({"success": True, "id": id})
+
+
+class MyView(View):
+    def get(self, request,id, *args, **kwargs):
+        print("kwargs", kwargs)
+        print("request.GET ==> ", request.GET)
+        return JsonResponse({"success": True, "id": id})
 
 
 class TestView(TemplateView):

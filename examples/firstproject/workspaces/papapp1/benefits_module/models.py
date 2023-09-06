@@ -2,8 +2,13 @@ from django.db import models
 from django.contrib.postgres.fields import JSONField
 # from django.utils.translation import ugettext_lazy as _
 
+# from django.core.urlresolvers import reverse # old reverse
+from django.urls import reverse # new reverse
+from django.utils.html import format_html
+
 from zelthy.apps.dynamic_models.models import DynamicModelBase
 from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField, ZManyToManyField
+from zelthy.apps.appauth.models import UserRoleModel
 
 from .global_config import ORDER_STATUS, BENEFIT_TYPE, CREDIT_UPDATE_TYPE, CREDIT_LIMIT_TYPE, DOC_CREDIT_EXPIRY_TYPES, BENEFIT_CATEGORY
 from ..program_module.models import ProgramModel
@@ -186,11 +191,152 @@ class BenefitsModel(DynamicModelBase):
                     max_length=255,
                     blank=True
                     )
+    # test_role = ZOneToOneField(
+    #                     UserRoleModel,
+    #                     blank=True,
+    #                     null=True,
+    #                     on_delete=models.SET_NULL
+    # )
+
+    test_role = ZOneToOneField(
+                        UserRoleModel,
+                        blank=True,
+                        null=True,
+                        on_delete=models.SET_NULL
+    )
+
+    name1 = models.CharField(
+        "Name",
+        max_length=255,
+        blank=True
+    )
+    temp_role = ZOneToOneField(
+                        UserRoleModel,
+                        blank=True,
+                        null=True,
+                        on_delete=models.SET_NULL
+    )
 
 
-    def __str_(self):    
+    temp_role2 = ZOneToOneField(
+                        UserRoleModel,
+                        blank=True,
+                        null=True,
+                        on_delete=models.SET_NULL
+    )
+
+    class Meta(DynamicModelBase.Meta):
+        ordering = ['-short_code']
+
+
+    def __str__(self):    
         return self.label
     
+
+    def get_config(self):
+        cs = self.benefitorderconfig_set.all()
+        if len(cs) > 0:
+            return cs[0]
+        return None
+
+
+    # def get_min_credit_reqd(self):
+    #     credits = []
+    #     for item in self.item_options.all():
+    #         if item.credit_required:
+    #             credits.append(item.credit_required)
+    #     return min(credits)
+
+
+    def generate_item_choice_condition(self):
+        url = reverse('add_benefit_condition', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_generation_condition(self):
+        url = reverse('generate-order-condition', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_benefit_credit_update_condition(self):
+        url = reverse('update-credit-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_dispense_condition(self):
+        url = reverse('order-dispense-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_close_condition(self):
+        url = reverse('order-close-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_return_condition(self):
+        url = reverse('order-return-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_cancel_condition(self):
+        url = reverse('order-cancel-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_scan_in_condition(self):
+        url = reverse('generate-order-scan-in-condition', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_scan_out_condition(self):
+        url = reverse('generate-order-scan-out-condition', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_1_condition(self):
+        url = reverse('order-extra-status1-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_2_condition(self):
+        url = reverse('order-extra-status2-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_3_condition(self):
+        url = reverse('order-extra-status3-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_4_condition(self):
+        url = reverse('order-extra-status4-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_5_condition(self):
+        url = reverse('order-extra-status5-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_6_condition(self):
+        url = reverse('order-extra-status6-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_7_condition(self):
+        url = reverse('order-extra-status7-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_8_condition(self):
+        url = reverse('order-extra-status8-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_9_condition(self):
+        url = reverse('order-extra-status9-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_10_condition(self):
+        url = reverse('order-extra-status10-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_11_condition(self):
+        url = reverse('order-extra-status11-rule', kwargs={'id':self.id})
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+    def generate_order_extrastatus_12_condition(self):
+        # url = reverse('order-extra-status12-rule', kwargs={'id':self.id})
+        url = "."
+        return format_html("<a href='{url}'>Add/Modify</a>", url= url)
+
+
+    def get_days_of_supply(self, dosage_per_cycle):
+        pass
+        
 
 class BenefitsSupplyChainNodes(DynamicModelBase):
     benefit = ZForeignKey(
@@ -269,6 +415,15 @@ class DispensingOptionsModel(DynamicModelBase):
 
   def __str__(self):
     return self.label
+
+
+#   def print_sku_details(self):
+#     items = self.items.all()
+#     result_html = ""
+#     for item in items:
+#       line = "<p style='margin:5px;'>{} - ({} {})</p>".format(item.label, item.quantity, item.sku.pack_size)
+#       result_html = result_html + line
+#     return result_html
   
 
 
