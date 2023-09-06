@@ -3,7 +3,7 @@
 if [ "$PLATFORM" == "django" ]; then 
     cd dproject
     project="dproject"
-    python generate_models.py --nt "$TENANTS" --nm "$MODELS" --nmv="$MODELS_IN_VIEWS"
+    python generate_models.py --nt "$TENANTS" --nm "$MODELS" --nmv="$MODELS_IN_VIEWS" --nv="$NO_OF_VIEWS"
 else
     cd examples/firstproject
     project="firstproject"

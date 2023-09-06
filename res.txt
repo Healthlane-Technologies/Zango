@@ -1,0 +1,27 @@
+
+Config:
+    Zelthy:
+        users: 100
+        spawn-rate: 10
+        time: 10m
+        models: 160
+        modules: 8
+        models_in_views: 80
+        tenants: 1
+    Django:
+        users: 100
+        spawn-rate: 10
+        time: 10m
+        models: 1280
+        models_in_views: 80
+        no_of_views: 8
+        tenants: 1
+
+Result:
+    Zelthy:
+        init: 170MB
+        peak: 329.5MB
+    Django:
+        init: 280MB
+        peak: 312MB
+

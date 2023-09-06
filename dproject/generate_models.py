@@ -58,7 +58,7 @@ def generate_models(path: str, no_of_models):
         f.write(f"class ModelBook(models.Model):\n")
         f.write(f"    author = models.ForeignKey(ModelAuthor, on_delete=models.CASCADE)\n")
 
-def generate_modules(tenant: str, no_of_models, no_of_models_in_view):
+def generate_modules(tenant: str, no_of_models, no_of_models_in_view, no_of_views):
     with open(f"{tenant}/models.py", "w") as f:
         f.writelines(["from django.db import models\n", ])
     
@@ -72,7 +72,7 @@ def generate_modules(tenant: str, no_of_models, no_of_models_in_view):
             f.write(f"from .models import Model{i}\n")
         f.write(f"from .models import ModelAuthor\n")
         f.write(f"from .models import ModelBook\n\n\n")
-        for i in range(100):
+        for i in range(no_of_views):
             model_nums = generate_unique_random_numbers(no_of_models_in_view, 0, no_of_models)
             f.write("\n\n")
             f.write(f"class View{i}(View):\n")
@@ -85,10 +85,10 @@ def generate_modules(tenant: str, no_of_models, no_of_models_in_view):
     
     with open(f"{tenant}/urls.py", "w") as f:
         f.write("from django.urls import re_path\n")
-        for i in range(100):
+        for i in range(no_of_views):
             f.write(f"from .views import View{i}\n\n")
         f.write(f"urlpatterns = [\n")
-        for i in range(100):
+        for i in range(no_of_views):
             f.write(f"    re_path(r'^view{i}/$', View{i}.as_view(), name='view{i}'),\n")
         f.write("]\n")
         
@@ -124,21 +124,25 @@ if __name__ == "__main__":
     parser.add_argument("--nt", help="No of tenants", type=int)
     parser.add_argument("--nm", help="No of models in each tenant", type=int)
     parser.add_argument("--nmv", help="No of models in view", type=int)
+    parser.add_argument("--nv", help="No of views", type=int)
     args = parser.parse_args()
     tenant_num = args.nt
     no_of_models = args.nm
     no_of_models_in_view = args.nmv
+    no_of_views = args.nv
     if tenant_num is None:
         tenant_num = 1
     if no_of_models is None:
         no_of_models = 100
     if no_of_models_in_view is None:
         no_of_models_in_view = 5
+    if no_of_views is None:
+        no_of_views = 100
     subprocess.run(f"python manage.py migrate_schemas", shell=True)
     tenants = [f"loadtest_{i}" for i in range(tenant_num)]
     for tenant in tenants:
         subprocess.run(f"python manage.py startapp {tenant}", shell=True)
-        generate_modules(tenant, no_of_models, no_of_models_in_view)
+        generate_modules(tenant, no_of_models, no_of_models_in_view, no_of_views)
     append_tenant_apps(tenants)
     append_urls(tenants)
     create_tenants_and_domains(tenants)
