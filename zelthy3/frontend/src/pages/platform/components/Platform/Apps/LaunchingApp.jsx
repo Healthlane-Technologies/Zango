@@ -2,14 +2,14 @@ import launchingAppLoaderGif from '../../../../../assets/images/gif/launching-ap
 
 export default function LaunchingApp({ data }) {
 	const {
-		app_id,
+		uuid,
 		name,
 		status,
 		domain_url,
 		description,
 		logo,
-		launched_at,
-		updated_at,
+		created_at,
+		modified_at,
 	} = data;
 
 	return (

@@ -8,19 +8,25 @@ import { transformToFormDataOrder } from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
-import { close, selectIsLaunchNewAppModalOpen } from '../../slice';
+import {
+	close,
+	selectIsLaunchNewAppModalOpen,
+	toggleRerenderPage,
+} from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
 const LaunchNewAppForm = ({ closeModal }) => {
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	let initialValues = {
-		app_name: '',
+		name: '',
 		description: '',
 	};
 
 	let validationSchema = Yup.object({
-		app_name: Yup.string().required('Required'),
+		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
 	});
 
@@ -31,14 +37,16 @@ const LaunchNewAppForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
+				url: `/api/v1/apps/`,
 				type: 'POST',
 				loader: true,
+				notify: true,
 				payload: dynamicFormData,
 			});
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 
@@ -60,24 +68,24 @@ const LaunchNewAppForm = ({ closeModal }) => {
 						<div className="flex grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="app_name"
+									htmlFor="name"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
 									App Name
 								</label>
 								<input
-									id="app_name"
-									name="app_name"
+									id="name"
+									name="name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.app_name}
+									value={formik.values.name}
 									className="rounded-[6px] rounded-[6px] border border border-[#DDE2E5] border-[#DDE2E5] px-[16px] px-[16px] py-[14px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter"
 								/>
-								{formik.touched.app_name && formik.errors.app_name ? (
+								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.app_name}
+										{formik.errors.name}
 									</div>
 								) : null}
 							</div>

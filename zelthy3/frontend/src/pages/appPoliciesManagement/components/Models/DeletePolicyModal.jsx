@@ -73,14 +73,14 @@ const DeletePolicyForm = ({ closeModal }) => {
 							<div className="flex grow flex-col items-center justify-center gap-[16px]">
 								<DeactivateUserRolesIcon />
 								<p className="max-w-[201px] text-center font-lato text-[16px] leading-[24px] tracking-[0.2px] text-[#212429]">
-									Sure you want to delete custom permission?
+									Sure you want to delete policy?
 								</p>
 							</div>
 							<p className="flex flex-col font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
 								<span>Note:</span>
 								<span>
-									This will delete the custom permission along with all the
-									details of this permission.
+									This will delete the policy along with all the details of this
+									permission.
 								</span>
 							</p>
 						</div>
@@ -90,7 +90,7 @@ const DeletePolicyForm = ({ closeModal }) => {
 								className="flex w-full items-center justify-center rounded-[4px] bg-danger-red px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								// disabled={!(formik.isValid && formik.dirty)}
 							>
-								<span>Delete Custom Permission</span>
+								<span>Delete Policy</span>
 							</button>
 						</div>
 					</form>
@@ -148,7 +148,7 @@ export default function DeletePolicyModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Delete Custom Permission
+												Delete Policy
 											</h4>
 										</div>
 									</Dialog.Title>

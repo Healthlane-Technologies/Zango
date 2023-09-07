@@ -1,18 +1,49 @@
 import BreadCrumbs from '../BreadCrumbs';
 import { useSelector, useDispatch } from 'react-redux';
-import { openIsAddNewUserModalOpen } from '../../slice';
+import {
+	openIsAddNewUserModalOpen,
+	selectPlatformUserManagementData,
+	setPlatformUserManagementData,
+} from '../../slice';
 import AddNewUserModal from '../Models/AddNewUserModal';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import Table from '../Table';
 import EditUserDetailsModal from '../Models/EditUserDetailsModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
+import { useEffect } from 'react';
+import useApi from '../../../../hooks/useApi';
 
 export default function PlatformUserManagement() {
+	const platformUserManagementData = useSelector(
+		selectPlatformUserManagementData
+	);
 	const dispatch = useDispatch();
 
 	const handleAddNewUser = () => {
 		dispatch(openIsAddNewUserModalOpen());
 	};
+
+	function updatePlatformUserManagementData(value) {
+		dispatch(setPlatformUserManagementData(value));
+	}
+
+	const triggerApi = useApi();
+
+	useEffect(() => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/auth/platform-users/`,
+				type: 'GET',
+				loader: true,
+			});
+			if (success && response) {
+				updatePlatformUserManagementData(response);
+			}
+		};
+
+		makeApiCall();
+	}, []);
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[20px]">
@@ -32,270 +63,9 @@ export default function PlatformUserManagement() {
 					</button>
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
-					<Table
-						tableData={[
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5045,
-								id: 12,
-								mobile: 9876543121,
-								email: 'cameron.williamson@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-							{
-								user_name: 'Jenny Wilson',
-								user_id: 5043,
-								id: 11,
-								mobile: 9876543121,
-								email: 'diannerussell@email.com',
-								role_access: ['Role 1'],
-								policy: ['Policy 1'],
-								last_login_date_joined: '21 Sep, 2020',
-							},
-						]}
-					/>
+					{platformUserManagementData ? (
+						<Table tableData={platformUserManagementData?.platform_users} />
+					) : null}
 				</div>
 			</div>
 			<AddNewUserModal />

@@ -1,35 +1,37 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import * as Yup from 'yup';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsEditUserDetailModalOpen,
 	selectIsEditUserDetailModalOpen,
+	selectPlatformUserManagementFormData,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
 const EditUserDetailsForm = ({ closeModal }) => {
 	const triggerApi = useApi();
+	const platformUserManagementFormData = useSelector(
+		selectPlatformUserManagementFormData
+	);
+
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		name: platformUserManagementFormData?.name ?? '',
+		email: platformUserManagementFormData?.email ?? '',
+		phone: platformUserManagementFormData?.phone ?? '',
+		apps:
+			platformUserManagementFormData?.apps?.map((eachApp) => eachApp.id) ?? [],
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
+		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
+		phone: Yup.string().min(9, 'Must be 9 digits').max(9, 'Must be 9 digits'),
 	});
 
 	let onSubmit = (values) => {
@@ -38,12 +40,12 @@ const EditUserDetailsForm = ({ closeModal }) => {
 			tempValues['phone'] = '+91' + tempValues['phone'];
 		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});
@@ -71,24 +73,24 @@ const EditUserDetailsForm = ({ closeModal }) => {
 						<div className="flex grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="full_name"
+									htmlFor="name"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
 									Full Name
 								</label>
 								<input
-									id="full_name"
-									name="full_name"
+									id="name"
+									name="name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.full_name}
+									value={formik.values.name}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter full name of the user"
 								/>
-								{formik.touched.full_name && formik.errors.full_name ? (
+								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.full_name}
+										{formik.errors.name}
 									</div>
 								) : null}
 							</div>
@@ -141,6 +143,34 @@ const EditUserDetailsForm = ({ closeModal }) => {
 									</div>
 								) : null}
 							</div>
+							<MultiSelectField
+								key="apps"
+								label="Apps Access"
+								name="apps"
+								id="apps"
+								placeholder="Select app(s)"
+								value={get(formik.values, 'apps', [])}
+								optionsDataName="apps"
+								optionsData={[
+									{
+										id: 590,
+										label: 'Option 1',
+									},
+									{
+										id: 673,
+										label: 'Option 2',
+									},
+									{
+										id: 701,
+										label: 'Option 3',
+									},
+									{
+										id: 'option4',
+										label: 'Option 4',
+									},
+								]}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button

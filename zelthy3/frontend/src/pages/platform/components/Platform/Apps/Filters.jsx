@@ -1,15 +1,11 @@
-import * as Yup from 'yup';
-import { useState } from 'react';
-import { useCallback } from 'react';
-import { useEffect } from 'react';
-import { useFormikContext, Formik, useField } from 'formik';
+import { Formik, useFormikContext } from 'formik';
 import debounce from 'just-debounce-it';
-import useApi from '../../../../../hooks/useApi';
 import { get } from 'lodash';
-
+import { useCallback, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import * as Yup from 'yup';
+import { selectSortBy, setSortBy } from '../../../slice';
 import SelectField from './SelectField';
-import { useRef } from 'react';
-import { useLayoutEffect } from 'react';
 
 const AutoSave = ({ debounceMs }) => {
 	const formik = useFormikContext();
@@ -35,29 +31,17 @@ const AutoSave = ({ debounceMs }) => {
 };
 
 export default function Filters() {
+	const sortBy = useSelector(selectSortBy);
+	const dispatch = useDispatch();
+
 	let initialValues = {
-		sort: 'Alphabetical',
+		sort: sortBy,
 	};
 
 	let validationSchema = Yup.object().shape({});
 
-	const triggerApi = useApi();
-
 	let onSubmit = (values) => {
-		const makeApiCall = async () => {
-			// const { response, success } = await triggerApi({
-			// 	url: `/all-orders/?id_search=${values.searchValue}&start_date=${values.startDate}&&end_date=${values.endDate}&&status_search=${values.filter}`,
-			// 	type: 'GET',
-			// 	loader: true,
-			// });
-
-			// if (success && response) {
-			// 	console.log([...response.data]);
-			// }
-			console.log('API CALL', values);
-		};
-
-		makeApiCall();
+		dispatch(setSortBy(values.sort));
 	};
 
 	return (
@@ -86,9 +70,9 @@ export default function Filters() {
 								value={get(formik.values, 'sort', '')}
 								optionsDataName="sort"
 								optionsData={[
-									{ id: 'Alphabetical', label: 'Alphabetical' },
-									{ id: 'Date Created', label: 'Date Created' },
-									{ id: 'Last Modified', label: 'Last Modified' },
+									{ id: 'alphabetical', label: 'Alphabetical' },
+									{ id: 'date_created', label: 'Date Created' },
+									{ id: 'last_modified', label: 'Last Modified' },
 								]}
 								onChange={formik.handleChange}
 								formik={formik}

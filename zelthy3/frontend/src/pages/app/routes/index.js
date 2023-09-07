@@ -12,27 +12,30 @@ export const PlatformAppRoutes = () => {
 	return (
 		<Layout>
 			<Routes>
-				<Route path="/user-roles/" element={<AppUserRolesRoutes />} />
-				<Route path="/user-management/" element={<AppUserManagementRoutes />} />
-				<Route path="/app-settings/" element={<div>App Settings</div>} />
+				<Route path="/user-roles//*" element={<AppUserRolesRoutes />} />
 				<Route
-					path="/app-settings/app-configuration/"
+					path="/user-management//*"
+					element={<AppUserManagementRoutes />}
+				/>
+				<Route path="/app-settings//*" element={<div>App Settings</div>} />
+				<Route
+					path="/app-settings/app-configuration//*"
 					element={<AppConfigurationRoutes />}
 				/>
 				<Route
-					path="/app-settings/app-theme-configuration"
+					path="/app-settings/app-theme-configuration//*"
 					element={<AppThemeConfigurationRoutes />}
 				/>
 				<Route
-					path="/permission-management/permissions"
+					path="/permission-management/permissions//*"
 					element={<AppPermissionsManagementRoutes />}
 				/>
 				<Route
-					path="/permission-management/policies"
+					path="/permission-management/policies//*"
 					element={<AppPoliciesManagementRoutes />}
 				/>
-				<Route path="/tasks-management/" element={<AppTaskManagement />} />
-				<Route path="*" element={<Navigate to="./user-roles/" />} />
+				<Route path="/tasks-management//*" element={<AppTaskManagement />} />
+				<Route path="*" element={<Navigate to="./user-roles//*" />} />
 			</Routes>
 		</Layout>
 	);

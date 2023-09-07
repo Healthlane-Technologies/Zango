@@ -16,6 +16,7 @@ export default function BreadCrumbs() {
 					let prefixSlash = index < filterBreadCrumb.length - 2 ? ' / ' : '';
 					return (
 						<Link
+							key={url}
 							to={url}
 							className={`font-lato text-[10px] font-black uppercase tracking-[2px] ${
 								suffixSlash ? 'text-[#212429]' : 'text-[#ababae]'

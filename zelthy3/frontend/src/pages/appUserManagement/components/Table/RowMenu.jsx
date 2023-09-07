@@ -9,6 +9,27 @@ import {
 	openIsDeactivateUserModalOpen,
 } from '../../slice';
 
+import toast from 'react-hot-toast';
+import Notifications from '../../../../components/Notifications';
+
+const notify = () =>
+	toast.custom(
+		(t) => (
+			<Notifications
+				type="success"
+				toastRef={t}
+				title={'Reset Password Link Sent'}
+				description={
+					'A reset password link has been shared with Darrell Steward via email.'
+				}
+			/>
+		),
+		{
+			duration: 5000,
+			position: 'bottom-left',
+		}
+	);
+
 export default function RowMenu({ className }) {
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
@@ -81,7 +102,7 @@ export default function RowMenu({ className }) {
 						</Menu.Item>
 						<Menu.Item>
 							{({ active }) => (
-								<button type="button" className="flex  w-full">
+								<button type="button" onClick={notify} className="flex  w-full">
 									<div
 										className={`${
 											active ? 'bg-[#F0F3F4]' : ''

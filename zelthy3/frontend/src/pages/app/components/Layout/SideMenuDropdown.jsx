@@ -53,7 +53,7 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 						<div className="flex flex-col gap-[6px] px-[20px] py-[12px]">
 							{sublinks?.map(({ url, label }) => {
 								return (
-									<Menu.Item>
+									<Menu.Item key={label}>
 										{({ active }) => (
 											<NavLink
 												to={url}

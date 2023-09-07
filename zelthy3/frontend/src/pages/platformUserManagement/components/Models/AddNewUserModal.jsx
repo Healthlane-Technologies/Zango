@@ -1,35 +1,32 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import * as Yup from 'yup';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsAddNewUserModalOpen,
 	selectIsAddNewUserModalOpen,
 } from '../../slice';
 
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-
 const AddNewUserForm = ({ closeModal }) => {
 	const triggerApi = useApi();
 	let initialValues = {
-		full_name: '',
+		name: '',
 		email: '',
 		phone: '',
+		apps: [],
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
+		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
+		phone: Yup.string().min(9, 'Must be 9 digits').max(9, 'Must be 9 digits'),
+		apps: Yup.array().min(1, 'Minimun one is required').required('Required'),
 	});
 
 	let onSubmit = (values) => {
@@ -38,11 +35,11 @@ const AddNewUserForm = ({ closeModal }) => {
 			tempValues['phone'] = '+91' + tempValues['phone'];
 		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
+				url: `/api/v1/auth/platform-users/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
@@ -68,27 +65,27 @@ const AddNewUserForm = ({ closeModal }) => {
 						className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto"
 						onSubmit={formik.handleSubmit}
 					>
-						<div className="flex grow flex-col gap-[16px]">
+						<div className="flex max-w-[370px] grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="full_name"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+									htmlFor="name"
+									className="font-lato text-[12px] font-semibold text-[#A3ABB1]"
 								>
 									Full Name
 								</label>
 								<input
-									id="full_name"
-									name="full_name"
+									id="name"
+									name="name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.full_name}
+									value={formik.values.name}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter full name of the user"
 								/>
-								{formik.touched.full_name && formik.errors.full_name ? (
+								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.full_name}
+										{formik.errors.name}
 									</div>
 								) : null}
 							</div>
@@ -141,6 +138,34 @@ const AddNewUserForm = ({ closeModal }) => {
 									</div>
 								) : null}
 							</div>
+							<MultiSelectField
+								key="apps"
+								label="Apps Access"
+								name="apps"
+								id="apps"
+								placeholder="Select app(s)"
+								value={get(formik.values, 'apps', [])}
+								optionsDataName="apps"
+								optionsData={[
+									{
+										id: 590,
+										label: 'Option 1',
+									},
+									{
+										id: 673,
+										label: 'Option 2',
+									},
+									{
+										id: 701,
+										label: 'Option 3',
+									},
+									{
+										id: 'option4',
+										label: 'Option 4',
+									},
+								]}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
@@ -193,7 +218,7 @@ export default function AddNewUserModal() {
 					>
 						<div className="fixed inset-0 overflow-y-auto">
 							<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
-								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[498px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pt-[52px] pb-[40px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[72px] md:pt-[32px]">
+								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[498px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pt-[52px] pb-[40px] text-left align-middle shadow-xl transition-all md:px-[32px] md:pt-[32px]">
 									<div className="flex justify-end md:absolute md:top-0 md:right-0">
 										<button
 											type="button"

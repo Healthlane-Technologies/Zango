@@ -61,7 +61,7 @@ export default function SelectField({ label }) {
 							<Menu.Item>
 								{({ active }) => (
 									<NavLink
-										exact
+										exact="true"
 										to={`/platform/apps`}
 										className="relative flex items-center px-[16px] py-[4px]"
 										children={({ isActive }) => {
@@ -87,7 +87,7 @@ export default function SelectField({ label }) {
 							<Menu.Item>
 								{({ active }) => (
 									<NavLink
-										exact
+										exact="true"
 										to={`/platform/user-managements`}
 										className="relative flex items-center px-[16px] py-[4px]"
 										children={({ isActive }) => {

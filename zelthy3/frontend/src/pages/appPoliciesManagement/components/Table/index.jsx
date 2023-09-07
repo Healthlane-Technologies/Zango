@@ -198,11 +198,13 @@ export default function Table({ tableData }) {
 										<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]"></span>
 									</div>
 								</td>
-								<div className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center  justify-end bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex">
-									<div className="">
-										<RowMenu />
-									</div>
-								</div>
+								<td
+									key="extra-cell2"
+									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
+								></td>
+								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex">
+									<RowMenu />
+								</td>
 							</tr>
 						))}
 					</tbody>
@@ -246,7 +248,7 @@ export default function Table({ tableData }) {
 					<div className="flex items-center gap-[8px]">
 						{/* <input
 							type="number"
-							defaultValue={table.getState().pagination.pageIndex + 1}
+							 
 							onChange={(e) => {
 								const page = e.target.value ? Number(e.target.value) - 1 : 0;
 								table.setPageIndex(page);

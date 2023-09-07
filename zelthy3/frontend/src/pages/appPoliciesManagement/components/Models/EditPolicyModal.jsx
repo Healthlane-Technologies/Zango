@@ -116,29 +116,6 @@ const EditPolicyForm = ({ closeModal }) => {
 										</div>
 									) : null}
 								</div>
-								<div className="flex flex-col gap-[4px]">
-									<label
-										htmlFor="policy"
-										className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-									>
-										Policy JSON
-									</label>
-									<textarea
-										id="policy"
-										name="policy"
-										type="text"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.policy}
-										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-										placeholder="Enter policy JSON"
-									/>
-									{formik.touched.policy && formik.errors.policy ? (
-										<div className="font-lato text-form-xs text-[#cc3300]">
-											{formik.errors.policy}
-										</div>
-									) : null}
-								</div>
 							</div>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">

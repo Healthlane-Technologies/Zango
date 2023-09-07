@@ -7,9 +7,32 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	openIsEditUserDetailModalOpen,
 	openIsDeactivateUserModalOpen,
+	setPlatformUserManagementFormData,
 } from '../../slice';
 
-export default function RowMenu({ className }) {
+import toast from 'react-hot-toast';
+import Notifications from '../../../../components/Notifications';
+import { useEffect } from 'react';
+
+const notify = () =>
+	toast.custom(
+		(t) => (
+			<Notifications
+				type="success"
+				toastRef={t}
+				title={'Reset Password Link Sent'}
+				description={
+					'A reset password link has been shared with Darrell Steward via email.'
+				}
+			/>
+		),
+		{
+			duration: 5000,
+			position: 'bottom-left',
+		}
+	);
+
+export default function RowMenu({ rowData }) {
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -27,11 +50,11 @@ export default function RowMenu({ className }) {
 	const dispatch = useDispatch();
 
 	const handleEditUserDetails = () => {
-		dispatch(openIsEditUserDetailModalOpen());
+		dispatch(openIsEditUserDetailModalOpen(rowData));
 	};
 
 	const handleDeactivateUser = () => {
-		dispatch(openIsDeactivateUserModalOpen());
+		dispatch(openIsDeactivateUserModalOpen(rowData));
 	};
 
 	return (
@@ -81,7 +104,7 @@ export default function RowMenu({ className }) {
 						</Menu.Item>
 						<Menu.Item>
 							{({ active }) => (
-								<button type="button" className="flex  w-full">
+								<button type="button" onClick={notify} className="flex  w-full">
 									<div
 										className={`${
 											active ? 'bg-[#F0F3F4]' : ''

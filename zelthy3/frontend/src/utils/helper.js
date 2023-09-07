@@ -178,3 +178,7 @@ export const currencyFormatter = new Intl.NumberFormat('en-US', {
 	style: 'currency',
 	currency: 'INR',
 });
+
+export function isMockApi() {
+	return process.env.NODE_ENV === 'development';
+}

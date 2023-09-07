@@ -1,36 +1,31 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
+import { Formik } from 'formik';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import * as Yup from 'yup';
-import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { ReactComponent as DeactivateUserIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsDeactivateUserModalOpen,
 	selectIsDeactivateUserModalOpen,
+	selectPlatformUserManagementFormData,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { ReactComponent as DeactivateUserIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
 
 const DeactivateUserForm = ({ closeModal }) => {
 	const triggerApi = useApi();
+	const platformUserManagementFormData = useSelector(
+		selectPlatformUserManagementFormData
+	);
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		is_active: false,
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
+		is_active: Yup.boolean()
+			.required('Required')
+			.oneOf([false], 'Deactivate User'),
 	});
 
 	let onSubmit = (values) => {
@@ -39,12 +34,12 @@ const DeactivateUserForm = ({ closeModal }) => {
 			tempValues['phone'] = '+91' + tempValues['phone'];
 		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});

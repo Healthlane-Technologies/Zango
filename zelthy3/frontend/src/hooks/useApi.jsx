@@ -2,6 +2,24 @@ import { useCallback, useContext } from 'react';
 import { callGetApi, callPostApi, callPutApi } from '../services/api';
 import { ErrorMessageContext } from '../context/ErrorMessageContextProvider';
 import { LoaderContext } from '../context/LoaderContextProvider';
+import toast from 'react-hot-toast';
+import Notifications from '../components/Notifications';
+
+const notify = (type, title, description) =>
+	toast.custom(
+		(t) => (
+			<Notifications
+				type={type}
+				toastRef={t}
+				title={title}
+				description={description}
+			/>
+		),
+		{
+			duration: 5000,
+			position: 'bottom-left',
+		}
+	);
 
 /**
  * This hook automatically appends the zelthy authentication token to network requests made
@@ -60,6 +78,10 @@ export default function useApi() {
 
 					if (!success) {
 						setErrorMessage(response?.message || 'Server Error');
+					} else {
+						if (apiDetails?.notify) {
+							notify('success', 'Success', response.message);
+						}
 					}
 
 					return {
@@ -69,6 +91,30 @@ export default function useApi() {
 					};
 				} catch (error) {
 					setErrorMessage('Server Error');
+
+					return {
+						response: {
+							message: 'Server Error',
+						},
+						success: false,
+						responseStatus: apiRequest.status,
+					};
+				}
+			} else if (apiRequest.status === 400) {
+				try {
+					const { response, success } = await apiRequest.json();
+
+					setErrorMessage(response.message);
+
+					return {
+						response: {
+							message: 'Server Error',
+						},
+						success: false,
+						responseStatus: apiRequest.status,
+					};
+				} catch (error) {
+					notify('error', 'Success', 'Server Error');
 
 					return {
 						response: {

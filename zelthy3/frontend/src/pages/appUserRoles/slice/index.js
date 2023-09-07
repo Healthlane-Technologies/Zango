@@ -6,36 +6,51 @@ export const appUserRolesSlice = createSlice({
 		isAddNewUserRolesModalOpen: false,
 		isEditUserRolesDetailModalOpen: false,
 		isDeactivateUserRolesModalOpen: false,
+		rerenderPage: false,
+		appUserRolesData: null,
+		appUserRolesFormData: null,
 	},
 	reducers: {
 		toggleIsAddNewUserRolesModalOpen: (state) => {
-			state.isAddNewUserRolesModalOpen += !state.isAddNewUserRolesModalOpen;
+			state.isAddNewUserRolesModalOpen = !state.isAddNewUserRolesModalOpen;
 		},
-		openIsAddNewUserRolesModalOpen: (state) => {
+		openIsAddNewUserRolesModalOpen: (state, action) => {
 			state.isAddNewUserRolesModalOpen = true;
+			state.appUserRolesFormData = action.payload;
 		},
 		closeIsAddNewUserRolesModalOpen: (state, action) => {
 			state.isAddNewUserRolesModalOpen = false;
+			state.appUserRolesFormData = null;
 		},
 		toggleIsEditUserRolesDetailModalOpen: (state) => {
-			state.isEditUserRolesDetailModalOpen +=
+			state.isEditUserRolesDetailModalOpen =
 				!state.isEditUserRolesDetailModalOpen;
 		},
-		openIsEditUserRolesDetailModalOpen: (state) => {
+		openIsEditUserRolesDetailModalOpen: (state, action) => {
 			state.isEditUserRolesDetailModalOpen = true;
+			state.appUserRolesFormData = action.payload;
 		},
-		closeIsEditUserRolesDetailModalOpen: (state, action) => {
+		closeIsEditUserRolesDetailModalOpen: (state) => {
 			state.isEditUserRolesDetailModalOpen = false;
+			state.appUserRolesFormData = null;
 		},
 		toggleIsDeactivateUserRolesModalOpen: (state) => {
-			state.isDeactivateUserRolesModalOpen +=
+			state.isDeactivateUserRolesModalOpen =
 				!state.isDeactivateUserRolesModalOpen;
 		},
-		openIsDeactivateUserRolesModalOpen: (state) => {
+		openIsDeactivateUserRolesModalOpen: (state, action) => {
 			state.isDeactivateUserRolesModalOpen = true;
+			state.appUserRolesFormData = action.payload;
 		},
-		closeIsDeactivateUserRolesModalOpen: (state, action) => {
+		closeIsDeactivateUserRolesModalOpen: (state) => {
 			state.isDeactivateUserRolesModalOpen = false;
+			state.appUserRolesFormData = null;
+		},
+		setAppUserRolesData: (state, action) => {
+			state.appUserRolesData = action.payload;
+		},
+		toggleRerenderPage: (state) => {
+			state.rerenderPage = !state.rerenderPage;
 		},
 	},
 });
@@ -50,6 +65,8 @@ export const {
 	toggleIsDeactivateUserRolesModalOpen,
 	openIsDeactivateUserRolesModalOpen,
 	closeIsDeactivateUserRolesModalOpen,
+	setAppUserRolesData,
+	toggleRerenderPage,
 } = appUserRolesSlice.actions;
 
 export const selectIsAddNewUserRolesModalOpen = (state) =>
@@ -60,5 +77,13 @@ export const selectIsEditUserRolesDetailModalOpen = (state) =>
 
 export const selectIsDeactivateUserRolesModalOpen = (state) =>
 	state.appUserRoles.isDeactivateUserRolesModalOpen;
+
+export const selectRerenderPage = (state) => state.appUserRoles.rerenderPage;
+
+export const selectAppUserRolesData = (state) =>
+	state.appUserRoles.appUserRolesData;
+
+export const selectAppUserRolesFormData = (state) =>
+	state.appUserRoles.appUserRolesFormData;
 
 export default appUserRolesSlice.reducer;

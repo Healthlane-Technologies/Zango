@@ -50,11 +50,10 @@ export default function NavSearchForm() {
 			// 	type: 'GET',
 			// 	loader: true,
 			// });
-
 			// if (success && response) {
 			// 	console.log([...response.data]);
 			// }
-			console.log('API CALL', values);
+			// console.log('API CALL', values);
 		};
 
 		makeApiCall();
