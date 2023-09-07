@@ -15,7 +15,7 @@ case "$SERVER" in
         python manage.py runserver 0.0.0.0:8000
         ;;
     "gunicorn_async")
-        gunicorn -k uvicorn.workers.UvicornWorker "$project".asgi
+        gunicorn -k uvicorn.workers.UvicornWorker "$project".asgi --bind 0.0.0.0:8000
         ;;
     "gunicorn_sync")
         gunicorn --workers=4 --bind 0.0.0.0:8000 "$project".wsgi

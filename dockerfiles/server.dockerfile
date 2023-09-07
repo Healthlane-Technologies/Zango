@@ -1,6 +1,6 @@
 FROM python:3.10
 
-RUN pip install pluginbase django-cors-headers channels memory-profiler gunicorn daphne
+RUN pip install pluginbase django-cors-headers channels memory-profiler gunicorn daphne uvicorn
 
 COPY backend /zelthy/backend
 COPY examples/firstproject /zelthy/examples/firstproject
