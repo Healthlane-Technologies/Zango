@@ -15,7 +15,6 @@ class RequestMiddleware:
             _request_local.user_role = model.objects.get(id=request.session['role_id'])
 
         except:
-            print("Role ID not found")
             _request_local.user_role = None
         
         response = self.get_response(request)

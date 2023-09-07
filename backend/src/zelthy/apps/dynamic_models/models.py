@@ -165,7 +165,6 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
     def prefilter(self):
         specs = self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["records"]
         filter_qs = [build_q_from_spec(replace_special_context(spec)) for spec in specs]
-        print(filter_qs)
         combined_q = reduce(and_, filter_qs)
         return super().filter(combined_q)
 

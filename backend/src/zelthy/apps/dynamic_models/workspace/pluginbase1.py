@@ -167,10 +167,8 @@ class _PluginSourceModule(ModuleType):
 
 
 def _setup_base_package(module_name):
-    print("_setup_base_package")
     try:
         mod = __import__(module_name, None, None, ['__name__'])
-        print(mod)
     except ImportError:
         mod = None
         if '.' in module_name:
@@ -316,7 +314,6 @@ class PluginSource(object):
         :param plugin: the name of the plugin to open the resource of.
         :param filename: the name of the file within the plugin to open.
         """
-        print("Inside open_resource")
         mod = self.load_plugin(plugin)
         fn = getattr(mod, '__file__', None)
         if fn is not None:
@@ -390,7 +387,6 @@ class PluginBaseState(object):
     __slots__ = ('_source',)
 
     def __init__(self, source):
-        print("jerre", source.persist, source)
         if source.persist:
             self._source = lambda: source
         else:

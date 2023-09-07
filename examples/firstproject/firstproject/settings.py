@@ -68,7 +68,6 @@ ROOT_URLCONF = 'firstproject.urls_tenants'
 # ROOT_URLCONF = 'workspaces.apps2.urls'
 
 ENV='dev'
-print(INSTALLED_APPS)
 
 INSTALLED_APPS += ["dummy"]
 

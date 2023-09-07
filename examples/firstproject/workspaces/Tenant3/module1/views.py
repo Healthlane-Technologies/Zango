@@ -25,7 +25,6 @@ class View2(TemplateView):
     template_name = 'hello_world.html'
 
     def get_context_data(self, **kwargs):
-        print("kwargs", kwargs)
         context = super().get_context_data(**kwargs)
         context["objects"] = StateModel.objects.all().count()
         # context['objects'] = Property.objects.all().count()
