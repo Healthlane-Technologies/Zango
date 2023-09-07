@@ -102,7 +102,6 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
                     (force_public or request.tenant.schema_name == get_public_schema_name())):
                 request.urlconf = settings.PUBLIC_SCHEMA_URLCONF
 
-# from .helpers import get_userrole_model
 # class SetUserRoleMiddleWare:
 
 #     def __init__(self, get_response):

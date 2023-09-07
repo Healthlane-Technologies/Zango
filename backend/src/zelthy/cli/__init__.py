@@ -10,8 +10,6 @@ def install_packages(args):
     # Logic to install packages based on the provided arguments
     app_name = args.app_name
     settings_file = args.settings
-    print(app_name)
-    print(settings_file)
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_file)
     django.setup()
     from django.conf import settings
@@ -161,7 +159,6 @@ def get_alembic_cfg(args):
     db_host = settings.DATABASES['default']['HOST']
     db_name = settings.DATABASES['default']['NAME']
     db_url = f"postgresql://{db_user}:{db_pass}@{db_host}/{db_name}"
-    print(db_url)
     # Set up the Alembic configuration
     alembic_cfg = Config()
     app_name = args.app_name
@@ -206,11 +203,9 @@ def migration_upgrade(args):
     alembic_cfg = get_alembic_cfg(args)    
     script = ScriptDirectory.from_config(alembic_cfg)
     script_location = script.dir+"/versions"
-    print(script_location)
     for file in os.listdir(script_location):
         if file.endswith(".py"):
             parse_functions(os.path.join(script_location, file),app.schema_name)
-    print(alembic_cfg)
     command.upgrade(alembic_cfg, 'head', '--verbose')
     return
     # return "Upgraded successfully"

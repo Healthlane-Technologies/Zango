@@ -5,3 +5,6 @@ djangorestframework
 django-rest-knox
 celery==5.3.1
 flake8==6.1.0
+django-redis==5.3.0
+django-cachalot==2.6.1
+django-debug-toolbar==4.2.0

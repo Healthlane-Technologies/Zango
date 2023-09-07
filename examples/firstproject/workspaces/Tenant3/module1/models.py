@@ -4,6 +4,7 @@ from django.db import models
 from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField, ZManyToManyField
 from zelthy.apps.dynamic_models.models import DynamicModelBase
 
+
 class SystemDetails(DynamicModelBase):
     details = models.TextField()
 
@@ -48,5 +49,24 @@ class Property(DynamicModelBase):
     key = models.CharField(max_length=100)
     value = ZForeignKey(PropertyValue, models.SET_NULL, null=True)
     pg = ZForeignKey(LandingPageModel, null=True, on_delete=models.CASCADE)
-    values = ZManyToManyField(PropertyValue)
+
     
+
+
+class Tag(DynamicModelBase):
+    name = models.CharField(max_length=10)
+    parent = models.ForeignKey(
+        "self",
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="children",
+    )
+
+
+class StateModel(DynamicModelBase):
+    name = models.CharField(max_length=20)
+
+class City(DynamicModelBase):
+    name = models.CharField(max_length=20)
+    state = ZForeignKey(StateModel, null=True, on_delete=models.CASCADE)
