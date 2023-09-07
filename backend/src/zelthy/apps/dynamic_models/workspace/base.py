@@ -34,6 +34,9 @@ from .wtree import WorkspaceTreeNode
 #     return plugin_base.make_plugin_source(searchpath=[path])
 
 from zelthy.core.custom_pluginbase import get_plugin_source
+# import gc
+# gc.set_debug(gc.DEBUG_LEAK)
+
 class Workspace:
     
     """
@@ -70,6 +73,7 @@ class Workspace:
         if key in cls._instances:
             return cls._instances[key]
         instance = super().__new__(cls)
+        instance.plugin_source = cls.get_plugin_source()
         cls._instances[key] = instance
         return instance
 
@@ -80,10 +84,11 @@ class Workspace:
         self.modules = self.get_ws_modules()
         self.plugins = self.get_plugins()
         self.models = [] # sorted with bfs
-        self.plugin_source = self.get_plugin_source()
+        # self.plugin_source = self.get_plugin_source()
         # self.wtee = self.get_wtree()
 
-    def get_plugin_source(self):
+    @classmethod
+    def get_plugin_source(cls):
         return get_plugin_source(connection.tenant.name)
 
 
@@ -292,14 +297,13 @@ class Workspace:
             if r_regex.search(path): # match module
                 module = r['module'] + "." + r['url']
                 md = self.plugin_source.load_plugin(module)
-                # urlpatterns = getattr(import_module(module), "urlpatterns")
                 urlpatterns = getattr(md, "urlpatterns")
                 mod_url_path = path[len(r['re_path'].strip("^")):] or "/"
                 for pattern in urlpatterns:
                     resolve = pattern.resolve(mod_url_path) # find view
                 if resolve:
                     match = pattern.pattern.regex.search(mod_url_path)
-                    return pattern.callback
+                    return pattern.callback, resolve
                 return # return 404
                 
 

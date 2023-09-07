@@ -11,7 +11,7 @@ from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
 from ..permissions.models import PolicyModel, PolicyGroupModel
 
-from .perm_mixin import PolicyQsMixin
+# from .perm_mixin import PolicyQsMixin
 from ..permissions.mixin import PermissionMixin
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
@@ -54,11 +54,6 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
           # Prevent deletion of the default object
           raise ValueError("Cannot delete the default object.")
       super().delete(*args, **kwargs)
-
-
-
-    
-          
 
 
 class AppUserModel(AbstractZelthyUserModel, PermissionMixin):

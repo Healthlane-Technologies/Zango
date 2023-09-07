@@ -1,4 +1,5 @@
 import uuid
+from django.db.models import Q
 from django.db import models
 from django.db.models import JSONField
 from django.db.models.query import QuerySet
@@ -79,7 +80,8 @@ class PolicyModel(FullAuditMixin):
                 null=True
               )
   expiry = models.DateTimeField(
-                null=True
+                null=True,
+                blank=True
               )
   is_active = models.BooleanField(
               default=True
@@ -91,7 +93,7 @@ class PolicyModel(FullAuditMixin):
   
   @classmethod
   def get_valid_policies(cls):
-    return cls.objects.filter(expiry__gte=timezone.now())
+    return cls.objects.filter(Q(expiry__gte=timezone.now()) | Q(expiry__isnull=True))
   
   @classmethod
   def get_userAccess_policies(cls):

@@ -62,3 +62,11 @@ class Tag(DynamicModelBase):
         null=True,
         related_name="children",
     )
+
+
+class StateModel(DynamicModelBase):
+    name = models.CharField(max_length=20)
+
+class City(DynamicModelBase):
+    name = models.CharField(max_length=20)
+    state = ZForeignKey(StateModel, null=True, on_delete=models.CASCADE)

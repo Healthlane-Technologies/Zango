@@ -1,4 +1,6 @@
+import ipaddress
 from django.utils import timezone
+from django.db.models import Q
 from .models import PermissionsModel, PolicyModel
 
 
@@ -26,15 +28,16 @@ class PermissionMixin:
   """
 
   def is_ip_valid(self, request, permission):
-    # TODO: Handle Global Whitelist IPs,allow all, CIDR, etc.
-    return request.META["REMOTE_ADDR"] in permission.get("accessIP")
+    if permission.get("type") == "userAccess":
+      try:
+        allowed_ips = [ipaddress.ip_network(ip) for ip in permission.get("accessIP", [])]
+        for ip in allowed_ips:
+          if ipaddress.ip_address(request.META["REMOTE_ADDR"]) in ip:
+            return True        
+      except:
+        pass
+    return False
 
-  def is_accessTime_valid(self, request, permission):
-    """
-      True if accessTime is not specified else validate
-    """
-    #TODO
-    return True
   
   def has_view_access(self, permission, view_name):
     if permission.get("type") == "view":
@@ -46,7 +49,8 @@ class PermissionMixin:
   def get_policies(self, perm_type, view=None, model=None):   
     policy_groups = self.policy_groups.all()
     policies_qs = self.policies.all() | PolicyModel.objects.filter(policy_groups__in=policy_groups)
-    valid_policies_qs = policies_qs.filter(is_active=True, expiry__gte=timezone.now())
+    valid_policies_qs = policies_qs.filter(
+        Q(is_active=True, expiry__gte=timezone.now()) | Q(is_active=True, expiry__isnull=True))
     if perm_type == "userAccess":
       qs = valid_policies_qs.filter(
           statement__permissions__contains=[{"type": perm_type}]
@@ -66,7 +70,7 @@ class PermissionMixin:
   def has_perm(self, request, perm_type, view_name=None):
     """
       checks if the role or user has the permission
-    """
+    """    
     policies =  self.get_policies(perm_type, view_name)
     if not policies.exists():
       return False
@@ -74,7 +78,7 @@ class PermissionMixin:
       for policy in policies:
         permissions = policy.statement.get("permissions")
         for permission in permissions:
-          if self.is_ip_valid(request, permission) and self.is_accessTime_valid(request, permission):
+          if self.is_ip_valid(request, permission):
             return True
     elif perm_type == "view":
       for policy in policies:
@@ -82,14 +86,14 @@ class PermissionMixin:
         for permission in permissions:
           if self.has_view_access(permission, view_name):
             return True
+    return False
     
   def get_model_perms(self, model):
     policy_groups = self.policy_groups.all()
     policies_qs = self.policies.all() | \
         PolicyModel.objects.filter(policy_groups__in=policy_groups)
     valid_policies_qs = policies_qs.filter(
-        is_active=True, expiry__gte=timezone.now()
-    )
+        Q(is_active=True, expiry__gte=timezone.now()) | Q(is_active=True, expiry__isnull=True))    
     qs = valid_policies_qs.filter(
           statement__permissions__contains=[{"name": model}]
           )

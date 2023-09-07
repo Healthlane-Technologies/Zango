@@ -7,7 +7,7 @@ from .views import *
 
 urlpatterns = [
     re_path(
-        r'^', 
+        r'^((?:[\w\-:.,]+/)*)$', 
         DynamicView.as_view(),
         name='dynamic-app'
     )

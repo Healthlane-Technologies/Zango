@@ -5,11 +5,10 @@ from functools import reduce
 from operator import and_
 
 from django.apps import apps
-
 from django.core.exceptions import FieldDoesNotExist as DjangoFieldDoesNotExist
 from django.core.exceptions import PermissionDenied
-from types import MethodType
-
+from zelthy.apps.appauth.models import AppUserModel
+from zelthy.core.utils import get_current_request, get_current_role
 
 class RegisterOnceModeMeta(type(models.Model)):
     pass
@@ -48,10 +47,6 @@ class DefaultAppsProxy:
         return getattr(apps, attr)
         
 
-
-from zelthy.core.utils import get_current_request, get_current_role
-from functools import lru_cache
-
 class ORMPemissions:
 
     permissions = {}
@@ -65,20 +60,16 @@ class ORMPemissions:
         self.model_name = model_name
         self.user_role = get_current_role()
         actions = []
-        allowed_attrs = []
         records = []
         for perm in self.get_permissions(model_name):
             actions += perm["actions"]
-            # allowed_attrs += self.get_allowed_attrs(perm["attributes"])
             records.append(perm["records"])
         self.permissions[self.request.tenant.name] = {self.user_role.id:{
                 model_name:{
                     "actions":  list(set(actions)),
-                    # "allowed_attrs": allowed_attrs,
                     "records": records
                     }
         }}
-        # print(self.permissions)
     
     def get_permissions(self, model_name):
         permissions = []
@@ -124,14 +115,36 @@ def build_q_from_spec(spec):
         return Q(**{operation: spec['value']})
     
     if "logical_operator" in spec:
-        q_objects = [build_q_from_spec(condition) for condition in spec["conditions"]]
+        q_objects = [build_q_from_spec(condition) for condition in spec["conditions"]]        
         if spec["logical_operator"] == "and":
             return Q(*q_objects)
         elif spec["logical_operator"] == "or":
             return reduce(lambda x, y: x | y, q_objects)
 
     raise ValueError("Invalid specification")
-        
+
+def replace_special_context(data):
+    """
+    Recursively replace values containing {{}} with a special object.
+    """
+    if isinstance(data, list):
+        for index, item in enumerate(data):
+            if isinstance(item, (dict, list)):
+                data[index] = replace_special_context(item)
+                
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                data[key] = replace_special_context(value)
+            elif isinstance(value, str) and "{{" in value and "}}" in value:
+                if value == "{{user}}":
+                    data[key] = AppUserModel.objects.all().first() #get_current_request().user
+                elif value == "{{user_role}}":
+                    data[key] = get_current_role()
+                elif value == "{{user_role_id}}":
+                    data[key] = get_current_role().id
+    return data
+
 
 class RestrictedQuerySet(models.QuerySet, ORMPemissions):
 
@@ -151,7 +164,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
     
     def prefilter(self):
         specs = self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["records"]
-        filter_qs = [build_q_from_spec(spec) for spec in specs]
+        filter_qs = [build_q_from_spec(replace_special_context(spec)) for spec in specs]
+        print(filter_qs)
         combined_q = reduce(and_, filter_qs)
         return super().filter(combined_q)
 
@@ -189,14 +203,22 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             qs =  super(RestrictedQuerySet, prefiltered_qs).annotate(*args, **kwargs)
             return qs
-        return super().annotate(*args, **kwargs)
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
     
     def aggregate(self, *args, **kwargs):
         if self.has_perm('view'):
             prefiltered_qs = self.prefilter()
             qs =  super(RestrictedQuerySet, prefiltered_qs).aggregate(*args, **kwargs)
             return qs
-        return super().annotate(*args, **kwargs)
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
+
+    def select_related(self, *args, **kwargs):
+        if self.has_perm('view'):
+            prefiltered_qs = self.prefilter()
+            qs =  super(RestrictedQuerySet, prefiltered_qs).select_related(*args, **kwargs)
+            return qs
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
+
     
     def create(self, *args, **kwargs):
         if self.has_perm('create'):
@@ -239,9 +261,23 @@ class RestrictedManager(models.Manager):
         qs = RestrictedQuerySet(self.model, using=self._db)
         return qs.all()
 
-
-
 class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    created_by = models.ForeignKey(
+        AppUserModel,
+        null=True, 
+        editable=False,
+        on_delete=models.PROTECT
+    )
+    modified_at = models.DateTimeField(auto_now=True)
+    modified_by = models.ForeignKey(
+        AppUserModel,
+        null=True, 
+        editable=False,
+        on_delete=models.PROTECT   
+    )
 
     objects = RestrictedManager()
 

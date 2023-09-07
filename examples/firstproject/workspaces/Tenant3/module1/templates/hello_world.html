@@ -1,46 +1,5 @@
 
-Hello I am from Tenant
-{{new_user.id}}- {{new_user.name}} - {{new_user.email}} - {{new_user.city}} <br>
-<button id="postDataBtn">Send POST request</button>
-{% for address in addresses %}
-{{address.id}} - {{address.address}}<br>
-{% endfor %}
-
-<h2>Add Book</h2>
-    <form method="post">
-        <!-- {% csrf_token %} -->
-        <input type="text" name="name"/>
-        <button type="submit">Add</button>
-    </form>
-
-
-
-
-<script>
-    // JavaScript to send a POST request using Fetch API
-    document.getElementById('postDataBtn').addEventListener('click', function() {
-        fetch('/mod1/view2/1/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // If you need to send some authentication token or other headers, add them here.
-                // 'Authorization': 'Bearer YOUR_TOKEN'
-            },
-            body: JSON.stringify({
-                csrftoken: '',
-                key1: 'value1',
-                key2: 'value2'
-                // Add any other data you want to send in the POST request
-            })
-        })
-        .then(response => response.json()) // assuming server responds with json
-        .then(data => {
-            console.log(data);
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
-    });
-</script>
+Hello World
+{{objects}}
 
 </body>
