@@ -48,7 +48,11 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/getting-started/installing-zosp',
-        'documentation/getting-started/creating-a-project'
+        'documentation/getting-started/zelthy3-the-zelthy-cli',
+        'documentation/getting-started/prerequisites-for-a-project',
+        'documentation/getting-started/setting-up-the-project',
+        'documentation/getting-started/running-development-server',
+        'documentation/getting-started/accessing-z-dynamic',
       ],
     },
     {
