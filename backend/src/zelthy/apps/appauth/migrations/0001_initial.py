@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             options={
                 'abstract': False,
             },
-            bases=(models.Model, zelthy.apps.appauth.models.PolicyQsMixin),
+            bases=(models.Model, zelthy.apps.permissions.mixin.PermissionMixin),
         ),
         migrations.CreateModel(
             name='AppUserModel',
@@ -69,6 +69,6 @@ class Migration(migrations.Migration):
             options={
                 'abstract': False,
             },
-            bases=(models.Model, zelthy.apps.appauth.models.PolicyQsMixin),
+            bases=(models.Model, zelthy.apps.permissions.mixin.PermissionMixin),
         ),
     ]
