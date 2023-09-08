@@ -64,7 +64,9 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/spinning-up-an-app/creating-an-app',
-        'documentation/spinning-up-an-app/updating-the-app-settings',
+        'documentation/spinning-up-an-app/switching-to-app-view',
+        'documentation/spinning-up-an-app/updating-app-settings',
+        'documentation/spinning-up-an-app/updating-app-theme',
       ],
     },
     {
