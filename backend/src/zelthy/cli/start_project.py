@@ -145,7 +145,7 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--db_user", prompt=True, help="DB User")
 @click.option("--db_password", prompt=True, help="DB Password")
 @click.option("--db_host", prompt=True, help="DB Host")
-@click.option("--db_port", prompt=True, help="DB Port", default="Default: 5432")
+@click.option("--db_port", prompt=True, help="DB Port", default="5432")
 def start_project(
     project_name, directory, db_name, db_user, db_password, db_host, db_port
 ):
@@ -181,16 +181,16 @@ def start_project(
     create_public_tenant()
 
     # Prompting default platform user details
-    click.echo("Please enter platform user details")
-    platform_username = click.prompt("Email")
-    platform_username_password = click.prompt(
-        "Password", hide_input=True, confirmation_prompt=True
-    )
+    # click.echo("Please enter platform user details")
+    # platform_username = click.prompt("Email")
+    # platform_username_password = click.prompt(
+    #     "Password", hide_input=True, confirmation_prompt=True
+    # )
 
-    user_creation_result = create_platform_user(
-        platform_username, platform_username_password
-    )
-    if not user_creation_result["success"]:
-        click.echo("User Creation Failed!")
+    # user_creation_result = create_platform_user(
+    #     platform_username, platform_username_password
+    # )
+    # if not user_creation_result["success"]:
+    #     click.echo("User Creation Failed!")
 
-    click.echo(user_creation_result["message"])
+    # click.echo(user_creation_result["message"])
