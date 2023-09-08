@@ -9,7 +9,7 @@ import {
 	openIsDeletePolicyModalOpen,
 } from '../../slice';
 
-export default function RowMenu({ className }) {
+export default function RowMenu({ rowData }) {
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -27,11 +27,11 @@ export default function RowMenu({ className }) {
 	const dispatch = useDispatch();
 
 	const handleEditPolicy = () => {
-		dispatch(openIsEditPolicyModalOpen());
+		dispatch(openIsEditPolicyModalOpen(rowData));
 	};
 
 	const handleDeletePolicy = () => {
-		dispatch(openIsDeletePolicyModalOpen());
+		dispatch(openIsDeletePolicyModalOpen(rowData));
 	};
 
 	return (

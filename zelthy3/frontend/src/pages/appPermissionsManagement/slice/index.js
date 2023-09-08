@@ -6,37 +6,52 @@ export const appPermissionsManagementSlice = createSlice({
 		isAddCustomPermissionModalOpen: false,
 		isEditCustomPermissionModalOpen: false,
 		isDeleteCustomPermissionModalOpen: false,
+		rerenderPage: false,
+		appPermissionsManagementData: null,
+		appPermissionsManagementFormData: null,
 	},
 	reducers: {
 		toggleIsAddCustomPermissionModalOpen: (state) => {
 			state.isAddCustomPermissionModalOpen +=
 				!state.isAddCustomPermissionModalOpen;
 		},
-		openIsAddCustomPermissionModalOpen: (state) => {
+		openIsAddCustomPermissionModalOpen: (state, action) => {
 			state.isAddCustomPermissionModalOpen = true;
+			state.appPermissionsManagementFormData = action.payload;
 		},
-		closeIsAddCustomPermissionModalOpen: (state, action) => {
+		closeIsAddCustomPermissionModalOpen: (state) => {
 			state.isAddCustomPermissionModalOpen = false;
+			state.appPermissionsManagementFormData = null;
 		},
 		toggleIsEditCustomPermissionModalOpen: (state) => {
 			state.isEditCustomPermissionModalOpen +=
 				!state.isEditCustomPermissionModalOpen;
 		},
-		openIsEditCustomPermissionModalOpen: (state) => {
+		openIsEditCustomPermissionModalOpen: (state, action) => {
 			state.isEditCustomPermissionModalOpen = true;
+			state.appPermissionsManagementFormData = action.payload;
 		},
-		closeIsEditCustomPermissionModalOpen: (state, action) => {
+		closeIsEditCustomPermissionModalOpen: (state) => {
 			state.isEditCustomPermissionModalOpen = false;
+			state.appPermissionsManagementFormData = null;
 		},
 		toggleIsDeleteCustomPermissionModalOpen: (state) => {
 			state.isDeleteCustomPermissionModalOpen +=
 				!state.isDeleteCustomPermissionModalOpen;
 		},
-		openIsDeleteCustomPermissionModalOpen: (state) => {
+		openIsDeleteCustomPermissionModalOpen: (state, action) => {
 			state.isDeleteCustomPermissionModalOpen = true;
+			state.appPermissionsManagementFormData = action.payload;
 		},
-		closeIsDeleteCustomPermissionModalOpen: (state, action) => {
+		closeIsDeleteCustomPermissionModalOpen: (state) => {
 			state.isDeleteCustomPermissionModalOpen = false;
+			state.appPermissionsManagementFormData = null;
+		},
+		setAppPermissionsManagementData: (state, action) => {
+			state.appPermissionsManagementData = action.payload;
+		},
+		toggleRerenderPage: (state) => {
+			state.rerenderPage = !state.rerenderPage;
 		},
 	},
 });
@@ -51,6 +66,8 @@ export const {
 	toggleIsDeleteCustomPermissionModalOpen,
 	openIsDeleteCustomPermissionModalOpen,
 	closeIsDeleteCustomPermissionModalOpen,
+	setAppPermissionsManagementData,
+	toggleRerenderPage,
 } = appPermissionsManagementSlice.actions;
 
 export const selectIsAddCustomPermissionModalOpen = (state) =>
@@ -61,5 +78,14 @@ export const selectIsEditCustomPermissionModalOpen = (state) =>
 
 export const selectIsDeleteCustomPermissionModalOpen = (state) =>
 	state.appPermissionsManagement.isDeleteCustomPermissionModalOpen;
+
+export const selectRerenderPage = (state) =>
+	state.appPermissionsManagement.rerenderPage;
+
+export const selectAppPermissionsManagementData = (state) =>
+	state.appPermissionsManagement.appPermissionsManagementData;
+
+export const selectAppPermissionsManagementFormData = (state) =>
+	state.appPermissionsManagement.appPermissionsManagementFormData;
 
 export default appPermissionsManagementSlice.reducer;

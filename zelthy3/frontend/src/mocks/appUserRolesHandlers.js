@@ -10,7 +10,7 @@ const range = (len) => {
 	return arr;
 };
 
-const newApp = () => {
+const newPolicy = () => {
 	return {
 		id: faker.number.int(1000),
 		schema_name: faker.internet.displayName(),
@@ -19,9 +19,9 @@ const newApp = () => {
 		modified_at: faker.date.past(),
 		modified_by: faker.person.fullName(),
 		uuid: faker.number.int({ min: 1000, max: 9999 }),
-		name: 'App ' + faker.number.int({ min: 1, max: 10 }),
+		name: 'Policy ' + faker.number.int({ min: 1, max: 10 }),
 		description: faker.lorem.sentences(2),
-		tenant_type: 'app',
+		tenant_type: 'policy',
 		status: faker.helpers.shuffle(['staged', 'deployed']),
 		deployed_on: null,
 		suspended_on: null,
@@ -35,28 +35,28 @@ const newApp = () => {
 	};
 };
 
-const newUser = () => {
+const newUserRole = () => {
 	return {
 		id: faker.number.int({ min: 1000, max: 9999 }),
 		created_at: faker.date.past(),
 		created_by: '',
 		modified_at: faker.date.past(),
 		modified_by: '',
-		name: faker.person.fullName(),
+		name: 'Role ' + faker.number.int({ min: 1, max: 10 }),
 		config: null,
 		is_active: faker.datatype.boolean(),
 		is_default: faker.datatype.boolean(),
-		policies: [],
-		policy_groups: [],
+		policies: makePolices(faker.number.int({ min: 1, max: 10 })),
+		no_of_users: faker.number.int({ min: 1, max: 10 }),
 	};
 };
 
-export function makeApps(...lens) {
+export function makePolices(...lens) {
 	const makeDataLevel = (depth = 0) => {
 		const len = lens[depth];
 		return range(len).map((d) => {
 			return {
-				...newApp(),
+				...newPolicy(),
 				subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
 			};
 		});
@@ -70,7 +70,7 @@ export function makeData(...lens) {
 		const len = lens[depth];
 		return range(len).map((d) => {
 			return {
-				...newUser(),
+				...newUserRole(),
 				subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
 			};
 		});
@@ -114,8 +114,13 @@ export const appUserRolesHandlers = [
 							previous: null,
 							records: slicedData,
 						},
-						include_dropdown_options: {
-							apps: [],
+						dropdown_options: {
+							policies: [
+								{ id: 1, label: 'Policy 1' },
+								{ id: 2, label: 'Policy 1' },
+								{ id: 3, label: 'Policy 1' },
+								{ id: 4, label: 'Policy 1' },
+							],
 						},
 						message: 'Platform user fetched successfully',
 					},

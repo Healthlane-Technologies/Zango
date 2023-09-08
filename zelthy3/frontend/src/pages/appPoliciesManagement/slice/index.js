@@ -6,44 +6,66 @@ export const appPoliciesManagementSlice = createSlice({
 		isAddPolicyModalOpen: false,
 		isEditPolicyModalOpen: false,
 		isViewPolicyModalOpen: false,
+		isEditViewPolicy: false,
 		isDeletePolicyModalOpen: false,
+		rerenderPage: false,
+		appPoliciesManagementData: null,
+		appPoliciesManagementFormData: null,
 	},
 	reducers: {
 		toggleIsAddPolicyModalOpen: (state) => {
 			state.isAddPolicyModalOpen += !state.isAddPolicyModalOpen;
 		},
-		openIsAddPolicyModalOpen: (state) => {
+		openIsAddPolicyModalOpen: (state, action) => {
 			state.isAddPolicyModalOpen = true;
+			state.appPoliciesManagementFormData = action.payload;
 		},
-		closeIsAddPolicyModalOpen: (state, action) => {
+		closeIsAddPolicyModalOpen: (state) => {
 			state.isAddPolicyModalOpen = false;
+			state.appPoliciesManagementFormData = null;
 		},
 		toggleIsEditPolicyModalOpen: (state) => {
 			state.isEditPolicyModalOpen += !state.isEditPolicyModalOpen;
 		},
-		openIsEditPolicyModalOpen: (state) => {
+		openIsEditPolicyModalOpen: (state, action) => {
 			state.isEditPolicyModalOpen = true;
+			state.appPoliciesManagementFormData = action.payload;
 		},
-		closeIsEditPolicyModalOpen: (state, action) => {
+		closeIsEditPolicyModalOpen: (state) => {
 			state.isEditPolicyModalOpen = false;
+			state.appPoliciesManagementFormData = null;
 		},
 		toggleIsViewPolicyModalOpen: (state) => {
 			state.isViewPolicyModalOpen += !state.isViewPolicyModalOpen;
 		},
-		openIsViewPolicyModalOpen: (state) => {
+		openIsViewPolicyModalOpen: (state, action) => {
 			state.isViewPolicyModalOpen = true;
+			state.appPoliciesManagementFormData = action.payload;
 		},
-		closeIsViewPolicyModalOpen: (state, action) => {
+		closeIsViewPolicyModalOpen: (state) => {
 			state.isViewPolicyModalOpen = false;
+			state.isEditViewPolicy = false;
+			state.appPoliciesManagementFormData = null;
+		},
+		toggleIsEditViewPolicy: (state) => {
+			state.isEditViewPolicy = !state.isEditViewPolicy;
 		},
 		toggleIsDeletePolicyModalOpen: (state) => {
 			state.isDeletePolicyModalOpen += !state.isDeletePolicyModalOpen;
 		},
-		openIsDeletePolicyModalOpen: (state) => {
+		openIsDeletePolicyModalOpen: (state, action) => {
 			state.isDeletePolicyModalOpen = true;
+			state.appPoliciesManagementFormData = action.payload;
 		},
-		closeIsDeletePolicyModalOpen: (state, action) => {
+		closeIsDeletePolicyModalOpen: (state) => {
 			state.isDeletePolicyModalOpen = false;
+			state.appPoliciesManagementFormData = null;
+		},
+		setAppPoliciesManagementData: (state, action) => {
+			state.appPoliciesManagementData = action.payload;
+		},
+		toggleRerenderPage: (state) => {
+			state.rerenderPage = !state.rerenderPage;
 		},
 	},
 });
@@ -58,9 +80,12 @@ export const {
 	toggleIsViewPolicyModalOpen,
 	openIsViewPolicyModalOpen,
 	closeIsViewPolicyModalOpen,
+	toggleIsEditViewPolicy,
 	toggleIsDeletePolicyModalOpen,
 	openIsDeletePolicyModalOpen,
 	closeIsDeletePolicyModalOpen,
+	setAppPoliciesManagementData,
+	toggleRerenderPage,
 } = appPoliciesManagementSlice.actions;
 
 export const selectIsAddPolicyModalOpen = (state) =>
@@ -72,7 +97,19 @@ export const selectIsEditPolicyModalOpen = (state) =>
 export const selectIsViewPolicyModalOpen = (state) =>
 	state.appPoliciesManagement.isViewPolicyModalOpen;
 
+export const selectIsEditViewPolicy = (state) =>
+	state.appPoliciesManagement.isEditViewPolicy;
+
 export const selectIsDeletePolicyModalOpen = (state) =>
 	state.appPoliciesManagement.isDeletePolicyModalOpen;
+
+export const selectRerenderPage = (state) =>
+	state.appPoliciesManagement.rerenderPage;
+
+export const selectAppPoliciesManagementData = (state) =>
+	state.appPoliciesManagement.appPoliciesManagementData;
+
+export const selectAppPoliciesManagementFormData = (state) =>
+	state.appPoliciesManagement.appPoliciesManagementFormData;
 
 export default appPoliciesManagementSlice.reducer;

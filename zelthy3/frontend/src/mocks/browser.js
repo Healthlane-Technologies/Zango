@@ -4,11 +4,21 @@ import { handlers } from './handlers';
 import { platformAppHandlers } from './platformAppHandlers';
 import { platformUsersMangementHandlers } from './platformUsersMangementHandlers';
 import { appUserRolesHandlers } from './appUserRolesHandlers';
+import { appUsersManagementHandlers } from './appUsersManagementHandlers';
+import { appPermissionsManagementHandlers } from './appPermissionsManagementHandlers';
+import { appPoliciesManagementHandlers } from './appPoliciesManagementHandlers';
+import { appTasksManagementHandlers } from './appTasksManagementHandlers';
+import { appConfigurationHandlers } from './appConfigurationHandlers';
 
 // This configures a Service Worker with the given request handlers.
 export const worker = setupWorker(
 	...handlers,
 	...platformAppHandlers,
 	...platformUsersMangementHandlers,
-	...appUserRolesHandlers
+	...appUserRolesHandlers,
+	...appUsersManagementHandlers,
+	...appPermissionsManagementHandlers,
+	...appPoliciesManagementHandlers,
+	...appTasksManagementHandlers,
+	...appConfigurationHandlers
 );

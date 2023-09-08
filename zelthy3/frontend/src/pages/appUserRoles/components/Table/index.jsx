@@ -49,11 +49,7 @@ export default function Table({ tableData }) {
 					</span>
 				</div>
 			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-					{info.getValue() ? <ListCell data={info.getValue()} /> : null}
-				</div>
-			),
+			cell: (info) => <ListCell data={info.getValue()} />,
 		}),
 		columnHelper.accessor((row) => row.is_active, {
 			id: 'is_active',
@@ -76,8 +72,8 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.number_of_users, {
-			id: 'number_of_users',
+		columnHelper.accessor((row) => row.no_of_users, {
+			id: 'no_of_users',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
@@ -217,7 +213,7 @@ export default function Table({ tableData }) {
 									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
 								></td>
 								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex">
-									<RowMenu />
+									<RowMenu rowData={row.original} />
 								</td>
 							</tr>
 						))}

@@ -10,26 +10,25 @@ import useApi from '../../../../hooks/useApi';
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsEditPolicyModalOpen,
+	selectAppPoliciesManagementFormData,
 	selectIsEditPolicyModalOpen,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
 const EditPolicyForm = ({ closeModal }) => {
+	const appPoliciesManagementFormData = useSelector(
+		selectAppPoliciesManagementFormData
+	);
 	const triggerApi = useApi();
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		name: appPoliciesManagementFormData?.name ?? '',
+		description: appPoliciesManagementFormData?.description ?? '',
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
+		name: Yup.string().required('Required'),
+		description: Yup.string().required('Required'),
 	});
 
 	let onSubmit = (values) => {
@@ -42,8 +41,8 @@ const EditPolicyForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/${appPoliciesManagementFormData?.id}/`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});
@@ -72,47 +71,47 @@ const EditPolicyForm = ({ closeModal }) => {
 							<div className="flex grow flex-col gap-[24px]">
 								<div className="flex flex-col gap-[4px]">
 									<label
-										htmlFor="policy"
+										htmlFor="name"
 										className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 									>
 										Policy Name
 									</label>
 									<input
-										id="policy"
-										name="policy"
+										id="name"
+										name="name"
 										type="text"
 										onChange={formik.handleChange}
 										onBlur={formik.handleBlur}
-										value={formik.values.policy}
+										value={formik.values.name}
 										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 										placeholder="Enter policy name"
 									/>
-									{formik.touched.policy && formik.errors.policy ? (
+									{formik.touched.name && formik.errors.name ? (
 										<div className="font-lato text-form-xs text-[#cc3300]">
-											{formik.errors.policy}
+											{formik.errors.name}
 										</div>
 									) : null}
 								</div>
 								<div className="flex flex-col gap-[4px]">
 									<label
-										htmlFor="policy"
+										htmlFor="description"
 										className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 									>
 										Policy Description
 									</label>
 									<textarea
-										id="policy"
-										name="policy"
+										id="description"
+										name="description"
 										type="text"
 										onChange={formik.handleChange}
 										onBlur={formik.handleBlur}
-										value={formik.values.policy}
+										value={formik.values.description}
 										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 										placeholder="Enter policy Description"
 									/>
-									{formik.touched.policy && formik.errors.policy ? (
+									{formik.touched.description && formik.errors.description ? (
 										<div className="font-lato text-form-xs text-[#cc3300]">
-											{formik.errors.policy}
+											{formik.errors.description}
 										</div>
 									) : null}
 								</div>

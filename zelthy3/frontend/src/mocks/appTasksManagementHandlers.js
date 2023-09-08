@@ -10,7 +10,7 @@ const range = (len) => {
 	return arr;
 };
 
-const newApp = () => {
+const newPolicy = () => {
 	return {
 		id: faker.number.int(1000),
 		schema_name: faker.internet.displayName(),
@@ -19,9 +19,9 @@ const newApp = () => {
 		modified_at: faker.date.past(),
 		modified_by: faker.person.fullName(),
 		uuid: faker.number.int({ min: 1000, max: 9999 }),
-		name: 'App ' + faker.number.int({ min: 1, max: 10 }),
+		name: 'Policy ' + faker.number.int({ min: 1, max: 10 }),
 		description: faker.lorem.sentences(2),
-		tenant_type: 'app',
+		tenant_type: 'policy',
 		status: faker.helpers.shuffle(['staged', 'deployed']),
 		deployed_on: null,
 		suspended_on: null,
@@ -35,12 +35,12 @@ const newApp = () => {
 	};
 };
 
-const newUser = () => {
+const newTask = () => {
 	return {
 		id: faker.number.int({ min: 1000, max: 9999 }),
-		name: faker.person.fullName(),
+		name: 'Task ' + faker.number.int({ min: 1, max: 10 }),
 		email: faker.internet.email().toLowerCase(),
-		apps: makeApps(faker.number.int({ min: 1, max: 10 })),
+		policies: makePolices(faker.number.int({ min: 1, max: 10 })),
 		is_superadmin: false,
 		last_login: faker.date.past(),
 		status: faker.helpers.shuffle(['active', 'inactive'])[0],
@@ -48,12 +48,12 @@ const newUser = () => {
 	};
 };
 
-export function makeApps(...lens) {
+export function makePolices(...lens) {
 	const makeDataLevel = (depth = 0) => {
 		const len = lens[depth];
 		return range(len).map((d) => {
 			return {
-				...newApp(),
+				...newPolicy(),
 				subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
 			};
 		});
@@ -67,7 +67,7 @@ export function makeData(...lens) {
 		const len = lens[depth];
 		return range(len).map((d) => {
 			return {
-				...newUser(),
+				...newTask(),
 				subRows: lens[depth + 1] ? makeDataLevel(depth + 1) : undefined,
 			};
 		});
@@ -79,42 +79,45 @@ export function makeData(...lens) {
 let totalData = 1000;
 const data = makeData(totalData);
 
-export const platformUsersMangementHandlers = [
-	rest.get('/api/v1/auth/platform-users/', (req, res, ctx) => {
-		const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
-		const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
-		let slicedData = data.slice(
-			pageIndex * pageSize,
-			(pageIndex + 1) * pageSize
-		);
+export const appTasksManagementHandlers = [
+	rest.get(
+		'/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/tasks/',
+		(req, res, ctx) => {
+			const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
+			const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
+			let slicedData = data.slice(
+				pageIndex * pageSize,
+				(pageIndex + 1) * pageSize
+			);
 
-		console.log(
-			'slicedData',
-			typeof pageIndex,
-			typeof pageSize,
-			pageIndex,
-			pageSize,
-			slicedData
-		);
-		return res(
-			ctx.delay(500),
-			ctx.status(200),
-			ctx.json({
-				success: true,
-				response: {
-					platform_users: {
-						total_records: totalData,
-						total_pages: Math.ceil(data.length / pageSize),
-						next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
-						previous: null,
-						records: slicedData,
+			console.log(
+				'slicedData',
+				typeof pageIndex,
+				typeof pageSize,
+				pageIndex,
+				pageSize,
+				slicedData
+			);
+			return res(
+				ctx.delay(500),
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					response: {
+						tasks: {
+							total_records: totalData,
+							total_pages: Math.ceil(data.length / pageSize),
+							next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
+							previous: null,
+							records: slicedData,
+						},
+						dropdown_options: {
+							apps: [],
+						},
+						message: 'Platform user fetched successfully',
 					},
-					dropdown_options: {
-						apps: [],
-					},
-					message: 'Platform user fetched successfully',
-				},
-			})
-		);
-	}),
+				})
+			);
+		}
+	),
 ];

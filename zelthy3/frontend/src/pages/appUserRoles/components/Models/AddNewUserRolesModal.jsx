@@ -4,45 +4,44 @@ import { Fragment, useState, useEffect } from 'react';
 import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import {
+	transformToFormData,
+	transformToFormDataOrder,
+} from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsAddNewUserRolesModalOpen,
+	selectAppUserRolesData,
 	selectIsAddNewUserRolesModalOpen,
 } from '../../slice';
-
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
 const AddNewUserRolesForm = ({ closeModal }) => {
+	const appUserRolesData = useSelector(selectAppUserRolesData);
 	const triggerApi = useApi();
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		name: '',
+		policies: [],
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
+		name: Yup.string().required('Required'),
+		policies: Yup.array()
+			.min(1, 'Minimun one is required')
 			.required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
+				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/roles/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
@@ -71,50 +70,38 @@ const AddNewUserRolesForm = ({ closeModal }) => {
 						<div className="flex grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="full_name"
+									htmlFor="name"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
 									Role Name
 								</label>
 								<input
-									id="full_name"
-									name="full_name"
+									id="name"
+									name="name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.full_name}
+									value={formik.values.name}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter role name"
 								/>
-								{formik.touched.full_name && formik.errors.full_name ? (
+								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.full_name}
+										{formik.errors.name}
 									</div>
 								) : null}
 							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="email"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Policy
-								</label>
-								<input
-									id="email"
-									name="email"
-									type="text"
-									onChange={formik.handleChange}
-									onBlur={formik.handleBlur}
-									value={formik.values.email}
-									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Select Policy"
-								/>
-								{formik.touched.email && formik.errors.email ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.email}
-									</div>
-								) : null}
-							</div>
+							<MultiSelectField
+								key="policies"
+								label="Policy"
+								name="policies"
+								id="policies"
+								placeholder="Select policies"
+								value={get(formik.values, 'policies', [])}
+								optionsDataName="policies"
+								optionsData={appUserRolesData?.dropdown_options?.policies ?? []}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button

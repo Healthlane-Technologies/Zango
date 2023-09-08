@@ -10,40 +10,42 @@ import useApi from '../../../../hooks/useApi';
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsEditUserDetailModalOpen,
+	selectAppUserManagementData,
+	selectAppUserManagementFormData,
 	selectIsEditUserDetailModalOpen,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 
 const EditUserDetailsForm = ({ closeModal }) => {
+	const appUserManagementData = useSelector(selectAppUserManagementData);
+	const appUserManagementFormData = useSelector(
+		selectAppUserManagementFormData
+	);
+
 	const triggerApi = useApi();
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		name: appUserManagementFormData?.name ?? '',
+		email: appUserManagementFormData?.email ?? '',
+		roles: appUserManagementFormData?.roles?.map((eachApp) => eachApp.id) ?? [],
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
+		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
+		roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/users/${appUserManagementFormData?.id}/`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});
@@ -71,24 +73,24 @@ const EditUserDetailsForm = ({ closeModal }) => {
 						<div className="flex grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="full_name"
+									htmlFor="name"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
 									Full Name
 								</label>
 								<input
-									id="full_name"
-									name="full_name"
+									id="name"
+									name="name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.full_name}
+									value={formik.values.name}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter full name of the user"
 								/>
-								{formik.touched.full_name && formik.errors.full_name ? (
+								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.full_name}
+										{formik.errors.name}
 									</div>
 								) : null}
 							</div>
@@ -115,32 +117,19 @@ const EditUserDetailsForm = ({ closeModal }) => {
 									</div>
 								) : null}
 							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="phone"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Phone (optional)
-								</label>
-								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
-									<span className="font-lato text-[#6C747D]">+91</span>
-									<input
-										id="phone"
-										name="phone"
-										type="number"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.phone}
-										className="font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-										placeholder="000000000"
-									/>
-								</div>
-								{formik.touched.phone && formik.errors.phone ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.phone}
-									</div>
-								) : null}
-							</div>
+							<MultiSelectField
+								key="roles"
+								label="User Role"
+								name="roles"
+								id="roles"
+								placeholder="Select roles"
+								value={get(formik.values, 'roles', [])}
+								optionsDataName="roles"
+								optionsData={
+									appUserManagementData?.dropdown_options?.roles ?? []
+								}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button

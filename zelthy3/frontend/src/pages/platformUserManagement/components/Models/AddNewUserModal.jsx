@@ -18,14 +18,12 @@ const AddNewUserForm = ({ closeModal }) => {
 	let initialValues = {
 		name: '',
 		email: '',
-		phone: '',
 		apps: [],
 	};
 
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string().min(9, 'Must be 9 digits').max(9, 'Must be 9 digits'),
 		apps: Yup.array().min(1, 'Minimun one is required').required('Required'),
 	});
 
@@ -109,32 +107,6 @@ const AddNewUserForm = ({ closeModal }) => {
 								{formik.touched.email && formik.errors.email ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.email}
-									</div>
-								) : null}
-							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="phone"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Phone (optional)
-								</label>
-								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
-									<span className="font-lato text-[#6C747D]">+91</span>
-									<input
-										id="phone"
-										name="phone"
-										type="number"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.phone}
-										className="font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-										placeholder="000000000"
-									/>
-								</div>
-								{formik.touched.phone && formik.errors.phone ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.phone}
 									</div>
 								) : null}
 							</div>

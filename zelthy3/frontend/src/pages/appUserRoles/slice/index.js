@@ -9,6 +9,7 @@ export const appUserRolesSlice = createSlice({
 		rerenderPage: false,
 		appUserRolesData: null,
 		appUserRolesFormData: null,
+		isAppUserRolesDataEmpty: true,
 	},
 	reducers: {
 		toggleIsAddNewUserRolesModalOpen: (state) => {
@@ -48,6 +49,9 @@ export const appUserRolesSlice = createSlice({
 		},
 		setAppUserRolesData: (state, action) => {
 			state.appUserRolesData = action.payload;
+			state.isAppUserRolesDataEmpty = action.payload?.roles?.records?.length
+				? false
+				: true;
 		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
@@ -85,5 +89,8 @@ export const selectAppUserRolesData = (state) =>
 
 export const selectAppUserRolesFormData = (state) =>
 	state.appUserRoles.appUserRolesFormData;
+
+export const selectIsAppUserRolesDataEmpty = (state) =>
+	state.appUserRoles.isAppUserRolesDataEmpty;
 
 export default appUserRolesSlice.reducer;

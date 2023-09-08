@@ -4,7 +4,10 @@ import { Fragment, useState, useEffect } from 'react';
 import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import {
+	transformToFormData,
+	transformToFormDataOrder,
+} from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
@@ -24,7 +27,7 @@ import FileUpload from '../../../../components/Form/FileUpload';
 const UpdateAppDetailsForm = ({ closeModal }) => {
 	const triggerApi = useApi();
 	let initialValues = {
-		app_name: '',
+		name: '',
 		description: '',
 		logo: '',
 		fav_icon: '',
@@ -35,8 +38,8 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 	};
 
 	let validationSchema = Yup.object({
-		app_name: Yup.string().required('Required'),
-		// domains: Yup.array().of(Yup.string().required('Required')),
+		name: Yup.string().required('Required'),
+		domains: Yup.array().of(Yup.string().required('Required')),
 	});
 
 	let onSubmit = (values) => {
@@ -45,7 +48,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			tempValues['phone'] = '+91' + tempValues['phone'];
 		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
@@ -78,24 +81,24 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 						<div className="flex grow flex-col gap-[16px] pr-[64px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="app_name"
+									htmlFor="name"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
 									App Name
 								</label>
 								<input
-									id="app_name"
-									name="app_name"
+									id="name"
+									name="name"
 									type="text"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.app_name}
+									value={formik.values.name}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter"
 								/>
-								{formik.touched.app_name && formik.errors.app_name ? (
+								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.app_name}
+										{formik.errors.name}
 									</div>
 								) : null}
 							</div>
@@ -147,25 +150,31 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 													<div key={index}>
 														<Field name={`domains.${index}`}>
 															{({ field, form, meta }) => (
-																<div className="relative flex">
-																	<input
-																		type="text"
-																		{...field}
-																		className="w-full rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-																		placeholder="Enter"
-																	/>
-																	{formik?.values?.domains?.length > 1 ? (
-																		<button
-																			type="button"
-																			onClick={() => arrayHelpers.remove(index)}
-																			className="absolute inset-y-0 right-[-32px]"
-																		>
-																			<DeleteIcon />
-																		</button>
-																	) : null}
+																<div className="relative flex flex-col gap-[8px]">
+																	<div className="relative flex">
+																		<input
+																			type="text"
+																			{...field}
+																			className="w-full rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+																			placeholder="Enter"
+																		/>
+																		{formik?.values?.domains?.length > 1 ? (
+																			<button
+																				type="button"
+																				onClick={() =>
+																					arrayHelpers.remove(index)
+																				}
+																				className="absolute inset-y-0 right-[-32px]"
+																			>
+																				<DeleteIcon />
+																			</button>
+																		) : null}
+																	</div>
 
 																	{meta.touched && meta.error && (
-																		<div className="error">{meta.error}</div>
+																		<div className="font-lato text-form-xs text-[#cc3300]">
+																			{meta.error}
+																		</div>
 																	)}
 																</div>
 															)}

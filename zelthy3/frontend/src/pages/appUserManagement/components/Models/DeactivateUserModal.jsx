@@ -10,6 +10,7 @@ import useApi from '../../../../hooks/useApi';
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsDeactivateUserModalOpen,
+	selectAppUserManagementFormData,
 	selectIsDeactivateUserModalOpen,
 } from '../../slice';
 
@@ -17,34 +18,29 @@ import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/
 import { ReactComponent as DeactivateUserIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
 
 const DeactivateUserForm = ({ closeModal }) => {
+	const appUserManagementFormData = useSelector(
+		selectAppUserManagementFormData
+	);
 	const triggerApi = useApi();
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		is_active: false,
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
+		is_active: Yup.boolean()
+			.required('Required')
+			.oneOf([false], 'Deactivate User'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/users/${appUserManagementFormData?.id}/`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});

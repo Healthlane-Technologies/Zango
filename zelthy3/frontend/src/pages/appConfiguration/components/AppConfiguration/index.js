@@ -1,16 +1,46 @@
 import BreadCrumbs from '../BreadCrumbs';
 import { useSelector, useDispatch } from 'react-redux';
-import { openIsUpdateAppDetailsModalOpen } from '../../slice';
+import {
+	openIsUpdateAppDetailsModalOpen,
+	selectAppConfigurationData,
+	setAppConfigurationData,
+} from '../../slice';
 
 import { ReactComponent as EachAppIcon } from '../../../../assets/images/svg/each-app-icon.svg';
 import UpdateAppDetailsModal from '../Models/UpdateAppDetailsModal';
+import useApi from '../../../../hooks/useApi';
+import { useEffect } from 'react';
 
 export default function AppConfiguration() {
+	const appConfigurationData = useSelector(selectAppConfigurationData);
+
 	const dispatch = useDispatch();
 
 	const handleUpdateAppDetails = () => {
 		dispatch(openIsUpdateAppDetailsModalOpen());
 	};
+
+	function updateAppConfigurationData(value) {
+		dispatch(setAppConfigurationData(value));
+	}
+
+	const triggerApi = useApi();
+
+	useEffect(() => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/6aadc375-75cc-4a74-b6d3-e421b063afb4`,
+				type: 'GET',
+				loader: true,
+			});
+			if (success && response) {
+				updateAppConfigurationData(response);
+			}
+		};
+
+		makeApiCall();
+	}, []);
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[40px]">
@@ -20,7 +50,7 @@ export default function AppConfiguration() {
 				<div className="flex grow flex-col gap-[20px] pl-[40px] pr-[48px]">
 					<div className="flex items-end gap-[24px]">
 						<h3 className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
-							App Name
+							{appConfigurationData?.apps?.name}
 						</h3>
 						<button
 							type="button"
@@ -42,7 +72,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										Description of the app will come here
+										{appConfigurationData?.apps?.description}
 									</span>
 								</td>
 							</tr>
@@ -53,8 +83,15 @@ export default function AppConfiguration() {
 									</span>
 								</td>
 								<td className="w-full pl-[20px]">
-									<EachAppIcon className="h-[56px] w-[56px]" />
-									{/* <span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]"></span> */}
+									{appConfigurationData?.apps?.logo ? (
+										<img
+											src={appConfigurationData?.apps?.logo}
+											className="h-[56px] w-[56px]"
+											alt="#"
+										/>
+									) : (
+										<EachAppIcon className="h-[56px] w-[56px]" />
+									)}
 								</td>
 							</tr>
 							<tr className="py-[4px] first:pb-[4px] last:pt-[4px]">
@@ -64,9 +101,15 @@ export default function AppConfiguration() {
 									</span>
 								</td>
 								<td className="w-full pl-[20px]">
-									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										-
-									</span>
+									{appConfigurationData?.apps?.fav_icon ? (
+										<img
+											src={appConfigurationData?.apps?.fav_icon}
+											className="h-[56px] w-[56px]"
+											alt="#"
+										/>
+									) : (
+										<EachAppIcon className="h-[56px] w-[56px]" />
+									)}
 								</td>
 							</tr>
 							<tr className="py-[4px] first:pb-[4px] last:pt-[4px]">
@@ -77,12 +120,13 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<div className="flex flex-col gap-[8px]">
-										<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											domainame1.com
-										</span>
-										<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											domainame1.com
-										</span>
+										{appConfigurationData?.apps?.domains?.map((eachDomain) => {
+											return (
+												<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+													{eachDomain}
+												</span>
+											);
+										})}
 									</div>
 								</td>
 							</tr>
@@ -94,7 +138,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										GMT+5:30
+										{appConfigurationData?.apps?.timezone}
 									</span>
 								</td>
 							</tr>
@@ -106,7 +150,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										MMMM dd yyyy, h:m tt{' '}
+										{appConfigurationData?.apps?.datetime_format}
 										<span className="text-[#A3ABB1]">
 											(August 05 2006, 3:05 PM)
 										</span>

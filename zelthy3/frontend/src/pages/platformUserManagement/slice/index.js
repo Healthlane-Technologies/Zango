@@ -64,7 +64,6 @@ export const {
 	openIsDeactivateUserModalOpen,
 	closeIsDeactivateUserModalOpen,
 	setPlatformUserManagementData,
-
 	toggleRerenderPage,
 } = platformUserManagementSlice.actions;
 

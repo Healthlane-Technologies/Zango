@@ -1,18 +1,49 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { openIsAddCustomPermissionModalOpen } from '../../slice';
+import {
+	openIsAddCustomPermissionModalOpen,
+	selectAppPermissionsManagementData,
+	setAppPermissionsManagementData,
+} from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
 import Table from '../Table';
 import EditCustomPermissionModal from '../Models/EditCustomPermissionModal';
 import DeleteCustomPermissionModal from '../Models/DeleteCustomPermissionModal';
 import AddCustomPermissionModal from '../Models/AddCustomPermissionModal';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import useApi from '../../../../hooks/useApi';
+import { useEffect } from 'react';
 
 export default function AppPermissionsManagement() {
+	const appPermissionsManagementData = useSelector(
+		selectAppPermissionsManagementData
+	);
 	const dispatch = useDispatch();
 
 	const handleAddNewUser = () => {
 		dispatch(openIsAddCustomPermissionModalOpen());
 	};
+
+	function updateAppPermissionsManagementData(value) {
+		dispatch(setAppPermissionsManagementData(value));
+	}
+
+	const triggerApi = useApi();
+
+	useEffect(() => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/permissions/`,
+				type: 'GET',
+				loader: true,
+			});
+			if (success && response) {
+				updateAppPermissionsManagementData(response);
+			}
+		};
+
+		makeApiCall();
+	}, []);
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[20px]">
@@ -30,58 +61,9 @@ export default function AppPermissionsManagement() {
 					</button>
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
-					<Table
-						tableData={[
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-							{
-								permission_name: 'Permission Name 1',
-								permission_id: 5045,
-								permission_type: 'DataModel',
-								permission_description: 'Permission Description 1',
-							},
-						]}
-					/>
+					{appPermissionsManagementData ? (
+						<Table tableData={appPermissionsManagementData?.permissions} />
+					) : null}
 				</div>
 			</div>
 			<AddCustomPermissionModal />

@@ -4,13 +4,19 @@ import { Fragment, useState, useEffect } from 'react';
 import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import {
+	transformToFormData,
+	transformToFormDataOrder,
+} from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsViewPolicyModalOpen,
+	selectAppPoliciesManagementFormData,
+	selectIsEditViewPolicy,
 	selectIsViewPolicyModalOpen,
+	toggleIsEditViewPolicy,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
@@ -84,6 +90,10 @@ const ViewPolicyForm = ({ closeModal }) => {
 };
 
 const EditPolicyConfigure = ({ closeModal }) => {
+	const appPoliciesManagementFormData = useSelector(
+		selectAppPoliciesManagementFormData
+	);
+
 	const editorRef = useRef(null);
 
 	function handleEditorDidMount(editor, monaco) {
@@ -93,60 +103,99 @@ const EditPolicyConfigure = ({ closeModal }) => {
 		}, 100);
 	}
 
-	const code = JSON.stringify({
-		permissions: [
-			{
-				type: 'dataModel',
-				name: 'patient',
-				actions: ['view', 'edit'],
-				attributes: { only: ['Field 1', 'Field 2'] },
-				records: { filter: 'object.clinic == currentUser.clinic' },
-				accessTime: '9:00-17:00',
-			},
-		],
-		configurations: { expiry: '26/12/23' },
+	const triggerApi = useApi();
+	let initialValues = {
+		statement: JSON.stringify(appPoliciesManagementFormData?.statement),
+	};
+
+	let validationSchema = Yup.object({
+		statement: Yup.string().required('Required'),
 	});
+
+	let onSubmit = (values) => {
+		let tempValues = values;
+
+		let dynamicFormData = transformToFormData(tempValues);
+
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/${appPoliciesManagementFormData?.id}/`,
+				type: 'PUT',
+				loader: true,
+				payload: dynamicFormData,
+			});
+
+			if (success && response) {
+				closeModal();
+			}
+		};
+
+		makeApiCall();
+	};
+
 	return (
-		<div className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto">
-			<div className="flex grow flex-col gap-[24px]">
-				<Editor
-					height="100%"
-					language="json"
-					value={code}
-					options={{
-						readOnly: false,
-						formatOnPaste: true,
-						formatOnType: true,
-					}}
-					onMount={handleEditorDidMount}
-				/>
-			</div>
-			<div className="sticky bottom-0 flex items-center justify-end gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
-				<button
-					type="button"
-					className="flex w-fit items-center justify-center rounded-[4px] border border-primary bg-[#ffffff] px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-primary disabled:opacity-[0.38]"
-					onClick={closeModal}
-				>
-					<span>Cancel</span>
-				</button>
-				<button
-					type="button"
-					className="flex w-fit items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-					onClick={closeModal}
-				>
-					<span>Save</span>
-				</button>
-			</div>
-		</div>
+		<Formik
+			initialValues={initialValues}
+			validationSchema={validationSchema}
+			onSubmit={onSubmit}
+		>
+			{(formik) => {
+				return (
+					<form
+						className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto"
+						onSubmit={formik.handleSubmit}
+					>
+						<div className="flex grow flex-col gap-[24px]">
+							<Editor
+								height="100%"
+								language="json"
+								value={formik.values.statement}
+								options={{
+									readOnly: false,
+									formatOnPaste: true,
+									formatOnType: true,
+								}}
+								onMount={handleEditorDidMount}
+								onChange={(value) => {
+									formik.setFieldValue('statement', value);
+								}}
+							/>
+						</div>
+
+						<div className="sticky bottom-0 flex items-center justify-end gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
+							<button
+								type="button"
+								className="flex w-fit items-center justify-center rounded-[4px] border border-primary bg-[#ffffff] px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-primary disabled:opacity-[0.38]"
+								onClick={closeModal}
+							>
+								<span>Cancel</span>
+							</button>
+							<button
+								type="submit"
+								className="flex w-fit items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
+							>
+								<span>Save</span>
+							</button>
+						</div>
+					</form>
+				);
+			}}
+		</Formik>
 	);
 };
 
 export default function ViewPolicyModal() {
 	const isViewPolicyModalOpen = useSelector(selectIsViewPolicyModalOpen);
+	const isEditViewPolicy = useSelector(selectIsEditViewPolicy);
+	console.log('isEditViewPolicy', isEditViewPolicy);
 	const dispatch = useDispatch();
 
 	function closeModal() {
 		dispatch(closeIsViewPolicyModalOpen());
+	}
+
+	function handleEditJson() {
+		dispatch(toggleIsEditViewPolicy());
 	}
 
 	return (
@@ -191,15 +240,20 @@ export default function ViewPolicyModal() {
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
 												Policy Name 6 Config
 											</h4>
-											<button>
-												<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
-													Edit JSON
-												</span>
-											</button>
+											{isEditViewPolicy ? null : (
+												<button type="button" onClick={handleEditJson}>
+													<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
+														Edit JSON
+													</span>
+												</button>
+											)}
 										</div>
 									</Dialog.Title>
-									{/* <ViewPolicyForm closeModal={closeModal} /> */}
-									<EditPolicyConfigure closeModal={closeModal} />
+									{isEditViewPolicy ? (
+										<EditPolicyConfigure closeModal={closeModal} />
+									) : (
+										<ViewPolicyForm closeModal={closeModal} />
+									)}
 								</Dialog.Panel>
 							</div>
 						</div>

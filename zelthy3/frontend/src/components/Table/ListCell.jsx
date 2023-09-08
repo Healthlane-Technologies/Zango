@@ -11,7 +11,7 @@ const ListCell = ({ data }) => {
 		<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
 			{data.map((eachApp, index) => {
 				return (
-					<div className="flex items-center gap-[12px]">
+					<div key={eachApp?.uuid} className="flex items-center gap-[12px]">
 						{show ? (
 							<span
 								key={eachApp?.uuid}

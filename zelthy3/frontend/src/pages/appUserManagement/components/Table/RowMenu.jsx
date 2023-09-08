@@ -30,7 +30,7 @@ const notify = () =>
 		}
 	);
 
-export default function RowMenu({ className }) {
+export default function RowMenu({ rowData }) {
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -48,11 +48,11 @@ export default function RowMenu({ className }) {
 	const dispatch = useDispatch();
 
 	const handleEditUserDetails = () => {
-		dispatch(openIsEditUserDetailModalOpen());
+		dispatch(openIsEditUserDetailModalOpen(rowData));
 	};
 
 	const handleDeactivateUser = () => {
-		dispatch(openIsDeactivateUserModalOpen());
+		dispatch(openIsDeactivateUserModalOpen(rowData));
 	};
 
 	return (
