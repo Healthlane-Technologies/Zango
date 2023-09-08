@@ -1,6 +1,6 @@
 Config:
     Zelthy:
-        users: 100
+        users: 1000
         spawn-rate: 10
         time: 10m
         models: 10
@@ -8,7 +8,7 @@ Config:
         models_in_views: 5
         tenants: 1
     Django:
-        users: 100
+        users: 1000
         spawn-rate: 10
         time: 10m
         models: 1000
@@ -20,10 +20,10 @@ Result:
     
     Zelthy:
         Daphne:
-            init: 53MB
-            peak: 113MB
+            init: 92MB
+            peak: 494MB
         
     Django:
         Daphne:
-            init: 73MB
-            peak: 107MB
+            init: 107MB
+            peak: 463MB

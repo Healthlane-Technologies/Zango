@@ -26,8 +26,8 @@ services:
       dockerfile: dockerfiles/server.dockerfile
     environment:
       SERVER: daphne
-      PLATFORM: django
-      MODELS: 1000
+      PLATFORM: zelthy
+      MODELS: 10
       MODULES: 100
       MODELS_IN_VIEWS: 5
       NO_OF_VIEWS: 100
