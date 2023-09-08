@@ -21,7 +21,7 @@ case "$SERVER" in
         gunicorn --workers=4 --bind 0.0.0.0:8000 "$project".wsgi
         ;;
     "daphne")
-        daphne "$project".asgi:application
+        daphne "$project".asgi:application -b 0.0.0.0
         ;;
     *)
         echo "Invalid server option"

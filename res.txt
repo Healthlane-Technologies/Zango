@@ -17,9 +17,13 @@ Config:
         tenants: 1
 
 Result:
+    
     Zelthy:
-        init: 53MB
-        peak: 112MB
+        Daphne:
+            init: 53MB
+            peak: 113MB
+        
     Django:
-        init: 74MB
-        peak: 103MB
+        Daphne:
+            init: 73MB
+            peak: 107MB
