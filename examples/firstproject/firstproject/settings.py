@@ -26,7 +26,7 @@ DATABASES = {
         'PASSWORD': 'zelthy3pass',
         'HOST': '127.0.0.1',
         'PORT': '5432',
-        'ATOMIC_REQUESTS':True
+        # 'ATOMIC_REQUESTS':True
     }
 }
 
@@ -65,8 +65,11 @@ TEMPLATES[0]['DIRS'] = [os.path.join(BASE_DIR, 'templates')]
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 PUBLIC_SCHEMA_URLCONF = 'firstproject.urls_public'
 ROOT_URLCONF = 'firstproject.urls_tenants'
+# ROOT_URLCONF = 'workspaces.apps2.urls'
 
 ENV='dev'
+
+INSTALLED_APPS += ["dummy"]
 
 
 # import os

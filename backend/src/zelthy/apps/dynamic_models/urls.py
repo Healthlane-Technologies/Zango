@@ -1,12 +1,14 @@
 '''Defines which API URLs.'''
-from django.urls import path, re_path, include
-from django.views.decorators.csrf import csrf_exempt
+import os
+from django.urls import re_path
 
 from .views import *
 
+
 urlpatterns = [
     re_path(
-        r'^', 
+        r'^((?:[\w\-:.,]+/)*)$', 
         DynamicView.as_view(),
         name='dynamic-app'
-    )]
+    )
+]

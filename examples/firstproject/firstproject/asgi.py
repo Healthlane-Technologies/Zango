@@ -12,5 +12,6 @@ import os
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'firstproject.settings')
+os.environ.setdefault('SERVER_TYPE', 'asgi')
 
 application = get_asgi_application()

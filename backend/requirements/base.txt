@@ -10,3 +10,6 @@ pluginbase==1.0.1
 click==8.1.7
 phonenumberslite
 django-phonenumber-field==7.1.0
+django-redis==5.3.0
+django-cachalot==2.6.1
+django-debug-toolbar==4.2.0

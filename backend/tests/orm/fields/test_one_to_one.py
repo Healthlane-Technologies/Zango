@@ -24,7 +24,6 @@ from zelthy3.backend.apps.tenants.dynamic_models.workspace.base import Workspace
 class TestOneToOne(unittest.TestCase):
 
     def setUp(self) -> None:
-        print("Here")
         tenant_model = get_tenant_model()
         env = tenant_model.objects.get(name="Tenant3")
         connection.set_tenant(env)

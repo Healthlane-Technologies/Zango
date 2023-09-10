@@ -5,5 +5,3 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('zelthy.config.urls_tenants')),
 ]
-
-print(urlpatterns)

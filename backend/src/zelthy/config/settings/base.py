@@ -1,7 +1,5 @@
 import sys
 
-print(any("zelthy_apps" in m for m in sys.modules.keys()))
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -43,6 +41,8 @@ TENANT_APPS = [
     "zelthy.apps.permissions",
     "zelthy.apps.dynamic_models",
     "corsheaders",
+    "debug_toolbar",
+    # "cachalot",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -55,17 +55,21 @@ TENANT_DOMAIN_MODEL = "tenancy.Domain"
 
 MIDDLEWARE = [
     "zelthy.middleware.tenant.ZelthyTenantMainMiddleware",
+    # 'zelthy.middleware.context_middleware.SimpleContextMiddleware',
+    # 'zelthy.middleware.tenant_url_switch.url_switch_middleware',
     # 'django_tenants.middleware.main.TenantMainMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "zelthy.middleware.request.RequestMiddleware",
     # 'zelthy.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 
@@ -104,3 +108,23 @@ MIGRATION_MODULES = {}
 RUNNING_ZMAKEMIGRATIONS = False
 
 SESSION_COOKIE_NAME = "zelthycookie"
+INTERNAL_IPS = [
+    # ...
+    "127.0.0.1",
+    # ...
+]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # Using DB 1 for cache
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 300,  # Default timeout is 5 minutes, but adjust as needed
+    }
+}
+
+# DEBUG_TOOLBAR_PANELS += ['cachalot.panels.CachalotPanel',]
+
+CACHALOT_ENABLED = False
