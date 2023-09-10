@@ -42,3 +42,14 @@ class IsAuthenticatedAppUser(IsAuthenticated, CheckIPWhitelisting):
             except:
                 return False
         return False
+
+
+class IsSuperAdminPlatformUser(IsAuthenticatedPlatformUser):
+    def has_permission(self, request, view):
+        has_perm = super(IsSuperAdminPlatformUser, self).has_permission(request, view)
+        if has_perm:
+            platform_user = request.user.platform_user
+            if platform_user.is_superadmin:
+                return True
+
+        return False

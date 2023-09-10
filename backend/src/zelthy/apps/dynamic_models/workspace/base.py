@@ -66,6 +66,7 @@ plugin_base = CustomPluginBase(
 
 
 def get_plugin_source(name):
+    print("###### inside get_plugin_source")
     path = str(settings.BASE_DIR) + "/workspaces/" + name
     return plugin_base.make_plugin_source(searchpath=[path])
 
@@ -115,6 +116,7 @@ class Workspace:
         instance = super().__new__(cls)
         cls._instances[key] = instance
         cls._modules[key] = sys.modules
+        instance.plugin_source = get_plugin_source(connection.tenant.name)
         return instance
 
     def __init__(self, wobj: object, request=None, as_systemuser=False) -> None:
@@ -123,9 +125,6 @@ class Workspace:
         self.modules = self.get_ws_modules()
         self.plugins = self.get_plugins()
         self.models = []  # sorted with bfs
-        self.plugin_source = self.get_plugin_source()
-        print(self.plugin_source)
-        # self.wtee = self.get_wtree()
 
     def get_plugin_source(self):
         return get_plugin_source(connection.tenant.name)
@@ -318,7 +317,10 @@ class Workspace:
                 routes.append(
                     {
                         "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": route["plugin"] + "." + pkg_route["module"],
+                        "module": "plugins."
+                        + route["plugin"]
+                        + "."
+                        + pkg_route["module"],
                         "url": pkg_route["url"],
                     }
                 )

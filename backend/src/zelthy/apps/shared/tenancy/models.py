@@ -91,6 +91,7 @@ class TenantModel(TenantMixin, FullAuditMixin):
     logo = models.FileField(
         upload_to=RandomUniqueFileName, verbose_name="Logo", null=True, blank=True
     )
+    # TODO: Add Fav icon file field
     extra_config = models.JSONField(null=True, blank=True)
 
     def __str__(self):
@@ -124,6 +125,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
             fp.write("")  # Fetch from template
             fp.close()
 
+        # TODO: Create Default User Roles
+        # TODO: Create Default Theme
+
         self.status = "deployed"
         self.save()
 
@@ -138,7 +142,7 @@ class Domain(DomainMixin, FullAuditMixin):
         return self.domain
 
 
-class ThemesModel(models.Model):
+class ThemesModel(FullAuditMixin):
     """
     Model to store the details of Themes for the Tenants. Multiple
     themes can be created for each tenant
@@ -147,7 +151,19 @@ class ThemesModel(models.Model):
     name = models.CharField(max_length=50)
     tenant = models.ForeignKey(TenantModel, on_delete=models.PROTECT)
     config = models.JSONField(null=True)
-    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)  # is_active
 
     def __str__(self):
         return
+
+    def save(self, *args, **kwargs):
+        # Get all other active themes with the same tenant
+        themes_list = self.__class__.objects.filter(
+            tenant=self.tenant, is_active=True
+        ).exclude(pk=self.pk)
+        # If we have no active theme yet, set as active theme by default
+        self.is_active = self.is_active or (not themes_list.exists())
+        if self.is_active:
+            # Remove active status of existing domains for tenant
+            themes_list.update(is_active=False)
+        super().save(*args, **kwargs)

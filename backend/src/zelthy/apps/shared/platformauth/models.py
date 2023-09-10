@@ -71,6 +71,10 @@ class PlatformUserModel(AbstractZelthyUserModel):
             return True
         return False
 
+    def add_apps(self, app_uuids):
+        app_objs = TenantModel.objects.filter(uuid__in=app_uuids)
+        self.apps.add(*app_objs)
+
     @classmethod
     def create_user(
         cls,
@@ -81,6 +85,7 @@ class PlatformUserModel(AbstractZelthyUserModel):
         is_superadmin=False,
         force_password_reset=True,
         require_verification=True,
+        app_uuids=[],
     ):
         """ """
         success = False
@@ -120,6 +125,7 @@ class PlatformUserModel(AbstractZelthyUserModel):
                         if require_verification:
                             platform_user.is_active = False
                         # Add old password logic
+                        platform_user.add_apps(app_uuids)
                         platform_user.save()
                         platform_user.user.save()
                         success = True

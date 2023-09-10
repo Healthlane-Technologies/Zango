@@ -42,7 +42,7 @@ def test_db_conection(db_name, db_user, db_password, db_host, db_port):
         return False
 
 
-def get_project_root(project_name):
+def get_project_root(project_name, directory=None):
     """
     Returns the root directory of the specified project.
 
@@ -52,9 +52,9 @@ def get_project_root(project_name):
     Returns:
         str: The root directory of the project.
     """
-    current_dir = os.getcwd()
+    current_dir = directory or os.getcwd()
     project_root = os.path.join(current_dir, project_name)
-    return project_name
+    return project_root
 
 
 def create_project(
@@ -76,14 +76,17 @@ def create_project(
     if directory:
         command = f"{command} {directory}"
 
+    project_root = get_project_root(project_name, directory=directory)
+
+    if os.path.exists(project_root):
+        return False, f"Folder already exists: {project_root}"
+
     project_template_path = os.path.join(
         os.path.dirname(zelthy.cli.__file__), "project_template"
     )
     command = f"{command} --template {str(project_template_path)}"
 
     subprocess.run(command, shell=True, check=True)
-
-    project_root = get_project_root(project_name)
 
     settings_file = os.path.join(project_root, project_name, "settings.py")
     replace_placeholders_in_file(
@@ -96,6 +99,8 @@ def create_project(
             "{db_port}": db_port,
         },
     )
+
+    return True, "Project created successfully"
 
     # PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     # sys.path.insert(
@@ -155,12 +160,15 @@ def start_project(
     if not db_connection_status:
         raise click.ClickException("DB Connection Failed!")
 
-    create_project(
+    project_status, project_message = create_project(
         project_name, directory, db_name, db_user, db_password, db_host, db_port
     )
 
+    if not project_status:
+        raise click.ClickException(project_message)
+
     # Initializing the project
-    project_root = get_project_root(project_name)
+    project_root = get_project_root(project_name, directory=directory)
     sys.path.insert(0, project_root)
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
 
