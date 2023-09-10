@@ -48,7 +48,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
         super().delete(*args, **kwargs)
 
 
-class AppUserModel(AbstractZelthyUserModel, PolicyQsMixin):
+class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     user = models.OneToOneField(User, related_name="app_user", on_delete=models.CASCADE)
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
