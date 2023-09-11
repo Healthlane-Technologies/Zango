@@ -11,12 +11,17 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsRemoveAllPoliciesModalOpen,
 	selectIsRemoveAllPoliciesModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import { ReactComponent as DeactivateUserRolesIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const RemoveAllPoliciesForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	let initialValues = {
 		full_name: '',
@@ -51,6 +56,7 @@ const RemoveAllPoliciesForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

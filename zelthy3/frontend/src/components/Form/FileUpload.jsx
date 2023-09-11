@@ -21,17 +21,17 @@ export default function FileUpload({ formik, label, id }) {
 							: 'border-dashed text-[#9A9A9A]'
 					}`}
 				>
-					<div className="flex items-center gap-[12px]">
+					<div className="flex w-[calc(100%_-_16px)] items-center gap-[12px]">
 						{formik.values[id]?.name ? (
 							<a href={previewUrl} target="_blank">
 								<img
-									class="h-[32px] w-[32px]"
+									class="h-[32px] min-h-[32px] w-[32px] min-w-[32px]"
 									src={previewUrl}
 									alt={`${id}_preview`}
 								/>
 							</a>
 						) : null}
-						<span>
+						<span className="overflow-hidden text-ellipsis">
 							{formik.values[id]?.name
 								? formik.values[id]?.name
 								: `Click to Upload ${label}`}

@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	openIsAddCustomPermissionModalOpen,
 	selectAppPermissionsManagementData,
+	selectRerenderPage,
 	setAppPermissionsManagementData,
 } from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
@@ -12,8 +13,12 @@ import AddCustomPermissionModal from '../Models/AddCustomPermissionModal';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 export default function AppPermissionsManagement() {
+	let { appId } = useParams();
+	const rerenderPage = useSelector(selectRerenderPage);
+
 	const appPermissionsManagementData = useSelector(
 		selectAppPermissionsManagementData
 	);
@@ -32,7 +37,7 @@ export default function AppPermissionsManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/permissions/`,
+				url: `/api/v1/apps/${appId}/permissions/`,
 				type: 'GET',
 				loader: true,
 			});
@@ -42,7 +47,7 @@ export default function AppPermissionsManagement() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
 
 	return (
 		<>

@@ -1,37 +1,55 @@
 import BreadCrumbs from '../BreadCrumbs';
 import { useSelector, useDispatch } from 'react-redux';
-import { openIsAddThemeModalOpen } from '../../slice';
+import {
+	openIsAddThemeModalOpen,
+	selectAppThemeConfigurationData,
+	selectRerenderPage,
+	setAppThemeConfigurationData,
+} from '../../slice';
 
 import { ReactComponent as AddThemeIcon } from '../../../../assets/images/svg/add-theme-icon.svg';
 import AddThemeModal from '../Models/AddThemeModal';
 import EachTheme from './EachTheme';
+import useApi from '../../../../hooks/useApi';
+import { useEffect } from 'react';
+import EditThemeModal from '../Models/EditThemeModal';
+import { useParams } from 'react-router-dom';
 
 export default function AppThemeConfiguration() {
+	let { appId } = useParams();
+	const rerenderPage = useSelector(selectRerenderPage);
+
+	const appThemeConfigurationData = useSelector(
+		selectAppThemeConfigurationData
+	);
+
 	const dispatch = useDispatch();
 
 	const handleAddTheme = () => {
 		dispatch(openIsAddThemeModalOpen());
 	};
 
-	let eachData = {
-		theme_name: 'Default Theme',
-		status: 'active',
-		font_family: 'Open Sans',
-		colors: {
-			primary: '#5048ED',
-			secondary: '#FFFFFF',
-		},
-	};
+	function updateAppConfigurationData(value) {
+		dispatch(setAppThemeConfigurationData(value));
+	}
 
-	let eachData2 = {
-		theme_name: 'Theme 2',
-		status: 'InActive',
-		font_family: 'Open Sans',
-		colors: {
-			primary: '#EC6356',
-			secondary: '#FFFFFF',
-		},
-	};
+	const triggerApi = useApi();
+
+	useEffect(() => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/themes/`,
+				type: 'GET',
+				loader: true,
+			});
+			if (success && response) {
+				updateAppConfigurationData(response);
+			}
+		};
+
+		makeApiCall();
+	}, [rerenderPage]);
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[40px]">
@@ -55,12 +73,14 @@ export default function AppThemeConfiguration() {
 						</h3>
 					</div>
 					<div className="complete-hidden-scroll-style grid grid-cols-1 items-stretch justify-start gap-[26px] overflow-y-auto pb-[29px] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-						<EachTheme data={eachData} />
-						<EachTheme data={eachData2} />
+						{appThemeConfigurationData?.themes?.map((eachTheme) => {
+							return <EachTheme key={eachTheme?.id} data={eachTheme} />;
+						})}
 					</div>
 				</div>
 			</div>
 			<AddThemeModal />
+			<EditThemeModal />
 		</>
 	);
 }

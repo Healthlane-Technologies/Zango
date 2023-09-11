@@ -1,65 +1,63 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Field, FieldArray, Formik } from 'formik';
 import { get } from 'lodash';
-import {
-	transformToFormData,
-	transformToFormDataOrder,
-} from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import * as Yup from 'yup';
+import { ReactComponent as DeleteIcon } from '../../../../assets/images/svg/delete-icon.svg';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import FileUpload from '../../../../components/Form/FileUpload';
+import SelectField from '../../../../components/Form/SelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsUpdateAppDetailsModalOpen,
+	selectAppConfigurationData,
 	selectIsUpdateAppDetailsModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { ReactComponent as DeleteIcon } from '../../../../assets/images/svg/delete-icon.svg';
-import { ReactComponent as UploadIcon } from '../../../../assets/images/svg/upload-icon.svg';
-import { ReactComponent as UploadCloseIcon } from '../../../../assets/images/svg/upload-close-icon.svg';
-
-import shortid from 'shortid';
-import FileUpload from '../../../../components/Form/FileUpload';
-
 const UpdateAppDetailsForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
+	const appConfigurationData = useSelector(selectAppConfigurationData);
 	const triggerApi = useApi();
 	let initialValues = {
-		name: '',
-		description: '',
-		logo: '',
-		fav_icon: '',
-		domain: [],
-		domains: [''],
-		time_zome: '',
-		date_time_format: '',
+		name: appConfigurationData?.apps?.name ?? '',
+		description: appConfigurationData?.apps?.description ?? '',
+		logo: appConfigurationData?.apps?.logo ?? '',
+		fav_icon: appConfigurationData?.apps?.fav_icon ?? '',
+		domains: appConfigurationData?.apps?.domains ?? [''],
+		timezone: appConfigurationData?.apps?.timezone ?? '',
+		datetime_format: appConfigurationData?.apps?.datetime_format ?? '',
 	};
 
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
+		description: Yup.string().required('Required'),
 		domains: Yup.array().of(Yup.string().required('Required')),
+		timezone: Yup.string().required('Required'),
+		datetime_format: Yup.string().required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/apps/${appId}/`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 
@@ -95,6 +93,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 									value={formik.values.name}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 									placeholder="Enter"
+									disabled
 								/>
 								{formik.touched.name && formik.errors.name ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
@@ -195,59 +194,37 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 									)}
 								/>
 							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="time_zome"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Time Zone
-								</label>
-								<input
-									id="time_zome"
-									name="time_zome"
-									type="text"
-									onChange={formik.handleChange}
-									onBlur={formik.handleBlur}
-									value={formik.values.time_zome}
-									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Enter"
-								/>
-								{formik.touched.time_zome && formik.errors.time_zome ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.time_zome}
-									</div>
-								) : null}
-							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="date_time_format"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Date Time Format
-								</label>
-								<input
-									id="date_time_format"
-									name="date_time_format"
-									type="text"
-									onChange={formik.handleChange}
-									onBlur={formik.handleBlur}
-									value={formik.values.date_time_format}
-									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Enter"
-								/>
-								{formik.touched.date_time_format &&
-								formik.errors.date_time_format ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.date_time_format}
-									</div>
-								) : null}
-							</div>
+							<SelectField
+								key="timezone"
+								label="Time Zone"
+								name="timezone"
+								id="timezone"
+								placeholder="Select time zone"
+								value={get(formik.values, 'timezone', '')}
+								optionsDataName="timezone"
+								optionsData={
+									appConfigurationData?.dropdown_options?.timezones ?? []
+								}
+								formik={formik}
+							/>
+							<SelectField
+								key="datetime_format"
+								label="Date Time Format"
+								name="datetime_format"
+								id="datetime_format"
+								placeholder="Select date time format"
+								value={get(formik.values, 'datetime_format', '')}
+								optionsDataName="datetime_format"
+								optionsData={
+									appConfigurationData?.dropdown_options?.datetime_formats ?? []
+								}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Update Details</span>
 							</button>

@@ -57,44 +57,67 @@ let totalData = 1000;
 const data = makeData(totalData);
 
 export const appPoliciesManagementHandlers = [
-	rest.get(
-		'/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/',
-		(req, res, ctx) => {
-			const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
-			const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
-			let slicedData = data.slice(
-				pageIndex * pageSize,
-				(pageIndex + 1) * pageSize
-			);
+	rest.get('/api/v1/apps/:appId/policies/', (req, res, ctx) => {
+		const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
+		const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
+		let slicedData = data.slice(
+			pageIndex * pageSize,
+			(pageIndex + 1) * pageSize
+		);
 
-			console.log(
-				'slicedData',
-				typeof pageIndex,
-				typeof pageSize,
-				pageIndex,
-				pageSize,
-				slicedData
-			);
-			return res(
-				ctx.delay(500),
-				ctx.status(200),
-				ctx.json({
-					success: true,
-					response: {
-						policies: {
-							total_records: totalData,
-							total_pages: Math.ceil(data.length / pageSize),
-							next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
-							previous: null,
-							records: slicedData,
-						},
-						dropdown_options: {
-							apps: [],
-						},
-						message: 'Platform user fetched successfully',
+		console.log(
+			'slicedData',
+			typeof pageIndex,
+			typeof pageSize,
+			pageIndex,
+			pageSize,
+			slicedData
+		);
+		return res(
+			ctx.delay(500),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					policies: {
+						total_records: totalData,
+						total_pages: Math.ceil(data.length / pageSize),
+						next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
+						previous: null,
+						records: slicedData,
 					},
-				})
-			);
-		}
-	),
+					dropdown_options: {
+						apps: [],
+					},
+					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
+
+	rest.post('/api/v1/apps/:appId/policies/', (req, res, ctx) => {
+		return res(
+			ctx.delay(500),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
+
+	rest.put('/api/v1/apps/:appId/policies/:id', (req, res, ctx) => {
+		return res(
+			ctx.delay(500),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
 ];

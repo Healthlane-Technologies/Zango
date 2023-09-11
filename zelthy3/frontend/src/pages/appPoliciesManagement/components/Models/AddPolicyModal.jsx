@@ -14,11 +14,16 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsAddPolicyModalOpen,
 	selectIsAddPolicyModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const AddPolicyForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	let initialValues = {
 		name: '',
@@ -39,7 +44,7 @@ const AddPolicyForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/`,
+				url: `/api/v1/apps/${appId}/policies/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
@@ -47,6 +52,7 @@ const AddPolicyForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

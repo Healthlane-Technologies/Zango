@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	openIsUpdateAppDetailsModalOpen,
 	selectAppConfigurationData,
+	selectRerenderPage,
 	setAppConfigurationData,
 } from '../../slice';
 
@@ -10,8 +11,12 @@ import { ReactComponent as EachAppIcon } from '../../../../assets/images/svg/eac
 import UpdateAppDetailsModal from '../Models/UpdateAppDetailsModal';
 import useApi from '../../../../hooks/useApi';
 import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 export default function AppConfiguration() {
+	let { appId } = useParams();
+	const rerenderPage = useSelector(selectRerenderPage);
+
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 
 	const dispatch = useDispatch();
@@ -29,7 +34,7 @@ export default function AppConfiguration() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/6aadc375-75cc-4a74-b6d3-e421b063afb4`,
+				url: `/api/v1/apps/${appId}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -39,7 +44,7 @@ export default function AppConfiguration() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
 
 	return (
 		<>

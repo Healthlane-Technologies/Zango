@@ -15,11 +15,15 @@ import {
 	closeIsAddNewUserRolesModalOpen,
 	selectAppUserRolesData,
 	selectIsAddNewUserRolesModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const AddNewUserRolesForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
 	const appUserRolesData = useSelector(selectAppUserRolesData);
 	const triggerApi = useApi();
 	let initialValues = {
@@ -41,7 +45,7 @@ const AddNewUserRolesForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/roles/`,
+				url: `/api/v1/apps/${appId}/roles/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
@@ -49,6 +53,7 @@ const AddNewUserRolesForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

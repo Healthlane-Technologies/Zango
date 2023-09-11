@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	openIsAddNewUserModalOpen,
 	selectAppUserManagementData,
+	selectRerenderPage,
 	setAppUserManagementData,
 } from '../../slice';
 import AddNewUserModal from '../Models/AddNewUserModal';
@@ -12,8 +13,11 @@ import EditUserDetailsModal from '../Models/EditUserDetailsModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
 import { useEffect } from 'react';
 import useApi from '../../../../hooks/useApi';
+import { useParams } from 'react-router-dom';
 
 export default function UserManagement() {
+	let { appId } = useParams();
+	const rerenderPage = useSelector(selectRerenderPage);
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 
 	const dispatch = useDispatch();
@@ -31,7 +35,7 @@ export default function UserManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/users/`,
+				url: `/api/v1/apps/${appId}/users/`,
 				type: 'GET',
 				loader: true,
 			});
@@ -41,7 +45,7 @@ export default function UserManagement() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
 
 	return (
 		<>

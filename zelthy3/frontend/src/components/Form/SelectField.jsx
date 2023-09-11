@@ -23,10 +23,11 @@ const SelectField = ({
 
 	const [searchTerm, setSearchTerm] = useState('');
 
+	console.log('value', value);
 	const [selected, setSelected] = useState(
-		optionsData.find((eachData) => eachData.value === value) || {
+		optionsData.find((eachData) => eachData.id === value) || {
 			label: placeholder,
-			value: '',
+			id: '',
 			unavailable: true,
 		}
 	);
@@ -40,19 +41,19 @@ const SelectField = ({
 
 	const handleChange = (value) => {
 		setSelected(value);
-		formik.setFieldValue(props.name, value.value);
+		formik.setFieldValue(props.name, value.id);
 	};
 
 	useEffect(() => {
 		if (optionsData && value) {
-			setSelected(optionsData.find((eachData) => eachData?.value === value));
+			setSelected(optionsData.find((eachData) => eachData?.id === value));
 		}
 	}, [value]);
 
 	return (
 		<div className="flex w-full flex-col gap-[4px]">
 			<label
-				htmlFor={props.value || props.name}
+				htmlFor={props.id || props.name}
 				className="font-lato text-[12px] font-semibold text-[#A3ABB1]"
 			>
 				{label}
@@ -64,11 +65,11 @@ const SelectField = ({
 							className="w-full rounded-[6px] rounded-[6px] border border-[#DDE2E5] px-[16px] px-[16px] py-[14px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 							{...field}
 							ref={(ref) => setReferenceElement(ref)}
-							id={props.value || props.name}
+							id={props.id || props.name}
 						>
 							<span
 								className={`block w-[80%] truncate text-left ${
-									selected.value ? '' : 'text-[#9A9A9A]'
+									selected.id ? '' : 'text-[#9A9A9A]'
 								}`}
 							>
 								{selected.label}

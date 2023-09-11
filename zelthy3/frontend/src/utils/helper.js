@@ -182,3 +182,14 @@ export const currencyFormatter = new Intl.NumberFormat('en-US', {
 export function isMockApi() {
 	return process.env.NODE_ENV === 'development';
 }
+
+export const getCookie = () => {
+	let csrfToken = '';
+
+	/*eslint-disable */
+	if (csrf_token !== 'undefined') {
+		csrfToken = csrf_token;
+	}
+
+	return csrfToken;
+};

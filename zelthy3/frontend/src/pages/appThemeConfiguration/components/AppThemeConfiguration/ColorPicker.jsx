@@ -1,4 +1,5 @@
 import { Menu, Transition } from '@headlessui/react';
+import { get } from 'lodash';
 import { Fragment, useState, useRef, useEffect } from 'react';
 import { ChromePicker } from 'react-color';
 import { usePopper } from 'react-popper';
@@ -11,7 +12,7 @@ export default function ColorPicker({ data }) {
 		placement: 'bottom-start',
 	});
 	const [width, setWidth] = useState(0);
-	const [color, setColor] = useState(formik.values[id] || '#ffffff');
+	const [color, setColor] = useState(get(formik.values, id, '#ffffff'));
 	const [opacity, setOpacity] = useState(data?.opacity || 100);
 	const opacityContentRef = useRef(null);
 
@@ -26,16 +27,16 @@ export default function ColorPicker({ data }) {
 		}
 	}, [opacity]);
 
-	// const handleOpacityChange = (value) => {
-	// 	let opacityValue = parseInt(value);
-	// 	if (opacityValue >= 0 && opacityValue <= 100) {
-	// 		setOpacity(opacityValue);
-	// 	} else if (opacityValue > 100) {
-	// 		setOpacity(100);
-	// 	} else {
-	// 		setOpacity(0);
-	// 	}
-	// };
+	const handleOpacityChange = (value) => {
+		let opacityValue = parseInt(value);
+		if (opacityValue >= 0 && opacityValue <= 100) {
+			setOpacity(opacityValue);
+		} else if (opacityValue > 100) {
+			setOpacity(100);
+		} else {
+			setOpacity(0);
+		}
+	};
 
 	const handleChangeComplete = (color, event) => {
 		setColor(color.hex);

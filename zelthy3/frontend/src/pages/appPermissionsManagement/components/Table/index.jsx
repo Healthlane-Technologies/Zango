@@ -22,8 +22,11 @@ import {
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
+import { useParams } from 'react-router-dom';
 
 export default function Table({ tableData }) {
+	let { appId } = useParams();
+
 	const columnHelper = createColumnHelper();
 
 	const columns = [
@@ -143,7 +146,7 @@ export default function Table({ tableData }) {
 		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/permissions/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+				url: `/api/v1/apps/${appId}/permissions/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
 				type: 'GET',
 				loader: true,
 			});

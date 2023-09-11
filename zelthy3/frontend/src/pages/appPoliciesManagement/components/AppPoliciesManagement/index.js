@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	openIsAddPolicyModalOpen,
 	selectAppPoliciesManagementData,
+	selectRerenderPage,
 	setAppPoliciesManagementData,
 } from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
@@ -13,8 +14,12 @@ import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add
 import ViewPolicyModal from '../Models/ViewPolicyModal';
 import { useEffect } from 'react';
 import useApi from '../../../../hooks/useApi';
+import { useParams } from 'react-router-dom';
 
 export default function AppPoliciesManagement() {
+	let { appId } = useParams();
+	const rerenderPage = useSelector(selectRerenderPage);
+
 	const appPoliciesManagementData = useSelector(
 		selectAppPoliciesManagementData
 	);
@@ -33,7 +38,7 @@ export default function AppPoliciesManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/`,
+				url: `/api/v1/apps/${appId}/policies/`,
 				type: 'GET',
 				loader: true,
 			});
@@ -43,7 +48,7 @@ export default function AppPoliciesManagement() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
 	return (
 		<>
 			<div className="flex grow flex-col gap-[20px]">

@@ -16,12 +16,17 @@ import {
 	selectAppUserRolesData,
 	selectAppUserRolesFormData,
 	selectIsEditUserRolesDetailModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import MultiSelectField from '../../../../components/Form/MultiSelectField';
+import { useParams } from 'react-router-dom';
 
 const EditUserRolesDetailsForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const appUserRolesData = useSelector(selectAppUserRolesData);
 	const appUserRolesFormData = useSelector(selectAppUserRolesFormData);
 
@@ -46,7 +51,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/roles/${appUserRolesFormData?.id}/`,
+				url: `/api/v1/apps/${appId}/roles/${appUserRolesFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
@@ -54,6 +59,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

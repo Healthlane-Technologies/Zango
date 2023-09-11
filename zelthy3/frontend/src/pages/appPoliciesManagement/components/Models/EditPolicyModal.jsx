@@ -12,11 +12,16 @@ import {
 	closeIsEditPolicyModalOpen,
 	selectAppPoliciesManagementFormData,
 	selectIsEditPolicyModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const EditPolicyForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const appPoliciesManagementFormData = useSelector(
 		selectAppPoliciesManagementFormData
 	);
@@ -41,7 +46,7 @@ const EditPolicyForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/${appPoliciesManagementFormData?.id}/`,
+				url: `/api/v1/apps/${appId}/policies/${appPoliciesManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
@@ -49,6 +54,7 @@ const EditPolicyForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 
@@ -121,7 +127,7 @@ const EditPolicyForm = ({ closeModal }) => {
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
+								// disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Save</span>
 							</button>

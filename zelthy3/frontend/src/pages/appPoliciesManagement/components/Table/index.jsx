@@ -7,6 +7,7 @@ import {
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
@@ -23,6 +24,8 @@ import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
+	let { appId } = useParams();
+
 	const handleViewPolicyConfigure = (payload) => {
 		dispatch(openIsViewPolicyModalOpen(payload));
 	};
@@ -150,7 +153,7 @@ export default function Table({ tableData }) {
 		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+				url: `/api/v1/apps/${appId}/policies/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
 				type: 'GET',
 				loader: true,
 			});

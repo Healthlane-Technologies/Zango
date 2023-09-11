@@ -11,9 +11,12 @@ import {
 	closeIsDeactivateUserModalOpen,
 	selectIsDeactivateUserModalOpen,
 	selectPlatformUserManagementFormData,
+	toggleRerenderPage,
 } from '../../slice';
 
 const DeactivateUserForm = ({ closeModal }) => {
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	const platformUserManagementFormData = useSelector(
 		selectPlatformUserManagementFormData
@@ -46,6 +49,7 @@ const DeactivateUserForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

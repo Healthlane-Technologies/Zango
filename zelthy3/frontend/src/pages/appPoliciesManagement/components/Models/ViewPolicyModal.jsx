@@ -17,54 +17,16 @@ import {
 	selectIsEditViewPolicy,
 	selectIsViewPolicyModalOpen,
 	toggleIsEditViewPolicy,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 
 import Editor, { loader } from '@monaco-editor/react';
 import { useRef } from 'react';
+import { useParams } from 'react-router-dom';
 
 const ViewPolicyForm = ({ closeModal }) => {
-	const triggerApi = useApi();
-	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
-	};
-
-	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
-	});
-
-	let onSubmit = (values) => {
-		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
-
-		let dynamicFormData = transformToFormDataOrder(tempValues);
-
-		const makeApiCall = async () => {
-			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
-				loader: true,
-				payload: dynamicFormData,
-			});
-
-			if (success && response) {
-				closeModal();
-			}
-		};
-
-		makeApiCall();
-	};
-
 	return (
 		<div className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto">
 			<div className="flex grow flex-col gap-[24px]">
@@ -90,6 +52,9 @@ const ViewPolicyForm = ({ closeModal }) => {
 };
 
 const EditPolicyConfigure = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const appPoliciesManagementFormData = useSelector(
 		selectAppPoliciesManagementFormData
 	);
@@ -119,7 +84,7 @@ const EditPolicyConfigure = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/policies/${appPoliciesManagementFormData?.id}/`,
+				url: `/api/v1/apps/${appId}/policies/${appPoliciesManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
@@ -127,6 +92,7 @@ const EditPolicyConfigure = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

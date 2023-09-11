@@ -12,8 +12,9 @@ import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
 import {
-	closeIsAddThemeModalOpen,
-	selectIsAddThemeModalOpen,
+	closeIsEditThemeModalOpen,
+	selectAppThemeConfigurationFormData,
+	selectIsEditThemeModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
 
@@ -26,27 +27,39 @@ import SelectField from '../../../../components/Form/SelectField';
 import { getFontFamily } from '../../../../utils/fonts';
 import { useParams } from 'react-router-dom';
 
-const AddThemeForm = ({ closeModal }) => {
+const EditThemeForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
+	const appThemeConfigurationFormData = useSelector(
+		selectAppThemeConfigurationFormData
+	);
 	const triggerApi = useApi();
 	let initialValues = {
-		name: '',
+		name: appThemeConfigurationFormData?.name ?? '',
 		config: {
 			color: {
-				primary: '#5048ED',
-				secondary: '#ffffff',
-				background: '#ffffff',
+				primary:
+					appThemeConfigurationFormData?.config?.color?.primary ?? '#5048ED',
+				secondary:
+					appThemeConfigurationFormData?.config?.color?.secondary ?? '#ffffff',
+				background:
+					appThemeConfigurationFormData?.config?.color?.background ?? '#ffffff',
 			},
 			typography: {
 				font_family: 'Open Sans',
 			},
 			button: {
-				border_radius: '',
-				color: '#ffffff',
-				border_color: '#C7CED3',
-				background: '#5048ED',
+				border_radius:
+					appThemeConfigurationFormData?.config?.button?.border_radius ?? '',
+				color:
+					appThemeConfigurationFormData?.config?.button?.color ?? '#ffffff',
+				border_color:
+					appThemeConfigurationFormData?.config?.button?.border_color ??
+					'#C7CED3',
+				background:
+					appThemeConfigurationFormData?.config?.button?.background ??
+					'#5048ED',
 			},
 		},
 	};
@@ -78,8 +91,8 @@ const AddThemeForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/themes/`,
-				type: 'POST',
+				url: `/api/v1/apps/${appId}/themes/${appThemeConfigurationFormData?.id}/`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});
@@ -239,7 +252,7 @@ const AddThemeForm = ({ closeModal }) => {
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
+								// disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Save</span>
 							</button>
@@ -251,17 +264,17 @@ const AddThemeForm = ({ closeModal }) => {
 	);
 };
 
-export default function AddThemeModal() {
-	const isAddThemeModalOpen = useSelector(selectIsAddThemeModalOpen);
+export default function EditThemeModal() {
+	const isEditThemeModalOpen = useSelector(selectIsEditThemeModalOpen);
 	const dispatch = useDispatch();
 
 	function closeModal() {
-		dispatch(closeIsAddThemeModalOpen());
+		dispatch(closeIsEditThemeModalOpen());
 	}
 
 	return (
 		<>
-			<Transition appear show={isAddThemeModalOpen} as={Fragment}>
+			<Transition appear show={isEditThemeModalOpen} as={Fragment}>
 				<Dialog as="div" className="relative z-10" onClose={closeModal}>
 					<Transition.Child
 						as={Fragment}
@@ -299,11 +312,11 @@ export default function AddThemeModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Add App Theme
+												Edit App Theme
 											</h4>
 										</div>
 									</Dialog.Title>
-									<AddThemeForm closeModal={closeModal} />
+									<EditThemeForm closeModal={closeModal} />
 								</Dialog.Panel>
 							</div>
 						</div>

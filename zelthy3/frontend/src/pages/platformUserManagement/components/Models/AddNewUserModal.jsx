@@ -11,9 +11,12 @@ import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsAddNewUserModalOpen,
 	selectIsAddNewUserModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 const AddNewUserForm = ({ closeModal }) => {
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	let initialValues = {
 		name: '',
@@ -45,6 +48,7 @@ const AddNewUserForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

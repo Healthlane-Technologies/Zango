@@ -11,11 +11,16 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsAddCustomPermissionModalOpen,
 	selectIsAddCustomPermissionModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const AddCustomPermissionForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	let initialValues = {
 		full_name: '',
@@ -50,6 +55,7 @@ const AddCustomPermissionForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

@@ -35,7 +35,7 @@ export default function EachApp({ data }) {
 
 	return (
 		<Link
-			to="123/user-roles/"
+			to={`${uuid}/user-roles/`}
 			className="group relative flex w-full flex-col rounded-[8px] border border-[#DDE2E5] hover:border-[#8485F6] hover:shadow-eachApp"
 		>
 			<div className="relative flex flex-col border-b border-[#F0F3F4] px-[16px] py-[22px]">

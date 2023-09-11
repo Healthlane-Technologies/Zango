@@ -12,9 +12,12 @@ import {
 	closeIsEditUserDetailModalOpen,
 	selectIsEditUserDetailModalOpen,
 	selectPlatformUserManagementFormData,
+	toggleRerenderPage,
 } from '../../slice';
 
 const EditUserDetailsForm = ({ closeModal }) => {
+	const dispatch = useDispatch();
+
 	const triggerApi = useApi();
 	const platformUserManagementFormData = useSelector(
 		selectPlatformUserManagementFormData
@@ -52,6 +55,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

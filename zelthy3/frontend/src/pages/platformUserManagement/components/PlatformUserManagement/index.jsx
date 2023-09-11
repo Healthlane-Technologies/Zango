@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	openIsAddNewUserModalOpen,
 	selectPlatformUserManagementData,
+	selectRerenderPage,
 	setPlatformUserManagementData,
 } from '../../slice';
 import AddNewUserModal from '../Models/AddNewUserModal';
@@ -14,6 +15,8 @@ import { useEffect } from 'react';
 import useApi from '../../../../hooks/useApi';
 
 export default function PlatformUserManagement() {
+	const rerenderPage = useSelector(selectRerenderPage);
+
 	const platformUserManagementData = useSelector(
 		selectPlatformUserManagementData
 	);
@@ -42,7 +45,7 @@ export default function PlatformUserManagement() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
 
 	return (
 		<>

@@ -15,12 +15,17 @@ import {
 	closeIsAddNewUserModalOpen,
 	selectAppUserManagementData,
 	selectIsAddNewUserModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import MultiSelectField from '../../../../components/Form/MultiSelectField';
+import { useParams } from 'react-router-dom';
 
 const AddNewUserForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const triggerApi = useApi();
 	let initialValues = {
@@ -44,7 +49,7 @@ const AddNewUserForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/users/`,
+				url: `/api/v1/apps/${appId}/users/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
@@ -52,6 +57,7 @@ const AddNewUserForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

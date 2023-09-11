@@ -12,12 +12,17 @@ import {
 	closeIsDeactivateUserRolesModalOpen,
 	selectAppUserRolesFormData,
 	selectIsDeactivateUserRolesModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import { ReactComponent as DeactivateUserRolesIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const DeactivateUserRolesForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const appUserRolesFormData = useSelector(selectAppUserRolesFormData);
 
 	const triggerApi = useApi();
@@ -38,7 +43,7 @@ const DeactivateUserRolesForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/roles/${appUserRolesFormData?.id}/`,
+				url: `/api/v1/apps/${appId}/roles/${appUserRolesFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
@@ -46,6 +51,7 @@ const DeactivateUserRolesForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

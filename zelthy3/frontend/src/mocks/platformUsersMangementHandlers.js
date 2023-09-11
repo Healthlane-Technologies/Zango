@@ -117,4 +117,30 @@ export const platformUsersMangementHandlers = [
 			})
 		);
 	}),
+
+	rest.post('/api/v1/auth/platform-users/', (req, res, ctx) => {
+		return res(
+			ctx.delay(500),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
+
+	rest.put('/api/v1/auth/platform-users/:id', (req, res, ctx) => {
+		return res(
+			ctx.delay(500),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
 ];

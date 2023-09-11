@@ -4,7 +4,10 @@ import { Fragment, useState, useEffect } from 'react';
 import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import {
+	transformToFormData,
+	transformToFormDataOrder,
+} from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
@@ -12,12 +15,17 @@ import {
 	closeIsDeactivateUserModalOpen,
 	selectAppUserManagementFormData,
 	selectIsDeactivateUserModalOpen,
+	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import { ReactComponent as DeactivateUserIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
+import { useParams } from 'react-router-dom';
 
 const DeactivateUserForm = ({ closeModal }) => {
+	let { appId } = useParams();
+	const dispatch = useDispatch();
+
 	const appUserManagementFormData = useSelector(
 		selectAppUserManagementFormData
 	);
@@ -35,11 +43,11 @@ const DeactivateUserForm = ({ closeModal }) => {
 	let onSubmit = (values) => {
 		let tempValues = values;
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/users/${appUserManagementFormData?.id}/`,
+				url: `/api/v1/apps/${appId}/users/${appUserManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
@@ -47,6 +55,7 @@ const DeactivateUserForm = ({ closeModal }) => {
 
 			if (success && response) {
 				closeModal();
+				dispatch(toggleRerenderPage());
 			}
 		};
 

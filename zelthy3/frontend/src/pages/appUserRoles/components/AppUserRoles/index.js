@@ -4,6 +4,7 @@ import {
 	openIsAddNewUserRolesModalOpen,
 	selectAppUserRolesData,
 	selectIsAppUserRolesDataEmpty,
+	selectRerenderPage,
 	setAppUserRolesData,
 } from '../../slice';
 import AddNewUserRolesModal from '../Models/AddNewUserRolesModal';
@@ -14,9 +15,12 @@ import DeactivateUserRolesModal from '../Models/DeactivateUserRolesModal';
 import { useState } from 'react';
 import useApi from '../../../../hooks/useApi';
 import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 export default function AppUserRoles() {
+	let { appId } = useParams();
 	const appUserRolesData = useSelector(selectAppUserRolesData);
+	const rerenderPage = useSelector(selectRerenderPage);
 	const isAppUserRolesDataEmpty = useSelector(selectIsAppUserRolesDataEmpty);
 
 	console.log(
@@ -42,7 +46,7 @@ export default function AppUserRoles() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/roles/`,
+				url: `/api/v1/apps/${appId}/roles/`,
 				type: 'GET',
 				loader: true,
 			});
@@ -52,7 +56,8 @@ export default function AppUserRoles() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[20px]">

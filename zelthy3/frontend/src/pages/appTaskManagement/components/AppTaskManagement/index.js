@@ -4,13 +4,18 @@ import UpdatePolicyModal from '../Models/UpdatePolicyModal';
 import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
 import {
 	selectAppTaskManagementData,
+	selectRerenderPage,
 	setAppTaskManagementData,
 } from '../../slice';
 import useApi from '../../../../hooks/useApi';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 
 export default function AppTaskManagement() {
+	let { appId } = useParams();
+	const rerenderPage = useSelector(selectRerenderPage);
+
 	const appTaskManagementData = useSelector(selectAppTaskManagementData);
 
 	const dispatch = useDispatch();
@@ -24,7 +29,7 @@ export default function AppTaskManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/tasks/`,
+				url: `/api/v1/apps/${appId}/tasks/`,
 				type: 'GET',
 				loader: true,
 			});
@@ -34,7 +39,7 @@ export default function AppTaskManagement() {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [rerenderPage]);
 
 	return (
 		<>

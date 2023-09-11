@@ -1,11 +1,14 @@
 // import { decamelizeKeys } from 'humps';
-import { isHcpDashboard } from '../utils/helper';
+import { getCookie, isHcpDashboard } from '../utils/helper';
 let authToken =
 	'5kO5NUSSG6SFZctca1dVJwMMbK14vfS0ECed9xlGcwNP1jeeYfN6k3l4uqe7sF7C';
 
 export const callGetApi = async ({ fullUrl }) => {
 	const request = await fetch(fullUrl, {
 		method: 'GET',
+		headers: {
+			'X-CSRFToken': getCookie('csrftoken'),
+		},
 		redirect: 'follow',
 	});
 	return request;
@@ -14,6 +17,9 @@ export const callGetApi = async ({ fullUrl }) => {
 export const callPostApi = async ({ fullUrl, payload }) => {
 	const request = await fetch(fullUrl, {
 		method: 'POST',
+		headers: {
+			'X-CSRFToken': getCookie('csrftoken'),
+		},
 		redirect: 'follow',
 		body: payload instanceof FormData ? payload : JSON.stringify(payload),
 	});
@@ -24,6 +30,9 @@ export const callPostApi = async ({ fullUrl, payload }) => {
 export const callPutApi = async ({ fullUrl, payload }) => {
 	const request = await fetch(fullUrl, {
 		method: 'PUT',
+		headers: {
+			'X-CSRFToken': getCookie('csrftoken'),
+		},
 		redirect: 'follow',
 		body: payload instanceof FormData ? payload : JSON.stringify(payload),
 	});
