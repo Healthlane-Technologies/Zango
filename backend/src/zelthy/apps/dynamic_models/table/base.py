@@ -96,6 +96,11 @@ class ModelTable:
             'searchable': True,
             'sortable': True
         },
+        'ForeignKey':{
+            'type': 'string',
+            'searchable': True,
+            'sortable': True
+        },
         'JSONField':{
             'type': 'json',
             'searchable': False,

@@ -24,7 +24,7 @@ class StringRelatedMeta(SerializerMetaclass):
 
         return super().__new__(cls, name, bases, attrs)
 
-from zelthy3.backend.apps.tenants.appauth.models import UserRoleModel
+from zelthy.apps.appauth.models import UserRoleModel
 
 class TestSerializer(serializers.ModelSerializer, metaclass=StringRelatedMeta):
     class Meta:

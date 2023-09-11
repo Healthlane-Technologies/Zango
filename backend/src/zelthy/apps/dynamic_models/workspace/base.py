@@ -284,7 +284,7 @@ class Workspace:
             for pkg_route in pkg_app_routes:
                 routes.append({
                     're_path':route['re_path']+pkg_route['re_path'].strip('^'),
-                    'module':route['plugin'] + '.' + pkg_route['module'],
+                    'module':'plugins' + '.' + route['plugin'] + '.' + pkg_route['module'],
                     'url':pkg_route['url']
                 })
         return routes
@@ -296,6 +296,7 @@ class Workspace:
             r_regex = re.compile(r['re_path'])
             if r_regex.search(path): # match module
                 module = r['module'] + "." + r['url']
+                print(module)
                 md = self.plugin_source.load_plugin(module)
                 urlpatterns = getattr(md, "urlpatterns")
                 mod_url_path = path[len(r['re_path'].strip("^")):] or "/"

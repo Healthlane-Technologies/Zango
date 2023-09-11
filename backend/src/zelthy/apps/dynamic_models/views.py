@@ -40,7 +40,8 @@ class DynamicView(View, PermMixin):
     def dispatch(self, request, *args, **kwargs):
         if self.has_user_access_perm(request, *args, **kwargs):                            
             view, resolve = self.get_view(request)
-            view_name = ".".join(resolve.__dict__['_func_path'].split(".")[5:])            
+            view_name = ".".join(resolve.__dict__['_func_path'].split(".")[5:])    
+            print(view_name)        
             if view:
                 kwargs = resolve.__dict__['kwargs']
                 if self.has_view_perm(request, view_name,*args, **kwargs):
