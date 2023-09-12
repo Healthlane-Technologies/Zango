@@ -7,14 +7,12 @@ import {
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as TableSyncIcon } from '../../../../assets/images/svg/sync-icon.svg';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
-import { ReactComponent as TableSyncIcon } from '../../../../assets/images/svg/sync-icon.svg';
-
-import ListCell from '../../../../components/Table/ListCell';
 import useApi from '../../../../hooks/useApi';
-import { formatTableDate } from '../../../../utils/formats';
 import {
 	selectAppPermissionsManagementData,
 	setAppPermissionsManagementData,
@@ -22,7 +20,6 @@ import {
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
-import { useParams } from 'react-router-dom';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
@@ -146,7 +143,7 @@ export default function Table({ tableData }) {
 		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/permissions/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+				url: `/api/v1/apps/${appId}/permissions/?page=${pageIndex}&page_size=${pageSize}&include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

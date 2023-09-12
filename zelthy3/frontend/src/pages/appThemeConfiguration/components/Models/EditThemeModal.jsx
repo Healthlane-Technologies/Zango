@@ -1,31 +1,23 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import {
-	transformToFormData,
-	transformToFormDataOrder,
-} from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import * as Yup from 'yup';
+import { ReactComponent as BorderRadiusIcon } from '../../../../assets/images/svg/border-radius-icon.svg';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import SelectField from '../../../../components/Form/SelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { getFontFamily } from '../../../../utils/fonts';
+import { transformToFormDataStringify } from '../../../../utils/helper';
 import {
 	closeIsEditThemeModalOpen,
 	selectAppThemeConfigurationFormData,
 	selectIsEditThemeModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { ReactComponent as BorderRadiusIcon } from '../../../../assets/images/svg/border-radius-icon.svg';
-
-import FileUpload from '../../../../components/Form/FileUpload';
 import ColorPicker from '../AppThemeConfiguration/ColorPicker';
-import SelectField from '../../../../components/Form/SelectField';
-import { getFontFamily } from '../../../../utils/fonts';
-import { useParams } from 'react-router-dom';
 
 const EditThemeForm = ({ closeModal }) => {
 	let { appId } = useParams();
@@ -87,7 +79,7 @@ const EditThemeForm = ({ closeModal }) => {
 	let onSubmit = (values) => {
 		let tempValues = values;
 
-		let dynamicFormData = transformToFormData(tempValues);
+		let dynamicFormData = transformToFormDataStringify(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({

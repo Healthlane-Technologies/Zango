@@ -136,7 +136,7 @@ export default function Table({ tableData }) {
 		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/roles/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+				url: `/api/v1/apps/${appId}/roles/?page=${pageIndex}&page_size=${pageSize}&include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

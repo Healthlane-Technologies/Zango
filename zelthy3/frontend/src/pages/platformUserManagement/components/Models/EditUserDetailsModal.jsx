@@ -11,12 +11,16 @@ import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsEditUserDetailModalOpen,
 	selectIsEditUserDetailModalOpen,
+	selectPlatformUserManagementData,
 	selectPlatformUserManagementFormData,
 	toggleRerenderPage,
 } from '../../slice';
 
 const EditUserDetailsForm = ({ closeModal }) => {
 	const dispatch = useDispatch();
+	const platformUserManagementData = useSelector(
+		selectPlatformUserManagementData
+	);
 
 	const triggerApi = useApi();
 	const platformUserManagementFormData = useSelector(
@@ -155,24 +159,9 @@ const EditUserDetailsForm = ({ closeModal }) => {
 								placeholder="Select app(s)"
 								value={get(formik.values, 'apps', [])}
 								optionsDataName="apps"
-								optionsData={[
-									{
-										id: 590,
-										label: 'Option 1',
-									},
-									{
-										id: 673,
-										label: 'Option 2',
-									},
-									{
-										id: 701,
-										label: 'Option 3',
-									},
-									{
-										id: 'option4',
-										label: 'Option 4',
-									},
-								]}
+								optionsData={
+									platformUserManagementData?.dropdown_options?.apps ?? []
+								}
 								formik={formik}
 							/>
 						</div>

@@ -1,16 +1,16 @@
-import BreadCrumbs from '../BreadCrumbs';
-import Table from '../Table';
-import UpdatePolicyModal from '../Models/UpdatePolicyModal';
-import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import useApi from '../../../../hooks/useApi';
 import {
 	selectAppTaskManagementData,
 	selectRerenderPage,
 	setAppTaskManagementData,
 } from '../../slice';
-import useApi from '../../../../hooks/useApi';
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import BreadCrumbs from '../BreadCrumbs';
+import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
+import UpdatePolicyModal from '../Models/UpdatePolicyModal';
+import Table from '../Table';
 
 export default function AppTaskManagement() {
 	let { appId } = useParams();
@@ -29,7 +29,7 @@ export default function AppTaskManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/tasks/`,
+				url: `/api/v1/apps/${appId}/tasks/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

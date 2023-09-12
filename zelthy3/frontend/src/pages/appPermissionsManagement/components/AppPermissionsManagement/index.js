@@ -1,4 +1,8 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddCustomPermissionModalOpen,
 	selectAppPermissionsManagementData,
@@ -6,14 +10,10 @@ import {
 	setAppPermissionsManagementData,
 } from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
-import Table from '../Table';
-import EditCustomPermissionModal from '../Models/EditCustomPermissionModal';
-import DeleteCustomPermissionModal from '../Models/DeleteCustomPermissionModal';
 import AddCustomPermissionModal from '../Models/AddCustomPermissionModal';
-import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
-import useApi from '../../../../hooks/useApi';
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import DeleteCustomPermissionModal from '../Models/DeleteCustomPermissionModal';
+import EditCustomPermissionModal from '../Models/EditCustomPermissionModal';
+import Table from '../Table';
 
 export default function AppPermissionsManagement() {
 	let { appId } = useParams();
@@ -37,7 +37,7 @@ export default function AppPermissionsManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/permissions/`,
+				url: `/api/v1/apps/${appId}/permissions/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

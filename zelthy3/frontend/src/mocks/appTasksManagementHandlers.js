@@ -1,6 +1,5 @@
-import { rest } from 'msw';
-import moment from 'moment';
 import { faker } from '@faker-js/faker';
+import { rest } from 'msw';
 
 const range = (len) => {
 	const arr = [];
@@ -81,8 +80,8 @@ const data = makeData(totalData);
 
 export const appTasksManagementHandlers = [
 	rest.get('/api/v1/apps/:appId/tasks/', (req, res, ctx) => {
-		const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
-		const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
+		const pageIndex = parseInt(req.url.searchParams.get('page')) || 0;
+		const pageSize = parseInt(req.url.searchParams.get('page_size')) || 10;
 		let slicedData = data.slice(
 			pageIndex * pageSize,
 			(pageIndex + 1) * pageSize

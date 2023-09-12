@@ -1,19 +1,18 @@
-import BreadCrumbs from '../BreadCrumbs';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as AddThemeIcon } from '../../../../assets/images/svg/add-theme-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddThemeModalOpen,
 	selectAppThemeConfigurationData,
 	selectRerenderPage,
 	setAppThemeConfigurationData,
 } from '../../slice';
-
-import { ReactComponent as AddThemeIcon } from '../../../../assets/images/svg/add-theme-icon.svg';
+import BreadCrumbs from '../BreadCrumbs';
 import AddThemeModal from '../Models/AddThemeModal';
-import EachTheme from './EachTheme';
-import useApi from '../../../../hooks/useApi';
-import { useEffect } from 'react';
 import EditThemeModal from '../Models/EditThemeModal';
-import { useParams } from 'react-router-dom';
+import EachTheme from './EachTheme';
 
 export default function AppThemeConfiguration() {
 	let { appId } = useParams();
@@ -38,7 +37,7 @@ export default function AppThemeConfiguration() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/themes/`,
+				url: `/api/v1/apps/${appId}/themes/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

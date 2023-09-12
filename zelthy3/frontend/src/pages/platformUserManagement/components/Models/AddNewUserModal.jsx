@@ -11,10 +11,14 @@ import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsAddNewUserModalOpen,
 	selectIsAddNewUserModalOpen,
+	selectPlatformUserManagementData,
 	toggleRerenderPage,
 } from '../../slice';
 
 const AddNewUserForm = ({ closeModal }) => {
+	const platformUserManagementData = useSelector(
+		selectPlatformUserManagementData
+	);
 	const dispatch = useDispatch();
 
 	const triggerApi = useApi();
@@ -122,24 +126,9 @@ const AddNewUserForm = ({ closeModal }) => {
 								placeholder="Select app(s)"
 								value={get(formik.values, 'apps', [])}
 								optionsDataName="apps"
-								optionsData={[
-									{
-										id: 590,
-										label: 'Option 1',
-									},
-									{
-										id: 673,
-										label: 'Option 2',
-									},
-									{
-										id: 701,
-										label: 'Option 3',
-									},
-									{
-										id: 'option4',
-										label: 'Option 4',
-									},
-								]}
+								optionsData={
+									platformUserManagementData?.dropdown_options?.apps ?? []
+								}
 								formik={formik}
 							/>
 						</div>

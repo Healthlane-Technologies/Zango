@@ -1,6 +1,5 @@
-import { rest } from 'msw';
-import moment from 'moment';
 import { faker } from '@faker-js/faker';
+import { rest } from 'msw';
 
 const range = (len) => {
 	const arr = [];
@@ -81,8 +80,8 @@ const data = makeData(totalData);
 
 export const platformUsersMangementHandlers = [
 	rest.get('/api/v1/auth/platform-users/', (req, res, ctx) => {
-		const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
-		const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
+		const pageIndex = parseInt(req.url.searchParams.get('page')) || 0;
+		const pageSize = parseInt(req.url.searchParams.get('page_size')) || 10;
 		let slicedData = data.slice(
 			pageIndex * pageSize,
 			(pageIndex + 1) * pageSize
@@ -110,7 +109,24 @@ export const platformUsersMangementHandlers = [
 						records: slicedData,
 					},
 					dropdown_options: {
-						apps: [],
+						apps: [
+							{
+								id: 1,
+								label: 'Apps 1',
+							},
+							{
+								id: 2,
+								label: 'Apps 2',
+							},
+							{
+								id: 3,
+								label: 'Apps 3',
+							},
+							{
+								id: 4,
+								label: 'Apps 4',
+							},
+						],
 					},
 					message: 'Platform user fetched successfully',
 				},

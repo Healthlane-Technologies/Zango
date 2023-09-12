@@ -13,7 +13,6 @@ import { ReactComponent as TablePaginationPreviousIcon } from '../../../../asset
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
 import ListCell from '../../../../components/Table/ListCell';
 import useApi from '../../../../hooks/useApi';
-import { formatTableDate } from '../../../../utils/formats';
 import {
 	selectAppTaskManagementData,
 	setAppTaskManagementData,
@@ -119,7 +118,7 @@ export default function Table({ tableData }) {
 		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/tasks/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+				url: `/api/v1/apps/${appId}/tasks/?page=${pageIndex}&page_size=${pageSize}&include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

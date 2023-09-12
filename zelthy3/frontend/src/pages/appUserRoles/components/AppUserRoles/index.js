@@ -1,5 +1,8 @@
-import BreadCrumbs from '../BreadCrumbs';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddNewUserRolesModalOpen,
 	selectAppUserRolesData,
@@ -7,15 +10,11 @@ import {
 	selectRerenderPage,
 	setAppUserRolesData,
 } from '../../slice';
+import BreadCrumbs from '../BreadCrumbs';
 import AddNewUserRolesModal from '../Models/AddNewUserRolesModal';
-import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
-import Table from '../Table';
-import EditUserRolesDetailsModal from '../Models/EditUserDetailsRolesModal';
 import DeactivateUserRolesModal from '../Models/DeactivateUserRolesModal';
-import { useState } from 'react';
-import useApi from '../../../../hooks/useApi';
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import EditUserRolesDetailsModal from '../Models/EditUserDetailsRolesModal';
+import Table from '../Table';
 
 export default function AppUserRoles() {
 	let { appId } = useParams();
@@ -46,7 +45,7 @@ export default function AppUserRoles() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/roles/`,
+				url: `/api/v1/apps/${appId}/roles/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

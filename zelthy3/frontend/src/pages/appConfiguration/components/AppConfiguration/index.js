@@ -1,17 +1,16 @@
-import BreadCrumbs from '../BreadCrumbs';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as EachAppIcon } from '../../../../assets/images/svg/each-app-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsUpdateAppDetailsModalOpen,
 	selectAppConfigurationData,
 	selectRerenderPage,
 	setAppConfigurationData,
 } from '../../slice';
-
-import { ReactComponent as EachAppIcon } from '../../../../assets/images/svg/each-app-icon.svg';
+import BreadCrumbs from '../BreadCrumbs';
 import UpdateAppDetailsModal from '../Models/UpdateAppDetailsModal';
-import useApi from '../../../../hooks/useApi';
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 
 export default function AppConfiguration() {
 	let { appId } = useParams();
@@ -34,7 +33,7 @@ export default function AppConfiguration() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}`,
+				url: `/api/v1/apps/${appId}?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

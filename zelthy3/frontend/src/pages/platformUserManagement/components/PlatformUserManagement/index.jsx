@@ -1,5 +1,7 @@
-import BreadCrumbs from '../BreadCrumbs';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddNewUserModalOpen,
 	selectPlatformUserManagementData,
@@ -7,12 +9,9 @@ import {
 	setPlatformUserManagementData,
 } from '../../slice';
 import AddNewUserModal from '../Models/AddNewUserModal';
-import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
-import Table from '../Table';
-import EditUserDetailsModal from '../Models/EditUserDetailsModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
-import { useEffect } from 'react';
-import useApi from '../../../../hooks/useApi';
+import EditUserDetailsModal from '../Models/EditUserDetailsModal';
+import Table from '../Table';
 
 export default function PlatformUserManagement() {
 	const rerenderPage = useSelector(selectRerenderPage);
@@ -35,7 +34,7 @@ export default function PlatformUserManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/auth/platform-users/`,
+				url: `/api/v1/auth/platform-users/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

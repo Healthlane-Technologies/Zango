@@ -1,19 +1,19 @@
-import BreadCrumbs from '../BreadCrumbs';
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddNewUserModalOpen,
 	selectAppUserManagementData,
 	selectRerenderPage,
 	setAppUserManagementData,
 } from '../../slice';
+import BreadCrumbs from '../BreadCrumbs';
 import AddNewUserModal from '../Models/AddNewUserModal';
-import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
-import Table from '../Table';
-import EditUserDetailsModal from '../Models/EditUserDetailsModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
-import { useEffect } from 'react';
-import useApi from '../../../../hooks/useApi';
-import { useParams } from 'react-router-dom';
+import EditUserDetailsModal from '../Models/EditUserDetailsModal';
+import Table from '../Table';
 
 export default function UserManagement() {
 	let { appId } = useParams();
@@ -35,7 +35,7 @@ export default function UserManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/users/`,
+				url: `/api/v1/apps/${appId}/users/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});

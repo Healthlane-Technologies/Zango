@@ -1,9 +1,8 @@
+import imageCompression from 'browser-image-compression';
 import forEach from 'lodash/forEach';
 import isEmpty from 'lodash/isEmpty';
-import imageCompression from 'browser-image-compression';
-import React, { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useMemo } from 'react';
 
 export function isDev() {
 	if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -80,6 +79,30 @@ export function transformToFormDataOrder(
 			formData.set(formattedKey, JSON.stringify(value));
 		} else if (value instanceof Object) {
 			transformToFormData(value, formData, formattedKey);
+		} else {
+			formData.set(formattedKey, value);
+		}
+	});
+	return formData;
+}
+
+export function transformToFormDataStringify(
+	data,
+	formData = new FormData(),
+	parentKey = null
+) {
+	// console.log(data);
+	forEach(data, (value, key) => {
+		if (value === null) return; // else "null" will be added
+
+		let formattedKey = isEmpty(parentKey) ? key : `${parentKey}[${key}]`;
+
+		if (value instanceof File) {
+			formData.set(formattedKey, value);
+		} else if (value instanceof Array) {
+			formData.set(formattedKey, JSON.stringify(value));
+		} else if (value instanceof Object) {
+			formData.set(formattedKey, JSON.stringify(value));
 		} else {
 			formData.set(formattedKey, value);
 		}

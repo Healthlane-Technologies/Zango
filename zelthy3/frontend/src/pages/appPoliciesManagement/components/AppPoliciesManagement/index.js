@@ -1,4 +1,8 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddPolicyModalOpen,
 	selectAppPoliciesManagementData,
@@ -6,15 +10,11 @@ import {
 	setAppPoliciesManagementData,
 } from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
-import Table from '../Table';
-import EditPolicyModal from '../Models/EditPolicyModal';
-import DeletePolicyModal from '../Models/DeletePolicyModal';
 import AddPolicyModal from '../Models/AddPolicyModal';
-import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
+import DeletePolicyModal from '../Models/DeletePolicyModal';
+import EditPolicyModal from '../Models/EditPolicyModal';
 import ViewPolicyModal from '../Models/ViewPolicyModal';
-import { useEffect } from 'react';
-import useApi from '../../../../hooks/useApi';
-import { useParams } from 'react-router-dom';
+import Table from '../Table';
 
 export default function AppPoliciesManagement() {
 	let { appId } = useParams();
@@ -38,7 +38,7 @@ export default function AppPoliciesManagement() {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/policies/`,
+				url: `/api/v1/apps/${appId}/policies/?include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});
