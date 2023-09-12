@@ -102,7 +102,7 @@ export function transformToFormDataStringify(
 		} else if (value instanceof Array) {
 			formData.set(formattedKey, JSON.stringify(value));
 		} else if (value instanceof Object) {
-			formData.set(formattedKey, JSON.stringify(value));
+			formData.set(formattedKey, JSON.stringify(JSON.stringify(value)));
 		} else {
 			formData.set(formattedKey, value);
 		}

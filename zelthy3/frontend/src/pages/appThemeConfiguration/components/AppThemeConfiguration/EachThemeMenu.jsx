@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import { transformToFormData } from '../../../../utils/helper';
-import { openIsEditThemeModalOpen } from '../../slice';
+import { openIsEditThemeModalOpen, toggleRerenderPage } from '../../slice';
 
 export default function EachThemeMenu({ data }) {
 	const [referenceElement, setReferenceElement] = useState(null);
@@ -46,6 +46,7 @@ export default function EachThemeMenu({ data }) {
 			});
 
 			if (success && response) {
+				dispatch(toggleRerenderPage());
 			}
 		};
 

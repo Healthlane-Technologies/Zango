@@ -10,7 +10,7 @@ export const appConfigurationHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					apps: {
+					app: {
 						id: 20,
 						schema_name: 'zapp1',
 						created_at: '2023-08-31T11:03:00.079548Z',

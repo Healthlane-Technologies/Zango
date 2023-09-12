@@ -25,13 +25,13 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 	const triggerApi = useApi();
 	let initialValues = {
-		name: appConfigurationData?.apps?.name ?? '',
-		description: appConfigurationData?.apps?.description ?? '',
-		logo: appConfigurationData?.apps?.logo ?? '',
-		fav_icon: appConfigurationData?.apps?.fav_icon ?? '',
-		domains: appConfigurationData?.apps?.domains ?? [''],
-		timezone: appConfigurationData?.apps?.timezone ?? '',
-		datetime_format: appConfigurationData?.apps?.datetime_format ?? '',
+		name: appConfigurationData?.app?.name ?? '',
+		description: appConfigurationData?.app?.description ?? '',
+		logo: appConfigurationData?.app?.logo ?? '',
+		fav_icon: appConfigurationData?.app?.fav_icon ?? '',
+		domains: appConfigurationData?.app?.domains ?? [''],
+		timezone: appConfigurationData?.app?.timezone ?? '',
+		datetime_format: appConfigurationData?.app?.datetime_format ?? '',
 	};
 
 	let validationSchema = Yup.object({

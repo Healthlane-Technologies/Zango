@@ -51,10 +51,7 @@ const AddPolicyForm = ({ closeModal }) => {
 		const formData = new FormData();
 		formData.set('name', tempValues?.name);
 		formData.set('description', tempValues?.description);
-		formData.set(
-			'statement',
-			JSON.stringify(JSON.parse(tempValues?.statement), null, 2)
-		);
+		formData.set('statement', JSON.stringify(tempValues?.statement));
 
 		let dynamicFormData = formData;
 

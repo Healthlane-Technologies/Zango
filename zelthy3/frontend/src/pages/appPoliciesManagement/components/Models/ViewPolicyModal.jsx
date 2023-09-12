@@ -1,16 +1,13 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
+import Editor from '@monaco-editor/react';
+import { Formik } from 'formik';
+import { Fragment, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
-import { get } from 'lodash';
-import {
-	transformToFormData,
-	transformToFormDataOrder,
-} from '../../../../utils/helper';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormDataStringify } from '../../../../utils/helper';
 import {
 	closeIsViewPolicyModalOpen,
 	selectAppPoliciesManagementFormData,
@@ -19,12 +16,6 @@ import {
 	toggleIsEditViewPolicy,
 	toggleRerenderPage,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-
-import Editor, { loader } from '@monaco-editor/react';
-import { useRef } from 'react';
-import { useParams } from 'react-router-dom';
 
 const ViewPolicyForm = ({ closeModal }) => {
 	return (
@@ -70,7 +61,11 @@ const EditPolicyConfigure = ({ closeModal }) => {
 
 	const triggerApi = useApi();
 	let initialValues = {
-		statement: JSON.stringify(appPoliciesManagementFormData?.statement),
+		statement: JSON.stringify(
+			appPoliciesManagementFormData?.statement,
+			null,
+			4
+		),
 	};
 
 	let validationSchema = Yup.object({
@@ -79,8 +74,9 @@ const EditPolicyConfigure = ({ closeModal }) => {
 
 	let onSubmit = (values) => {
 		let tempValues = values;
+		tempValues['statement'] = JSON.parse(values.statement);
 
-		let dynamicFormData = transformToFormData(tempValues);
+		let dynamicFormData = transformToFormDataStringify(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({

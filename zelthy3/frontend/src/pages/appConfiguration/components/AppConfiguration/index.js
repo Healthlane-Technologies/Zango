@@ -54,7 +54,7 @@ export default function AppConfiguration() {
 				<div className="flex grow flex-col gap-[20px] pl-[40px] pr-[48px]">
 					<div className="flex items-end gap-[24px]">
 						<h3 className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
-							{appConfigurationData?.apps?.name}
+							{appConfigurationData?.app?.name}
 						</h3>
 						<button
 							type="button"
@@ -76,7 +76,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										{appConfigurationData?.apps?.description}
+										{appConfigurationData?.app?.description}
 									</span>
 								</td>
 							</tr>
@@ -87,9 +87,9 @@ export default function AppConfiguration() {
 									</span>
 								</td>
 								<td className="w-full pl-[20px]">
-									{appConfigurationData?.apps?.logo ? (
+									{appConfigurationData?.app?.logo ? (
 										<img
-											src={appConfigurationData?.apps?.logo}
+											src={appConfigurationData?.app?.logo}
 											className="h-[56px] w-[56px]"
 											alt="#"
 										/>
@@ -105,9 +105,9 @@ export default function AppConfiguration() {
 									</span>
 								</td>
 								<td className="w-full pl-[20px]">
-									{appConfigurationData?.apps?.fav_icon ? (
+									{appConfigurationData?.app?.fav_icon ? (
 										<img
-											src={appConfigurationData?.apps?.fav_icon}
+											src={appConfigurationData?.app?.fav_icon}
 											className="h-[56px] w-[56px]"
 											alt="#"
 										/>
@@ -124,7 +124,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<div className="flex flex-col gap-[8px]">
-										{appConfigurationData?.apps?.domains?.map((eachDomain) => {
+										{appConfigurationData?.app?.domains?.map((eachDomain) => {
 											return (
 												<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 													{eachDomain}
@@ -142,7 +142,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										{appConfigurationData?.apps?.timezone}
+										{appConfigurationData?.app?.timezone}
 									</span>
 								</td>
 							</tr>
@@ -154,7 +154,7 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										{appConfigurationData?.apps?.datetime_format}
+										{appConfigurationData?.app?.datetime_format}
 										<span className="text-[#A3ABB1]">
 											(August 05 2006, 3:05 PM)
 										</span>
