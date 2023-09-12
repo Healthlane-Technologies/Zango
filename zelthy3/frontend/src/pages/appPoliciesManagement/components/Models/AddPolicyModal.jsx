@@ -34,13 +34,29 @@ const AddPolicyForm = ({ closeModal }) => {
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
-		statement: Yup.string().required('Required'),
+		statement: Yup.string()
+			.test('statement', 'Invalid JSON format', (value) => {
+				try {
+					JSON.parse(value);
+					return true;
+				} catch (error) {
+					return false;
+				}
+			})
+			.required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
+		const formData = new FormData();
+		formData.set('name', tempValues?.name);
+		formData.set('description', tempValues?.description);
+		formData.set(
+			'statement',
+			JSON.stringify(JSON.parse(tempValues?.statement), null, 2)
+		);
 
-		let dynamicFormData = transformToFormData(tempValues);
+		let dynamicFormData = formData;
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
@@ -148,7 +164,7 @@ const AddPolicyForm = ({ closeModal }) => {
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								disabled={!(formik.isValid && formik.dirty)}
 							>
-								<span>Add Custom Permission</span>
+								<span>Add Policy</span>
 							</button>
 						</div>
 					</form>
