@@ -1,12 +1,12 @@
-import { usePopper } from 'react-popper';
-import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
+import { Fragment, useState } from 'react';
+import { usePopper } from 'react-popper';
+import { useDispatch } from 'react-redux';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
-import { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import {
-	openIsEditUserRolesDetailModalOpen,
+	openIsActivateUserRolesModalOpen,
 	openIsDeactivateUserRolesModalOpen,
+	openIsEditUserRolesDetailModalOpen,
 } from '../../slice';
 
 export default function RowMenu({ rowData }) {
@@ -32,6 +32,10 @@ export default function RowMenu({ rowData }) {
 
 	const handleDeactivateUser = () => {
 		dispatch(openIsDeactivateUserRolesModalOpen(rowData));
+	};
+
+	const handleActivateUser = () => {
+		dispatch(openIsActivateUserRolesModalOpen(rowData));
 	};
 
 	return (
@@ -79,28 +83,53 @@ export default function RowMenu({ rowData }) {
 								</button>
 							)}
 						</Menu.Item>
-						<Menu.Item>
-							{({ active }) => (
-								<button
-									type="button"
-									className="flex  w-full"
-									onClick={handleDeactivateUser}
-								>
-									<div
-										className={`${
-											active ? 'bg-[#F0F3F4]' : ''
-										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+						{rowData?.is_active ? (
+							<Menu.Item>
+								{({ active }) => (
+									<button
+										type="button"
+										className="flex  w-full"
+										onClick={handleDeactivateUser}
 									>
-										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
-											Deactivate User Role
-										</span>
-										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											this will not delete the user role but only disable it
-										</span>
-									</div>
-								</button>
-							)}
-						</Menu.Item>
+										<div
+											className={`${
+												active ? 'bg-[#F0F3F4]' : ''
+											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+										>
+											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
+												Deactivate User Role
+											</span>
+											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+												this will not delete the user role but only disable it
+											</span>
+										</div>
+									</button>
+								)}
+							</Menu.Item>
+						) : (
+							<Menu.Item>
+								{({ active }) => (
+									<button
+										type="button"
+										className="flex  w-full"
+										onClick={handleActivateUser}
+									>
+										<div
+											className={`${
+												active ? 'bg-[#F0F3F4]' : ''
+											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+										>
+											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#42931e]">
+												Activate User Role
+											</span>
+											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+												this will enable it
+											</span>
+										</div>
+									</button>
+								)}
+							</Menu.Item>
+						)}
 					</div>
 				</Menu.Items>
 			</Transition>

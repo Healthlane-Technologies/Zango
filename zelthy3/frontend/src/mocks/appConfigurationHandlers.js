@@ -31,7 +31,11 @@ export const appConfigurationHandlers = [
 						datetime_format: '%d/%m/%y %I:%M %p',
 						logo: null,
 						extra_config: null,
-						domains: ['domainame1.com', 'domainame2.com'],
+						domains: [
+							{ domain: 'domainame1.com', is_primary: true },
+							{ domain: 'domainame2.com', is_primary: false },
+							{ domain: 'domainame3.com', is_primary: false },
+						],
 					},
 					dropdown_options: {
 						timezones: [

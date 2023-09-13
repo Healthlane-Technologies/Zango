@@ -31,16 +31,44 @@ const AddNewUserForm = ({ closeModal }) => {
 	let initialValues = {
 		name: '',
 		email: '',
+		mobile: '',
 		password: '',
 		roles: [],
 	};
 
-	let validationSchema = Yup.object({
-		name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		password: Yup.string().required('Required'),
-		roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
-	});
+	let validationSchema = Yup.object().shape(
+		{
+			name: Yup.string().required('Required'),
+			email: Yup.string().when(['mobile'], {
+				is: (mobile) => {
+					if (!mobile) return true;
+				},
+				then: Yup.string().email('Invalid email address').required('Required'),
+				otherwise: Yup.string(),
+			}),
+			mobile: Yup.string().when(['email'], {
+				is: (email) => {
+					if (!email) return true;
+				},
+				then: Yup.string()
+					.min(10, 'Must be 10 digits')
+					.max(10, 'Must be 10 digits')
+					.required('Required'),
+				otherwise: Yup.string()
+					.min(10, 'Must be 10 digits')
+					.max(10, 'Must be 10 digits'),
+			}),
+			password: Yup.string().required('Required'),
+			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
+		},
+		[
+			['name'],
+			['mobile', 'email'],
+			['email', 'mobile'],
+			['password'],
+			['roles'],
+		]
+	);
 
 	let onSubmit = (values) => {
 		let tempValues = values;
@@ -120,6 +148,32 @@ const AddNewUserForm = ({ closeModal }) => {
 								{formik.touched.email && formik.errors.email ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.email}
+									</div>
+								) : null}
+							</div>
+							<div className="flex flex-col gap-[4px]">
+								<label
+									htmlFor="mobile"
+									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+								>
+									Mobile
+								</label>
+								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
+									<span className="font-lato text-[#6C747D]">+91</span>
+									<input
+										id="mobile"
+										name="mobile"
+										type="number"
+										onChange={formik.handleChange}
+										onBlur={formik.handleBlur}
+										value={formik.values.mobile}
+										className="font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+										placeholder="00000 00000"
+									/>
+								</div>
+								{formik.touched.mobile && formik.errors.mobile ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.mobile}
 									</div>
 								) : null}
 							</div>

@@ -1,16 +1,14 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import {
-	transformToFormData,
-	transformToFormDataOrder,
-} from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import * as Yup from 'yup';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsEditUserDetailModalOpen,
 	selectAppUserManagementData,
@@ -18,10 +16,6 @@ import {
 	selectIsEditUserDetailModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import MultiSelectField from '../../../../components/Form/MultiSelectField';
-import { useParams } from 'react-router-dom';
 
 const EditUserDetailsForm = ({ closeModal }) => {
 	let { appId } = useParams();
@@ -36,14 +30,36 @@ const EditUserDetailsForm = ({ closeModal }) => {
 	let initialValues = {
 		name: appUserManagementFormData?.name ?? '',
 		email: appUserManagementFormData?.email ?? '',
+		mobile: appUserManagementFormData?.mobile.slice(4) ?? '',
 		roles: appUserManagementFormData?.roles?.map((eachApp) => eachApp.id) ?? [],
 	};
 
-	let validationSchema = Yup.object({
-		name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
-	});
+	let validationSchema = Yup.object().shape(
+		{
+			name: Yup.string().required('Required'),
+			email: Yup.string().when(['mobile'], {
+				is: (mobile) => {
+					if (!mobile) return true;
+				},
+				then: Yup.string().email('Invalid email address').required('Required'),
+				otherwise: Yup.string(),
+			}),
+			mobile: Yup.string().when(['email'], {
+				is: (email) => {
+					if (!email) return true;
+				},
+				then: Yup.string()
+					.min(10, 'Must be 10 digits')
+					.max(10, 'Must be 10 digits')
+					.required('Required'),
+				otherwise: Yup.string()
+					.min(10, 'Must be 10 digits')
+					.max(10, 'Must be 10 digits'),
+			}),
+			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
+		},
+		[['name'], ['mobile', 'email'], ['email', 'mobile'], ['roles']]
+	);
 
 	let onSubmit = (values) => {
 		let tempValues = values;
@@ -126,6 +142,32 @@ const EditUserDetailsForm = ({ closeModal }) => {
 									</div>
 								) : null}
 							</div>
+							<div className="flex flex-col gap-[4px]">
+								<label
+									htmlFor="mobile"
+									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+								>
+									Mobile
+								</label>
+								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
+									<span className="font-lato text-[#6C747D]">+91</span>
+									<input
+										id="mobile"
+										name="mobile"
+										type="number"
+										onChange={formik.handleChange}
+										onBlur={formik.handleBlur}
+										value={formik.values.mobile}
+										className="font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+										placeholder="00000 00000"
+									/>
+								</div>
+								{formik.touched.mobile && formik.errors.mobile ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.mobile}
+									</div>
+								) : null}
+							</div>
 							<MultiSelectField
 								key="roles"
 								label="User Role"
@@ -144,7 +186,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Save</span>
 							</button>

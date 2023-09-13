@@ -11,6 +11,7 @@ import {
 	setAppUserRolesData,
 } from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
+import ActivateUserRolesModal from '../Models/ActivateUserRolesModal';
 import AddNewUserRolesModal from '../Models/AddNewUserRolesModal';
 import DeactivateUserRolesModal from '../Models/DeactivateUserRolesModal';
 import EditUserRolesDetailsModal from '../Models/EditUserDetailsRolesModal';
@@ -105,6 +106,7 @@ export default function AppUserRoles() {
 			<AddNewUserRolesModal />
 			<EditUserRolesDetailsModal />
 			<DeactivateUserRolesModal />
+			<ActivateUserRolesModal />
 		</>
 	);
 }

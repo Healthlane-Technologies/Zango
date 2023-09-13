@@ -6,6 +6,7 @@ export const appUserRolesSlice = createSlice({
 		isAddNewUserRolesModalOpen: false,
 		isEditUserRolesDetailModalOpen: false,
 		isDeactivateUserRolesModalOpen: false,
+		isActivateUserRolesModalOpen: false,
 		rerenderPage: false,
 		appUserRolesData: null,
 		appUserRolesFormData: null,
@@ -47,6 +48,17 @@ export const appUserRolesSlice = createSlice({
 			state.isDeactivateUserRolesModalOpen = false;
 			state.appUserRolesFormData = null;
 		},
+		toggleIsActivateUserRolesModalOpen: (state) => {
+			state.isActivateUserRolesModalOpen = !state.isActivateUserRolesModalOpen;
+		},
+		openIsActivateUserRolesModalOpen: (state, action) => {
+			state.isActivateUserRolesModalOpen = true;
+			state.appUserRolesFormData = action.payload;
+		},
+		closeIsActivateUserRolesModalOpen: (state) => {
+			state.isActivateUserRolesModalOpen = false;
+			state.appUserRolesFormData = null;
+		},
 		setAppUserRolesData: (state, action) => {
 			state.appUserRolesData = action.payload;
 			state.isAppUserRolesDataEmpty = action.payload?.roles?.records?.length
@@ -69,6 +81,9 @@ export const {
 	toggleIsDeactivateUserRolesModalOpen,
 	openIsDeactivateUserRolesModalOpen,
 	closeIsDeactivateUserRolesModalOpen,
+	toggleIsActivateUserRolesModalOpen,
+	openIsActivateUserRolesModalOpen,
+	closeIsActivateUserRolesModalOpen,
 	setAppUserRolesData,
 	toggleRerenderPage,
 } = appUserRolesSlice.actions;
@@ -81,6 +96,9 @@ export const selectIsEditUserRolesDetailModalOpen = (state) =>
 
 export const selectIsDeactivateUserRolesModalOpen = (state) =>
 	state.appUserRoles.isDeactivateUserRolesModalOpen;
+
+export const selectIsActivateUserRolesModalOpen = (state) =>
+	state.appUserRoles.isActivateUserRolesModalOpen;
 
 export const selectRerenderPage = (state) => state.appUserRoles.rerenderPage;
 

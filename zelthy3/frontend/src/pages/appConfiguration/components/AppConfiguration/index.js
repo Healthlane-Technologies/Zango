@@ -127,7 +127,7 @@ export default function AppConfiguration() {
 										{appConfigurationData?.app?.domains?.map((eachDomain) => {
 											return (
 												<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-													{eachDomain}
+													{eachDomain.domain}
 												</span>
 											);
 										})}

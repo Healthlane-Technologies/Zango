@@ -29,7 +29,9 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		description: appConfigurationData?.app?.description ?? '',
 		logo: appConfigurationData?.app?.logo ?? '',
 		fav_icon: appConfigurationData?.app?.fav_icon ?? '',
-		domains: appConfigurationData?.app?.domains ?? [''],
+		domains: appConfigurationData?.app?.domains?.map(
+			(eachDomain) => eachDomain.domain
+		) ?? [''],
 		timezone: appConfigurationData?.app?.timezone ?? '',
 		datetime_format: appConfigurationData?.app?.datetime_format ?? '',
 	};

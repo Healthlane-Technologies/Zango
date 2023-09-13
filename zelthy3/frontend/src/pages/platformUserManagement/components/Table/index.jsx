@@ -98,43 +98,7 @@ export default function Table({ tableData }) {
 					</span>
 				</div>
 			),
-			cell: (info) => (
-				// <div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-				// 	 {info.getValue().length > 3
-				// 		? info.getValue().map((eachApp, index) => {
-				// 				if (index < 3) {
-				// 					return (
-				// 						<span
-				// 							key={eachApp?.uuid}
-				// 							className="min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] text-[#5048ED]"
-				// 						>
-				// 							{eachApp?.name}
-				// 						</span>
-				// 					);
-				// 				}
-
-				// 				return (
-				// 					<span
-				// 						key={eachApp?.uuid}
-				// 						className="min-w-max text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#5048ED]"
-				// 					>
-				// 						+{info.getValue().length - 3} more
-				// 					</span>
-				// 				);
-				// 		  })
-				// 		: info.getValue().map((eachApp) => {
-				// 				return (
-				// 					<span
-				// 						key={eachApp?.uuid}
-				// 						className="min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] text-[#5048ED]"
-				// 					>
-				// 						{eachApp?.name}
-				// 					</span>
-				// 				);
-				// 		  })}
-				// </div>
-				<ListCell data={info.getValue()} />
-			),
+			cell: (info) => <ListCell data={info.getValue()} />,
 		}),
 		columnHelper.accessor((row) => row.created_at, {
 			id: 'created_at',
@@ -206,7 +170,7 @@ export default function Table({ tableData }) {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/auth/platform-users/?page=${
 					pageIndex + 1
-				}&page_size=${pageSize}%include_dropdown_options=true`,
+				}&page_size=${pageSize}&include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});
