@@ -4,6 +4,8 @@ from rest_framework import serializers
 from zelthy.apps.shared.tenancy.models import TenantModel, Domain, ThemesModel
 from zelthy.apps.appauth.models import UserRoleModel, AppUserModel
 
+from zelthy.api.platform.permissions.v1.serializers import PolicySerializer
+
 
 class DomainSerializerModel(serializers.ModelSerializer):
     class Meta:
@@ -13,11 +15,24 @@ class DomainSerializerModel(serializers.ModelSerializer):
 
 class TenantSerializerModel(serializers.ModelSerializer):
     domains = DomainSerializerModel(many=True, required=False)
+    domain_url = serializers.SerializerMethodField("get_domain_url")
+    datetime_format_display = serializers.SerializerMethodField(
+        "get_datetime_format_display"
+    )
 
     class Meta:
         model = TenantModel
         read_only_fields = ("name", "schema_name")
         fields = "__all__"
+
+    def get_domain_url(self, obj):
+        primary_domain = obj.get_primary_domain()
+        if primary_domain:
+            return primary_domain.domain
+        return None
+
+    def get_datetime_format_display(self, obj):
+        return obj.get_datetime_format_display()
 
     def update(self, instance, validated_data):
         instance = super(TenantSerializerModel, self).update(instance, validated_data)
@@ -42,6 +57,8 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
 
 class UserRoleSerializerModel(serializers.ModelSerializer):
+    attached_policies = serializers.SerializerMethodField()
+
     class Meta:
         model = UserRoleModel
         fields = [
@@ -51,12 +68,18 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
             "is_default",
             "no_of_users",
             "policies",
+            "attached_policies",
             "policy_groups",
             "created_at",
             "created_by",
             "modified_at",
             "modified_by",
         ]
+
+    def get_attached_policies(self, obj):
+        policies = obj.policies.all()
+        policy_serializer = PolicySerializer(policies, many=True)
+        return policy_serializer.data
 
     def update(self, instance, validated_data):
         if not validated_data.get("policies"):

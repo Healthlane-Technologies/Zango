@@ -1,3 +1,5 @@
+import json
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 
@@ -47,6 +49,28 @@ class AbstractZelthyUserModel(AbstractBaseUser, FullAuditMixin):
     )
     extra_data = JSONField(null=True)
     USERNAME_FIELD = "email"
+
+    class Meta:
+        abstract = True
+
+
+class AbstractOldPasswords(models.Model):
+    password = models.CharField(max_length=300)
+    password_date = models.DateField(
+        verbose_name="Password Change Date", auto_now_add=True
+    )
+    password_datetime = models.DateTimeField(
+        verbose_name="Password Change DateTime",
+        auto_now_add=True,
+        null=True,
+        blank=True,
+    )
+
+    def setPasswords(self, password):
+        self.password = json.dumps(password)
+
+    def getPasswords(self):
+        return json.loads(self.password)
 
     class Meta:
         abstract = True

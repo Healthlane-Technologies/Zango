@@ -11,8 +11,10 @@ from zelthy.core.api import (
 from zelthy.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
 from zelthy.apps.appauth.models import UserRoleModel, AppUserModel
+from zelthy.apps.permissions.models import PolicyModel
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.core.api.utils import ZelthyAPIPagination
+from zelthy.core.permissions import IsPlatformUserAllowedApp
 
 from .serializers import (
     TenantSerializerModel,
@@ -39,7 +41,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
 
             # Returning Only allowed apps
             if not platform_user.is_superadmin:
-                apps = platform_user.app
+                apps = platform_user.apps
 
             serializer = TenantSerializerModel(apps, many=True)
             success = True
@@ -89,6 +91,8 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
 
 
 class AppDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get_obj(self, **kwargs):
         obj = TenantModel.objects.get(uuid=kwargs.get("app_uuid"))
         return obj
@@ -160,11 +164,20 @@ class AppDetailViewAPIV1(ZelthyGenericPlatformAPIView):
 @method_decorator(set_app_schema_path, name="dispatch")
 class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
+    permission_classes = (IsPlatformUserAllowedApp,)
+
+    def get_dropdown_options(self):
+        options = {}
+        options["policies"] = [
+            {"id": t.id, "label": t.name}
+            for t in PolicyModel.objects.all().order_by("-modified_at")
+        ]
+        return options
 
     def get(self, request, *args, **kwargs):
         try:
+            include_dropdown_options = request.GET.get("include_dropdown_options")
             roles = UserRoleModel.objects.all().order_by("-created_at")
-
             paginated_roles = self.paginate_queryset(roles, request, view=self)
             serializer = UserRoleSerializerModel(paginated_roles, many=True)
             paginated_roles_data = self.get_paginated_response_data(serializer.data)
@@ -174,6 +187,8 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 "roles": paginated_roles_data,
                 "message": "All roles fetched successfully",
             }
+            if include_dropdown_options:
+                response["dropdown_options"] = self.get_dropdown_options()
             status = 200
         except Exception as e:
             success = False
@@ -210,6 +225,8 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class UserRoleDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get_obj(self, **kwargs):
         obj = UserRoleModel.objects.get(id=kwargs.get("role_id"))
         return obj
@@ -232,7 +249,10 @@ class UserRoleDetailViewAPIV1(ZelthyGenericPlatformAPIView):
         try:
             obj = self.get_obj(**kwargs)
             serializer = UserRoleSerializerModel(
-                instance=obj, data=request.data, partial=True
+                instance=obj,
+                data=request.data,
+                partial=True,
+                context={"request": request},
             )
             if serializer.is_valid():
                 serializer.save()
@@ -265,10 +285,11 @@ class UserRoleDetailViewAPIV1(ZelthyGenericPlatformAPIView):
 @method_decorator(set_app_schema_path, name="dispatch")
 class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
+    permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_dropdown_options(self):
         options = {}
-        options["user_roles"] = [
+        options["roles"] = [
             {"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()
         ]
         return options
@@ -303,9 +324,10 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             creation_result = AppUserModel.create_user(
                 name=data["name"],
                 email=data["email"],
-                mobile="",
+                mobile=data["mobile"],
                 password=data["password"],
                 role_ids=role_ids,
+                require_verification=False,
             )
             success = creation_result["success"]
             result = {"message": creation_result["message"]}
@@ -319,6 +341,8 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class UserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get_obj(self, **kwargs):
         obj = AppUserModel.objects.get(id=kwargs.get("user_id"))
         return obj
@@ -357,6 +381,8 @@ class UserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
 
 
 class ThemeViewAPIV1(ZelthyGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get_app_tenant(self):
         tenant_obj = TenantModel.objects.get(uuid=self.kwargs["app_uuid"])
         return tenant_obj
@@ -415,6 +441,8 @@ class ThemeViewAPIV1(ZelthyGenericPlatformAPIView):
 
 
 class ThemeDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get_obj(self, **kwargs):
         obj = ThemesModel.objects.get(
             tenant__uuid=kwargs.get("app_uuid"), id=kwargs.get("theme_id")

@@ -125,9 +125,6 @@ class TenantModel(TenantMixin, FullAuditMixin):
             fp.write("")  # Fetch from template
             fp.close()
 
-        # TODO: Create Default User Roles
-        # TODO: Create Default Theme
-
         self.status = "deployed"
         self.save()
 
@@ -151,10 +148,10 @@ class ThemesModel(FullAuditMixin):
     name = models.CharField(max_length=50)
     tenant = models.ForeignKey(TenantModel, on_delete=models.PROTECT)
     config = models.JSONField(null=True)
-    is_active = models.BooleanField(default=False)  # is_active
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
-        return
+        return f"{self.name} ({self.tenant.name})"
 
     def save(self, *args, **kwargs):
         # Get all other active themes with the same tenant

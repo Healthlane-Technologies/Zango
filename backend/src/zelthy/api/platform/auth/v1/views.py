@@ -6,6 +6,7 @@ from zelthy.core.api import (
 )
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.apps.shared.platformauth.models import PlatformUserModel
+from zelthy.apps.shared.tenancy.models import TenantModel
 from zelthy.core.permissions import IsSuperAdminPlatformUser
 
 from .serializers import PlatformUserSerializerModel
@@ -15,8 +16,18 @@ class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     permission_classes = (IsSuperAdminPlatformUser,)
     pagination_class = ZelthyAPIPagination
 
+    def get_dropdown_options(self):
+        options = {}
+        options["apps"] = [
+            {"id": str(t.uuid), "label": t.name}
+            for t in TenantModel.objects.all().exclude(schema_name="public")
+        ]
+        return options
+
     def get(self, request, *args, **kwargs):
         try:
+            print("request.GET: ", request.GET)
+            include_dropdown_options = request.GET.get("include_dropdown_options")
             platform_users = PlatformUserModel.objects.all().order_by("-modified_at")
             paginated_platform_users = self.paginate_queryset(
                 platform_users, request, view=self
@@ -30,6 +41,8 @@ class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 "platform_users": platform_users_data,
                 "message": "Platform user fetched successfully",
             }
+            if include_dropdown_options:
+                response["dropdown_options"] = self.get_dropdown_options()
             status = 200
 
         except Exception as e:

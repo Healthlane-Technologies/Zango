@@ -5,6 +5,7 @@ import re
 
 from django.conf import settings
 from django.db import connection
+from django.http import Http404
 
 # from zelthy.core.pluginbase1 import PluginBase, PluginSource
 
@@ -308,7 +309,8 @@ class Workspace:
                     if resolve:
                         match = pattern.pattern.regex.search(mod_url_path)
                         return pattern.callback, resolve
-                return  # return 404
+
+        raise Http404()
 
     def launch(self, params: dict) -> None:
         """
