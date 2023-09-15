@@ -48,7 +48,7 @@ USE_TZ = True
 
 
 # ROOT_URLCONF = '{{project_name}}.urls'
-STATICFILES_DIRS = (os.path.join(BASE_DIR, "assets"),)
+STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = "static/"
 

@@ -1,4 +1,7 @@
 import sys
+import os
+
+import zelthy
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -18,6 +21,9 @@ SHARED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.admin",
+    "crispy_forms",
+    "crispy_bootstrap5",
+    "debug_toolbar",
     # 'phonenumber_field',
     # 'django_otp',
     # 'django_otp.plugins.otp_static',
@@ -41,6 +47,8 @@ TENANT_APPS = [
     "zelthy.apps.permissions",
     "zelthy.apps.dynamic_models",
     "corsheaders",
+    "crispy_forms",
+    "crispy_bootstrap5",
     "debug_toolbar",
     # "cachalot",
 ]
@@ -75,6 +83,7 @@ MIDDLEWARE = [
 
 AUTHENTICATION_BACKENDS = (
     "zelthy.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
+    "zelthy.apps.appauth.auth_backend.AppUserModelBackend",
 )
 
 TEMPLATES = [
@@ -107,7 +116,6 @@ DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 MIGRATION_MODULES = {}
 RUNNING_ZMAKEMIGRATIONS = False
 
-SESSION_COOKIE_NAME = "zelthycookie"
 INTERNAL_IPS = [
     # ...
     "127.0.0.1",
@@ -128,3 +136,25 @@ CACHES = {
 # DEBUG_TOOLBAR_PANELS += ['cachalot.panels.CachalotPanel',]
 
 CACHALOT_ENABLED = False
+
+STATIC_URL = "static/"
+STATICFILES_DIRS = [os.path.join(os.path.dirname(zelthy.__file__), "assets")]
+
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = (
+    "ukcrisp",
+    "uni_form",
+    "bootstrap5",
+)
+
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+SESSION_COOKIE_NAME = "zelthycookie"
+SESSION_COOKIE_SECURE = False  # To be changed for prod settings
+CSRF_COOKIE_SECURE = False  # To be changed for prod settings
+
+LOGIN_URL = "/login"
+
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_NO_REPEAT_DAYS = 180
+PASSWORD_RESET_DAYS = 90

@@ -1,14 +1,20 @@
-import uuid
+from datetime import date, timedelta
+
 from django.db import models
 from django.db.models import Q
-from zelthy.core.model_mixins import FullAuditMixin
-from zelthy.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
-
-from django.contrib.auth.models import User
-from django.db.models import JSONField
+from django.conf import settings
+from django.contrib.auth.hashers import check_password
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
+
+
+from zelthy.core.model_mixins import FullAuditMixin
+from zelthy.apps.shared.platformauth.abstract_model import (
+    AbstractZelthyUserModel,
+    AbstractOldPasswords,
+)
+
 from ..permissions.models import PolicyModel, PolicyGroupModel
 
 # from .perm_mixin import PolicyQsMixin
@@ -23,7 +29,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
     policy_groups = models.ManyToManyField(
         PolicyGroupModel, related_name="role_policy_groups", blank=True
     )
-    config = JSONField(null=True, blank=True)
+    config = models.JSONField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
 
@@ -50,7 +56,6 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
-    user = models.OneToOneField(User, related_name="app_user", on_delete=models.CASCADE)
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
         PolicyGroupModel, related_name="user_policy_groups"
@@ -88,6 +93,19 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         roles = UserRoleModel.objects.filter(id__in=role_ids)
         self.roles.add(*roles)
 
+    def check_password_validity(self, password):
+        """
+        Does not allow a password from within PASSWORD_NO_REPEAT_DAYS
+        """
+        minDate = date.today() - timedelta(settings.PASSWORD_NO_REPEAT_DAYS)
+        old_pwds = self.oldpasswords_set.all().filter(password_date__gte=minDate)
+        matchFound = False
+        for p in old_pwds:
+            if check_password(password, p.getPasswords()):
+                matchFound = True
+                break
+        return matchFound
+
     @classmethod
     def create_user(
         cls,
@@ -124,18 +142,20 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                             name=name,
                             email=email,
                             mobile=mobile,
-                            user=User.objects.create(
-                                username=str(uuid.uuid4()), is_active=True
-                            ),
                         )
                         app_user.add_roles(role_ids)
                         app_user.set_password(password)
-                        app_user.user.set_unusable_password()
                         if require_verification:
                             app_user.is_active = False
-                        ##Add old password logic
+                        else:
+                            app_user.is_active = True
+
+                        if not force_password_reset:
+                            old_password_obj = OldPasswords.objects.create(user=user)
+                            old_password_obj.setPasswords(user.password)
+                            old_password_obj.save()
+
                         app_user.save()
-                        app_user.user.save()
                         success = True
                         message = "App User created successfully."
             except Exception as e:
@@ -152,14 +172,11 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                 user_query = user_query | Q(email=email)
             if mobile:
                 user_query = user_query | Q(mobile=mobile)
-
-            user = AppUserModel.objects.filter(user_query).exclude(id=self.id)
-            print("user: ", user)
-            if user.exists():
-                message = (
-                    "Another user already exists matching the provided email or mobile"
-                )
-                return {"success": False, "message": message}
+            if user_query:
+                user = AppUserModel.objects.filter(user_query).exclude(id=self.id)
+                if user.exists():
+                    message = "Another user already exists matching the provided email or mobile"
+                    return {"success": False, "message": message}
 
             password = data.get("password")
             if password:
@@ -168,7 +185,6 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                     return {"success": False, "message": message}
 
                 self.set_password(password)
-                ##Add old password logic, force_reset
 
             if email:
                 self.email = email
@@ -184,6 +200,9 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                 self.add_roles(role_ids)
 
             is_active = data.get("is_active", self.is_active)
+            if isinstance(is_active, str):
+                is_active = True if is_active == "true" else False
+
             self.is_active = is_active
 
             self.save()
@@ -192,3 +211,33 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         except Exception as e:
             message = str(e)
         return {"success": success, "message": message}
+
+    def has_role_step(self, request):
+        """
+        Checks if role step is part of user login process
+        If only one role then don't show
+        show if 0 or >1 roles
+        """
+        roles = self.roles.filter(is_active=True)
+        if roles.count() == 1:
+            return False
+        return True
+
+    def has_password_reset_step(self, request, days=90):
+        """
+        Checks if password reset is required as part of login process
+        If password was not changed in last 90 days, force password reset
+        """
+        if days == -1:
+            return False
+        old_passwords = self.oldpasswords_set.all().filter(
+            password_date__gt=date.today() - timedelta(days)
+        )
+        print(old_passwords)
+        if old_passwords.count() > 0:
+            return False
+        return True
+
+
+class OldPasswords(AbstractOldPasswords):
+    user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)

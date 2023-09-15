@@ -1,0 +1,25 @@
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% if wizard.steps.current == 'auth' %}
+  <h3>{% trans "Login to your account" %}</h3>
+{% endif %}
+{% if wizard.steps.current == 'token' %}   
+  <h3>{% trans "Enter your secret token" %}</h3>
+{% endif %}
+
+
+<form action="" method="post">
+  {% csrf_token %}
+	<table>
+	  {{ wizard.management_form }}
+	  {% crispy wizard.form %}    
+	</table>
+</form>
+
+<style>
+	#id_phone_otp-bypass_2fa_user_consent, #id_token-bypass_2fa_user_consent {
+		margin-top: 5px;
+    	margin-right: 2px;
+	}
+</style>

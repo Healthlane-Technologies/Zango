@@ -13,6 +13,7 @@ from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
 from zelthy.apps.permissions.models import PolicyModel, PermissionsModel
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.core.api.utils import ZelthyAPIPagination
+from zelthy.core.permissions import IsPlatformUserAllowedApp
 
 from .serializers import PolicySerializer
 
@@ -20,6 +21,7 @@ from .serializers import PolicySerializer
 @method_decorator(set_app_schema_path, name="dispatch")
 class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
+    permission_classes = (IsPlatformUserAllowedApp,)
 
     def get(self, request, *args, **kwargs):
         try:
@@ -68,6 +70,8 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class PolicyDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get_obj(self, **kwargs):
         obj = PolicyModel.objects.get(id=kwargs.get("policy_id"))
         return obj
@@ -89,7 +93,7 @@ class PolicyDetailViewAPIV1(ZelthyGenericPlatformAPIView):
     def put(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
-            serializer = PolicySerializer(instance=obj, data=request.data)
+            serializer = PolicySerializer(instance=obj, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 success = True
