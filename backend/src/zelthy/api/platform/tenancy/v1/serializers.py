@@ -44,7 +44,6 @@ class TenantSerializerModel(serializers.ModelSerializer):
         domains_to_be_removed.delete()
 
         # Creating new domains
-        # TODO: Validare is_primary
         for domain in domains:
             domain_obj, created = Domain.objects.get_or_create(
                 domain=domain, tenant=instance

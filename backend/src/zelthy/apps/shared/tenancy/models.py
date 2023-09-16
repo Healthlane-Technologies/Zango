@@ -2,6 +2,8 @@ import uuid
 import os
 from collections import namedtuple
 
+import cookiecutter.main
+
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
@@ -114,16 +116,22 @@ class TenantModel(TenantMixin, FullAuditMixin):
         # Create workspace Folder
         project_base_dir = settings.BASE_DIR
 
-        workspace_dir = os.path.join(project_base_dir, "workspaces", self.name)
+        workspace_dir = os.path.join(project_base_dir, "workspaces")
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir)
 
-        files = ["settings.json", "plugins.json"]
+        # Creating app folder with the initial files
+        template_directory = os.path.join(
+            os.path.dirname(__file__), "workspace_folder_template"
+        )
+        cookiecutter_context = {"app_name": self.name}
 
-        for f in files:
-            fp = open(os.path.join(workspace_dir, f), "w")
-            fp.write("")  # Fetch from template
-            fp.close()
+        cookiecutter.main.cookiecutter(
+            template_directory,
+            extra_context=cookiecutter_context,
+            output_dir=workspace_dir,
+            no_input=True,
+        )
 
         self.status = "deployed"
         self.save()
