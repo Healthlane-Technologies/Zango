@@ -1,5 +1,7 @@
-
 import sys
+import os
+
+import zelthy
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -10,17 +12,18 @@ ALLOWED_HOSTS = []
 # Application definition
 
 
-
 SHARED_APPS = [
-    'django_tenants',  # mandatory
+    "django_tenants",  # mandatory
     # 'zelthy',
-    
-    'django.contrib.contenttypes',
-    'django.contrib.auth',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.admin',
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.admin",
+    "crispy_forms",
+    "crispy_bootstrap5",
+    "debug_toolbar",
     # 'phonenumber_field',
     # 'django_otp',
     # 'django_otp.plugins.otp_static',
@@ -29,83 +32,86 @@ SHARED_APPS = [
     # 'session_security',
     # 'django_celery_beat',
     # 'django_celery_results',
-    'rest_framework',
-    'knox',
+    "rest_framework",
+    "knox",
     # 'nocaptcha_recaptcha',
-    'zelthy.apps.shared.tenancy',
-    'zelthy.apps.shared.platformauth',
-     
+    "zelthy.apps.shared.tenancy",
+    "zelthy.apps.shared.platformauth",
 ]
 
 
 TENANT_APPS = [
     # The following Django contrib apps must be in TENANT_APPS
-    'django.contrib.contenttypes',
-    'zelthy.apps.appauth',
-    'zelthy.apps.permissions',
-    'zelthy.apps.dynamic_models',
-    'corsheaders',
+    "django.contrib.contenttypes",
+    "zelthy.apps.appauth",
+    "zelthy.apps.permissions",
+    "zelthy.apps.dynamic_models",
+    "corsheaders",
+    "crispy_forms",
+    "crispy_bootstrap5",
     "debug_toolbar",
     # "cachalot",
-
 ]
 
-INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
+INSTALLED_APPS = list(SHARED_APPS) + [
+    app for app in TENANT_APPS if app not in SHARED_APPS
+]
 
 TENANT_MODEL = "tenancy.TenantModel"
 TENANT_DOMAIN_MODEL = "tenancy.Domain"
 
 
-
 MIDDLEWARE = [
-    'zelthy.middleware.tenant.ZelthyTenantMainMiddleware',    
+    "zelthy.middleware.tenant.ZelthyTenantMainMiddleware",
     # 'zelthy.middleware.context_middleware.SimpleContextMiddleware',
-    # 'zelthy.middleware.tenant_url_switch.url_switch_middleware',        
+    # 'zelthy.middleware.tenant_url_switch.url_switch_middleware',
     # 'django_tenants.middleware.main.TenantMainMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',    
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'zelthy.middleware.request.RequestMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "zelthy.middleware.request.RequestMiddleware",
     # 'zelthy.middleware.middleware.SetUserRoleMiddleWare',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 
+AUTHENTICATION_BACKENDS = (
+    "zelthy.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
+    "zelthy.apps.appauth.auth_backend.AppUserModelBackend",
+)
+
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': False,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": False,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
             # 'builtins': [
             #     'django.contrib.staticfiles',  # Add this line
-            # ],           
-            'loaders': [
-                'zelthy.template_loader.AppTemplateLoader',
-                'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',                                             
-            ]
+            # ],
+            "loaders": [
+                "zelthy.template_loader.AppTemplateLoader",
+                "django.template.loaders.filesystem.Loader",
+                "django.template.loaders.app_directories.Loader",
+            ],
         },
     },
 ]
 
 
-
-DATABASE_ROUTERS = (
-    'django_tenants.routers.TenantSyncRouter',
-)
+DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 
 MIGRATION_MODULES = {}
 RUNNING_ZMAKEMIGRATIONS = False
@@ -113,21 +119,42 @@ RUNNING_ZMAKEMIGRATIONS = False
 INTERNAL_IPS = [
     # ...
     "127.0.0.1",
-    
     # ...
 ]
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',  # Using DB 1 for cache
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # Using DB 1 for cache
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
-        'TIMEOUT': 300,  # Default timeout is 5 minutes, but adjust as needed
+        "TIMEOUT": 300,  # Default timeout is 5 minutes, but adjust as needed
     }
 }
 
 # DEBUG_TOOLBAR_PANELS += ['cachalot.panels.CachalotPanel',]
 
 CACHALOT_ENABLED = False
+
+STATIC_URL = "static/"
+STATICFILES_DIRS = [os.path.join(os.path.dirname(zelthy.__file__), "assets")]
+
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = (
+    "ukcrisp",
+    "uni_form",
+    "bootstrap5",
+)
+
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+SESSION_COOKIE_NAME = "zelthycookie"
+SESSION_COOKIE_SECURE = False  # To be changed for prod settings
+CSRF_COOKIE_SECURE = False  # To be changed for prod settings
+
+LOGIN_URL = "/login"
+
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_NO_REPEAT_DAYS = 180
+PASSWORD_RESET_DAYS = 90
