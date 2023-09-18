@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from django.views.generic.base import TemplateView
+from django.contrib.auth.views import LoginView
 from rest_framework.views import APIView
-from zelthy3.backend.core.api import ZelthySessionPlatformAPIView, get_api_response
-
+from zelthy.core.api import ZelthySessionPlatformAPIView, get_api_response
 
 
 # Create your views here.
@@ -10,7 +10,8 @@ class PlatformUserLoginView(TemplateView):
     """
     View to render the login page html.
     """
-    template_name = 'platform_login.html'
+
+    template_name = "platform_login.html"
 
 
 class PlatformUserLoginAPIV1(APIView):
@@ -18,16 +19,15 @@ class PlatformUserLoginAPIV1(APIView):
 
 
 class PlatformUserProfileAPIV1(ZelthySessionPlatformAPIView):
-    """
-    
-    """
+    """ """
+
     def get_profile_data(self, request):
         data = {}
-        data['name'] = request.user.platform_user.name
-        data['email'] = request.user.platform_user.email
-        data['mobile'] = request.user.platform_user.mobile
-        data['role'] = 'Platform User'
-        data['user_uuid'] = request.user.username
+        data["name"] = request.user.platform_user.name
+        data["email"] = request.user.platform_user.email
+        data["mobile"] = request.user.platform_user.mobile
+        data["role"] = "Platform User"
+        data["user_uuid"] = request.user.username
         return data
 
     def get(self, request, *args, **kwargs):
