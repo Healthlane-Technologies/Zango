@@ -2,12 +2,14 @@ import { Menu, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 import { usePopper } from 'react-popper';
 import { useDispatch } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import { transformToFormData } from '../../../../utils/helper';
 import { openIsEditThemeModalOpen, toggleRerenderPage } from '../../slice';
 
 export default function EachThemeMenu({ data }) {
+	let { appId } = useParams();
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -39,7 +41,7 @@ export default function EachThemeMenu({ data }) {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/02248bb4-e120-48fa-bb64-a1c6ee032cb5/themes/${data?.id}/`,
+				url: `/api/v1/apps/${appId}/themes/${data?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,

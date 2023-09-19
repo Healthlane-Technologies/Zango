@@ -6,6 +6,8 @@ export const appUserManagementSlice = createSlice({
 		isAddNewUserModalOpen: false,
 		isEditUserDetailModalOpen: false,
 		isDeactivateUserModalOpen: false,
+		isActivateUserModalOpen: false,
+		isResetPasswordModalOpen: false,
 		rerenderPage: false,
 		appUserManagementData: null,
 		appUserManagementFormData: null,
@@ -44,6 +46,28 @@ export const appUserManagementSlice = createSlice({
 			state.isDeactivateUserModalOpen = false;
 			state.appUserManagementFormData = null;
 		},
+		toggleIsActivateUserModalOpen: (state) => {
+			state.isActivateUserModalOpen = !state.isActivateUserModalOpen;
+		},
+		openIsActivateUserModalOpen: (state, action) => {
+			state.isActivateUserModalOpen = true;
+			state.appUserManagementFormData = action.payload;
+		},
+		closeIsActivateUserModalOpen: (state) => {
+			state.isActivateUserModalOpen = false;
+			state.appUserManagementFormData = null;
+		},
+		toggleIsResetPasswordModalOpen: (state) => {
+			state.isResetPasswordModalOpen = !state.isResetPasswordModalOpen;
+		},
+		openIsResetPasswordModalOpen: (state, action) => {
+			state.isResetPasswordModalOpen = true;
+			state.appUserManagementFormData = action.payload;
+		},
+		closeIsResetPasswordModalOpen: (state) => {
+			state.isResetPasswordModalOpen = false;
+			state.appUserManagementFormData = null;
+		},
 		setAppUserManagementData: (state, action) => {
 			state.appUserManagementData = action.payload;
 		},
@@ -63,6 +87,12 @@ export const {
 	toggleIsDeactivateUserModalOpen,
 	openIsDeactivateUserModalOpen,
 	closeIsDeactivateUserModalOpen,
+	toggleIsActivateUserModalOpen,
+	openIsActivateUserModalOpen,
+	closeIsActivateUserModalOpen,
+	toggleIsResetPasswordModalOpen,
+	openIsResetPasswordModalOpen,
+	closeIsResetPasswordModalOpen,
 	setAppUserManagementData,
 	toggleRerenderPage,
 } = appUserManagementSlice.actions;
@@ -75,6 +105,12 @@ export const selectIsEditUserDetailModalOpen = (state) =>
 
 export const selectIsDeactivateUserModalOpen = (state) =>
 	state.appUserManagement.isDeactivateUserModalOpen;
+
+export const selectIsActivateUserModalOpen = (state) =>
+	state.appUserManagement.isActivateUserModalOpen;
+
+export const selectIsResetPasswordModalOpen = (state) =>
+	state.appUserManagement.isResetPasswordModalOpen;
 
 export const selectRerenderPage = (state) =>
 	state.appUserManagement.rerenderPage;

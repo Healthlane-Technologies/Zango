@@ -1,5 +1,4 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Editor } from '@monaco-editor/react';
 import { Formik } from 'formik';
 import { Fragment } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,53 +6,46 @@ import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import useApi from '../../../../hooks/useApi';
+import { transformToFormData } from '../../../../utils/helper';
 import {
-	closeIsAddPolicyModalOpen,
-	selectIsAddPolicyModalOpen,
+	closeIsResetPasswordModalOpen,
+	selectIsResetPasswordModalOpen,
+	selectPlatformUserManagementData,
+	selectPlatformUserManagementFormData,
 	toggleRerenderPage,
 } from '../../slice';
 
-const AddPolicyForm = ({ closeModal }) => {
+const ResetPasswordForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
+	const platformUserManagementFormData = useSelector(
+		selectPlatformUserManagementFormData
+	);
 
+	const platformUserManagementData = useSelector(
+		selectPlatformUserManagementData
+	);
 	const triggerApi = useApi();
 	let initialValues = {
-		name: '',
-		description: '',
-		statement: '',
+		password: '',
 	};
 
-	let validationSchema = Yup.object({
-		name: Yup.string().required('Required'),
-		description: Yup.string().required('Required'),
-		statement: Yup.string()
-			.test('statement', 'Invalid JSON format', (value) => {
-				try {
-					JSON.parse(value);
-					return true;
-				} catch (error) {
-					return false;
-				}
-			})
-			.required('Required'),
+	let validationSchema = Yup.object().shape({
+		password: Yup.string().required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		const formData = new FormData();
-		formData.set('name', tempValues?.name);
-		formData.set('description', tempValues?.description);
-		formData.set('statement', JSON.stringify(tempValues?.statement));
 
-		let dynamicFormData = formData;
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/policies/`,
-				type: 'POST',
+				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
+				notify: true,
 			});
 
 			if (success && response) {
@@ -77,79 +69,27 @@ const AddPolicyForm = ({ closeModal }) => {
 						className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto"
 						onSubmit={formik.handleSubmit}
 					>
-						<div className="flex grow flex-col gap-[24px]">
+						<div className="flex grow flex-col gap-[16px]">
 							<div className="flex flex-col gap-[4px]">
 								<label
-									htmlFor="name"
+									htmlFor="password"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
 								>
-									Policy Name
+									Password
 								</label>
 								<input
-									id="name"
-									name="name"
-									type="text"
+									id="password"
+									name="password"
+									type="password"
 									onChange={formik.handleChange}
 									onBlur={formik.handleBlur}
-									value={formik.values.name}
+									value={formik.values.password}
 									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Enter name name"
+									placeholder="Enter password"
 								/>
-								{formik.touched.name && formik.errors.name ? (
+								{formik.touched.password && formik.errors.password ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.name}
-									</div>
-								) : null}
-							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="description"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Policy Description
-								</label>
-								<textarea
-									id="description"
-									name="description"
-									type="text"
-									onChange={formik.handleChange}
-									onBlur={formik.handleBlur}
-									value={formik.values.description}
-									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Enter description Description"
-								/>
-								{formik.touched.description && formik.errors.description ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.description}
-									</div>
-								) : null}
-							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="statement"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Policy JSON
-								</label>
-								<div className="flex min-h-[400px] grow rounded-[6px] border border-[#DDE2E5]">
-									<Editor
-										height="100%"
-										className="w-100"
-										language="json"
-										value={formik.values.statement}
-										options={{
-											readOnly: false,
-											formatOnPaste: true,
-											formatOnType: true,
-										}}
-										onChange={(value) => {
-											formik.setFieldValue('statement', value);
-										}}
-									/>
-								</div>
-								{formik.touched.statement && formik.errors.statement ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.statement}
+										{formik.errors.password}
 									</div>
 								) : null}
 							</div>
@@ -160,7 +100,7 @@ const AddPolicyForm = ({ closeModal }) => {
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								disabled={!(formik.isValid && formik.dirty)}
 							>
-								<span>Add Policy</span>
+								<span>Reset Password</span>
 							</button>
 						</div>
 					</form>
@@ -170,17 +110,17 @@ const AddPolicyForm = ({ closeModal }) => {
 	);
 };
 
-export default function AddPolicyModal() {
-	const isAddPolicyModalOpen = useSelector(selectIsAddPolicyModalOpen);
+export default function ResetPasswordModal() {
+	const isResetPasswordModalOpen = useSelector(selectIsResetPasswordModalOpen);
 	const dispatch = useDispatch();
 
 	function closeModal() {
-		dispatch(closeIsAddPolicyModalOpen());
+		dispatch(closeIsResetPasswordModalOpen());
 	}
 
 	return (
 		<>
-			<Transition appear show={isAddPolicyModalOpen} as={Fragment}>
+			<Transition appear show={isResetPasswordModalOpen} as={Fragment}>
 				<Dialog as="div" className="relative z-10" onClose={closeModal}>
 					<Transition.Child
 						as={Fragment}
@@ -218,11 +158,11 @@ export default function AddPolicyModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Add Policy
+												Reset Password
 											</h4>
 										</div>
 									</Dialog.Title>
-									<AddPolicyForm closeModal={closeModal} />
+									<ResetPasswordForm closeModal={closeModal} />
 								</Dialog.Panel>
 							</div>
 						</div>

@@ -43,8 +43,8 @@ export default function Table({ tableData }) {
 				);
 			},
 		}),
-		columnHelper.accessor((row) => row.policies, {
-			id: 'policies',
+		columnHelper.accessor((row) => row.attached_policies, {
+			id: 'attached_policies',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">

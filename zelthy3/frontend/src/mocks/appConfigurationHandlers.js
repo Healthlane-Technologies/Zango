@@ -1,6 +1,4 @@
 import { rest } from 'msw';
-import moment from 'moment';
-import { faker } from '@faker-js/faker';
 
 export const appConfigurationHandlers = [
 	rest.get('/api/v1/apps/:appId', (req, res, ctx) => {
@@ -29,6 +27,7 @@ export const appConfigurationHandlers = [
 						language: null,
 						date_format: null,
 						datetime_format: '%d/%m/%y %I:%M %p',
+						datetime_format_display: 'August 05 2006, 3:05 PM',
 						logo: null,
 						extra_config: null,
 						domains: [

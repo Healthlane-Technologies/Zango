@@ -1,47 +1,48 @@
 import { Dialog, Transition } from '@headlessui/react';
 import { Formik } from 'formik';
-import { get } from 'lodash';
 import { Fragment } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
+import { ReactComponent as ActivateUserRolesIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-import { transformToFormData } from '../../../../utils/helper';
+import { transformToFormDataOrder } from '../../../../utils/helper';
 import {
-	closeIsAddNewUserRolesModalOpen,
-	selectAppUserRolesData,
-	selectIsAddNewUserRolesModalOpen,
+	closeIsActivateUserModalOpen,
+	selectAppUserManagementFormData,
+	selectIsActivateUserModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
 
-const AddNewUserRolesForm = ({ closeModal }) => {
+const ActivateUserForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
-	const appUserRolesData = useSelector(selectAppUserRolesData);
+
+	const appUserManagementFormData = useSelector(
+		selectAppUserManagementFormData
+	);
+
 	const triggerApi = useApi();
 	let initialValues = {
-		name: '',
-		policies: [],
+		is_active: true,
 	};
 
 	let validationSchema = Yup.object({
-		name: Yup.string().required('Required'),
-		// policies: Yup.array()
-		// 	.min(1, 'Minimun one is required')
-		// 	.required('Required'),
+		is_active: Yup.boolean()
+			.required('Required')
+			.oneOf([true], 'Activate User'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
 
-		let dynamicFormData = transformToFormData(tempValues);
+		let dynamicFormData = transformToFormDataOrder(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/roles/`,
-				type: 'POST',
+				url: `/api/v1/apps/${appId}/users/${appUserManagementFormData?.id}/`,
+				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
 			});
@@ -68,48 +69,25 @@ const AddNewUserRolesForm = ({ closeModal }) => {
 						onSubmit={formik.handleSubmit}
 					>
 						<div className="flex grow flex-col gap-[16px]">
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="name"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Role Name
-								</label>
-								<input
-									id="name"
-									name="name"
-									type="text"
-									onChange={formik.handleChange}
-									onBlur={formik.handleBlur}
-									value={formik.values.name}
-									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Enter role name"
-								/>
-								{formik.touched.name && formik.errors.name ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.name}
-									</div>
-								) : null}
+							<div className="flex grow flex-col items-center justify-center gap-[16px]">
+								<ActivateUserRolesIcon />
+								<p className="max-w-[201px] text-center font-lato text-[16px] leading-[24px] tracking-[0.2px] text-[#212429]">
+									Sure you want to activate {appUserManagementFormData?.name}?
+								</p>
 							</div>
-							<MultiSelectField
-								key="policies"
-								label="Policy"
-								name="policies"
-								id="policies"
-								placeholder="Select policies"
-								value={get(formik.values, 'policies', [])}
-								optionsDataName="policies"
-								optionsData={appUserRolesData?.dropdown_options?.policies ?? []}
-								formik={formik}
-							/>
+							<p className="flex flex-col font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
+								<span>Note:</span>
+								<span>
+									This will enable it and can be disabled anytime later.
+								</span>
+							</p>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
 								type="submit"
-								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
+								className="flex w-full items-center justify-center rounded-[4px] bg-[#42931e] px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 							>
-								<span>Create User Role</span>
+								<span>Activate User</span>
 							</button>
 						</div>
 					</form>
@@ -119,19 +97,20 @@ const AddNewUserRolesForm = ({ closeModal }) => {
 	);
 };
 
-export default function AddNewUserRolesModal() {
-	const isAddNewUserRolesModalOpen = useSelector(
-		selectIsAddNewUserRolesModalOpen
+export default function ActivateUserModal() {
+	const appUserManagementFormData = useSelector(
+		selectAppUserManagementFormData
 	);
+	const isActivateUserModalOpen = useSelector(selectIsActivateUserModalOpen);
 	const dispatch = useDispatch();
 
 	function closeModal() {
-		dispatch(closeIsAddNewUserRolesModalOpen());
+		dispatch(closeIsActivateUserModalOpen());
 	}
 
 	return (
 		<>
-			<Transition appear show={isAddNewUserRolesModalOpen} as={Fragment}>
+			<Transition appear show={isActivateUserModalOpen} as={Fragment}>
 				<Dialog as="div" className="relative z-10" onClose={closeModal}>
 					<Transition.Child
 						as={Fragment}
@@ -169,11 +148,11 @@ export default function AddNewUserRolesModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Create New User Role
+												Activate {appUserManagementFormData?.name}
 											</h4>
 										</div>
 									</Dialog.Title>
-									<AddNewUserRolesForm closeModal={closeModal} />
+									<ActivateUserForm closeModal={closeModal} />
 								</Dialog.Panel>
 							</div>
 						</div>

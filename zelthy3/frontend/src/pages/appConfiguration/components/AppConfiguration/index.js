@@ -154,10 +154,12 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										{appConfigurationData?.app?.datetime_format}
-										<span className="text-[#A3ABB1]">
-											(August 05 2006, 3:05 PM)
-										</span>
+										{appConfigurationData?.app?.datetime_format}{' '}
+										{appConfigurationData?.app?.datetime_format_display ? (
+											<span className="text-[#A3ABB1]">
+												({appConfigurationData?.app?.datetime_format_display})
+											</span>
+										) : null}
 									</span>
 								</td>
 							</tr>

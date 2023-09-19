@@ -18,15 +18,16 @@ import {
 } from '../../slice';
 
 const ViewPolicyForm = ({ closeModal }) => {
+	const appPoliciesManagementFormData = useSelector(
+		selectAppPoliciesManagementFormData
+	);
 	return (
 		<div className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto">
 			<div className="flex grow flex-col gap-[24px]">
 				<div className="flex grow flex-col gap-[24px]">
-					<div className="font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
-						{
-							'{    permissions: [    { type: "dataModel",        name: "patient",        actions: ["view", "edit"],        attributes: {only: ["Field 1", "Field 2"]},        records: {filter: object.clinic == currentUser.clinic},        accessTime: "9:00-17:00"    }],    configurations: {        expiry: "26/12/23"}'
-						}
-					</div>
+					<pre className="font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
+						{JSON.stringify(appPoliciesManagementFormData?.statement, null, 4)}
+					</pre>
 				</div>
 			</div>
 			<div className="sticky bottom-0 flex flex-col  items-end gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">

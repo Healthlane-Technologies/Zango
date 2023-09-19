@@ -40,17 +40,13 @@ export default function Table({ tableData }) {
 						<span className="min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 							{info.getValue()}
 						</span>
-						{info.row.original?.status ? (
-							<span
-								className={`w-fit min-w-[77px] rounded-[15px] px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
-									{ active: 'bg-[#E4F9F2]', inactive: 'bg-[#FBE0DD]' }[
-										info.row.original?.status
-									]
-								}`}
-							>
-								{info.row.original?.status}
-							</span>
-						) : null}
+						<span
+							className={`w-fit min-w-[77px] rounded-[15px] px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
+								info.row.original?.is_active ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
+							}`}
+						>
+							{info.row.original?.is_active ? 'Active' : 'Inactive'}
+						</span>
 					</div>
 				);
 			},

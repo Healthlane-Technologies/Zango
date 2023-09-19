@@ -10,9 +10,11 @@ import {
 	setAppUserManagementData,
 } from '../../slice';
 import BreadCrumbs from '../BreadCrumbs';
+import ActivateUserModal from '../Models/ActivateUserModal';
 import AddNewUserModal from '../Models/AddNewUserModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
 import EditUserDetailsModal from '../Models/EditUserDetailsModal';
+import ResetPasswordModal from '../Models/ResetPasswordModal';
 import Table from '../Table';
 
 export default function UserManagement() {
@@ -72,6 +74,8 @@ export default function UserManagement() {
 			<AddNewUserModal />
 			<EditUserDetailsModal />
 			<DeactivateUserModal />
+			<ActivateUserModal />
+			<ResetPasswordModal />
 		</>
 	);
 }

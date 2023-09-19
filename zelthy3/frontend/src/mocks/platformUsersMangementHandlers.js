@@ -21,7 +21,7 @@ const newApp = () => {
 		name: 'App ' + faker.number.int({ min: 1, max: 10 }),
 		description: faker.lorem.sentences(2),
 		tenant_type: 'app',
-		status: faker.helpers.shuffle(['staged', 'deployed']),
+		is_active: faker.datatype.boolean(),
 		deployed_on: null,
 		suspended_on: null,
 		deleted_on: null,
@@ -42,7 +42,7 @@ const newUser = () => {
 		apps: makeApps(faker.number.int({ min: 1, max: 10 })),
 		is_superadmin: false,
 		last_login: faker.date.past(),
-		status: faker.helpers.shuffle(['active', 'inactive'])[0],
+		is_active: faker.datatype.boolean(),
 		created_at: faker.date.past(),
 	};
 };

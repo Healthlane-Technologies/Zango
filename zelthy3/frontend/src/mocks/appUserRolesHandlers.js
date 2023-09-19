@@ -45,7 +45,7 @@ const newUserRole = () => {
 		config: null,
 		is_active: faker.datatype.boolean(),
 		is_default: faker.datatype.boolean(),
-		policies: makePolices(faker.number.int({ min: 1, max: 10 })),
+		attached_policies: makePolices(faker.number.int({ min: 1, max: 10 })),
 		no_of_users: faker.number.int({ min: 1, max: 10 }),
 	};
 };

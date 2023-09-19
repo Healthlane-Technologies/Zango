@@ -8,9 +8,11 @@ import {
 	selectRerenderPage,
 	setPlatformUserManagementData,
 } from '../../slice';
+import ActivateUserModal from '../Models/ActivateUserModal';
 import AddNewUserModal from '../Models/AddNewUserModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
 import EditUserDetailsModal from '../Models/EditUserDetailsModal';
+import ResetPasswordModal from '../Models/ResetPasswordModal';
 import Table from '../Table';
 
 export default function PlatformUserManagement() {
@@ -73,6 +75,8 @@ export default function PlatformUserManagement() {
 			<AddNewUserModal />
 			<EditUserDetailsModal />
 			<DeactivateUserModal />
+			<ActivateUserModal />
+			<ResetPasswordModal />
 		</>
 	);
 }

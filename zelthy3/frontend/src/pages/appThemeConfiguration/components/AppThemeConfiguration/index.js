@@ -4,6 +4,10 @@ import { useParams } from 'react-router-dom';
 import { ReactComponent as AddThemeIcon } from '../../../../assets/images/svg/add-theme-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import {
+	selectAppConfigurationData,
+	setAppConfigurationData,
+} from '../../../appConfiguration/slice';
+import {
 	openIsAddThemeModalOpen,
 	selectAppThemeConfigurationData,
 	selectRerenderPage,
@@ -17,6 +21,7 @@ import EachTheme from './EachTheme';
 export default function AppThemeConfiguration() {
 	let { appId } = useParams();
 	const rerenderPage = useSelector(selectRerenderPage);
+	const appConfigurationData = useSelector(selectAppConfigurationData);
 
 	const appThemeConfigurationData = useSelector(
 		selectAppThemeConfigurationData
@@ -28,11 +33,30 @@ export default function AppThemeConfiguration() {
 		dispatch(openIsAddThemeModalOpen());
 	};
 
-	function updateAppConfigurationData(value) {
+	function updateAppThemeConfigurationData(value) {
 		dispatch(setAppThemeConfigurationData(value));
 	}
 
+	function updateAppConfigurationData(value) {
+		dispatch(setAppConfigurationData(value));
+	}
+
 	const triggerApi = useApi();
+
+	useEffect(() => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}`,
+				type: 'GET',
+				loader: true,
+			});
+			if (success && response) {
+				updateAppConfigurationData(response);
+			}
+		};
+
+		makeApiCall();
+	}, []);
 
 	useEffect(() => {
 		const makeApiCall = async () => {
@@ -42,7 +66,7 @@ export default function AppThemeConfiguration() {
 				loader: true,
 			});
 			if (success && response) {
-				updateAppConfigurationData(response);
+				updateAppThemeConfigurationData(response);
 			}
 		};
 
@@ -68,7 +92,7 @@ export default function AppThemeConfiguration() {
 				<div className="flex grow flex-col gap-[20px] pl-[40px] pr-[48px]">
 					<div className="flex items-end gap-[24px]">
 						<h3 className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
-							App Name
+							{appConfigurationData?.app?.name}
 						</h3>
 					</div>
 					<div className="complete-hidden-scroll-style grid grid-cols-1 items-stretch justify-start gap-[26px] overflow-y-auto pb-[29px] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">

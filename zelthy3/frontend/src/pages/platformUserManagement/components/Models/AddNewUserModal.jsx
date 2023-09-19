@@ -25,12 +25,14 @@ const AddNewUserForm = ({ closeModal }) => {
 	let initialValues = {
 		name: '',
 		email: '',
+		password: '',
 		apps: [],
 	};
 
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
+		password: Yup.string().required('Required'),
 		apps: Yup.array().min(1, 'Minimun one is required').required('Required'),
 	});
 
@@ -115,6 +117,29 @@ const AddNewUserForm = ({ closeModal }) => {
 								{formik.touched.email && formik.errors.email ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.email}
+									</div>
+								) : null}
+							</div>
+							<div className="flex flex-col gap-[4px]">
+								<label
+									htmlFor="password"
+									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+								>
+									Password
+								</label>
+								<input
+									id="password"
+									name="password"
+									type="password"
+									onChange={formik.handleChange}
+									onBlur={formik.handleBlur}
+									value={formik.values.password}
+									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+									placeholder="Enter password"
+								/>
+								{formik.touched.password && formik.errors.password ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.password}
 									</div>
 								) : null}
 							</div>
