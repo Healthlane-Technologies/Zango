@@ -41,7 +41,7 @@ const ResetPasswordForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}`,
+				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,

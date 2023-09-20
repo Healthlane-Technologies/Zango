@@ -11,7 +11,7 @@ const range = (len) => {
 
 const newApp = () => {
 	return {
-		id: faker.number.int(1000),
+		id: faker.number.int({ min: 1, max: 10 }),
 		schema_name: faker.internet.displayName(),
 		created_at: faker.date.past(),
 		created_by: faker.person.fullName(),
@@ -125,6 +125,14 @@ export const platformUsersMangementHandlers = [
 							{
 								id: 4,
 								label: 'Apps 4',
+							},
+							{
+								id: 5,
+								label: 'Apps 5',
+							},
+							{
+								id: 6,
+								label: 'Apps 6',
 							},
 						],
 					},

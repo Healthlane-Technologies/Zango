@@ -34,7 +34,8 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 	let initialValues = {
 		name: appUserRolesFormData?.name ?? '',
 		policies:
-			appUserRolesFormData?.policies?.map((eachApp) => eachApp.id) ?? [],
+			appUserRolesFormData?.attached_policies?.map((eachApp) => eachApp.id) ??
+			[],
 	};
 
 	let validationSchema = Yup.object({

@@ -38,9 +38,6 @@ const AddNewUserForm = ({ closeModal }) => {
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
 		let dynamicFormData = transformToFormData(tempValues);
 

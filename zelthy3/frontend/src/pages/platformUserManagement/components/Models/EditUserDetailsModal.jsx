@@ -30,7 +30,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 	let initialValues = {
 		name: platformUserManagementFormData?.name ?? '',
 		email: platformUserManagementFormData?.email ?? '',
-		phone: platformUserManagementFormData?.phone ?? '',
 		apps:
 			platformUserManagementFormData?.apps?.map((eachApp) => eachApp.id) ?? [],
 	};
@@ -38,20 +37,17 @@ const EditUserDetailsForm = ({ closeModal }) => {
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string().min(9, 'Must be 9 digits').max(9, 'Must be 9 digits'),
+		apps: Yup.array().min(1, 'Minimun one is required').required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}`,
+				url: `/api/v1/auth/platform-users/${platformUserManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
@@ -125,32 +121,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 									</div>
 								) : null}
 							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="phone"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Phone (optional)
-								</label>
-								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
-									<span className="font-lato text-[#6C747D]">+91</span>
-									<input
-										id="phone"
-										name="phone"
-										type="number"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.phone}
-										className="font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-										placeholder="000000000"
-									/>
-								</div>
-								{formik.touched.phone && formik.errors.phone ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.phone}
-									</div>
-								) : null}
-							</div>
 							<MultiSelectField
 								key="apps"
 								label="Apps Access"
@@ -169,7 +139,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
+								// disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Save</span>
 							</button>
