@@ -8,7 +8,6 @@ import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { ReactComponent as TableSyncIcon } from '../../../../assets/images/svg/sync-icon.svg';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
@@ -17,6 +16,7 @@ import {
 	selectAppPermissionsManagementData,
 	setAppPermissionsManagementData,
 } from '../../slice';
+import SyncPermissions from '../SyncPermissions';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
@@ -140,7 +140,6 @@ export default function Table({ tableData }) {
 
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
-		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/permissions/?page=${
@@ -150,7 +149,6 @@ export default function Table({ tableData }) {
 				loader: true,
 			});
 			if (success && response) {
-				console.log(response);
 				updateAppPermissionsManagementData(response);
 			}
 		};
@@ -172,17 +170,7 @@ export default function Table({ tableData }) {
 							placeholder="Search Users by name / ID / role(s)"
 						/>
 					</div>
-					<div className="flex items-center gap-[16px]">
-						<button type="button" className="flex items-center gap-[12px]">
-							<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
-								Sync Permission
-							</span>
-							<TableSyncIcon className="h-[20px] min-h-[20px] w-[20px] min-w-[20px]" />
-						</button>
-						<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-							last synced 2 min ago
-						</span>
-					</div>
+					<SyncPermissions />
 					{/* <TableFilterIcon />
 					<TableColumnFilterIcon /> */}
 				</div>

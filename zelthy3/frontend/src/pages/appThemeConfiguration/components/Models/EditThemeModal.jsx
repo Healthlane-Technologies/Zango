@@ -267,7 +267,7 @@ export default function EditThemeModal() {
 	return (
 		<>
 			<Transition appear show={isEditThemeModalOpen} as={Fragment}>
-				<Dialog as="div" className="relative z-10" onClose={closeModal}>
+				<Dialog as="div" className="relative z-10" onClose={() => {}}>
 					<Transition.Child
 						as={Fragment}
 						enter="ease-in-out duration-700"

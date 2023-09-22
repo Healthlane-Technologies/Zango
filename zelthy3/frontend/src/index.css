@@ -225,12 +225,14 @@ input[type='number'] {
 
 .small-device-height-fix {
 	max-height: 100vh;
-	max-height: calc((var(--vh, 1vh) * 100) - 84px);
+	max-height: calc(
+		(var(--vh, 1vh) * 100) - var(--navHeight) - var(--footerHeight)
+	);
 }
 
 .small-device-height-fix2 {
-	max-height: 100vh;
-	max-height: calc((var(--vh, 1vh) * 100) - 49px);
+	/* max-height: 100vh; */
+	max-height: calc((var(--vh, 1vh) * 100) - var(--navHeight));
 }
 
 @layer components {

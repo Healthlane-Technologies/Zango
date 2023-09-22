@@ -5,8 +5,8 @@ import 'react-dates/initialize';
 import 'react-dates/lib/css/_datepicker.css';
 import { usePopper } from 'react-popper';
 import { FixedSizeList as List } from 'react-window';
-import { ReactComponent as FormSelectSearchCloseIcon } from '../../assets/images/svg/form-select-search-close-icon.svg';
 import { ReactComponent as FormSelectDropdownIcon } from '../../assets/images/svg/form-select-dropdown-icon.svg';
+import { ReactComponent as FormSelectSearchCloseIcon } from '../../assets/images/svg/form-select-search-close-icon.svg';
 
 const SelectField = ({
 	label,
@@ -23,7 +23,6 @@ const SelectField = ({
 
 	const [searchTerm, setSearchTerm] = useState('');
 
-	console.log('value', value);
 	const [selected, setSelected] = useState(
 		optionsData.find((eachData) => eachData.id === value) || {
 			label: placeholder,

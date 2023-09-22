@@ -47,7 +47,7 @@ export default function EachTheme({ data }) {
 					</span>
 					<button
 						type="button"
-						className={`rounded-[4px] bg-[${config?.button?.background}] p-[11px]`}
+						className={`rounded-[4px] bg-[${config?.button?.background}] cursor-default p-[11px]`}
 						style={{
 							backgroundColor: config?.button?.background,
 							borderRadius: `${config?.button?.border_radius}px`,

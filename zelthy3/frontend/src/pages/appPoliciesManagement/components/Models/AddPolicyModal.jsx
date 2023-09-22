@@ -181,7 +181,7 @@ export default function AddPolicyModal() {
 	return (
 		<>
 			<Transition appear show={isAddPolicyModalOpen} as={Fragment}>
-				<Dialog as="div" className="relative z-10" onClose={closeModal}>
+				<Dialog as="div" className="relative z-10" onClose={() => {}}>
 					<Transition.Child
 						as={Fragment}
 						enter="ease-in-out duration-700"

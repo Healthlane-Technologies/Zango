@@ -10,30 +10,36 @@ import useApi from '../../../../hooks/useApi';
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsUpdatePolicyModalOpen,
+	selectAppTaskManagementData,
+	selectAppTaskManagementFormData,
 	selectIsUpdatePolicyModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
 
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import { useParams } from 'react-router-dom';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 
 const UpdatePolicyForm = ({ closeModal }) => {
 	let { appId } = useParams();
+	const appTaskManagementData = useSelector(selectAppTaskManagementData);
+
+	const appTaskManagementFormData = useSelector(
+		selectAppTaskManagementFormData
+	);
 	const dispatch = useDispatch();
 
 	const triggerApi = useApi();
 	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
+		policies:
+			appTaskManagementFormData?.attached_policies?.map(
+				(eachApp) => eachApp.id
+			) ?? [],
 	};
 
 	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
+		policies: Yup.array()
+			.min(1, 'Minimun one is required')
 			.required('Required'),
 	});
 
@@ -47,7 +53,7 @@ const UpdatePolicyForm = ({ closeModal }) => {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
+				url: `/api/v1/apps/${appId}/tasks/${appTaskManagementFormData?.id}/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
@@ -86,7 +92,7 @@ const UpdatePolicyForm = ({ closeModal }) => {
 											</td>
 											<td className="w-full pl-[16px]">
 												<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-													Task 1
+													{appTaskManagementFormData?.name}
 												</span>
 											</td>
 										</tr>
@@ -98,36 +104,26 @@ const UpdatePolicyForm = ({ closeModal }) => {
 											</td>
 											<td className="w-full pl-[16px]">
 												<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-													5045
+													{appTaskManagementFormData?.id}
 												</span>
 											</td>
 										</tr>
 									</tbody>
 								</table>
 							</div>
-							<div className="flex flex-col gap-[4px]">
-								<label
-									htmlFor="policy"
-									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-								>
-									Policy
-								</label>
-								<input
-									id="policy"
-									name="policy"
-									type="text"
-									onChange={formik.handleChange}
-									onBlur={formik.handleBlur}
-									value={formik.values.policy}
-									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-									placeholder="Select policy"
-								/>
-								{formik.touched.policy && formik.errors.policy ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
-										{formik.errors.policy}
-									</div>
-								) : null}
-							</div>
+							<MultiSelectField
+								key="policies"
+								label="Policy"
+								name="policies"
+								id="policies"
+								placeholder="Select policies"
+								value={get(formik.values, 'policies', [])}
+								optionsDataName="policies"
+								optionsData={
+									appTaskManagementData?.dropdown_options?.policies ?? []
+								}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
@@ -156,7 +152,7 @@ export default function UpdatePolicyModal() {
 	return (
 		<>
 			<Transition appear show={isUpdatePolicyModalOpen} as={Fragment}>
-				<Dialog as="div" className="relative z-10" onClose={closeModal}>
+				<Dialog as="div" className="relative z-10" onClose={() => {}}>
 					<Transition.Child
 						as={Fragment}
 						enter="ease-in-out duration-700"

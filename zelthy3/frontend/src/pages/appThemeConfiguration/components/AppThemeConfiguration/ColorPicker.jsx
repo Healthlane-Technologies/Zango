@@ -17,7 +17,6 @@ export default function ColorPicker({ data }) {
 	const opacityContentRef = useRef(null);
 
 	useEffect(() => {
-		console.log('changed', color, opacity);
 		formik.setFieldValue(id, color);
 	}, [color, opacity]);
 

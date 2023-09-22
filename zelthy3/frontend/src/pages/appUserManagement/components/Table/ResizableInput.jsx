@@ -6,12 +6,12 @@ const ResizableInput = ({ table }) => {
 
 	useEffect(() => {
 		setText((table.getState().pagination.pageIndex + 1).toString());
-	}, []);
+	}, [table.getState().pagination.pageIndex]);
 
 	return (
 		<input
 			type="number"
-			value={table.getState().pagination.pageIndex + 1}
+			value={text}
 			onChange={(e) => {
 				const page = e.target.value ? Number(e.target.value) - 1 : 0;
 				table.setPageIndex(page);

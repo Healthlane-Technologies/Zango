@@ -17,6 +17,7 @@ import {
 	selectAppTaskManagementData,
 	setAppTaskManagementData,
 } from '../../slice';
+import SyncTask from '../SyncTask';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
@@ -63,8 +64,8 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.policies, {
-			id: 'policies',
+		columnHelper.accessor((row) => row.attached_policies, {
+			id: 'attached_policies',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
@@ -73,6 +74,23 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => <ListCell data={info.getValue()} />,
+		}),
+		columnHelper.accessor((row) => row.schedule, {
+			id: 'schedule',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						Schedule (IST)
+					</span>
+				</div>
+			),
+			cell: (info) => (
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+						{info.getValue()}
+					</span>
+				</div>
+			),
 		}),
 	];
 
@@ -115,15 +133,15 @@ export default function Table({ tableData }) {
 
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
-		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/tasks/?page=${pageIndex + 1}&page_size=${pageSize}&include_dropdown_options=true`,
+				url: `/api/v1/apps/${appId}/tasks/?page=${
+					pageIndex + 1
+				}&page_size=${pageSize}&include_dropdown_options=true`,
 				type: 'GET',
 				loader: true,
 			});
 			if (success && response) {
-				console.log(response);
 				updateAppTaskManagementData(response);
 			}
 		};
@@ -145,6 +163,7 @@ export default function Table({ tableData }) {
 							placeholder="Search Users by name / ID / role(s)"
 						/>
 					</div>
+					<SyncTask />
 					{/* <TableFilterIcon />
 					<TableColumnFilterIcon /> */}
 				</div>

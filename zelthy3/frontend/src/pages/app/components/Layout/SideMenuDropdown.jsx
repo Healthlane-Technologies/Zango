@@ -4,9 +4,17 @@ import { Menu, Transition } from '@headlessui/react';
 import { ReactComponent as EachSideMenuIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import { ReactComponent as SidemenuArrowIcon } from '../../../../assets/images/svg/sidemenu-arrow-icon.svg';
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 export default function SideMenuDropdown({ label, Icon, sublinks }) {
+	const location = useLocation();
+	let pathnameArray = location.pathname.split('/').filter((each) => each);
+	let allSublinks = sublinks
+		?.map(({ url }) => url.split('/').filter((each) => each))
+		.flat(Infinity);
+	let isCurrentPage = allSublinks.some(
+		(eachLink) => pathnameArray.indexOf(eachLink) > -1
+	);
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -28,7 +36,11 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 					className="flex w-full justify-center focus:outline-none"
 					ref={(ref) => setReferenceElement(ref)}
 				>
-					<div className="flex cursor-pointer flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4]">
+					<div
+						className={`flex cursor-pointer flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+							isCurrentPage ? 'bg-[#d3c9a4]' : 'bg-transparent'
+						}`}
+					>
 						<Icon />
 						<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 							{label}

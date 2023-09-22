@@ -1,9 +1,9 @@
-import { usePopper } from 'react-popper';
-import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { ReactComponent as NavSearchDownArrowIcon } from '../../../../../assets/images/svg/nav-select-down-arrow.svg';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import { usePopper } from 'react-popper';
 import { NavLink } from 'react-router-dom';
+import { ReactComponent as NavSearchDownArrowIcon } from '../../../../../assets/images/svg/nav-select-down-arrow.svg';
+import { ReactComponent as SelectDynamicCheckIcon } from '../../../../../assets/images/svg/select-dynamic-check-icon.svg';
 
 export default function SelectField({ label }) {
 	const [referenceElement, setReferenceElement] = useState(null);
@@ -71,13 +71,22 @@ export default function SelectField({ label }) {
 														active ? '' : ''
 													} relative flex w-full flex-col rounded-[2px]`}
 												>
-													<span
-														className={`block font-lato text-[#FFFFFF] ${
-															isActive ? 'font-bold' : ''
-														}`}
-													>
-														Apps
-													</span>
+													<div className="flex gap-[12px]">
+														<div className="min-w-[12px]">
+															<SelectDynamicCheckIcon
+																className={`${
+																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+																}`}
+															/>
+														</div>
+														<span
+															className={`block font-lato text-[#FFFFFF] ${
+																isActive ? 'font-bold' : ''
+															}`}
+														>
+															Apps
+														</span>
+													</div>
 												</div>
 											);
 										}}
@@ -97,13 +106,22 @@ export default function SelectField({ label }) {
 														active ? '' : ''
 													} relative flex w-full flex-col rounded-[2px]`}
 												>
-													<span
-														className={`block font-lato text-[#FFFFFF] ${
-															isActive ? 'font-bold' : ''
-														}`}
-													>
-														User Management
-													</span>
+													<div className="flex gap-[12px]">
+														<div className="min-w-[12px]">
+															<SelectDynamicCheckIcon
+																className={`${
+																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+																}`}
+															/>
+														</div>
+														<span
+															className={`block font-lato text-[#FFFFFF] ${
+																isActive ? 'font-bold' : ''
+															}`}
+														>
+															User Management
+														</span>
+													</div>
 												</div>
 											);
 										}}

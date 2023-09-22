@@ -150,7 +150,6 @@ const EditPolicyConfigure = ({ closeModal }) => {
 export default function ViewPolicyModal() {
 	const isViewPolicyModalOpen = useSelector(selectIsViewPolicyModalOpen);
 	const isEditViewPolicy = useSelector(selectIsEditViewPolicy);
-	console.log('isEditViewPolicy', isEditViewPolicy);
 	const dispatch = useDispatch();
 
 	function closeModal() {
@@ -164,7 +163,7 @@ export default function ViewPolicyModal() {
 	return (
 		<>
 			<Transition appear show={isViewPolicyModalOpen} as={Fragment}>
-				<Dialog as="div" className="relative z-10" onClose={closeModal}>
+				<Dialog as="div" className="relative z-10" onClose={() => {}}>
 					<Transition.Child
 						as={Fragment}
 						enter="ease-in-out duration-700"

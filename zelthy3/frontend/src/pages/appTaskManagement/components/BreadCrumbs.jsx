@@ -8,16 +8,14 @@ export default function BreadCrumbs() {
 				.split('/')
 				.filter((each, index) => each && index !== 1)
 				.map((each, index, filterBreadCrumb) => {
-					console.log(each, index);
-
 					let url = filterBreadCrumb.slice(0, index + 1).join('/');
-					console.log(url);
 					let suffixSlash = index === filterBreadCrumb.length - 1 ? ' / ' : '';
 					let prefixSlash = index < filterBreadCrumb.length - 2 ? ' / ' : '';
+
 					return (
 						<Link
 							key={url}
-							to={url}
+							to={{ 0: '/platform/apps/', 1: '', 2: '', 3: url }[index]}
 							className={`font-lato text-[10px] font-black uppercase tracking-[2px] ${
 								suffixSlash ? 'text-[#212429]' : 'text-[#ababae]'
 							}`}

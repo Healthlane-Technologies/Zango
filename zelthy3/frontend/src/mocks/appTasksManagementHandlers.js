@@ -11,7 +11,7 @@ const range = (len) => {
 
 const newPolicy = () => {
 	return {
-		id: faker.number.int(1000),
+		id: faker.number.int({ min: 1, max: 10 }),
 		schema_name: faker.internet.displayName(),
 		created_at: faker.date.past(),
 		created_by: faker.person.fullName(),
@@ -39,7 +39,8 @@ const newTask = () => {
 		id: faker.number.int({ min: 1000, max: 9999 }),
 		name: 'Task ' + faker.number.int({ min: 1, max: 10 }),
 		email: faker.internet.email().toLowerCase(),
-		policies: makePolices(faker.number.int({ min: 1, max: 10 })),
+		attached_policies: makePolices(faker.number.int({ min: 1, max: 10 })),
+		schedule: '* * * * *',
 		is_superadmin: false,
 		last_login: faker.date.past(),
 		status: faker.helpers.shuffle(['active', 'inactive'])[0],
@@ -87,14 +88,6 @@ export const appTasksManagementHandlers = [
 			(pageIndex + 1) * pageSize
 		);
 
-		console.log(
-			'slicedData',
-			typeof pageIndex,
-			typeof pageSize,
-			pageIndex,
-			pageSize,
-			slicedData
-		);
 		return res(
 			ctx.delay(500),
 			ctx.status(200),
@@ -109,7 +102,12 @@ export const appTasksManagementHandlers = [
 						records: slicedData,
 					},
 					dropdown_options: {
-						apps: [],
+						policies: [
+							{ id: 1, label: 'Policy 1' },
+							{ id: 2, label: 'Policy 2' },
+							{ id: 3, label: 'Policy 3' },
+							{ id: 4, label: 'Policy 4' },
+						],
 					},
 					message: 'Platform user fetched successfully',
 				},
@@ -125,6 +123,19 @@ export const appTasksManagementHandlers = [
 				success: true,
 				response: {
 					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
+
+	rest.post('/api/v1/apps/:appId/tasks/sync/', (req, res, ctx) => {
+		return res(
+			ctx.delay(1000),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					message: 'Tasks synced successfully',
 				},
 			})
 		);

@@ -1,34 +1,14 @@
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
-import toast from 'react-hot-toast';
 import { usePopper } from 'react-popper';
 import { useDispatch } from 'react-redux';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
-import Notifications from '../../../../components/Notifications';
 import {
 	openIsActivateUserModalOpen,
 	openIsDeactivateUserModalOpen,
 	openIsEditUserDetailModalOpen,
 	openIsResetPasswordModalOpen,
 } from '../../slice';
-
-const notify = () =>
-	toast.custom(
-		(t) => (
-			<Notifications
-				type="success"
-				toastRef={t}
-				title={'Reset Password Link Sent'}
-				description={
-					'A reset password link has been shared with Darrell Steward via email.'
-				}
-			/>
-		),
-		{
-			duration: 5000,
-			position: 'bottom-left',
-		}
-	);
 
 export default function RowMenu({ rowData }) {
 	const [referenceElement, setReferenceElement] = useState(null);

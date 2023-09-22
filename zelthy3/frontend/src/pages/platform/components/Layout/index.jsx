@@ -4,13 +4,41 @@ import ProfileMenu from './ProfileMenu';
 
 import { ReactComponent as ZelthyIcon } from '../../../../assets/images/svg/zelthy-icon.svg';
 import NavSearchForm from './NavSearchForm';
+import { useRef } from 'react';
+import { useLayoutEffect } from 'react';
+import debounce from 'just-debounce-it';
 
 export default function Layout({ children }) {
+	const navRef = useRef(null);
+	const footerRef = useRef(null);
+
 	useWindowSizeHeight();
+
+	useLayoutEffect(() => {
+		function setElementOffsetHeight() {
+			document.documentElement.style.setProperty(
+				'--navHeight',
+				`${navRef?.current?.offsetHeight}px`
+			);
+			document.documentElement.style.setProperty(
+				'--footerHeight',
+				`${footerRef?.current?.offsetHeight}px`
+			);
+		}
+
+		const heightChange = debounce(() => setElementOffsetHeight());
+
+		window.addEventListener('resize', heightChange);
+		heightChange();
+		return () => window.removeEventListener('resize', heightChange);
+	}, []);
 
 	return (
 		<>
-			<nav className="flex items-center justify-between border-b-[1px] border-[#DDE2E5] py-[8px] pl-[24px] pr-[40px]">
+			<nav
+				ref={navRef}
+				className="flex items-center justify-between border-b-[1px] border-[#DDE2E5] py-[8px] pl-[24px] pr-[40px]"
+			>
 				<div className="flex items-center justify-between gap-[48px]">
 					<Link to="/platform">
 						<ZelthyIcon />
@@ -24,7 +52,10 @@ export default function Layout({ children }) {
 			<main className="small-device-height-fix flex grow overflow-y-auto">
 				{children}
 			</main>
-			<footer className="flex items-center justify-center gap-[8px] border-t-[1px] border-[#DDE2E5] p-[8px]">
+			<footer
+				ref={footerRef}
+				className="flex items-center justify-center gap-[8px] border-t-[1px] border-[#DDE2E5] p-[8px]"
+			>
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
 					V 2.0
 				</span>

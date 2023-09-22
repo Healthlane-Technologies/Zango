@@ -9,7 +9,7 @@ import {
 	openIsRemoveAllPoliciesModalOpen,
 } from '../../slice';
 
-export default function RowMenu({ className }) {
+export default function RowMenu({ rowData }) {
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -27,11 +27,11 @@ export default function RowMenu({ className }) {
 	const dispatch = useDispatch();
 
 	const handleEditUserDetails = () => {
-		dispatch(openIsUpdatePolicyModalOpen());
+		dispatch(openIsUpdatePolicyModalOpen(rowData));
 	};
 
 	const handleDeactivateUser = () => {
-		dispatch(openIsRemoveAllPoliciesModalOpen());
+		dispatch(openIsRemoveAllPoliciesModalOpen(rowData));
 	};
 
 	return (
@@ -70,10 +70,10 @@ export default function RowMenu({ className }) {
 										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
 									>
 										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											Update Policy
+											Update Task
 										</span>
 										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											edit, delete policy
+											edit, delete policy, schedule
 										</span>
 									</div>
 								</button>
@@ -83,8 +83,9 @@ export default function RowMenu({ className }) {
 							{({ active }) => (
 								<button
 									type="button"
-									className="flex  w-full"
+									className="flex w-full disabled:opacity-[0.38]"
 									onClick={handleDeactivateUser}
+									disabled={!rowData?.attached_policies?.length}
 								>
 									<div
 										className={`${

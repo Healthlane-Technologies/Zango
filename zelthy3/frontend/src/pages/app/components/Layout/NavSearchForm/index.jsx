@@ -1,13 +1,9 @@
-import * as Yup from 'yup';
-import { useState } from 'react';
-import { useCallback } from 'react';
-import { useEffect } from 'react';
-import { useFormikContext, Formik, useField } from 'formik';
+import { Formik, useFormikContext } from 'formik';
 import debounce from 'just-debounce-it';
-import useApi from '../../../../../hooks/useApi';
-import { get } from 'lodash';
-
+import { useCallback, useEffect, useState } from 'react';
+import * as Yup from 'yup';
 import { ReactComponent as SearchIcon } from '../../../../../assets/images/svg/search-icon.svg';
+import useApi from '../../../../../hooks/useApi';
 import SelectField from './SelectField';
 
 const AutoSave = ({ debounceMs }) => {
@@ -49,11 +45,9 @@ export default function NavSearchForm() {
 			// 	type: 'GET',
 			// 	loader: true,
 			// });
-
 			// if (success && response) {
 			// 	console.log([...response.data]);
 			// }
-			console.log('API CALL', values);
 		};
 
 		makeApiCall();

@@ -8,10 +8,7 @@ export default function BreadCrumbs() {
 				.split('/')
 				.filter((each, index) => each && index !== 1)
 				.map((each, index, filterBreadCrumb) => {
-					console.log(each, index);
-
 					let url = filterBreadCrumb.slice(0, index + 1).join('/');
-					console.log(url);
 					let suffixSlash = index === filterBreadCrumb.length - 1 ? ' / ' : '';
 					let prefixSlash = index < filterBreadCrumb.length - 2 ? ' / ' : '';
 					return (

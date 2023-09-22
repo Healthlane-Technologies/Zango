@@ -87,14 +87,6 @@ export const platformUsersMangementHandlers = [
 			(pageIndex + 1) * pageSize
 		);
 
-		console.log(
-			'slicedData',
-			typeof pageIndex,
-			typeof pageSize,
-			pageIndex,
-			pageSize,
-			slicedData
-		);
 		return res(
 			ctx.delay(500),
 			ctx.status(200),

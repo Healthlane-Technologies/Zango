@@ -133,7 +133,6 @@ export default function Table({ tableData }) {
 
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
-		console.log('pagination', pagination);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/roles/?page=${
@@ -143,7 +142,6 @@ export default function Table({ tableData }) {
 				loader: true,
 			});
 			if (success && response) {
-				console.log(response);
 				updateAppUserRolesData(response);
 			}
 		};

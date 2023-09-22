@@ -23,11 +23,6 @@ export default function AppUserRoles() {
 	const rerenderPage = useSelector(selectRerenderPage);
 	const isAppUserRolesDataEmpty = useSelector(selectIsAppUserRolesDataEmpty);
 
-	console.log(
-		'isAppUserRolesDataEmpty',
-		isAppUserRolesDataEmpty,
-		appUserRolesData
-	);
 	const [isEmpty, setisEmpty] = useState(
 		appUserRolesData?.roles?.records?.length ? false : true
 	);

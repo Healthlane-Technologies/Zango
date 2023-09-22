@@ -114,7 +114,7 @@ export default function DeactivateUserRolesModal() {
 	return (
 		<>
 			<Transition appear show={isDeactivateUserRolesModalOpen} as={Fragment}>
-				<Dialog as="div" className="relative z-10" onClose={closeModal}>
+				<Dialog as="div" className="relative z-10" onClose={() => {}}>
 					<Transition.Child
 						as={Fragment}
 						enter="ease-in-out duration-700"
