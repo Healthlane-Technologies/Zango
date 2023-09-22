@@ -83,5 +83,5 @@ if USE_S3:
     DEFAULT_FILE_STORAGE = "zelthy.core.storage_utils.MediaS3Boto3Storage"
     AWS_QUERYSTRING_EXPIRE = 600
 else:
-    MEDIA_URL = "/workspaces/"
+    MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "workspaces")
