@@ -10,7 +10,7 @@ from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
 
 from zelthy.core.model_mixins import FullAuditMixin
-from zelthy.core.storage_utils import RandomUniqueFileName
+from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
 
 from .utils import TIMEZONES, DATEFORMAT, DATETIMEFORMAT
 
@@ -90,10 +90,8 @@ class TenantModel(TenantMixin, FullAuditMixin):
         null=True,
         blank=True,
     )
-    logo = models.FileField(
-        upload_to=RandomUniqueFileName, verbose_name="Logo", null=True, blank=True
-    )
-    # TODO: Add Fav icon file field
+    logo = ZFileField(verbose_name="Logo", null=True, blank=True)
+    fav_icon = ZFileField(verbose_name="Fav Icon", null=True, blank=True)
     extra_config = models.JSONField(null=True, blank=True)
 
     def __str__(self):
