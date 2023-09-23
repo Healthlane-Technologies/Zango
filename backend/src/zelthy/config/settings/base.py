@@ -46,6 +46,8 @@ TENANT_APPS = [
     'zelthy.apps.dynamic_models',
     'corsheaders',
     "debug_toolbar",
+    'crispy_forms',
+    "crispy_bootstrap4",
     # "cachalot",
 
 ]
@@ -131,3 +133,7 @@ CACHES = {
 # DEBUG_TOOLBAR_PANELS += ['cachalot.panels.CachalotPanel',]
 
 CACHALOT_ENABLED = False
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
