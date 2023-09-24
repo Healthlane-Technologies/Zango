@@ -1,3 +1,4 @@
+from __future__ import annotations
 import copy
 from rest_framework import serializers
 from rest_framework.renderers import JSONRenderer
@@ -58,15 +59,34 @@ class ModelTable:
         
         self._fields = explicit_cols
         self.actions_metadata = self.get_actions_metadata()
+    
+
+    def can_include_row_action(self, request, row, obj):
+        roles = row.get("roles", [])
+        can_perform = True
+        if hasattr(self, f"can_perform_row_action_{row['key']}"):
+            can_perform_method = getattr(self, f"can_perform_row_action_{row['key']}")
+            can_perform = can_perform_method(request, obj)
+        
+        if ((not roles) or (roles and self.user_role.name in roles)) and can_perform:
+            return True
+        return False
+
+    def get_row_actions(self,request,obj):
+        row_actions_list = []
+        row_actions_dict = copy.deepcopy(self.row_actions)
+        for row in row_actions_dict:
+            if self.can_include_row_action(request, row, obj):
+                if row["type"] == "form":
+                    row.pop("form", None)
+                row_actions_list.append(row)
+        
+        return row_actions_list
+    
 
     def get_actions_metadata(self):
-        actions = {"row":[], "table": []}
+        actions = {"table": []}
 
-        for row in self.row_actions:
-            roles = row.get("roles", [])
-            if (not roles) or \
-                            (roles and self.user_role.name in roles):
-                actions["row"].append(row)
         for action in self.table_actions:
             roles = action.get("roles", [])
             if (not roles) or \
@@ -117,7 +137,7 @@ class ModelTable:
         serializer_class = StringRelatedMeta(serializer_name, (serializers.ModelSerializer,), {'Meta': Meta})
         return serializer_class
     
-    def post_process_data(self, data):
+    def post_process_data(self, request, data):
         result = []
         columns = self.get_columns()
         i = 0
@@ -130,6 +150,8 @@ class ModelTable:
                     new_row[col] = col_getval(obj)
                 else:
                     new_row[col] = serialized[col]
+            new_row["pk"] = obj.pk
+            new_row["row_actions"] = self.get_row_actions(request, obj)
             result.append(new_row)
         return result
     
@@ -197,6 +219,23 @@ class ModelTable:
         else:
             objects = objects.order_by('-modified_at')
         return objects
+
+
+    def perform_row_action(self, request):
+        action_key = request.GET.get('action_key')
+        action_dict = [a for a in self.row_actions if a['key'] == action_key]
+        if not action_dict:
+            success = False
+            response = {"message": "No action found"}
+            return success, response
+        
+        action_dict = action_dict[0]
+        obj_pk = request.POST.get("pk")
+        obj = self.model.objects.get(pk=obj_pk)
+        
+        # TODO: Handle if process function doesn't exists
+        perform_row_action_method = getattr(self, f"process_row_action_{action_dict['key']}")
+        return perform_row_action_method(request, obj)
 
         
 
