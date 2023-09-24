@@ -44,7 +44,7 @@ class PatientTable(ModelTable):
                 )        
         
     row_actions = [{
-                    "name": "Edit",
+                    "name": "Edit Patient",
                     "key": "edit",
                     "description": "Edit patient record",
                     "type": "form",
@@ -105,6 +105,9 @@ class PatientTable(ModelTable):
         
     def can_perform_row_action_mark_active_inactive(self, request, obj):
         return True
+    
+    def can_perform_row_action_edit(self, request, obj):
+        return obj.active
     
     def process_row_action_mark_active_inactive(self, request, obj):
         obj.active = not obj.active
