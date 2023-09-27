@@ -31,7 +31,8 @@ const EditUserDetailsForm = ({ closeModal }) => {
 		name: platformUserManagementFormData?.name ?? '',
 		email: platformUserManagementFormData?.email ?? '',
 		apps:
-			platformUserManagementFormData?.apps?.map((eachApp) => eachApp.id) ?? [],
+			platformUserManagementFormData?.apps?.map((eachApp) => eachApp.uuid) ??
+			[],
 	};
 
 	let validationSchema = Yup.object({

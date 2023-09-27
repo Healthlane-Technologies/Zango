@@ -17,7 +17,7 @@ const newApp = () => {
 		created_by: faker.person.fullName(),
 		modified_at: faker.date.past(),
 		modified_by: faker.person.fullName(),
-		uuid: faker.number.int({ min: 1000, max: 9999 }),
+		uuid: faker.number.int({ min: 1, max: 10 }),
 		name: 'App ' + faker.number.int({ min: 1, max: 10 }),
 		description: faker.lorem.sentences(2),
 		tenant_type: 'app',
