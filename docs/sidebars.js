@@ -115,14 +115,16 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Dynamic Data Models',
+      label: 'Views and Routes',
       link: {
         type: 'doc',
-        id: 'documentation/ddms/overview',
+        id: 'documentation/views-and-routes/overview',
       },
       collapsed: true,
       items: [
-        'documentation/ddms/creating-a-ddm',
+        'documentation/views-and-routes/types-of-views',
+        'documentation/views-and-routes/creating-a-view',
+        'documentation/views-and-routes/assigning-route-to-a-view',
       ],
     },
     {
@@ -139,15 +141,14 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'APIs and Views',
+      label: 'Dynamic Data Models',
       link: {
         type: 'doc',
-        id: 'documentation/apis-and-views/overview',
+        id: 'documentation/ddms/overview',
       },
       collapsed: true,
       items: [
-        'documentation/apis-and-views/creating-an-api',
-        'documentation/apis-and-views/creating-a-view',
+        'documentation/ddms/creating-a-ddm',
       ],
     },
     {
