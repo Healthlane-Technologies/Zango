@@ -40,9 +40,9 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
-		policies: Yup.array()
-			.min(1, 'Minimun one is required')
-			.required('Required'),
+		// policies: Yup.array()
+		// 	.min(1, 'Minimun one is required')
+		// 	.required('Required'),
 	});
 
 	let onSubmit = (values) => {
@@ -119,7 +119,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
+								// disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Save</span>
 							</button>

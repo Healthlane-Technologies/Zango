@@ -126,7 +126,7 @@ export default function AppConfiguration() {
 									<div className="flex flex-col gap-[8px]">
 										{appConfigurationData?.app?.domains?.map((eachDomain) => {
 											return (
-												<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+												<span key={eachDomain.domain} className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 													{eachDomain.domain}
 												</span>
 											);

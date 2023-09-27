@@ -35,19 +35,26 @@ const UpdatePolicyForm = ({ closeModal }) => {
 			appTaskManagementFormData?.attached_policies?.map(
 				(eachApp) => eachApp.id
 			) ?? [],
+		minute: '*',
+		hour: '*',
+		day_of_week: '*',
+		day_of_month: '*',
+		month_of_year: '*',
 	};
 
 	let validationSchema = Yup.object({
 		policies: Yup.array()
 			.min(1, 'Minimun one is required')
 			.required('Required'),
+		minute: Yup.string().required('Required'),
+		hour: Yup.string().required('Required'),
+		day_of_week: Yup.string().required('Required'),
+		day_of_month: Yup.string().required('Required'),
+		month_of_year: Yup.string().required('Required'),
 	});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
 
@@ -124,12 +131,136 @@ const UpdatePolicyForm = ({ closeModal }) => {
 								}
 								formik={formik}
 							/>
+							<div className="flex flex-col gap-[16px]">
+								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+									Schedule (IST)
+								</h4>
+								<div class="grid grid-cols-2 gap-4">
+									<div className="flex flex-col gap-[4px]">
+										<label
+											htmlFor="minute"
+											className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+										>
+											Minute
+										</label>
+										<input
+											id="minute"
+											name="minute"
+											type="text"
+											onChange={formik.handleChange}
+											onBlur={formik.handleBlur}
+											value={formik.values.minute}
+											className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+											placeholder="Enter"
+										/>
+										{formik.touched.minute && formik.errors.minute ? (
+											<div className="font-lato text-form-xs text-[#cc3300]">
+												{formik.errors.minute}
+											</div>
+										) : null}
+									</div>
+									<div className="flex flex-col gap-[4px]">
+										<label
+											htmlFor="hour"
+											className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+										>
+											Hour
+										</label>
+										<input
+											id="hour"
+											name="hour"
+											type="text"
+											onChange={formik.handleChange}
+											onBlur={formik.handleBlur}
+											value={formik.values.hour}
+											className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+											placeholder="Enter"
+										/>
+										{formik.touched.hour && formik.errors.hour ? (
+											<div className="font-lato text-form-xs text-[#cc3300]">
+												{formik.errors.hour}
+											</div>
+										) : null}
+									</div>
+									<div className="flex flex-col gap-[4px]">
+										<label
+											htmlFor="day_of_week"
+											className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+										>
+											Day of Week
+										</label>
+										<input
+											id="day_of_week"
+											name="day_of_week"
+											type="text"
+											onChange={formik.handleChange}
+											onBlur={formik.handleBlur}
+											value={formik.values.day_of_week}
+											className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+											placeholder="Enter"
+										/>
+										{formik.touched.day_of_week && formik.errors.day_of_week ? (
+											<div className="font-lato text-form-xs text-[#cc3300]">
+												{formik.errors.day_of_week}
+											</div>
+										) : null}
+									</div>
+									<div className="flex flex-col gap-[4px]">
+										<label
+											htmlFor="day_of_month"
+											className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+										>
+											Day of Month
+										</label>
+										<input
+											id="day_of_month"
+											name="day_of_month"
+											type="text"
+											onChange={formik.handleChange}
+											onBlur={formik.handleBlur}
+											value={formik.values.day_of_month}
+											className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+											placeholder="Enter"
+										/>
+										{formik.touched.day_of_month &&
+										formik.errors.day_of_month ? (
+											<div className="font-lato text-form-xs text-[#cc3300]">
+												{formik.errors.day_of_month}
+											</div>
+										) : null}
+									</div>
+									<div className="flex flex-col gap-[4px]">
+										<label
+											htmlFor="month_of_year"
+											className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+										>
+											Month of Year
+										</label>
+										<input
+											id="month_of_year"
+											name="month_of_year"
+											type="text"
+											onChange={formik.handleChange}
+											onBlur={formik.handleBlur}
+											value={formik.values.month_of_year}
+											className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+											placeholder="Enter"
+										/>
+										{formik.touched.month_of_year &&
+										formik.errors.month_of_year ? (
+											<div className="font-lato text-form-xs text-[#cc3300]">
+												{formik.errors.month_of_year}
+											</div>
+										) : null}
+									</div>
+								</div>
+							</div>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
 								type="submit"
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
-								disabled={!(formik.isValid && formik.dirty)}
+								// disabled={!(formik.isValid && formik.dirty)}
 							>
 								<span>Update Policy</span>
 							</button>

@@ -4,7 +4,7 @@ import { Fragment } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
-import { ReactComponent as ActivateUserRolesIcon } from '../../../../assets/images/svg/deactivate-user-icon.svg';
+import { ReactComponent as ActivateUserRolesIcon } from '../../../../assets/images/svg/activate-icon.svg';
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import { transformToFormDataOrder } from '../../../../utils/helper';
@@ -86,7 +86,7 @@ const ActivateUserForm = ({ closeModal }) => {
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
 								type="submit"
-								className="flex w-full items-center justify-center rounded-[4px] bg-[#42931e] px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
+								className="flex w-full items-center justify-center rounded-[4px] bg-[#229470] px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 							>
 								<span>Activate User</span>
 							</button>

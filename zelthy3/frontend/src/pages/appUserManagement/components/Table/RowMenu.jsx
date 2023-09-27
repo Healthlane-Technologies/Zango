@@ -167,7 +167,7 @@ export default function RowMenu({ rowData }) {
 												active ? 'bg-[#F0F3F4]' : ''
 											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
 										>
-											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#42931e]">
+											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#229470]">
 												Activate User
 											</span>
 											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
