@@ -1,3 +1,138 @@
 # Templates
 
-## What is a Template?
+Templates in Zelthy serve the same purpose as they do in Django or other web frameworks. They provide a way to separate the design or presentation layer from the business logic of your application. In Zelthy, you can use templates to generate HTML dynamically based on data and user interactions. Here's what you need to know about working with templates in Zelthy:
+
+## Directory
+
+In Zelthy, template files should be placed inside a folder named "templates" within the module's folder. This structure helps keep your templates organized and accessible to Zelthy's template engine.
+
+```
+my_module/
+└── templates/
+    └── my_template.html
+```
+
+## Structure
+
+Templates in Zelthy are usually HTML files with placeholders for dynamic content. These placeholders are enclosed in double curly braces `{{ variable_name }}`, and they are replaced with actual values when the template is rendered.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title }}</title>
+</head>
+<body>
+    <h1>Welcome, {{ user_name }}!</h1>
+    <p>Your email is {{ user_email }}</p>
+</body>
+</html>
+```
+
+## Rendering
+
+Zelthy uses a template engine to render templates. When a view function generates a response, it often includes data that needs to be inserted into a template. The template engine takes care of this process.
+
+```python
+from django.http import HttpResponse
+from django.template import loader
+from django.shortcuts import render
+
+def my_view(request):
+    # Data to be included in the template
+    context = {
+        'page_title': 'My Page',
+        'user_name': 'John Doe',
+        'user_email': 'john@example.com',
+    }
+    
+    # Using the loader
+    template = loader.get_template('my_template.html')
+    rendered_template = template.render(context, request)
+
+    # Using the render shortcut
+    # rendered_template = render(request, 'my_template.html', context)
+
+    return HttpResponse(rendered_template)
+```
+
+In the code above, we create a `context` dictionary that contains data to be inserted into the template. We then use the `loader.get_template()` method to load the template and the `template.render()` method to render it with the context data. Alternatively, you can use the `render()` shortcut to simplify this process.
+
+## Inheritance
+
+Zelthy supports template inheritance, allowing you to create a base template with common elements (like headers and footers) and then extend it in child templates. This promotes code reusability and maintainability.
+
+**Base Template (`base.html`):**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <!-- Header content -->
+    </header>
+
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <!-- Footer content -->
+    </footer>
+</body>
+</html>
+```
+
+**Child Template (`child.html`):**
+
+```html
+{% extends "base.html" %}
+
+{% block title %}My Page{% endblock %}
+
+{% block content %}
+    <h1>Welcome, {{ user_name }}!</h1>
+    <p>Your email is {{ user_email }}</p>
+{% endblock %}
+```
+
+In this example, the `child.html` template extends the `base.html` template using `{% extends "base.html" %}`. It overrides the `title` block and inserts content into the `content` block defined in the base template.
+
+## Tags and Filters
+
+Zelthy provides a wide range of template tags and filters that you can use to manipulate and display data in your templates. These tags and filters offer powerful tools for controlling the presentation of your web pages.
+
+```html
+<p>Today's date is {{ current_date|date:"F j, Y" }}</p>
+```
+
+In this example, the `date` filter is used to format the `current_date` variable as a human-readable date.
+
+## Static Files
+
+Static files like CSS stylesheets, JavaScript files, and images can be served in Zelthy using the `{% static %}` template tag. You'll need to configure your project to handle static files properly.
+
+```html
+<link rel="stylesheet" type="text/css" href="{% static 'styles.css' %}">
+```
+
+## Caching
+
+Zelthy offers template caching to optimize the rendering of templates. Cached templates are stored in memory, reducing the need to recompile templates for each request.
+
+```python
+from django.template import loader
+
+# Load the template and enable template caching
+template = loader.get_template('my_template.html')
+template = template.template.cached_template
+```
+
+By caching templates, you can improve the performance of your application, especially for frequently used templates.
+
+In summary, templates in Zelthy follow the same principles as other web frameworks like Django. They provide a way to separate your application's logic from its presentation, making your code more maintainable and scalable. By using template tags, filters, and template inheritance, you can create dynamic and visually appealing web pages in your Zelthy applications.

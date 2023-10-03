@@ -136,7 +136,6 @@ const sidebars = {
       },
       collapsed: true,
       items: [
-        'documentation/templates/creating-a-template',
       ],
     },
     {
@@ -149,6 +148,8 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/ddms/creating-a-ddm',
+        'documentation/ddms/ddm-field-types',
+        'documentation/ddms/migrating-ddms',
       ],
     },
     {
