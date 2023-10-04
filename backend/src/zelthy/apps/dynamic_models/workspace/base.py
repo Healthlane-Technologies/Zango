@@ -165,6 +165,21 @@ class Workspace:
                 result.append(model_module)
         return result
 
+    def get_tasks(self) -> list[str]:
+        """
+        returns sorted list of task modules (dependency first, then plugin then modules)
+        """
+        result = []
+        modules = self.get_all_module_paths()
+        for module in modules:
+            if os.path.isfile(module + "/tasks.py"):
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/tasks"
+                )
+                model_module = model_module.lstrip("/").replace("/", ".")
+                result.append(model_module)
+        return result
+
     def get_plugins(self) -> list[dict]:
         """
         returns list of plugins
@@ -264,6 +279,34 @@ class Workspace:
                 continue
             split = m.split(".")[2:]
             self.plugin_source.load_plugin(".".join(split))
+        return
+
+    def sync_tasks(self) -> None:
+        """
+        get topologically sorted list of tasks from packages and modules and
+        import tasks.py files in that order
+        """
+        from zelthy.config.celery import app
+        from celery import Task
+        import inspect
+        from zelthy.apps.tasks.models import AppTask
+
+        for m in self.get_tasks():
+            mod_path = m.split(".")[2:]
+            mod_path_str = ".".join(mod_path)
+            _plugin = self.plugin_source.load_plugin(mod_path_str)
+
+            task_ids_synced = []
+            for name, method in inspect.getmembers(_plugin):
+                if isinstance(method, Task):
+                    task_path = f"{mod_path_str}.{name}"
+                    task_obj, created = AppTask.objects.get_or_create(
+                        name=name, module_path=task_path
+                    )
+                    task_ids_synced.append(task_obj.id)
+
+        AppTask.objects.all().exclude(id__in=task_ids_synced).delete
+
         return
 
     def ready(self) -> bool:
