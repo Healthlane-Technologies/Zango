@@ -1,20 +1,18 @@
 from django.urls import re_path
-from .views import view1
-from .views import View2
+
+from .views import FrameTestView, CrudTestView
 
 urlpatterns = [
     
     re_path(
-        r'^view1/(?P<id>\d+)/',
-        view1,
-        name='view1'
+        r'^frame-test/$',
+        FrameTestView.as_view(),
+        name='frame-test'
     ),
     re_path(
-        r'^view2/(?P<id>\d+)/$',
-        View2.as_view(),
-        name='view1'
-    ),
+        r'^crud-test/$',
+        CrudTestView.as_view(),
+        name='crud-test'
+    )
 ]
 
-
-# code update in a workspace => 

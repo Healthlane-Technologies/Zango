@@ -8,19 +8,8 @@
     {
       "name": "crud",
       "version": "0.1.0",
-      "repo": "https://github.com/Healthlane-Technologies/package-userauth"
-    },
-    {
-      "name": "login-signup",
-      "version": "0.1.0",
-      "repo": "https://github.com/Healthlane-Technologies/package-userauth"
-    },
-    {
-      "name": "program-benefit",
-      "version": "0.1.0",
-      "repo": "https://github.com/Healthlane-Technologies/package-userauth"
+      "repo": ""
     }
-    
 
  ]
 }
