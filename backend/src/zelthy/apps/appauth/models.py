@@ -90,6 +90,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         return False
 
     def add_roles(self, role_ids):
+        self.roles.clear()
         roles = UserRoleModel.objects.filter(id__in=role_ids)
         self.roles.add(*roles)
 
