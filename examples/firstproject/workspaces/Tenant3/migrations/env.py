@@ -45,7 +45,6 @@ def run_migrations_online() -> None:
     )
     # current_tenant = context.get_x_argument(as_dictionary=True).get("tenant3")
     current_tenant = "tenant3, public"
-    print(current_tenant)
     with connectable.connect() as connection:
         connection.execute(text('set search_path to "%s"' % current_tenant))
         connection.dialect.default_schema_name = current_tenant
