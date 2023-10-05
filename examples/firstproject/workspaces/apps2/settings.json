@@ -4,15 +4,7 @@
         {
             "name": "module1",
             "path": "module1"
-        },
-        {
-            "name": "module2",
-            "path": "dir1/dir2/module2"
-        },
-        {
-            "name": "landingPage",
-            "path": "landingPage"
-        }
+        }        
     ],
     "app_routes": [
        
@@ -28,24 +20,7 @@
             "re_path": "^frame/",
             "plugin": "frame",
             "url": "urls"
-        },
-        {
-            "re_path": "^email/",
-            "plugin": "zel-email",
-            "url": "urls"
-        },
-        {
-            "re_path": "^crud/",
-            "plugin": "crud",
-            "url": "urls"
-        },
-        {
-            "re_path": "^program/",
-            "plugin": "program-benefit",
-            "url": "urls"
         }
-
-
     ]
     
 }
