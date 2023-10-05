@@ -12,14 +12,13 @@ def zelthy_task_executor(tenant_name, task_name, *args, **kwargs):
     tenant = TenantModel.objects.get(name=tenant_name)
 
     connection.set_tenant(tenant)
-
     with connection.cursor() as c:
         task_obj = AppTask.objects.get(name=task_name)
 
         ws = Workspace(connection.tenant, request=None, as_systemuser=True)
         ws.ready()
 
-        task_module = task_obj.module_path.rsplit(".", 1)[0]
+        task_module = task_obj.name.rsplit(".", 1)[0]
         _task = ws.plugin_source.load_plugin(task_module)
         task_fun = getattr(_task, task_name)
         return task_fun(*args, **kwargs)

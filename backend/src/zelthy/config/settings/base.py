@@ -52,6 +52,7 @@ TENANT_APPS = [
     "crispy_bootstrap5",
     "debug_toolbar",
     "crispy_forms"
+    # "django_celery_results"
     # "cachalot",
 ]
 
@@ -174,3 +175,4 @@ MEDIA_URL = "/media/"
 
 # Celery
 CELERY_BROKER_URL = REDIS_URL
+# CELERY_RESULT_BACKEND = "django-db"
