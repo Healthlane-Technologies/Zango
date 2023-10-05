@@ -1,5 +1,5 @@
 from django.db import models
-from django_celery_beat.models import CrontabSchedule
+from django_celery_beat.models import CrontabSchedule, IntervalSchedule
 
 from zelthy.core.model_mixins import FullAuditMixin
 from django_celery_beat.models import PeriodicTask
@@ -10,8 +10,14 @@ class AppTask(FullAuditMixin):
     module_path = models.TextField(unique=True)
     is_enabled = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
-    task = "zelthy.core.zelthy_tasks.zelthy_custom_task"
-
+    task = "zelthy.core.tasks.zelthy_task_executor"
+    interval = models.ForeignKey(
+        IntervalSchedule,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="interval",
+    )
     crontab = models.ForeignKey(
         CrontabSchedule,
         on_delete=models.CASCADE,
@@ -22,6 +28,9 @@ class AppTask(FullAuditMixin):
     )
     args = models.JSONField(null=True, blank=True)
     kwargs = models.JSONField(null=True, blank=True)
+    master_task = models.ForeignKey(
+        PeriodicTask, null=True, blank=True, on_delete=models.CASCADE
+    )
 
     def schedule(self):
         return self.master_task.schedule
@@ -38,7 +47,7 @@ class AppTask(FullAuditMixin):
             obj = PeriodicTask(
                 name=uuid.uuid4(),
                 task=self.task,
-                # interval=self.interval,
+                interval=self.interval,
                 crontab=self.crontab,
                 # solar=self.solar,
                 args=self.args,
@@ -54,7 +63,7 @@ class AppTask(FullAuditMixin):
         else:
             obj = self.master_task
             obj.task = self.task
-            # obj.interval = self.interval
+            obj.interval = self.interval
             obj.crontab = self.crontab
             # obj.solar = self.solar
             obj.args = self.args
