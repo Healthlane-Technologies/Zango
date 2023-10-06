@@ -8,14 +8,14 @@ class RequestMiddleware:
 
     def __call__(self, request):
         _request_local.current_request = request
+        from django.apps import apps
+        model = apps.get_model('appauth', 'UserRoleModel')
         try:
-            # _request_local.user_role = request.session['role_id'] #TODO
-            from django.apps import apps
-            model = apps.get_model('appauth', 'UserRoleModel')
             _request_local.user_role = model.objects.get(id=request.session['role_id'])
-
         except:
-            _request_local.user_role = None
-        
+            if request.tenant.tenant_type == 'app':  
+                _request_local.user_role = model.objects.get(name='AnonymousUsers')
+            else:
+                _request_local.user_role = None # user role is not applicable at platform level
         response = self.get_response(request)
         return response
