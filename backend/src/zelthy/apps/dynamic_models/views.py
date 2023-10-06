@@ -4,8 +4,6 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.utils.decorators import method_decorator
 
-import psutil
-
 from django.views.generic import View
 from django.http import Http404
 
