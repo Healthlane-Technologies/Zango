@@ -51,6 +51,11 @@ field_map = {
             'searchable': False,
             'sortable': False,
         },
+        'ZFileField': {
+            'type': 'file',
+            'searchable': False,
+            'sortable': False,
+        },
         'ImageField': {
             'type': 'image',
             'searchable': False,
