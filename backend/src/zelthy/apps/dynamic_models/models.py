@@ -159,6 +159,7 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         self.user_role_id = get_current_role().id    
         
     def has_perm(self, perm_type):
+        print(self.permissions, perm_type, self.model)
         return perm_type in \
         self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["actions"]
     
@@ -278,7 +279,7 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
         on_delete=models.PROTECT   
     )
 
-    objects = RestrictedManager()
+    # objects = RestrictedManager()
 
     class Meta:
         app_label = 'dynamic_models'

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zelthy CodeAssist</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat-area {
+            width: 80%;
+            height: 400px;
+            border: 1px solid #ccc;
+            padding: 20px;
+            overflow-y: scroll;
+            background-color: #fff;
+            margin-bottom: 20px;
+        }
+        #input-area {
+            width: 80%;
+            display: flex;
+            justify-content: space-between;
+        }
+        #user-input {
+            flex-grow: 2;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        #send-button {
+            padding: 10px 20px;
+        }
+        .user-message, .chatgpt-message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            width: 70%;
+        }
+        .user-message {
+            background-color: #d1e7fd;
+            align-self: flex-end;
+            text-align: right;
+        }
+        .chatgpt-message {
+            background-color: #e6e6e6;
+        }
+    </style>
+</head>
+<body>
+    <h2>Welcome to Zelthy CodeAssist</h2>
+    <div id="chat-area">
+        <!-- Messages will be displayed here -->
+    </div>
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="Type a message...">
+        <button id="send-button">Send</button>
+    </div>
+    <script>
+        function sendMessage() {
+            const message = document.getElementById('user-input').value.trim();
+            console.log(message)
+            if (message) {
+                // Display user message
+                const userMessageElement = document.createElement('div');
+                userMessageElement.className = 'user-message';
+                userMessageElement.textContent = message;
+                document.getElementById('chat-area').appendChild(userMessageElement);
+
+                fetch('.', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // Include any other headers here, such as CSRF token if needed
+            },
+            body: JSON.stringify({ message: message, action: 'get_assist' })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Display ChatGPT's message
+            const chatgptMessageElement = document.createElement('div');
+            chatgptMessageElement.className = 'chatgpt-message';
+            chatgptMessageElement.innerHTML = data.message;  // Use innerHTML to render HTML
+
+            // Check if allow_execution is true and add an "Execute" button if it is
+            if (data.allow_execution) {
+                const executeButton = document.createElement('button');
+                let execution_json = data.exection_json
+                console.log(execution_json)
+                executeButton.textContent = 'Commit';
+                executeButton.onclick = function() {
+                    // Your logic for handling the "Execute" button click
+                    // For example, you might use data.execution_json to perform an action
+                    console.log('Execute button clicked!', data.execution_json);
+                    fetch('.', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // Include other headers here, such as CSRF token if needed
+                        },
+                        body: JSON.stringify({
+                            action: 'execute',
+                            execute_json: execution_json
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Handle the response from the execute action
+                        // For example, display a message or update the UI
+                        const executionMessageElement = document.createElement('div');
+                        executionMessageElement.className = 'execution-message';
+                        executionMessageElement.innerHTML = data.message;
+                        document.getElementById('chat-area').appendChild(executionMessageElement);
+
+                        // Scroll chat area to show the latest message
+                        document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+
+                    })
+                    .catch((error) => {
+                        console.error('Fetch error: ', error);
+                        // Handle error, such as displaying a message to the user
+                    });
+                };
+                executeButton.style.backgroundColor = '#4A90E2';
+                executeButton.style.color = 'white';
+                executeButton.style.padding = '10px';
+                executeButton.style.border = 'none';
+                executeButton.style.borderRadius = '5px';
+                executeButton.style.cursor = 'pointer';
+                executeButton.style.marginLeft = '10px';
+                chatgptMessageElement.appendChild(executeButton);
+            }
+
+            document.getElementById('chat-area').appendChild(chatgptMessageElement);
+
+            // Scroll chat area to show the latest message
+            document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+
+        })
+        .catch((error) => {
+            console.error('Fetch error: ', error);
+            // Handle error, such as displaying a message to the user
+        });
+
+                // Example: Display ChatGPT's message (replace this with actual response from server)
+                const chatgptMessageElement = document.createElement('div');
+                chatgptMessageElement.className = 'chatgpt-message';
+                chatgptMessageElement.textContent = "CodeAssist's response...";
+                document.getElementById('chat-area').appendChild(chatgptMessageElement);
+
+                // Clear input
+                document.getElementById('user-input').value = '';
+                
+                // Scroll chat area to show the latest message
+                document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+            }
+        }
+
+        // document.getElementById('user-input').addEventListener('keypress', function(e) {
+        //     if (e.key === 'Enter') {
+        //         sendMessage();
+        //         e.preventDefault();  // Prevent form submission
+        //     }
+        // });
+
+        document.getElementById('send-button').addEventListener('click', function() {
+            sendMessage();
+        });
+    </script>
+</body>
+</html>
