@@ -136,7 +136,6 @@ export default function InstallPackageModal() {
 
 	function closeModal() {
 		dispatch(closeIsInstallPackageModalOpen());
-		dispatch(toggleRerenderPage());
 	}
 
 	return (
