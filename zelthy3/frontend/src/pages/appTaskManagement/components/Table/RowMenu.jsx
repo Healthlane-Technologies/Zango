@@ -1,12 +1,11 @@
-import { usePopper } from 'react-popper';
-import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
+import { Fragment, useState } from 'react';
+import { usePopper } from 'react-popper';
+import { useDispatch } from 'react-redux';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
-import { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import {
-	openIsUpdatePolicyModalOpen,
 	openIsRemoveAllPoliciesModalOpen,
+	openIsUpdatePolicyModalOpen,
 } from '../../slice';
 
 export default function RowMenu({ rowData }) {
@@ -44,12 +43,6 @@ export default function RowMenu({ rowData }) {
 			</Menu.Button>
 			<Transition
 				as={Fragment}
-				enter="transition ease-out duration-100"
-				enterFrom="transform opacity-0 scale-95"
-				enterTo="transform opacity-100 scale-100"
-				leave="transition ease-in duration-75"
-				leaveFrom="transform opacity-100 scale-100"
-				leaveTo="transform opacity-0 scale-95"
 				// @ts-ignore
 				ref={(ref) => setPopperElement(ref)}
 				style={styles['popper']}

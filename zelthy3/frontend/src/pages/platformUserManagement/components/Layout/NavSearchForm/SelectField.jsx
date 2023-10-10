@@ -10,6 +10,14 @@ export default function SelectField({ label }) {
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
 		placement: 'top-start',
+		modifiers: [
+			{
+				name: 'offset',
+				options: {
+					offset: [0, -32],
+				},
+			},
+		],
 	});
 
 	return (
@@ -30,18 +38,12 @@ export default function SelectField({ label }) {
 				</Menu.Button>
 				<Transition
 					as={Fragment}
-					enter="transition ease-out duration-100"
-					enterFrom="transform opacity-0 scale-95"
-					enterTo="transform opacity-100 scale-100"
-					leave="transition ease-in duration-75"
-					leaveFrom="transform opacity-100 scale-100"
-					leaveTo="transform opacity-0 scale-95"
 					// @ts-ignore
 					ref={(ref) => setPopperElement(ref)}
 					style={styles['popper']}
 					{...attributes['popper']}
 				>
-					<Menu.Items className="absolute z-[1] mt-[-32px] h-fit max-h-96 w-full overflow-y-auto rounded-[4px] bg-[#495057] font-lato text-base focus:outline-none sm:text-sm">
+					<Menu.Items className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto rounded-[4px] bg-[#495057] font-lato text-base focus:outline-none sm:text-sm">
 						<div className="relative">
 							<div className="flex w-full items-center gap-[12px] rounded-r-[4px] border-l border-[#495057] bg-[#495057] py-[6px] px-[16px] hover:outline-0 focus:outline-0">
 								<span

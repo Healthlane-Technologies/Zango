@@ -9,6 +9,7 @@ import appPermissionsManagementReducer from '../pages/appPermissionsManagement/s
 import appPoliciesManagementReducer from '../pages/appPoliciesManagement/slice';
 import appConfigurationReducer from '../pages/appConfiguration/slice';
 import appThemeConfigurationReducer from '../pages/appThemeConfiguration/slice';
+import appPackagesManagementReducer from '../pages/appPackagesManagement/slice';
 
 export default configureStore({
 	reducer: {
@@ -21,5 +22,6 @@ export default configureStore({
 		appPoliciesManagement: appPoliciesManagementReducer,
 		appConfiguration: appConfigurationReducer,
 		appThemeConfiguration: appThemeConfigurationReducer,
+		appPackagesManagement: appPackagesManagementReducer,
 	},
 });

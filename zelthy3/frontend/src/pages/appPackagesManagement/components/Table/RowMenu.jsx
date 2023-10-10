@@ -4,9 +4,8 @@ import { usePopper } from 'react-popper';
 import { useDispatch } from 'react-redux';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import {
-	openIsActivateUserRolesModalOpen,
-	openIsDeactivateUserRolesModalOpen,
-	openIsEditUserRolesDetailModalOpen,
+	openIsConfigurePackageModalOpen,
+	openIsInstallPackageModalOpen,
 } from '../../slice';
 
 export default function RowMenu({ rowData }) {
@@ -26,16 +25,12 @@ export default function RowMenu({ rowData }) {
 
 	const dispatch = useDispatch();
 
-	const handleEditUserDetails = () => {
-		dispatch(openIsEditUserRolesDetailModalOpen(rowData));
+	const handleConfiurePackage = () => {
+		dispatch(openIsConfigurePackageModalOpen(rowData));
 	};
 
-	const handleDeactivateUser = () => {
-		dispatch(openIsDeactivateUserRolesModalOpen(rowData));
-	};
-
-	const handleActivateUser = () => {
-		dispatch(openIsActivateUserRolesModalOpen(rowData));
+	const handleInstallPackage = () => {
+		dispatch(openIsInstallPackageModalOpen(rowData));
 	};
 
 	return (
@@ -55,75 +50,55 @@ export default function RowMenu({ rowData }) {
 			>
 				<Menu.Items className="absolute top-[30px] right-0 w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 					<div className="p-[4px]">
-						<Menu.Item>
-							{({ active }) => (
-								<button
-									type="button"
-									className="flex w-full"
-									onClick={handleEditUserDetails}
-								>
-									<div
-										className={`${
-											active ? 'bg-[#F0F3F4]' : ''
-										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
-									>
-										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											Edit User Role
-										</span>
-										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											user role name, policy
-										</span>
-									</div>
-								</button>
-							)}
-						</Menu.Item>
-						{rowData?.is_active ? (
+						{rowData?.status === 'Installed' ? null : (
 							<Menu.Item>
 								{({ active }) => (
 									<button
 										type="button"
-										className="flex  w-full"
-										onClick={handleDeactivateUser}
+										className="flex w-full"
+										onClick={handleInstallPackage}
 									>
 										<div
 											className={`${
 												active ? 'bg-[#F0F3F4]' : ''
 											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
 										>
-											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
-												Deactivate User Role
+											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+												Install Package
 											</span>
 											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-												this will not delete the user role but only disable it
-											</span>
-										</div>
-									</button>
-								)}
-							</Menu.Item>
-						) : (
-							<Menu.Item>
-								{({ active }) => (
-									<button
-										type="button"
-										className="flex  w-full"
-										onClick={handleActivateUser}
-									>
-										<div
-											className={`${
-												active ? 'bg-[#F0F3F4]' : ''
-											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
-										>
-											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#229470]">
-												Activate User Role
-											</span>
-											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-												this will enable it
+												install package
 											</span>
 										</div>
 									</button>
 								)}
 							</Menu.Item>
 						)}
+
+						{rowData?.status === 'Installed' ? (
+							<Menu.Item>
+								{({ active }) => (
+									<button
+										type="button"
+										className="flex w-full"
+										onClick={handleConfiurePackage}
+									>
+										<div
+											className={`${
+												active ? 'bg-[#F0F3F4]' : ''
+											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+										>
+											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+												Configure Package
+											</span>
+											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+												configure
+											</span>
+										</div>
+									</button>
+								)}
+							</Menu.Item>
+						) : null}
 					</div>
 				</Menu.Items>
 			</Transition>

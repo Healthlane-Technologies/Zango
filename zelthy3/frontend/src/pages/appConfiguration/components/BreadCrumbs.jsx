@@ -1,7 +1,12 @@
+import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
+import { selectAppConfigurationData } from '../slice';
 
 export default function BreadCrumbs() {
 	let location = useLocation();
+	const appConfigurationData = useSelector(selectAppConfigurationData);
+
 	return (
 		<div className="flex flex-wrap gap-[5px]">
 			{location.pathname
@@ -19,7 +24,11 @@ export default function BreadCrumbs() {
 								suffixSlash ? 'text-[#212429]' : 'text-[#ababae]'
 							}`}
 						>
-							{suffixSlash} {each.replaceAll('-', ' ')} {prefixSlash}
+							{suffixSlash}{' '}
+							{index !== 1
+								? each.replaceAll('-', ' ')
+								: appConfigurationData?.app?.name}{' '}
+							{prefixSlash}
 						</Link>
 					);
 				})}
