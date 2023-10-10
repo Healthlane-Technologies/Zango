@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zelthy CodeAssist</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-json.min.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -51,6 +56,38 @@
         .chatgpt-message {
             background-color: #e6e6e6;
         }
+        #options-area {
+            width: 80%;
+            display: flex;
+            justify-content: flex-start;            
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .option-bubble {
+            padding: 5px 10px;
+            border-radius: 10px;
+            background-color: #d1e7fd;
+            cursor: pointer;
+            user-select: none;
+            margin-right: 10px; /* Add some space between the options */
+            margin-bottom: 10px; /* Add some space below the options */
+        }
+
+        .option-bubble-selected {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .code-block {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-x: auto; /* Add horizontal scrolling for long lines of code */
+            white-space: pre-wrap; /* Preserve line breaks and spaces */
+        }
+
+
+
     </style>
 </head>
 <body>
@@ -62,8 +99,31 @@
         <input type="text" id="user-input" placeholder="Type a message...">
         <button id="send-button">Send</button>
     </div>
+    <!-- <div style='float: left'>Select Knowledge Base to use</div> -->
+    <div id="options-area">        
+        <!-- Option bubbles will be displayed here -->
+    </div>
+    
     <script>
-        function sendMessage() {
+        var selectedOptionNumber;
+        function createOptionBubbles() {
+                const options = ['Zelthy Basics', 'Models', 'Crud Pkg', 'Frames Pkg', 'Login-Signup Pkg', 'Generic']; // Add your options here
+                const optionsArea = document.getElementById('options-area');
+                optionsArea.innerHTML = ''; // Clear previous options
+                
+                options.forEach((option, index) => {
+                    const optionBubble = document.createElement('div');
+                    optionBubble.className = 'option-bubble';
+                    optionBubble.textContent = option;
+                    optionBubble.dataset.optionNumber = index + 1; // Store option number in dataset
+                    optionsArea.appendChild(optionBubble);
+                });
+            }
+            createOptionBubbles();
+        function sendMessage() {            
+            if (selectedOptionNumber == null){
+                alert("You must select a knowledge base")
+            }
             const message = document.getElementById('user-input').value.trim();
             console.log(message)
             if (message) {
@@ -79,7 +139,7 @@
                 'Content-Type': 'application/json',
                 // Include any other headers here, such as CSRF token if needed
             },
-            body: JSON.stringify({ message: message, action: 'get_assist' })
+            body: JSON.stringify({ message: message, action: 'get_assist', knowledge_base: selectedOptionNumber })
         })
         .then(response => {
             if (!response.ok) {
@@ -91,7 +151,42 @@
             // Display ChatGPT's message
             const chatgptMessageElement = document.createElement('div');
             chatgptMessageElement.className = 'chatgpt-message';
-            chatgptMessageElement.innerHTML = data.message;  // Use innerHTML to render HTML
+            // chatgptMessageElement.innerHTML = data.message;  // Use innerHTML to render HTML
+            data.message.forEach(part => {
+        if (part.type === 'code' && part.code) {
+            // Format as code block
+            const codeBlock = document.createElement('pre');
+            codeBlock.className = 'code-block';
+
+            let codeContent = part.content;
+            if (part.code === 'json') {
+                try {
+                    // Pretty print JSON with 4-space indentation
+                    codeContent = JSON.stringify(JSON.parse(part.content), null, 4);
+                } catch (e) {
+                    console.error('Invalid JSON:', e);
+                }
+            }
+
+            codeBlock.innerHTML = `<code class="language-${part.code}">${codeContent}</code>`;
+            chatgptMessageElement.appendChild(codeBlock);
+
+            // Add a "Copy" button
+            const copyButton = document.createElement('button');
+            copyButton.textContent = 'Copy Code';
+            copyButton.onclick = function() {
+                navigator.clipboard.writeText(codeContent).then(() => {
+                    alert('Code copied to clipboard!');
+                }).catch(err => {
+                    alert('Failed to copy code:', err);
+                });
+            };
+            chatgptMessageElement.appendChild(copyButton);
+        } else if (part.type === 'text') {
+            // Insert as plain text
+            chatgptMessageElement.appendChild(document.createTextNode(part.content));
+        }
+    });
 
             // Check if allow_execution is true and add an "Execute" button if it is
             if (data.allow_execution) {
@@ -182,6 +277,30 @@
         document.getElementById('send-button').addEventListener('click', function() {
             sendMessage();
         });
+
+        
+
+            document.getElementById('options-area').addEventListener('click', function(e) {
+                if (e.target.classList.contains('option-bubble')) {
+                    // Check if the clicked option is already selected
+                    if (e.target.classList.contains('option-bubble-selected')) {
+                        e.target.classList.remove('option-bubble-selected');
+                        // sendMessage(null); // Deselect the option
+                    } else {
+                        // Deselect any previously selected option
+                         selectedOption = document.querySelector('.option-bubble-selected');
+                        if (selectedOption) {
+                            selectedOption.classList.remove('option-bubble-selected');
+                        }
+                        // Select the clicked option
+                        e.target.classList.add('option-bubble-selected');
+                         selectedOptionNumber = e.target.dataset.optionNumber;
+                        // sendMessage(selectedOptionNumber);
+                    }
+                }
+});
+
+
     </script>
 </body>
 </html>
