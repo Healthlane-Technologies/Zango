@@ -8,20 +8,41 @@ import psutil
 
 from django.views.generic import View
 from django.http import Http404
+from django.core import signing
 
 from .workspace.base import Workspace
 from zelthy.core.utils import get_current_role
+from zelthy.apps.shared.tenancy.models import TenantModel
 
 
 class PermMixin:
     def has_user_access_perm(self, request, *args, **kwargs):
-        # return True
-        user_role = get_current_role()
-        return user_role.has_perm(request, "userAccess")
+        if "configure" not in request.path:
+            user_role = get_current_role()
+            return user_role.has_perm(request, "userAccess")
+        if "configure" in request.path:
+            try:
+                token = request.GET.get("token", None)
+                user_id = signing.loads(token)
+                user = TenantModel.objects.get(id=user_id)
+                return True
+            except Exception:
+                pass
+        return False
 
     def has_view_perm(self, request, view_name, *args, **kwargs):
-        user_role = get_current_role()
-        return user_role.has_perm(request, "view", view_name=view_name)
+        if "configure" not in request.path:
+            user_role = get_current_role()
+            return user_role.has_perm(request, "view", view_name=view_name)
+        if "configure" in request.path:
+            try:
+                token = request.GET.get("token", None)
+                user_id = signing.loads(token)
+                user = TenantModel.objects.get(id=user_id)
+                return True
+            except Exception:
+                pass
+        return False
 
 
 @method_decorator(csrf_exempt, name="dispatch")
