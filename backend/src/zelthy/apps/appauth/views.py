@@ -5,8 +5,12 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib.auth import logout
 from django.utils.decorators import method_decorator
+from django.core.exceptions import SuspiciousOperation
 
-from zelthy.core.generic_views.base import ZelthySessionAppTemplateView
+from zelthy.core.generic_views.base import (
+    ZelthySessionAppTemplateView,
+    ZelthySessionAppView,
+)
 from zelthy.apps.appauth.login.utils import ZelthyLoginView
 from zelthy.apps.appauth.models import UserRoleModel
 
@@ -56,6 +60,20 @@ class AppUserLandingView(ZelthySessionAppTemplateView):
     """
 
     template_name = "applandingPage.html"  # To be updated with new html
+
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class SwitchUserRoleView(ZelthySessionAppView):
+    def get(self, request, *args, **kwargs):
+        role_id = kwargs["role_id"]
+        if not request.user.roles.filter(id=role_id).exists():
+            raise SuspiciousOperation(
+                "Trying to apply role for which is not mapped to user"
+            )
+        request.session["role_id"] = role_id
+        return redirect("/app/home/")
 
 
 class AppLogoutView(View):
