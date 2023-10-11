@@ -54,17 +54,6 @@ class AppUserLoginView(ZelthyLoginView):
         return self.user_cache
 
 
-class AppUserLandingView(ZelthySessionAppTemplateView):
-    """
-    View to render the landing page after login.
-    """
-
-    template_name = "applandingPage.html"  # To be updated with new html
-
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-
 class SwitchUserRoleView(ZelthySessionAppView):
     def get(self, request, *args, **kwargs):
         role_id = kwargs["role_id"]
