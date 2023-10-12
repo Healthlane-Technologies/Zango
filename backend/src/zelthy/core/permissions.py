@@ -68,7 +68,7 @@ class IsPlatformUserAllowedApp(IsAuthenticatedPlatformUser):
 
             app_uuid = view.kwargs.get("app_uuid")
             allowed_apps = platform_user.apps.all()
-            if allowed_apps.filter(app_uuid=app_uuid).exists():
+            if allowed_apps.filter(uuid=app_uuid).exists():
                 return True
 
         return False
