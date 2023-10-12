@@ -144,7 +144,7 @@ class Workspace:
                     path = self.get_plugin_path(item["name"]) + mod["path"]
                     if path not in modules:
                         modules.append(path)
-            elif item["type"] == "module":
+            if item["type"] == "module":
                 path = self.path + item["path"]
                 if path not in modules:
                     modules.append(path)
@@ -260,8 +260,9 @@ class Workspace:
         import models.py files in that order
         """
         for m in self.get_models():
-            split = m.split(".")[2:]
-            self.plugin_source.load_plugin(".".join(split))
+            if m.split(".")[2] != "plugins":
+                split = m.split(".")[2:]
+                self.plugin_source.load_plugin(".".join(split))
         return
 
     def ready(self) -> bool:

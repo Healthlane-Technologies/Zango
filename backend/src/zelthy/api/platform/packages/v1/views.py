@@ -22,16 +22,15 @@ class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             if settings.DEBUG:
                 port = request.META["HTTP_HOST"].split(":")[1]
             try:
-                token = signing.dumps(request.user.id)
+                token = signing.dumps(
+                    request.user.id,
+                )
                 tenant = TenantModel.objects.get(uuid=app_uuid)
                 domain = Domain.objects.get(tenant=tenant)
                 url = get_package_configuration_url(
                     request.GET.get("package_name"), tenant.name, domain, port
                 )
                 resp = {"url": f"http://{url}/?token={token}"}
-                # resp = {
-                #     "url": f"https://blog.logrocket.com/best-practices-react-iframes/"
-                # }
                 status = 200
             except Exception as e:
                 resp = {"message": str(e)}
@@ -56,13 +55,7 @@ class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         try:
             data = request.data
             tenant = TenantModel.objects.get(uuid=app_uuid)
-            result = install_package(
-                data["name"],
-                data["version"],
-                tenant.name,
-                skip_migrate=True,
-                skip_static=True,
-            )
+            result = install_package(data["name"], data["version"], tenant.name)
             success = True
             response = {"message": result}
             status = 200

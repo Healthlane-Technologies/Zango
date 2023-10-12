@@ -50,8 +50,8 @@ TENANT_APPS = [
     "crispy_forms",
     "crispy_bootstrap5",
     "debug_toolbar",
-    'crispy_forms',
-    "crispy_bootstrap4",
+    "crispy_forms"
+    # "crispy_bootstrap4",
     # "cachalot",
 ]
 

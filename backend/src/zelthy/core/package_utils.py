@@ -33,16 +33,16 @@ def get_all_packages(tenant=None):
     if tenant is not None:
         installed_packages = get_installed_packages(tenant)
     packages = {}
-    s3_package_data = s3.list_objects(Bucket="zelthy3-packages")
+    s3_package_data = s3.list_objects(Bucket="zelthy3-packages", Prefix="packages/")
     for package in s3_package_data["Contents"]:
         name = package["Key"]
-        if "." in name:
-            version = name.split("/")[1]
-            name = name.split("/")[0]
-            packages[name]["versions"].append(version)
+        name = name[9:]
+        version = name.split("/")[1]
+        name = name.split("/")[0]
+        if name not in packages:
+            packages[name] = {"versions": [version]}
         else:
-            name = name.split("/")[0]
-            packages[name] = {"versions": []}
+            packages[name]["versions"].append(version)
         if tenant is not None:
             if installed_packages.get(name):
                 packages[name]["status"] = "Installed"
@@ -61,7 +61,7 @@ def update_settings_json(tenant, package_name, version):
         data = json.loads(f.read())
 
     data["plugin_routes"].append(
-        {"re_path": f"^/{package_name}/", "plugin": f"{package_name}", "url": "urls"}
+        {"re_path": f"^{package_name}/", "plugin": f"{package_name}", "url": "urls"}
     )
 
     with open(f"workspaces/{tenant}/settings.json", "w") as file:
@@ -103,61 +103,59 @@ def get_package_configuration_url(package_name, tenant, tenant_domain, port=None
     for route in data["plugin_routes"]:
         if route["plugin"] == package_name:
             if port is not None:
-                return f"{tenant_domain}:{port}/{route['re_path'][1:]}configure/email"
+                return f"{tenant_domain}:{port}/{route['re_path'][1:]}configure"
             return f"http://{tenant_domain}/{route['re_path'][1:]}/configure"
     return ""
 
 
-def install_package(
-    package_name, version, tenant, skip_static=False, skip_migrate=False
-):
+def install_package(package_name, version, tenant):
     if package_installed(package_name, tenant):
         return "Package already installed"
     try:
-        if not package_is_cached(package_name, version):
-            create_directories([f"workspaces/{tenant}/plugins"])
-            resource = boto3.resource(
-                "s3",
-                aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            )
-            bucket = resource.Bucket("zelthy3-packages")
-            bucket.download_file(
-                f"{package_name}/{version}/codebase/",
-                f"workspaces/{tenant}/plugins/{package_name}.zip",
-            )
-            with zipfile.ZipFile(
-                f"workspaces/{tenant}/plugins/{package_name}.zip", "r"
-            ) as zip_ref:
-                zip_ref.extractall(f"workspaces/{tenant}/plugins")
-            shutil.move(
-                f"workspaces/{tenant}/plugins/pkg-zelthy3-{package_name}-development/{package_name}",
-                f"workspaces/{tenant}/plugins/",
-            )
-            shutil.rmtree(
-                f"workspaces/{tenant}/plugins/pkg-zelthy3-{package_name}-development"
-            )
-            os.remove(f"workspaces/{tenant}/plugins/{package_name}.zip")
-            cache_package(
-                package_name, version, f"workspaces/{tenant}/plugins/{package_name}"
-            )
-        else:
-            print("Installing from cache")
-            create_directories([f"workspaces/{tenant}/plugins"])
-            shutil.copytree(
-                f"tmp/{package_name}/{version}/",
-                f"workspaces/{tenant}/plugins/{package_name}",
-            )
-        # os.remove(f"workspaces/{tenant}/plugins/{package_name}.zip")
+        # if not package_is_cached(package_name, version):
+        create_directories([f"workspaces/{tenant}/plugins"])
+        resource = boto3.resource(
+            "s3",
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+        bucket = resource.Bucket("zelthy3-packages")
+        bucket.download_file(
+            f"packages/{package_name}/{version}/codebase/",
+            f"workspaces/{tenant}/plugins/{package_name}.zip",
+        )
+        with zipfile.ZipFile(
+            f"workspaces/{tenant}/plugins/{package_name}.zip", "r"
+        ) as zip_ref:
+            zip_ref.extractall(f"workspaces/{tenant}/plugins")
+        shutil.move(
+            f"workspaces/{tenant}/plugins/pkg-zelthy3-{package_name}-{version}/{package_name}",
+            f"workspaces/{tenant}/plugins/",
+        )
+        shutil.rmtree(
+            f"workspaces/{tenant}/plugins/pkg-zelthy3-{package_name}-{version}"
+        )
+        os.remove(f"workspaces/{tenant}/plugins/{package_name}.zip")
+        # cache_package(
+        #     package_name, version, f"workspaces/{tenant}/plugins/{package_name}"
+        # )
+        # else:
+        #     print("Installing from cache")
+        #     create_directories([f"workspaces/{tenant}/plugins"])
+        #     shutil.copytree(
+        #         f"tmp/{package_name}/{version}/",
+        #         f"workspaces/{tenant}/plugins/{package_name}",
+        #     )
         update_plugins_json(tenant, package_name, version)
         update_settings_json(tenant, package_name, version)
 
-        if not skip_static:
-            subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
-            subprocess.run("python manage.py collectstatic", shell=True)
-        if not skip_migrate:
-            subprocess.run(f"python manage.py ws_makemigration {tenant}", shell=True)
-            subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
+        subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
+        subprocess.run("python manage.py collectstatic --noinput", shell=True)
+        if os.path.exists(f"workspaces/{tenant}/plugins/{package_name}/migrations"):
+            subprocess.run(
+                f"python manage.py ws_migrate {tenant} --plugin {package_name}",
+                shell=True,
+            )
 
         return "Package Installed"
     except Exception as e:

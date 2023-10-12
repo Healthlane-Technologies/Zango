@@ -12,37 +12,27 @@ from django.core import signing
 
 from .workspace.base import Workspace
 from zelthy.core.utils import get_current_role
-from zelthy.apps.shared.tenancy.models import TenantModel
+from zelthy.apps.dynamic_models.permissions import is_platform_user
 
 
 class PermMixin:
     def has_user_access_perm(self, request, *args, **kwargs):
-        if "configure" not in request.path:
+        try:
             user_role = get_current_role()
             return user_role.has_perm(request, "userAccess")
-        if "configure" in request.path:
-            try:
-                token = request.GET.get("token", None)
-                user_id = signing.loads(token)
-                user = TenantModel.objects.get(id=user_id)
+        except AttributeError:
+            if is_platform_user(request):
                 return True
-            except Exception:
-                pass
-        return False
+            return False
 
     def has_view_perm(self, request, view_name, *args, **kwargs):
-        if "configure" not in request.path:
+        try:
             user_role = get_current_role()
             return user_role.has_perm(request, "view", view_name=view_name)
-        if "configure" in request.path:
-            try:
-                token = request.GET.get("token", None)
-                user_id = signing.loads(token)
-                user = TenantModel.objects.get(id=user_id)
+        except AttributeError:
+            if is_platform_user(request):
                 return True
-            except Exception:
-                pass
-        return False
+            return False
 
 
 @method_decorator(csrf_exempt, name="dispatch")
