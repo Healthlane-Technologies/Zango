@@ -34,6 +34,11 @@ class Command(MakeMigrationsCommand):
         parser.add_argument(
             "--test", action="store_true", help="Run the migration for test database"
         )
+        parser.add_argument(
+            "--is_plugin_migration",
+            action="store_true",
+            help="Run makemigration on plugin models",
+        )
 
     def handle(self, *app_labels, **options):
         is_test_mode = options["test"]
@@ -48,5 +53,8 @@ class Command(MakeMigrationsCommand):
             f"dynamic_models": f"workspaces.{options['workspace']}.dmigrations"
         }
         w = Workspace(tenant_obj, None, True)
-        w.load_models(migration=True)
+        if options["is_plugin_migration"]:
+            w.load_models()
+        else:
+            w.load_models(migration=True)
         super().handle("dynamic_models", **options)
