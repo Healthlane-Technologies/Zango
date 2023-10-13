@@ -27,8 +27,8 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 	let initialValues = {
 		name: appConfigurationData?.app?.name ?? '',
 		description: appConfigurationData?.app?.description ?? '',
-		logo: appConfigurationData?.app?.logo ?? '',
-		fav_icon: appConfigurationData?.app?.fav_icon ?? '',
+		logo: '',
+		fav_icon: '',
 		domains: appConfigurationData?.app?.domains?.map(
 			(eachDomain) => eachDomain.domain
 		) ?? [''],
@@ -46,6 +46,13 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 
 	let onSubmit = (values) => {
 		let tempValues = values;
+		if (!tempValues['logo']) {
+			delete tempValues['logo'];
+		}
+
+		if (!tempValues['fav_icon']) {
+			delete tempValues['fav_icon'];
+		}
 
 		let dynamicFormData = transformToFormData(tempValues);
 

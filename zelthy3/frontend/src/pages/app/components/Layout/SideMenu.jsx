@@ -45,8 +45,21 @@ export default function SideMenu() {
 					},
 				]}
 			/>
+			<NavLink
+				to={`permission-management/policies/`}
+				className={({ isActive, isPending }) =>
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
+					}`
+				}
+			>
+				<EachSideMenuIcon />
+				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
+					Policies
+				</span>
+			</NavLink>
 
-			<SideMenuDropdown
+			{/* <SideMenuDropdown
 				Icon={EachSideMenuIcon}
 				label="Permission Management"
 				sublinks={[
@@ -59,7 +72,7 @@ export default function SideMenu() {
 						label: 'Policies',
 					},
 				]}
-			/>
+			/> */}
 			<NavLink
 				to={`tasks-management/`}
 				className={({ isActive, isPending }) =>
