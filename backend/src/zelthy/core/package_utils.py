@@ -5,13 +5,16 @@ import json
 import shutil
 import subprocess
 
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+from zelthy.config.settings.base import (
+    PACKAGE_REPO_AWS_ACCESS_KEY_ID,
+    PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
+)
+
 
 s3 = boto3.client(
     "s3",
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    aws_access_key_id=PACKAGE_REPO_AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
 )
 
 
@@ -116,8 +119,8 @@ def install_package(package_name, version, tenant):
         create_directories([f"workspaces/{tenant}/plugins"])
         resource = boto3.resource(
             "s3",
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            aws_access_key_id=PACKAGE_REPO_AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
         )
         bucket = resource.Bucket("zelthy3-packages")
         bucket.download_file(
