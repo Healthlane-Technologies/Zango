@@ -25,10 +25,27 @@ export default function Table({ tableData }) {
 	const columnHelper = createColumnHelper();
 
 	const columns = [
+		columnHelper.accessor((row) => row.id, {
+			id: 'id',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
+					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						User Id
+					</span>
+				</div>
+			),
+			cell: (info) => (
+				<div className="flex h-full flex-col gap-[8px] border-b border-[#F0F3F4] py-[14px] pl-[32px] pr-[20px]">
+					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+						{info.getValue()}
+					</span>
+				</div>
+			),
+		}),
 		columnHelper.accessor((row) => row.name, {
 			id: 'name',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						User Name Active/inactive
 					</span>
@@ -36,7 +53,7 @@ export default function Table({ tableData }) {
 			),
 			cell: (info) => {
 				return (
-					<div className="flex h-full flex-col gap-[8px] border-b border-[#F0F3F4] py-[14px] pl-[32px] pr-[20px]">
+					<div className="flex h-full flex-col gap-[8px] border-b border-[#F0F3F4] py-[14px] px-[20px]">
 						<span className="min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 							{info.getValue()}
 						</span>
@@ -50,23 +67,6 @@ export default function Table({ tableData }) {
 					</div>
 				);
 			},
-		}),
-		columnHelper.accessor((row) => row.id, {
-			id: 'id',
-			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
-					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						User Id
-					</span>
-				</div>
-			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-						{info.getValue()}
-					</span>
-				</div>
-			),
 		}),
 		columnHelper.accessor((row) => row.email, {
 			id: 'email',
