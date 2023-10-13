@@ -392,7 +392,7 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
     def delete(self, *args, **kwargs):
         request = get_current_request()
         if is_platform_user(request):
-            return super().save(*args, **kwargs)
+            return super().delete(*args, **kwargs)
         if self.has_perm("delete"):
             return super().delete(*args, **kwargs)
         raise PermissionDenied(
