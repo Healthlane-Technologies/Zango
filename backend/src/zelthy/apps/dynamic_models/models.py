@@ -185,6 +185,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         return super().filter(combined_q)
 
     def get(self, *args, **kwargs):
+        if self.platform_user:
+            return super(RestrictedQuerySet, self).get(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
             obj = super(RestrictedQuerySet, prefiltered_qs).get(*args, **kwargs)
@@ -205,6 +207,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def exclude(self, *args, **kwargs):
+        if self.platform_user:
+            return super(RestrictedQuerySet, self).exclude(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).exclude(*args, **kwargs)
@@ -214,6 +218,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def filter(self, *args, **kwargs):
+        if self.platform_user:
+            return super(RestrictedQuerySet, self).filter(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).filter(*args, **kwargs)
@@ -223,6 +229,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def annotate(self, *args, **kwargs):
+        if self.platform_user:
+            return super(RestrictedQuerySet, self).annotate(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).annotate(*args, **kwargs)
@@ -232,6 +240,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def aggregate(self, *args, **kwargs):
+        if self.platform_user:
+            return super(RestrictedQuerySet, self).aggregate(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).aggregate(*args, **kwargs)
@@ -241,6 +251,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def select_related(self, *args, **kwargs):
+        if self.platform_user:
+            return super(RestrictedQuerySet, self).select_related(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).select_related(
@@ -252,6 +264,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def create(self, *args, **kwargs):
+        if self.platform_user:
+            return super().create(*args, **kwargs)
         if self.has_perm("create"):
             return super().create(*args, **kwargs)
         raise PermissionDenied(
@@ -259,6 +273,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def bulk_create(self, *args, **kwargs):
+        if self.platform_user:
+            return super().bulk_create(*args, **kwargs)
         if self.has_perm("create"):
             return super().bulk_create(*args, **kwargs)
         raise PermissionDenied(
@@ -266,6 +282,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def update(self, *args, **kwargs):
+        if self.platform_user:
+            return super().update(*args, **kwargs)
         if self.has_perm("edit"):
             return super().update(*args, **kwargs)
         raise PermissionDenied(
@@ -273,6 +291,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def bulk_update(self, *args, **kwargs):
+        if self.platform_user:
+            return super().bulk_update(*args, **kwargs)
         if self.has_perm("edit"):
             return super().bulk_update(*args, **kwargs)
         raise PermissionDenied(
@@ -280,6 +300,8 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
         )
 
     def delete(self):
+        if self.platform_user:
+            return super().delete()
         if self.has_perm("delete"):
             return super().delete()
         raise PermissionDenied(
@@ -318,25 +340,17 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
         abstract = True
 
     def has_perm(self, perm_type):
-        request = get_current_request()
-        try:
-            model_name = self.__class__.__name__
-            perm_obj = ORMPemissions()
-            perm_obj.update_model_perm(model_name)
-            permissions = perm_obj.permissions
-            current_role_id = get_current_role().id
-            tenant_name = connection.tenant.name
-            if (
-                perm_type
-                in permissions[tenant_name][current_role_id][type(self).__name__][
-                    "actions"
-                ]
-            ):
-                return True
-        except Exception:
-            if is_platform_user(request):
-                return True
-            return False
+        model_name = self.__class__.__name__
+        perm_obj = ORMPemissions()
+        perm_obj.update_model_perm(model_name)
+        permissions = perm_obj.permissions
+        current_role_id = get_current_role().id
+        tenant_name = connection.tenant.name
+        if (
+            perm_type
+            in permissions[tenant_name][current_role_id][type(self).__name__]["actions"]
+        ):
+            return True
         return False
 
     # TODO: Attribute level permission
@@ -364,6 +378,9 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
     #     return super().__getattribute__(key)
 
     def save(self, *args, **kwargs):
+        request = get_current_request()
+        if is_platform_user(request):
+            return super().save(*args, **kwargs)
         if not self.pk and self.has_perm("create"):
             return super().save(*args, **kwargs)
         if self.pk and self.has_perm("edit"):
@@ -373,6 +390,9 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
         )
 
     def delete(self, *args, **kwargs):
+        request = get_current_request()
+        if is_platform_user(request):
+            return super().save(*args, **kwargs)
         if self.has_perm("delete"):
             return super().delete(*args, **kwargs)
         raise PermissionDenied(
