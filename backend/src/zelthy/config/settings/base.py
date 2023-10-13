@@ -50,8 +50,7 @@ TENANT_APPS = [
     "crispy_forms",
     "crispy_bootstrap5",
     "debug_toolbar",
-    "crispy_forms"
-    # "crispy_bootstrap4",
+    "crispy_forms",
     # "cachalot",
 ]
 
@@ -163,3 +162,4 @@ PASSWORD_RESET_DAYS = 90
 
 PACKAGE_REPO_AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+MEDIA_URL = "/media/"
