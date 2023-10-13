@@ -63,3 +63,25 @@ ROOT_URLCONF = "{{project_name}}.urls_tenants"
 ENV = "dev"
 
 PHONENUMBER_DEFAULT_REGION = "IN"
+
+USE_S3 = os.getenv("USE_S3") == "TRUE"
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = "AWS ACCESS KEY"
+    AWS_SECRET_ACCESS_KEY = "ASW SECRET KEY"
+
+    AWS_S3_REGION_NAME = "AWS S3 REGION"
+    AWS_STORAGE_BUCKET_NAME = "AWS BUCKET NAME"
+
+    AWS_QUERYSTRING_AUTH = True
+    AWS_S3_ENCRYPTION = True
+
+    S3_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+
+    MEDIA_DIRECTORY = "/media/"
+    MEDIA_URL = S3_URL + MEDIA_DIRECTORY
+    DEFAULT_FILE_STORAGE = "zelthy.core.storage_utils.MediaS3Boto3Storage"
+    AWS_QUERYSTRING_EXPIRE = 600
+else:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = os.path.join(BASE_DIR, "workspaces")
