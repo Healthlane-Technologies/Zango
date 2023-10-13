@@ -17,22 +17,16 @@ from zelthy.apps.dynamic_models.permissions import is_platform_user
 
 class PermMixin:
     def has_user_access_perm(self, request, *args, **kwargs):
-        try:
-            user_role = get_current_role()
-            return user_role.has_perm(request, "userAccess")
-        except AttributeError:
-            if is_platform_user(request):
-                return True
-            return False
+        if is_platform_user(request):
+            return True
+        user_role = get_current_role()
+        return user_role.has_perm(request, "userAccess")
 
     def has_view_perm(self, request, view_name, *args, **kwargs):
-        try:
-            user_role = get_current_role()
-            return user_role.has_perm(request, "view", view_name=view_name)
-        except AttributeError:
-            if is_platform_user(request):
-                return True
-            return False
+        if is_platform_user(request):
+            return True
+        user_role = get_current_role()
+        return user_role.has_perm(request, "view", view_name=view_name)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
