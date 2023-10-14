@@ -29,6 +29,18 @@ class ZelthySessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateVie
         )
 
 
+class ZelthySessionAppView(IsAuthenticatedAppUser, View):
+    """
+    View only accessible to authenticated app users.
+    """
+
+    @classmethod
+    def as_view(cls):
+        login_url = None
+        return login_required(
+            super(ZelthySessionAppView, cls).as_view(), login_url=login_url
+        )
+
 class ZelthySessionAppTemplateView(IsAuthenticatedAppUser, TemplateView):
     """
     TemplateView only accessible to authenticated app users.

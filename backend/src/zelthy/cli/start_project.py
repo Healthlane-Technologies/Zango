@@ -143,8 +143,8 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--directory", help="Project Directory")
 @click.option("--db_name", prompt=True, help="DB Name")
 @click.option("--db_user", prompt=True, help="DB User")
-@click.option("--db_password", prompt=True, help="DB Password")
-@click.option("--db_host", prompt=True, help="DB Host")
+@click.option("--db_password", prompt=True, hide_input=True, help="DB Password")
+@click.option("--db_host", prompt=True, help="DB Host", default="127.0.0.1")
 @click.option("--db_port", prompt=True, help="DB Port", default="5432")
 def start_project(
     project_name, directory, db_name, db_user, db_password, db_host, db_port

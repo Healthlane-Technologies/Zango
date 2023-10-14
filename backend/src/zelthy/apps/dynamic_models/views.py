@@ -6,18 +6,23 @@ from django.utils.decorators import method_decorator
 
 from django.views.generic import View
 from django.http import Http404
+from django.core import signing
 
 from .workspace.base import Workspace
 from zelthy.core.utils import get_current_role
+from zelthy.apps.dynamic_models.permissions import is_platform_user
 
 
 class PermMixin:
     def has_user_access_perm(self, request, *args, **kwargs):
-        # return True
+        if is_platform_user(request):
+            return True
         user_role = get_current_role()
         return user_role.has_perm(request, "userAccess")
 
     def has_view_perm(self, request, view_name, *args, **kwargs):
+        if is_platform_user(request):
+            return True
         user_role = get_current_role()
         return user_role.has_perm(request, "view", view_name=view_name)
 
