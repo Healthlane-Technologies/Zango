@@ -144,7 +144,7 @@ class Workspace:
                     path = self.get_plugin_path(item["name"]) + mod["path"]
                     if path not in modules:
                         modules.append(path)
-            elif item["type"] == "module":
+            if item["type"] == "module":
                 path = self.path + item["path"]
                 if path not in modules:
                     modules.append(path)
@@ -254,12 +254,14 @@ class Workspace:
         """
         pass
 
-    def load_models(self) -> None:
+    def load_models(self, migration=False) -> None:
         """
         get topologically sorted list of models from packages and modules and
         import models.py files in that order
         """
         for m in self.get_models():
+            if m.split(".")[2] == "plugins" and migration:
+                continue
             split = m.split(".")[2:]
             self.plugin_source.load_plugin(".".join(split))
         return
