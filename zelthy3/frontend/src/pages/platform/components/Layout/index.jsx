@@ -1,12 +1,10 @@
-import { Link } from 'react-router-dom';
-import { useWindowSizeHeight } from '../../../../utils/helper';
-import ProfileMenu from './ProfileMenu';
-
-import { ReactComponent as ZelthyIcon } from '../../../../assets/images/svg/zelthy-icon.svg';
-import NavSearchForm from './NavSearchForm';
-import { useRef } from 'react';
-import { useLayoutEffect } from 'react';
 import debounce from 'just-debounce-it';
+import { useLayoutEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { ReactComponent as ZelthyIcon } from '../../../../assets/images/svg/zelthy-icon.svg';
+import { useWindowSizeHeight } from '../../../../utils/helper';
+import NavSearchForm from './NavSearchForm';
+import ProfileMenu from './ProfileMenu';
 
 export default function Layout({ children }) {
 	const navRef = useRef(null);
@@ -71,12 +69,12 @@ export default function Layout({ children }) {
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
 					Documents
 				</span>
-				<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
+				{/* <span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•
 				</span>
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
 					License 273781
-				</span>
+				</span> */}
 			</footer>
 		</>
 	);

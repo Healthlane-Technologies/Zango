@@ -127,12 +127,14 @@ export default function AppConfiguration() {
 									<div className="flex flex-col gap-[8px]">
 										{appConfigurationData?.app?.domains?.map((eachDomain) => {
 											return (
-												<span
-													key={eachDomain.domain}
-													className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]"
-												>
-													{eachDomain.domain}
-												</span>
+												<a href={eachDomain?.domain} alt="#" target={'_blank'}>
+													<span
+														key={eachDomain.domain}
+														className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429] hover:text-[#5048ED]"
+													>
+														{eachDomain.domain}
+													</span>
+												</a>
 											);
 										})}
 									</div>

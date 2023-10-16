@@ -160,7 +160,7 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Users by name / ID / role(s)"
+							placeholder="Search User roles by Access / Policy"
 						/>
 					</div>
 					{/* <TableFilterIcon />
