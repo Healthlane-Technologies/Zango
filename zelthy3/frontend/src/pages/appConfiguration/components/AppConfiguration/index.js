@@ -3,13 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as EachAppIcon } from '../../../../assets/images/svg/each-app-icon.svg';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	openIsUpdateAppDetailsModalOpen,
 	selectAppConfigurationData,
 	selectRerenderPage,
 	setAppConfigurationData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
+
 import UpdateAppDetailsModal from '../Models/UpdateAppDetailsModal';
 
 export default function AppConfiguration() {

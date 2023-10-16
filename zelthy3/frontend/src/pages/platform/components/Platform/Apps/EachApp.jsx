@@ -40,7 +40,11 @@ export default function EachApp({ data }) {
 		>
 			<div className="relative flex flex-col border-b border-[#F0F3F4] px-[16px] py-[22px]">
 				{logo ? (
-					<img src={logo} alt="#" />
+					<img
+						src={logo}
+						alt="#"
+						className="max-h-[32px] min-h-[32px] w-fit object-contain"
+					/>
 				) : (
 					<EachAppIcon className="mt-[6px] min-h-[32px] min-w-[32px]" />
 				)}
@@ -61,15 +65,15 @@ export default function EachApp({ data }) {
 					) : null}
 				</div>
 			</div>
-			<div className="flex flex-col gap-[28px] px-[16px] pt-[22px] pb-[16px]">
-				<div className="flex flex-col gap-[8px]">
+			<div className="flex grow flex-col gap-[28px] px-[16px] pt-[22px] pb-[16px]">
+				<div className="flex grow flex-col gap-[8px]">
 					<span className="font-lato text-[12px] font-bold uppercase leading-[20px] tracking-[0.6px] text-[#A3ABB1]">
 						App ID: {uuid}
 					</span>
 					<span className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 						{name}
 					</span>
-					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
+					<span className="truncate font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						{description}
 					</span>
 				</div>
@@ -89,7 +93,7 @@ export default function EachApp({ data }) {
 					</button>
 				</div>
 			</div>
-			<button
+			{/* <button
 				type="button"
 				className={`absolute top-[16px] right-[16px] rounded-[2px] bg-[#F0F3F4] p-[4px] ${
 					isBookmarked ? 'flex' : 'hidden group-hover:flex'
@@ -99,7 +103,7 @@ export default function EachApp({ data }) {
 				<EachAppStarBookmarkIcon
 					className={` ${isBookmarked ? 'text-[#FC9E01]' : 'text-[#A3ABB1]'}`}
 				/>
-			</button>
+			</button> */}
 		</Link>
 	);
 }

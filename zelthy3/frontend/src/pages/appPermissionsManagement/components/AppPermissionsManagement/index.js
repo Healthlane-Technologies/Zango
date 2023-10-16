@@ -3,13 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	openIsAddCustomPermissionModalOpen,
 	selectAppPermissionsManagementData,
 	selectRerenderPage,
 	setAppPermissionsManagementData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
 import AddCustomPermissionModal from '../Models/AddCustomPermissionModal';
 import DeleteCustomPermissionModal from '../Models/DeleteCustomPermissionModal';
 import EditCustomPermissionModal from '../Models/EditCustomPermissionModal';

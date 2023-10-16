@@ -1,17 +1,17 @@
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import useApi from '../../../hooks/useApi';
 import { AppConfigurationRoutes } from '../../appConfiguration/routes';
+import { setAppConfigurationData } from '../../appConfiguration/slice';
+import { AppPackagesManagementRoutes } from '../../appPackagesManagement/routes';
+import { AppPermissionsManagementRoutes } from '../../appPermissionsManagement/routes';
+import { AppPoliciesManagementRoutes } from '../../appPoliciesManagement/routes';
+import { AppTaskManagementRoutes } from '../../appTaskManagement/routes';
 import { AppThemeConfigurationRoutes } from '../../appThemeConfiguration/routes';
 import { AppUserManagementRoutes } from '../../appUserManagement/routes';
 import { AppUserRolesRoutes } from '../../appUserRoles/routes';
-import AppTaskManagement from '../../appTaskManagement/components/AppTaskManagement';
 import Layout from '../components/Layout';
-import { AppPermissionsManagementRoutes } from '../../appPermissionsManagement/routes';
-import { AppPoliciesManagementRoutes } from '../../appPoliciesManagement/routes';
-import { AppPackagesManagementRoutes } from '../../appPackagesManagement/routes';
-import { useEffect } from 'react';
-import useApi from '../../../hooks/useApi';
-import { useDispatch } from 'react-redux';
-import { setAppConfigurationData } from '../../appConfiguration/slice';
 
 export const PlatformAppRoutes = () => {
 	let { appId } = useParams();
@@ -64,7 +64,10 @@ export const PlatformAppRoutes = () => {
 					path="/permission-management/policies//*"
 					element={<AppPoliciesManagementRoutes />}
 				/>
-				<Route path="/tasks-management//*" element={<AppTaskManagement />} />
+				<Route
+					path="/tasks-management//*"
+					element={<AppTaskManagementRoutes />}
+				/>
 				<Route
 					path="/packages-management//*"
 					element={<AppPackagesManagementRoutes />}

@@ -2,12 +2,12 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	selectAppTaskManagementData,
 	selectRerenderPage,
 	setAppTaskManagementData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
 import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
 import UpdatePolicyModal from '../Models/UpdatePolicyModal';
 import Table from '../Table';

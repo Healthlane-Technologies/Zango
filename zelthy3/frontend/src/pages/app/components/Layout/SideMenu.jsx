@@ -1,10 +1,24 @@
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { ReactComponent as EachSideMenuIcon } from '../../../../assets/images/svg/each-side-menu-icon.svg';
 import SideMenuDropdown from './SideMenuDropdown';
 
 export default function SideMenu() {
 	return (
 		<div className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]">
+			<SideMenuDropdown
+				Icon={EachSideMenuIcon}
+				label="App Settings"
+				sublinks={[
+					{
+						url: `app-settings/app-configuration/`,
+						label: 'App Configuration',
+					},
+					{
+						url: `app-settings/app-theme-configuration/`,
+						label: 'App Theme Configuration',
+					},
+				]}
+			/>
 			<NavLink
 				to={`user-roles/`}
 				className={({ isActive, isPending }) =>
@@ -31,20 +45,6 @@ export default function SideMenu() {
 					User Management
 				</span>
 			</NavLink>
-			<SideMenuDropdown
-				Icon={EachSideMenuIcon}
-				label="App Settings"
-				sublinks={[
-					{
-						url: `app-settings/app-configuration/`,
-						label: 'App Configuration',
-					},
-					{
-						url: `app-settings/app-theme-configuration/`,
-						label: 'App Theme Configuration',
-					},
-				]}
-			/>
 			<NavLink
 				to={`permission-management/policies/`}
 				className={({ isActive, isPending }) =>

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	openIsAddNewUserRolesModalOpen,
 	selectAppUserRolesData,
@@ -10,7 +11,6 @@ import {
 	selectRerenderPage,
 	setAppUserRolesData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
 import ActivateUserRolesModal from '../Models/ActivateUserRolesModal';
 import AddNewUserRolesModal from '../Models/AddNewUserRolesModal';
 import DeactivateUserRolesModal from '../Models/DeactivateUserRolesModal';

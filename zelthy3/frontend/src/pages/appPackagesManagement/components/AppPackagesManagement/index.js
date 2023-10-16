@@ -2,12 +2,12 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	selectAppPackagesManagementData,
 	selectRerenderPage,
 	setAppPackagesManagementData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
 import ConfigurePackageModal from '../Models/ConfigurePackageModal';
 import InstallPackageModal from '../Models/InstallPackageModal';
 import Table from '../Table';

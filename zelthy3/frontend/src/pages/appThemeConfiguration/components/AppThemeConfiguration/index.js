@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as AddThemeIcon } from '../../../../assets/images/svg/add-theme-icon.svg';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	selectAppConfigurationData,
 	setAppConfigurationData,
@@ -13,7 +14,6 @@ import {
 	selectRerenderPage,
 	setAppThemeConfigurationData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
 import AddThemeModal from '../Models/AddThemeModal';
 import EditThemeModal from '../Models/EditThemeModal';
 import EachTheme from './EachTheme';

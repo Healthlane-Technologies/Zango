@@ -3,13 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import useApi from '../../../../hooks/useApi';
+import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	openIsAddNewUserModalOpen,
 	selectAppUserManagementData,
 	selectRerenderPage,
 	setAppUserManagementData,
 } from '../../slice';
-import BreadCrumbs from '../BreadCrumbs';
 import ActivateUserModal from '../Models/ActivateUserModal';
 import AddNewUserModal from '../Models/AddNewUserModal';
 import DeactivateUserModal from '../Models/DeactivateUserModal';
