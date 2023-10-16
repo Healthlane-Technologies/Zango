@@ -21,7 +21,7 @@ export default function BreadCrumbs() {
 							key={
 								{
 									0: 'platform/apps/',
-									1: `/platform/apps/${uuid}`,
+									1: `/platform/apps/${uuid}/app-settings/app-configuration/`,
 									2: url,
 									3: url,
 								}[index]
@@ -29,7 +29,7 @@ export default function BreadCrumbs() {
 							to={
 								{
 									0: '/platform/apps/',
-									1: `/platform/apps/${uuid}`,
+									1: `/platform/apps/${uuid}/app-settings/app-configuration/`,
 									2: url,
 									3: url,
 								}[index]

@@ -66,9 +66,9 @@ export default function RowMenu({ rowData }) {
 											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 												Install Package
 											</span>
-											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+											{/* <span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
 												install package
-											</span>
+											</span> */}
 										</div>
 									</button>
 								)}
@@ -91,9 +91,9 @@ export default function RowMenu({ rowData }) {
 											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 												Configure Package
 											</span>
-											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+											{/* <span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
 												configure
-											</span>
+											</span> */}
 										</div>
 									</button>
 								)}
