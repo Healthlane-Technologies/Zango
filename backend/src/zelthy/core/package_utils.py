@@ -8,13 +8,6 @@ import subprocess
 from django.conf import settings
 
 
-s3 = boto3.client(
-    "s3",
-    aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
-)
-
-
 def create_directories(dirs):
     for directory in dirs:
         if not os.path.exists(directory):
@@ -33,6 +26,11 @@ def get_all_packages(tenant=None):
     if tenant is not None:
         installed_packages = get_installed_packages(tenant)
     packages = {}
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
+    )
     s3_package_data = s3.list_objects(Bucket="zelthy3-packages", Prefix="packages/")
     for package in s3_package_data["Contents"]:
         name = package["Key"]
