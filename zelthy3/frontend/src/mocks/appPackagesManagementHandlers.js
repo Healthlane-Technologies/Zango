@@ -46,7 +46,6 @@ export const appPackagesManagementHandlers = [
 			(pageIndex + 1) * pageSize
 		);
 
-		console.log('action', action);
 		if (action === 'config_url') {
 			return res(
 				ctx.delay(500),
