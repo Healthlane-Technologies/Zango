@@ -37,21 +37,17 @@ const MultiSelectField = ({
 		  )
 		: optionsData;
 
-	const handleChange = (selectedValue) => {
-		let isAlreadySelected = value.indexOf(selectedValue.id) >= 0;
+	const handleChange = (selectedValues) => {
+		let selectedAllValuesID = selectedValues?.map((selectedValue) => {
+			return selectedValue?.id;
+		});
 
-		if (isAlreadySelected) {
-			setSelected((previous) => [
-				...previous.filter((eachValue) => eachValue.id !== selectedValue.id),
-			]);
+		let selectOptions = optionsData.filter(
+			(eachData) => selectedAllValuesID.indexOf(eachData.id) >= 0
+		);
+		setSelected((previous) => [...selectOptions]);
 
-			formik.setFieldValue(props.name, [
-				...value.filter((eachValue) => eachValue !== selectedValue.id),
-			]);
-		} else {
-			setSelected((previous) => [...previous, selectedValue]);
-			formik.setFieldValue(props.name, [...value, selectedValue.id]);
-		}
+		formik.setFieldValue(props.name, [...selectedAllValuesID]);
 	};
 
 	const handleRemove = (selectedValue) => {
@@ -81,7 +77,7 @@ const MultiSelectField = ({
 				{label}
 			</label>
 			<div className="flex flex-col gap-[12px]">
-				<Listbox value={selected} onChange={handleChange}>
+				<Listbox value={selected} onChange={handleChange} multiple>
 					<div className="relative">
 						<Listbox.Button
 							className="w-full rounded-[6px] rounded-[6px] border border-[#DDE2E5] px-[16px] px-[16px] py-[14px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
