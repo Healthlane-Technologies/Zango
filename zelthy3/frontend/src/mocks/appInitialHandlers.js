@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { rest } from 'msw';
 
 export const appInitialHandlers = [
-	rest.get('/api/v1/appInitialData', (req, res, ctx) => {
+	rest.get('/api/v1/auth/app-initalization-details/', (req, res, ctx) => {
 		return res(
 			ctx.delay(500),
 			ctx.status(200),

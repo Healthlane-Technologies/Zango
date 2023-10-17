@@ -18,7 +18,7 @@ export const AppRoutes = () => {
 	useEffect(() => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/appInitialData`,
+				url: `/api/v1/auth/app-initalization-details/`,
 				type: 'GET',
 				loader: true,
 			});
