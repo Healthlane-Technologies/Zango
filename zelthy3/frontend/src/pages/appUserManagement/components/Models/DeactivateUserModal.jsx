@@ -78,7 +78,8 @@ const DeactivateUserForm = ({ closeModal }) => {
 							<div className="flex grow flex-col items-center justify-center gap-[16px]">
 								<DeactivateUserIcon />
 								<p className="max-w-[201px] text-center font-lato text-[16px] leading-[24px] tracking-[0.2px] text-[#212429]">
-									Sure you want to deactivate Darrell Steward’s profile?
+									Sure you want to deactivate {appUserManagementFormData?.name}
+									's profile?
 								</p>
 							</div>
 							<p className="flex flex-col font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
@@ -108,6 +109,9 @@ const DeactivateUserForm = ({ closeModal }) => {
 export default function DeactivateUserModal() {
 	const isDeactivateUserModalOpen = useSelector(
 		selectIsDeactivateUserModalOpen
+	);
+	const appUserManagementFormData = useSelector(
+		selectAppUserManagementFormData
 	);
 	const dispatch = useDispatch();
 
@@ -155,7 +159,7 @@ export default function DeactivateUserModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Deactivate Darrel’s Profile
+												Deactivate {appUserManagementFormData?.name}'s Profile
 											</h4>
 										</div>
 									</Dialog.Title>

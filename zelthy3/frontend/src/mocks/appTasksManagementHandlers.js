@@ -41,6 +41,11 @@ const newTask = () => {
 		email: faker.internet.email().toLowerCase(),
 		attached_policies: makePolices(faker.number.int({ min: 1, max: 10 })),
 		schedule: '* * * * *',
+		minute: '1',
+		hour: '2',
+		day_of_week: '3',
+		day_of_month: '4',
+		month_of_year: '5',
 		is_superadmin: false,
 		last_login: faker.date.past(),
 		status: faker.helpers.shuffle(['active', 'inactive'])[0],
@@ -116,6 +121,20 @@ export const appTasksManagementHandlers = [
 	}),
 
 	rest.post('/api/v1/apps/:appId/tasks/', (req, res, ctx) => {
+		const action = req.url.searchParams.get('action');
+		if (action === 'sync_tasks') {
+			return res(
+				ctx.delay(1000),
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					response: {
+						message: 'Tasks synced successfully',
+					},
+				})
+			);
+		}
+
 		return res(
 			ctx.delay(500),
 			ctx.status(200),
@@ -123,19 +142,6 @@ export const appTasksManagementHandlers = [
 				success: true,
 				response: {
 					message: 'Platform user fetched successfully',
-				},
-			})
-		);
-	}),
-
-	rest.post('/api/v1/apps/:appId/tasks/sync/', (req, res, ctx) => {
-		return res(
-			ctx.delay(1000),
-			ctx.status(200),
-			ctx.json({
-				success: true,
-				response: {
-					message: 'Tasks synced successfully',
 				},
 			})
 		);

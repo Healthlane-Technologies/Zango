@@ -28,12 +28,12 @@ export default function Table({ tableData }) {
 	const columnHelper = createColumnHelper();
 
 	const columns = [
-		columnHelper.accessor((row) => row.name, {
-			id: 'name',
+		columnHelper.accessor((row) => row.id, {
+			id: 'id',
 			header: () => (
 				<div className="flex h-full min-w-max items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Task Name
+						Task Id
 					</span>
 				</div>
 			),
@@ -47,12 +47,12 @@ export default function Table({ tableData }) {
 				);
 			},
 		}),
-		columnHelper.accessor((row) => row.id, {
-			id: 'id',
+		columnHelper.accessor((row) => row.name, {
+			id: 'name',
 			header: () => (
 				<div className="flex h-full min-w-max items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Task Id
+						Task Name
 					</span>
 				</div>
 			),

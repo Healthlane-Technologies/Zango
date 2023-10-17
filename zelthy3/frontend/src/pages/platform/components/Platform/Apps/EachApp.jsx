@@ -68,7 +68,7 @@ export default function EachApp({ data }) {
 			<div className="flex grow flex-col gap-[28px] px-[16px] pt-[22px] pb-[16px]">
 				<div className="flex grow flex-col gap-[8px]">
 					<span className="font-lato text-[12px] font-bold uppercase leading-[20px] tracking-[0.6px] text-[#A3ABB1]">
-						App ID: {uuid}
+						App ID: {uuid?.slice(0, 7)}
 					</span>
 					<span className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 						{name}

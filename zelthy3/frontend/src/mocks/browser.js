@@ -11,6 +11,7 @@ import { appTasksManagementHandlers } from './appTasksManagementHandlers';
 import { appConfigurationHandlers } from './appConfigurationHandlers';
 import { appThemeConfigurationHandlers } from './appThemeConfigurationHandlers';
 import { appPackagesManagementHandlers } from './appPackagesManagementHandlers';
+import { appInitialHandlers } from './appInitialHandlers';
 
 // This configures a Service Worker with the given request handlers.
 export const worker = setupWorker(
@@ -24,5 +25,6 @@ export const worker = setupWorker(
 	...appTasksManagementHandlers,
 	...appConfigurationHandlers,
 	...appThemeConfigurationHandlers,
-	...appPackagesManagementHandlers
+	...appPackagesManagementHandlers,
+	...appInitialHandlers
 );

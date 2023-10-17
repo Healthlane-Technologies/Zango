@@ -42,7 +42,7 @@ export default function SideMenu() {
 			>
 				<EachSideMenuIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
-					User Management
+					User
 				</span>
 			</NavLink>
 			<NavLink
@@ -83,7 +83,7 @@ export default function SideMenu() {
 			>
 				<EachSideMenuIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
-					Tasks Management
+					Tasks
 				</span>
 			</NavLink>
 			<NavLink
@@ -96,7 +96,7 @@ export default function SideMenu() {
 			>
 				<EachSideMenuIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
-					Packages Management
+					Packages
 				</span>
 			</NavLink>
 		</div>
