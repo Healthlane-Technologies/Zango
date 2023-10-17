@@ -30,11 +30,12 @@ def age_validator(value):
     
     if value > 100:
         raise ValidationError("Age should not greater that 100")
+    print("value =>", value)
     return value
 
 
 class TempProfile(DynamicModelBase):
     name = models.CharField(max_length=100, validators=[MinLengthValidator])
     email = models.EmailField(max_length=200)
-    age = models.IntegerField() #validators=[age_validator] <--- custom validators not worked
+    age = models.IntegerField(validators=[age_validator]) #validators=[age_validator] <--- custom validators not worked
 

@@ -60,7 +60,8 @@ class OrderFormView(View):
         if form.is_valid():
             form.save()
             context = {"msg": "Data saved..!"}
+            context["form"] = OrderForm()
         else:
-            context = {"msg": "Data NOT saved..!"}
-        context["form"] = OrderForm()
+            print("form.errors ==> ", form.errors)
+            context = {"msg": "Data NOT saved..!", "form": form}
         return render(request, self.template_name, context)

@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 import uuid
 from random import randint
 from django.contrib.postgres.fields import JSONField
@@ -23,9 +24,17 @@ def random_unique_code():
     return final_code
 
 
+def qty_validator(value):
+  if value < 0:
+    raise ValidationError("Quantity should be +ve value only...!")
+  return value
+
+
+
 
 class OrderModel(DynamicModelBase):
 
+  quantity = models.IntegerField(validators=[qty_validator]) # <-- For test validation in form 
   slug_code = models.UUIDField(
                           default=uuid.uuid4,
                           unique=True,
@@ -35,7 +44,7 @@ class OrderModel(DynamicModelBase):
                     max_length=6,
                     verbose_name="Order Code",
                     # unique=True,
-                    # default=random_unique_code <--   causing migration error
+                    default=random_unique_code #<--   causing migration error -- need to fix import error in migrations file
                     )
   order_generation_date = models.DateTimeField(
                      verbose_name="Order Generation Date",

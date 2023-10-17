@@ -5,6 +5,8 @@ from rest_framework import status
 from rest_framework.response import Response  # Not woring with View
 from rest_framework.views import APIView # Not woring properly : for get kwargs is {}
 
+from zelthy.apps.appauth.models import AppUserModel
+
 from .models import BenefitsModel, BenefitsDispensingModel
 from . serializers import BenefitsModelSerializer
 from ..program_module.models import ProgramModel
@@ -12,11 +14,11 @@ from .models import DispensingOptionsModel, DispensingOptionsOrderItemsModel, Or
 from ..supplychainnode_module.models import SupplyChainNodes
 from ..order_module.models import OrderModel
 # from .. patient_module.models import DoctorModel, Patient
-from ..test_module.models import CityModel
+from ..test_module.models import CityModel, TempProfile
 
 from .serializers import DispensingOptionsModelSerializer
 
-from zelthy.apps.appauth.models import UserRoleModel
+from zelthy.apps.appauth.models import UserRoleModel, User
 
 
 class BenefitView(View):
@@ -288,11 +290,39 @@ class RunScript(View):
 
 
 
-        CityModel.objects.get(id=1).delete()
+        # CityModel.objects.get(id=1).delete()
 
-        order=OrderModel.objects.get(id=1)
-        print("get_patient ===> ", order.get_patient())
-        print("patient ---> ", order.patient)
+
+
+        # order=OrderModel.objects.get(id=1)
+        # print("get_patient ===> ", order.get_patient())
+        # print("patient ---> ", order.patient)
+
+
+        # sum=OrderModel.add(10,20) # <--------- @classmethod work
+        # print("sum ==> ", sum)
+
+
+        # #Testing age_validator() of model  -- Validation work
+        # obj = TempProfile()
+        # obj.name = "abc"
+        # obj.age = -44
+        # obj.full_clean() 
+        # obj.save()
+
+
+
+        # Adding AppUser
+
+        user = User()
+        user.name = "user 1"
+        user.save()
+
+        obj  = AppUserModel()
+        obj.name = "appuser 1"
+        obj.email = "appuser1@gmail.com"
+        obj.user = user
+        obj.save()
 
 
 
