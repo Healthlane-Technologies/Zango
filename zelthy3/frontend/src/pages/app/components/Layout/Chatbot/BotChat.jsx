@@ -1,17 +1,15 @@
-import React, { useState } from 'react'
 import Editor from '@monaco-editor/react';
-import useApi from '../../../../../hooks/useApi';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as CopyIcon } from '../../../../../assets/images/svg/copy-icon.svg';
-import { ReactComponent as PopoutIcon } from '../../../../../assets/images/svg/popout-icon.svg';
-import { ReactComponent as LikeIcon } from '../../../../../assets/images/svg/like-icon.svg';
 import { ReactComponent as DislikeIcon } from '../../../../../assets/images/svg/dislike-icon.svg';
-import { useDispatch } from 'react-redux';
+import { ReactComponent as LikeIcon } from '../../../../../assets/images/svg/like-icon.svg';
+import { ReactComponent as PopoutIcon } from '../../../../../assets/images/svg/popout-icon.svg';
+import useApi from '../../../../../hooks/useApi';
 import {
-	selectIsDraggablePopoverOpen,
 	openIsDraggablePopoverOpen,
-	selectPopOverLink,
-	setPopOverLink,
+	setPopOverLink
 } from '../../../slice';
 
 

@@ -1,8 +1,7 @@
-import { Menu, Transition } from '@headlessui/react';
 import { Formik } from 'formik';
 import _ from 'lodash';
-import React, { Fragment, useState, useRef } from 'react';
-import { usePopper, Popper } from 'react-popper';
+import React, { useRef, useState } from 'react';
+import { Popper } from 'react-popper';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 import { ReactComponent as ChatbotIcon } from '../../../../../assets/images/svg/chatbot-icon.svg';
@@ -12,12 +11,9 @@ import { ReactComponent as SendIcon } from '../../../../../assets/images/svg/sen
 import useApi from '../../../../../hooks/useApi';
 import ChatText from './ChatText';
 import RadioPillField from './RadioPillField';
-import { Popover } from '@headlessui/react';
 
 const Chatbot = () => {
-	// const [referenceElement, setReferenceElement] = useState(null);
-	// const [popperElement, setPopperElement] = useState(null);
-	const [activeConversationId, setActiveConversationId] = useState("123123")
+	// const [activeConversationId, setActiveConversationId] = useState("123123")
 	const [isNewConversation, setIsNewConversation] = useState(false)
 	const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef(null);
@@ -177,7 +173,6 @@ const Chatbot = () => {
 			}
 		};
 		makeApiCall()
-		// setMessages([...messages, { text: values, type: 'user' }]);
 	};
 
 	const createNewConversation = () => {

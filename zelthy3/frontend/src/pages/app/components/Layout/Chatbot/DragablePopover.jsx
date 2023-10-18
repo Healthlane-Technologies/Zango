@@ -1,17 +1,16 @@
-import React from 'react'
-import Draggable, { DraggableCore } from 'react-draggable';
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState } from 'react';
-import {
-	selectIsDraggablePopoverOpen,
-	openIsDraggablePopoverOpen,
-	closeIsDraggablePopoverOpen,
-	selectPopOverLink,
-} from '../../../slice';
-import { useSelector, useDispatch } from 'react-redux';
+import { Transition } from '@headlessui/react';
+import React, { useState } from 'react';
+import Draggable from 'react-draggable';
+import { useDispatch, useSelector } from 'react-redux';
+import { ResizableBox } from 'react-resizable';
 import { ReactComponent as CloseIcon } from '../../../../../assets/images/svg/close-icon.svg';
 import { ReactComponent as RefreshIcon } from '../../../../../assets/images/svg/refresh-icon.svg';
-import { Resizable, ResizableBox } from 'react-resizable';
+import {
+	closeIsDraggablePopoverOpen,
+	openIsDraggablePopoverOpen,
+	selectIsDraggablePopoverOpen,
+	selectPopOverLink,
+} from '../../../slice';
 
 
 const DragablePopover = () => {
