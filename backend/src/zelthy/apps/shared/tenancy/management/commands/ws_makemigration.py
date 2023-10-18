@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.db import connection
 
@@ -52,6 +54,10 @@ class Command(MakeMigrationsCommand):
         settings.MIGRATION_MODULES = {
             f"dynamic_models": f"workspaces.{options['workspace']}.dmigrations"
         }
+        if not os.path.exists(f"workspaces/{options['workspace']}/dmigrations"):
+            os.makedirs(f"workspaces/{options['workspace']}/dmigrations")
+            with open(f"workspaces/{options['workspace']}/dmigrations/__init__.py", "w"):
+                pass
         w = Workspace(tenant_obj, None, True)
         if options["is_plugin_migration"]:
             w.load_models()
