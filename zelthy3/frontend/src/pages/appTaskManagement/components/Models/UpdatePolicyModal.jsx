@@ -50,7 +50,19 @@ const UpdatePolicyForm = ({ closeModal }) => {
 	});
 
 	let onSubmit = (values) => {
-		let tempValues = values;
+		let crontab_exp = JSON.stringify({
+			minute: values?.minute,
+			hour: values?.hour,
+			day_of_week: values?.day_of_week,
+			day_of_month: values?.day_of_month,
+			month_of_year: values?.month_of_year,
+		});
+
+		let tempValues = {
+			policies: values?.policies,
+			crontab_exp: crontab_exp,
+			is_enabled: values?.is_enabled,
+		};
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
 
@@ -269,7 +281,7 @@ const UpdatePolicyForm = ({ closeModal }) => {
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								// disabled={!(formik.isValid && formik.dirty)}
 							>
-								<span>Update Policy</span>
+								<span>Update Task</span>
 							</button>
 						</div>
 					</form>
