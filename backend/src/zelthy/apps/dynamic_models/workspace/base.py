@@ -281,7 +281,7 @@ class Workspace:
             self.plugin_source.load_plugin(".".join(split))
         return
 
-    def sync_tasks(self) -> None:
+    def sync_tasks(self, tenant_name) -> None:
         """
         get topologically sorted list of tasks from packages and modules and
         import tasks.py files in that order
@@ -290,6 +290,7 @@ class Workspace:
         from celery import Task
         import inspect
         from zelthy.apps.tasks.models import AppTask
+        from zelthy.apps.tasks.utils import get_crontab_obj
 
         for m in self.get_tasks():
             mod_path = m.split(".")[2:]
@@ -300,10 +301,20 @@ class Workspace:
             for name, method in inspect.getmembers(_plugin):
                 if isinstance(method, Task):
                     task_path = f"{mod_path_str}.{name}"
-                    task_obj, created = AppTask.objects.get_or_create(
-                        name=name, module_path=task_path
-                    )
-                    task_ids_synced.append(task_obj.id)
+                    try:
+                        AppTask.objects.get(name=task_path)
+                    except AppTask.DoesNotExist:
+                        schedule, success = get_crontab_obj()
+                        task_obj, created = AppTask.objects.get_or_create(
+                            name=task_path,
+                            crontab=schedule,
+                            args=[],
+                            kwargs={},
+                        )
+                        if created:
+                            task_obj.args = json.dumps([tenant_name, task_obj.name])
+                            task_obj.save()
+                        task_ids_synced.append(task_obj.id)
 
         AppTask.objects.all().exclude(id__in=task_ids_synced).delete
 
