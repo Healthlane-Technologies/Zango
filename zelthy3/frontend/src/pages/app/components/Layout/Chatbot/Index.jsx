@@ -14,10 +14,10 @@ import RadioPillField from './RadioPillField';
 
 const Chatbot = () => {
 	// const [activeConversationId, setActiveConversationId] = useState("123123")
-	const [isNewConversation, setIsNewConversation] = useState(false)
+	const [isNewConversation, setIsNewConversation] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef(null);
-  const popoverRef = useRef(null);
+	const triggerRef = useRef(null);
+	const popoverRef = useRef(null);
 
 	let { appId } = useParams();
 	const triggerApi = useApi();
@@ -158,7 +158,7 @@ const Chatbot = () => {
 				payload: update_conversation_form,
 			});
 			if (success && response) {
-				console.log("print response here", response)
+				console.log('print response here', response);
 				// updateAppConfigurationData(response);
 				setMessages([
 					...messages,
@@ -168,11 +168,11 @@ const Chatbot = () => {
 						action: 'get_assist',
 						knowledge_base: values.filter,
 					},
-					{...response, type: 'bot'},
+					{ ...response, type: 'bot' },
 				]);
 			}
 		};
-		makeApiCall()
+		makeApiCall();
 	};
 
 	const createNewConversation = () => {
@@ -189,19 +189,17 @@ const Chatbot = () => {
 		setIsNewConversation(true);
 	};
 
-
-
-//   const openPopover = () => {
-// 		setIsOpen(true);
-// 	};
+	//   const openPopover = () => {
+	// 		setIsOpen(true);
+	// 	};
 
 	const closePopover = () => {
 		setIsOpen(false);
 	};
 
 	const togglePopover = () => {
-		setIsOpen((prev => !prev))
-	}
+		setIsOpen((prev) => !prev);
+	};
 
 	return (
 		<div className="relative z-50">
@@ -357,7 +355,6 @@ const Chatbot = () => {
 					)}
 				</Popper>
 			)}
-		
 		</div>
 	);
 };

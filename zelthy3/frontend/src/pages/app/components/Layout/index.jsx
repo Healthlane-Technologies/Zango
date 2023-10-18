@@ -52,19 +52,9 @@ export default function Layout({ children }) {
 				<SideMenu />
 				{children}
 				{/* <Draggable> */}
-					<ResizableBox width={200} height={200}>
-						<div
-							style={{
-								backgroundColor: 'green',
-								width: '100%',
-								height: '100%',
-							}}
-						>
-							123
-						</div>
-					</ResizableBox>
+				{/* <ResizableBox width={200} height={200}></ResizableBox> */}
 				{/* </Draggable> */}
-				<div className="absolute bottom-[8px] left-[96px]">
+				<div className="absolute bottom-[8px] left-[96px] z-[51]">
 					<DragablePopover />
 				</div>
 				<Chatbot />
