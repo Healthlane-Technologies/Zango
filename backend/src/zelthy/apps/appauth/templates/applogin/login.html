@@ -1,57 +1,112 @@
-{% load i18n %}
-{% load static %}
+{% load i18n %} {% load static %} {% load crispy_forms_tags %}
 
-<!doctype html>
+<!DOCTYPE html>
 
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
+    />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <!-- Remove Tap Highlight on Windows Phone IE -->
-    <meta name="msapplication-tap-highlight" content="no"/>
+    <meta name="msapplication-tap-highlight" content="no" />
 
     <title>{{config.title}}</title>
 
-    <link href='http://fonts.googleapis.com/css?family=Roboto:300,400,500' rel='stylesheet' type='text/css'>
+    <link
+      href="http://fonts.googleapis.com/css?family=Roboto:300,400,500"
+      rel="stylesheet"
+      type="text/css"
+    />
 
     <!-- uikit -->
-    <link rel="stylesheet" href="{% static 'css/uikit.almost-flat.min.css' %}"/>
+    <link
+      rel="stylesheet"
+      href="{% static 'css/uikit.almost-flat.min.css' %}"
+    />
 
     <!-- altair admin login page -->
     <link rel="stylesheet" href="{% static 'login/css/login_page.css' %}" />
 
-</head>
-<body class="login_page">
-
+    <link rel="stylesheet" href="{% static 'login/css/styles.css' %}" />
+  </head>
+  <body class="login-container">
     {% include "applogin/_message_block.html" %}
-    
-    <div class="pen-title">
-        <h1>{{tenant.name}}</h1>
-    </div>
-    <div class="login_page_wrapper">
 
-    <div class="md-card" id="login_card">
-      <div class="md-card-content large-padding" id="login_form">  
-        <div class="login_heading">
-              {% include "applogin/_login_form_block.html" %}
+    <div class="login-logo">logo</div>
+
+    <section class="main-login-section">
+      <div class="login-hero-section">
+        <div class="hero-left">
+          <h1>{{tenant.name}}</h1>
+        </div>
+        <div class="hero-right">
+          <div class="login-box">
+            <div class="login-box-header">Login</div>
+            <div class="login-header-underscore"></div>
+            <form class="login-form" action="" method="post">
+              {% csrf_token %} {{ wizard.management_form }}
+              {% crispy wizard.form %}
+              <!-- <input
+                type="text"
+                name="auth-username"
+                autofocus
+                autocapitalize="none"
+                autocomplete="username"
+                maxlength="150"
+                placeholder="Email ID/ Mobile Number"
+                class="textinput form-control is-invalid"
+                required
+                id="id_auth-username"
+              />
+
+              <input
+                type="password"
+                name="auth-password"
+                autocomplete="current-password"
+                placeholder="Password"
+                class="passwordinput form-control is-invalid"
+                required
+                id="id_auth-password"
+              />
+
+              <input
+                type="submit"
+                name="submit"
+                value="Login"
+                class="btn btn-primary"
+                id="submit-id-submit"
+              /> -->
+            </form>
+
+            
+          </div>
+        
         </div>
       </div>
-    </div>
+    </section>
 
+    <div class="pen-title">{{config.public_page_footer}}</div>
 
-      <div class="pen-title">
-          {{config.public_page_footer}}
-      </div>
+    <!-- common functions -->
+    <script src="{% static 'js/common.min.js' %}"></script>
+    <!-- uikit functions -->
+    <script src="{% static 'js/uikit_custom.min.js' %}"></script>
+    <!-- altair core functions -->
+    <script src="{% static 'js/altair_admin_common.min.js' %}"></script>
 
-        <!-- common functions -->
-        <script src="{% static 'js/common.min.js' %}"></script>
-        <!-- uikit functions -->
-        <script src="{% static 'js/uikit_custom.min.js' %}"></script>
-        <!-- altair core functions -->
-        <script src="{% static 'js/altair_admin_common.min.js' %}"></script>
-
-        <!-- altair login page functions -->
-        <script src="{% static 'login/js/login.js' %}"></script> 
-</body>
+    <!-- altair login page functions -->
+    <script src="{% static 'login/js/login.js' %}"></script>
+    <script>
+      $(".login-form #div_id_auth-username div")
+      let form = `{% crispy wizard.form %}`;
+      let form2 = `{{ wizard.management_form }}`;
+      let csrf = `{% csrf_token %}`;
+      console.log("print wizard form here", form);
+      console.log("print wizard form2 here", form2, document.getElementById("id_app_user_login_view-current_step").value);
+      console.log("print csrf here", csrf);
+    </script>
+  </body>
 </html>
