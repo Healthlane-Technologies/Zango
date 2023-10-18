@@ -92,6 +92,27 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
+		columnHelper.accessor((row) => row.is_enabled, {
+			id: 'is_enabled',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						Status
+					</span>
+				</div>
+			),
+			cell: (info) => (
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+					<span
+						className={`w-fit min-w-[77px] rounded-[15px] px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
+							info.getValue() ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
+						}`}
+					>
+						{info.getValue() ? 'Enabled' : 'Disabled'}
+					</span>
+				</div>
+			),
+		}),
 	];
 
 	const [{ pageIndex, pageSize }, setPagination] = useState({

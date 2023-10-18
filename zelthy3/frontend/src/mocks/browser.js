@@ -27,6 +27,6 @@ export const worker = setupWorker(
 	...appConfigurationHandlers,
 	...appThemeConfigurationHandlers,
 	...appPackagesManagementHandlers,
-	...appInitialHandlers
+	...appInitialHandlers,
 	...appChatbotHandlers
 );
