@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import { useWindowSizeHeight } from '../../../../utils/helper';
+import Chatbot from './Chatbot/Index';
 import ProfileMenu from './ProfileMenu';
 
+import debounce from 'just-debounce-it';
+import { useLayoutEffect, useRef } from 'react';
 import { ReactComponent as ZelthyIcon } from '../../../../assets/images/svg/zelthy-icon.svg';
 import NavSearchForm from './NavSearchForm';
 import SideMenu from './SideMenu';
-import { useRef } from 'react';
-import { useLayoutEffect } from 'react';
-import debounce from 'just-debounce-it';
+import DragablePopover from './Chatbot/DragablePopover';
+import Draggable, { DraggableCore } from 'react-draggable';
+import { Resizable, ResizableBox } from 'react-resizable';
 
 export default function Layout({ children }) {
 	useWindowSizeHeight();
@@ -48,6 +51,13 @@ export default function Layout({ children }) {
 			<main className="small-device-height-fix2 flex grow overflow-y-auto">
 				<SideMenu />
 				{children}
+				{/* <Draggable> */}
+				{/* <ResizableBox width={200} height={200}></ResizableBox> */}
+				{/* </Draggable> */}
+				<div className="absolute bottom-[8px] left-[96px] z-[51]">
+					<DragablePopover />
+				</div>
+				<Chatbot />
 			</main>
 		</>
 	);
