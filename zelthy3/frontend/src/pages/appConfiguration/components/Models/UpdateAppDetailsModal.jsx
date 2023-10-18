@@ -40,8 +40,6 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
 		domains: Yup.array().of(Yup.string().required('Required')),
-		timezone: Yup.string().required('Required'),
-		datetime_format: Yup.string().required('Required'),
 	});
 
 	let onSubmit = (values) => {

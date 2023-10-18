@@ -35,11 +35,11 @@ const UpdatePolicyForm = ({ closeModal }) => {
 			appTaskManagementFormData?.attached_policies?.map(
 				(eachApp) => eachApp.id
 			) ?? [],
-		minute: '*',
-		hour: '*',
-		day_of_week: '*',
-		day_of_month: '*',
-		month_of_year: '*',
+		minute: appTaskManagementFormData?.minute ?? '*',
+		hour: appTaskManagementFormData?.hour ?? '*',
+		day_of_week: appTaskManagementFormData?.day_of_week ?? '*',
+		day_of_month: appTaskManagementFormData?.day_of_month ?? '*',
+		month_of_year: appTaskManagementFormData?.month_of_year ?? '*',
 	};
 
 	let validationSchema = Yup.object({

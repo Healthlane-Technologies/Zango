@@ -1,7 +1,18 @@
 import EachThemeMenu from './EachThemeMenu';
+import WebFont from 'webfontloader';
+import { useEffect } from 'react';
 
 export default function EachTheme({ data }) {
 	let { id, name, is_active, config } = data;
+
+	useEffect(() => {
+		WebFont.load({
+			google: {
+				families: [`${config?.typography?.font_family}`],
+			},
+		});
+	}, [data]);
+
 	return (
 		<div className="relative flex flex-col rounded-[8px] border border-[#DDE2E5] bg-[#FFFFFF]">
 			<div className="flex flex-col gap-[8px] px-[16px] pt-[24px] pb-[16px]">
@@ -22,7 +33,10 @@ export default function EachTheme({ data }) {
 					<span className="font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
 						{config?.typography?.font_family}
 					</span>
-					<span className="font-source-sans-pro text-[26px] leading-[32px] tracking-[-0.2px] text-[#A3ABB1]">
+					<span
+						className="font-source-sans-pro text-[26px] leading-[32px] tracking-[-0.2px] text-[#A3ABB1]"
+						style={{ fontFamily: config?.typography?.font_family }}
+					>
 						Aa Bb Cc Dd Ee
 					</span>
 				</div>
@@ -55,7 +69,10 @@ export default function EachTheme({ data }) {
 					>
 						<span
 							className={`font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[${config?.button?.color}]`}
-							style={{ color: config?.button?.color }}
+							style={{
+								color: config?.button?.color,
+								fontFamily: config?.typography?.font_family,
+							}}
 						>
 							Button/CTA
 						</span>

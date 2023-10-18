@@ -92,7 +92,7 @@ export default function AppThemeConfiguration() {
 				<div className="flex grow flex-col gap-[20px] pl-[40px] pr-[48px]">
 					<div className="flex items-end gap-[24px]">
 						<h3 className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
-							{appConfigurationData?.app?.name}
+							Themes
 						</h3>
 					</div>
 					<div className="complete-hidden-scroll-style grid grid-cols-1 items-stretch justify-start gap-[26px] overflow-y-auto pb-[29px] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">

@@ -1,9 +1,12 @@
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 import { usePopper } from 'react-popper';
+import { useSelector } from 'react-redux';
 import { ReactComponent as ProfileDropdownIcon } from '../../../../assets/images/svg/profile-dropdown-icon.svg';
+import { selectAppPanelInitialData } from '../../../platform/slice';
 
 export default function ProfileMenu() {
+	const appPanelInitialData = useSelector(selectAppPanelInitialData);
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -38,10 +41,10 @@ export default function ProfileMenu() {
 						<div className="p-[4px]">
 							<div className="flex w-full flex-col rounded-[2px] px-[12px] py-[8px]">
 								<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-									User Name
+									{appPanelInitialData?.user_logged_in?.name}
 								</span>
 								<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-									Description
+									{appPanelInitialData?.user_logged_in?.email}
 								</span>
 							</div>
 						</div>
