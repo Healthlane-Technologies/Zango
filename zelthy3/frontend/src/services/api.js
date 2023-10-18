@@ -15,6 +15,7 @@ export const callGetApi = async ({ fullUrl }) => {
 };
 
 export const callPostApi = async ({ fullUrl, payload }) => {
+	console.log("postdata", payload)
 	const request = await fetch(fullUrl, {
 		method: 'POST',
 		headers: {
