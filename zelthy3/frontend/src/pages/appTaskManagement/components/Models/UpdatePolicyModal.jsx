@@ -33,11 +33,11 @@ const UpdatePolicyForm = ({ closeModal }) => {
 			appTaskManagementFormData?.attached_policies?.map(
 				(eachApp) => eachApp.id
 			) ?? [],
-		minute: appTaskManagementFormData?.crontab_exp?.minute ?? '*',
-		hour: appTaskManagementFormData?.crontab_exp?.hour ?? '*',
-		day_of_week: appTaskManagementFormData?.crontab_exp?.day_of_week ?? '*',
-		day_of_month: appTaskManagementFormData?.crontab_exp?.day_of_month ?? '*',
-		month_of_year: appTaskManagementFormData?.crontab_exp?.month_of_year ?? '*',
+		minute: appTaskManagementFormData?.crontab?.minute ?? '*',
+		hour: appTaskManagementFormData?.crontab?.hour ?? '*',
+		day_of_week: appTaskManagementFormData?.crontab?.day_of_week ?? '*',
+		day_of_month: appTaskManagementFormData?.crontab?.day_of_month ?? '*',
+		month_of_year: appTaskManagementFormData?.crontab?.month_of_year ?? '*',
 		is_enabled: appTaskManagementFormData?.is_enabled ?? false,
 	};
 

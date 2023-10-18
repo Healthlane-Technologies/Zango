@@ -41,7 +41,7 @@ const newTask = () => {
 		email: faker.internet.email().toLowerCase(),
 		attached_policies: makePolices(faker.number.int({ min: 1, max: 10 })),
 		schedule: '* * * * *',
-		crontab_exp: {
+		crontab: {
 			minute: '1',
 			hour: '2',
 			day_of_week: '3',
