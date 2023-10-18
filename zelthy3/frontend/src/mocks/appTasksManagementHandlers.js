@@ -48,7 +48,7 @@ const newTask = () => {
 		month_of_year: '5',
 		is_superadmin: false,
 		last_login: faker.date.past(),
-		status: faker.helpers.shuffle(['active', 'inactive'])[0],
+		is_enabled: faker.datatype.boolean(),
 		created_at: faker.date.past(),
 	};
 };
@@ -147,7 +147,7 @@ export const appTasksManagementHandlers = [
 		);
 	}),
 
-	rest.put('/api/v1/apps/:appId/tasks/:id', (req, res, ctx) => {
+	rest.post('/api/v1/apps/:appId/tasks/:id', (req, res, ctx) => {
 		return res(
 			ctx.delay(500),
 			ctx.status(200),

@@ -25,7 +25,7 @@ export default function FileUpload({ formik, label, id }) {
 						{formik.values[id]?.name ? (
 							<a href={previewUrl} target="_blank">
 								<img
-									class="h-[32px] min-h-[32px] w-[32px] min-w-[32px]"
+									className="h-[32px] min-h-[32px] w-[32px] min-w-[32px]"
 									src={previewUrl}
 									alt={`${id}_preview`}
 								/>
