@@ -135,7 +135,7 @@ const UpdatePolicyForm = ({ closeModal }) => {
 								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 									Schedule (IST)
 								</h4>
-								<div class="grid grid-cols-2 gap-4">
+								<div className="grid grid-cols-2 gap-4">
 									<div className="flex flex-col gap-[4px]">
 										<label
 											htmlFor="minute"
