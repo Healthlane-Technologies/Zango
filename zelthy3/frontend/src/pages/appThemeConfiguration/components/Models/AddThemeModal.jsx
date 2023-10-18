@@ -35,7 +35,7 @@ const AddThemeForm = ({ closeModal }) => {
 				font_family: 'Open Sans',
 			},
 			button: {
-				border_radius: '',
+				border_radius: '4',
 				color: '#ffffff',
 				border_color: '#C7CED3',
 				background: '#5048ED',

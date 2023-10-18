@@ -1,6 +1,4 @@
 import { rest } from 'msw';
-import moment from 'moment';
-import { faker } from '@faker-js/faker';
 
 export const appThemeConfigurationHandlers = [
 	rest.get('/api/v1/apps/:appId/themes/', (req, res, ctx) => {
@@ -25,7 +23,7 @@ export const appThemeConfigurationHandlers = [
 									background: '#ffffff',
 								},
 								typography: {
-									font_family: 'Opens Sans',
+									font_family: 'Advent Pro',
 								},
 								button: {
 									border_radius: 4,
@@ -51,7 +49,7 @@ export const appThemeConfigurationHandlers = [
 									background: '#ffffff',
 								},
 								typography: {
-									font_family: 'Opens Sans',
+									font_family: 'Alegreya Sans SC',
 								},
 								button: {
 									border_radius: 4,

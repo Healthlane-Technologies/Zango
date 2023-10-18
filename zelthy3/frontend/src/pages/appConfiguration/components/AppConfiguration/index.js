@@ -75,10 +75,14 @@ export default function AppConfiguration() {
 										App Description:
 									</span>
 								</td>
-								<td className="w-full pl-[20px]">
-									<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-										{appConfigurationData?.app?.description}
-									</span>
+								<td className="w-100 pl-[20px]">
+									<pre className="w-100 font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+										{appConfigurationData?.app?.description
+											.split('\n')
+											.map((str) => (
+												<p className="whitespace-normal">{str}</p>
+											))}
+									</pre>
 								</td>
 							</tr>
 							<tr className="py-[4px] first:pb-[4px] last:pt-[4px]">

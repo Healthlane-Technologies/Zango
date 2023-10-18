@@ -19,7 +19,7 @@ export default function SyncTask() {
 		setIsLoading(true);
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/tasks/sync/`,
+				url: `/api/v1/apps/${appId}/tasks/?action=sync_tasks`,
 				type: 'POST',
 				loader: false,
 				notify: true,

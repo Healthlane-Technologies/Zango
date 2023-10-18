@@ -74,7 +74,7 @@ const DeactivateUserRolesForm = ({ closeModal }) => {
 							<div className="flex grow flex-col items-center justify-center gap-[16px]">
 								<DeactivateUserRolesIcon />
 								<p className="max-w-[201px] text-center font-lato text-[16px] leading-[24px] tracking-[0.2px] text-[#212429]">
-									Sure you want to deactivate Role 1?
+									Sure you want to deactivate {appUserRolesFormData?.name}?
 								</p>
 							</div>
 							<p className="flex flex-col font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
@@ -105,6 +105,8 @@ export default function DeactivateUserRolesModal() {
 	const isDeactivateUserRolesModalOpen = useSelector(
 		selectIsDeactivateUserRolesModalOpen
 	);
+	const appUserRolesFormData = useSelector(selectAppUserRolesFormData);
+
 	const dispatch = useDispatch();
 
 	function closeModal() {
@@ -151,7 +153,7 @@ export default function DeactivateUserRolesModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Deactivate Role 1
+												Deactivate {appUserRolesFormData?.name}
 											</h4>
 										</div>
 									</Dialog.Title>
