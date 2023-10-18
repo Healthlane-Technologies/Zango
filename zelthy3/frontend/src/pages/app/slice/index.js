@@ -1,44 +1,37 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-export const appSlice = createSlice({
-	name: 'app',
+export const appChatbotSlice = createSlice({
+	name: 'appChatbot',
 	initialState: {
-		isUpdateAppDetailsModalOpen: false,
-		rerenderPage: false,
-		appData: null,
+		isDraggablePopoverOpen: false,
+		popOverLink: '',
 	},
 	reducers: {
-		toggleIsUpdateAppDetailsModalOpen: (state) => {
-			state.isUpdateAppDetailsModalOpen += !state.isUpdateAppDetailsModalOpen;
+		toggleIsDraggablePopoverOpen: (state) => {
+			state.isDraggablePopoverOpen += !state.isDraggablePopoverOpen;
 		},
-		openIsUpdateAppDetailsModalOpen: (state) => {
-			state.isUpdateAppDetailsModalOpen = true;
+		openIsDraggablePopoverOpen: (state) => {
+			state.isDraggablePopoverOpen = true;
 		},
-		closeIsUpdateAppDetailsModalOpen: (state) => {
-			state.isUpdateAppDetailsModalOpen = false;
+		closeIsDraggablePopoverOpen: (state) => {
+			state.isDraggablePopoverOpen = false;
 		},
-		setAppData: (state, action) => {
-			state.appData = action.payload;
-		},
-		toggleRerenderPage: (state) => {
-			state.rerenderPage = !state.rerenderPage;
-		},
+		setPopOverLink: (state, action) => {
+			state.popOverLink = action.payload;
+		}
 	},
 });
 
 export const {
-	toggleIsUpdateAppDetailsModalOpen,
-	openIsUpdateAppDetailsModalOpen,
-	closeIsUpdateAppDetailsModalOpen,
-	setAppData,
-	toggleRerenderPage,
-} = appSlice.actions;
+	toggleIsDraggablePopoverOpen,
+	openIsDraggablePopoverOpen,
+	closeIsDraggablePopoverOpen,
+	setPopOverLink,
+} = appChatbotSlice.actions;
 
-export const selectIsUpdateAppDetailsModalOpen = (state) =>
-	state.app.isUpdateAppDetailsModalOpen;
+export const selectIsDraggablePopoverOpen = (state) =>
+	state.appChatbot.isDraggablePopoverOpen;
 
-export const selectRerenderPage = (state) => state.app.rerenderPage;
+export const selectPopOverLink = (state) => state.appChatbot.popOverLink;
 
-export const selectAppData = (state) => state.app.appData;
-
-export default appSlice.reducer;
+export default appChatbotSlice.reducer;

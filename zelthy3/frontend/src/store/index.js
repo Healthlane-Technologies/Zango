@@ -10,6 +10,7 @@ import appPoliciesManagementReducer from '../pages/appPoliciesManagement/slice';
 import appConfigurationReducer from '../pages/appConfiguration/slice';
 import appThemeConfigurationReducer from '../pages/appThemeConfiguration/slice';
 import appPackagesManagementReducer from '../pages/appPackagesManagement/slice';
+import appChatbotReducer from '../pages/app/slice';
 
 export default configureStore({
 	reducer: {
@@ -23,5 +24,6 @@ export default configureStore({
 		appConfiguration: appConfigurationReducer,
 		appThemeConfiguration: appThemeConfigurationReducer,
 		appPackagesManagement: appPackagesManagementReducer,
+		appChatbot: appChatbotReducer,
 	},
 });
