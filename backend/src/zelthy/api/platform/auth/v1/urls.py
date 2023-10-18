@@ -1,6 +1,11 @@
 from django.urls import re_path
 
-from .views import PlatformUserViewAPIV1, PlatformUserDetailViewAPIV1, AppPanelDetailsView
+
+from .views import (
+    PlatformUserViewAPIV1,
+    PlatformUserDetailViewAPIV1,
+    AppPanelDetailsView,
+)
 
 
 urlpatterns = [

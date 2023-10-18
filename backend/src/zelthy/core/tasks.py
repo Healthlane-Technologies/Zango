@@ -19,8 +19,9 @@ def zelthy_task_executor(tenant_name, task_name, *args, **kwargs):
         ws.ready()
 
         task_module = task_obj.name.rsplit(".", 1)[0]
-        _task = ws.plugin_source.load_plugin(task_module)
-        task_fun = getattr(_task, task_name)
+        func_name = task_obj.name.rsplit(".", 1)[1]
+        _task = ws.plugin_source.load_plugin(f"{task_module}")
+        task_fun = getattr(_task, func_name)
         return task_fun(*args, **kwargs)
 
 
