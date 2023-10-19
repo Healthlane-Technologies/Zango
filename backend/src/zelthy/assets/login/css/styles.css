@@ -4,7 +4,9 @@
     position: relative;
     height: 100vh;
     width: 100%;
-    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+    background-image: url('../../../assets/images/login-background.png') no-repeat center center fixed;;
+    background-image: linear-gradient(to right, rgba(121, 114, 251, 0.8), rgba(52, 33, 211, 0.8));
+    
 }
 
 .login-logo {
@@ -28,6 +30,7 @@
     justify-content: space-between;
     align-items: center;
     text-align: center;
+    
 }
 
 .hero-left {
@@ -39,7 +42,7 @@
 }
 
 .login-box {
-    height: 430px;
+    /* height: 430px; */
     width: 400px;
     background-color: white;
     text-align: left;
@@ -47,6 +50,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
+    border-radius: 4px;
 }
 
 .login-box-header {
@@ -54,13 +58,14 @@
     font-weight: 700;
     font-size: 32px;
     margin-bottom: 0.25rem;
+    color: black;
 }
 
 .login-header-underscore {
     height: 6px;
     width: 40px;
     border-radius: 0.5rem;
-    background-color: #666666;
+    background-color: #5048ED;
 }
 
 .login-form {
@@ -74,4 +79,53 @@
 
 .login-form #div_id_auth-password div {
     display: block;
+}
+
+.login-form > div {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#id_auth-username {
+    height: 52px;
+    padding: 12px;
+    margin-top: 4px;
+    border-radius: 4px;
+}
+
+#id_auth-password {
+    height: 52px;
+    padding: 12px;
+    margin-top: 4px;
+    border-radius: 4px;
+}
+
+#submit-id-submit {
+    height: 48px;
+    background-color: #5048ED;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    margin-top: 24px;
+    border-radius: 4px;
+}
+
+input[type=text]:focus {
+    border: 1px solid #5048ED;
+}
+
+input[type=password]:focus {
+    border: 1px solid #5048ED;
+}
+
+select:focus {
+    border: 1px solid #5048ED;
+}
+
+.login-form div h2 {
+    margin-bottom: 0;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
 }
