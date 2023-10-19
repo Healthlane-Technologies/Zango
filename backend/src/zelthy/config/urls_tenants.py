@@ -4,11 +4,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    re_path(r'^', include('zelthy.apps.appauth.urls')),
-    re_path(r'api/auth/', include('knox.urls')),
+    re_path(r"^", include("zelthy.apps.appauth.urls")),
+    re_path(r"api/auth/", include("knox.urls")),
     path("__debug__/", include("debug_toolbar.urls")),
-    re_path(r'^((?:[\w\-:.,]+/)*)$', include('zelthy.apps.dynamic_models.urls')),
-        
+    re_path(r"^((?:[\w\-:.,]+/)*)$", include("zelthy.apps.dynamic_models.urls")),
 ]
 
 if settings.DEBUG:

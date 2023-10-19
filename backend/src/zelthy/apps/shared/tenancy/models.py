@@ -8,9 +8,12 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
+from django_tenants.utils import schema_context
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
+from zelthy.apps.permissions.models import PolicyModel
+from zelthy.apps.appauth.models import UserRoleModel
 
 from .utils import TIMEZONES, DATEFORMAT, DATETIMEFORMAT
 
@@ -133,6 +136,21 @@ class TenantModel(TenantMixin, FullAuditMixin):
 
         self.status = "deployed"
         self.save()
+
+        with schema_context(self.schema_name):
+            # Create default policies
+            app_landing_view_policy = PolicyModel.objects.create(
+                name="AppLandingViewAccess",
+                description="Policy To Allow access to the App Landing View.",
+                statement={
+                    "permissions": [
+                        {"name": "app_landing.views.AppLandingPageView", "type": "view"}
+                    ]
+                },
+            )
+
+            anonymous_users_role = UserRoleModel.objects.get(name="AnonymousUsers")
+            anonymous_users_role.policies.add(app_landing_view_policy)
 
 
 class Domain(DomainMixin, FullAuditMixin):

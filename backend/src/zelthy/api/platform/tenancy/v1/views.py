@@ -290,7 +290,10 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     def get_dropdown_options(self):
         options = {}
         options["roles"] = [
-            {"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()
+            {"id": t.id, "label": t.name}
+            for t in UserRoleModel.objects.all().exclude(
+                name__in=["AnonymousUsers", "SystemUsers"]
+            )
         ]
         return options
 

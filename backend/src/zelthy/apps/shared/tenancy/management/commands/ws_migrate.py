@@ -16,6 +16,7 @@ class Command(MigrateSchemasCommand):
         parser.add_argument(
             "--test", action="store_true", help="Run the migration for test database"
         )
+        parser.add_argument("--plugin", help="Run the migrations for the plugin")
 
     def handle(self, *args, **options):
         tenant_obj = TenantModel.objects.get(name=options["workspace"])
@@ -24,8 +25,13 @@ class Command(MigrateSchemasCommand):
             connection.settings_dict["NAME"] = (
                 "test_" + connection.settings_dict["NAME"]
             )
-        settings.MIGRATION_MODULES = {
-            f"dynamic_models": f"workspaces.{ options['workspace']}.dmigrations"
-        }
+        if options["plugin"] is None:
+            settings.MIGRATION_MODULES = {
+                f"dynamic_models": f"workspaces.{ options['workspace']}.dmigrations"
+            }
+        else:
+            settings.MIGRATION_MODULES = {
+                f"dynamic_models": f"workspaces.{ options['workspace']}.plugins.{options['plugin']}.migrations"
+            }
         options["schema_name"] = tenant_obj.schema_name
         super().handle(*args, **options)
