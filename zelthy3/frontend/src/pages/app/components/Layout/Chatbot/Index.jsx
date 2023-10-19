@@ -1,6 +1,6 @@
 import { Formik } from 'formik';
 import _ from 'lodash';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Popper } from 'react-popper';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
@@ -13,7 +13,7 @@ import ChatText from './ChatText';
 import RadioPillField from './RadioPillField';
 
 const Chatbot = () => {
-	// const [activeConversationId, setActiveConversationId] = useState("123123")
+	const [activeConversationId, setActiveConversationId] = useState('');
 	const [isNewConversation, setIsNewConversation] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
 	const triggerRef = useRef(null);
@@ -21,110 +21,143 @@ const Chatbot = () => {
 
 	let { appId } = useParams();
 	const triggerApi = useApi();
-	const [messages, setMessages] = useState([
-		{
-			assist_message: 'can you help me create modal',
-			type: 'break',
-			action: 'get_assist',
-			knowledge_base: '1',
-		},
-		{
-			assist_message: 'can you help me create modal',
-			type: 'user',
-			action: 'get_assist',
-			knowledge_base: '1',
-		},
-		{
-			assist_message: [
-				{
-					content:
-						"Sure! I am ready to help you create your requested model.<br/> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br/>",
-					content_meta: {
-						type: 'text',
-					},
-				},
-				{
-					content:
-						"from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\nfrom zelthy.apps.dynamic_models.fields import ZForeignKey\n\nclass Patient(DynamicModelBase):\n    GENDER_CHOICES = [\n        ('male', 'Male'),\n        ('female', 'Female'),\n        ('other', 'Other'),\n    ]\n\n    name = models.CharField(max_length=255)\n    age = models.IntegerField()\n    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)\n    address = models.CharField(max_length=255, blank=True, null=True)\n    phone_number = models.CharField(max_length=15, blank=True, null=True)\n    email = models.EmailField(blank=True, null=True)\n\n    def __str__(self):\n        return self.name",
-					content_meta: {
-						type: 'code',
-						code_language: 'python',
-					},
-				},
-			],
-			type: 'bot',
-			allow_execution: true,
-			exection_json: {
-				execution: 'createModel',
-				module: 'patients',
-				'models.py':
-					"from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\nfrom zelthy.apps.dynamic_models.fields import ZForeignKey\n\nclass Patient(DynamicModelBase):\n    GENDER_CHOICES = [\n        ('male', 'Male'),\n        ('female', 'Female'),\n        ('other', 'Other'),\n    ]\n\n    name = models.CharField(max_length=255)\n    age = models.IntegerField()\n    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)\n    address = models.CharField(max_length=255, blank=True, null=True)\n    phone_number = models.CharField(max_length=15, blank=True, null=True)\n    email = models.EmailField(blank=True, null=True)\n\n    def __str__(self):\n        return self.name",
-			},
-		},
-		{
-			assist_message: 'can you help me create modal',
-			type: 'break',
-			action: 'get_assist',
-			knowledge_base: '1',
-		},
-		{
-			assist_message: 'thanks',
-			type: 'user',
-			action: 'get_assist',
-			knowledge_base: '1',
-		},
-		{
-			assist_message: [
-				{
-					content:
-						"Sure! I am ready to help you create your requested model.<br/> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br/>",
-					content_meta: {
-						type: 'text',
-					},
-				},
-				{
-					content:
-						'https://www.youtube.com/embed/XHTrLYShBRQ?si=ZjT4H8YyTtgUPAhv',
-					content_meta: {
-						type: 'url',
-					},
-				},
-			],
-			type: 'bot',
-		},
-		{
-			assist_message: 'can you help me create modal',
-			type: 'break',
-			status: 'new',
-			action: 'get_assist',
-			knowledge_base: '1',
-		},
-		{
-			assist_message: 'show me the map',
-			type: 'user',
-			action: 'get_assist',
-			knowledge_base: '1',
-		},
-		{
-			assist_message: [
-				{
-					content:
-						"Sure! I am ready to help you create your requested model.<br/> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br/>",
-					content_meta: {
-						type: 'text',
-					},
-				},
-				{
-					content:
-						'https://www.openstreetmap.org/export/embed.html?bbox=-0.004017949104309083%2C51.47612752641776%2C0.00030577182769775396%2C51.478569861898606&layer=mapnik',
-					content_meta: {
-						type: 'url',
-					},
-				},
-			],
-			type: 'bot',
-		},
-	]);
+	// const [messages, setMessages] = useState([
+	// 	{
+	// 		assist_message: 'can you help me create modal',
+	// 		type: 'break',
+	// 		action: 'get_assist',
+	// 		knowledge_base: '1',
+	// 	},
+	// 	{
+	// 		assist_message: 'can you help me create modal',
+	// 		type: 'user',
+	// 		action: 'get_assist',
+	// 		knowledge_base: '1',
+	// 	},
+	// 	{
+	// 		assist_message: [
+	// 			{
+	// 				content:
+	// 					"Sure! I am ready to help you create your requested model.<br/> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br/>",
+	// 				content_meta: {
+	// 					type: 'text',
+	// 				},
+	// 			},
+	// 			{
+	// 				content:
+	// 					"from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\nfrom zelthy.apps.dynamic_models.fields import ZForeignKey\n\nclass Patient(DynamicModelBase):\n    GENDER_CHOICES = [\n        ('male', 'Male'),\n        ('female', 'Female'),\n        ('other', 'Other'),\n    ]\n\n    name = models.CharField(max_length=255)\n    age = models.IntegerField()\n    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)\n    address = models.CharField(max_length=255, blank=True, null=True)\n    phone_number = models.CharField(max_length=15, blank=True, null=True)\n    email = models.EmailField(blank=True, null=True)\n\n    def __str__(self):\n        return self.name",
+	// 				content_meta: {
+	// 					type: 'code',
+	// 					code_language: 'python',
+	// 				},
+	// 			},
+	// 		],
+	// 		type: 'bot',
+	// 		allow_execution: true,
+	// 		exection_json: {
+	// 			execution: 'createModel',
+	// 			module: 'patients',
+	// 			'models.py':
+	// 				"from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\nfrom zelthy.apps.dynamic_models.fields import ZForeignKey\n\nclass Patient(DynamicModelBase):\n    GENDER_CHOICES = [\n        ('male', 'Male'),\n        ('female', 'Female'),\n        ('other', 'Other'),\n    ]\n\n    name = models.CharField(max_length=255)\n    age = models.IntegerField()\n    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)\n    address = models.CharField(max_length=255, blank=True, null=True)\n    phone_number = models.CharField(max_length=15, blank=True, null=True)\n    email = models.EmailField(blank=True, null=True)\n\n    def __str__(self):\n        return self.name",
+	// 		},
+	// 	},
+	// 	{
+	// 		assist_message: 'can you help me create modal',
+	// 		type: 'break',
+	// 		action: 'get_assist',
+	// 		knowledge_base: '1',
+	// 	},
+	// 	{
+	// 		assist_message: 'thanks',
+	// 		type: 'user',
+	// 		action: 'get_assist',
+	// 		knowledge_base: '1',
+	// 	},
+	// 	{
+	// 		assist_message: [
+	// 			{
+	// 				content:
+	// 					"Sure! I am ready to help you create your requested model.<br/> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br/>",
+	// 				content_meta: {
+	// 					type: 'text',
+	// 				},
+	// 			},
+	// 			{
+	// 				content:
+	// 					'https://www.youtube.com/embed/XHTrLYShBRQ?si=ZjT4H8YyTtgUPAhv',
+	// 				content_meta: {
+	// 					type: 'url',
+	// 				},
+	// 			},
+	// 		],
+	// 		type: 'bot',
+	// 	},
+	// 	{
+	// 		assist_message: 'can you help me create modal',
+	// 		type: 'break',
+	// 		status: 'new',
+	// 		action: 'get_assist',
+	// 		knowledge_base: '1',
+	// 	},
+	// 	{
+	// 		assist_message: 'show me the map',
+	// 		type: 'user',
+	// 		action: 'get_assist',
+	// 		knowledge_base: '1',
+	// 	},
+	// 	{
+	// 		assist_message: [
+	// 			{
+	// 				content:
+	// 					"Sure! I am ready to help you create your requested model.<br/> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br/>",
+	// 				content_meta: {
+	// 					type: 'text',
+	// 				},
+	// 			},
+	// 			{
+	// 				content:
+	// 					'https://www.openstreetmap.org/export/embed.html?bbox=-0.004017949104309083%2C51.47612752641776%2C0.00030577182769775396%2C51.478569861898606&layer=mapnik',
+	// 				content_meta: {
+	// 					type: 'url',
+	// 				},
+	// 			},
+	// 		],
+	// 		type: 'bot',
+	// 	},
+	// ]);
+	const [messages, setMessages] = useState([]);
+	const getConversationHistory = async () => {
+		let payloadData = new FormData();
+		payloadData.append(
+			'data',
+			JSON.stringify({
+				action: 'get_conversations',
+			})
+		);
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/code-assist/conversation/`,
+			type: 'POST',
+			loader: true,
+			payload: payloadData,
+		});
+		if (success && response) {
+			response['conversations'].length === 0
+				? setIsNewConversation(true)
+				: setIsNewConversation(false);
+			setMessages([...response.conversations]);
+		}
+	};
+	useEffect(() => {
+		getConversationHistory();
+	}, []);
+
+	useEffect(() => {
+		let activeMessage = messages.slice(-1);
+		if (activeMessage[0]) {
+			setActiveConversationId(activeMessage[0]['conversation_id']);
+		}
+		console.log('activeMessage ======>', activeMessage);
+	}, [messages]);
 
 	let initialValues = {
 		message: '',
@@ -135,7 +168,7 @@ const Chatbot = () => {
 		filter: Yup.string().required('please select one category'),
 	});
 
-	const onSubmit = (values) => {
+	const onSubmit = (values, actions) => {
 		console.log('submitted', values);
 		let postData = {
 			action: isNewConversation ? 'create_conversation' : 'update_conversation',
@@ -144,7 +177,9 @@ const Chatbot = () => {
 				knowledge_base: values.filter,
 			},
 		};
-
+		if (!isNewConversation) {
+			postData['conversation_id'] = activeConversationId;
+		}
 		console.log('print update convo post data', postData);
 
 		let update_conversation_form = new FormData();
@@ -158,34 +193,28 @@ const Chatbot = () => {
 				payload: update_conversation_form,
 			});
 			if (success && response) {
-				console.log('print response here', response);
 				// updateAppConfigurationData(response);
-				setMessages([
-					...messages,
-					{
-						assist_message: values.message,
-						type: 'user',
-						action: 'get_assist',
-						knowledge_base: values.filter,
-					},
-					{ ...response, type: 'bot' },
-				]);
+				if (isNewConversation) {
+					setMessages([...messages, response]);
+					setIsNewConversation(false);
+				} else {
+					let tempData = messages;
+					tempData.forEach((conversation, index) => {
+						if (conversation['conversation_id'] === response.conversation_id) {
+							conversation.Messages.push(...response.Messages);
+							conversation['allow_execution'] = response['allow_execution'];
+							conversation['execution_data'] = response['execution_data'];
+						}
+					});
+					setMessages([...tempData]);
+				}
+				actions.resetForm();
 			}
 		};
 		makeApiCall();
 	};
 
 	const createNewConversation = () => {
-		// setActiveConversationId("")
-		setMessages([
-			...messages,
-			{
-				assist_message: 'can you help me create modal',
-				type: 'break',
-				action: 'get_assist',
-				knowledge_base: '1',
-			},
-		]);
 		setIsNewConversation(true);
 	};
 
@@ -248,7 +277,14 @@ const Chatbot = () => {
 									</div>
 								</div>
 								<div className="h-[calc(100%-178px)] overflow-auto">
-									<ChatText data={messages} />
+									<ChatText
+										data={messages}
+										appId={appId}
+										getConversationHistory={getConversationHistory}
+									/>
+									{isNewConversation && (
+										<div className="mx-6 mt-[40px] mb-[8px] h-[2px] bg-[#DDE2E5]"></div>
+									)}
 									<div
 										className="mr-[24px] cursor-pointer text-right text-sm font-semibold text-[#5048ED]"
 										onClick={() => createNewConversation()}
@@ -259,9 +295,9 @@ const Chatbot = () => {
 								<Formik
 									initialValues={initialValues}
 									validationSchema={validationSchema}
-									onSubmit={(values) => {
+									onSubmit={(values, actions) => {
 										return new Promise((resolve) => {
-											onSubmit(values);
+											onSubmit(values, actions);
 											resolve();
 										});
 									}}
@@ -273,7 +309,7 @@ const Chatbot = () => {
 													<div className="flex h-full w-full flex-col justify-between rounded-[6px] border-[1px] px-[4px] py-[6px]">
 														<div className="flex justify-between">
 															<textarea
-																className="mx-[5px] h-[40px] w-full text-sm focus:ring-0"
+																className="mx-[5px] h-[40px] w-full p-1 text-sm focus:ring-0"
 																type="text"
 																name="message"
 																id="message"
@@ -308,32 +344,32 @@ const Chatbot = () => {
 																	radioData={[
 																		{
 																			id: 'Zelthy Basics',
-																			value: 'Zelthy Basics',
+																			value: 'basics',
 																			label: 'Zelthy Basics',
 																		},
 																		{
 																			id: 'Models',
-																			value: 'Models',
+																			value: 'models',
 																			label: 'Models',
 																		},
 																		{
 																			id: 'Crud Pkg',
-																			value: 'Crud Pkg',
+																			value: 'crud',
 																			label: 'Crud Pkg',
 																		},
 																		{
 																			id: 'Frames Pkg',
-																			value: 'Frames Pkg',
+																			value: 'frames',
 																			label: 'Frames Pkg',
 																		},
 																		{
 																			id: 'Login-Signup Pkg',
-																			value: 'Login-Signup Pkg',
+																			value: 'login_signup',
 																			label: 'Login-Signup Pkg',
 																		},
 																		{
 																			id: 'Generic',
-																			value: 'Generic',
+																			value: 'generic',
 																			label: 'Generic',
 																		},
 																	]}
