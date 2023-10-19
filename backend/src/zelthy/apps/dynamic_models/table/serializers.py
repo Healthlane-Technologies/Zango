@@ -20,8 +20,7 @@ class StringRelatedMeta(SerializerMetaclass):
                 # Check if the field is a relational field
                 if isinstance(field, (models.ForeignKey, models.OneToOneField, ZForeignKey, ZOneToOneField)):
                     # Use StringRelatedField for this field
-                    pass
-                    # attrs[field.name] = serializers.StringRelatedField()
+                    attrs[field.name] = serializers.StringRelatedField()
                 # if isinstance(field, (models.DateTimeField)):
                 #     attrs[field.name] = serializers.DateTimeField(format='Y-m-d H:i:s', default_timezone=None)
                     # attrs[field.name] = serializers.DateTimeField(format=settings.DATETIME_FORMAT, default_timezone=None)
