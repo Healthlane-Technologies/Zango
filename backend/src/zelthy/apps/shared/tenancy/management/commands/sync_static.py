@@ -6,9 +6,10 @@ from django.db import connection
 from zelthy.apps.shared.tenancy.models import TenantModel
 from zelthy.apps.dynamic_models.workspace.base import Workspace
 
+
 class Command(BaseCommand):
-    help = 'Collects assets from the specified app, including plugins and copies into \
-            the main django asset folder'
+    help = "Collects assets from the specified app, including plugins and copies into \
+            the main django asset folder"
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
@@ -30,20 +31,26 @@ class Command(BaseCommand):
                 shutil.copy2(s, d)
         return
 
-
-
     def handle(self, *args, **options):
-        wks_obj = TenantModel.objects.get(name=options['workspace']) 
+        wks_obj = TenantModel.objects.get(name=options["workspace"])
         connection.set_tenant(wks_obj)
-        ws = Workspace(wks_obj, None,  True)        
-        destination_path = settings.STATICFILES_DIRS[0] + "/workspaces/%s"%(options['workspace'])
-        ws_static_path= ws.path + "static"
+        ws = Workspace(wks_obj, None, True)
+        destination_path = settings.STATICFILES_DIRS[0] + "/workspaces/%s" % (
+            options["workspace"]
+        )
+        if not os.path.exists(f"workspaces/{options['workspace']}/static"):
+            os.makedirs(f"workspaces/{options['workspace']}/static")
+        if not os.path.exists("./assets"):
+            os.makedirs("assets")
+        ws_static_path = ws.path + "static"
         self.copy_source_to_destination(ws_static_path, destination_path)
 
         for plugin in ws.plugins:
-            plugin_name = plugin['name']
-            plugin_source_dir = ws.path + "plugins/%s/static"%(plugin_name)
+            plugin_name = plugin["name"]
+            plugin_source_dir = ws.path + "plugins/%s/static" % (plugin_name)
             if os.path.exists(plugin_source_dir):
-                plugin_destination_dir = destination_path + "/plugins/%s"%plugin_name
-                self.copy_source_to_destination(plugin_source_dir, plugin_destination_dir)
+                plugin_destination_dir = destination_path + "/plugins/%s" % plugin_name
+                self.copy_source_to_destination(
+                    plugin_source_dir, plugin_destination_dir
+                )
         return

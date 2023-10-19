@@ -196,7 +196,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             if name:
                 self.name = name
 
-            role_ids = data.get("roles", [])
+            role_ids = data.getlist("roles", [])
             if role_ids:
                 self.add_roles(role_ids)
 
