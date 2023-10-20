@@ -1,6 +1,6 @@
 from django.urls import re_path
 
-from .views import PlatformUserViewAPIV1, PlatformUserDetailViewAPIV1
+from .views import PlatformUserViewAPIV1, PlatformUserDetailViewAPIV1, AppPanelDetailsView
 
 
 urlpatterns = [
@@ -14,4 +14,5 @@ urlpatterns = [
         PlatformUserDetailViewAPIV1.as_view(),
         name="platformauth-apiv1-userdetailview",
     ),
+    re_path("app-initalization-details/", AppPanelDetailsView.as_view()),
 ]
