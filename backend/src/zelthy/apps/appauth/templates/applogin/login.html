@@ -32,9 +32,14 @@
 
     <link rel="stylesheet" href="{% static 'login/css/styles.css' %}" />
   </head>
-  <body class="login-container">
+  <body >
+    <img class="bg-image" src="{% static 'images/login-background.png' %}" />
+    <div class="login-container">
     {% include "applogin/_message_block.html" %}
+    
+    
 
+    
     <div class="login-logo">
       <svg
         width="138"
@@ -89,6 +94,8 @@
 
     <div class="pen-title">{{config.public_page_footer}}</div>
 
+    </div>
+
     <!-- common functions -->
     <script src="{% static 'js/common.min.js' %}"></script>
     <!-- uikit functions -->
@@ -125,6 +132,23 @@
       selectRoleLabel.css("font-size", "12px");
       selectRoleLabel.css("line-height", "16px");
       selectRoleLabel.css("color", "#6C747D");
+
+      const errorMessage = $(".alert-danger")
+      const inputDiv = $("#div_id_auth-password")
+      errorMessage.detach().insertAfter(inputDiv);
+      // inputDiv.append(errorMessage)
+
+       // Get the existing div element
+  var oldElement = $('.alert-danger ul');
+
+  // Create a new span element and copy contents
+  var newElement1 = $('<div>').html(oldElement.html());
+
+   var newElement2 = $('.alert-danger li');
+
+  // Replace the old div with the new span
+  oldElement.replaceWith(newElement2);
+      
 
     </script>
   </body>
