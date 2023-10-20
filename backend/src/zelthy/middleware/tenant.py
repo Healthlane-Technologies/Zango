@@ -55,6 +55,7 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
 
         tenant.domain_url = hostname
         request.tenant = tenant
+        request.internal_routing = False
         connection.set_tenant(request.tenant)
         self.setup_url_routing(request)
         # sa_base.base = declarative_base()

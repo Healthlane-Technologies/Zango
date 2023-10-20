@@ -1,3 +1,4 @@
+#TODO: This file can be deleted. Please check and delete
 from django.conf import settings
 from django.core.exceptions import DisallowedHost
 from django.db import connection
