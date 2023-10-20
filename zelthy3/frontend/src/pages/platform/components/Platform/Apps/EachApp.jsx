@@ -10,6 +10,9 @@ import {
 } from '../../../../../utils/formats';
 
 export default function EachApp({ data }) {
+	let port = document.location.port;
+	let protocol = document.location.protocol;
+
 	const [isBookmarked, setIsBookmarked] = useState(false);
 
 	const {
@@ -83,12 +86,17 @@ export default function EachApp({ data }) {
 					</span>
 					<button
 						type="button"
-						onClick={(event) => handleUrlButtonClick(event, domain_url)}
-						data-url={domain_url}
+						onClick={(event) =>
+							handleUrlButtonClick(
+								event,
+								protocol + '//' + domain_url + (port ? `:${port}` : '')
+							)
+						}
+						data-url={protocol + '//' + domain_url + (port ? `:${port}` : '')}
 						className="w-fit"
 					>
 						<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
-							{domain_url}
+							{protocol + '//' + domain_url + (port ? `:${port}` : '')}
 						</span>
 					</button>
 				</div>
