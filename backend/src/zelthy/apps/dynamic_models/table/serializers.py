@@ -1,15 +1,19 @@
+import pytz
+
 from django.db import models
 from django.conf import settings
 from rest_framework import serializers
 from rest_framework.serializers import SerializerMetaclass
 
 from ..fields import ZForeignKey, ZOneToOneField
+from zelthy.core.utils import get_current_request
 
 class StringRelatedMeta(SerializerMetaclass):
     def __new__(cls, name, bases, attrs):
         # Get the Meta class from attrs
         meta = attrs.get('Meta', None)
         # Check if there's a model defined in Meta
+        tenant = get_current_request().tenant
         if meta and hasattr(meta, 'model'):
             model = meta.model
             # Iterate through the model's fields
@@ -21,9 +25,8 @@ class StringRelatedMeta(SerializerMetaclass):
                 if isinstance(field, (models.ForeignKey, models.OneToOneField, ZForeignKey, ZOneToOneField)):
                     # Use StringRelatedField for this field
                     attrs[field.name] = serializers.StringRelatedField()
-                # if isinstance(field, (models.DateTimeField)):
-                #     attrs[field.name] = serializers.DateTimeField(format='Y-m-d H:i:s', default_timezone=None)
-                    # attrs[field.name] = serializers.DateTimeField(format=settings.DATETIME_FORMAT, default_timezone=None)
+                if isinstance(field, (models.DateTimeField)):
+                    attrs[field.name] = serializers.DateTimeField(format=tenant.datetime_format, default_timezone=pytz.timezone(tenant.timezone))
 
         return super().__new__(cls, name, bases, attrs)
 
