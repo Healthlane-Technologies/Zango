@@ -104,6 +104,8 @@ class Workspace:
         If user is Anonymous or SystemUser, then check access permission for the user role
         else check access permission for the user
         """
+        if request.internal_routing:
+            return True
         if request:
             user = request.user
             return True  # TODO: Remove this later
