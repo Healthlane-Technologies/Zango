@@ -28,7 +28,7 @@ const BotChat = ({ item, executionData }) => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/code-assist/execute/`,
 				type: 'POST',
-				loader: true,
+				loader: false,
 				payload: formdata,
 			});
 			if (success && response) {
@@ -46,12 +46,10 @@ const BotChat = ({ item, executionData }) => {
 					item.content_meta.type === 'text' ? 'max-w-[70%]' : 'w-[70%]'
 				} `}
 			>
-				<div className="mt-[8px] w-full self-start rounded-[6px] bg-[#F0F3F4] px-[10px] py-[8px]">
+				<div className=" w-full self-start rounded-[6px] bg-[#F0F3F4] px-3 py-2">
 					<>
 						{item.content_meta.type === 'text' ? (
-							<div className=" text-[#212429} mb-[8px] text-sm">
-								{item.content}
-							</div>
+							<div className=" text-[#212429}  text-sm">{item.content}</div>
 						) : item.content_meta.type === 'code' ? (
 							<div className="relative w-full">
 								<CopyIcon
@@ -65,6 +63,7 @@ const BotChat = ({ item, executionData }) => {
 									width={'100%'}
 									defaultLanguage={item.content_meta.code_language}
 									defaultValue={item.content}
+									className="overflow-none"
 									theme="vs-dark"
 									options={{
 										domReadOnly: true,

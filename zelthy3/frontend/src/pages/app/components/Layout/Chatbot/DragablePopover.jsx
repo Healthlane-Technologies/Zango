@@ -42,7 +42,7 @@ const DragablePopover = () => {
 						resizeHandles={['ne', 'e', 'n']}
 					>
 						<div className="relative flex flex-grow rounded-[6px] bg-[#F0F3F4] p-[8px] pt-[30px]">
-							<div className="fixed top-[6px] right-[8px] flex cursor-pointer items-center gap-[8px]">
+							<div className="fixed top-[6px] right-[20px] flex cursor-pointer items-center gap-[8px]">
 								<RefreshIcon
 									className="w-3"
 									onClick={() => {
