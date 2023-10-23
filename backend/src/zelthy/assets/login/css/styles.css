@@ -7,8 +7,8 @@ body {
   position: relative;
   height: 100vh;
   width: 100%;
-  background-image: url("../../../assets/images/login-background.png") no-repeat
-    center center fixed;
+/*   background-image: url("../../../assets/images/login-background.png") no-repeat
+    center center fixed; */
   background-image: linear-gradient(
     to right,
     rgba(121, 114, 251, 0.8),
