@@ -1,11 +1,11 @@
 import React from 'react';
+import { useRef } from 'react';
 import BotChat from './BotChat';
 import { ReactComponent as RestartIcon } from '../../../../../assets/images/svg/restart-icon.svg';
 import useApi from '../../../../../hooks/useApi';
 
 const ChatText = ({ data, appId, getConversationHistory }) => {
 	const triggerApi = useApi();
-
 	const restartConversation = async (conversationId) => {
 		let payloadData = new FormData();
 		payloadData.append(
@@ -18,7 +18,7 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 		const { response, success } = await triggerApi({
 			url: `/api/v1/apps/${appId}/code-assist/conversation/`,
 			type: 'POST',
-			loader: true,
+			loader: false,
 			payload: payloadData,
 		});
 		if (success && response) {
@@ -27,15 +27,15 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 		}
 	};
 	return (
-		<div className="w-full px-[24px]">
-			{data.map((messages, key) => (
-				<React.Fragment key={key}>
+		<div className="w-full px-6 pb-10">
+			{data.map((messages, key, array) => (
+				<div key={key} className="relative flex flex-col gap-2">
 					<>
-						<div className="mt-[40px] mb-[8px] h-[2px] bg-[#DDE2E5]"></div>
-						{messages.Status === 'open' ? (
+						<div className="  mt-[40px]   h-[2px] bg-[#DDE2E5]"></div>
+						{key === array.length - 1 ? (
 							<></>
 						) : (
-							<div className="flex justify-end">
+							<div className="sticky top-0 z-10 flex w-full justify-end bg-white p-2">
 								<button
 									onClick={() =>
 										restartConversation(messages['conversation_id'])
@@ -52,9 +52,9 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 					</>
 					{messages['Messages'].map((message, index, array) => {
 						return (
-							<div className="flex flex-col gap-[8px] p-[8px]" key={index}>
+							<div className="flex flex-col " key={index}>
 								{message.role === 'user' ? (
-									<div className="mt-[8px] max-w-[70%] self-end rounded-[6px] bg-[#5048ED] px-[10px] py-[4px] text-white">
+									<div className=" max-w-[70%] self-end rounded-[6px] bg-[#5048ED] px-3 py-2 text-white">
 										{message.content}
 									</div>
 								) : (
@@ -75,7 +75,7 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 							</div>
 						);
 					})}
-				</React.Fragment>
+				</div>
 			))}
 		</div>
 	);

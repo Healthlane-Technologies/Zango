@@ -1,4 +1,5 @@
 import { rest } from 'msw';
+let status = 'waiting';
 let mockHistoryData = [
 	{
 		UserID: '2',
@@ -148,7 +149,7 @@ let mockHistoryData = [
 export const appChatbotHandlers = [
 	rest.post('/api/v1/apps/:appId/code-assist/execute/', (req, res, ctx) => {
 		return res(
-			ctx.delay(500),
+			ctx.delay(5000),
 			ctx.status(200),
 			ctx.json({
 				success: true,
@@ -165,7 +166,7 @@ export const appChatbotHandlers = [
 			const postData = await JSON.parse(req.body['data']);
 			if (postData['action'] === 'get_conversations') {
 				return res(
-					ctx.delay(500),
+					ctx.delay(5000),
 					ctx.status(200),
 					ctx.json({
 						success: true,
@@ -187,6 +188,10 @@ export const appChatbotHandlers = [
 					})
 				);
 			} else if (postData['action'] === 'update_conversation') {
+				status = 'waiting';
+				setTimeout(() => {
+					status = 'completed';
+				}, 5000);
 				return res(
 					ctx.delay(500),
 					ctx.status(200),
@@ -195,63 +200,44 @@ export const appChatbotHandlers = [
 						response: {
 							message: 'Conversation updated successfully',
 							conversation_id: '03e144c3-8639-554a-89e8-e4e0ba74e0ed',
-							Messages: [
-								{
-									role: 'user',
-									content: postData['action_data']['message'],
-									content_meta: {
-										type: 'text',
-									},
-									knowledge_base: postData['action_data']['knowledge_base'],
-									timestamp: 1697707854,
-								},
-								{
-									content:
-										"Sure! I am ready to help you create your requested model.<br> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br>",
-									content_meta: {
-										type: 'text',
-									},
-									timestamp: 1697707870,
-									role: 'assistant',
-								},
-								{
-									content:
-										'from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\n\n\nclass Customer(DynamicModelBase):\n    name = models.CharField(max_length=255)\n    mobile = models.CharField(max_length=15, blank=True, null=True)\n    address = models.CharField(max_length=255, blank=True, null=True)\n\n    def __str__(self):\n        return self.name',
-									content_meta: {
-										type: 'code',
-										code_language: 'python',
-									},
-									timestamp: 1697707870,
-									role: 'assistant',
-								},
-							],
-							allow_execution: true,
-							execution_data: {
-								execution: 'createModel',
-								module: 'customer',
-								'models.py':
-									'from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\n\n\nclass Customer(DynamicModelBase):\n    name = models.CharField(max_length=255)\n    mobile = models.CharField(max_length=15, blank=True, null=True)\n    address = models.CharField(max_length=255, blank=True, null=True)\n\n    def __str__(self):\n        return self.name',
-							},
 						},
 					})
 				);
 			} else if (postData['action'] === 'create_conversation') {
+				status = 'waiting';
+				setTimeout(() => {
+					status = 'completed';
+				}, 10000);
 				return res(
-					ctx.delay(500),
+					ctx.delay(5000),
 					ctx.status(200),
 					ctx.json({
 						success: true,
 						response: {
 							message: 'Conversation created successfully',
 							conversation_id: 'fcf37de1-8e57-4159-8ce0-8e3b9ae0db62',
+						},
+					})
+				);
+			} else if (postData['action'] === 'get_conversation_message') {
+				return res(
+					ctx.delay(500),
+					ctx.status(200),
+					ctx.json({
+						success: true,
+
+						response: {
+							message: 'Conversation created successfully',
+							conversation_id: '03e144c3-8639-554a-89e8-e4e0ba74e0ed',
+							status: status,
 							Messages: [
 								{
 									role: 'user',
-									content: postData['action_data']['message'],
+									content: 'test',
 									content_meta: {
 										type: 'text',
 									},
-									knowledge_base: postData['action_data']['knowledge_base'],
+									knowledge_base: 'base',
 									timestamp: 1697707854,
 								},
 								{
