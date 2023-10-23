@@ -97,6 +97,33 @@ input[type='number'] {
 	animation: spinner 1s linear 0s infinite;
 }
 
+/* temp spinner */
+.mini-spinner {
+	/* position: absolute; */
+	z-index: 1051;
+	overflow: show;
+	margin: auto;
+	/* top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0; */
+	width: 50px;
+	height: 50px;
+}
+.mini-spinner:not(:required):after {
+	content: '';
+	display: block;
+	font-size: 10px;
+	width: 50px;
+	height: 50px;
+	margin-top: -0.5em;
+	border: 5px solid #5048ed;
+	border-radius: 100%;
+	border-bottom-color: transparent;
+	-webkit-animation: spinner 1s linear 0s infinite;
+	animation: spinner 1s linear 0s infinite;
+}
+
 /* Animation */
 
 @-webkit-keyframes spinner {

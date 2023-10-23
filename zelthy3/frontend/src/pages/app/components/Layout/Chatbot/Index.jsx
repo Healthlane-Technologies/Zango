@@ -8,7 +8,7 @@ import { ReactComponent as ChatbotIcon } from '../../../../../assets/images/svg/
 import { ReactComponent as CloseIcon } from '../../../../../assets/images/svg/close-icon.svg';
 import { ReactComponent as PlusIcon } from '../../../../../assets/images/svg/plus-icon.svg';
 import { ReactComponent as SendIcon } from '../../../../../assets/images/svg/send-icon.svg';
-import launchingAppLoaderGif from '../../../../../assets/images/gif/launching-app-loader.gif';
+// import launchingAppLoaderGif from '../../../../../assets/images/gif/launching-app-loader.gif';
 
 import useApi from '../../../../../hooks/useApi';
 import ChatText from './ChatText';
@@ -35,6 +35,24 @@ const Chatbot = () => {
 			}, 200);
 		}
 	};
+	function updateMessages(data, isNewConversation) {
+		if (isNewConversation) {
+			// console.log('before====>', messages);
+			setMessages([...messages, data]);
+			setIsNewConversation(false);
+		} else {
+			let tempData = messages;
+
+			tempData.forEach((conversation, index, array) => {
+				if (conversation['conversation_id'] === data.conversation_id) {
+					conversation.Messages.push(...data.Messages);
+					conversation['allow_execution'] = data['allow_execution'];
+					conversation['execution_data'] = data['execution_data'];
+				}
+			});
+			setMessages([...tempData]);
+		}
+	}
 	const getConversationHistory = async () => {
 		setIsLoading(true);
 
@@ -68,7 +86,8 @@ const Chatbot = () => {
 		if (activeMessage[0]) {
 			setActiveConversationId(activeMessage[0]['conversation_id']);
 		}
-		console.log('activeMessage ======>', activeMessage);
+		// console.log('activeMessage ======>', activeMessage);
+		console.log('Messagess======>', messages);
 	}, [messages]);
 
 	let initialValues = {
@@ -97,23 +116,10 @@ const Chatbot = () => {
 		if (success && response) {
 			if (response.status === 'waiting') {
 				setTimeout(() => {
-					getConversationMessages();
+					getConversationMessages(conversationId);
 				}, 500);
 			} else if (response.status === 'completed') {
-				if (isNewConversation) {
-					setMessages([...messages, response]);
-					setIsNewConversation(false);
-				} else {
-					let tempData = messages;
-					tempData.forEach((conversation, index) => {
-						if (conversation['conversation_id'] === response.conversation_id) {
-							conversation.Messages.push(...response.Messages);
-							conversation['allow_execution'] = response['allow_execution'];
-							conversation['execution_data'] = response['execution_data'];
-						}
-					});
-					setMessages([...tempData]);
-				}
+				updateMessages(response, isNewConversation);
 				setIsLoading(false);
 			}
 		}
@@ -130,7 +136,7 @@ const Chatbot = () => {
 		if (!isNewConversation) {
 			postData['conversation_id'] = activeConversationId;
 		}
-		console.log('print update convo post data', postData);
+		// console.log('print update convo post data', postData);
 
 		let update_conversation_form = new FormData();
 		update_conversation_form.append('data', JSON.stringify(postData));
@@ -145,6 +151,7 @@ const Chatbot = () => {
 			});
 			if (success && response) {
 				// updateAppConfigurationData(response);
+				updateMessages(response, isNewConversation);
 				getConversationMessages(response.conversation_id);
 				actions.resetForm({ values: { message: '', filter: values.filter } });
 			}
@@ -224,16 +231,17 @@ const Chatbot = () => {
 									)}
 									{isLoading && (
 										<div
-											className={`flex ${
+											className={`relative flex ${
 												messages.length === 0 ? 'h-[calc(100%-36px)]' : ''
-											} items-center justify-center`}
+											} min-h-[100px] items-center justify-center`}
 										>
 											{' '}
-											<img
+											{/* <img
 												src={launchingAppLoaderGif}
 												alt="#"
 												className="h-[78px] max-h-[78px] min-h-[78px] w-[79px] min-w-[79px] max-w-[79px]"
-											/>
+											/> */}
+											<div className="mini-spinner"></div>
 										</div>
 									)}
 
