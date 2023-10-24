@@ -1,5 +1,6 @@
 import json
 import os
+import importlib
 
 from django.utils.decorators import method_decorator
 from django.conf import settings
@@ -51,7 +52,6 @@ class ConversationViewAPIV1(ZelthyGenericPlatformAPIView):
         #     )
 
         response_data = lambda_invocation(data)
-        print("response_data: ", response_data)
         response = response_data["response"]
         return get_api_response(True, response, 200)
 
@@ -97,7 +97,7 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
             execute = self.mapPolicy(execution_data, **kwargs)
         elif execution == "createCustomCode":
             execute = self.createCustomCode(execution_data, **kwargs)
-        elif execution == "setUpFrame":
+        elif execution == "setupFrame":
             execute = self.setupFrame(execution_data, **kwargs)
 
         # assist_msg = 'Executed Successfully!'
@@ -248,8 +248,26 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
         role.save()
         return (True, "Succesfully executed")
 
-    # def setupFrame(self, execution_json, **kwargs):
-    #     frame_mod =
+    def setupFrame(self, execution_json, **kwargs):
+        app_obj = self.get_app_obj(**kwargs)
+        frame_mod_path = f"workspaces.{app_obj.name}.plugins.frame.configure.models"
+        frame_mod = importlib.import_module(frame_mod_path)
+
+        frame_model_class = frame_mod.FramesModel
+        user_role = UserRoleModel.objects.filter(
+            name__iexact=execution_json["role_name"]
+        ).first()
+        if not user_role:
+            return (False, "There is no role with the provided role name")
+
+        if frame_model_class.objects.filter(user_role=user_role).exists():
+            return (False, f"Frames already exists for {user_role.name}")
+
+        frame_model_class.objects.create(
+            user_role=user_role, config=execution_json["frame_config"]
+        )
+
+        return (True, "Succesfully executed")
 
     def createCustomCode(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)

@@ -7,6 +7,8 @@ import subprocess
 
 from django.conf import settings
 
+from zelthy.core.utils import get_current_request_url
+
 
 def create_directories(dirs):
     for directory in dirs:
@@ -95,14 +97,14 @@ def package_installed(package_name, tenant):
         return False
 
 
-def get_package_configuration_url(package_name, tenant, tenant_domain, port=None):
-    with open(f"workspaces/{tenant}/settings.json", "r") as f:
+def get_package_configuration_url(request, tenant, package_name):
+    with open(f"workspaces/{tenant.name}/settings.json", "r") as f:
         data = json.loads(f.read())
     for route in data["plugin_routes"]:
         if route["plugin"] == package_name:
-            if port is not None:
-                return f"{tenant_domain}:{port}/{route['re_path'][1:]}configure"
-            return f"http://{tenant_domain}/{route['re_path'][1:]}/configure"
+            domain = tenant.domains.filter(is_primary=True).last()
+            url = get_current_request_url(request, domain=domain)
+            return f"{url}/{route['re_path'][1:]}configure/"
     return ""
 
 
@@ -157,7 +159,9 @@ def install_package(package_name, version, tenant):
 
         return "Package Installed"
     except Exception as e:
-        return f"Package could not be installed\n Error: {str(e)}"
+        import traceback
+
+        return f"Package could not be installed\n Error: {traceback.format_exc()}"
 
 
 def uninstall_package():

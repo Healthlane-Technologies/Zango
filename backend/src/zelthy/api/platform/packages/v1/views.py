@@ -15,22 +15,22 @@ from django.core import signing
 class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
 
+    def get_app_obj(self, app_uuid):
+        obj = TenantModel.objects.get(uuid=app_uuid)
+        return obj
+
     def get(self, request, app_uuid, *args, **kwargs):
         action = request.GET.get("action", None)
         if action == "config_url":
-            port = None
-            if settings.DEBUG:
-                port = request.META["HTTP_HOST"].split(":")[1]
             try:
                 token = signing.dumps(
                     request.user.id,
                 )
-                tenant = TenantModel.objects.get(uuid=app_uuid)
-                domain = Domain.objects.get(tenant=tenant)
+                tenant = self.get_app_obj(app_uuid)
                 url = get_package_configuration_url(
-                    request.GET.get("package_name"), tenant.name, domain, port
+                    request, tenant, request.GET.get("package_name")
                 )
-                resp = {"url": f"http://{url}/?token={token}"}
+                resp = {"url": f"{url}?token={token}"}
                 status = 200
             except Exception as e:
                 resp = {"message": str(e)}
