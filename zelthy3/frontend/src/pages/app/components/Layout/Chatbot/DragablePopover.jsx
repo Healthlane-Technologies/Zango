@@ -31,10 +31,18 @@ const DragablePopover = () => {
 	return (
 		<>
 			<Transition show={isDraggablePopoverOpen}>
-				<Draggable defaultPosition={{ x: 0, y: 0 }}>
-					<ResizableBox width={450} height={300} className="flex flex-grow">
+				<Draggable
+					cancel=".react-resizable-handle"
+					defaultPosition={{ x: 0, y: 0 }}
+				>
+					<ResizableBox
+						width={450}
+						height={300}
+						className="flex flex-grow"
+						resizeHandles={['ne', 'e', 'n']}
+					>
 						<div className="relative flex flex-grow rounded-[6px] bg-[#F0F3F4] p-[8px] pt-[30px]">
-							<div className="fixed top-[6px] right-[8px] flex cursor-pointer items-center gap-[8px]">
+							<div className="fixed top-[6px] right-[20px] flex cursor-pointer items-center gap-[8px]">
 								<RefreshIcon
 									className="w-3"
 									onClick={() => {
