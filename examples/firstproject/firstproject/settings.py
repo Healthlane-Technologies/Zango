@@ -1,5 +1,5 @@
 import os
-from zelthy3.base_settings import *
+from zelthy.config.settings.base import *
 
 from pathlib import Path
 
@@ -21,12 +21,12 @@ WSGI_APPLICATION = 'firstproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE':'django_tenants.postgresql_backend',
-        'NAME': 'postgres',
+        'NAME': 'zelthy1',
         'USER': 'postgres',
         'PASSWORD': 'zelthy3pass',
         'HOST': '127.0.0.1',
         'PORT': '5432',
-        'ATOMIC_REQUESTS':True
+        # 'ATOMIC_REQUESTS':True
     }
 }
 
@@ -65,5 +65,47 @@ TEMPLATES[0]['DIRS'] = [os.path.join(BASE_DIR, 'templates')]
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 PUBLIC_SCHEMA_URLCONF = 'firstproject.urls_public'
 ROOT_URLCONF = 'firstproject.urls_tenants'
+# ROOT_URLCONF = 'workspaces.apps2.urls'
 
 ENV='dev'
+
+INSTALLED_APPS += ["dummy"]
+
+
+# import os
+# import importlib
+# import sys
+# import sys
+# from watchdog.observers import Observer
+# from watchdog.events import FileSystemEventHandler
+
+# class FileChangeHandler(FileSystemEventHandler):
+#     def on_modified(self, event):
+#         print(f'File {event.src_path} has been modified')
+#         if event.src_path.endswith('.py'):
+#             module_name = os.path.basename(event.src_path)[:-3]  # Remove ".py" from the end
+#             if module_name in sys.modules:
+#                 print(f'Reloading module {module_name}')
+#                 importlib.reload(sys.modules[module_name])
+
+# # Directory you want to watch for changes
+# path_to_watch = os.getcwd()  # this will watch the current working directory
+# event_handler = FileChangeHandler()
+
+# observer = Observer()
+# observer.schedule(event_handler, path_to_watch, recursive=True)
+
+# observer.start()
+# import time
+# try:
+#     while True:
+#         time.sleep(1)
+#         print("h")
+# except KeyboardInterrupt:
+#     observer.stop()
+
+# observer.join()
+
+
+
+

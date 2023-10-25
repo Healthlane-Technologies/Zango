@@ -1,0 +1,22 @@
+{
+    "version": "1.0.0",
+    "modules": [ 
+        {
+            "name": "foreign_key",
+            "path": "foreign_key"
+        },
+        {
+            "name": "one_to_one",
+            "path": "one_to_one"
+        },
+        {
+            "name": "update",
+            "path": "update"
+        },
+        {
+            "name": "null_fk",
+            "path": "null_fk"
+        }
+    ]
+
+}

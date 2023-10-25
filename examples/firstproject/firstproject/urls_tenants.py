@@ -3,5 +3,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('zelthy3.urls_tenants')),
+    path('', include('zelthy.config.urls_tenants')),
 ]

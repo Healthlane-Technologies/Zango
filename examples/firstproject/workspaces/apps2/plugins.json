@@ -1,0 +1,16 @@
+{
+ "plugins": [
+    {
+      "name": "frame",
+      "version": "0.1.0",
+      "repo": "https://github.com/Healthlane-Technologies/package-frame/archive/refs/tags/0.1.0.zip"
+    },
+    {
+      "name": "crud",
+      "version": "0.1.0",
+      "repo": ""
+    }
+
+ ]
+}
+
