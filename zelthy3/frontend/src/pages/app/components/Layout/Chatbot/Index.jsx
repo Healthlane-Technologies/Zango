@@ -151,7 +151,7 @@ const Chatbot = () => {
 			});
 			if (success && response) {
 				// updateAppConfigurationData(response);
-				// updateMessages(response, isNewConversation);
+				updateMessages(response, isNewConversation);
 				getConversationMessages(response.conversation_id);
 				actions.resetForm({ values: { message: '', filter: values.filter } });
 			}
