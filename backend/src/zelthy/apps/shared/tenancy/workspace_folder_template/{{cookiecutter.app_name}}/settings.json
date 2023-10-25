@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+            "name": "app_landing",
+            "path": "app_landing"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^",
+            "module": "app_landing",
+            "url": "urls"
+        }
+    ],
+    "plugin_routes": []
+}

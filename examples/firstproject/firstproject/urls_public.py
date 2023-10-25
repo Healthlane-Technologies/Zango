@@ -4,7 +4,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('zelthy3.urls_public')),
+    path('', include('zelthy.urls_public')),
 ]
 
 
