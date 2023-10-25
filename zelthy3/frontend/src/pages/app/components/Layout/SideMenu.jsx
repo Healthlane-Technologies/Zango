@@ -1,12 +1,19 @@
 import { NavLink } from 'react-router-dom';
 import { ReactComponent as EachSideMenuIcon } from '../../../../assets/images/svg/each-side-menu-icon.svg';
+import { ReactComponent as AppPackagesIcon } from '../../../../assets/images/svg/app-packages-icon.svg';
+import { ReactComponent as AppPolicyIcon } from '../../../../assets/images/svg/app-policy-icon.svg';
+import { ReactComponent as AppSettingsIcon } from '../../../../assets/images/svg/app-settings-icon.svg';
+import { ReactComponent as AppTasksIcon } from '../../../../assets/images/svg/app-tasks-icon.svg';
+import { ReactComponent as AppUserManagementIcon } from '../../../../assets/images/svg/app-user-management-icon.svg';
+import { ReactComponent as AppUserRoleIcon } from '../../../../assets/images/svg/app-user-role-icon.svg';
+
 import SideMenuDropdown from './SideMenuDropdown';
 
 export default function SideMenu() {
 	return (
 		<div className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]">
 			<SideMenuDropdown
-				Icon={EachSideMenuIcon}
+				Icon={AppSettingsIcon}
 				label="App Settings"
 				sublinks={[
 					{
@@ -27,7 +34,7 @@ export default function SideMenu() {
 					}`
 				}
 			>
-				<EachSideMenuIcon />
+				<AppUserRoleIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					User Roles
 				</span>
@@ -40,7 +47,7 @@ export default function SideMenu() {
 					}`
 				}
 			>
-				<EachSideMenuIcon />
+				<AppUserManagementIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					User
 				</span>
@@ -53,7 +60,7 @@ export default function SideMenu() {
 					}`
 				}
 			>
-				<EachSideMenuIcon />
+				<AppPolicyIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					Policies
 				</span>
@@ -81,7 +88,7 @@ export default function SideMenu() {
 					}`
 				}
 			>
-				<EachSideMenuIcon />
+				<AppTasksIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					Tasks
 				</span>
@@ -94,7 +101,7 @@ export default function SideMenu() {
 					}`
 				}
 			>
-				<EachSideMenuIcon />
+				<AppPackagesIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					Packages
 				</span>

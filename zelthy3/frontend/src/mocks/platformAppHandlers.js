@@ -23,7 +23,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 5,
@@ -46,7 +46,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 6,
@@ -69,7 +69,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 7,
@@ -92,7 +92,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 9,
@@ -115,7 +115,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 10,
@@ -138,7 +138,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 11,
@@ -161,7 +161,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 12,
@@ -184,7 +184,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 13,
@@ -207,7 +207,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 	{
 		id: 14,
@@ -230,7 +230,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'https://test.zelthy.com',
+		domain_url: 'test.zelthy.com',
 	},
 ];
 
@@ -259,7 +259,7 @@ export const platformAppHandlers = [
 			datetime_format: null,
 			logo: null,
 			extra_config: null,
-			domain_url: 'https://test.zelthy.com',
+			domain_url: 'test.zelthy.com',
 		});
 
 		return res(
