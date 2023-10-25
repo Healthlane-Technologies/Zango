@@ -41,14 +41,16 @@ const newTask = () => {
 		email: faker.internet.email().toLowerCase(),
 		attached_policies: makePolices(faker.number.int({ min: 1, max: 10 })),
 		schedule: '* * * * *',
-		minute: '1',
-		hour: '2',
-		day_of_week: '3',
-		day_of_month: '4',
-		month_of_year: '5',
+		crontab: {
+			minute: '1',
+			hour: '2',
+			day_of_week: '3',
+			day_of_month: '4',
+			month_of_year: '5',
+		},
 		is_superadmin: false,
 		last_login: faker.date.past(),
-		status: faker.helpers.shuffle(['active', 'inactive'])[0],
+		is_enabled: faker.datatype.boolean(),
 		created_at: faker.date.past(),
 	};
 };
@@ -147,7 +149,7 @@ export const appTasksManagementHandlers = [
 		);
 	}),
 
-	rest.put('/api/v1/apps/:appId/tasks/:id', (req, res, ctx) => {
+	rest.post('/api/v1/apps/:appId/tasks/:id', (req, res, ctx) => {
 		return res(
 			ctx.delay(500),
 			ctx.status(200),

@@ -55,7 +55,7 @@ export default function Layout({ children }) {
 				className="flex items-center justify-center gap-[8px] border-t-[1px] border-[#DDE2E5] p-[8px]"
 			>
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-					V 2.0
+					V 3.0
 				</span>
 				<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•
@@ -66,9 +66,17 @@ export default function Layout({ children }) {
 				<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•
 				</span>
-				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-					Documents
-				</span>
+				<a
+					href="https://zelthystatichosting.s3.ap-south-1.amazonaws.com/zelthy3/docs/index.html"
+					alt="#"
+					target={'_blank'}
+					className="m-0 inline-flex p-0"
+				>
+					<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
+						Documents
+					</span>
+				</a>
+
 				{/* <span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•
 				</span>

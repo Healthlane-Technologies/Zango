@@ -1,13 +1,15 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import * as Yup from 'yup';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import CheckboxField from '../../../../components/Form/CheckboxField';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormDataOrder } from '../../../../utils/helper';
 import {
 	closeIsUpdatePolicyModalOpen,
 	selectAppTaskManagementData,
@@ -15,10 +17,6 @@ import {
 	selectIsUpdatePolicyModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { useParams } from 'react-router-dom';
-import MultiSelectField from '../../../../components/Form/MultiSelectField';
 
 const UpdatePolicyForm = ({ closeModal }) => {
 	let { appId } = useParams();
@@ -35,17 +33,15 @@ const UpdatePolicyForm = ({ closeModal }) => {
 			appTaskManagementFormData?.attached_policies?.map(
 				(eachApp) => eachApp.id
 			) ?? [],
-		minute: appTaskManagementFormData?.minute ?? '*',
-		hour: appTaskManagementFormData?.hour ?? '*',
-		day_of_week: appTaskManagementFormData?.day_of_week ?? '*',
-		day_of_month: appTaskManagementFormData?.day_of_month ?? '*',
-		month_of_year: appTaskManagementFormData?.month_of_year ?? '*',
+		minute: appTaskManagementFormData?.crontab?.minute ?? '*',
+		hour: appTaskManagementFormData?.crontab?.hour ?? '*',
+		day_of_week: appTaskManagementFormData?.crontab?.day_of_week ?? '*',
+		day_of_month: appTaskManagementFormData?.crontab?.day_of_month ?? '*',
+		month_of_year: appTaskManagementFormData?.crontab?.month_of_year ?? '*',
+		is_enabled: appTaskManagementFormData?.is_enabled ?? false,
 	};
 
 	let validationSchema = Yup.object({
-		policies: Yup.array()
-			.min(1, 'Minimun one is required')
-			.required('Required'),
 		minute: Yup.string().required('Required'),
 		hour: Yup.string().required('Required'),
 		day_of_week: Yup.string().required('Required'),
@@ -54,7 +50,19 @@ const UpdatePolicyForm = ({ closeModal }) => {
 	});
 
 	let onSubmit = (values) => {
-		let tempValues = values;
+		let crontab_exp = JSON.stringify({
+			minute: values?.minute,
+			hour: values?.hour,
+			day_of_week: values?.day_of_week,
+			day_of_month: values?.day_of_month,
+			month_of_year: values?.month_of_year,
+		});
+
+		let tempValues = {
+			policies: values?.policies,
+			crontab_exp: crontab_exp,
+			is_enabled: values?.is_enabled,
+		};
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
 
@@ -255,6 +263,17 @@ const UpdatePolicyForm = ({ closeModal }) => {
 									</div>
 								</div>
 							</div>
+							<CheckboxField
+								key="is_enabled"
+								label="Is Enabled"
+								content=""
+								name="is_enabled"
+								id="is_enabled"
+								placeholder=""
+								value={get(formik.values, 'is_enabled', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<button
@@ -262,7 +281,7 @@ const UpdatePolicyForm = ({ closeModal }) => {
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								// disabled={!(formik.isValid && formik.dirty)}
 							>
-								<span>Update Policy</span>
+								<span>Update Task</span>
 							</button>
 						</div>
 					</form>
@@ -320,7 +339,7 @@ export default function UpdatePolicyModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Update Policy
+												Update Task
 											</h4>
 										</div>
 									</Dialog.Title>
