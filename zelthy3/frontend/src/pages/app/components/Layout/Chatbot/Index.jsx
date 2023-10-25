@@ -151,7 +151,7 @@ const Chatbot = () => {
 			});
 			if (success && response) {
 				// updateAppConfigurationData(response);
-				updateMessages(response, isNewConversation);
+				// updateMessages(response, isNewConversation);
 				getConversationMessages(response.conversation_id);
 				actions.resetForm({ values: { message: '', filter: values.filter } });
 			}
@@ -175,7 +175,7 @@ const Chatbot = () => {
 	};
 
 	return (
-		<div className="relative z-50">
+		<div className="relative z-[1000]">
 			<button
 				ref={triggerRef}
 				onClick={togglePopover}
@@ -207,7 +207,7 @@ const Chatbot = () => {
 							style={style}
 							className="popover-content"
 						>
-							<div className="mx-3 h-[85vh] w-[800px] rounded-[6px] bg-white shadow-table-menu">
+							<div className="mx-3 h-[80vh] w-[800px] rounded-[6px] bg-white shadow-table-menu">
 								<div className="border-[#DDE2E5} relative h-[64px] border-b-[1px]">
 									<div className="fixed top-[16px] left-[26px] text-lg font-semibold text-[#000]">
 										Code Assist
@@ -227,7 +227,7 @@ const Chatbot = () => {
 										getConversationHistory={getConversationHistory}
 									/>
 									{isNewConversation && (
-										<div className="mx-6 mt-[40px] mb-[8px] h-[2px] bg-[#DDE2E5]"></div>
+										<div className="mx-6 my-10  h-[2px] bg-[#DDE2E5]"></div>
 									)}
 									{isLoading && (
 										<div
@@ -245,11 +245,17 @@ const Chatbot = () => {
 										</div>
 									)}
 
-									<div className="sticky bottom-0 z-10 mr-2 bg-white p-2 text-right text-sm font-semibold text-[#5048ED]">
-										<button onClick={() => createNewConversation()}>
-											start new conversation
-										</button>
-									</div>
+									{!isNewConversation && (
+										<div className="sticky bottom-0 z-10 mr-2 bg-white p-2 text-right text-sm font-semibold   text-[#5048ED] ">
+											<button
+												className="disabled:opacity-50"
+												disabled={isLoading}
+												onClick={() => createNewConversation()}
+											>
+												start new conversation
+											</button>
+										</div>
+									)}
 									<div className="h-0 w-0 bg-black" ref={scrollBottomRef}></div>
 								</div>
 								<Formik
@@ -269,7 +275,7 @@ const Chatbot = () => {
 													<div className="flex h-full w-full flex-col justify-between rounded-[6px] border-[1px] px-[4px] py-[6px] focus-within:border-primary">
 														<div className="flex justify-between">
 															<textarea
-																className="mx-[5px] h-[40px] w-full p-1 text-sm focus:outline-none focus:ring-0"
+																className="mx-[5px] h-[40px] w-full p-1 text-sm focus:outline-none focus:ring-0 disabled:opacity-50"
 																type="text"
 																name="message"
 																id="message"
@@ -280,7 +286,8 @@ const Chatbot = () => {
 															/>
 															<button
 																type="submit"
-																className="mr-[5px] flex h-6 items-center gap-2 rounded-full bg-[#F0F3F4] px-[10px] py-[2px]"
+																disabled={isLoading}
+																className="mr-[5px] flex h-6 items-center gap-2 rounded-full bg-[#F0F3F4] px-[10px] py-[2px] disabled:opacity-50"
 															>
 																<SendIcon className="h-4 w-4" />
 															</button>

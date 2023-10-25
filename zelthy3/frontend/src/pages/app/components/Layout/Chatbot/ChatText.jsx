@@ -35,7 +35,7 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 						{key === array.length - 1 ? (
 							<></>
 						) : (
-							<div className="sticky top-0 z-10 flex w-full justify-end bg-white p-2">
+							<div className="sticky top-0 z-[11] flex w-full justify-end bg-white p-2">
 								<button
 									onClick={() =>
 										restartConversation(messages['conversation_id'])
