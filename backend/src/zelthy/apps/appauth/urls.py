@@ -5,6 +5,7 @@ from .views import (
     AppUserLoginView,
     AppLogoutView,
     SwitchUserRoleView,
+    AppUserChangePasswordView,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
         name="appuser-switch-role-view",
     ),
     re_path(r"^logout/", view=AppLogoutView.as_view(), name="app-logout-view"),
+    re_path(r"^change_password/", view=AppUserChangePasswordView.as_view()),
 ]

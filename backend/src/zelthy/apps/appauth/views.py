@@ -1,11 +1,14 @@
+from typing import Any
 from django.urls import reverse
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib.auth import logout
 from django.utils.decorators import method_decorator
 from django.core.exceptions import SuspiciousOperation
+
+from formtools.wizard.views import SessionWizardView
 
 from zelthy.core.generic_views.base import (
     ZelthySessionAppTemplateView,
@@ -20,6 +23,7 @@ from .login.forms import (
     AppUserResetPasswordForm,
     UserRoleSelectionForm,
     AppUserResetPasswordForm,
+    ChangePasswordForm,
 )
 
 
@@ -79,3 +83,27 @@ class AppLogoutView(View):
         meta = request.META["HTTP_HOST"]
         logout_url = self.add_protocol(request, meta + logout_uri)
         return redirect(logout_url)
+
+
+class AppUserChangePasswordView(ZelthySessionAppTemplateView, SessionWizardView):
+    
+    template_name = "applogin/change_password.html"
+
+    form_list = (
+        ("change_password", ChangePasswordForm),
+    )
+
+    def get_form_initial(self, step):
+        initial = super(AppUserChangePasswordView, self).get_form_initial(step)
+        initial["request"] = self.request
+        initial["user"] = self.request.user
+        return initial
+    
+
+    def done(self, form_list, **kwargs):
+        form = form_list[0]
+        form.save()
+        return redirect("/app/home/")
+
+    
+

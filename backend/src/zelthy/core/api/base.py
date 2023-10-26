@@ -53,3 +53,8 @@ class ZelthyGenericPlatformAPIView(APIView):
     authentication_classes = (SessionAuthentication,
                                 TokenAuthentication)
     permission_classes = (IsAuthenticatedPlatformUser,)
+
+class ZelthyGenericAppAPIView(APIView):
+
+    authentication_classes = (TokenAuthentication, SessionAuthentication)
+    permission_classes = (IsAuthenticatedAppUser,)
