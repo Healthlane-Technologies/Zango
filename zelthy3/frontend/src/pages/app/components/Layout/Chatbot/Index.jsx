@@ -86,7 +86,7 @@ const Chatbot = () => {
 		if (activeMessage[0]) {
 			setActiveConversationId(activeMessage[0]['conversation_id']);
 		}
-		// console.log('activeMessage ======>', activeMessage);
+		console.log('activeMessage ======>', activeMessage);
 		console.log('Messagess======>', messages);
 	}, [messages]);
 
