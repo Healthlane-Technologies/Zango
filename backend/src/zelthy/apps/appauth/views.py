@@ -1,4 +1,3 @@
-from typing import Any
 from django.urls import reverse
 from django.shortcuts import redirect, render
 from django.views.generic import View
