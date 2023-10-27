@@ -11,7 +11,7 @@ class ProfileViewAPIV1(ZelthyGenericAppAPIView):
         status = 200
         return get_api_response(success, response, status)
     
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         response = request.user.update_user(request.data)
         success = response.pop("success")
         if success:
