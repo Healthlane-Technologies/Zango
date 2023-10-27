@@ -101,7 +101,7 @@ class ZelthyLoginView(ZelthyLoginBase, SessionWizardView):
             self.redirect_field_name, self.request.GET.get(self.redirect_field_name, "")
         )
         if not redirect_to:
-            redirect_to = "/user-landing/"
+            redirect_to = "/app/home/"
         if self.request.is_secure():
             url = "https://" + self.request.META["HTTP_HOST"] + redirect_to
         else:
@@ -211,6 +211,7 @@ class PasswordValidationMixin(object):
             validation = False
         else:
             msg = ""
+            validation = True
         return {"validation": validation, "msg": msg}
 
     def check_special_character(self, password):
@@ -285,3 +286,4 @@ class PasswordValidationMixin(object):
 
         else:
             return {"validation": True, "msg": "Password validations passed"}
+

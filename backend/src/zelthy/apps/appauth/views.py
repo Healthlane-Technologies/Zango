@@ -1,12 +1,18 @@
 from django.urls import reverse
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib.auth import logout
 from django.utils.decorators import method_decorator
+from django.core.exceptions import SuspiciousOperation
 
-from zelthy.core.generic_views.base import ZelthySessionAppTemplateView
+from formtools.wizard.views import SessionWizardView
+
+from zelthy.core.generic_views.base import (
+    ZelthySessionAppTemplateView,
+    ZelthySessionAppView,
+)
 from zelthy.apps.appauth.login.utils import ZelthyLoginView
 from zelthy.apps.appauth.models import UserRoleModel
 
@@ -16,6 +22,7 @@ from .login.forms import (
     AppUserResetPasswordForm,
     UserRoleSelectionForm,
     AppUserResetPasswordForm,
+    ChangePasswordForm,
 )
 
 
@@ -50,12 +57,15 @@ class AppUserLoginView(ZelthyLoginView):
         return self.user_cache
 
 
-class AppUserLandingView(ZelthySessionAppTemplateView):
-    """
-    View to render the landing page after login.
-    """
-
-    template_name = "applandingPage.html"  # To be updated with new html
+class SwitchUserRoleView(ZelthySessionAppView):
+    def get(self, request, *args, **kwargs):
+        role_id = kwargs["role_id"]
+        if not request.user.roles.filter(id=role_id).exists():
+            raise SuspiciousOperation(
+                "Trying to apply role for which is not mapped to user"
+            )
+        request.session["role_id"] = role_id
+        return redirect("/app/home/")
 
 
 class AppLogoutView(View):
@@ -72,3 +82,27 @@ class AppLogoutView(View):
         meta = request.META["HTTP_HOST"]
         logout_url = self.add_protocol(request, meta + logout_uri)
         return redirect(logout_url)
+
+
+class AppUserChangePasswordView(ZelthySessionAppTemplateView, SessionWizardView):
+    
+    template_name = "applogin/change_password.html"
+
+    form_list = (
+        ("change_password", ChangePasswordForm),
+    )
+
+    def get_form_initial(self, step):
+        initial = super(AppUserChangePasswordView, self).get_form_initial(step)
+        initial["request"] = self.request
+        initial["user"] = self.request.user
+        return initial
+    
+
+    def done(self, form_list, **kwargs):
+        form = form_list[0]
+        form.save()
+        return redirect("/app/home/")
+
+    
+

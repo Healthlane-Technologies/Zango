@@ -72,6 +72,7 @@ class PlatformUserModel(AbstractZelthyUserModel):
         return False
 
     def add_apps(self, app_uuids):
+        self.apps.clear()
         app_objs = TenantModel.objects.filter(uuid__in=app_uuids)
         self.apps.add(*app_objs)
 
@@ -132,4 +133,54 @@ class PlatformUserModel(AbstractZelthyUserModel):
                         message = "Platform User created successfully."
             except Exception as e:
                 message = str(e)
+        return {"success": success, "message": message}
+
+    def update_user(self, data):
+        success = False
+        try:
+            user_query = Q()
+            email = data.get("email")
+            mobile = data.get("mobile")
+            if email:
+                user_query = user_query | Q(email=email)
+            if mobile:
+                user_query = user_query | Q(mobile=mobile)
+            if user_query:
+                user = PlatformUserModel.objects.filter(user_query).exclude(id=self.id)
+                if user.exists():
+                    message = "Another user already exists matching the provided email or mobile"
+                    return {"success": False, "message": message}
+
+            password = data.get("password")
+            if password:
+                if not self.validate_password(password):
+                    message = "Invalid password. Password must follow rules xyz"
+                    return {"success": False, "message": message}
+
+                self.set_password(password)
+
+            if email:
+                self.email = email
+            if mobile:
+                self.mobile = mobile
+
+            name = data.get("name")
+            if name:
+                self.name = name
+
+            app_ids = data.getlist("apps", [])
+            if app_ids:
+                self.add_apps(app_ids)
+
+            is_active = data.get("is_active", self.is_active)
+            if isinstance(is_active, str):
+                is_active = True if is_active == "true" else False
+
+            self.is_active = is_active
+
+            self.save()
+            success = True
+            message = "Platform User updated successfully."
+        except Exception as e:
+            message = str(e)
         return {"success": success, "message": message}

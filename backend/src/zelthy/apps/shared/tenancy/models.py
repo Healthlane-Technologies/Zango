@@ -8,11 +8,14 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
+from django_tenants.utils import schema_context
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
+from zelthy.apps.permissions.models import PolicyModel
+from zelthy.apps.appauth.models import UserRoleModel
 
-from .utils import TIMEZONES, DATEFORMAT, DATETIMEFORMAT
+from .utils import TIMEZONES, DATEFORMAT, DATETIMEFORMAT, DEFAULT_THEME_CONFIG, create_default_policy_and_role
 
 
 Choice = namedtuple("Choice", ["value", "display"])
@@ -133,6 +136,8 @@ class TenantModel(TenantMixin, FullAuditMixin):
 
         self.status = "deployed"
         self.save()
+        create_default_policy_and_role(self.schema_name)
+        theme = ThemesModel.objects.create(name="Default", tenant=self, config=DEFAULT_THEME_CONFIG)        
 
 
 class Domain(DomainMixin, FullAuditMixin):

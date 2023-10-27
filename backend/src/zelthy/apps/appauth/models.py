@@ -137,7 +137,14 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                     )
                 else:
                     if not cls.validate_password(password):
-                        message = "Invalid password. Password must follow rules xyz"
+                        message = """
+                            Invalid password. Password must follow rules
+                            1. Must have at least 8 characters
+                            2. Must have at least one uppercase letter
+                            3. Must have at least one lowercase letter
+                            4. Must have at least one number
+                            5. Must have at least one special character
+                            """
                     else:
                         app_user = cls.objects.create(
                             name=name,
@@ -196,7 +203,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             if name:
                 self.name = name
 
-            role_ids = data.get("roles", [])
+            role_ids = data.getlist("roles", [])
             if role_ids:
                 self.add_roles(role_ids)
 
