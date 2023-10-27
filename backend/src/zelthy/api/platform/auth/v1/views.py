@@ -95,3 +95,40 @@ class PlatformUserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
             status = 500
 
         return get_api_response(success, response, status)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            obj = self.get_obj(**kwargs)
+            update_result = PlatformUserModel.update_user(obj, request.data)
+            success = update_result["success"]
+            message = update_result["message"]
+            status_code = 200 if success else 400
+            result = {
+                "message": message,
+                "user_id": obj.id,
+            }
+        except Exception as e:
+            success = False
+            result = {"message": str(e)}
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+class AppPanelDetailsView(ZelthyGenericPlatformAPIView):
+    def get_obj(self, request, **kwargs):
+        obj = PlatformUserModel.objects.get(id=request.user.id)
+        return obj
+
+    def get(self, request, *args, **kwargs):
+        try:
+            obj = self.get_obj(request, **kwargs)
+            serializer = PlatformUserSerializerModel(obj)
+            success = True
+            response = {"app_data": {"user_logged_in": serializer.data}}
+            status = 200
+        except Exception as e:
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
