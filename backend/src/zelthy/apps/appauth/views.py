@@ -51,7 +51,7 @@ class AppUserLoginView(ZelthyLoginView):
             tenant=self.request.tenant, is_active=True
         ).first()
         if app_theme_config:
-            context["app_theme_config"] = app_theme_config
+            context["app_theme_config"] = app_theme_config.config
         return context
 
     def get_form_initial(self, step):
@@ -111,7 +111,7 @@ class AppUserChangePasswordView(ZelthySessionAppTemplateView, SessionWizardView)
             tenant=self.request.tenant, is_active=True
         ).first()
         if app_theme_config:
-            context["app_theme_config"] = app_theme_config
+            context["app_theme_config"] = app_theme_config.config
         return context
 
     def done(self, form_list, **kwargs):
