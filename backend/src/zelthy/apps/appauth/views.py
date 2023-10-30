@@ -16,6 +16,7 @@ from zelthy.core.generic_views.base import (
 )
 from zelthy.apps.appauth.login.utils import ZelthyLoginView
 from zelthy.apps.appauth.models import UserRoleModel
+from zelthy.apps.shared.tenancy.models import ThemesModel
 
 from .login.forms import (
     AppLoginForm,
@@ -46,6 +47,11 @@ class AppUserLoginView(ZelthyLoginView):
     def get_context_data(self, **kwargs):
         context = super(AppUserLoginView, self).get_context_data(**kwargs)
         context["tenant"] = self.request.tenant
+        app_theme_config = ThemesModel.objects.filter(
+            tenant=self.request.tenant, is_active=True
+        ).first()
+        if app_theme_config:
+            context["app_theme_config"] = app_theme_config
         return context
 
     def get_form_initial(self, step):
@@ -99,6 +105,14 @@ class AppUserChangePasswordView(ZelthySessionAppTemplateView, SessionWizardView)
         initial["user"] = self.request.user
         return initial
     
+    def get_context_data(self, form, **kwargs):
+        context =  super(AppUserChangePasswordView, self).get_context_data(form, **kwargs)
+        app_theme_config = ThemesModel.objects.filter(
+            tenant=self.request.tenant, is_active=True
+        ).first()
+        if app_theme_config:
+            context["app_theme_config"] = app_theme_config
+        return context
 
     def done(self, form_list, **kwargs):
         form = form_list[0]

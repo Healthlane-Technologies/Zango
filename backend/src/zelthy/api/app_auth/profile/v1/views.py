@@ -11,15 +11,11 @@ class ProfileViewAPIV1(ZelthyGenericAppAPIView):
         status = 200
         return get_api_response(success, response, status)
     
-    def post(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(data=request.data, instance=request.user, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            success = True
-            response = {"message": "success"}
+    def put(self, request, *args, **kwargs):
+        response = request.user.update_user(request.data)
+        success = response.pop("success")
+        if success:
             status = 200
         else:
-            success = False
-            response = {"message": serializer.errors}
-            status = 400
+            status = 500
         return get_api_response(success, response, status)
