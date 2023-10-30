@@ -83,6 +83,8 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
             execute = self.createModule(execution_data, **kwargs)
         elif execution == "createModel":
             execute = self.createModel(execution_data, **kwargs)
+        elif execution == "updateModel":
+            execute = self.updateModel(execution_data, **kwargs)
         elif execution == "createCrud":
             execute = self.createCrud(execution_data, **kwargs)
         elif execution == "updateCrudTable":
@@ -102,7 +104,7 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
 
         # assist_msg = 'Executed Successfully!'
         return get_api_response(
-            success=True, response_content={"message": execute[1]}, status=200
+            success=execute[0], response_content={"message": execute[1]}, status=200
         )
 
     def createModule(self, execution_data, **kwargs):
@@ -134,6 +136,16 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
             + f"/workspaces/{app_obj.name}/{execution_json['module']}/models.py"
         )
         with open(model_path, "a") as f:
+            f.write(execution_json["models.py"])
+        return (True, "Succesfully executed")
+
+    def updateModel(self, execution_json, **kwargs):
+        app_obj = self.get_app_obj(**kwargs)
+        model_path = (
+            str(settings.BASE_DIR)
+            + f"/workspaces/{app_obj.name}/{execution_json['module']}/models.py"
+        )
+        with open(model_path, "w") as f:
             f.write(execution_json["models.py"])
         return (True, "Succesfully executed")
 
