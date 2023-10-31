@@ -106,7 +106,7 @@ def get_package_configuration_url(package_name, tenant, tenant_domain, port=None
     return ""
 
 
-def install_package(package_name, version, tenant):
+def install_package(package_name, version, tenant, skip_migration=False, skip_sync_static=False):
     if package_installed(package_name, tenant):
         return "Package already installed"
     try:
@@ -147,13 +147,15 @@ def install_package(package_name, version, tenant):
         update_plugins_json(tenant, package_name, version)
         update_settings_json(tenant, package_name, version)
 
-        subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
-        subprocess.run("python manage.py collectstatic --noinput", shell=True)
+        if not skip_sync_static:
+            subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
+            subprocess.run("python manage.py collectstatic --noinput", shell=True)
         if os.path.exists(f"workspaces/{tenant}/plugins/{package_name}/migrations"):
-            subprocess.run(
-                f"python manage.py ws_migrate {tenant} --plugin {package_name}",
-                shell=True,
-            )
+            if not skip_migration:
+                subprocess.run(
+                    f"python manage.py ws_migrate {tenant} --plugin {package_name}",
+                    shell=True,
+                )
 
         return "Package Installed"
     except Exception as e:

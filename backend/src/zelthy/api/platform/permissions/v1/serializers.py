@@ -18,6 +18,8 @@ class PolicySerializer(serializers.ModelSerializer):
         return super(PolicySerializer, self).create(validated_data)
 
     def update(self, instance, validated_data):
+        if instance.type == "system":
+            raise serializers.ValidationError
         if validated_data.get("statement"):
             statement = json.loads(validated_data["statement"])
             validated_data["statement"] = statement
