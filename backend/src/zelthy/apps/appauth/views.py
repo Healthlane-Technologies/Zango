@@ -1,4 +1,3 @@
-from typing import Any
 from django.urls import reverse
 from django.shortcuts import redirect, render
 from django.views.generic import View
@@ -51,7 +50,7 @@ class AppUserLoginView(ZelthyLoginView):
             tenant=self.request.tenant, is_active=True
         ).first()
         if app_theme_config:
-            context["app_theme_config"] = app_theme_config.config
+            context["app_theme_config"] = app_theme_config
         return context
 
     def get_form_initial(self, step):
@@ -111,7 +110,7 @@ class AppUserChangePasswordView(ZelthySessionAppTemplateView, SessionWizardView)
             tenant=self.request.tenant, is_active=True
         ).first()
         if app_theme_config:
-            context["app_theme_config"] = app_theme_config.config
+            context["app_theme_config"] = app_theme_config
         return context
 
     def done(self, form_list, **kwargs):
