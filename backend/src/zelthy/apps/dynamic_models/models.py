@@ -332,7 +332,7 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
         AppUserModel, null=True, editable=False, on_delete=models.PROTECT
     )
 
-    objects = RestrictedManager()
+    # objects = RestrictedManager()
 
     class Meta:
         app_label = "dynamic_models"
