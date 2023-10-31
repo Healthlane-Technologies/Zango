@@ -8,15 +8,20 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
-from django_tenants.utils import schema_context
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
 
-from .utils import TIMEZONES, DATEFORMAT, DATETIMEFORMAT, DEFAULT_THEME_CONFIG, create_default_policy_and_role
-
+from .utils import (
+    TIMEZONES,
+    DATEFORMAT,
+    DATETIMEFORMAT,
+    DEFAULT_THEME_CONFIG,
+    create_default_policy_and_role,
+    install_default_packages,
+)
 
 Choice = namedtuple("Choice", ["value", "display"])
 
@@ -112,6 +117,7 @@ class TenantModel(TenantMixin, FullAuditMixin):
         ).save()
         # initialize tenant's workspace
         obj.initialize_workspace()
+        return obj
 
     def initialize_workspace(self):
         # Create workspace Folder
@@ -137,7 +143,10 @@ class TenantModel(TenantMixin, FullAuditMixin):
         self.status = "deployed"
         self.save()
         create_default_policy_and_role(self.schema_name)
-        theme = ThemesModel.objects.create(name="Default", tenant=self, config=DEFAULT_THEME_CONFIG)        
+        theme = ThemesModel.objects.create(
+            name="Default", tenant=self, config=DEFAULT_THEME_CONFIG
+        )
+        install_default_packages(self.schema_name)
 
 
 class Domain(DomainMixin, FullAuditMixin):

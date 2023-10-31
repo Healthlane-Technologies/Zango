@@ -4,6 +4,7 @@ from django_tenants.utils import schema_context
 
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
+from zelthy.core.package_utils import install_package
 
 __all__ = [
     "TIMEZONES",
@@ -47,15 +48,7 @@ DEFAULT_THEME_CONFIG = {
 
 def create_default_policy_and_role(schema_name):
     with schema_context(schema_name):
-        app_landing_view_policy = PolicyModel.objects.create(
-            name="AppLandingViewAccess",
-            description="Policy To Allow access to the App Landing View.",
-            statement={
-                "permissions": [
-                    {"name": "app_landing.views.AppLandingPageView", "type": "view"}
-                ]
-            },
-        )
-
+        app_landing_view_access = PolicyModel.objects.get(name="AppLandingViewAccess")
         anonymous_users_role = UserRoleModel.objects.get(name="AnonymousUsers")
-        anonymous_users_role.policies.add(app_landing_view_policy)
+        anonymous_users_role.policies.add(app_landing_view_access)
+
