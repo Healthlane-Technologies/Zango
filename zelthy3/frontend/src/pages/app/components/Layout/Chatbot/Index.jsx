@@ -1,6 +1,6 @@
 import { Formik } from 'formik';
 import _ from 'lodash';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { Popper } from 'react-popper';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
@@ -8,6 +8,8 @@ import { ReactComponent as ChatbotIcon } from '../../../../../assets/images/svg/
 import { ReactComponent as CloseIcon } from '../../../../../assets/images/svg/close-icon.svg';
 import { ReactComponent as PlusIcon } from '../../../../../assets/images/svg/plus-icon.svg';
 import { ReactComponent as SendIcon } from '../../../../../assets/images/svg/send-icon.svg';
+import Lottie from 'lottie-react';
+import animationData from '../../../../../assets/images/zelthy-loader.json';
 // import launchingAppLoaderGif from '../../../../../assets/images/gif/launching-app-loader.gif';
 
 import useApi from '../../../../../hooks/useApi';
@@ -22,18 +24,13 @@ const Chatbot = () => {
 	const triggerRef = useRef(null);
 	const popoverRef = useRef(null);
 	const scrollBottomRef = useRef(null);
-
 	let { appId } = useParams();
 	const triggerApi = useApi();
 	const [messages, setMessages] = useState([]);
 
 	const scrollToBottom = () => {
-		if (scrollBottomRef.current) {
-			scrollBottomRef.current.scrollTop = scrollBottomRef.current.scrollHeight;
-			return setTimeout(() => {
-				return scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-			}, 200);
-		}
+		const { scrollHeight, scrollTop } = scrollBottomRef.current;
+		scrollBottomRef.current.scrollTo(0, scrollHeight);
 	};
 	function updateMessages(data, isNewConversation) {
 		if (isNewConversation) {
@@ -42,7 +39,6 @@ const Chatbot = () => {
 			setIsNewConversation(false);
 		} else {
 			let tempData = messages;
-
 			tempData.forEach((conversation, index, array) => {
 				if (conversation['conversation_id'] === data.conversation_id) {
 					conversation.Messages.push(...data.Messages);
@@ -53,6 +49,7 @@ const Chatbot = () => {
 			setMessages([...tempData]);
 		}
 	}
+
 	const getConversationHistory = async () => {
 		setIsLoading(true);
 
@@ -86,9 +83,12 @@ const Chatbot = () => {
 		if (activeMessage[0]) {
 			setActiveConversationId(activeMessage[0]['conversation_id']);
 		}
-		// console.log('activeMessage ======>', activeMessage);
-		console.log('Messagess======>', messages);
 	}, [messages]);
+	useLayoutEffect(() => {
+		if (scrollBottomRef.current) {
+			scrollToBottom();
+		}
+	}, [isLoading, isOpen, messages, isNewConversation]);
 
 	let initialValues = {
 		message: '',
@@ -117,7 +117,7 @@ const Chatbot = () => {
 			if (response.status === 'waiting') {
 				setTimeout(() => {
 					getConversationMessages(conversationId);
-				}, 500);
+				}, 5000);
 			} else if (response.status === 'completed') {
 				updateMessages(response, isNewConversation);
 				setIsLoading(false);
@@ -136,13 +136,13 @@ const Chatbot = () => {
 		if (!isNewConversation) {
 			postData['conversation_id'] = activeConversationId;
 		}
-		// console.log('print update convo post data', postData);
 
 		let update_conversation_form = new FormData();
 		update_conversation_form.append('data', JSON.stringify(postData));
 
 		const makeApiCall = async () => {
 			setIsLoading(true);
+
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/code-assist/conversation/`,
 				type: 'POST',
@@ -161,10 +161,6 @@ const Chatbot = () => {
 	const createNewConversation = () => {
 		setIsNewConversation(true);
 	};
-
-	//   const openPopover = () => {
-	// 		setIsOpen(true);
-	// 	};
 
 	const closePopover = () => {
 		setIsOpen(false);
@@ -220,7 +216,10 @@ const Chatbot = () => {
 										<CloseIcon />
 									</div>
 								</div>
-								<div className="h-[calc(100%-178px)] overflow-auto">
+								<div
+									className="h-[calc(100%-178px)] overflow-auto scroll-smooth"
+									ref={scrollBottomRef}
+								>
 									<ChatText
 										data={messages}
 										appId={appId}
@@ -236,12 +235,11 @@ const Chatbot = () => {
 											} min-h-[100px] items-center justify-center`}
 										>
 											{' '}
-											{/* <img
-												src={launchingAppLoaderGif}
-												alt="#"
-												className="h-[78px] max-h-[78px] min-h-[78px] w-[79px] min-w-[79px] max-w-[79px]"
-											/> */}
-											<div className="mini-spinner"></div>
+											<Lottie
+												animationData={animationData}
+												className="lottie-container h-[100px] w-[100px] [&>svg]:!transform-none"
+											/>
+											{/* <div className="mini-spinner"></div> */}
 										</div>
 									)}
 
@@ -256,7 +254,6 @@ const Chatbot = () => {
 											</button>
 										</div>
 									)}
-									<div className="h-0 w-0 bg-black" ref={scrollBottomRef}></div>
 								</div>
 								<Formik
 									initialValues={initialValues}
