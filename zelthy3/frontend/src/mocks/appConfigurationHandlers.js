@@ -28,7 +28,8 @@ export const appConfigurationHandlers = [
 						date_format: null,
 						datetime_format: '%d/%m/%y %I:%M %p',
 						datetime_format_display: 'August 05 2006, 3:05 PM',
-						logo: null,
+						logo: '',
+						fav_icon: '',
 						extra_config: null,
 						domains: [
 							{ domain: 'domainame1.com', is_primary: true },
