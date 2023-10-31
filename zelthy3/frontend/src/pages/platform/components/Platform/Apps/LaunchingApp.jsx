@@ -1,5 +1,6 @@
 import launchingAppLoaderGif from '../../../../../assets/images/gif/launching-app-loader.gif';
-
+import Lottie from 'lottie-react';
+import animationData from '../../../../../assets/images/zelthy-loader.json';
 export default function LaunchingApp({ data }) {
 	const {
 		uuid,
@@ -27,10 +28,14 @@ export default function LaunchingApp({ data }) {
 					</span>
 				</div>
 				<div className="itens-center flex justify-center">
-					<img
+					{/* <img
 						src={launchingAppLoaderGif}
 						alt="#"
 						className="h-[78px] max-h-[78px] min-h-[78px] w-[79px] min-w-[79px] max-w-[79px]"
+					/> */}
+					<Lottie
+						animationData={animationData}
+						className="lottie-container h-[78px] w-[78px] [&>svg]:!transform-none"
 					/>
 				</div>
 				<div>
