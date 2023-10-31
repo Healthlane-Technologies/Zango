@@ -93,6 +93,7 @@ class ModelCol:
         self.sortable = kwargs.get("sortable", None)
         self.choices = kwargs.get("choices", None)
         self.user_roles = kwargs.get("user_roles", [])
+        self.related_object_attribute = kwargs.get("related_object_attribute", None)
 
     def update_model_field(self, field):
         self.model_field = field
@@ -110,6 +111,8 @@ class ModelCol:
             metadata.update(sortable=self.sortable)
         if self.choices:
             metadata.update(choices=self.choices)
+        if self.related_object_attribute is not None:
+            metadata.update(related_object_attribute=self.related_object_attribute)
         return metadata
 
 
