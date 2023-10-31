@@ -9,11 +9,11 @@ body {
   width: 100%;
 /*   background-image: url("../../../assets/images/login-background.png") no-repeat
     center center fixed; */
-  background-image: linear-gradient(
+  /* background-image: linear-gradient(
     to right,
     rgba(121, 114, 251, 0.8),
     rgba(52, 33, 211, 0.8)
-  );
+  ); */
   z-index: 2;
 }
 
@@ -80,7 +80,6 @@ body {
   height: 6px;
   width: 40px;
   border-radius: 0.5rem;
-  background-color: #5048ed;
 }
 
 .login-form {
@@ -115,10 +114,51 @@ body {
   margin-top: 4px;
   border-radius: 4px;
 }
+.login-form #id_change_password-password div {
+  display: block;
+}
+
+.login-form #id_change_password-password1  div {
+  display: block;
+}
+
+.login-form #id_change_password-password2  div {
+  display: block;
+}
+
+.login-form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#id_change_password-password {
+  height: 52px;
+  padding: 12px;
+  margin-top: 4px;
+  border-radius: 4px;
+  margin-bottom: 0;
+}
+
+#id_change_password-password1 {
+  height: 52px;
+  padding: 12px;
+  margin-top: 4px;
+  border-radius: 4px;
+  margin-bottom: 0;
+}
+
+#id_change_password-password2 {
+  height: 52px;
+  padding: 12px;
+  margin-top: 4px;
+  border-radius: 4px;
+  margin-bottom: 0;
+}
 
 #submit-id-submit {
   height: 48px;
-  background-color: #5048ed;
+  
   font-size: 16px;
   line-height: 24px;
   font-weight: 600;
@@ -156,4 +196,14 @@ select:focus {
 
 .alert-danger li {
   list-style: none;
+}
+
+.invalid-feedback {
+  font-size: 11px;
+  color: #d52918;
+  font-weight: 700;
+  line-height: 16px;
+  /* 145.455% */
+  letter-spacing: 0.2px;
+  margin-top: -30px;
 }
