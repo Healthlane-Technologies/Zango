@@ -152,9 +152,9 @@ export const appChatbotHandlers = [
 			ctx.delay(5000),
 			ctx.status(200),
 			ctx.json({
-				success: true,
+				success: false,
 				response: {
-					message: 'Succesfully executed',
+					message: 'Failed to executed',
 				},
 			})
 		);

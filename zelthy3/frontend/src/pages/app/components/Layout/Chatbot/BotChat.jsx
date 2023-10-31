@@ -35,6 +35,13 @@ const BotChat = ({ item, executionData }) => {
 				setHideCommit(true);
 				setExecutionMsg(response.message);
 				console.log('print execution data', response);
+			} else {
+				setHideCommit(false);
+				if (response.message) {
+					setExecutionMsg(response.message);
+				} else {
+					setExecutionMsg('An Error Occurred');
+				}
 			}
 		};
 		makeApiCall();
@@ -106,13 +113,19 @@ const BotChat = ({ item, executionData }) => {
 					)}
 				</div>
 				{executionMsg && (
-					<div className="mt-[8px] text-xs text-[#229470]">{executionMsg}</div>
+					<div
+						className={`mt-[8px] text-xs  ${
+							hideCommit ? 'text-[#229470]' : 'text-danger-red'
+						}`}
+					>
+						{executionMsg}
+					</div>
 				)}
 			</div>
-			<div className="flex grow justify-end gap-[8px] self-end text-right">
+			{/* <div className="flex grow justify-end gap-[8px] self-end text-right">
 				<LikeIcon className="cursor-pointer" />
 				<DislikeIcon className="cursor-pointer" />
-			</div>
+			</div> */}
 		</div>
 	);
 };

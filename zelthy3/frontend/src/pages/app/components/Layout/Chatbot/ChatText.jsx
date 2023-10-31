@@ -1,12 +1,15 @@
 import React from 'react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import BotChat from './BotChat';
 import { ReactComponent as RestartIcon } from '../../../../../assets/images/svg/restart-icon.svg';
 import useApi from '../../../../../hooks/useApi';
 
 const ChatText = ({ data, appId, getConversationHistory }) => {
 	const triggerApi = useApi();
+	const [disableRestartConversation, setDisableRestartConversation] =
+		useState(false);
 	const restartConversation = async (conversationId) => {
+		setDisableRestartConversation(true);
 		let payloadData = new FormData();
 		payloadData.append(
 			'data',
@@ -25,6 +28,7 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 			console.log('print restart response here', response);
 			getConversationHistory();
 		}
+		setDisableRestartConversation(false);
 	};
 	return (
 		<div className="w-full px-6 pb-10">
@@ -37,10 +41,11 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 						) : (
 							<div className="sticky top-0 z-[11] flex w-full justify-end bg-white p-2">
 								<button
+									disabled={disableRestartConversation}
 									onClick={() =>
 										restartConversation(messages['conversation_id'])
 									}
-									className="flex cursor-pointer items-center justify-end gap-[10px] text-right text-sm font-semibold text-[#212429]"
+									className="flex cursor-pointer items-center justify-end gap-[10px] text-right text-sm font-semibold text-[#212429] disabled:opacity-50"
 								>
 									<div>
 										<RestartIcon />
