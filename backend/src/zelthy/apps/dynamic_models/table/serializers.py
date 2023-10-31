@@ -41,13 +41,13 @@ class TestSerializer(serializers.ModelSerializer, metaclass=StringRelatedMeta):
         model = UserRoleModel
 
 class FileSerializer(serializers.Field):
-
     def to_representation(self, value):
         request = get_current_request()
+        url = request.build_absolute_uri(value.url)
         host = request.get_host()
         svg = f"""
             <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="50" height="50" viewBox="0 0 50 50">
-                <a xlink:href='http://{host}{value.url}' target='_blank'> 
+                <a xlink:href='{url}' target='_blank'> 
                     <path d="M24.707,8.793l-6.5-6.5C18.019,2.105,17.765,2,17.5,2H7C5.895,2,5,2.895,5,4v22c0,1.105,0.895,2,2,2h16c1.105,0,2-0.895,2-2 V9.5C25,9.235,24.895,8.981,24.707,8.793z M18,10c-0.552,0-1-0.448-1-1V3.904L23.096,10H18z"></path>
                 </a>
             </svg>
