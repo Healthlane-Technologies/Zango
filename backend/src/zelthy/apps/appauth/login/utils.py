@@ -211,6 +211,7 @@ class PasswordValidationMixin(object):
             validation = False
         else:
             msg = ""
+            validation = True
         return {"validation": validation, "msg": msg}
 
     def check_special_character(self, password):
@@ -285,3 +286,4 @@ class PasswordValidationMixin(object):
 
         else:
             return {"validation": True, "msg": "Password validations passed"}
+
