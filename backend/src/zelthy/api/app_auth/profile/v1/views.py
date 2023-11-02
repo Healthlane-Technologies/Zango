@@ -17,5 +17,5 @@ class ProfileViewAPIV1(ZelthyGenericAppAPIView):
         if success:
             status = 200
         else:
-            status = 500
+            status = 400
         return get_api_response(success, response, status)
