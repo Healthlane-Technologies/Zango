@@ -131,39 +131,21 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 									</div>
 								) : null}
 							</div>
-							<div className="flex flex-col gap-[4px]">
-								<FileUpload formik={formik} label={'Logo'} id={'logo'} />
-								{appConfigurationData?.app?.logo && !formik.values.logo ? (
-									<a
-										href={appConfigurationData?.app?.logo}
-										alt=""
-										target={'_blank'}
-									>
-										<span className="font-lato text-[14px] font-bold leading-[20px] text-primary">
-											{appConfigurationData?.app?.logo}
-										</span>
-									</a>
-								) : null}
-							</div>
-							<div className="flex flex-col gap-[4px]">
-								<FileUpload
-									formik={formik}
-									label={'Fav Icon'}
-									id={'fav_icon'}
-								/>
-								{appConfigurationData?.app?.fav_icon &&
-								!formik.values.fav_icon ? (
-									<a
-										href={appConfigurationData?.app?.fav_icon}
-										alt=""
-										target={'_blank'}
-									>
-										<span className="font-lato text-[14px] font-bold leading-[20px] text-primary">
-											{appConfigurationData?.app?.fav_icon}
-										</span>
-									</a>
-								) : null}
-							</div>
+
+							<FileUpload
+								formik={formik}
+								label={'Logo'}
+								id={'logo'}
+								fileValue={appConfigurationData?.app?.logo || ''}
+							/>
+
+							<FileUpload
+								formik={formik}
+								label={'Fav Icon'}
+								id={'fav_icon'}
+								fileValue={appConfigurationData?.app?.fav_icon || ''}
+							/>
+
 							<div className="flex flex-col gap-[4px]">
 								<label
 									htmlFor="domain"
