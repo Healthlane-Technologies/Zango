@@ -4,7 +4,6 @@ from django_tenants.utils import schema_context
 
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
-from zelthy.core.package_utils import install_package
 
 __all__ = [
     "TIMEZONES",
@@ -46,9 +45,13 @@ DEFAULT_THEME_CONFIG = {
 }
 
 
-def create_default_policy_and_role(schema_name):
+def assign_policies_to_anonymous_user(schema_name):
     with schema_context(schema_name):
         app_landing_view_access = PolicyModel.objects.get(name="AppLandingViewAccess")
         anonymous_users_role = UserRoleModel.objects.get(name="AnonymousUsers")
         anonymous_users_role.policies.add(app_landing_view_access)
+        anonymous_users_role.policies.add(
+            PolicyModel.objects.get(name="AllowFromAnywhere")
+        )
+        anonymous_users_role.save()
 

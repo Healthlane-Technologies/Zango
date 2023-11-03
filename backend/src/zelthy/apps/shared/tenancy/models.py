@@ -19,8 +19,7 @@ from .utils import (
     DATEFORMAT,
     DATETIMEFORMAT,
     DEFAULT_THEME_CONFIG,
-    create_default_policy_and_role,
-    install_default_packages,
+    assign_policies_to_anonymous_user
 )
 
 Choice = namedtuple("Choice", ["value", "display"])
@@ -142,11 +141,10 @@ class TenantModel(TenantMixin, FullAuditMixin):
 
         self.status = "deployed"
         self.save()
-        create_default_policy_and_role(self.schema_name)
+        assign_policies_to_anonymous_user(self.schema_name)
         theme = ThemesModel.objects.create(
             name="Default", tenant=self, config=DEFAULT_THEME_CONFIG
         )
-        install_default_packages(self.schema_name)
 
 
 class Domain(DomainMixin, FullAuditMixin):
