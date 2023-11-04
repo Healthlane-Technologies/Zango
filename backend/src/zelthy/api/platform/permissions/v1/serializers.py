@@ -19,7 +19,9 @@ class PolicySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if instance.type == "system":
-            raise serializers.ValidationError
+            raise serializers.ValidationError(
+                "Updates are not allowed for system policy."
+            )
         if validated_data.get("statement"):
             statement = json.loads(validated_data["statement"])
             validated_data["statement"] = statement
