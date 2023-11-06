@@ -5,6 +5,9 @@ from django_tenants.utils import schema_context
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
 
+from zelthy.core.package_utils import install_package, get_all_packages
+
+
 __all__ = [
     "TIMEZONES",
     "DATEFORMAT",
@@ -55,3 +58,10 @@ def assign_policies_to_anonymous_user(schema_name):
         )
         anonymous_users_role.save()
 
+
+def install_default_packages(schema_name):
+    default_packages = ["crud", "frame"]
+    all_packages = get_all_packages()
+    for package in all_packages:
+        if package["name"] in default_packages:
+            install_package(package["name"], package["versions"][-1], schema_name)

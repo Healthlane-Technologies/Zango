@@ -4,15 +4,19 @@ from collections import namedtuple
 
 import cookiecutter.main
 
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .utils import install_default_packages
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
+
 
 from .utils import (
     TIMEZONES,
@@ -146,6 +150,13 @@ class TenantModel(TenantMixin, FullAuditMixin):
             name="Default", tenant=self, config=DEFAULT_THEME_CONFIG
         )
 
+@receiver(post_save, sender=TenantModel)
+def TenantPostSave(sender, instance, **kwargs):
+    def on_commit_callback():
+        if instance.schema_name != "public":
+            install_default_packages(instance.schema_name)
+
+    transaction.on_commit(on_commit_callback)
 
 class Domain(DomainMixin, FullAuditMixin):
     """
