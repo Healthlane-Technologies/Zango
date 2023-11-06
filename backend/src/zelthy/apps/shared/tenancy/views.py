@@ -4,9 +4,9 @@ from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import AppUserModel, UserRoleModel
 
 
-class DynamicPanelView(ZelthySessionPlatformTemplateView):
+class AppPanelView(ZelthySessionPlatformTemplateView):
     """
-    View to render the Dynamic Panel accessible only to platform users.
+    View to render the App Panel accessible only to platform users.
     """
 
-    template_name = "dynamic_panel.html"
+    template_name = "app_panel.html"
