@@ -17,24 +17,36 @@ import ChatText from './ChatText';
 import RadioPillField from './RadioPillField';
 
 const Chatbot = () => {
-	const [activeConversationId, setActiveConversationId] = useState('');
+	// const [activeConversationId, setActiveConversationId] = useState('');
+	const [userMessage, setUserMessage] = useState('');
 	const [isNewConversation, setIsNewConversation] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const [errorMessage, setErrorMessage] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
+	const [messages, setMessages] = useState([]);
+
 	const triggerRef = useRef(null);
 	const popoverRef = useRef(null);
 	const scrollBottomRef = useRef(null);
 	let { appId } = useParams();
 	const triggerApi = useApi();
-	const [messages, setMessages] = useState([]);
 
+	/**
+	 * Scrolls to the bottom of the page.
+	 */
 	const scrollToBottom = () => {
-		const { scrollHeight, scrollTop } = scrollBottomRef.current;
+		const { scrollHeight } = scrollBottomRef.current;
 		scrollBottomRef.current.scrollTo(0, scrollHeight);
 	};
+
+	/**
+	 * Updates the messages based on the provided data.
+	 *
+	 * @param {object} data - The data used to update the messages.
+	 * @param {boolean} isNewConversation - Indicates if it is a new conversation.
+	 */
 	function updateMessages(data, isNewConversation) {
 		if (isNewConversation) {
-			// console.log('before====>', messages);
 			setMessages([...messages, data]);
 			setIsNewConversation(false);
 		} else {
@@ -49,6 +61,16 @@ const Chatbot = () => {
 			setMessages([...tempData]);
 		}
 	}
+
+	/**
+	 * Returns the conversation ID of the active conversation.
+	 *
+	 * @return {string} The conversation ID of the active conversation.
+	 */
+	const getActiveConversationId = () => {
+		let activeMessage = messages.slice(-1);
+		return activeMessage[0]['conversation_id'];
+	};
 
 	const getConversationHistory = async () => {
 		setIsLoading(true);
@@ -72,32 +94,13 @@ const Chatbot = () => {
 				: setIsNewConversation(false);
 			setMessages([...response.conversations]);
 			setIsLoading(false);
+			setUserMessage('');
+		} else {
+			setUserMessage(response.message);
+			setIsLoading(false);
 		}
 	};
-	useEffect(() => {
-		getConversationHistory();
-	}, []);
 
-	useEffect(() => {
-		let activeMessage = messages.slice(-1);
-		if (activeMessage[0]) {
-			setActiveConversationId(activeMessage[0]['conversation_id']);
-		}
-	}, [messages]);
-	useLayoutEffect(() => {
-		if (scrollBottomRef.current) {
-			scrollToBottom();
-		}
-	}, [isLoading, isOpen, messages, isNewConversation]);
-
-	let initialValues = {
-		message: '',
-		filter: '',
-	};
-	let validationSchema = Yup.object().shape({
-		message: Yup.string().trim().required('command text Required'),
-		filter: Yup.string().required('please select one category'),
-	});
 	const getConversationMessages = async (conversationId) => {
 		let payloadData = new FormData();
 		payloadData.append(
@@ -120,10 +123,33 @@ const Chatbot = () => {
 				}, 5000);
 			} else if (response.status === 'completed') {
 				updateMessages(response, isNewConversation);
+				setUserMessage('');
 				setIsLoading(false);
 			}
+		} else {
+			setUserMessage(response.message);
+			setIsLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		getConversationHistory();
+	}, []);
+
+	useLayoutEffect(() => {
+		if (scrollBottomRef.current) {
+			scrollToBottom();
+		}
+	}, [isLoading, isOpen, messages, isNewConversation]);
+
+	let initialValues = {
+		message: '',
+		filter: '',
+	};
+	let validationSchema = Yup.object().shape({
+		message: Yup.string().trim().required('command text Required'),
+		filter: Yup.string().required('please select one category'),
+	});
 
 	const onSubmit = (values, actions) => {
 		let postData = {
@@ -134,13 +160,15 @@ const Chatbot = () => {
 			},
 		};
 		if (!isNewConversation) {
-			postData['conversation_id'] = activeConversationId;
+			postData['conversation_id'] = getActiveConversationId();
 		}
 
 		let update_conversation_form = new FormData();
 		update_conversation_form.append('data', JSON.stringify(postData));
 
 		const makeApiCall = async () => {
+			setUserMessage(values.message);
+			actions.resetForm({ values: { message: '', filter: values.filter } });
 			setIsLoading(true);
 
 			const { response, success } = await triggerApi({
@@ -151,9 +179,14 @@ const Chatbot = () => {
 			});
 			if (success && response) {
 				// updateAppConfigurationData(response);
-				updateMessages(response, isNewConversation);
+				// updateMessages(response, isNewConversation);
+
 				getConversationMessages(response.conversation_id);
-				actions.resetForm({ values: { message: '', filter: values.filter } });
+
+				setErrorMessage('');
+			} else {
+				setErrorMessage(response.message);
+				setIsLoading(false);
 			}
 		};
 		makeApiCall();
@@ -224,10 +257,25 @@ const Chatbot = () => {
 										data={messages}
 										appId={appId}
 										getConversationHistory={getConversationHistory}
+										setErrorMessage={setErrorMessage}
+										setIsLoading={setIsLoading}
 									/>
 									{isNewConversation && (
 										<div className="mx-6 my-10  h-[2px] bg-[#DDE2E5]"></div>
 									)}
+									{userMessage && (
+										<div className="flex flex-col px-6">
+											<div className=" max-w-[70%] self-end rounded-[6px] bg-[#5048ED] px-3 py-2 text-white">
+												{userMessage}
+											</div>
+										</div>
+									)}
+									{errorMessage && !isLoading && (
+										<div className="mt-2 flex justify-center bg-error px-3 py-2 font-semibold text-error-text text-white">
+											{errorMessage}
+										</div>
+									)}
+
 									{isLoading && (
 										<div
 											className={`relative flex ${

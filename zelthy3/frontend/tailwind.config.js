@@ -74,6 +74,8 @@ module.exports = {
 				'light-gray': '#D4D4D4',
 				'off-white': '#f7f7f7',
 				'on-hold': '#FFEFD4',
+				error: '#FBE0DD',
+				'error-text': '#55100A',
 			},
 			spacing: {
 				0.5: '0.125',
