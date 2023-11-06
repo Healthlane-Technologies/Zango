@@ -180,7 +180,6 @@ class ChangePasswordForm(forms.Form, PasswordValidationMixin):
 
     def save(self):
         password = self.cleaned_data.get("password1", "")
-        print(password)
         self.user.set_password(password)
         self.user.save()
         obj = self.oldpassword_model.objects.create(user=self.user)
