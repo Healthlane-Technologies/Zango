@@ -42,24 +42,24 @@ class PasswordChangeViewAPIV1(ZelthySessionAppAPIView, PasswordValidationMixin):
                 "The current password you have entered is wrong. Please try again!"
             )
 
-    def clean_password2(self, user, password, password1):
+    def clean_password2(self, user, current_password, new_password):
         """method to validate password"""
-        password2 = password1
+        password2 = new_password
         validation = self.run_all_validations(
-            self.request.user, password1, password2, password
+            user, new_password, password2, current_password
         )
         if not validation.get("validation"):
             raise ValidationError(validation.get("msg"))
         return True
 
     def put(self, request, *args, **kwargs):
-        password = request.data.get("password")
-        password1 = request.data.get("password1")
+        current_password = request.data.get("current_password")
+        new_password = request.data.get("new_password")
         success = False
         try:
-            self.clean_password(request.user.email, password)
-            self.clean_password2(request.user, password, password1)
-            request.user.set_password(password1)
+            self.clean_password(request.user.email, current_password)
+            self.clean_password2(request.user, current_password, new_password)
+            request.user.set_password(new_password)
             request.user.save()
             obj = OldPasswords.objects.create(user=request.user)
             obj.setPasswords(request.user.password)
@@ -69,7 +69,7 @@ class PasswordChangeViewAPIV1(ZelthySessionAppAPIView, PasswordValidationMixin):
             status = 200
             return get_api_response(success, response, status)
         except ValidationError as e:
-            response = {"message": str(e)}
+            response = {"message": str(e)[2:-2]}
         if success:
             status = 200
         else:
