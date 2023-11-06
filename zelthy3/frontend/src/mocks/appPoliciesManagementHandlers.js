@@ -35,6 +35,7 @@ const newPolicy = () => {
 				expiry: '26/12/23',
 			},
 		},
+		type: faker.helpers.shuffle(['system', 'user'])[0],
 	};
 };
 

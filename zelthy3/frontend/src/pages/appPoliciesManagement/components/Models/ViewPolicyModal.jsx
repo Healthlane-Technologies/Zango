@@ -152,6 +152,10 @@ export default function ViewPolicyModal() {
 	const isEditViewPolicy = useSelector(selectIsEditViewPolicy);
 	const dispatch = useDispatch();
 
+	const appPoliciesManagementFormData = useSelector(
+		selectAppPoliciesManagementFormData
+	);
+
 	function closeModal() {
 		dispatch(closeIsViewPolicyModalOpen());
 	}
@@ -203,8 +207,17 @@ export default function ViewPolicyModal() {
 												Policy Name 6 Config
 											</h4>
 											{isEditViewPolicy ? null : (
-												<button type="button" onClick={handleEditJson}>
-													<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
+												<button
+													type="button"
+													onClick={handleEditJson}
+													disabled={
+														appPoliciesManagementFormData?.type === 'system'
+															? true
+															: false
+													}
+													className="disabled:opacity-50"
+												>
+													<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary ">
 														Edit JSON
 													</span>
 												</button>
