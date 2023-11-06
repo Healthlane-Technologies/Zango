@@ -1,4 +1,5 @@
 from django.utils.decorators import method_decorator
+from django.core import signing
 
 from zelthy.core.api import get_api_response, ZelthyGenericPlatformAPIView
 from zelthy.core.package_utils import (
@@ -8,8 +9,6 @@ from zelthy.core.package_utils import (
 )
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.apps.shared.tenancy.models import TenantModel, Domain
-from django.conf import settings
-from django.core import signing
 
 
 class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
