@@ -173,14 +173,14 @@ export const appChatbotHandlers = [
 						response: { conversations: mockHistoryData },
 					})
 				);
-			} else if (postData['action'] === 'restart_conversations') {
+			} else if (postData['action'] === 'restart_conversation') {
 				let conversationId = postData['conversation_id'];
 				// sortAndTransformArray(mockData, conversationId);
 				return res(
 					ctx.delay(500),
-					ctx.status(200),
+					ctx.status(500),
 					ctx.json({
-						success: true,
+						success: false,
 						response: {
 							conversation_id: conversationId,
 							message: 'Conversation Restarted Successfully',
@@ -194,12 +194,50 @@ export const appChatbotHandlers = [
 				}, 5000);
 				return res(
 					ctx.delay(500),
-					ctx.status(200),
+					ctx.status(500),
 					ctx.json({
-						success: true,
+						success: false,
 						response: {
 							message: 'Conversation updated successfully',
-							conversation_id: '03e144c3-8639-554a-89e8-e4e0ba74e0ed',
+							conversation_id: '95dde125-27ad-4588-b9ff-a5dd35a93a76',
+							Messages: [
+								{
+									role: 'user',
+									content:
+										'Can you help me create Customer model inside customer module? you can include common contact fields like name, mobile, address',
+									content_meta: {
+										type: 'text',
+									},
+									knowledge_base: 'models',
+									timestamp: 1697716659,
+								},
+								{
+									content:
+										"Sure! I am ready to help you create your requested model.<br> For this I will be adding the model's class in the module's models.py file. The proposed model's class is <br>",
+									content_meta: {
+										type: 'text',
+									},
+									timestamp: 1697716670,
+									role: 'assistant',
+								},
+								{
+									content:
+										'from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\n\n\nclass Customer(DynamicModelBase):\n    name = models.CharField(max_length=255)\n    mobile = models.CharField(max_length=15, blank=True, null=True)\n    address = models.CharField(max_length=255, blank=True, null=True)\n\n    def __str__(self):\n        return self.name',
+									content_meta: {
+										type: 'code',
+										code_language: 'python',
+									},
+									timestamp: 1697716670,
+									role: 'assistant',
+									allow_execution: true,
+									exection_data: {
+										execution: 'createModel',
+										module: 'customer',
+										'models.py':
+											'from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\n\n\nclass Customer(DynamicModelBase):\n    name = models.CharField(max_length=255)\n    mobile = models.CharField(max_length=15, blank=True, null=True)\n    address = models.CharField(max_length=255, blank=True, null=True)\n\n    def __str__(self):\n        return self.name',
+									},
+								},
+							],
 						},
 					})
 				);
@@ -233,12 +271,13 @@ export const appChatbotHandlers = [
 							Messages: [
 								{
 									role: 'user',
-									content: 'test',
+									content:
+										'Can you help me create Customer model inside customer module? you can include common contact fields like name, mobile, address',
 									content_meta: {
 										type: 'text',
 									},
-									knowledge_base: 'base',
-									timestamp: 1697707854,
+									knowledge_base: 'models',
+									timestamp: 1697716659,
 								},
 								{
 									content:
@@ -246,17 +285,17 @@ export const appChatbotHandlers = [
 									content_meta: {
 										type: 'text',
 									},
-									timestamp: 1697707870,
+									timestamp: 1697988683,
 									role: 'assistant',
 								},
 								{
 									content:
-										'from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\n\n\nclass Customer(DynamicModelBase):\n    name = models.CharField(max_length=255)\n    mobile = models.CharField(max_length=15, blank=True, null=True)\n    address = models.CharField(max_length=255, blank=True, null=True)\n\n    def __str__(self):\n        return self.name',
+										'from django.db import models\nfrom zelthy.apps.dynamic_models.models import DynamicModelBase\n\n\nclass Teacher(DynamicModelBase):\n    name = models.CharField(max_length=255)\n    mobile = models.CharField(max_length=15, blank=True, null=True)\n    address = models.CharField(max_length=255, blank=True, null=True)\n\n    def __str__(self):\n        return self.name',
 									content_meta: {
 										type: 'code',
 										code_language: 'python',
 									},
-									timestamp: 1697707870,
+									timestamp: 1697988683,
 									role: 'assistant',
 								},
 							],

@@ -4,12 +4,19 @@ import BotChat from './BotChat';
 import { ReactComponent as RestartIcon } from '../../../../../assets/images/svg/restart-icon.svg';
 import useApi from '../../../../../hooks/useApi';
 
-const ChatText = ({ data, appId, getConversationHistory }) => {
+const ChatText = ({
+	data,
+	appId,
+	getConversationHistory,
+	setErrorMessage,
+	setIsLoading,
+}) => {
 	const triggerApi = useApi();
 	const [disableRestartConversation, setDisableRestartConversation] =
 		useState(false);
 	const restartConversation = async (conversationId) => {
 		setDisableRestartConversation(true);
+		setIsLoading(true);
 		let payloadData = new FormData();
 		payloadData.append(
 			'data',
@@ -27,6 +34,9 @@ const ChatText = ({ data, appId, getConversationHistory }) => {
 		if (success && response) {
 			console.log('print restart response here', response);
 			getConversationHistory();
+		} else {
+			setErrorMessage(response.message);
+			setIsLoading(false);
 		}
 		setDisableRestartConversation(false);
 	};

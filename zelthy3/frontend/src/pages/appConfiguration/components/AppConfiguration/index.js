@@ -79,8 +79,10 @@ export default function AppConfiguration() {
 									<pre className="w-100 font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 										{appConfigurationData?.app?.description
 											.split('\n')
-											.map((str) => (
-												<p className="whitespace-normal">{str}</p>
+											.map((str, key) => (
+												<p key={key} className="whitespace-normal">
+													{str}
+												</p>
 											))}
 									</pre>
 								</td>
@@ -129,18 +131,25 @@ export default function AppConfiguration() {
 								</td>
 								<td className="w-full pl-[20px]">
 									<div className="flex flex-col gap-[8px]">
-										{appConfigurationData?.app?.domains?.map((eachDomain) => {
-											return (
-												<a href={eachDomain?.domain} alt="#" target={'_blank'}>
-													<span
-														key={eachDomain.domain}
-														className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429] hover:text-[#5048ED]"
+										{appConfigurationData?.app?.domains?.map(
+											(eachDomain, key) => {
+												return (
+													<a
+														href={eachDomain?.domain}
+														alt="#"
+														target={'_blank'}
+														key={key}
 													>
-														{eachDomain.domain}
-													</span>
-												</a>
-											);
-										})}
+														<span
+															key={eachDomain.domain}
+															className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429] hover:text-[#5048ED]"
+														>
+															{eachDomain.domain}
+														</span>
+													</a>
+												);
+											}
+										)}
 									</div>
 								</td>
 							</tr>
