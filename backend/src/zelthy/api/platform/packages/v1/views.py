@@ -17,7 +17,13 @@ class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
     def get(self, request, app_uuid, *args, **kwargs):
         action = request.GET.get("action", None)
+        tenant = TenantModel.objects.get(uuid=app_uuid)
         if action == "config_url":
+            domains = Domain.objects.filter(tenant=tenant)
+            if len(domains) == 0:
+                resp = {"message": "No domain configured for the tenant"}
+                status = 400
+                return get_api_response(False, resp, status)
             port = None
             if settings.DEBUG:
                 port = request.META["HTTP_HOST"].split(":")[1]
@@ -37,7 +43,6 @@ class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 status = 500
             return get_api_response(True, resp, status)
         try:
-            tenant = TenantModel.objects.get(uuid=app_uuid)
             packages = get_all_packages(tenant.name)
             paginated_packages = self.paginate_queryset(packages, request, view=self)
             packages = self.get_paginated_response_data(paginated_packages)
