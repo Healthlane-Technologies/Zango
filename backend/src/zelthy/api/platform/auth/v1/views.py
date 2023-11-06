@@ -114,6 +114,7 @@ class PlatformUserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
 
         return get_api_response(success, result, status_code)
 
+
 class AppPanelDetailsView(ZelthyGenericPlatformAPIView):
     def get_obj(self, request, **kwargs):
         obj = PlatformUserModel.objects.get(id=request.user.id)

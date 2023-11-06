@@ -5,6 +5,7 @@ from rest_framework.renderers import JSONRenderer
 from django.db.models import Q
 from django.db import models
 from zelthy.core.utils import get_current_role
+from zelthy.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
 from .serializers import StringRelatedMeta
 from .column import ModelCol, StringCol, NumericCol, SelectCol
 
@@ -65,9 +66,9 @@ class ModelTable:
                     field = self.model._meta.get_field(f)
                     col.update_model_field(field)
                     explicit_cols.append((f, col))
-
         self._fields = explicit_cols
         self.actions_metadata = self.get_actions_metadata()
+        self.table_metadata = self.get_table_metadata()
 
     def can_include_row_action(self, request, row, obj):
         roles = row.get("roles", [])
@@ -137,7 +138,9 @@ class ModelTable:
 
         serializer_name = f"{self.model.__class__.__name__}Serializer"
         serializer_class = StringRelatedMeta(
-            serializer_name, (serializers.ModelSerializer,), {"Meta": Meta}
+            serializer_name,
+            (serializers.ModelSerializer,),
+            {"Meta": Meta, "metadata": self.get_table_metadata()},
         )
         return serializer_class
 
@@ -168,14 +171,16 @@ class ModelTable:
         searchable_cols = [c["name"] for c in columns if c["searchable"]]
         return searchable_cols
 
-    def get_col_q_obj(self, col, query_value):
+    def get_col_q_obj(self, col, query_value, rel_obj_attr=None):
         custom_search_fn = getattr(self, f"{col}_Q_obj", None)
-
         if custom_search_fn:
             return custom_search_fn(query_value)
         else:
             if col in self.native_fields:
-                return Q(**{f"{col}__icontains": query_value})
+                if rel_obj_attr is not None:
+                    return Q(**{f"{col}__{rel_obj_attr}__icontains": query_value})
+                else:
+                    return Q(**{f"{col}__icontains": query_value})
             else:
                 return (
                     Q()
@@ -185,10 +190,34 @@ class ModelTable:
         """
         Returns a queryset of the model where any of its fields contains the query_value.
         """
-        searchable_cols = self.get_searchable_columns()
-        q_objects = Q()
-        for col in searchable_cols:
-            q_objects |= self.get_col_q_obj(col, query_value)
+        for field in objects.model._meta.fields:
+            for column in self.table_metadata["columns"]:
+                if field.name == column["name"]:
+                    column["type"] = type(field)
+        q_objects = Q()  # Initialize the Q object
+
+        for col in self.table_metadata["columns"]:
+            if col.get("searchable", False):
+                col_type = col["type"]
+                col_name = col["name"]
+                related_attr = col.get("related_object_attribute")
+
+                if col_type in [
+                    ZOneToOneField,
+                    ZForeignKey,
+                    models.ForeignKey,
+                    models.OneToOneField,
+                ]:
+                    if related_attr:
+                        q_objects |= self.get_col_q_obj(
+                            f"{col_name}", query_value, rel_obj_attr=related_attr
+                        )
+                    else:
+                        q_objects |= self.get_col_q_obj(
+                            col_name, query_value, rel_obj_attr="id"
+                        )
+                else:
+                    q_objects |= self.get_col_q_obj(col_name, query_value)
         print(q_objects)
         return objects.filter(q_objects)
 
