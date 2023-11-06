@@ -54,8 +54,9 @@ export default function RowMenu({ rowData }) {
 							{({ active }) => (
 								<button
 									type="button"
-									className="flex w-full"
+									className="flex w-full disabled:opacity-50"
 									onClick={handleEditPolicy}
+									disabled={rowData?.type === 'system' ? true : false}
 								>
 									<div
 										className={`${
