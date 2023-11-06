@@ -54,10 +54,10 @@ export default function Layout({ children }) {
 				{/* <Draggable> */}
 				{/* <ResizableBox width={200} height={200}></ResizableBox> */}
 				{/* </Draggable> */}
-				{/* <div className="absolute bottom-[8px] left-[96px] z-[51]">
+				<div className="absolute bottom-[8px] left-[96px] z-[51]">
 					<DragablePopover />
 				</div>
-				<Chatbot /> */}
+				<Chatbot />
 			</main>
 		</>
 	);
