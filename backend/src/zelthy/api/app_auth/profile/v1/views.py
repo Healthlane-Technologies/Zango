@@ -69,7 +69,7 @@ class PasswordChangeViewAPIV1(ZelthySessionAppAPIView, PasswordValidationMixin):
             status = 200
             return get_api_response(success, response, status)
         except ValidationError as e:
-            response = {"message": str(e)[2:-2]}
+            response = {"message": e.message}
         if success:
             status = 200
         else:
