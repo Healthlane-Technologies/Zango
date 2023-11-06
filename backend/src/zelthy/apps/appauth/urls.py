@@ -4,7 +4,7 @@ from django.urls import re_path
 from .views import (
     AppUserLoginView,
     AppLogoutView,
-    SwitchUserRoleView,
+    SwitchUserRoleView
 )
 
 urlpatterns = [
@@ -14,5 +14,5 @@ urlpatterns = [
         SwitchUserRoleView.as_view(),
         name="appuser-switch-role-view",
     ),
-    re_path(r"^logout/", view=AppLogoutView.as_view(), name="app-logout-view"),
+    re_path(r"^logout/", view=AppLogoutView.as_view(), name="app-logout-view")
 ]

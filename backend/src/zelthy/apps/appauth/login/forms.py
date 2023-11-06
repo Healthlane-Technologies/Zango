@@ -127,7 +127,7 @@ class ChangePasswordForm(forms.Form, PasswordValidationMixin):
     password = forms.CharField(widget=forms.PasswordInput)
     password1 = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(widget=forms.PasswordInput)
-
+    oldpassword_model = OldPasswords
     def __init__(self, *args, **kwargs):
         if kwargs.get("user"):
             self.user = kwargs["user"]
