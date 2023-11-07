@@ -7,12 +7,7 @@ import subprocess
 
 from django.conf import settings
 
-
-s3 = boto3.client(
-    "s3",
-    aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
-)
+from zelthy.core.utils import get_current_request_url
 
 
 def create_directories(dirs):
@@ -33,6 +28,11 @@ def get_all_packages(tenant=None):
     if tenant is not None:
         installed_packages = get_installed_packages(tenant)
     packages = {}
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
+    )
     s3_package_data = s3.list_objects(Bucket="zelthy3-packages", Prefix="packages/")
     for package in s3_package_data["Contents"]:
         name = package["Key"]
@@ -97,14 +97,14 @@ def package_installed(package_name, tenant):
         return False
 
 
-def get_package_configuration_url(package_name, tenant, tenant_domain, port=None):
-    with open(f"workspaces/{tenant}/settings.json", "r") as f:
+def get_package_configuration_url(request, tenant, package_name):
+    with open(f"workspaces/{tenant.name}/settings.json", "r") as f:
         data = json.loads(f.read())
     for route in data["plugin_routes"]:
         if route["plugin"] == package_name:
-            if port is not None:
-                return f"{tenant_domain}:{port}/{route['re_path'][1:]}configure"
-            return f"http://{tenant_domain}/{route['re_path'][1:]}/configure"
+            domain = tenant.domains.filter(is_primary=True).last()
+            url = get_current_request_url(request, domain=domain)
+            return f"{url}/{route['re_path'][1:]}configure/"
     return ""
 
 
@@ -159,7 +159,9 @@ def install_package(package_name, version, tenant):
 
         return "Package Installed"
     except Exception as e:
-        return f"Package could not be installed\n Error: {str(e)}"
+        import traceback
+
+        return f"Package could not be installed\n Error: {traceback.format_exc()}"
 
 
 def uninstall_package():

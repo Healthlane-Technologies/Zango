@@ -5480,7 +5480,7 @@ body > .content-preloader.preloader-active {
 .icheckbox_md,
 .iradio_md {
   display: inline-block;
-  *display: inline;
+  /* *display: inline; */
   vertical-align: middle;
   margin: 0;
   padding: 0;
