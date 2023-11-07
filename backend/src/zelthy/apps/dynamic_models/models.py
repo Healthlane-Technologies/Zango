@@ -340,6 +340,8 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
         abstract = True
 
     def has_perm(self, perm_type):
+        if not isinstance(self.__class__.objects, RestrictedQuerySet):
+            return True
         model_name = self.__class__.__name__
         perm_obj = ORMPemissions()
         perm_obj.update_model_perm(model_name)

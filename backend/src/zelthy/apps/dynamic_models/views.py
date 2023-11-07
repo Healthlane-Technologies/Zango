@@ -1,5 +1,5 @@
 import asyncio
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.utils.decorators import method_decorator
@@ -51,6 +51,9 @@ class DynamicView(View, PermMixin):
                     response = csrf_protect(view)(request, *args, **kwargs)
                     return response
                 else:
+                    user_role = get_current_role()
+                    if user_role.name == "AnonymousUsers":
+                        return redirect("/app/home/")
                     return HttpResponseForbidden(
                         "You don't have permission to view this page"
                     )
