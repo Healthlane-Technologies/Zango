@@ -1,3 +1,5 @@
+from importlib import import_module
+
 def get_current_request():
     from ..middleware.request import _request_local
 
@@ -22,8 +24,12 @@ def get_package_url(tenant, package_name, path):
     )
     ws = ws_klass(tenant)
     ws_settings = ws.get_workspace_settings()
-    plugin_root_path = ws_settings["plugin_routes"][package_name]
-    return f"http://{domain_url}/{plugin_root_path}/{path}"  # this is used for internal routing so http should suffice
+    for plugin_routes in ws_settings["plugin_routes"]:
+        if package_name == plugin_routes["plugin"]:
+            plugin_root_path = plugin_routes["re_path"]
+    from zelthy.apps.shared.tenancy.models import Domain
+    domain = Domain.objects.filter(tenant=tenant).first()
+    return f"http://{domain.domain}/{plugin_root_path[1:]}{path}"  # this is used for internal routing so http should suffice
 
 
 def get_current_request_url(request, domain=None):
