@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+
+ app:
+   build:
+     context: .
+     args:
+       - PROJECT_NAME=${PROJECT_NAME}
+   ports:
+     - "8000:8000"
+   environment:
+     SERVER: ${SERVER}
+     POSTGRES_USER: ${POSTGRES_USER}
+     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+     POSTGRES_DB: ${POSTGRES_DB}
+     PROJECT_NAME: ${PROJECT_NAME}
+     POSTGRES_HOST: ${POSTGRES_HOST}
+     POSTGRES_PORT: ${POSTGRES_PORT}
+     PLATFORM_USERNAME: ${PLATFORM_USERNAME}
+     PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
+     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+     AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+   volumes: 
+     - .:/zelthy/

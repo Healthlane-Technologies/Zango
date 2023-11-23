@@ -146,8 +146,10 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--db_password", prompt=True, hide_input=True, help="DB Password")
 @click.option("--db_host", prompt=True, help="DB Host", default="127.0.0.1")
 @click.option("--db_port", prompt=True, help="DB Port", default="5432")
+@click.option("--platform_username", prompt=False, help="Platform Username")
+@click.option("--platform_user_password", prompt=False, hide_input=True, help="Platform User Password")
 def start_project(
-    project_name, directory, db_name, db_user, db_password, db_host, db_port
+    project_name, directory, db_name, db_user, db_password, db_host, db_port, platform_username, platform_user_password
 ):
     """Create Project"""
     if directory:
@@ -163,7 +165,6 @@ def start_project(
     project_status, project_message = create_project(
         project_name, directory, db_name, db_user, db_password, db_host, db_port
     )
-
     if not project_status:
         raise click.ClickException(project_message)
 
@@ -181,14 +182,16 @@ def start_project(
     create_public_tenant()
 
     # Prompting default platform user details
-    click.echo("Please enter platform user details")
-    platform_username = click.prompt("Email")
-    platform_username_password = click.prompt(
-        "Password", hide_input=True, confirmation_prompt=True
-    )
+    if not platform_username:
+        click.echo("Please enter platform user email")
+        platform_username = click.prompt("Email")
+    if not platform_user_password:
+        platform_user_password = click.prompt(
+            "Password", hide_input=True, confirmation_prompt=True
+        )
 
     user_creation_result = create_platform_user(
-        platform_username, platform_username_password
+        platform_username, platform_user_password
     )
     if not user_creation_result["success"]:
         click.echo("User Creation Failed!")
