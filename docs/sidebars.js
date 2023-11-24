@@ -39,6 +39,7 @@ const sidebars = {
   ],
   docsSidebar: [
     'documentation/introduction',
+    'documentation/platform-architecture',
     {
       type: 'category',
       label: 'Getting Started',
@@ -47,23 +48,27 @@ const sidebars = {
       },
       collapsed: true,
       items: [
-        'documentation/getting-started/installing-zosp',
-        'documentation/getting-started/zelthy3-the-zelthy-cli',
-        'documentation/getting-started/prerequisites-for-a-project',
-        'documentation/getting-started/setting-up-the-project',
-        'documentation/getting-started/running-development-server',
-        'documentation/getting-started/accessing-z-dynamic',
+        {
+          type: 'category',
+          label: 'Installing Zelthy',
+          collapsed: true,
+          items: [
+            'documentation/getting-started/installing-zelthy/manual',
+            'documentation/getting-started/installing-zelthy/docker',
+          ],
+        },
+        'documentation/getting-started/accessing-app-panel',
       ],
     },
     {
       type: 'category',
-      label: 'Spinning up an app',
+      label: 'Building your first App',
       link: {
         type: 'generated-index',
       },
       collapsed: true,
       items: [
-        'documentation/spinning-up-an-app/creating-an-app',
+        'documentation/spinning-up-an-app/launch-the-app',
         'documentation/spinning-up-an-app/intializing-app-codebase',
         'documentation/spinning-up-an-app/switching-to-app-view',
         'documentation/spinning-up-an-app/updating-app-settings',
