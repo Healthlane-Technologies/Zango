@@ -262,7 +262,7 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
 
     def setupFrame(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
-        frame_mod_path = f"workspaces.{app_obj.name}.plugins.frame.configure.models"
+        frame_mod_path = f"workspaces.{app_obj.name}.packages.frame.configure.models"
         frame_mod = importlib.import_module(frame_mod_path)
 
         frame_model_class = frame_mod.FramesModel
