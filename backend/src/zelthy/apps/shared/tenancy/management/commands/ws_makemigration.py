@@ -50,7 +50,7 @@ class Command(MakeMigrationsCommand):
                 "test_" + connection.settings_dict["NAME"]
             )
         settings.MIGRATION_MODULES = {
-            f"dynamic_models": f"workspaces.{options['workspace']}.dmigrations"
+            f"dynamic_models": f"workspaces.{options['workspace']}.migrations"
         }
         w = Workspace(tenant_obj, None, True)
         if options["is_plugin_migration"]:
