@@ -88,7 +88,7 @@ class Workspace:
         self.wobj = wobj
         self.path = str(settings.BASE_DIR) + f"/workspaces/{wobj.name}/"
         self.modules = self.get_ws_modules()
-        self.plugins = self.get_plugins()
+        self.packages = self.get_packages()
         self.models = []  # sorted with bfs
         # self.plugin_source = self.get_plugin_source()
         # self.wtee = self.get_wtree()
@@ -132,16 +132,16 @@ class Workspace:
 
     def get_all_module_paths(self) -> list[str]:
         """
-        returns path of all ws modules as well as plugin modules
+        returns path of all ws modules as well as package modules
         """
         modules = []
         ws_tree = self.get_wtree()
         bfs = ws_tree.bfs()
         bfs.reverse()
         for item in bfs:
-            if item["type"] == "plugin":
+            if item["type"] == "package":
                 for mod in item["modules"]:
-                    path = self.get_plugin_path(item["name"]) + mod["path"]
+                    path = self.get_package_path(item["name"]) + mod["path"]
                     if path not in modules:
                         modules.append(path)
             if item["type"] == "module":
@@ -152,7 +152,7 @@ class Workspace:
 
     def get_models(self) -> list[str]:
         """
-        returns sorted list of model modules (dependency first, then plugin then modules)
+        returns sorted list of model modules (dependency first, then package then modules)
         """
         result = []
         modules = self.get_all_module_paths()
@@ -165,51 +165,51 @@ class Workspace:
                 result.append(model_module)
         return result
 
-    def get_plugins(self) -> list[dict]:
+    def get_packages(self) -> list[dict]:
         """
-        returns list of plugins
+        returns list of packages
         """
-        with open(self.path + "plugins.json") as f:
-            return json.loads(f.read())["plugins"]
+        with open(self.path + "packages.json") as f:
+            return json.loads(f.read())["packages"]
 
-    def get_plugin_path(self, plugin_name: str) -> str:
-        return self.path + f"plugins/{plugin_name}/"
+    def get_package_path(self, package_name: str) -> str:
+        return self.path + f"packages/{package_name}/"
 
-    def get_plugin_settings(self, plugin_name: str) -> dict:
-        _path = self.get_plugin_path(plugin_name) + "settings.json"
+    def get_package_settings(self, package_name: str) -> dict:
+        _path = self.get_package_path(package_name) + "settings.json"
         with open(_path) as f:
             return json.loads(f.read())
 
-    def get_plugin_modules(self, plugin_name: str) -> list[dict]:
-        _settings = self.get_plugin_settings(plugin_name)
+    def get_package_modules(self, package_name: str) -> list[dict]:
+        _settings = self.get_package_settings(package_name)
         return _settings["modules"]
 
-    def get_plugin_dependencies(self, plugin_name: str) -> list[dict]:
-        _path = self.get_plugin_path(plugin_name) + "settings.json"
+    def get_package_dependencies(self, package_name: str) -> list[dict]:
+        _path = self.get_package_path(package_name) + "settings.json"
         with open(_path) as f:
             _settings = json.loads(f.read())
             dependencies = _settings.get("dependencies", [])
         return dependencies
 
-    def is_plugin_installed(self, plugin_name: str) -> bool:
+    def is_package_installed(self, package_name: str) -> bool:
         """
-        the plugin and all its dependencies must be installed
+        the package and all its dependencies must be installed
         """
-        if os.path.isfile(self.get_plugin_path(plugin_name) + "settings.json"):
-            if len(self.get_plugin_dependencies(plugin_name)) == 0:
+        if os.path.isfile(self.get_package_path(package_name) + "settings.json"):
+            if len(self.get_package_dependencies(package_name)) == 0:
                 return True
             else:
-                for dep in self.get_plugin_dependencies(plugin_name):
+                for dep in self.get_package_dependencies(package_name):
                     if not os.path.isfile(
-                        self.get_plugin_path(dep["name"]) + "settings.json"
+                        self.get_package_path(dep["name"]) + "settings.json"
                     ):
                         return False
                 return True
         return False
 
-    def all_plugins_installed(self) -> bool:
-        for plugin in self.get_plugins():
-            if not self.is_plugin_installed(plugin["name"]):
+    def all_packages_installed(self) -> bool:
+        for package in self.get_packages():
+            if not self.is_package_installed(package["name"]):
                 return False
         return True
 
@@ -227,25 +227,25 @@ class Workspace:
                 {"name": module["name"], "type": "module", "path": module["path"]}
             )
             wtree.add_child(wtree_appnode)
-        for plugin in self.get_plugins():
-            wtree_plugin = WorkspaceTreeNode(
+        for package in self.get_packages():
+            wtree_package = WorkspaceTreeNode(
                 {
-                    "name": plugin["name"],
-                    "type": "plugin",
-                    "modules": self.get_plugin_modules(plugin["name"]),
+                    "name": package["name"],
+                    "type": "package",
+                    "modules": self.get_package_modules(package["name"]),
                 }
             )
-            for dependency in self.get_plugin_dependencies(plugin["name"]):
-                wtree_plugin.add_child(
+            for dependency in self.get_package_dependencies(package["name"]):
+                wtree_package.add_child(
                     WorkspaceTreeNode(
                         {
                             "name": dependency["name"],
-                            "type": "plugin",
-                            "modules": self.get_plugin_modules(dependency["name"]),
+                            "type": "package",
+                            "modules": self.get_package_modules(dependency["name"]),
                         }
                     )
                 )
-            wtree.add_child(wtree_plugin)
+            wtree.add_child(wtree_package)
         return wtree
 
     def serve_request(self, request) -> tuple[str, str, str]:
@@ -260,7 +260,7 @@ class Workspace:
         import models.py files in that order
         """
         for m in self.get_models():
-            if m.split(".")[2] == "plugins" and migration:
+            if m.split(".")[2] == "packages" and migration:
                 continue
             split = m.split(".")[2:]
             self.plugin_source.load_plugin(".".join(split))
@@ -268,11 +268,11 @@ class Workspace:
 
     def ready(self) -> bool:
         """
-        plugins must be installed
+        packages must be installed
         all models loaded
         migrations in sync
         """
-        if not self.all_plugins_installed():
+        if not self.all_packages_installed():
             return False
         self.load_models()
         return
@@ -280,15 +280,15 @@ class Workspace:
     def get_root_urls(self) -> list[dict]:
         _settings = self.get_workspace_settings()
         routes = _settings["app_routes"]
-        package_routes = _settings["plugin_routes"]
+        package_routes = _settings["package_routes"]
         for route in package_routes:
-            pkg_app_routes = self.get_plugin_settings(route["plugin"])["app_routes"]
+            pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
             for pkg_route in pkg_app_routes:
                 routes.append(
                     {
                         "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": "plugins."
-                        + route["plugin"]
+                        "module": "packages."
+                        + route["package"]
                         + "."
                         + pkg_route["module"],
                         "url": pkg_route["url"],
