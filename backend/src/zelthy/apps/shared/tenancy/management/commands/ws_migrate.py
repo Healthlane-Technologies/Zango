@@ -27,7 +27,7 @@ class Command(MigrateSchemasCommand):
             )
         if options["plugin"] is None:
             settings.MIGRATION_MODULES = {
-                f"dynamic_models": f"workspaces.{ options['workspace']}.dmigrations"
+                f"dynamic_models": f"workspaces.{ options['workspace']}.migrations"
             }
         else:
             settings.MIGRATION_MODULES = {
