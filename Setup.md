@@ -38,10 +38,20 @@ Make sure you have Docker and Docker Compose installed on your machine. If not, 
     - `--platform_username`: The user email of the platform user (Default: `zelthy@mail.com`).
     - `--platform_user_password`: The password for the platform user (Default: `Zelthy@123`).
     - `--skip_build_project`: Skips building the project (Default: `False`).
+    - `--start`: Starts the project as soon as it is created (Default: `False`)
 
 5. To install any Zelthy package, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the `.env` file created in the `project_dir` and restart the containers.
 
 6. Subsequently, you can use `docker compose up` from the `project_dir` to start the project.
 
-Feel free to adjust the wording and formatting based on your preferences and the specific needs of your users.
+
+# Rebuilding Core
+
+If you modify somehting in the core of the project, to rebuild it run the following command from the root of the zelthy3 project
+
+```bash
+python zel_setup.py --project_dir <project_dir> --rebuild_core
+```
+
+you can then run `docker compose up` from the project directory to start the project
 

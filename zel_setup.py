@@ -36,20 +36,28 @@ def build_project(file):
    except subprocess.CalledProcessError as e:
        print(f"Error: {e}")
 
-def setup_dev(project_dir, project_name, without_db, skip_build=False):
+def setup_dev(project_dir, project_name, without_db, skip_build=False, start=False):
     if not skip_build:
         print("Building with db")
         build_project(f"{project_dir}/docker-compose.yml")
+    if start:
+        try:
+            proc = subprocess.Popen(f"docker compose -f {project_dir}/docker-compose.yml up", shell=True)
+            signal.signal(signal.SIGINT, lambda sig, frame: print("\nStopping zelthy environment"))
+            proc.wait()
+        except subprocess.CalledProcessError as e:
+            traceback.print_exc()
+            print(f"Error: {e}")
+        except KeyboardInterrupt:
+            pass
+
+def rebuild_core(project_dir):
     try:
-        proc = subprocess.Popen(f"docker compose -f {project_dir}/docker-compose.yml up", shell=True)
-        signal.signal(signal.SIGINT, lambda sig, frame: print("\nStopping zelthy environment"))
-        proc.wait()
+        subprocess.run(f"docker build -t zelthy3 .", shell=True, check=True)
+        subprocess.run(f"docker compose -f {project_dir}/docker-compose.yml build", shell=True, check=True)
+        sys.exit(0)
     except subprocess.CalledProcessError as e:
-        traceback.print_exc()
         print(f"Error: {e}")
-    except KeyboardInterrupt:
-        pass
-   
 
 def setup_prod():
    pass
@@ -66,15 +74,19 @@ if __name__ == "__main__":
    parser.add_argument("--server", default="runserver", help="The server which runs the project")
    parser.add_argument("--platform_username", default="zelthy@mail.com", help="The platform username")
    parser.add_argument("--platform_user_password", default="Zelthy@123", help="The platform user password")
+   parser.add_argument("--start", action="store_true", default=False)
+   parser.add_argument("--rebuild_core", action="store_true", default=False)
    args = parser.parse_args()
    try:
     if args.project_name == "":
         args.project_name = "zelthy_project"
+    if args.rebuild_core:
+        rebuild_core(args.project_dir)
     load_necessary_files(args.project_dir, args.project_name, args.without_db)
     write_env_file(args.project_dir, args)
     if args.build_core:
         build_core()
     if args.environment == "dev":
-        setup_dev(args.project_dir, args.project_name, args.without_db, args.skip_build_project)
+        setup_dev(args.project_dir, args.project_name, args.without_db, args.skip_build_project, args.start)
    except Exception:
        traceback.print_exc()
