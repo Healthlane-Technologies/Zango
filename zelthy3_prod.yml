@@ -16,31 +16,44 @@ services:
       timeout: 5s
       retries: 5
    volumes: 
-     - dev_db:/var/lib/postgresql/data
+     - prod_db:/var/lib/postgresql/data
 
  app:
    build:
      context: .
-     dockerfile: dev.dockerfile
+     dockerfile: prod.dockerfile
+     args:
+       - PROJECT_NAME=${PROJECT_NAME}
    ports:
      - "8000:8000"
    depends_on:
      postgres:
        condition: service_healthy
    environment:
-     PROJECT_NAME: ${PROJECT_NAME}
-     SERVER: runserver
+     SERVER: gunicorn
      POSTGRES_USER: postgres
      POSTGRES_PASSWORD: zelthy3pass
      POSTGRES_DB: zelthy1
      POSTGRES_HOST: postgres
      POSTGRES_PORT: 5432
+     PROJECT_NAME: ${PROJECT_NAME}
      PLATFORM_USERNAME: ${PLATFORM_USERNAME}
      PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  
+ nginx:
+   build:
+     context: .
+     dockerfile: nginx/Dockerfile
+   ports:
+    - "1443:1443"
+   depends_on:
+     - app
+   environment:
+     - PROJECT_NAME=${PROJECT_NAME}
    volumes:
-     - .:/zelthy/
+     - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
 
 volumes:
-  dev_db:
+  prod_db:

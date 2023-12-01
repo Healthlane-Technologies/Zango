@@ -5,8 +5,6 @@ services:
  app:
    build:
      context: .
-     args:
-       - PROJECT_NAME=${PROJECT_NAME}
    ports:
      - "8000:8000"
    environment:
@@ -21,5 +19,5 @@ services:
      PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-   volumes: 
+   volumes:
      - .:/zelthy/

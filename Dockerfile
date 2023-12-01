@@ -1,7 +1,5 @@
 FROM python:3.10
 
-ARG PROJECT_NAME
-
 COPY . /zelthy/
 WORKDIR /zelthy/
 RUN cd backend && pip install .
