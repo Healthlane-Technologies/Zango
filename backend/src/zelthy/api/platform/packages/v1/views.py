@@ -1,4 +1,5 @@
 from django.utils.decorators import method_decorator
+from django.core import signing
 
 from zelthy.core.api import get_api_response, ZelthyGenericPlatformAPIView
 from zelthy.core.package_utils import (
@@ -8,35 +9,33 @@ from zelthy.core.package_utils import (
 )
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.apps.shared.tenancy.models import TenantModel, Domain
-from django.conf import settings
-from django.core import signing
 
 
 class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
 
+    def get_app_obj(self, app_uuid):
+        obj = TenantModel.objects.get(uuid=app_uuid)
+        return obj
+
     def get(self, request, app_uuid, *args, **kwargs):
         action = request.GET.get("action", None)
-        tenant = TenantModel.objects.get(uuid=app_uuid)
+        tenant = self.get_app_obj(app_uuid)
         if action == "config_url":
             domains = Domain.objects.filter(tenant=tenant)
             if len(domains) == 0:
                 resp = {"message": "No domain configured for the tenant"}
                 status = 400
                 return get_api_response(False, resp, status)
-            port = None
-            if settings.DEBUG:
-                port = request.META["HTTP_HOST"].split(":")[1]
+
             try:
                 token = signing.dumps(
                     request.user.id,
                 )
-                tenant = TenantModel.objects.get(uuid=app_uuid)
-                domain = Domain.objects.get(tenant=tenant)
                 url = get_package_configuration_url(
-                    request.GET.get("package_name"), tenant.name, domain, port
+                    request, tenant, request.GET.get("package_name")
                 )
-                resp = {"url": f"http://{url}/?token={token}"}
+                resp = {"url": f"{url}?token={token}"}
                 status = 200
             except Exception as e:
                 resp = {"message": str(e)}

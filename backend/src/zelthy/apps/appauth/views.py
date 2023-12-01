@@ -88,31 +88,3 @@ class AppLogoutView(View):
         meta = request.META["HTTP_HOST"]
         logout_url = self.add_protocol(request, meta + logout_uri)
         return redirect(logout_url)
-
-
-class AppUserChangePasswordView(ZelthySessionAppTemplateView, SessionWizardView):
-    template_name = "applogin/change_password.html"
-
-    form_list = (("change_password", ChangePasswordForm),)
-
-    def get_form_initial(self, step):
-        initial = super(AppUserChangePasswordView, self).get_form_initial(step)
-        initial["request"] = self.request
-        initial["user"] = self.request.user
-        return initial
-
-    def get_context_data(self, form, **kwargs):
-        context = super(AppUserChangePasswordView, self).get_context_data(
-            form, **kwargs
-        )
-        app_theme_config = ThemesModel.objects.filter(
-            tenant=self.request.tenant, is_active=True
-        ).first()
-        if app_theme_config:
-            context["app_theme_config"] = app_theme_config.config
-        return context
-
-    def done(self, form_list, **kwargs):
-        form = form_list[0]
-        form.save()
-        return redirect("/app/home/")

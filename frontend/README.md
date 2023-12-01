@@ -1,1 +1,1 @@
-The source code of Dynamic Panel (React App) will be maintained here
+The source code of App Panel (React App) will be maintained here

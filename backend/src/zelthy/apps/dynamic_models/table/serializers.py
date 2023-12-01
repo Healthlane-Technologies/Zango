@@ -14,6 +14,7 @@ class StringRelatedMeta(SerializerMetaclass):
     def __new__(cls, name, bases, attrs):
         # Get the Meta class from attrs
         meta = attrs.get("Meta", None)
+        metadata = attrs.get("metadata", {})
         # Check if there's a model defined in Meta
         tenant = get_current_request().tenant
         if meta and hasattr(meta, "model"):
@@ -34,7 +35,19 @@ class StringRelatedMeta(SerializerMetaclass):
                     ),
                 ):
                     # Use StringRelatedField for this field
-                    attrs[field.name] = serializers.StringRelatedField()
+                    related_object_attribute = None
+                    for column in metadata["columns"]:
+                        if column["name"] == field.name:
+                            if column.get("related_object_attribute"):
+                                related_object_attribute = column[
+                                    "related_object_attribute"
+                                ]
+                    if related_object_attribute is not None:
+                        attrs[field.name] = ForeignKeySerializer(
+                            related_object_attribute
+                        )
+                    else:
+                        attrs[field.name] = serializers.StringRelatedField()
                 if isinstance(field, (models.DateTimeField)):
                     attrs[field.name] = serializers.DateTimeField(
                         format=tenant.datetime_format,
@@ -68,3 +81,12 @@ class FileSerializer(serializers.Field):
             </svg>
             """
         return svg
+
+
+class ForeignKeySerializer(serializers.Field):
+    def __init__(self, field, *args, **kwargs):
+        super(ForeignKeySerializer, self).__init__(*args, **kwargs)
+        self.field = field
+
+    def to_representation(self, value):
+        return vars(value).get(self.field)
