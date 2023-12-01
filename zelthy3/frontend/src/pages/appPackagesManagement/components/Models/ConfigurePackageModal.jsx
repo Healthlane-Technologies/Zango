@@ -2,7 +2,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import { ReactComponent as ModalBackIcon } from '../../../../assets/images/svg/page-back-arrow-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import {
 	closeIsConfigurePackageModalOpen,
@@ -79,13 +79,13 @@ export default function ConfigurePackageModal() {
 						<div className="fixed inset-0 overflow-y-auto">
 							<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
 								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full transform flex-col gap-[32px] overflow-hidden bg-white p-[0px] text-left align-middle shadow-xl transition-all">
-									<div className="flex justify-end md:absolute md:top-0 md:right-0">
+									<div className="flex justify-end md:absolute md:top-0 md:left-0">
 										<button
 											type="button"
-											className="flex justify-end focus:outline-none md:absolute md:top-[16px] md:right-[16px]"
+											className="flex justify-end focus:outline-none md:absolute md:top-[16px] md:left-[16px]"
 											onClick={closeModal}
 										>
-											<ModalCloseIcon />
+											<ModalBackIcon />
 										</button>
 									</div>
 									{/* <Dialog.Title as="div" className="flex flex-col gap-2">
