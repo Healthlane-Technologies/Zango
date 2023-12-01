@@ -204,7 +204,7 @@ export default function ViewPolicyModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex items-end gap-[16px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Policy Name 6 Config
+												{appPoliciesManagementFormData?.name}
 											</h4>
 											{isEditViewPolicy ? null : (
 												<button

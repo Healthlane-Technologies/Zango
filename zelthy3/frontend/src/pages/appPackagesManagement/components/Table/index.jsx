@@ -11,8 +11,10 @@ import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
+import { ReactComponent as DetailEyeIcon } from '../../../../assets/images/svg/detail-eye-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import {
+	openIsConfigurePackageModalOpen,
 	selectAppPackagesManagementData,
 	setAppPackagesManagementData,
 } from '../../slice';
@@ -45,6 +47,24 @@ export default function Table({ tableData }) {
 				);
 			},
 		}),
+
+		columnHelper.accessor((row) => row.installed_version, {
+			id: 'installed_version',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						Version
+					</span>
+				</div>
+			),
+			cell: (info) => (
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+						{info.getValue()}
+					</span>
+				</div>
+			),
+		}),
 		columnHelper.accessor((row) => row.status, {
 			id: 'status',
 			header: () => (
@@ -61,23 +81,6 @@ export default function Table({ tableData }) {
 							info.getValue() === 'Installed' ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
 						}`}
 					>
-						{info.getValue()}
-					</span>
-				</div>
-			),
-		}),
-		columnHelper.accessor((row) => row.installed_version, {
-			id: 'installed_version',
-			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
-					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Version
-					</span>
-				</div>
-			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
 				</div>
@@ -180,6 +183,11 @@ export default function Table({ tableData }) {
 										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
 									</div>
 								</th>
+								<th key="extra-head" className="p-0 align-top">
+									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
+									</div>
+								</th>
 								<th key="extra-head2" className="p-0 align-top">
 									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
@@ -199,6 +207,24 @@ export default function Table({ tableData }) {
 										{flexRender(cell.column.columnDef.cell, cell.getContext())}
 									</td>
 								))}
+								<td>
+									<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+										<button
+											className="flex items-center gap-[12px] disabled:opacity-25"
+											onClick={() => {
+												dispatch(openIsConfigurePackageModalOpen(row.original));
+											}}
+											disabled={row.original?.status !== 'Installed'}
+										>
+											<span
+												className={`w-fit min-w-max rounded-[15px] text-center font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px] text-[#5048ED]`}
+											>
+												View Details
+											</span>
+											<DetailEyeIcon />
+										</button>
+									</div>
+								</td>
 								<td key="extra-cell" className="w-full">
 									<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
 										<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]"></span>

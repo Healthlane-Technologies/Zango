@@ -204,11 +204,11 @@ const Chatbot = () => {
 	};
 
 	return (
-		<div className="relative z-[1000]">
+		<div className="relative z-[10]">
 			<button
 				ref={triggerRef}
 				onClick={togglePopover}
-				className="fixed bottom-0 right-0"
+				className="fixed bottom-[50px] right-0"
 			>
 				<ChatbotIcon />
 			</button>

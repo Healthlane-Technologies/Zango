@@ -78,7 +78,7 @@ export default function ConfigurePackageModal() {
 					>
 						<div className="fixed inset-0 overflow-y-auto">
 							<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
-								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pt-[52px] pb-[40px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[72px] md:pt-[32px]">
+								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full transform flex-col gap-[32px] overflow-hidden bg-white p-[0px] text-left align-middle shadow-xl transition-all">
 									<div className="flex justify-end md:absolute md:top-0 md:right-0">
 										<button
 											type="button"
@@ -88,13 +88,13 @@ export default function ConfigurePackageModal() {
 											<ModalCloseIcon />
 										</button>
 									</div>
-									<Dialog.Title as="div" className="flex flex-col gap-2">
+									{/* <Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
 												Configure Package
 											</h4>
 										</div>
-									</Dialog.Title>
+									</Dialog.Title> */}
 									<ConfigurePackageForm closeModal={closeModal} />
 								</Dialog.Panel>
 							</div>
