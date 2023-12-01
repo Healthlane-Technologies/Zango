@@ -2,6 +2,8 @@
 
 This guide outlines the steps to create and develop Zelthy projects without the need for local installations.
 
+# Develop
+
 ## Prerequisites
 
 Make sure you have Docker and Docker Compose installed on your machine. If not, you can follow the installation instructions for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
@@ -33,7 +35,6 @@ Make sure you have Docker and Docker Compose installed on your machine. If not, 
 
     - `--project_name`: Modifies the name of the project (Default: `zelthy_project`).
     - `--project_dir`: Specifies the directory for project creation (Default: `zproject`).
-    - `--server`: Specifies the server to be used to run the project (Default: `runserver`).
     - `--build_core`: Builds the Zelthy library (Default: `False`).
     - `--platform_username`: The user email of the platform user (Default: `zelthy@mail.com`).
     - `--platform_user_password`: The password for the platform user (Default: `Zelthy@123`).
@@ -55,3 +56,18 @@ python zel_setup.py --project_dir <project_dir> --rebuild_core
 
 you can then run `docker compose up` from the project directory to start the project
 
+# Deploy
+
+The necessary docker compose, nginx and gunicorn files to deploy your project are created in the project directory you can use it to deploy your apps easily
+
+## Steps
+
+- Replace `${PROJECT_NAME}` with your project name in the following files
+    - `config/nginx.conf`
+    - `prod.dockerfile`
+- Start the production server by running the two commands
+    ```bash
+    docker compose -f docker-compose.prod.yml build
+    docker compose -f docker-compose.prod.yml up
+    ```
+- You can access your server at `http://localhost:1443`
