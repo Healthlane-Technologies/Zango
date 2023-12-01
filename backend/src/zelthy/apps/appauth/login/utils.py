@@ -19,7 +19,7 @@ class ZelthyLoginView(ZelthyLoginBase, SessionWizardView):
     View for handling the login process
     The login process is composed like a wizard. The first step asks for the
     user's credentials. If the credentials are correct, the wizard prompts user to select a role(from the ones assigned to user).
-    Once the user selects the role, it displays Reset password form if the user is logging in for the first time or password is reset from Dynamic Panel
+    Once the user selects the role, it displays Reset password form if the user is logging in for the first time or password is reset from App Panel
     """
 
     template_name = ""
@@ -286,4 +286,3 @@ class PasswordValidationMixin(object):
 
         else:
             return {"validation": True, "msg": "Password validations passed"}
-
