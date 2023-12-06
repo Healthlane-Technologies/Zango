@@ -56,6 +56,10 @@ python zel_setup.py --project_dir <project_dir> --rebuild_core
 
 you can then run `docker compose up` from the project directory to start the project
 
+# Syncing Static Files
+
+You can sync static files by running `python manage.py collectstatic` from the project directory in the `<project>-app-1` container. Make sure to sync the static files before deploying
+
 # Deploy
 
 The necessary docker compose, nginx and gunicorn files to deploy your project are created in the project directory you can use it to deploy your apps easily
@@ -65,9 +69,10 @@ The necessary docker compose, nginx and gunicorn files to deploy your project ar
 - Replace `${PROJECT_NAME}` with your project name in the following files
     - `config/nginx.conf`
     - `prod.dockerfile`
+- Change the `CORS_ORIGIN_WHITELIST` and `CSRF_TRUSTED_ORIGINS` in the project settings to appropriate domain configured
 - Start the production server by running the two commands
     ```bash
     docker compose -f docker-compose.prod.yml build
     docker compose -f docker-compose.prod.yml up
     ```
-- You can access your server at `http://localhost:1443`
+- You can access your server at `http://<domain>:1443` (By default the domain is localhost)
