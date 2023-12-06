@@ -126,18 +126,19 @@ class TenantModel(TenantMixin, FullAuditMixin):
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir)
 
-        # Creating app folder with the initial files
-        template_directory = os.path.join(
-            os.path.dirname(__file__), "workspace_folder_template"
-        )
-        cookiecutter_context = {"app_name": self.name}
+        if not os.path.exists(os.path.join(workspace_dir, self.name)): 
+            # Creating app folder with the initial files
+            template_directory = os.path.join(
+                os.path.dirname(__file__), "workspace_folder_template"
+            )
+            cookiecutter_context = {"app_name": self.name}
 
-        cookiecutter.main.cookiecutter(
-            template_directory,
-            extra_context=cookiecutter_context,
-            output_dir=workspace_dir,
-            no_input=True,
-        )
+            cookiecutter.main.cookiecutter(
+                template_directory,
+                extra_context=cookiecutter_context,
+                output_dir=workspace_dir,
+                no_input=True,
+            )
 
         self.status = "deployed"
         self.save()

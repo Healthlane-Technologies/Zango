@@ -41,11 +41,12 @@ services:
      PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+     ENV: prod
   
  nginx:
    build:
      context: .
-     dockerfile: nginx/Dockerfile
+     dockerfile: config/Dockerfile
    ports:
     - "1443:1443"
    depends_on:
