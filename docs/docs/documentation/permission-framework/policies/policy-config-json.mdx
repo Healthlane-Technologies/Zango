@@ -23,44 +23,27 @@ The "configurations" section holds policy-wide settings that influence the overa
 View Type Permissions grant access to specific views in your application, enabling users see the content of the view.
 
 - This permission type doesn't require additional configurations.
-- In the Policy Config JSON, you specify the permission type as "view" and provide the name of the view permission.
-- Example JSON:
-```json
-{
-    permissions: [
+- In the Policy Config JSON, you specify the permission type as "view" and provide the path of the view class.
+    ```json
     {
-        type: "view",
-        name: "patient_table",
-    },
-    {
-        type: "view",
-        name: "doctor_table",
-    }],
-    configurations: {
-        expiry: "26/12/23",
+        "type": "view",
+        "name": "<module_name>.<view_file_path>.<view_classname>",
     }
-}
-```
-
-### DataModel Type Permission
-
-DataModel Type Permissions control access to DataModels, ensuring fine-grained control over data interactions.
-
-- These permissions offer extensive fine-grained control over data models. Refer to the [Using Permission](../permissions/using-permissions#2-data-model-permission) section for comprehensive details on these configurations.
-- In the Policy Config JSON, you need to specify fields such as type, name, actions, attributes, and records.
 - Example JSON:
 ```json
 {
-    permissions: [
-    {
-        type: "dataModel",
-        name: "patient",
-        actions: ["view", "edit"],
-        attributes: {only: ["Field 1", "Field 2"]},
-        records: {filter: object.clinic == currentUser.clinic},
-    }],
-    configurations: {
-        expiry: "26/12/23"
+    "permissions": [
+        {
+            "type": "view",
+            "name": "patient.views.PatientCrudView"
+        },
+        {
+            "type": "view",
+            "name": "doctor.views.DoctorCrudView"
+        }
+    ],
+    "configurations": {
+        "expiry": "26/12/23",
     }
 }
 ```
@@ -69,17 +52,15 @@ DataModel Type Permissions control access to DataModels, ensuring fine-grained c
 
 User Access Type Permissions regulate application access at the user level, ensuring control over when and from where users can access the app.
 
-- These permissions manage user access settings, such as allowed access times and IP addresses. Refer to the [Using Permission](../permissions/using-permissions#3-user-access-permission) section for more information on these configurations.
-- In the Policy Config JSON, you need to specify fields like type, name, accessTime, and accessIP.
+- These permissions manage user access settings, such as allowed access times and IP addresses.
+- In the Policy Config JSON, you need to specify fields like type and accessIP (in CIDR Notation).
 - Example JSON:
 ```json
 {
     permissions: [
     {
-        type: "userAccess",
-        name: "defaultPermission",
-        accessTime: "9:00-17:00",
-        accessIP: "192.168.*.*"
+        "type": "userAccess",
+        "accessIP": "0.0.0.0/32"
     }],
     configurations: {
         expiry: "26/12/23"

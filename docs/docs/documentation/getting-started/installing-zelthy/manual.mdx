@@ -139,9 +139,19 @@ Once you've entered these details, the setup process will create the default pla
 
 With all the necessary configurations in place, the setup process will proceed to create your project's folder structure and populate it with boilerplate code. You're now ready to start developing your healthcare apps within the Zelthy platform.
 
-<center> <mark> Add screenshot of folder structure and files </mark> </center>
-
-<center> <mark> Add explanation on each file </mark> </center>
+##### Project Structure
+```plaintext
+project_name/                  # Project root directory
+├── manage.py                  # Django command-line utility for administrative tasks
+└── project_name/              # Django project package
+    ├── __init__.py
+    ├── asgi.py                # ASGI config for the project
+    ├── settings.py            # Project settings (database, static files, etc.)
+    ├── urls_public.py         # Public URL patterns
+    ├── urls_tenant.py         # Tenant-specific URL pattern
+    ├── urls.py                # Project-level URL patterns
+    └── wsgi.py                # WSGI config for the project
+```
 
 Follow this guide, and you'll be well on your way to creating powerful and efficient healthcare applications using Zelthy.
 
