@@ -1,3 +1,5 @@
+from importlib import import_module
+
 def get_current_request():
     from ..middleware.request import _request_local
 
@@ -11,6 +13,23 @@ def get_current_role():
     # model = apps.get_model('appauth', 'UserRoleModel')
     return getattr(_request_local, "user_role", None)
     # return model.objects.get(id=user_role_id)
+
+
+def get_package_url(tenant, package_name, path):
+    """
+    returns the root path of the package
+    """
+    ws_klass = getattr(
+        import_module("zelthy.apps.dynamic_models.workspace.base"), "Workspace"
+    )
+    ws = ws_klass(tenant)
+    ws_settings = ws.get_workspace_settings()
+    for plugin_routes in ws_settings["plugin_routes"]:
+        if package_name == plugin_routes["plugin"]:
+            plugin_root_path = plugin_routes["re_path"]
+    from zelthy.apps.shared.tenancy.models import Domain
+    domain = Domain.objects.filter(tenant=tenant).first()
+    return f"http://{domain.domain}/{plugin_root_path[1:]}{path}"  # this is used for internal routing so http should suffice
 
 
 def get_current_request_url(request, domain=None):
