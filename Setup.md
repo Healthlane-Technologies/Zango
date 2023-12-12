@@ -74,24 +74,26 @@ Run the below command in your terminal to create a postgres container
 
 ```bash
 docker run -d \
-    --name <db_name> \                          
-    -p 5432:5432 \
-    -e POSTGRES_USER=<username> \
-    -e POSTGRES_PASSWORD=<password> \
-    -e POSTGRES_DB=<db_name> \
-    postgres:latest
+   --name <db_name> \
+   -p 5432:5432 \
+   -e POSTGRES_USER=<username>\
+   -e POSTGRES_PASSWORD=<password> \
+   -e POSTGRES_DB=<db_name> \
+   -v db:/var/lib/postgresql/data \
+   postgres:latest
 ```
 
 ex:
 
 ```bash
 docker run -d \
-    --name zelthy_postgres_db \                          
-    -p 5432:5432 \
-    -e POSTGRES_USER=zelthy_admin \
-    -e POSTGRES_PASSWORD=zelthy3pass \
-    -e POSTGRES_DB=zelthy_db \
-    postgres:latest
+   --name zelthy_postgres_db \
+   -p 5432:5432 \
+   -e POSTGRES_USER=zelthy_admin \
+   -e POSTGRES_PASSWORD=zelthy3pass \
+   -e POSTGRES_DB=zelthy_db \
+   -v db:/var/lib/postgresql/data \
+   postgres:latest
 ```
 
 ## Setting Up the Project
