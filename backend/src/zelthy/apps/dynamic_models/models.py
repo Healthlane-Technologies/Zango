@@ -379,17 +379,17 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
     #                 raise AttributeError(f"'{type(self).__name__}' permission not available for '{key}'")
     #     return super().__getattribute__(key)
 
-    def save(self, *args, **kwargs):
-        request = get_current_request()
-        if is_platform_user(request):
-            return super().save(*args, **kwargs)
-        if not self.pk and self.has_perm("create"):
-            return super().save(*args, **kwargs)
-        if self.pk and self.has_perm("edit"):
-            return super().save(*args, **kwargs)
-        raise PermissionDenied(
-            f"Create/Edit Permission not available for {self.__class__.__name__}"
-        )
+    # def save(self, *args, **kwargs):
+    #     request = get_current_request()
+    #     if is_platform_user(request):
+    #         return super().save(*args, **kwargs)
+    #     if not self.pk and self.has_perm("create"):
+    #         return super().save(*args, **kwargs)
+    #     if self.pk and self.has_perm("edit"):
+    #         return super().save(*args, **kwargs)
+    #     raise PermissionDenied(
+    #         f"Create/Edit Permission not available for {self.__class__.__name__}"
+    #     )
 
     def delete(self, *args, **kwargs):
         request = get_current_request()
