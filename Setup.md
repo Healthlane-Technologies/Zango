@@ -3,17 +3,13 @@ To get started with Zelthy, you will need to install it using the Python package
 
 Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions [here](https://www.python.org/downloads/) and pip installation instructions [here](https://pip.pypa.io/en/stable/installation/).
 
-Once Python and pip are installed, you can will need to install virtualenv to create virtual environment in which zelthy will be installed. 
-
-```shell
-pip install virtualenv
-```
+Once Python and pip are installed, you can create virtual environment in which zelthy will be installed. 
 
 Now you are ready to create and activate the virtual environment by running the following command in your terminal or command prompt
 
 ```shell
-virtualenv .venv
-source .venv/bin/activate
+python3 -m venv <virtual_environment_name>
+source <virtual_environment_name>/bin/activate
 ```
 
 install the Zelthy Open Source Platform by running the following command in your terminal or command prompt

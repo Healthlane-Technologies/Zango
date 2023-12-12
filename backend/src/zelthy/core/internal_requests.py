@@ -1,15 +1,10 @@
 import requests
 import json
-from urllib.parse import urlparse
-from django.urls import resolve
-from django.http import HttpRequest
-from django.conf import settings
-from django.db import connection
 from importlib import import_module
+
+from django.db import connection
 from django.test import RequestFactory
 
-
-from django_tenants.utils import get_tenant_domain_model, remove_www
 
 original_post = requests.post
 original_get = requests.get
@@ -23,6 +18,8 @@ def fake_get_response(request):
 
 
 def get_domain_from_url(url):
+    from django_tenants.utils import get_tenant_domain_model, remove_www
+
     domain = url.split("://")[-1].split("/")[0]
     domain = remove_www(domain.split(":")[0])
     domain_obj = get_tenant_domain_model().objects.filter(domain=domain).first()
