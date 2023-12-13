@@ -25,7 +25,11 @@ def write_env_file(project_dir, args):
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
         f.write(f"PROJECT_NAME={args.project_name}\n")
-
+        f.write(f"POSTGRES_USER=zelthy_admin\n")
+        f.write(f"POSTGRES_PASSWORD=zelthy3pass\n")
+        f.write(f"POSTGRES_DB=zelthy\n")
+        f.write(f"POSTGRES_HOST=postgres\n")
+        f.write(f"POSTGRES_PORT=5432\n")
 
 def build_core():
     try:
