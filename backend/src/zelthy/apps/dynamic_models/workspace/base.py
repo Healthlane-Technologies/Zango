@@ -111,7 +111,6 @@ class Workspace:
             pass
         if request:
             user = request.user
-            return True  # TODO: Remove this later
             if user.is_anonymous:
                 role = UserRoleModel.objects.get(name="AnonymousUsers")
                 return role.has_perm(request, "userAccess")
