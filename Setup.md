@@ -224,7 +224,7 @@ Make sure you have Docker and Docker Compose installed on your machine. If not, 
     - `--skip_build_project`: Skips building the project (Default: `False`).
     - `--start`: Starts the project as soon as it is created (Default: `False`)
 
-5. To install any Zelthy package, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the `.env` file created in the `project_dir` and restart the containers.
+5. To install any Zelthy package, add `PACKAGE_REPO_AWS_ACCESS_KEY_ID` and `PACKAGE_REPO_AWS_SECRET_ACCESS_KEY` to the `.env` file created in the `project_dir` and restart the containers.
 
 6. Subsequently, you can use `docker compose up` from the `project_dir` to start the project.
 

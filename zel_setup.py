@@ -87,14 +87,15 @@ if __name__ == "__main__":
    parser.add_argument("--rebuild_core", action="store_true", default=False)
    args = parser.parse_args()
    try:
+    if args.build_core:
+        build_core()
+        sys.exit(0)
     if args.project_name == "":
         args.project_name = "zelthy_project"
     if args.rebuild_core:
         rebuild_core(args.project_dir)
     load_necessary_files(args.project_dir, args.project_name, args.without_db)
     write_env_file(args.project_dir, args)
-    if args.build_core:
-        build_core()
     setup_project(args.project_dir, args.project_name, args.without_db, args.start)
    except Exception:
        traceback.print_exc()
