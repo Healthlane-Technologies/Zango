@@ -17,9 +17,9 @@ def create_directories(dirs):
 
 
 def get_installed_packages(tenant):
-    with open(f"workspaces/{tenant}/plugins.json", "r") as f:
+    with open(f"workspaces/{tenant}/packages.json", "r") as f:
         data = json.loads(f.read())
-        packages = data["plugins"]
+        packages = data["packages"]
     return {package["name"]: package["version"] for package in packages}
 
 
@@ -60,21 +60,21 @@ def update_settings_json(tenant, package_name, version):
     with open(f"workspaces/{tenant}/settings.json", "r") as f:
         data = json.loads(f.read())
 
-    data["plugin_routes"].append(
-        {"re_path": f"^{package_name}/", "plugin": f"{package_name}", "url": "urls"}
+    data["package_routes"].append(
+        {"re_path": f"^{package_name}/", "package": f"{package_name}", "url": "urls"}
     )
 
     with open(f"workspaces/{tenant}/settings.json", "w") as file:
         json.dump(data, file, indent=4)
 
 
-def update_plugins_json(tenant, package_name, version):
-    with open(f"workspaces/{tenant}/plugins.json", "r") as f:
+def update_packages_json(tenant, package_name, version):
+    with open(f"workspaces/{tenant}/packages.json", "r") as f:
         data = json.loads(f.read())
 
-    data["plugins"].append({"name": package_name, "version": version})
+    data["packages"].append({"name": package_name, "version": version})
 
-    with open(f"workspaces/{tenant}/plugins.json", "w") as file:
+    with open(f"workspaces/{tenant}/packages.json", "w") as file:
         json.dump(data, file, indent=4)
 
 
@@ -91,7 +91,7 @@ def package_is_cached(package_name, version):
 
 
 def package_installed(package_name, tenant):
-    if os.path.exists(f"workspaces/{tenant}/plugins/{package_name}/"):
+    if os.path.exists(f"workspaces/{tenant}/packages/{package_name}/"):
         return True
     else:
         return False
@@ -100,8 +100,8 @@ def package_installed(package_name, tenant):
 def get_package_configuration_url(request, tenant, package_name):
     with open(f"workspaces/{tenant.name}/settings.json", "r") as f:
         data = json.loads(f.read())
-    for route in data["plugin_routes"]:
-        if route["plugin"] == package_name:
+    for route in data["package_routes"]:
+        if route["package"] == package_name:
             domain = tenant.domains.filter(is_primary=True).last()
             url = get_current_request_url(request, domain=domain)
             return f"{url}/{route['re_path'][1:]}configure/"
@@ -113,7 +113,7 @@ def install_package(package_name, version, tenant):
         return "Package already installed"
     try:
         # if not package_is_cached(package_name, version):
-        create_directories([f"workspaces/{tenant}/plugins"])
+        create_directories([f"workspaces/{tenant}/packages"])
         resource = boto3.resource(
             "s3",
             aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
@@ -122,38 +122,38 @@ def install_package(package_name, version, tenant):
         bucket = resource.Bucket("zelthy3-packages")
         bucket.download_file(
             f"packages/{package_name}/{version}/codebase/",
-            f"workspaces/{tenant}/plugins/{package_name}.zip",
+            f"workspaces/{tenant}/packages/{package_name}.zip",
         )
         with zipfile.ZipFile(
-            f"workspaces/{tenant}/plugins/{package_name}.zip", "r"
+            f"workspaces/{tenant}/packages/{package_name}.zip", "r"
         ) as zip_ref:
-            zip_ref.extractall(f"workspaces/{tenant}/plugins")
+            zip_ref.extractall(f"workspaces/{tenant}/packages")
         shutil.move(
-            f"workspaces/{tenant}/plugins/pkg-zelthy3-{package_name}-{version}/{package_name}",
-            f"workspaces/{tenant}/plugins/",
+            f"workspaces/{tenant}/packages/pkg-zelthy3-{package_name}-{version}/{package_name}",
+            f"workspaces/{tenant}/packages/",
         )
         shutil.rmtree(
-            f"workspaces/{tenant}/plugins/pkg-zelthy3-{package_name}-{version}"
+            f"workspaces/{tenant}/packages/pkg-zelthy3-{package_name}-{version}"
         )
-        os.remove(f"workspaces/{tenant}/plugins/{package_name}.zip")
+        os.remove(f"workspaces/{tenant}/packages/{package_name}.zip")
         # cache_package(
-        #     package_name, version, f"workspaces/{tenant}/plugins/{package_name}"
+        #     package_name, version, f"workspaces/{tenant}/packages/{package_name}"
         # )
         # else:
         #     print("Installing from cache")
-        #     create_directories([f"workspaces/{tenant}/plugins"])
+        #     create_directories([f"workspaces/{tenant}/packages"])
         #     shutil.copytree(
         #         f"tmp/{package_name}/{version}/",
-        #         f"workspaces/{tenant}/plugins/{package_name}",
+        #         f"workspaces/{tenant}/packages/{package_name}",
         #     )
-        update_plugins_json(tenant, package_name, version)
+        update_packages_json(tenant, package_name, version)
         update_settings_json(tenant, package_name, version)
 
         subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
         subprocess.run("python manage.py collectstatic --noinput", shell=True)
-        if os.path.exists(f"workspaces/{tenant}/plugins/{package_name}/migrations"):
+        if os.path.exists(f"workspaces/{tenant}/packages/{package_name}/migrations"):
             subprocess.run(
-                f"python manage.py ws_migrate {tenant} --plugin {package_name}",
+                f"python manage.py ws_migrate {tenant} --package {package_name}",
                 shell=True,
             )
 

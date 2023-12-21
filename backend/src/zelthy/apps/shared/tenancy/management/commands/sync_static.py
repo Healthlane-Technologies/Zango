@@ -8,7 +8,7 @@ from zelthy.apps.dynamic_models.workspace.base import Workspace
 
 
 class Command(BaseCommand):
-    help = "Collects assets from the specified app, including plugins and copies into \
+    help = "Collects assets from the specified app, including packages and copies into \
             the main django asset folder"
 
     def add_arguments(self, parser):
@@ -45,12 +45,12 @@ class Command(BaseCommand):
         ws_static_path = ws.path + "static"
         self.copy_source_to_destination(ws_static_path, destination_path)
 
-        for plugin in ws.plugins:
-            plugin_name = plugin["name"]
-            plugin_source_dir = ws.path + "plugins/%s/static" % (plugin_name)
-            if os.path.exists(plugin_source_dir):
-                plugin_destination_dir = destination_path + "/plugins/%s" % plugin_name
+        for package in ws.packages:
+            package_name = package["name"]
+            package_source_dir = ws.path + "packages/%s/static" % (package_name)
+            if os.path.exists(package_source_dir):
+                package_destination_dir = destination_path + "/packages/%s" % package_name
                 self.copy_source_to_destination(
-                    plugin_source_dir, plugin_destination_dir
+                    package_source_dir, package_destination_dir
                 )
         return
