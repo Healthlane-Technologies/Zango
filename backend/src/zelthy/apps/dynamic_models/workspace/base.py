@@ -115,7 +115,9 @@ class Workspace:
                 role = UserRoleModel.objects.get(name="AnonymousUsers")
                 return role.has_perm(request, "userAccess")
             else:
-                return user.has_perm(request, "userAccess")
+                from zelthy.core.utils import get_current_role
+                role = get_current_role()
+                return role.has_perm(request, "userAccess")
         elif as_systemuser:
             # role = UserRoleModel.objects.get(name='SystemUser')
             return True
