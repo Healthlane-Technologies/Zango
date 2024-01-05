@@ -45,6 +45,7 @@ TENANT_APPS = [
     "django.contrib.contenttypes",
     "zelthy.apps.appauth",
     "zelthy.apps.permissions",
+    "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
     "corsheaders",
     "crispy_forms",

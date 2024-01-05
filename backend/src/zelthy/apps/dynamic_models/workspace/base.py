@@ -116,6 +116,7 @@ class Workspace:
                 return role.has_perm(request, "userAccess")
             else:
                 from zelthy.core.utils import get_current_role
+
                 role = get_current_role()
                 return role.has_perm(request, "userAccess")
         elif as_systemuser:
