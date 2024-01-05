@@ -1,4 +1,6 @@
 from importlib import import_module
+import pytz
+
 
 def get_current_request():
     from ..middleware.request import _request_local
@@ -24,10 +26,11 @@ def get_package_url(tenant, package_name, path):
     )
     ws = ws_klass(tenant)
     ws_settings = ws.get_workspace_settings()
-    for plugin_routes in ws_settings["plugin_routes"]:
-        if package_name == plugin_routes["plugin"]:
+    for plugin_routes in ws_settings["package_routes"]:
+        if package_name == plugin_routes["package"]:
             plugin_root_path = plugin_routes["re_path"]
     from zelthy.apps.shared.tenancy.models import Domain
+
     domain = Domain.objects.filter(tenant=tenant).first()
     return f"http://{domain.domain}/{plugin_root_path[1:]}{path}"  # this is used for internal routing so http should suffice
 
@@ -50,3 +53,13 @@ def get_current_request_url(request, domain=None):
     # Construct and return the complete URL.
     current_url = f"{protocol}://{domain}{port_string}"
     return current_url
+
+
+def get_datetime_in_tenant_timezone(datetime_val, tenant):
+    tz = pytz.timezone(tenant.timezone)
+    return datetime_val.astimezone(tz)
+
+
+def get_datetime_str_in_tenant_timezone(datetime_val, tenant):
+    datetime_val = get_datetime_in_tenant_timezone(datetime_val, tenant)
+    return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")

@@ -11,7 +11,7 @@ class ObjectStore(models.Model):
     content_object = GenericForeignKey("content_type", "object_id")
 
     @classmethod
-    def get_object_by_uuid(cls, object_uuid):
+    def get_object(cls, object_uuid):
         """
         A class method that retrieves the corresponding object from the object store by its UUID.
 
