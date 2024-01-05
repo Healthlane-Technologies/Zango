@@ -1,18 +1,19 @@
-from typing import Any
-from django.db import models, connection
-from django.db.models import Q
+import uuid
 from functools import reduce
 from operator import and_
 
+from django.db import models, connection
+from django.db.models import Q
 from django.apps import apps
-from django.core.exceptions import FieldDoesNotExist as DjangoFieldDoesNotExist
-from django.core import signing
 from django.core.exceptions import PermissionDenied
+from django.contrib.contenttypes.models import ContentType
 
 from zelthy.apps.appauth.models import AppUserModel
 from zelthy.core.utils import get_current_request, get_current_role
 from zelthy.apps.shared.platformauth.models import PlatformUserModel
 from zelthy.apps.dynamic_models.permissions import is_platform_user
+
+from zelthy.apps.object_store.models import ObjectStore
 
 
 class RegisterOnceModeMeta(type(models.Model)):
@@ -331,6 +332,7 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
     modified_by = models.ForeignKey(
         AppUserModel, null=True, editable=False, on_delete=models.PROTECT
     )
+    object_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     # objects = RestrictedManager()
 
@@ -381,10 +383,21 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
 
     def save(self, *args, **kwargs):
         request = get_current_request()
+        is_create_operation = not self.pk
         if is_platform_user(request):
             return super().save(*args, **kwargs)
-        if not self.pk and self.has_perm("create"):
-            return super().save(*args, **kwargs)
+        if is_create_operation and self.has_perm("create"):
+            resp = super().save(*args, **kwargs)
+
+            # Create an object in ObjectStore when object is getting created
+            content_type = ContentType.objects.get_for_model(self)
+            ObjectStore.objects.create(
+                object_uuid=self.object_uuid,
+                content_type=content_type,
+                object_id=self.pk,
+                content_object=self,
+            )
+            return resp
         if self.pk and self.has_perm("edit"):
             return super().save(*args, **kwargs)
         raise PermissionDenied(
