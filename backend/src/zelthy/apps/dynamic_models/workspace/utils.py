@@ -8,7 +8,7 @@ from django.conf import settings
 def workspace_sys_paths(wname: str) -> list[str]:
     """
         Ensures that sys.path does not contain any other tenant's paths
-        Adds the path of the workspace and its plugins to sys.path
+        Adds the path of the workspace and its packages to sys.path
     """
     original_sys_path = sys.path[:]
     temp_sys_path = []

@@ -3,7 +3,7 @@ from zelthy.core.generic_views.base import (
 )
 from django.views.generic import View
 
-from ..plugins.frame.decorator import apply_frame_routing
+from ..packages.frame.decorator import apply_frame_routing
 
 
 class AppLandingPageView(ZelthySessionAppTemplateView):

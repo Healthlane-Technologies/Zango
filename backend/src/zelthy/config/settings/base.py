@@ -45,6 +45,7 @@ TENANT_APPS = [
     "django.contrib.contenttypes",
     "zelthy.apps.appauth",
     "zelthy.apps.permissions",
+    "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
     "corsheaders",
     "crispy_forms",
@@ -160,6 +161,7 @@ PASSWORD_MIN_LENGTH = 8
 PASSWORD_NO_REPEAT_DAYS = 180
 PASSWORD_RESET_DAYS = 90
 
-PACKAGE_REPO_AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+PACKAGE_REPO_AWS_ACCESS_KEY_ID = os.getenv("PACKAGE_REPO_AWS_ACCESS_KEY_ID")
+PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = os.getenv("PACKAGE_REPO_AWS_SECRET_ACCESS_KEY")
 MEDIA_URL = "/media/"
+X_FRAME_OPTIONS = "ALLOW"
