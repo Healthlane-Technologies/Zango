@@ -13,7 +13,7 @@ class Command(MakeMigrationsCommand):
     Custom makemigration to generate migration files for dynamic_models. The
     workspace name is a mandatory argument with this command. The workspace is
     initialized and the models are loaded after which the migrations are
-    generated. The migrations for the workspace and all the plugins are
+    generated. The migrations for the workspace and all the packages are
     generated through this command.
 
     Known issues:
@@ -35,9 +35,9 @@ class Command(MakeMigrationsCommand):
             "--test", action="store_true", help="Run the migration for test database"
         )
         parser.add_argument(
-            "--is_plugin_migration",
+            "--is_package_migration",
             action="store_true",
-            help="Run makemigration on plugin models",
+            help="Run makemigration on package models",
         )
 
     def handle(self, *app_labels, **options):
@@ -50,10 +50,10 @@ class Command(MakeMigrationsCommand):
                 "test_" + connection.settings_dict["NAME"]
             )
         settings.MIGRATION_MODULES = {
-            f"dynamic_models": f"workspaces.{options['workspace']}.dmigrations"
+            f"dynamic_models": f"workspaces.{options['workspace']}.migrations"
         }
         w = Workspace(tenant_obj, None, True)
-        if options["is_plugin_migration"]:
+        if options["is_package_migration"]:
             w.load_models()
         else:
             w.load_models(migration=True)

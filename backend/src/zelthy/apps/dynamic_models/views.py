@@ -45,7 +45,9 @@ class DynamicView(View, PermMixin):
             view_name = ".".join(resolve.__dict__["_func_path"].split(".")[5:])
             if view:
                 kwargs = resolve.__dict__["kwargs"]
-                if self.has_view_perm(request, view_name, *args, **kwargs):
+                if request.internal_routing or self.has_view_perm(
+                    request, view_name, *args, **kwargs
+                ):
                     response = csrf_protect(view)(request, *args, **kwargs)
                     return response
                 else:
