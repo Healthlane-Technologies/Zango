@@ -1,6 +1,6 @@
 from importlib import import_module
 import pytz
-
+import json
 
 def get_current_request():
     from ..middleware.request import _request_local
@@ -17,22 +17,15 @@ def get_current_role():
     # return model.objects.get(id=user_role_id)
 
 
-def get_package_url(tenant, package_name, path):
-    """
-    returns the root path of the package
-    """
-    ws_klass = getattr(
-        import_module("zelthy.apps.dynamic_models.workspace.base"), "Workspace"
-    )
-    ws = ws_klass(tenant)
-    ws_settings = ws.get_workspace_settings()
-    for plugin_routes in ws_settings["package_routes"]:
-        if package_name == plugin_routes["package"]:
-            plugin_root_path = plugin_routes["re_path"]
-    from zelthy.apps.shared.tenancy.models import Domain
-
-    domain = Domain.objects.filter(tenant=tenant).first()
-    return f"http://{domain.domain}/{plugin_root_path[1:]}{path}"  # this is used for internal routing so http should suffice
+def get_package_url(request, path, package_name):
+    with open(f"workspaces/{request.tenant.name}/settings.json", "r") as f:
+        data = json.loads(f.read())
+    for route in data["package_routes"]:
+        if route["package"] == package_name:
+            domain = request.tenant.domains.filter(is_primary=True).last()
+            url = get_current_request_url(request, domain=domain)
+            return f"{url}/{route['re_path'][1:]}{path}"
+    return ""
 
 
 def get_current_request_url(request, domain=None):
