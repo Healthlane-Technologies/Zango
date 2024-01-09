@@ -120,6 +120,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     ):
         """ """
         success = False
+        app_user = None
         if not email and not mobile:
             message = "Email and mobile both cannot be empty"
         else:
@@ -168,7 +169,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                         message = "App User created successfully."
             except Exception as e:
                 message = str(e)
-        return {"success": success, "message": message}
+        return {"success": success, "message": message, 'app_user': app_user}
 
     def update_user(self, data):
         success = False
