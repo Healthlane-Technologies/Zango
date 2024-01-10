@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("django_celery_beat", "0018_improve_crontab_helptext"),
-        ("permissions", "0002_alter_policymodel_expiry"),
     ]
 
     operations = [
