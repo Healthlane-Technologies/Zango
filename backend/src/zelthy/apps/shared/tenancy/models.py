@@ -1,22 +1,30 @@
 import uuid
 from collections import namedtuple
+import os
+import cookiecutter
 
 
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
-from django_tenants.utils import schema_context
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
 
-from .utils import TIMEZONES, DATEFORMAT, DATETIMEFORMAT, DEFAULT_THEME_CONFIG, create_default_policy_and_role
 
 from .tasks import initialize_workspace
 
+
+from .utils import (
+    TIMEZONES,
+    DATEFORMAT,
+    DATETIMEFORMAT,
+    DEFAULT_THEME_CONFIG,
+    assign_policies_to_anonymous_user,
+)
 
 Choice = namedtuple("Choice", ["value", "display"])
 
@@ -113,8 +121,38 @@ class TenantModel(TenantMixin, FullAuditMixin):
             name=name, schema_name=schema_name, description=description, **other_params
         )
         # initialize tenant's workspace
+
         initialize_workspace.delay(str(obj.uuid))
         return obj
+
+    def initialize_workspace(self):
+        # Create workspace Folder
+        project_base_dir = settings.BASE_DIR
+
+        workspace_dir = os.path.join(project_base_dir, "workspaces")
+        if not os.path.exists(workspace_dir):
+            os.makedirs(workspace_dir)
+
+        if not os.path.exists(os.path.join(workspace_dir, self.name)):
+            # Creating app folder with the initial files
+            template_directory = os.path.join(
+                os.path.dirname(__file__), "workspace_folder_template"
+            )
+            cookiecutter_context = {"app_name": self.name}
+
+            cookiecutter.main.cookiecutter(
+                template_directory,
+                extra_context=cookiecutter_context,
+                output_dir=workspace_dir,
+                no_input=True,
+            )
+
+        self.status = "deployed"
+        self.save()
+        assign_policies_to_anonymous_user(self.schema_name)
+        theme = ThemesModel.objects.create(
+            name="Default", tenant=self, config=DEFAULT_THEME_CONFIG
+        )
 
 
 class Domain(DomainMixin, FullAuditMixin):

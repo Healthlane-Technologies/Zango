@@ -31,9 +31,11 @@
     <link rel="stylesheet" href="{% static 'login/css/login_page.css' %}" />
 
     <link rel="stylesheet" href="{% static 'login/css/styles.css' %}" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.min.js"
+        integrity="sha512-AvCfbOQzCVi2ctVWF4m89jLwTn/zVPJuS7rhiKyY3zqyCdbPqtvNa0I628GJqPytbowfFjkAGOpq85E5kQc40Q=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   </head>
   <body >
-    <img class="bg-image" src="{% static 'images/login-background.png' %}" />
     <div class="login-container">
     {% include "applogin/_message_block.html" %}
     
@@ -83,7 +85,7 @@
         <div class="hero-right">
           <div class="login-box">
             <div class="login-box-header">Login</div>
-            <div class="login-header-underscore"></div>
+            <div class="login-header-underscore" id="login-header-underscore"></div>
             <form class="login-form" action="" method="post">
               {% csrf_token %} {{ wizard.management_form }} {% crispy wizard.form %}
             </form>
@@ -102,53 +104,62 @@
     <script src="{% static 'js/uikit_custom.min.js' %}"></script>
     <!-- altair core functions -->
     <script src="{% static 'js/altair_admin_common.min.js' %}"></script>
-
     <!-- altair login page functions -->
     <script src="{% static 'login/js/login.js' %}"></script>
     <script>
 
-      const usernameLabel = $("<label>Username </label>");
-      const usernameInput = $("#id_auth-username");
-      usernameLabel.insertBefore(usernameInput);
-      usernameLabel.css("font-weight", "400");
-      usernameLabel.css("font-size", "12px");
-      usernameLabel.css("line-height", "16px");
-      usernameLabel.css("color", "#6C747D");
+        const usernameLabel = $("<label>Username </label>");
+        const usernameInput = $("#id_auth-username");
+        usernameLabel.insertBefore(usernameInput);
+        usernameLabel.css("font-weight", "400");
+        usernameLabel.css("font-size", "12px");
+        usernameLabel.css("line-height", "16px");
+        usernameLabel.css("color", "#6C747D");
 
-      const passwordLabel = $("<label>Password </label>");
-      const passwordInput = $("#id_auth-password");
-      passwordLabel.insertBefore(passwordInput);
-      passwordLabel.css("font-weight", "400");
-      passwordLabel.css("font-size", "12px");
-      passwordLabel.css("line-height", "16px");
-      passwordLabel.css("color", "#6C747D");
+        const passwordLabel = $("<label>Password </label>");
+        const passwordInput = $("#id_auth-password");
+        passwordLabel.insertBefore(passwordInput);
+        passwordLabel.css("font-weight", "400");
+        passwordLabel.css("font-size", "12px");
+        passwordLabel.css("line-height", "16px");
+        passwordLabel.css("color", "#6C747D");
 
-      $(".login-form h2").remove()
+        $(".login-form h2").remove()
 
-      const selectRoleLabel = $("<label>Select your role </label>");
-      const selectRoleInput = $("#id_user_role-user_role");
-      selectRoleLabel.insertBefore(selectRoleInput);
-      selectRoleLabel.css("font-weight", "400");
-      selectRoleLabel.css("font-size", "12px");
-      selectRoleLabel.css("line-height", "16px");
-      selectRoleLabel.css("color", "#6C747D");
+        const selectRoleLabel = $("<label>Select your role </label>");
+        const selectRoleInput = $("#id_user_role-user_role");
+        selectRoleLabel.insertBefore(selectRoleInput);
+        selectRoleLabel.css("font-weight", "400");
+        selectRoleLabel.css("font-size", "12px");
+        selectRoleLabel.css("line-height", "16px");
+        selectRoleLabel.css("color", "#6C747D");
 
-      const errorMessage = $(".alert-danger")
-      const inputDiv = $("#div_id_auth-password")
-      errorMessage.detach().insertAfter(inputDiv);
-      // inputDiv.append(errorMessage)
+        const errorMessage = $(".alert-danger")
+        const inputDiv = $("#div_id_auth-password")
+        errorMessage.detach().insertAfter(inputDiv);
+        // inputDiv.append(errorMessage)
 
-       // Get the existing div element
-  var oldElement = $('.alert-danger ul');
+        // Get the existing div element
+        var oldElement = $('.alert-danger ul');
 
-  // Create a new span element and copy contents
-  var newElement1 = $('<div>').html(oldElement.html());
+        // Create a new span element and copy contents
+        var newElement1 = $('<div>').html(oldElement.html());
 
-   var newElement2 = $('.alert-danger li');
+        var newElement2 = $('.alert-danger li');
 
-  // Replace the old div with the new span
-  oldElement.replaceWith(newElement2);
-      
+
+        var obj = "{{app_theme_config|escapejs}}"
+        var decodedCode = obj.replace(/&#x27;/g, "'");
+        var validJson = decodedCode.replace(/'/g, '"');
+        var app_theme_config = JSON.parse(validJson);
+
+
+        $("#submit-id-submit").css("background-color", app_theme_config?.color?.primary || "#5048ed");
+        $("#login-header-underscore").css("background-color", app_theme_config?.color?.primary || "#5048ed");
+        $(".login-container").css("background-color", app_theme_config?.color?.primary + "cc" || "rgba(121, 114, 251, 0.8)");
+
+        // Replace the old div with the new span
+        oldElement.replaceWith(newElement2);
 
     </script>
   </body>
