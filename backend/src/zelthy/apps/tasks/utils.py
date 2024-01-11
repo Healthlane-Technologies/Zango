@@ -89,6 +89,15 @@ def validate_cron_input(crontab):
 def get_crontab_obj(crontab={}):
     if not validate_cron_input(crontab):
         raise ValueError("Invalid cron expression")
+    
+    if not crontab:
+        crontab = {
+          "minute": "*",
+          "hour": "*",
+          "day_of_week": "*",
+          "day_of_month": "*",
+          "month_of_year": "*"
+        }
 
     schedule, created = CrontabSchedule.objects.get_or_create(**crontab)
     if created:

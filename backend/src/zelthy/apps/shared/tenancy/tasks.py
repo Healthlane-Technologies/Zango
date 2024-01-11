@@ -6,10 +6,13 @@ from celery import shared_task
 from django.conf import settings
 from django.core.management import call_command
 
+from .utils import assign_policies_to_anonymous_user, DEFAULT_THEME_CONFIG
+
 
 @shared_task
 def initialize_workspace(tenant_uuid):
-    from zelthy.apps.shared.tenancy.models import TenantModel
+    from zelthy.apps.shared.tenancy.models import TenantModel, ThemesModel
+
 
     tenant = TenantModel.objects.get(uuid=tenant_uuid)
 
@@ -46,3 +49,8 @@ def initialize_workspace(tenant_uuid):
 
     tenant.status = "deployed"
     tenant.save()
+
+    assign_policies_to_anonymous_user(tenant.schema_name)
+    theme = ThemesModel.objects.create(
+            name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
+        )

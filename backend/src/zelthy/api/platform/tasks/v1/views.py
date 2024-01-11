@@ -18,7 +18,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
         try:
-            app_tasks = AppTask.objects.all().order_by("-id")
+            app_tasks = AppTask.objects.filter(is_deleted=False).order_by("-id")
             paginated_tasks = self.paginate_queryset(app_tasks, request, view=self)
             serializer = TaskSerializer(paginated_tasks, many=True)
             paginated_app_tasks = self.get_paginated_response_data(serializer.data)

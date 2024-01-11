@@ -299,12 +299,13 @@ class Workspace:
         from zelthy.apps.tasks.models import AppTask
         from zelthy.apps.tasks.utils import get_crontab_obj
 
+        task_ids_synced = []
+
         for m in self.get_tasks():
             mod_path = m.split(".")[2:]
             mod_path_str = ".".join(mod_path)
             _plugin = self.plugin_source.load_plugin(mod_path_str)
 
-            task_ids_synced = []
             for name, method in inspect.getmembers(_plugin):
                 if isinstance(method, Task):
                     task_path = f"{mod_path_str}.{name}"
@@ -323,7 +324,7 @@ class Workspace:
                             task_obj.save()
                         task_ids_synced.append(task_obj.id)
 
-        AppTask.objects.all().exclude(id__in=task_ids_synced).delete
+        AppTask.objects.all().exclude(id__in=task_ids_synced).update(is_deleted=True, is_enabled=False)
 
         return
 
