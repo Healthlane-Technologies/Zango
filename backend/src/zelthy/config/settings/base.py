@@ -30,7 +30,7 @@ SHARED_APPS = [
     # 'django_otp.plugins.otp_totp',
     # 'axes',
     # 'session_security',
-    # 'django_celery_beat',
+    "django_celery_beat",
     # 'django_celery_results',
     "rest_framework",
     "knox",
@@ -47,11 +47,13 @@ TENANT_APPS = [
     "zelthy.apps.permissions",
     "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
+    "zelthy.apps.tasks",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
     "debug_toolbar",
-    "crispy_forms",
+    "crispy_forms"
+    # "django_celery_results"
     # "cachalot",
 ]
 
@@ -124,10 +126,17 @@ INTERNAL_IPS = [
     # ...
 ]
 
+REDIS_HOST = "127.0.0.1"
+REDIS_PORT = 6379
+REDIS_PROTOCOL = "redis"
+
+REDIS_URL = f"{REDIS_PROTOCOL}://{REDIS_HOST}:{REDIS_PORT}/1"
+
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # Using DB 1 for cache
+        "LOCATION": REDIS_URL,  # Using DB 1 for cache
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -164,4 +173,8 @@ PASSWORD_RESET_DAYS = 90
 PACKAGE_REPO_AWS_ACCESS_KEY_ID = os.getenv("PACKAGE_REPO_AWS_ACCESS_KEY_ID")
 PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = os.getenv("PACKAGE_REPO_AWS_SECRET_ACCESS_KEY")
 MEDIA_URL = "/media/"
+
+# Celery
+CELERY_BROKER_URL = REDIS_URL
+# CELERY_RESULT_BACKEND = "django-db"
 X_FRAME_OPTIONS = "ALLOW"

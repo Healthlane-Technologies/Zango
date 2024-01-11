@@ -62,15 +62,13 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
         try:
             success, message = self.validate_data(data)
             if success:
-                app = TenantModel.objects.create(
+                app = TenantModel.create(
                     name=data["name"],
                     schema_name=data["name"],
                     description=data["description"],
                     tenant_type="app",
                     status="staged",
                 )
-                app = TenantModel.objects.get(name=data["name"])
-                app.initialize_workspace()
                 # TODO: trigger celery task once celery integration is done
                 # task = launch_new_app.delay(str(app.uuid), countdown=30)
                 # result = {"app_uuid": str(app.uuid), "task_uuid": str(task)}

@@ -1,8 +1,6 @@
 import uuid
-import os
 from collections import namedtuple
 
-import cookiecutter.main
 
 from django.db import models
 from django.utils import timezone
@@ -14,12 +12,16 @@ from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
 
+
+from .tasks import initialize_workspace
+
+
 from .utils import (
     TIMEZONES,
     DATEFORMAT,
     DATETIMEFORMAT,
     DEFAULT_THEME_CONFIG,
-    assign_policies_to_anonymous_user
+    assign_policies_to_anonymous_user,
 )
 
 Choice = namedtuple("Choice", ["value", "display"])
@@ -101,6 +103,8 @@ class TenantModel(TenantMixin, FullAuditMixin):
     fav_icon = ZFileField(verbose_name="Fav Icon", null=True, blank=True)
     extra_config = models.JSONField(null=True, blank=True)
 
+    auto_create_schema = False
+
     def __str__(self):
         return self.name
 
@@ -111,41 +115,13 @@ class TenantModel(TenantMixin, FullAuditMixin):
 
     @classmethod
     def create(cls, name, schema_name, description, **other_params):
-        obj = cls(
+        obj = cls.objects.create(
             name=name, schema_name=schema_name, description=description, **other_params
-        ).save()
-        # initialize tenant's workspace
-        obj.initialize_workspace()
-        return obj
-
-    def initialize_workspace(self):
-        # Create workspace Folder
-        project_base_dir = settings.BASE_DIR
-
-        workspace_dir = os.path.join(project_base_dir, "workspaces")
-        if not os.path.exists(workspace_dir):
-            os.makedirs(workspace_dir)
-
-        if not os.path.exists(os.path.join(workspace_dir, self.name)): 
-            # Creating app folder with the initial files
-            template_directory = os.path.join(
-                os.path.dirname(__file__), "workspace_folder_template"
-            )
-            cookiecutter_context = {"app_name": self.name}
-
-            cookiecutter.main.cookiecutter(
-                template_directory,
-                extra_context=cookiecutter_context,
-                output_dir=workspace_dir,
-                no_input=True,
-            )
-
-        self.status = "deployed"
-        self.save()
-        assign_policies_to_anonymous_user(self.schema_name)
-        theme = ThemesModel.objects.create(
-            name="Default", tenant=self, config=DEFAULT_THEME_CONFIG
         )
+        # initialize tenant's workspace
+
+        initialize_workspace.delay(str(obj.uuid))
+        return obj
 
 
 class Domain(DomainMixin, FullAuditMixin):
