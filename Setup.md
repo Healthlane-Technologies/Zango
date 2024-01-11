@@ -259,3 +259,81 @@ The necessary docker compose, nginx and gunicorn files to deploy your project ar
     docker compose -f docker-compose.prod.yml up
     ```
 - You can access your server at `http://<domain>:1443` (By default the domain is localhost)
+- 
+
+
+# Celery Setup for Manual Mode
+
+## Starting the celery worker
+
+- In project ``__init__.py`` file (``zprj/zprj/__init__.py``) add the below code snippet
+   ```
+   from zelthy.config.celery import app as celery_app
+   
+   __all__ = ["celery_app"]
+   
+   ```
+   Note: This step is only for existing projects. New projects will have this by default
+
+-  Start the redis service
+  
+-  Start the celery worker
+   & navigate to the project root (where manage.py file is there)
+   ```
+   celery -A <project_name> worker -l INFO
+   ```
+
+- Start the celery beat
+   & navigate to the project root (where manage.py file is there)
+   ```
+   celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+   ```
+
+## Creating task and syncing it
+
+- Navigate to the module or package where you need to create the task and create ``tasks.py``
+  
+   ```
+   workspace
+      App_Name
+         module_name
+            tasks.py    --> Task File
+   ```
+- Add the task with ``@shared_task`` decorator
+  ```
+  from celery import shared_task
+  
+  @shared_task
+  def download_task(request_data):
+
+       print("request_data: ", request_data)
+       pat = Patient.objects.create(
+           name="Download oc"
+       )
+   ```
+
+ - Navigate to App Panel and under Tasks Table sync the tasks
+ - Executing task programmatically
+
+   ```
+
+   from zelthy.core.tasks import zelthy_task_executor
+   zelthy_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
+
+   task_name can be taken from App Panel -> Tasks table
+   ```
+
+   Example
+   ```
+
+   from zelthy.core.tasks import zelthy_task_executor
+   zelthy_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
+
+   task_name can be taken from App Panel -> Tasks table
+   ```
+   
+ 
+     
+  
+
+   
