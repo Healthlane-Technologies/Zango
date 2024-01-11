@@ -13,6 +13,7 @@ from .views import (
 
 from zelthy.api.platform.permissions.v1 import urls as permissions_v1_urls
 from zelthy.api.platform.packages.v1 import urls as packages_v1_urls
+from zelthy.api.platform.tasks.v1 import urls as tasks_v1_urls
 from zelthy.api.platform.codeassist.v1 import urls as codeassist_v1_urls
 
 
@@ -54,6 +55,7 @@ urlpatterns = [
         name="apps-apiv1-themedetailview",
     ),
     re_path(r"^(?P<app_uuid>[\w-]+)/packages/$", include(packages_v1_urls)),
+    re_path(r"^(?P<app_uuid>[\w-]+)/tasks/", include(tasks_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/code-assist/", include(codeassist_v1_urls)),
     path("", include(permissions_v1_urls)),
 ]
