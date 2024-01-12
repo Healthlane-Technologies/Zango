@@ -56,3 +56,18 @@ def get_datetime_in_tenant_timezone(datetime_val, tenant):
 def get_datetime_str_in_tenant_timezone(datetime_val, tenant):
     datetime_val = get_datetime_in_tenant_timezone(datetime_val, tenant)
     return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")
+
+
+def get_package_config(tenant, package_name):
+    """
+    returns if package exists or not 
+    """
+    ws_klass = getattr(
+        import_module("zelthy.apps.dynamic_models.workspace.base"), "Workspace"
+    )
+    ws = ws_klass(tenant)
+    ws_package = [i.get('name','') for i in ws.get_packages()]
+    if package_name in ws_package:
+        return True
+    else:
+        return False
