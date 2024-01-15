@@ -310,7 +310,11 @@ class Workspace:
                 if isinstance(method, Task):
                     task_path = f"{mod_path_str}.{name}"
                     try:
-                        AppTask.objects.get(name=task_path)
+                        task = AppTask.objects.get(name=task_path)
+                        if task.is_deleted:
+                            task.is_deleted = False
+                            task.save()
+                        task_ids_synced.append(task.id)
                     except AppTask.DoesNotExist:
                         schedule, success = get_crontab_obj()
                         task_obj, created = AppTask.objects.get_or_create(
@@ -323,8 +327,9 @@ class Workspace:
                             task_obj.args = json.dumps([tenant_name, task_obj.name])
                             task_obj.save()
                         task_ids_synced.append(task_obj.id)
-
-        AppTask.objects.all().exclude(id__in=task_ids_synced).update(is_deleted=True, is_enabled=False)
+        AppTask.objects.all().exclude(id__in=task_ids_synced).update(
+            is_deleted=True, is_enabled=False
+        )
 
         return
 
