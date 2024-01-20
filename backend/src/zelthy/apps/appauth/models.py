@@ -6,6 +6,8 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 
 from zelthy.core.model_mixins import FullAuditMixin
+
+from zelthy.apps.object_store.models import ObjectStore
 from zelthy.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
 
 
@@ -60,9 +62,19 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     policy_groups = models.ManyToManyField(
         PolicyGroupModel, related_name="user_policy_groups"
     )
+    app_objects = models.JSONField(null=True)
 
     def __str__(self):
         return self.name
+
+
+    def get_app_object(self, role_id):
+        if self.app_objects:
+            object_uuid = self.app_objects.get(str(role_id), None)
+            if object_uuid:
+                return ObjectStore.get_object(object_uuid)
+        return None
+
 
     def has_perm(self, request, perm_type, view=None, dataModel=None):
         if perm_type == "userAccess":
@@ -117,6 +129,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         role_ids=[],
         force_password_reset=True,
         require_verification=True,
+        app_objects=None
     ):
         """ """
         success = False
@@ -163,6 +176,9 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                             old_password_obj = OldPasswords.objects.create(user=user)
                             old_password_obj.setPasswords(user.password)
                             old_password_obj.save()
+
+                        if app_objects:
+                            app_user.app_objects = app_objects
 
                         app_user.save()
                         success = True
