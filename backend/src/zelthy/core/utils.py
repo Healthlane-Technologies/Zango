@@ -17,6 +17,12 @@ def get_current_role():
     # return model.objects.get(id=user_role_id)
 
 
+def get_app_object():
+    from ..middleware.request import _request_local
+
+    return getattr(_request_local, "app_object", None)
+
+
 def get_package_url(request, path, package_name):
     with open(f"workspaces/{request.tenant.name}/settings.json", "r") as f:
         data = json.loads(f.read())

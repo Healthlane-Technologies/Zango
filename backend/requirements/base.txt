@@ -22,4 +22,5 @@ botocore==1.31.52
 django-storages==1.14
 django-celery-beat==2.5.0
 django-smtp-ssl==1.0
+PyJWT==2.8.0
 XlsxWriter==3.1.9
