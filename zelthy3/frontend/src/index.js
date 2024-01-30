@@ -6,7 +6,7 @@ import { worker } from './mocks/browser';
 import { isMockApi } from './utils/helper';
 
 if (isMockApi()) {
-	worker.start();
+	// worker.start();
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

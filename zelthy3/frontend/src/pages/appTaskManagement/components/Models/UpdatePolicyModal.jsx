@@ -1,7 +1,8 @@
 import { Dialog, Transition } from '@headlessui/react';
+import Editor from '@monaco-editor/react';
 import { Formik } from 'formik';
 import { get } from 'lodash';
-import { Fragment } from 'react';
+import { Fragment, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
@@ -27,12 +28,22 @@ const UpdatePolicyForm = ({ closeModal }) => {
 	);
 	const dispatch = useDispatch();
 
+	const editorRef = useRef(null);
+
+	function handleEditorDidMount(editor, monaco) {
+		editorRef.current = editor;
+		setTimeout(function () {
+			editor.getAction('editor.action.formatDocument').run();
+		}, 100);
+	}
+
 	const triggerApi = useApi();
 	let initialValues = {
 		policies:
 			appTaskManagementFormData?.attached_policies?.map(
 				(eachApp) => eachApp.id
 			) ?? [],
+		kwargs: JSON.stringify(appTaskManagementFormData?.kwargs, null, 4),
 		minute: appTaskManagementFormData?.crontab?.minute ?? '*',
 		hour: appTaskManagementFormData?.crontab?.hour ?? '*',
 		day_of_week: appTaskManagementFormData?.crontab?.day_of_week ?? '*',
@@ -42,6 +53,16 @@ const UpdatePolicyForm = ({ closeModal }) => {
 	};
 
 	let validationSchema = Yup.object({
+		kwargs: Yup.string()
+			.test('json', 'Invalid JSON format', (value) => {
+				try {
+					JSON.parse(value);
+					return true;
+				} catch (error) {
+					return false;
+				}
+			})
+			.required('Required'),
 		minute: Yup.string().required('Required'),
 		hour: Yup.string().required('Required'),
 		day_of_week: Yup.string().required('Required'),
@@ -62,6 +83,7 @@ const UpdatePolicyForm = ({ closeModal }) => {
 			policies: values?.policies,
 			crontab_exp: crontab_exp,
 			is_enabled: values?.is_enabled,
+			kwargs: JSON.stringify(JSON.parse(values?.kwargs)),
 		};
 
 		let dynamicFormData = transformToFormDataOrder(tempValues);
@@ -139,9 +161,40 @@ const UpdatePolicyForm = ({ closeModal }) => {
 								}
 								formik={formik}
 							/>
+							<div className="flex h-full min-h-[300px] flex-col gap-[4px]">
+								<label
+									htmlFor="kwargs"
+									className="font-lato text-[12px] font-semibold text-[#A3ABB1]"
+								>
+									Kwargs
+								</label>
+								<div className="flex grow flex-col rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] ">
+									<Editor
+										id="kwargs"
+										height="100%"
+										language="json"
+										value={formik.values.kwargs}
+										options={{
+											readOnly: false,
+											formatOnPaste: true,
+											formatOnType: true,
+										}}
+										onMount={handleEditorDidMount}
+										onChange={(value) => {
+											formik.setFieldValue('kwargs', value);
+										}}
+									/>
+								</div>
+								{formik.touched.kwargs && formik.errors.kwargs ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.kwargs}
+									</div>
+								) : null}
+							</div>
+
 							<div className="flex flex-col gap-[16px]">
 								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
-									Schedule (IST)
+									Schedule (UTC)
 								</h4>
 								<div className="grid grid-cols-2 gap-4">
 									<div className="flex flex-col gap-[4px]">

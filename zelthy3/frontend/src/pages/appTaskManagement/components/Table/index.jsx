@@ -80,7 +80,7 @@ export default function Table({ tableData }) {
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Schedule (IST)
+						Schedule (UTC)
 					</span>
 				</div>
 			),
@@ -108,7 +108,7 @@ export default function Table({ tableData }) {
 							info.getValue() ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
 						}`}
 					>
-						{info.getValue() ? 'Enabled' : 'Disabled'}
+						{info.getValue() ? 'Scheduled' : 'Disabled'}
 					</span>
 				</div>
 			),

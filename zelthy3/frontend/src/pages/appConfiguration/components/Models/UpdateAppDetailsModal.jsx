@@ -33,6 +33,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			(eachDomain) => eachDomain.domain
 		) ?? [''],
 		timezone: appConfigurationData?.app?.timezone ?? '',
+		date_format: appConfigurationData?.app?.date_format ?? '',
 		datetime_format: appConfigurationData?.app?.datetime_format ?? '',
 	};
 
@@ -224,6 +225,19 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 								optionsDataName="timezone"
 								optionsData={
 									appConfigurationData?.dropdown_options?.timezones ?? []
+								}
+								formik={formik}
+							/>
+							<SelectField
+								key="date_format"
+								label="Date Format"
+								name="date_format"
+								id="date_format"
+								placeholder="Select date format"
+								value={get(formik.values, 'date_format', '')}
+								optionsDataName="date_format"
+								optionsData={
+									appConfigurationData?.dropdown_options?.date_formats ?? []
 								}
 								formik={formik}
 							/>
