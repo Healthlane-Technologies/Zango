@@ -69,7 +69,7 @@ const config = {
       // Replace with your project's social card
       image: "img/zelthy-social-card.jpg",
       navbar: {
-        title: "ZOSP",
+        title: "Zelthy Platform V3.0",
         logo: {
           alt: "Zelthy Logo",
           src: "img/zelthy_logo.png",

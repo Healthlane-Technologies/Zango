@@ -8,22 +8,50 @@ In Zelthy, creating views is akin to the process you'd follow in Django, the pop
 
 Here's a step-by-step guide on how to create views in Zelthy:
 
+```text
+workspaces
+├── YourApp
+│   ├── YourModule
+│       ├── views.py
+│     
+│   ...
+```
+
 1. **Navigate to the `views.py` File**:
    - In Zelthy, views are typically coded in the `views.py` file located within a specific module folder.
    - If you haven't already created a module, refer to the [Creating a Module](../modules/creating-a-module) section to set up the necessary structure.
 
 2. **Import Dependencies**:
-   - At the beginning of your `views.py` file, import any necessary dependencies such as Django's `HttpResponse` class or Zelthy-specific modules.
+   - At the beginning of your `views.py` file, import any necessary dependencies or Zelthy-specific modules.
+   - Any imports inside the `views.py` file should be relative to that file. For example:
+   
+   ```text
+      workspaces
+      ├── YourApp
+      │   ├── YourModule
+      │       ├── helpers.py
+      │       ├── views.py
+      │     
+      │   ...
+   ```
 
-3. **Define Your View Function**:
-   - Create a Python function that represents your view's logic. This function will handle the incoming HTTP request and generate an appropriate response.
-   - Your view function should accept at least one argument, typically named `request`, which represents the HTTP request object.
+   ```python
+   
+   # Correct: Import relative to views.py
+   from .helpers import some_function
 
-4. **Write Your View Logic**:
+   # Avoid: Avoid absolute imports
+   from YourApp.YourModule.some_module import SomeClass
+
+   # Accross module imports 
+   from ..module2.models import SomeModel
+
+3. **Define Your View**:
+   - Create the View function or View Class in ``views.py``
    - Inside your view function, implement the logic for your view. This can include tasks like retrieving data from a database, processing user input, or performing calculations.
    - You can use Zelthy's ORM (Object-Relational Mapping) to interact with your application's database if needed.
 
-5. **Return a Response**:
+4. **Return a Response**:
    - Your view function should return an HTTP response that corresponds to the client's request.
    - For API views, you can use Zelthy's `JsonResponse` class to return JSON data.
    - For template views, you can use Zelthy's `render` function to render an HTML template and return it as an HTTP response.

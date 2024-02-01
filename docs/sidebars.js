@@ -39,6 +39,7 @@ const sidebars = {
   ],
   docsSidebar: [
     'documentation/introduction',
+    'documentation/platform-architecture',
     {
       type: 'category',
       label: 'Getting Started',
@@ -47,23 +48,27 @@ const sidebars = {
       },
       collapsed: true,
       items: [
-        'documentation/getting-started/installing-zosp',
-        'documentation/getting-started/zelthy3-the-zelthy-cli',
-        'documentation/getting-started/prerequisites-for-a-project',
-        'documentation/getting-started/setting-up-the-project',
-        'documentation/getting-started/running-development-server',
-        'documentation/getting-started/accessing-z-dynamic',
+        {
+          type: 'category',
+          label: 'Installing Zelthy',
+          collapsed: true,
+          items: [
+            'documentation/getting-started/installing-zelthy/manual',
+            'documentation/getting-started/installing-zelthy/docker',
+          ],
+        },
+        'documentation/getting-started/accessing-app-panel',
       ],
     },
     {
       type: 'category',
-      label: 'Spinning up an app',
+      label: 'Building your first App',
       link: {
         type: 'generated-index',
       },
       collapsed: true,
       items: [
-        'documentation/spinning-up-an-app/creating-an-app',
+        'documentation/spinning-up-an-app/launch-the-app',
         'documentation/spinning-up-an-app/intializing-app-codebase',
         'documentation/spinning-up-an-app/switching-to-app-view',
         'documentation/spinning-up-an-app/updating-app-settings',
@@ -115,45 +120,6 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Views and Routes',
-      link: {
-        type: 'doc',
-        id: 'documentation/views-and-routes/overview',
-      },
-      collapsed: true,
-      items: [
-        'documentation/views-and-routes/types-of-views',
-        'documentation/views-and-routes/creating-a-view',
-        'documentation/views-and-routes/assigning-route-to-a-view',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Templates',
-      link: {
-        type: 'doc',
-        id: 'documentation/templates/overview',
-      },
-      collapsed: true,
-      items: [
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Dynamic Data Models',
-      link: {
-        type: 'doc',
-        id: 'documentation/ddms/overview',
-      },
-      collapsed: true,
-      items: [
-        'documentation/ddms/creating-a-ddm',
-        'documentation/ddms/ddm-field-types',
-        'documentation/ddms/migrating-ddms',
-      ],
-    },
-    {
-      type: 'category',
       label: 'Permission Framework',
       link: {
         type: 'doc',
@@ -161,21 +127,21 @@ const sidebars = {
       },
       collapsed: true,
       items: [
-        {
-          type: 'category',
-          label: 'Permissions',
-          link: {
-            type: 'doc',
-            id: 'documentation/permission-framework/permissions/overview',
-          },
-          collapsed: true,
-          items: [
-            'documentation/permission-framework/permissions/creating-permissions',
-            'documentation/permission-framework/permissions/syncing-and-viewing-permissions',
-            'documentation/permission-framework/permissions/using-permissions',
-            'documentation/permission-framework/permissions/custom-permissions',
-          ],
-        },
+        // {
+        //   type: 'category',
+        //   label: 'Permissions',
+        //   link: {
+        //     type: 'doc',
+        //     id: 'documentation/permission-framework/permissions/overview',
+        //   },
+        //   collapsed: true,
+        //   items: [
+        //     'documentation/permission-framework/permissions/creating-permissions',
+        //     'documentation/permission-framework/permissions/syncing-and-viewing-permissions',
+        //     'documentation/permission-framework/permissions/using-permissions',
+        //     'documentation/permission-framework/permissions/custom-permissions',
+        //   ],
+        // },
         {
           type: 'category',
           label: 'Policies',
@@ -207,6 +173,68 @@ const sidebars = {
         'documentation/packages/installing-a-package',
       ],
     },
+    {
+      type: 'category',
+      label: 'Development Workflow',
+      link: {
+        type: 'generated-index',
+      },
+      collapsed: true,
+      items: [
+        {
+          type: 'category',
+            label: 'Fundamentals',
+            link: {
+              type: 'generated-index'
+            },
+            collapsed: true,
+            items: [
+              {
+                type: 'category',
+                label: 'Views and Routes',
+                link: {
+                  type: 'doc',
+                  id: 'documentation/views-and-routes/overview',
+                },
+                collapsed: true,
+                items: [
+                  // 'documentation/views-and-routes/types-of-views',
+                  'documentation/views-and-routes/creating-a-view',
+                  'documentation/views-and-routes/assigning-route-to-a-view',
+                ],
+              },
+              {
+                type: 'category',
+                label: 'Templates',
+                link: {
+                  type: 'doc',
+                  id: 'documentation/templates/overview',
+                },
+                collapsed: true,
+                items: [
+                ],
+              },
+              {
+                type: 'category',
+                label: 'Models',
+                link: {
+                  type: 'doc',
+                  id: 'documentation/ddms/overview',
+                },
+                collapsed: true,
+                items: [
+                  'documentation/ddms/creating-a-ddm',
+                  'documentation/ddms/ddm-field-types',
+                  'documentation/ddms/migrating-ddms',
+                ],
+              }
+            ]
+        }
+      ]
+        
+      
+     
+    }, 
     {
       type: 'category',
       label: 'Async Tasks',
