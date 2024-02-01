@@ -1,0 +1,40 @@
+---
+sidebar_label: Using Permissions
+---
+
+# Using Permissions
+
+Permissions are fundamental elements for controlling access to resources within the Zelthy platform. They're harnessed through policies, enabling a robust access control system. Each type of permission is accompanied by configurable parameters that offer fine-grained control over resource interactions.
+
+## Configurable Parameters in Permission Initialization
+
+When initializing permissions within policies, you have the ability to configure various parameters. These configurations are specified using JSON, allowing you to tailor permissions to align with your specific access requirements.
+
+## Types of Permissions and Their Configurations
+
+### 1. View Permission
+   This type of permission does not involve any additional configuration. It simply enables access to specific URLs.
+
+### 2. Data Model Permission
+   Data Model Permissions offer comprehensive control over data interactions. This permission type provides the tools to create a nuanced and tailored access experience:
+
+   - **Actions:** Define permissible actions for the user on the data. These actions span a spectrum from "View," enabling read-only access, to "Create," "Edit," "Export," and "Delete," offering extensive control over data manipulation.
+
+   - **Attributes:** Specify access to fields within the Data Model. This level of granularity allows you to define exactly which fields users can view and modify. Attributes can be configured in different ways:
+   
+      - `{all: true}`: Grants access to all fields.
+      - `{only: ["Field 1", "Field 2"]}`: Specifies access only to the listed fields.
+      - `{all_except: ["Field 2", "Field 3"]}`: Grants access to all fields except those listed.
+
+   - **Records:** Dictate access to Data Model objects through filtering queries. This powerful feature empowers you to tailor access based on dynamic conditions. Filtering queries can be contextualized with user and Data Model specifics. Examples include `{filter: True}` to allow all records, or `{filter: object.clinic == currentUser.clinic}` to restrict records based on user and clinic affiliation.
+
+By configuring these parameters, you finely control what actions a user can perform, which attributes they can access, and which records they can interact with in the Data Model.
+
+#### Default Behavior of Fine-Grained Configurations
+
+If no fine-grained configurations are defined in the policy, it's equivalent to not having permission to the Data Model. Fine-grained settings provide the flexibility to define permissions at a granular level, ensuring users have precisely the access they require.
+
+### <mark>3. User Access Permission</mark>
+The User Access Permission is a foundational permission that allows any user to enter the application. It does not involve any configuration.
+
+By leveraging permissions with tailored configurations, you optimize security, streamline workflows, and align access control with the specific needs of your healthcare applications.
