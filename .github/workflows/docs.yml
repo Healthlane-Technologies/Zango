@@ -34,12 +34,12 @@ jobs:
         with:
           args: --acl public-read
         env:
-          AWS_S3_BUCKET: "zelthystatichosting"
+          AWS_S3_BUCKET: "zelthy3-docs-zelthy3"
           AWS_ACCESS_KEY_ID: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY}}
           AWS_REGION: "ap-south-1"
           SOURCE_DIR: "docs/build/"
-          DEST_DIR: "${{ github.event.repository.name }}/docs"
+          DEST_DIR: ""
 
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
