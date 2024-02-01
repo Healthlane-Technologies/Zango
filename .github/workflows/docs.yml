@@ -39,7 +39,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY}}
           AWS_REGION: "ap-south-1"
           SOURCE_DIR: "docs/build/"
-          DEST_DIR: "/"
+          DEST_DIR: ""
 
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
