@@ -1,0 +1,114 @@
+# Templates
+
+Templates in Zelthy serve the same purpose as they do in Django or other web frameworks. They provide a way to separate the design or presentation layer from the business logic of your application. In Zelthy, you can use templates to generate HTML dynamically based on data and user interactions. Here's what you need to know about working with templates in Zelthy:
+
+## Directory
+
+In Zelthy, template files should be placed inside a folder named "templates" within the module's folder. This structure helps keep your templates organized and accessible to Zelthy's template engine.
+
+```text
+workspaces
+├── YourApp
+│   ├── YourModule
+│       ├── templates
+│            ├── your_template.html
+│   ...
+```
+## Template Syntax and Inheritance
+Zelthy's template syntax closely resembles Django templates, making it familiar for developers acquainted with Django. You can use variables, control structures, and template tags to create dynamic and interactive HTML content. For example:
+
+```html
+<!-- Variable -->
+<p>{{ variable_name }}</p>
+
+<!-- Control Structures -->
+{% for item in items %}
+  <li>{{ item }}</li>
+{% endfor %}
+```
+
+Just like Django, Zelthy supports template inheritance. You can create a base template with the common structure and elements and then extend it in other templates. This facilitates code reuse and helps in maintaining a consistent layout across your application. For instance:
+
+```plaintext
+workspaces
+├── YourApp
+│   ├── YourModule
+│       ├── templates
+│            ├── base_template.html
+│            ├── child_template.html
+│   ...
+```
+
+```html
+<!-- child_template.html -->
+{% extends "base_template.html" %}
+
+{% block title %}Page Title{% endblock %}
+
+{% block content %}
+  <h1>Welcome to the page!</h1>
+{% endblock %}
+```
+
+
+## Rendering
+
+Zelthy uses a template engine to render templates. When a view function or class generates a response, it often includes data that needs to be inserted into a template. The template engine takes care of this process.
+
+Example,
+```plaintext
+workspaces
+├── YourApp
+│   ├── YourModule
+│       ├── templates
+│            ├── sample_template.html
+│       ├── views.py
+...
+```
+
+#### sample_template.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zelthy Sample Template View</title>
+</head>
+<body>
+    <h1>List of Items</h1>
+    <ul>
+        {% for item in items %}
+            <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+```
+
+#### views.py 
+```python
+
+from django.views.generic import TemplateView
+
+class SampleTemplateView(TemplateView):
+    template_name = 'sample_template.html'
+
+    def get_context_data(self, **kwargs):
+        # Sample data to be passed to the template
+        items = ["Item 1", "Item 2", "Item 3", "Item 4"]
+        context = super().get_context_data(**kwargs)
+        context['items'] = items
+        return context
+```
+
+## Static Files
+
+Static files like CSS stylesheets, JavaScript files, and images can be served in Zelthy using the `{% zstatic %}` template tag. You'll need to configure your project to handle static files properly.
+
+```html
+{% load zstatic %}
+<link rel="stylesheet" type="text/css" href="{% zstatic 'styles.css' %}">
+```
+
+In summary, templates in Zelthy follow the same principles as other web frameworks like Django. They provide a way to separate your application's logic from its presentation, making your code more maintainable and scalable. By using template tags, filters, and template inheritance, you can create dynamic and visually appealing web pages in your Zelthy applications.
