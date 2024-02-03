@@ -9,7 +9,7 @@ from zelthy.core.api import (
     ZelthyGenericPlatformAPIView,
 )
 from zelthy.apps.shared.tenancy.models import TenantModel, ThemesModel
-from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
+from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT, DATEFORMAT
 from zelthy.apps.appauth.models import UserRoleModel, AppUserModel
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.core.common_utils import set_app_schema_path
@@ -101,6 +101,7 @@ class AppDetailViewAPIV1(ZelthyGenericPlatformAPIView):
         options["datetime_formats"] = [
             {"id": d[0], "label": d[1]} for d in DATETIMEFORMAT
         ]
+        options["date_formats"] = [{"id": d[0], "label": d[1]} for d in DATEFORMAT]
         return options
 
     def get(self, request, *args, **kwargs):
