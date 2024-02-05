@@ -1,4 +1,7 @@
+import pytz
+
 from django.conf import settings
+from django.utils import timezone
 from django.core.exceptions import DisallowedHost
 from django.db import connection
 from django.http import Http404
@@ -100,3 +103,39 @@ class ZelthyTenantMainMiddleware(TenantMainMiddleware):
             if (hasattr(settings, 'PUBLIC_SCHEMA_URLCONF') and
                     (force_public or request.tenant.schema_name == get_public_schema_name())):
                 request.urlconf = settings.PUBLIC_SCHEMA_URLCONF
+
+class TimezoneMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        try:
+            tzname = request.tenant.timezone
+            timezone.activate(pytz.timezone(tzname))
+            australian_timezones = ['Australia/ACT', 'Australia/Adelaide', 'Australia/Brisbane',
+                                    'Australia/Broken_Hill', 'Australia/Canberra', 'Australia/Currie',
+                                    'Australia/Darwin', 'Australia/Eucla', 'Australia/Hobart',
+                                    'Australia/LHI', 'Australia/Lindeman', 'Australia/Lord_Howe',
+                                    'Australia/Melbourne', 'Australia/NSW', 'Australia/North',
+                                    'Australia/Perth', 'Australia/Queensland', 'Australia/South',
+                                    'Australia/Sydney', 'Australia/Tasmania', 'Australia/Victoria',
+                                    'Australia/West', 'Australia/Yancowinna']
+
+            if tzname == 'Asia/Bangkok':    
+                settings.PHONENUMBER_DEFAULT_REGION = 'TH'  
+            elif tzname == 'Asia/Kolkata':  
+                settings.PHONENUMBER_DEFAULT_REGION = 'IN'  
+            elif tzname == 'Asia/Singapore':    
+                settings.PHONENUMBER_DEFAULT_REGION = 'SG'  
+            elif tzname == 'Asia/Taipei':   
+                settings.PHONENUMBER_DEFAULT_REGION = 'TW'  
+            elif tzname == 'Asia/Hong_Kong':    
+                settings.PHONENUMBER_DEFAULT_REGION = 'HK'  
+            elif tzname == 'Asia/Kuala_Lumpur': 
+                settings.PHONENUMBER_DEFAULT_REGION = 'MY'  
+            elif tzname == 'Asia/Ho_Chi_Minh':  
+                settings.PHONENUMBER_DEFAULT_REGION = 'VN'
+            elif tzname in australian_timezones:
+                settings.PHONENUMBER_DEFAULT_REGION = 'AU'
+            elif tzname == 'Pacific/Auckland':
+                settings.PHONENUMBER_DEFAULT_REGION = 'NZ'
+                
+        except:
+            timezone.deactivate()
