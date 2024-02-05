@@ -2,6 +2,9 @@ from importlib import import_module
 import pytz
 import json
 
+from django.conf import settings
+
+
 def get_current_request():
     from ..middleware.request import _request_local
 
@@ -36,18 +39,26 @@ def get_package_url(request, path, package_name):
 
 def get_current_request_url(request, domain=None):
     # Determine the protocol (HTTP or HTTPS) based on the request's is_secure() method.
-    protocol = "https" if request.is_secure() else "http"
+    if settings.ENV == "dev":
+        protocol = "https" if request.is_secure() else "http"
+    else:
+        protocol = "https"
 
     # Get the hostname (domain) from the request.
     if not domain:
         domain = request.get_host()
 
     # Get the port from the request. Use the standard ports (80 for HTTP, 443 for HTTPS) as default.
-    port = request.META.get("SERVER_PORT", "")
-    if (protocol == "http" and port == "80") or (protocol == "https" and port == "443"):
-        port_string = ""
+    if settings.ENV == "dev":
+        port = request.META.get("SERVER_PORT", "")
+        if (protocol == "http" and port == "80") or (
+            protocol == "https" and port == "443"
+        ):
+            port_string = ""
+        else:
+            port_string = f":{port}"
     else:
-        port_string = f":{port}"
+        port_string = ""
 
     # Construct and return the complete URL.
     current_url = f"{protocol}://{domain}{port_string}"
