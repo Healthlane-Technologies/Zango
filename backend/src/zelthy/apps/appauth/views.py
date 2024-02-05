@@ -87,4 +87,6 @@ class AppLogoutView(View):
         logout_uri = reverse("app-login-view")
         meta = request.META["HTTP_HOST"]
         logout_url = self.add_protocol(request, meta + logout_uri)
+        if request.GET.get('redirect_url'):
+            logout_url = request.GET.get('redirect_url')
         return redirect(logout_url)
