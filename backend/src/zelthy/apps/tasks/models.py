@@ -1,3 +1,5 @@
+import json
+
 from django.db import models
 from django_celery_beat.models import CrontabSchedule, IntervalSchedule
 from django_celery_beat.models import PeriodicTask
@@ -68,7 +70,7 @@ class AppTask(FullAuditMixin):
             obj.crontab = self.crontab
             # obj.solar = self.solar
             obj.args = self.args
-            obj.kwargs = self.kwargs
+            obj.kwargs = json.dumps(self.kwargs)
             # obj.expires = self.expires
             obj.enabled = self.is_enabled
             # obj.date_changed = self.date_changed
