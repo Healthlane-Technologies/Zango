@@ -1,24 +1,51 @@
-version: '3.8'
+version: "3.8"
 
 services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      SERVER: ${SERVER}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PROJECT_NAME: ${PROJECT_NAME}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      PLATFORM_USERNAME: ${PLATFORM_USERNAME}
+      PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
+      PACKAGE_REPO_AWS_SECRET_ACCESS_KEY: ${PACKAGE_REPO_AWS_SECRET_ACCESS_KEY}
+      PACKAGE_REPO_AWS_ACCESS_KEY_ID: ${PACKAGE_REPO_AWS_ACCESS_KEY_ID}
+      ENV: "dev"
+    volumes:
+      - .:/zelthy/
 
- app:
-   build:
-     context: .
-   ports:
-     - "8000:8000"
-   environment:
-     SERVER: ${SERVER}
-     POSTGRES_USER: ${POSTGRES_USER}
-     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-     POSTGRES_DB: ${POSTGRES_DB}
-     PROJECT_NAME: ${PROJECT_NAME}
-     POSTGRES_HOST: ${POSTGRES_HOST}
-     POSTGRES_PORT: ${POSTGRES_PORT}
-     PLATFORM_USERNAME: ${PLATFORM_USERNAME}
-     PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
-     PACKAGE_REPO_AWS_SECRET_ACCESS_KEY: ${PACKAGE_REPO_AWS_SECRET_ACCESS_KEY}
-     PACKAGE_REPO_AWS_ACCESS_KEY_ID: ${PACKAGE_REPO_AWS_ACCESS_KEY_ID}
-     ENV: "dev"
-   volumes:
-     - .:/zelthy/
+  celery:
+    image: zelthy3
+    command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
+    volumes:
+      - .:/zelthy/
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+    depends_on:
+      - app
+      - redis
+      - celery_beat
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+  celery_beat:
+    image: zelthy3
+    command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - .:/zelthy/
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+    depends_on:
+      - app
+      - redis

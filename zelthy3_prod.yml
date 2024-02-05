@@ -1,63 +1,91 @@
-version: '3.8'
-
+version: "3.8"
 services:
- postgres:
-   image: postgres
-   environment:
-     POSTGRES_USER: ${POSTGRES_USER}
-     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-     POSTGRES_DB: ${POSTGRES_DB}
-     POSTGRES_PORT: ${POSTGRES_PORT}
-     PROJECT_NAME: ${PROJECT_NAME}
-   ports:
-     - "5432:5432"
-   healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_PORT}"]
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_PORT: "${POSTGRES_PORT}"
+      PROJECT_NAME: "${PROJECT_NAME}"
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_PORT}"
       interval: 5s
       timeout: 5s
       retries: 5
-   volumes: 
-     - prod_db:/var/lib/postgresql/data
-
- app:
-   build:
-     context: .
-     dockerfile: prod.dockerfile
-     args:
-       - PROJECT_NAME=${PROJECT_NAME}
-   ports:
-     - "8000:8000"
-   depends_on:
-     postgres:
-       condition: service_healthy
-   environment:
-     SERVER: gunicorn
-     POSTGRES_USER: ${POSTGRES_USER}
-     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-     POSTGRES_DB: ${POSTGRES_DB}
-     POSTGRES_HOST: ${POSTGRES_HOST}
-     POSTGRES_PORT: ${POSTGRES_PORT}
-     PROJECT_NAME: ${PROJECT_NAME}
-     PLATFORM_USERNAME: ${PLATFORM_USERNAME}
-     PLATFORM_USER_PASSWORD: ${PLATFORM_USER_PASSWORD}
-     PACKAGE_REPO_AWS_SECRET_ACCESS_KEY: ${PACKAGE_REPO_AWS_SECRET_ACCESS_KEY}
-     PACKAGE_REPO_AWS_ACCESS_KEY_ID: ${PACKAGE_REPO_AWS_ACCESS_KEY_ID}
-     ENV: prod
-   volumes:
-     - .:/zelthy/
-  
- nginx:
-   build:
-     context: .
-     dockerfile: config/Dockerfile
-   ports:
-    - "1443:1443"
-   depends_on:
-     - app
-   environment:
-     - PROJECT_NAME=${PROJECT_NAME}
-  #  volumes:
-  #    - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
-
+    volumes:
+      - "prod_db:/var/lib/postgresql/data"
+  app:
+    build:
+      context: .
+      dockerfile: prod.dockerfile
+      args:
+        - "PROJECT_NAME=${PROJECT_NAME}"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER: gunicorn
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_HOST: "${POSTGRES_HOST}"
+      POSTGRES_PORT: "${POSTGRES_PORT}"
+      PROJECT_NAME: "${PROJECT_NAME}"
+      PLATFORM_USERNAME: "${PLATFORM_USERNAME}"
+      PLATFORM_USER_PASSWORD: "${PLATFORM_USER_PASSWORD}"
+      PACKAGE_REPO_AWS_SECRET_ACCESS_KEY: "${PACKAGE_REPO_AWS_SECRET_ACCESS_KEY}"
+      PACKAGE_REPO_AWS_ACCESS_KEY_ID: "${PACKAGE_REPO_AWS_ACCESS_KEY_ID}"
+      REDIS_HOST: ${REDIS_HOST}
+      ENV: prod
+    volumes:
+      - ".:/zelthy/"
+  nginx:
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    ports:
+      - "1443:1443"
+    depends_on:
+      - app
+    environment:
+      - "PROJECT_NAME=${PROJECT_NAME}"
+    volumes:
+      - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
+  celery:
+    image: zelthy3
+    command: >-
+      /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l
+      info"
+    volumes:
+      - ".:/zelthy/"
+    environment:
+      - "PROJECT_NAME=${PROJECT_NAME}"
+    depends_on:
+      - app
+      - redis
+      - celery_beat
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+  celery_beat:
+    image: zelthy3
+    command: >-
+      /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - ".:/zelthy/"
+    environment:
+      - "PROJECT_NAME=${PROJECT_NAME}"
+    depends_on:
+      - app
+      - redis
 volumes:
-  prod_db:
+  prod_db: null
