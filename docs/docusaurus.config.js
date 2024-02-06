@@ -82,12 +82,17 @@ const config = {
             label: "Docs",
           },
           {
-            type: "docSidebar",
-            sidebarId: "tutorialSidebar",
+            to: "/packages",
+            label: "Packages", 
             position: "left",
-            label: "Tutorial",
+            type: "dropdown",
+            items: [
+                {
+                  label: "Crud",
+                  to: "/crud"
+                }
+              ]
           },
-          { to: "/blog", label: "Blog", position: "left" },
           {
             href: "https://github.com/Healthlane-Technologies/zelthy3",
             position: "right",
@@ -114,10 +119,6 @@ const config = {
           {
             title: "Others",
             items: [
-              {
-                label: "Blogs",
-                to: "/blog",
-              },
             ],
           },
           // {
