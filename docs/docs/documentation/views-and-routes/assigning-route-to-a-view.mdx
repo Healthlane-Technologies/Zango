@@ -1,0 +1,54 @@
+---
+sidebar_label: Assigning Route to a View
+---
+
+# Assigning Route to a View
+
+In Zelthy, routing is essential for directing incoming HTTP requests to the appropriate view functions. Routing is typically managed using URL patterns defined in the `urls.py` file within your module. Below, we'll outline the steps to assign a route to a view in Zelthy:
+
+```text
+      workspaces
+      ├── YourApp
+      │   ├── YourModule
+      │       ├── views.py
+      │       ├── urls.py
+      │     
+      │   ...
+   ```
+
+#### 1. Open the `urls.py` File:
+   - Navigate to the `urls.py` file within your module folder. If it doesn't exist, you can create it.
+
+#### 2. Import Dependencies:
+   - At the beginning of your `urls.py` file, import any necessary dependencies. You will often need to import Django's `path` or `re_path` function for creating URL patterns.
+
+#### 3. Define a URL Pattern:
+   - Use Django's `path` or ``re_path`` function to define a URL pattern that maps a specific URL to your view function.
+   - The `path` function takes two arguments: the URL pattern as a string and the view function that should handle requests to this URL.
+
+   ```python
+   from django.urls import path
+   from .views import YourView  # Import your view
+
+   urlpatterns = [
+       path('my-route/', YourView),  # Define the URL pattern and associate it with your view
+   ]
+   ```
+
+   In this example, visiting the `/<module_route_path>/my-route/` URL will trigger the `YourView`.
+
+   ``<module_route_path>`` is the route path registered for the module as mentioned in [Registering a Module](../modules/registering-a-module) section.
+
+#### 4. Specify the URL Pattern:
+   - The `urlpatterns` list should contain all the URL patterns for your module.
+   - Ensure that the `urlpatterns` list is properly configured with all the routes you want to associate with views.
+
+#### 5. Test the Route:
+   - Before deploying your Zelthy application, it's crucial to test the defined route locally.
+   - Run Zelthy's development server and access the URL associated with your route to ensure that the correct view is invoked.
+
+#### 6. Additional Routing Configuration:
+   - Zelthy's routing system is versatile and allows for more advanced configurations, such as including URL parameters and handling different HTTP methods (GET, POST, etc.).
+   - You can use regular expressions and URL converters for more complex routing requirements. [Refer to this](https://docs.djangoproject.com/en/4.2/ref/urls/#re-path)
+
+By following these steps, you can assign a route to your view in Zelthy. Properly configured routes are essential for ensuring that incoming requests are directed to the appropriate view functions, allowing your application to respond effectively to user interactions.
