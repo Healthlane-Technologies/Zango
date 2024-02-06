@@ -13,30 +13,6 @@
 
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
-  tutorialSidebar: [
-    {
-      type: 'category',
-      label: 'Simple Todo App',
-      link: {
-        type: 'doc',
-        id: 'tutorials/todo-app/overview',
-      },
-      collapsed: false,
-      items: [
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Complex App',
-      link: {
-        type: 'doc',
-        id: 'tutorials/complex-app/overview',
-      },
-      collapsed: false,
-      items: [
-      ],
-    },
-  ],
   docsSidebar: [
     'documentation/introduction',
     'documentation/platform-architecture',
