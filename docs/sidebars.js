@@ -221,6 +221,9 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/async-tasks/creating-an-async-task',
+        'documentation/async-tasks/syncing-and-viewing-async-tasks',
+        'documentation/async-tasks/manually-triggering-async-tasks',
+        'documentation/async-tasks/scheduling-async-tasks',
       ],
     },
     {
