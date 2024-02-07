@@ -1,0 +1,30 @@
+---
+sidebar_label: Manually Triggering Async Tasks
+---
+
+# Manually triggering Async Tasks
+
+Async tasks in Zelthy can be manually triggered from any part of your application's codebase. This provides flexibility in managing and executing tasks asynchronously as needed. Below are the steps to manually trigger an async task:
+
+- **Import the Task Executor**: 
+   Import the `zelthy_task_executor` function from the `zelthy.core.tasks` module. This function is responsible for executing the async task.
+
+   ```python
+   from zelthy.core.tasks import zelthy_task_executor
+   ```
+
+- **Call the Task Executor Function**: 
+   Call the `zelthy_task_executor.delay()` function and pass the required parameters. This function takes various arguments to specify the task to be executed and its parameters.
+
+   ```python
+   zelthy_task_executor.delay(
+       request.tenant.name, 
+       "triggers.tasks.send_communication",
+       // optional function parameters kwargs
+   )
+   ```
+
+   - `request.tenant.name`: The name of the tenant associated with the task.
+   - `"triggers.tasks.send_communication"`: The path to the async task function to be executed.
+
+By following these steps and providing the necessary parameters, you can manually trigger async tasks within your Zelthy application, enabling efficient and asynchronous processing of various operations.
