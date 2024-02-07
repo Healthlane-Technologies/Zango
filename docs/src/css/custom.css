@@ -75,8 +75,6 @@ body[data-theme="dark"] {
     no-repeat;
 }
 
-img {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 5px;
+.img_node_modules-\@docusaurus-theme-classic-lib-theme-MDXComponents-Img-styles-module {
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
 }
