@@ -83,19 +83,6 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Modules',
-      link: {
-        type: 'doc',
-        id: 'documentation/modules/overview',
-      },
-      collapsed: true,
-      items: [
-        'documentation/modules/creating-a-module',
-        'documentation/modules/registering-a-module',
-      ],
-    },
-    {
-      type: 'category',
       label: 'Permission Framework',
       link: {
         type: 'doc',
@@ -159,57 +146,57 @@ const sidebars = {
       items: [
         {
           type: 'category',
-            label: 'Fundamentals',
-            link: {
-              type: 'generated-index'
-            },
-            collapsed: true,
-            items: [
-              {
-                type: 'category',
-                label: 'Views and Routes',
-                link: {
-                  type: 'doc',
-                  id: 'documentation/views-and-routes/overview',
-                },
-                collapsed: true,
-                items: [
-                  // 'documentation/views-and-routes/types-of-views',
-                  'documentation/views-and-routes/creating-a-view',
-                  'documentation/views-and-routes/assigning-route-to-a-view',
-                ],
-              },
-              {
-                type: 'category',
-                label: 'Templates',
-                link: {
-                  type: 'doc',
-                  id: 'documentation/templates/overview',
-                },
-                collapsed: true,
-                items: [
-                ],
-              },
-              {
-                type: 'category',
-                label: 'Models',
-                link: {
-                  type: 'doc',
-                  id: 'documentation/ddms/overview',
-                },
-                collapsed: true,
-                items: [
-                  'documentation/ddms/creating-a-ddm',
-                  'documentation/ddms/ddm-field-types',
-                  'documentation/ddms/migrating-ddms',
-                ],
-              }
-            ]
-        }
+          label: 'Modules',
+          link: {
+            type: 'doc',
+            id: 'documentation/modules/overview',
+          },
+          collapsed: true,
+          items: [
+            'documentation/modules/creating-a-module',
+            'documentation/modules/registering-a-module',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Views and Routes',
+          link: {
+            type: 'doc',
+            id: 'documentation/views-and-routes/overview',
+          },
+          collapsed: true,
+          items: [
+            // 'documentation/views-and-routes/types-of-views',
+            'documentation/views-and-routes/creating-a-view',
+            'documentation/views-and-routes/assigning-route-to-a-view',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Templates',
+          link: {
+            type: 'doc',
+            id: 'documentation/templates/overview',
+          },
+          collapsed: true,
+          items: [
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Models',
+          link: {
+            type: 'doc',
+            id: 'documentation/ddms/overview',
+          },
+          collapsed: true,
+          items: [
+            'documentation/ddms/creating-a-ddm',
+            'documentation/ddms/ddm-field-types',
+            'documentation/ddms/migrating-ddms',
+          ],
+        },
       ]
-        
-      
-     
     }, 
     {
       type: 'category',
@@ -226,28 +213,28 @@ const sidebars = {
         'documentation/async-tasks/scheduling-async-tasks',
       ],
     },
-    {
-      type: 'category',
-      label: 'Events',
-      link: {
-        type: 'doc',
-        id: 'documentation/events/overview',
-      },
-      collapsed: true,
-      items: [
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Static and Media',
-      link: {
-        type: 'doc',
-        id: 'documentation/static-and-media/overview',
-      },
-      collapsed: true,
-      items: [
-      ],
-    },
+    // {
+    //   type: 'category',
+    //   label: 'Events',
+    //   link: {
+    //     type: 'doc',
+    //     id: 'documentation/events/overview',
+    //   },
+    //   collapsed: true,
+    //   items: [
+    //   ],
+    // },
+    // {
+    //   type: 'category',
+    //   label: 'Static and Media',
+    //   link: {
+    //     type: 'doc',
+    //     id: 'documentation/static-and-media/overview',
+    //   },
+    //   collapsed: true,
+    //   items: [
+    //   ],
+    // },
     {
       type: 'category',
       label: 'Deployment',
