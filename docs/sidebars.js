@@ -77,7 +77,7 @@ const sidebars = {
       items: [
         'documentation/user-management/viewing-users',
         'documentation/user-management/adding-users',
-        'documentation/user-management/assigning-policies-to-users',
+        // 'documentation/user-management/assigning-policies-to-users',
         'documentation/user-management/updating-user-roles',
       ],
     },
@@ -119,7 +119,7 @@ const sidebars = {
             'documentation/permission-framework/policies/policy-config-json',
             'documentation/permission-framework/policies/assigning-policies',
             'documentation/permission-framework/policies/editing-policy-config',
-            'documentation/permission-framework/policies/archiving-a-policy',
+            // 'documentation/permission-framework/policies/archiving-a-policy',
           ],
         },
       ],

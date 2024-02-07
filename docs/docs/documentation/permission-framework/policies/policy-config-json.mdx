@@ -30,23 +30,23 @@ View Type Permissions grant access to specific views in your application, enabli
         "name": "<module_name>.<view_file_path>.<view_classname>",
     }
 - Example JSON:
-```json
-{
-    "permissions": [
-        {
-            "type": "view",
-            "name": "patient.views.PatientCrudView"
-        },
-        {
-            "type": "view",
-            "name": "doctor.views.DoctorCrudView"
+    ```json
+    {
+        "permissions": [
+            {
+                "type": "view",
+                "name": "patient.views.PatientCrudView"
+            },
+            {
+                "type": "view",
+                "name": "doctor.views.DoctorCrudView"
+            }
+        ],
+        "configurations": {
+            "expiry": "26/12/23",
         }
-    ],
-    "configurations": {
-        "expiry": "26/12/23",
     }
-}
-```
+    ```
 
 ### User Access Type Permission
 
@@ -55,17 +55,17 @@ User Access Type Permissions regulate application access at the user level, ensu
 - These permissions manage user access settings, such as allowed access times and IP addresses.
 - In the Policy Config JSON, you need to specify fields like type and accessIP (in CIDR Notation).
 - Example JSON:
-```json
-{
-    permissions: [
+    ```json
     {
-        "type": "userAccess",
-        "accessIP": "0.0.0.0/32"
-    }],
-    configurations: {
-        expiry: "26/12/23"
+        permissions: [
+        {
+            "type": "userAccess",
+            "accessIP": "0.0.0.0/32"
+        }],
+        configurations: {
+            expiry: "26/12/23"
+        }
     }
-}
-```
+    ```
 
 By mastering the Policy Config JSON and understanding the specifics of different permission types, you lay the foundation for a flexible and robust access control framework that seamlessly aligns with your application's unique requirements.
