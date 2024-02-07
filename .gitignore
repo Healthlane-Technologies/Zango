@@ -130,3 +130,5 @@ package-lock.json
 *-workspacebin/
 
 **/plugins/
+
+.docusaurus
