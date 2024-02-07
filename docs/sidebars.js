@@ -77,21 +77,8 @@ const sidebars = {
       items: [
         'documentation/user-management/viewing-users',
         'documentation/user-management/adding-users',
-        'documentation/user-management/assigning-policies-to-users',
+        // 'documentation/user-management/assigning-policies-to-users',
         'documentation/user-management/updating-user-roles',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Modules',
-      link: {
-        type: 'doc',
-        id: 'documentation/modules/overview',
-      },
-      collapsed: true,
-      items: [
-        'documentation/modules/creating-a-module',
-        'documentation/modules/registering-a-module',
       ],
     },
     {
@@ -132,7 +119,7 @@ const sidebars = {
             'documentation/permission-framework/policies/policy-config-json',
             'documentation/permission-framework/policies/assigning-policies',
             'documentation/permission-framework/policies/editing-policy-config',
-            'documentation/permission-framework/policies/archiving-a-policy',
+            // 'documentation/permission-framework/policies/archiving-a-policy',
           ],
         },
       ],
@@ -159,57 +146,57 @@ const sidebars = {
       items: [
         {
           type: 'category',
-            label: 'Fundamentals',
-            link: {
-              type: 'generated-index'
-            },
-            collapsed: true,
-            items: [
-              {
-                type: 'category',
-                label: 'Views and Routes',
-                link: {
-                  type: 'doc',
-                  id: 'documentation/views-and-routes/overview',
-                },
-                collapsed: true,
-                items: [
-                  // 'documentation/views-and-routes/types-of-views',
-                  'documentation/views-and-routes/creating-a-view',
-                  'documentation/views-and-routes/assigning-route-to-a-view',
-                ],
-              },
-              {
-                type: 'category',
-                label: 'Templates',
-                link: {
-                  type: 'doc',
-                  id: 'documentation/templates/overview',
-                },
-                collapsed: true,
-                items: [
-                ],
-              },
-              {
-                type: 'category',
-                label: 'Models',
-                link: {
-                  type: 'doc',
-                  id: 'documentation/ddms/overview',
-                },
-                collapsed: true,
-                items: [
-                  'documentation/ddms/creating-a-ddm',
-                  'documentation/ddms/ddm-field-types',
-                  'documentation/ddms/migrating-ddms',
-                ],
-              }
-            ]
-        }
+          label: 'Modules',
+          link: {
+            type: 'doc',
+            id: 'documentation/modules/overview',
+          },
+          collapsed: true,
+          items: [
+            'documentation/modules/creating-a-module',
+            'documentation/modules/registering-a-module',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Views and Routes',
+          link: {
+            type: 'doc',
+            id: 'documentation/views-and-routes/overview',
+          },
+          collapsed: true,
+          items: [
+            // 'documentation/views-and-routes/types-of-views',
+            'documentation/views-and-routes/creating-a-view',
+            'documentation/views-and-routes/assigning-route-to-a-view',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Templates',
+          link: {
+            type: 'doc',
+            id: 'documentation/templates/overview',
+          },
+          collapsed: true,
+          items: [
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Models',
+          link: {
+            type: 'doc',
+            id: 'documentation/ddms/overview',
+          },
+          collapsed: true,
+          items: [
+            'documentation/ddms/creating-a-ddm',
+            'documentation/ddms/ddm-field-types',
+            'documentation/ddms/migrating-ddms',
+          ],
+        },
       ]
-        
-      
-     
     }, 
     {
       type: 'category',
@@ -221,30 +208,33 @@ const sidebars = {
       collapsed: true,
       items: [
         'documentation/async-tasks/creating-an-async-task',
+        'documentation/async-tasks/syncing-and-viewing-async-tasks',
+        'documentation/async-tasks/manually-triggering-async-tasks',
+        'documentation/async-tasks/scheduling-async-tasks',
       ],
     },
-    {
-      type: 'category',
-      label: 'Events',
-      link: {
-        type: 'doc',
-        id: 'documentation/events/overview',
-      },
-      collapsed: true,
-      items: [
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Static and Media',
-      link: {
-        type: 'doc',
-        id: 'documentation/static-and-media/overview',
-      },
-      collapsed: true,
-      items: [
-      ],
-    },
+    // {
+    //   type: 'category',
+    //   label: 'Events',
+    //   link: {
+    //     type: 'doc',
+    //     id: 'documentation/events/overview',
+    //   },
+    //   collapsed: true,
+    //   items: [
+    //   ],
+    // },
+    // {
+    //   type: 'category',
+    //   label: 'Static and Media',
+    //   link: {
+    //     type: 'doc',
+    //     id: 'documentation/static-and-media/overview',
+    //   },
+    //   collapsed: true,
+    //   items: [
+    //   ],
+    // },
     {
       type: 'category',
       label: 'Deployment',
