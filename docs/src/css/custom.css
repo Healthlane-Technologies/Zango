@@ -75,6 +75,15 @@ body[data-theme="dark"] {
     no-repeat;
 }
 
-.img_node_modules-\@docusaurus-theme-classic-lib-theme-MDXComponents-Img-styles-module {
+.markdown img {
   box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+}
+
+.medium-zoom-image--opened {
+  z-index: 999;
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+}
+
+.medium-zoom--opened .medium-zoom-overlay {
+  z-index: 998;
 }
