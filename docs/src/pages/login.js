@@ -8,8 +8,8 @@ export default function Home() {
 
   return (
     <Layout
-      title={`Zelthy for Devs`}
-      description="Zelthy for Devs">
+      title={`Login Package`}
+      description="Login Package">
       <main>
       <iframe
         style={{height: '100vh'}}
