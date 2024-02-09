@@ -83,7 +83,6 @@ const config = {
             label: "Docs",
           },
           {
-            to: "/packages",
             label: "Packages", 
             position: "left",
             type: "dropdown",
