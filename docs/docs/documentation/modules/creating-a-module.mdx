@@ -1,0 +1,47 @@
+---
+sidebar_label: Creating a Module
+---
+
+# Creating a Module
+
+In the Zelthy healthcare app development platform, modules are essential for organizing your application's features and functionalities. Creating a module involves several steps to set up the structure and logic for a specific aspect of your app. Here's a step-by-step guide on how to create a module:
+
+#### 1. Create a Module Folder
+
+1. Start by navigating to your app's directory within your project. Each module is typically located within the app it belongs to.
+
+2. Create a new folder with the name of your module. This folder will serve as the container for all the components related to this module.
+
+   ```
+   ├── YourApp
+       ├── YourModule  <-- Create this folder
+   ```
+
+#### 2. Create a `views.py` File
+
+1. Inside the module folder you just created, create a file named `views.py`. This file will house all the view functions and logic needed for this module.
+
+   ```
+   ├── YourApp
+       ├── YourModule
+           ├── views.py  <-- Create this file
+   ```
+
+   You will define your views, API endpoints, and related logic within this `views.py` file.
+
+#### 3. Create a `urls.py` File
+
+1. In the same module folder, create a file named `urls.py`. This file will be used to define URL mappings and routes for the views within this module.
+
+   ```
+   ├── YourApp
+       ├── YourModule
+           ├── views.py
+           ├── urls.py  <-- Create this file
+   ```
+
+   In the `urls.py` file, you'll specify the URLs that should trigger specific views and actions within your module.
+
+With these three steps completed, your module is now created and set up for you to start writing the code logic specific to this module. You can define views, APIs, templates, and other components necessary to implement the functionality you require within your healthcare app.
+
+Modules provide a structured and organized way to develop and maintain different parts of your application, making it easier to manage and scale your healthcare app as it evolves.

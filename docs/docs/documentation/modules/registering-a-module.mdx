@@ -1,0 +1,96 @@
+---
+sidebar_label: Registering a Module
+---
+
+# Registering a Module
+
+In the Zelthy healthcare app development platform, registering a module is crucial to make your app recognize and utilize the components and routes within that module. This process involves two main steps: registering the module path and registering the module routes. Below, we'll guide you through these steps:
+
+### Registering the Module Path
+
+1. Open the `settings.json` file located in your app's root folder. This file contains various configurations for your app.
+
+2. Locate the `"modules"` key within the JSON structure. It should have a list of objects, where each object represents a registered module path.
+
+3. To register your module path, add a new object to the list. This object should have the following keys and values:
+
+   - `"name": "<module_name>"`: Replace `<module_name>` with the name you want to assign to your module. This name will be used to reference the module in other parts of the codebase.
+
+   - `"path": "<module_path>"`: Replace `<module_path>` with the path to your module folder relative to the location of the `settings.json` file.
+
+```json
+{
+   "modules": [
+      {
+         "name": "<module_name>",
+         "path": "<module_path>"
+      }
+   ]
+}
+```
+
+
+Your module is now registered with the app, allowing it to recognize the module's location within the project.
+
+### Registering the Module Routes
+
+1. In the same `settings.json` file, locate the `"app_routes"` key. This key should contain a list of objects, where each object represents a registered module route.
+
+2. To register your module's routes, add a new object to the list. This object should have the following keys and values:
+
+   - `"module": "<module_name>"`: Specify the name of the module, which should match the name you assigned in the previous step when registering the module path.
+
+   - `"re_path": "<module_route>"`: Define the module route that encompasses all the routes inside the module. Replace `<module_route>` with the appropriate route prefix.
+
+   - `"url": "<url_file_name>"`: Provide the name of the URL file located within the module folder. This file will define the specific URL patterns for the module.
+
+```json
+{
+   "app_routes": [
+      {
+         "module": "<module_name>",
+         "re_path": "<module_route>",
+         "url": "<url_file_name>"
+      }
+   ]
+}
+```
+
+#### Sample ``settings.json`` file
+
+```json
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+            "name": "app_landing",
+            "path": "app_landing"
+        },
+        {
+            "name": "customers",
+            "path": "customers"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^",
+            "module": "app_landing",
+            "url": "urls"
+        },
+        {
+            "re_path": "^customers/",
+            "module": "customers",
+            "url": "urls"
+        }
+    ],
+    "package_routes": [
+        {
+            "re_path": "^frame/",
+            "plugin": "frame",
+            "url": "urls"
+        }
+    ]
+}
+```
+
+Once you've completed both steps, your module is successfully registered with the app. The app will now recognize the module's routes, views, and components, allowing you to start building and expanding the functionality of your healthcare app within this module.

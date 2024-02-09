@@ -19,6 +19,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
     datetime_format_display = serializers.SerializerMethodField(
         "get_datetime_format_display"
     )
+    date_format_display = serializers.SerializerMethodField("get_date_format_display")
 
     class Meta:
         model = TenantModel
@@ -33,6 +34,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
     def get_datetime_format_display(self, obj):
         return obj.get_datetime_format_display()
+
+    def get_date_format_display(self, obj):
+        return obj.get_date_format_display()
 
     def update(self, instance, validated_data):
         instance = super(TenantSerializerModel, self).update(instance, validated_data)
