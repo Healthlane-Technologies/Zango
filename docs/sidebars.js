@@ -235,17 +235,17 @@ const sidebars = {
     //   items: [
     //   ],
     // },
-    {
-      type: 'category',
-      label: 'Deployment',
-      link: {
-        type: 'doc',
-        id: 'documentation/deployment/overview',
-      },
-      collapsed: true,
-      items: [
-      ],
-    },
+    // {
+    //   type: 'category',
+    //   label: 'Deployment',
+    //   link: {
+    //     type: 'doc',
+    //     id: 'documentation/deployment/overview',
+    //   },
+    //   collapsed: true,
+    //   items: [
+    //   ],
+    // },
   ],
 };
 

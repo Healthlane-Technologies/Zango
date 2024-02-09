@@ -6,7 +6,7 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: "ZOSP",
+  title: "Zelthy Docs",
   tagline: "Next-Gen HealthCare App Development Platform",
   favicon: "img/favicon.ico",
 
