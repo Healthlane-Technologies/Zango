@@ -34,7 +34,7 @@ jobs:
         with:
           args: --acl public-read
         env:
-          AWS_S3_BUCKET: "zelthy3-docs-zelthy3"
+          AWS_S3_BUCKET: "docs.zelthy.com"
           AWS_ACCESS_KEY_ID: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY_ID}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY}}
           AWS_REGION: "ap-south-1"
