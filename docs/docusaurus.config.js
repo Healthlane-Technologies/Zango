@@ -6,7 +6,7 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: "ZOSP",
+  title: "Zelthy Docs",
   tagline: "Next-Gen HealthCare App Development Platform",
   favicon: "img/favicon.ico",
 
@@ -18,8 +18,8 @@ const config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: "facebook", // Usually your GitHub org/user name.
-  projectName: "docusaurus", // Usually your repo name.
+  organizationName: "zelthy", // Usually your GitHub org/user name.
+  projectName: "zelthy_docs", // Usually your repo name.
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -69,10 +69,11 @@ const config = {
       // Replace with your project's social card
       image: "img/zelthy-social-card.jpg",
       navbar: {
-        title: "Zelthy Platform V3.0",
+        title: "Zelthy Docs",
         logo: {
           alt: "Zelthy Logo",
           src: "img/zelthy_logo.png",
+          href: '/docs/documentation/introduction'
         },
         items: [
           {
@@ -101,34 +102,34 @@ const config = {
                 }
               ]
           },
-          {
-            href: "https://github.com/Healthlane-Technologies/zelthy3",
-            position: "right",
-            className: "header-github-link",
-          },
+          // {
+          //   href: "https://github.com/Healthlane-Technologies/zelthy3",
+          //   position: "right",
+          //   className: "header-github-link",
+          // },
         ],
       },
       footer: {
         style: "dark",
         links: [
-          {
-            title: "Docs",
-            items: [
-              {
-                label: "Documentation",
-                to: "/docs/documentation/introduction",
-              },
-              {
-                label: "Tutorial",
-                to: "/docs/tutorials/todo-app/overview",
-              },
-            ],
-          },
-          {
-            title: "Others",
-            items: [
-            ],
-          },
+          // {
+          //   title: "Docs",
+          //   items: [
+          //     {
+          //       label: "Documentation",
+          //       to: "/docs/documentation/introduction",
+          //     },
+          //     // {
+          //     //   label: "Tutorial",
+          //     //   to: "/docs/tutorials/todo-app/overview",
+          //     // },
+          //   ],
+          // },
+          // {
+          //   title: "Others",
+          //   items: [
+          //   ],
+          // },
           // {
           //   title: 'Community',
           //   items: [
@@ -146,19 +147,19 @@ const config = {
           //     },
           //   ],
           // },
-          {
-            title: "More",
-            items: [
-              {
-                label: "Zelthy",
-                href: "https://zelthy.com",
-              },
-              {
-                label: "GitHub",
-                href: "https://github.com/Healthlane-Technologies/zelthy3",
-              },
-            ],
-          },
+          // {
+          //   title: "More",
+          //   items: [
+          //     {
+          //       label: "Zelthy",
+          //       href: "https://zelthy.com",
+          //     },
+          //     {
+          //       label: "GitHub",
+          //       href: "https://github.com/Healthlane-Technologies/zelthy3",
+          //     },
+          //   ],
+          // },
         ],
         copyright: `Copyright © ${new Date().getFullYear()} Healthlane Technologies Pvt. Ltd.`,
       },

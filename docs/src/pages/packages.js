@@ -8,12 +8,12 @@ export default function Home() {
 
   return (
     <Layout
-      title={`Zelthy for Devs`}
-      description="Zelthy for Devs">
+      title={`Packages`}
+      description="Packages">
       <main>
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      {/* <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <img src={ZelthyLandingPageBgImg} />
-      </div>
+      </div> */}
       </main>
     </Layout>
   )

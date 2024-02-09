@@ -20,7 +20,7 @@ cd backend
 pip install -e .
 ```
 
-This command will download and install the latest version of ZOSP along with its dependencies.
+This command will download and install the latest version of Zelthy Framework along with its dependencies.
 
 ## zelthy3: The Zelthy CLI
 
