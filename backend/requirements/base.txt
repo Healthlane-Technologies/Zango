@@ -24,3 +24,4 @@ django-celery-beat==2.5.0
 django-smtp-ssl==1.0
 PyJWT==2.8.0
 XlsxWriter==3.1.9
+pydub==0.25.1
