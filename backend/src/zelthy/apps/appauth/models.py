@@ -102,9 +102,16 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         return False
 
     def add_roles(self, role_ids):
-        self.roles.clear()
         roles = UserRoleModel.objects.filter(id__in=role_ids)
-        self.roles.add(*roles)
+        for role in roles:
+            user_role, _ = AppUserRoleModel.objects.get_or_create(user = self, role=role)
+            user_role.is_active = True
+            user_role.save()
+
+    def remove_roles(self, role_ids):
+        roles = UserRoleModel.objects.filter(id__in=role_ids)
+        for role in roles:
+            AppUserRoleModel.objects.filter(user=self, role=role).delete()
 
     def check_password_validity(self, password):
         """
@@ -263,6 +270,59 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             return False
         return True
 
+    def _get_user_role(self, role_name):
+        if role_name:
+            return AppUserModel.objects.filter(user=self, role__name=role_name).last()
+        return
+
+    def activate(self, role_name=None):
+        if role_name:
+            user_role = self._get_user_role(role_name)
+            if user_role:
+                user_role.is_active = True
+                user_role.save()
+        else:
+            self.is_active = True
+            self.save()
+    
+    def deactivate(self, role_name=None):
+        if role_name:
+            user_role = self._get_user_role(role_name)
+            if user_role:
+                user_role.is_active = False
+                user_role.save()
+        else:
+            self.is_active = False
+            self.save()
+
+    @property
+    def is_user_active(self, role_name=None):
+        if role_name:
+            user_role = self._get_user_role(role_name)
+            if user_role:
+                return user_role.is_active and self.is_active
+            return False
+        return self.is_active
+
+    @property
+    def roles(self):
+        
+        roles = UserRoleModel.objects.none()
+        for user_role in AppUserRoleModel.objects.filter(user = self).only('role'):
+            roles |= UserRoleModel.objects.filter(pk=user_role.role.pk)
+        return roles
+    
+        # return AppUserRoleModel.objects.filter(user = self).values('role')
+
+
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
+
+
+class AppUserRoleModel(models.Model):
+
+    user = models.ForeignKey(AppUserModel, related_name='app_user')
+    role = models.ForeignKey(UserRoleModel, related_name='app_user_role')
+    is_active = models.BooleanField(default=True)
+
