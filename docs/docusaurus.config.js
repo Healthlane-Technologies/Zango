@@ -73,6 +73,7 @@ const config = {
         logo: {
           alt: "Zelthy Logo",
           src: "img/zelthy_logo.png",
+          href: '/docs/documentation/introduction'
         },
         items: [
           {
