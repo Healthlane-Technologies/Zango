@@ -16,10 +16,15 @@ def zstatic(context, static_file_path, is_build=False):
     file_path = app_static_file_path+static_file_path
     if is_build:
         try:
-            build_file_path = app_static_file_path+static_file_path    
-            build_folder_path_without_file = '/'.join(build_file_path.split('/')[:-1])
+            build_file_path = app_static_file_path+static_file_path
+            path_parts = build_file_path.split('/')
+            build_folder_path_without_file = '/'.join(path_parts[:-1])
+            # passed file's name and extension
+            name, extension = path_parts[-1].split('.', 1)
             folder_contents  = os.listdir(build_folder_path_without_file+'/static')
-            build_files = [filename for filename in folder_contents if 'build' in filename]
+            build_files = [filename for filename in folder_contents \
+                           if filename.split('.')[0] == name and filename.endswith(extension)
+                           ]
             if build_files:
                 latest_build_file =  '/'+ sorted(build_files)[-1]
                 file_path = build_folder_path_without_file+latest_build_file
