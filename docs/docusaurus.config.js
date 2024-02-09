@@ -88,6 +88,14 @@ const config = {
             type: "dropdown",
             items: [
                 {
+                  label: "Login",
+                  to: "/login"
+                },
+                {
+                  label: "Frame",
+                  to: "/frame"
+                },
+                {
                   label: "Crud",
                   to: "/crud"
                 }
