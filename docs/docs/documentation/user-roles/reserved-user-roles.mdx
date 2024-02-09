@@ -1,0 +1,33 @@
+---
+sidebar_label: Reserved User Roles
+---
+
+# Reserved User Roles
+
+Within the Zelthy application, two reserved user roles serve specific purposes to facilitate a well-structured access control framework:
+
+![Create User Role 1](/img/user-roles/creating-a-user-role1.png)
+
+## Anonymous User Role
+
+The Anonymous User Role is designed for granting public access to certain resources, allowing users without specific authentication to interact with designated elements.
+
+#### Usage
+- **Public Access:** This user role is utilized to provide access to resources that are meant to be publicly accessible.
+- **Policy Attachment:** A policy is created and associated with the Anonymous User Role.
+- **Dynamic Access:** Any permissions added to the policy automatically render the associated resources accessible to the public.
+
+It's important to note that the Anonymous User Role cannot be associated with any individual users; it primarily functions as an entity for providing open access to resources.
+
+## System User Role
+
+The System User Role is intended for granting controlled access to external systems that require interaction with application resources.
+
+#### Usage
+- **System Integration:** This user role is employed to grant access to external systems that need to interact with specific resources.
+- **Policy Constraints:** Unlike other user roles, the System User Role cannot have policies directly attached to it.
+- **User-Level Policies:** For each system requiring access, a user under the System User Role is created. Policies are then directly assigned to this user, not at the UserRole level. Refer to the "Assigning Policies to Users" section for more details on this method.
+
+The System User Role provides a controlled mechanism for integrating external systems with application resources, ensuring security and appropriate access levels.
+
+By leveraging the Anonymous User Role and System User Role, you can effectively manage public access and external system interactions within your healthcare applications while maintaining a robust access control structure.

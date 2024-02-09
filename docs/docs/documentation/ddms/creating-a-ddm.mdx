@@ -1,0 +1,60 @@
+---
+sidebar_label: Creating a Model
+---
+
+# Creating a Model
+
+Models in Zelthy are a powerful way to define custom data structures tailored to the unique needs of individual tenants in a multi-tenant application. Defining a Model class in Zelthy is quite similar to creating a model class in Django, with a few distinctions.
+
+Here, we'll walk you through the process of creating a Model in Zelthy:
+
+## Step 1: File Location
+
+Models are defined inside the module folder of your Zelthy application, in a file named `models.py`. This file serves as the blueprint for your data models within a specific module.
+
+```plaintext
+workspaces
+├── YourApp
+│   ├── YourModule
+│       ├── templates
+│              ├── test.html
+│       ├── views.py
+│       ├── models.py  ---> Define your models here
+│       ├── urls.py
+```
+
+## Step 2: Extending DynamicModelBase
+
+In Zelthy, Model classes need to extend `DynamicModelBase`, a base class provided by Zelthy's framework. This extension is essential to make your model dynamic and tenant-specific. Here's an example of defining a Model class:
+
+```python
+from zelthy.apps.dynamic_models.models import DynamicModelBase
+
+class CustomModel(DynamicModelBase):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    # Add more fields as needed
+```
+
+The non-relational fields, such as `CharField` and `TextField`, are defined just like they are in Django.
+
+## Step 3: Relational Fields
+
+For relational fields, such as ForeignKey and OneToOneField, you'll need to import them from `zelthy.apps.dynamic_models.fields` instead of Django's `models`. Here's an example:
+
+```python
+from zelthy.apps.dynamic_models.fields import ZForeignKey
+from zelthy.apps.dynamic_models.fields import ZOneToOneField
+
+class CustomModel(DynamicModelBase):
+    name = models.CharField(max_length=100)
+    doctor = ZOneToOneField(DoctorModel, null=True, blank=True, on_delete=models.CASCADE)
+    doctor = ZForeignKey(DoctorModel, null=True, blank=True, on_delete=models.CASCADE)
+    # Add more fields as needed
+```
+
+## Step 4: Define Your Fields
+
+Customize your Model class by adding fields that match your tenant's specific data requirements. You can include various field types provided by Django and Zelthy to represent different data types, including text, numbers, dates, and more.
+
+With these steps, you've successfully created a Model in Zelthy, allowing you to have unique data structures for each tenant within your multi-tenant application. This flexibility empowers you to meet the diverse needs of your clients or organizations while maintaining data isolation and security.
