@@ -4,7 +4,7 @@ image: gitpod/workspace-full:latest
 tasks:
   - name: Init project and run server
     command: |
-      python3 zel_setup.py --start
+      python zel3_setup.py --build_core --start
   
 ports:
   - port: 8000
