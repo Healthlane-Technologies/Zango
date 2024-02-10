@@ -1,0 +1,12 @@
+# Image of workspace. Learn more: https://www.gitpod.io/docs/configure/workspaces/workspace-image
+image: gitpod/workspace-full:latest
+
+tasks:
+  - name: Init project and run server
+    command: |
+      python3 zel_setup.py --start
+  
+ports:
+  - port: 8000
+    onOpen: open-preview
+    visibility: private
