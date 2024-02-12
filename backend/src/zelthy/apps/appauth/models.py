@@ -101,16 +101,13 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         return False
 
     def add_roles(self, role_ids):
-        roles = UserRoleModel.objects.filter(id__in=role_ids)
-        for role in roles:
-            user_role, _ = AppUserRoleModel.objects.get_or_create(user = self, role=role)
-            user_role.is_active = True
-            user_role.save()
+        
+        AppUserRoleModel.objects.filter(user=self).delete()
 
-    def remove_roles(self, role_ids):
         roles = UserRoleModel.objects.filter(id__in=role_ids)
         for role in roles:
-            AppUserRoleModel.objects.filter(user=self, role=role).delete()
+            AppUserRoleModel.objects.create(user = self, role=role)
+
 
     def check_password_validity(self, password):
         """
@@ -317,7 +314,7 @@ class OldPasswords(AbstractOldPasswords):
 
 class AppUserRoleModel(models.Model):
 
-    user = models.ForeignKey(AppUserModel, related_name='app_user')
-    role = models.ForeignKey(UserRoleModel, related_name='app_user_role')
+    user = models.ForeignKey(AppUserModel, related_name='app_user', on_delete=models.CASCADE)
+    role = models.ForeignKey(UserRoleModel, related_name='app_user_role', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
 
