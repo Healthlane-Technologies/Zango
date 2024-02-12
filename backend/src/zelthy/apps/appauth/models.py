@@ -57,7 +57,6 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 
 class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
-    roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
         PolicyGroupModel, related_name="user_policy_groups"
@@ -272,7 +271,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
     def _get_user_role(self, role_name):
         if role_name:
-            return AppUserModel.objects.filter(user=self, role__name=role_name).last()
+            return AppUserRoleModel.objects.filter(user=self, role__name=role_name).last()
         return
 
     def activate(self, role_name=None):
@@ -311,10 +310,6 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         for user_role in AppUserRoleModel.objects.filter(user = self).only('role'):
             roles |= UserRoleModel.objects.filter(pk=user_role.role.pk)
         return roles
-    
-        # return AppUserRoleModel.objects.filter(user = self).values('role')
-
-
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
