@@ -3,8 +3,16 @@ image: gitpod/workspace-full:latest
 
 tasks:
   - name: Init project and run server
+    init: |
+      # Create project directory
+      mkdir /workspace/zelthy3/projects
+
+      # Building zelthy3 base image
+      python zel3_setup.py --build_core
+
     command: |
-      python zel3_setup.py --build_core --start
+      # Initializing project and starting server
+      python zel3_setup.py --project_dir=/workspace/zelthy3/projects/ --start
   
 ports:
   - port: 8000
