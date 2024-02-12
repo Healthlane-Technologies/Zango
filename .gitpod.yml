@@ -8,11 +8,11 @@ tasks:
       mkdir /workspace/zelthy3/projects
 
       # Building zelthy3 base image
-      python zel3_setup.py --build_core
+      python zel_setup.py --build_core
 
     command: |
       # Initializing project and starting server
-      python zel3_setup.py --project_dir=/workspace/zelthy3/projects/ --start
+      python zel_setup.py --project_dir=/workspace/zelthy3/projects/ --start
   
 ports:
   - port: 8000
