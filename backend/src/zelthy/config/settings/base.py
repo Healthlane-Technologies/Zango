@@ -178,3 +178,45 @@ MEDIA_URL = "/media/"
 CELERY_BROKER_URL = REDIS_URL
 # CELERY_RESULT_BACKEND = "django-db"
 X_FRAME_OPTIONS = "ALLOW"
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+   
+    'formatters': {
+            'verbose': {
+                'format' : "%(uuid)s [%(schema_name)s:%(domain_url)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
+                'datefmt' : "%d/%b/%Y %H:%M:%S"
+            }            
+        },
+
+    'filters': {
+        'custom_filter': {
+            '()': 'zelthy.core.log_file.CustomFilter',
+        }
+    },
+    'handlers': {
+
+        'file': {
+            'level': 'INFO',  # Change the level to INFO
+            'class': 'logging.handlers.RotatingFileHandler',
+            'maxBytes': 1024*1024*5, # 5 MB
+            'formatter': 'verbose',  # Use the custom formatter
+            'filters': ['custom_filter'],
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',  # Change the level to INFO
+            'propagate': True,
+        },
+        'zelthy': {
+            'handlers': ['file'],
+            'level': 'INFO',  # Change the level to INFO
+            'propagate': True,
+        }
+    },
+}

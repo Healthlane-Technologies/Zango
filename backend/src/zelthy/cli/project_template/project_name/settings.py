@@ -85,3 +85,6 @@ if USE_S3:
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "workspaces")
+
+
+LOGGING['handlers']['file']['filename'] =  os.path.join(BASE_DIR, 'server.log')
