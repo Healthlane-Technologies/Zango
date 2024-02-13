@@ -16,7 +16,7 @@ export default function Home() {
         title="Embedded Content"
         width="100%"
         height="100vh"
-        src="http://zelthy3-docs-pkg-zelthy3-crud.s3-website.ap-south-1.amazonaws.com/docs/documentation/introduction/"
+        src="https://docs.zelthy.com/crud1/docs/documentation/introduction/"
         frameBorder="0"
         allowFullScreen
       ></iframe>

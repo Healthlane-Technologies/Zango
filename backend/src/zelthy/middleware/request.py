@@ -53,6 +53,6 @@ class HomePageMiddleware(MiddlewareMixin):
 
         is_root_path = request.path == '/'
         if is_root_path:
-            if not request.user.is_anonymous:
+            if not request.user.is_anonymous and not request.user.__class__.__name__ == "PlatformUserModel":
                 return redirect('/app/home')
             
