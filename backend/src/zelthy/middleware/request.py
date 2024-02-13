@@ -1,5 +1,8 @@
 from threading import local
 
+from django.shortcuts import redirect
+from django.utils.deprecation import MiddlewareMixin
+
 _request_local = local()
 
 class RequestMiddleware:
@@ -30,3 +33,26 @@ class RequestMiddleware:
             _request_local.app_object = None
         response = self.get_response(request)
         return response
+
+
+class HomePageMiddleware(MiddlewareMixin):
+    """
+    Middleware class for redirecting the root path to the home page.
+
+    This middleware checks if the requested path is the root path ("/") and if the user is authenticated. 
+    If both conditions are met, it redirects the user to the home page ("/app/home").
+
+    Attributes:
+        None
+
+    Methods:
+        process_request(request): Checks if the requested path is the root path and if the user is authenticated. 
+        If both conditions are met, it redirects the user to the home page.
+    """
+    def process_request(self, request):
+
+        is_root_path = request.path == '/'
+        if is_root_path:
+            if not request.user.is_anonymous and not request.user.__class__.__name__ == "PlatformUserModel":
+                return redirect('/app/home')
+            

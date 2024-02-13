@@ -6,7 +6,7 @@ from zelthy.core.api import (
     ZelthyGenericAppAPIView,
     ZelthySessionAppAPIView,
 )
-from zelthy.apps.appauth.login.utils import PasswordValidationMixin
+from zelthy.api.app_auth.profile.v1.utils import PasswordValidationMixin
 from zelthy.apps.appauth.models import OldPasswords
 
 from .serializers import ProfileSerializer

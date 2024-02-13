@@ -1,0 +1,81 @@
+---
+sidebar_label: Field Types
+---
+
+# Field Types
+
+Models in Zelthy support various field types, allowing you to define flexible and customized data structures for each tenant within your multi-tenant application. These field types can be broadly categorized into two groups: non-relational fields and relational fields.
+
+## Non-Relational Fields
+
+Non-relational fields in Zelthy Model are equivalent to Django's standard field types and can be imported directly from Django. These fields are suitable for representing simple data types like text, numbers, dates, and more. Here are some common non-relational field types:
+
+Example
+1. **CharField**: Used for short text strings like names, titles, or labels.
+   
+   ```python
+   from django.db import models
+
+   class MyModel(DynamicModelBase):
+       name = models.CharField(max_length=100)
+   ```
+
+2. **IntegerField**: Ideal for storing whole numbers.
+   
+   ```python
+   from django.db import models
+
+   class MyModel(DynamicModelBase):
+       age = models.IntegerField()
+   ```
+
+3. **DateField**: Designed to hold date values.
+   
+   ```python
+   from django.db import models
+
+   class MyModel(DynamicModelBase):
+       birthdate = models.DateField()
+   ```
+
+4. **BooleanField**: Represents true/false values.
+   
+   ```python
+   from django.db import models
+
+   class MyModel(DynamicModelBase):
+       is_active = models.BooleanField(default=True)
+   ```
+
+These non-relational fields behave just like their Django counterparts, making them suitable for straightforward data storage within your models.
+
+## Relational Fields
+
+Relational fields in Zelthy models are specialized field types imported from Zelthy's `zelthy.apps.dynamic_models.fields`. They allow you to establish relationships between Data Models, offering more flexibility in your data modeling approach. Here are some common relational field types:
+
+1. **OneToOneField**: Defines a one-to-one relationship between two models.
+
+   ```python
+   from zelthy.apps.dynamic_models.fields import ZOneToOneField
+
+   class MyModel(DynamicModelBase):
+       related_model = ZOneToOneField(RelatedModel, null=True, blank=True, on_delete=models.CASCADE)
+   ```
+
+2. **ForeignKey**: Establishes a many-to-one relationship between two DDMs.
+
+   ```python
+   from zelthy.apps.dynamic_models.fields import ZForeignKey
+
+   class MyModel(DynamicModelBase):
+       related_model = ZOneToOneField(RelatedModel, null=True, blank=True, on_delete=models.CASCADE)
+   ```
+
+3. **ManyToManyField**: 
+
+    Coming Soon . . .
+  
+
+These relational fields enable you to create complex data relationships and structures tailored to the unique needs of your tenants or clients.
+
+In summary, Zelthy's model field types provide a versatile and powerful toolset for creating dynamic and customized data structures in multi-tenant applications. Whether you need simple text fields or intricate data relationships, DDMs offer the flexibility to meet your diverse data modeling requirements.

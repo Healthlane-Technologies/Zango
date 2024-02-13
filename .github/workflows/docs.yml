@@ -1,0 +1,49 @@
+# Name of workflow as seen in Github actions tab
+name: dev-build-and-deploy
+# Run workflow only on push to dev branch
+on:
+  push:
+    branches:
+      - development
+  workflow_dispatch: # Put here!!
+jobs:
+  # To build the project
+  deploy_to_s3:
+    name: Deploy to S3
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - name: Checking out code
+        uses: actions/checkout@v3
+
+      - name: Installing Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Installing dependencies
+        run: yarn install
+
+      - name: Building project
+        run: CI=false yarn build
+
+      - name: Deploy to S3
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: "docs.zelthy.com"
+          AWS_ACCESS_KEY_ID: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.ZELTHYSTATIC_S3_AWS_KEY}}
+          AWS_REGION: "ap-south-1"
+          SOURCE_DIR: "docs/build/"
+          DEST_DIR: ""
+
+      - name: Notify on z-deployment_notifs slack channel
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: New deployment in documentation environment of ${{ github.event.repository.name }}
+          SLACK_CHANNEL: "z-deployment-notifs"

@@ -1,0 +1,30 @@
+---
+sidebar_label: Creating an Async Task
+---
+
+# Creating an Async Task
+
+In Zelthy, asynchronous tasks are defined as functions within a `tasks.py` file located inside any module folder of your application. These tasks leverage the `@shared_task` function decorator to indicate that they should be executed asynchronously.
+
+#### Steps to Create an Async Task
+
+1. **Create a `tasks.py` File**: Within the module folder of your app, create a file named `tasks.py`. This file will contain the definition of your asynchronous tasks.
+
+2. **Define the Task Function**: Inside the `tasks.py` file, define your asynchronous task as a regular Python function. Use the `@shared_task` decorator from Zelthy to mark the function as an asynchronous task.
+
+```python
+# tasks.py
+
+from celery import shared_task
+
+@shared_task
+def my_async_task():
+    # Task logic goes here
+    pass
+```
+
+3. **Implement Task Logic**: Within the task function, write the logic that you want to execute asynchronously. This could include database operations, API calls, file processing, or any other computationally intensive or time-consuming tasks.
+
+4. **Repeat as Needed**: You can define any number of asynchronous tasks within the `tasks.py` file. Each task should be defined as a separate function with the `@shared_task` decorator.
+
+By following these steps, you can create and define asynchronous tasks in Zelthy, allowing you to offload time-consuming operations and improve the overall performance and responsiveness of your application.
