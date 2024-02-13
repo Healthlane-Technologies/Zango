@@ -5,7 +5,7 @@ tasks:
   - name: Setup and start the project
     before: |
       # Create project directory
-      mkdir /workspace/projects
+      [ ! -d "/workspace/projects" ] && mkdir /workspace/projects
     init: |
 
       docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN
@@ -16,8 +16,13 @@ tasks:
       docker tag $DOCKERHUB_USERNAME/zelthy3 zelthy3
 
     command: |
-      # Initializing project and starting server
-      DOCKER_BUILDKIT=0 python zel_setup.py --project_dir=/workspace/projects --platform_username=admin@zelthy.com --start
+      if [ ! -d "/workspace/projects" ]; then
+        # Initializing project and starting server
+        DOCKER_BUILDKIT=0 python zel_setup.py --project_dir=/workspace/projects --platform_username=admin@zelthy.com --start
+      else
+        # Starting server
+        cd /workspace/projects && docker-compose up
+      fi
   
 ports:
   - port: 8000
