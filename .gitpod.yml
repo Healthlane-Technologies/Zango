@@ -7,7 +7,7 @@ tasks:
       # Create project directory
       mkdir /workspace/projects
     init: |
-    
+
       docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN
       
       # Pulling latest zelthy3 image
@@ -17,7 +17,7 @@ tasks:
 
     command: |
       # Initializing project and starting server
-      python zel_setup.py --project_dir=/workspace/projects --platform_username=admin@zelthy.com --start
+      DOCKER_BUILDKIT=0 python zel_setup.py --project_dir=/workspace/projects --platform_username=admin@zelthy.com --start
   
 ports:
   - port: 8000
