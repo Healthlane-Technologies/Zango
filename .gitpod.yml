@@ -4,10 +4,13 @@ image: gitpod/workspace-full:latest
 tasks:
   - name: Setup and start the project
     init: |
+      echo $DOCKERHUB_USERNAME 
+      echo $DOCKERHUB_TOKEN
+
       docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN
       
       # Pulling latest zelthy3 image
-      docker pull hszelthy/zelthy3:latest
+      docker pull $DOCKERHUB_USERNAME/zelthy3:latest
 
       # Create project directory
       mkdir /workspace/projects
