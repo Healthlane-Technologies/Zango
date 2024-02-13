@@ -1,0 +1,89 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #5048ed;
+  --ifm-color-primary-dark: #4b3fe1;
+  --ifm-color-primary-darker: #4332d4;
+  --ifm-color-primary-darkest: #2e00b8;
+  --ifm-color-primary-light: #6967f3;
+  --ifm-color-primary-lighter: #5a91ea;
+  --ifm-color-primary-lightest: #a9a8f8;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme="dark"] {
+  --ifm-color-primary: #5048ed;
+  --ifm-color-primary-dark: #4b3fe1;
+  --ifm-color-primary-darker: #4332d4;
+  --ifm-color-primary-darkest: #2e00b8;
+  --ifm-color-primary-light: #6967f3;
+  --ifm-color-primary-lighter: #5a91ea;
+  --ifm-color-primary-lightest: #a9a8f8;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Source Sans Pro", sans-serif;
+}
+
+:root {
+  --ifm-font-family-base: "Lato", sans-serif;
+}
+
+.aa-DetachedSearchButton {
+  border-radius: 8px !important;
+}
+
+.aa-DetachedSearchButton {
+  margin-right: 10px !important;
+}
+
+body.dark,
+body[data-theme="dark"] {
+  --aa-text-color-rgb: 227, 227, 227 !important;
+  --aa-primary-color-rgb: 105, 103, 243 !important;
+  --aa-muted-color-rgb: 169, 168, 248 !important;
+  --aa-input-background-color-rgb: 36, 37, 38 !important;
+  --aa-background-color-rgb: 27, 27, 29 !important;
+}
+
+.header-github-link:hover {
+  opacity: 0.6;
+}
+
+.header-github-link:before {
+  background: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat;
+  content: "";
+  display: flex;
+  height: 24px;
+  width: 24px;
+}
+
+[data-theme="dark"] .header-github-link:before {
+  background: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat;
+}
+
+.markdown img {
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+}
+
+.medium-zoom-image--opened {
+  z-index: 999;
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+}
+
+.medium-zoom--opened .medium-zoom-overlay {
+  z-index: 998;
+}

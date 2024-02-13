@@ -1,0 +1,71 @@
+---
+sidebar_label: Policy Config JSON
+---
+
+# Policy Configuration JSON and Permission Types
+
+Configuring policies and permissions is a fundamental aspect of access control within the Zelthy platform. The Policy Config JSON acts as the tool through which permissions are initialized and fine-tuned. Let's delve into the structure of the Policy Config JSON and explore how it's used for different types of permissions:
+
+## Policy Config JSON Structure
+
+The Policy Config JSON consists of two main sections:
+
+### Permissions
+Under the "permissions" section, you define the specifics of each permission that the policy contains. Each permission can be configured individually based on its type. This section essentially outlines what users or user roles are allowed to do within the context of the policy.
+
+### Configurations
+The "configurations" section holds policy-wide settings that influence the overall behavior of the policy. One example is the "expiry" setting, which defines when the policy becomes invalid.
+
+## Exploring Different Permission Types
+
+### View Type Permission
+
+View Type Permissions grant access to specific views in your application, enabling users see the content of the view.
+
+- This permission type doesn't require additional configurations.
+- In the Policy Config JSON, you specify the permission type as "view" and provide the path of the view class.
+    ```json
+    {
+        "type": "view",
+        "name": "<module_name>.<view_file_path>.<view_classname>",
+    }
+- Example JSON:
+    ```json
+    {
+        "permissions": [
+            {
+                "type": "view",
+                "name": "patient.views.PatientCrudView"
+            },
+            {
+                "type": "view",
+                "name": "doctor.views.DoctorCrudView"
+            }
+        ],
+        "configurations": {
+            "expiry": "26/12/23",
+        }
+    }
+    ```
+
+### User Access Type Permission
+
+User Access Type Permissions regulate application access at the user level, ensuring control over when and from where users can access the app.
+
+- These permissions manage user access settings, such as allowed access times and IP addresses.
+- In the Policy Config JSON, you need to specify fields like type and accessIP (in CIDR Notation).
+- Example JSON:
+    ```json
+    {
+        permissions: [
+        {
+            "type": "userAccess",
+            "accessIP": "0.0.0.0/32"
+        }],
+        configurations: {
+            expiry: "26/12/23"
+        }
+    }
+    ```
+
+By mastering the Policy Config JSON and understanding the specifics of different permission types, you lay the foundation for a flexible and robust access control framework that seamlessly aligns with your application's unique requirements.

@@ -58,7 +58,14 @@ def get_project_root(project_name, directory=None):
 
 
 def create_project(
-    project_name, directory, db_name, db_user, db_password, db_host, db_port
+    project_name,
+    directory,
+    db_name,
+    db_user,
+    db_password,
+    db_host,
+    db_port,
+    redis_host="127.0.0.1",
 ):
     """
     Create a new Django project with the given project name and directory.
@@ -97,6 +104,7 @@ def create_project(
             "{db_password}": db_password,
             "{db_host}": db_host,
             "{db_port}": db_port,
+            "{redis_host}": redis_host,
         },
     )
 
@@ -146,10 +154,25 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--db_password", prompt=True, hide_input=True, help="DB Password")
 @click.option("--db_host", prompt=True, help="DB Host", default="127.0.0.1")
 @click.option("--db_port", prompt=True, help="DB Port", default="5432")
+@click.option("--redis_host", prompt=True, help="Redis Host", default="127.0.0.1")
 @click.option("--platform_username", prompt=False, help="Platform Username")
-@click.option("--platform_user_password", prompt=False, hide_input=True, help="Platform User Password")
+@click.option(
+    "--platform_user_password",
+    prompt=False,
+    hide_input=True,
+    help="Platform User Password",
+)
 def start_project(
-    project_name, directory, db_name, db_user, db_password, db_host, db_port, platform_username, platform_user_password
+    project_name,
+    directory,
+    db_name,
+    db_user,
+    db_password,
+    db_host,
+    db_port,
+    redis_host,
+    platform_username,
+    platform_user_password,
 ):
     """Create Project"""
     if directory:
@@ -163,7 +186,14 @@ def start_project(
         raise click.ClickException("DB Connection Failed!")
 
     project_status, project_message = create_project(
-        project_name, directory, db_name, db_user, db_password, db_host, db_port
+        project_name,
+        directory,
+        db_name,
+        db_user,
+        db_password,
+        db_host,
+        db_port,
+        redis_host,
     )
     if not project_status:
         raise click.ClickException(project_message)

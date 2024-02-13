@@ -1,0 +1,28 @@
+---
+sidebar_label: Creating Permissions
+---
+
+# Creating Permissions
+
+Permissions within the Zelthy platform play a pivotal role in regulating access to resources and functionalities within healthcare applications. However, the creation of permissions follows a distinct approach to ensure consistency and control. Permissions are created automatically (except for [Custom Permissions](./custom-permissions)).
+
+## Automatic Permission Creation
+
+Creating permissions directly is not the typical process, with an exception for Custom type permissions (refer to the [Custom Permissions](./custom-permissions)). Instead, relevant permissions are automatically generated as you create different components of your application, such as data models and views.
+
+### Data Model Permissions
+
+When a Data Model is defined in the codebase, the platform intelligently generates the necessary permissions required for that data model. These permissions are then made available within the policies, ensuring that the access control aligns seamlessly with your data structures.
+
+### View Permissions
+
+Similarly, when you create a view within the application, the platform automatically generates the corresponding View type permission. This integration streamlines the process, reducing manual overhead and maintaining a coherent permission structure.
+
+## Syncing Permissions for Visibility
+It's important to note that while permissions are automatically created, a syncing process is necessary for them to become visible and accessible within the App Panel interface. ([refer to Syncing and Viewing Permisisons](./syncing-and-viewing-permissions))
+
+## Transparency and Auditability
+
+The automated creation of permissions and their association with specific types of resources, excluding Custom type permissions, contributes to transparency and auditability. This methodology ensures that permissions are consistently linked to relevant components, leaving no room for ambiguity.
+
+By adopting this approach, you establish a clear and organized system where permissions are intricately tied to resources, promoting transparency in access control and facilitating comprehensive audit trails for every interaction within your healthcare applications.
