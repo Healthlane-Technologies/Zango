@@ -200,7 +200,7 @@ LOGGING = {
     'handlers': {
 
         'file': {
-            'level': 'INFO',  # Change the level to INFO
+            'level': 'INFO', 
             'class': 'logging.handlers.RotatingFileHandler',
             'maxBytes': 1024*1024*5, # 5 MB
             'formatter': 'verbose',  # Use the custom formatter
@@ -210,12 +210,12 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['file'],
-            'level': 'INFO',  # Change the level to INFO
+            'level': 'INFO',
             'propagate': True,
         },
         'zelthy': {
             'handlers': ['file'],
-            'level': 'INFO',  # Change the level to INFO
+            'level': 'INFO',
             'propagate': True,
         }
     },
