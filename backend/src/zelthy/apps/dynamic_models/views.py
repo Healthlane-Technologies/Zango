@@ -57,8 +57,6 @@ class DynamicView(View, PermMixin):
                     return HttpResponseForbidden(
                         "You don't have permission to view this page"
                     )
-            if request.path == '/':
-                 return redirect('/login')
              
             return Http404()
         return HttpResponseForbidden("You don't have permission to view this page")
