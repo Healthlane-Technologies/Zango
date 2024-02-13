@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.db import connection
 
@@ -49,6 +51,18 @@ class Command(MakeMigrationsCommand):
             connection.settings_dict["NAME"] = (
                 "test_" + connection.settings_dict["NAME"]
             )
+        migrations_dir = (
+            f"{settings.BASE_DIR}/workspaces/{options['workspace']}/migrations/"
+        )
+        # Create the migration directory if it doesn't exist
+        os.makedirs(migrations_dir, exist_ok=True)
+
+        # Add an __init__.py file in the folder if it doesn't exist
+        init_file = os.path.join(migrations_dir, "__init__.py")
+        if not os.path.exists(init_file):
+            with open(init_file, "w"):
+                pass  # Creates an empty __init__.py file
+
         settings.MIGRATION_MODULES = {
             f"dynamic_models": f"workspaces.{options['workspace']}.migrations"
         }
