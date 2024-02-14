@@ -93,4 +93,17 @@ else:
 REDIS_URL = "redis://{redis_host}:6379/1"
 CELERY_BROKER_URL = REDIS_URL
 
-LOGGING['handlers']['file']['filename'] =  os.path.join(BASE_DIR, 'server.log')
+log_folder = os.path.join(BASE_DIR, 'log')
+log_file = os.path.join(log_folder, 'server.log')
+
+# Check if the log folder exists, if not, create it
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
+
+# Check if the log file exists, if not, create it
+if not os.path.exists(log_file):
+    with open(log_file, 'a'):
+        pass  # Create an empty file
+
+
+LOGGING['handlers']['file']['filename'] =  log_file
