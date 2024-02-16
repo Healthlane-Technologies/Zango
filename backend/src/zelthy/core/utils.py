@@ -59,6 +59,9 @@ def get_current_request_url(request, domain=None):
             port_string = f":{port}"
     else:
         port_string = ""
+    
+    protocol = "https"
+    port_string = ""
 
     # Construct and return the complete URL.
     current_url = f"{protocol}://{domain}{port_string}"
