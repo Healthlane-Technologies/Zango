@@ -230,7 +230,7 @@ const appsMockData = [
 		datetime_format: null,
 		logo: null,
 		extra_config: null,
-		domain_url: 'test.zelthy.com',
+		domain_url: null,
 	},
 ];
 

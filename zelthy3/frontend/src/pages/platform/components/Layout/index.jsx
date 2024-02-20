@@ -61,13 +61,13 @@ export default function Layout({ children }) {
 					•
 				</span>
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-					© zelthy
+					© {new Date().getFullYear()} zelthy
 				</span>
 				<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•
 				</span>
 				<a
-					href="https://zelthystatichosting.s3.ap-south-1.amazonaws.com/zelthy3/docs/index.html"
+					href="https://docs.zelthy.com/"
 					alt="#"
 					target={'_blank'}
 					className="m-0 inline-flex p-0"

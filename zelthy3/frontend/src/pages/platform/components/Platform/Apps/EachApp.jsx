@@ -84,21 +84,23 @@ export default function EachApp({ data }) {
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#000000]">
 						Modified {getTimeFromNow(modified_at)}
 					</span>
-					<button
-						type="button"
-						onClick={(event) =>
-							handleUrlButtonClick(
-								event,
-								protocol + '//' + domain_url + (port ? `:${port}` : '')
-							)
-						}
-						data-url={protocol + '//' + domain_url + (port ? `:${port}` : '')}
-						className="w-fit"
-					>
-						<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
-							{protocol + '//' + domain_url + (port ? `:${port}` : '')}
-						</span>
-					</button>
+					{domain_url ? (
+						<button
+							type="button"
+							onClick={(event) =>
+								handleUrlButtonClick(
+									event,
+									protocol + '//' + domain_url + (port ? `:${port}` : '')
+								)
+							}
+							data-url={protocol + '//' + domain_url + (port ? `:${port}` : '')}
+							className="w-fit"
+						>
+							<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
+								{protocol + '//' + domain_url + (port ? `:${port}` : '')}
+							</span>
+						</button>
+					) : null}
 				</div>
 			</div>
 			{/* <button
