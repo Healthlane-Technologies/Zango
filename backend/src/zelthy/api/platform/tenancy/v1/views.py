@@ -1,6 +1,8 @@
 import json
 import traceback
 
+from django_celery_results.models import TaskResult
+
 from django.conf import settings
 from django.utils.decorators import method_decorator
 
@@ -36,6 +38,26 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
 
     def get(self, request, *args, **kwargs):
         try:
+            action = request.GET.get("action")
+            if action == "get_app_creation_status":
+                task_id = request.GET.get("task_id")
+                try:
+                    task = TaskResult.objects.filter(task_id=task_id).first()
+                    if task.status == "SUCCESS":
+                        return get_api_response(
+                            True,
+                            {
+                                "message": "App created successfully",
+                                "is_created": True,
+                            },
+                            200,
+                        )
+                except TaskResult.DoesNotExist:
+                    return get_api_response(
+                        True,
+                        {"message": "App creating", "is_created": False},
+                        500,
+                    )
             platform_user = request.user.platform_user
             apps = TenantModel.objects.all().exclude(schema_name="public")
 
@@ -62,7 +84,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
         try:
             success, message = self.validate_data(data)
             if success:
-                app = TenantModel.create(
+                app, task_id = TenantModel.create(
                     name=data["name"],
                     schema_name=data["name"],
                     description=data["description"],
@@ -75,6 +97,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
                 result = {
                     "message": "App Launch Initiated Successfully",
                     "app_uuid": str(app.uuid),
+                    "task_id": task_id,
                 }
                 status = 200
             else:
