@@ -1,8 +1,22 @@
 import os
 import uuid
 from django.db import models, connection
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from storages.backends.s3boto3 import S3Boto3Storage
+
+
+class S3StaticStorage(S3Boto3Storage):
+    location = settings.AWS_STATIC_STORAGE_LOCATION
+    default_acl = "public-read"
+    querystring_auth = False
+    bucket_name = settings.AWS_STATIC_STORAGE_BUCKET_NAME
+
+
+class S3MediaStorage(S3Boto3Storage):
+    location = settings.AWS_MEDIA_STORAGE_LOCATION
+    querystring_auth = True
+    bucket_name = settings.AWS_MEDIA_STORAGE_BUCKET_NAME
 
 
 def RandomUniqueFileName(instance, filename):
@@ -10,12 +24,15 @@ def RandomUniqueFileName(instance, filename):
         path = connection.tenant.name + "/" + instance.__class__.__name__
         extension = filename.split(".")[-1]
         file_ = "%s.%s" % (uuid.uuid4(), extension)
-        return os.path.join(path, file_)
+        print("data is ......................", path, file_, filename)
+        if (
+            settings.STORAGES.get("default", {}).get("BACKEND")
+            != "django.core.files.storage.FileSystemStorage"
+        ):
+            return os.path.join(path, file_)
+        return f"{os.path.join(path, file_)}"
     except:
         return
-
-
-MediaS3Boto3Storage = lambda: S3Boto3Storage(location="media")
 
 
 def validate_file_extension(value):
@@ -43,14 +60,6 @@ def validate_file_extension(value):
         )
 
 
-def local_save(instance, filename):
-    class_name = str(type(instance))
-    folder = class_name.split(".")[-1].split("'")[0]
-    tenant = class_name.split(".")[3]
-    extension = filename.split(".")[-1]
-    return f"{tenant}/{folder}/{uuid.uuid4()}.{extension}"
-
-
 class ZFileField(models.FileField):
     def __init__(
         self,
@@ -65,9 +74,7 @@ class ZFileField(models.FileField):
         super(ZFileField, self).__init__(
             verbose_name=verbose_name,
             name=name,
-            upload_to=RandomUniqueFileName
-            if os.getenv("USE_S3") == "TRUE"
-            else local_save,
+            upload_to=(RandomUniqueFileName),
             storage=storage,
             validators=[validate_file_extension],
             **kwargs,
