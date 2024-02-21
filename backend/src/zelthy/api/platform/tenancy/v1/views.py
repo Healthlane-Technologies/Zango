@@ -42,7 +42,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
             if action == "get_app_creation_status":
                 task_id = request.GET.get("task_id")
                 try:
-                    task = TaskResult.objects.filter(task_id=task_id).first()
+                    task = TaskResult.objects.get(task_id=task_id)
                     if task.status == "SUCCESS":
                         result = json.loads(task.result)
                         if result["result"] == "success":
