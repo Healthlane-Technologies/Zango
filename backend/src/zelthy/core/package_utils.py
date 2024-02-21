@@ -149,8 +149,8 @@ def install_package(package_name, version, tenant):
         update_packages_json(tenant, package_name, version)
         update_settings_json(tenant, package_name, version)
 
-        subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
-        subprocess.run("python manage.py collectstatic --noinput", shell=True)
+        subprocess.run(f"sudo python manage.py sync_static {tenant}", shell=True)
+        subprocess.run("sudo python manage.py collectstatic --noinput", shell=True)
         if os.path.exists(f"workspaces/{tenant}/packages/{package_name}/migrations"):
             subprocess.run(
                 f"python manage.py ws_migrate {tenant} --package {package_name}",
