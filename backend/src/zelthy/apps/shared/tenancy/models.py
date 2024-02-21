@@ -119,9 +119,8 @@ class TenantModel(TenantMixin, FullAuditMixin):
             name=name, schema_name=schema_name, description=description, **other_params
         )
         # initialize tenant's workspace
-
-        initialize_workspace.delay(str(obj.uuid))
-        return obj
+        init_task = initialize_workspace.delay(str(obj.uuid))
+        return obj, init_task.id
 
 
 class Domain(DomainMixin, FullAuditMixin):

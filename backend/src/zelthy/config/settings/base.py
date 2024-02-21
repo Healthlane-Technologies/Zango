@@ -31,7 +31,7 @@ SHARED_APPS = [
     # 'axes',
     # 'session_security',
     "django_celery_beat",
-    # 'django_celery_results',
+    "django_celery_results",
     "rest_framework",
     "knox",
     # 'nocaptcha_recaptcha',
@@ -52,8 +52,8 @@ TENANT_APPS = [
     "crispy_forms",
     "crispy_bootstrap5",
     "debug_toolbar",
-    "crispy_forms"
-    # "django_celery_results"
+    "crispy_forms",
+    "django_celery_results",
     # "cachalot",
 ]
 
@@ -177,5 +177,5 @@ MEDIA_URL = "/media/"
 
 # Celery
 CELERY_BROKER_URL = REDIS_URL
-# CELERY_RESULT_BACKEND = "django-db"
+CELERY_RESULT_BACKEND = "django-db"
 X_FRAME_OPTIONS = "ALLOW"
