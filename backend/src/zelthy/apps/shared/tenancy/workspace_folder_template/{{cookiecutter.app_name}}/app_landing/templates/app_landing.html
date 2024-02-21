@@ -1,4 +1,6 @@
+{% raw %}
 {% load static %}
+{% endraw %}
 
 <!doctype html>
 
@@ -11,12 +13,16 @@
     <!-- Remove Tap Highlight on Windows Phone IE -->
     <meta name="msapplication-tap-highlight" content="no" />
 
-    <title>{{config.title}}</title>
+    <title>Zelthy App Landing Page</title>
 
+    {% raw %}
     <link rel="stylesheet" href="{% static 'app_landing/css/styles.css' %}" />
+    {% endraw %}
 </head>
 
 <body>
+    
+
     <div class="page-container">
         <div class="content-container">
             <img loading="lazy"
@@ -26,7 +32,9 @@
                 <span style="color: rgba(163, 171, 177, 1)">
                     Edit your app codebase at
                 </span>
+                {% raw %}
                 {{project_name}}/workspaces/{{app_name}}/
+                {% endraw %}
             </div>
             <div class="card-container">
                 <div class="cards-list">
