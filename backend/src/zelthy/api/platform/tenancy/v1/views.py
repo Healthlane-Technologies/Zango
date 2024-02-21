@@ -44,18 +44,36 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
                 try:
                     task = TaskResult.objects.filter(task_id=task_id).first()
                     if task.status == "SUCCESS":
-                        return get_api_response(
-                            True,
-                            {
-                                "message": "App created successfully",
-                                "is_created": True,
-                            },
-                            200,
-                        )
+                        result = json.loads(task.result)
+                        if result["result"] == "success":
+                            return get_api_response(
+                                True,
+                                {
+                                    "message": "App created successfully",
+                                    "deployed": True,
+                                    "status": "Deployed",
+                                },
+                                200,
+                            )
+                        else:
+                            return get_api_response(
+                                False,
+                                {
+                                    "message": "App creation failed",
+                                    "deployed": False,
+                                    "status": "Failed",
+                                    "error": result["error"],
+                                },
+                                500,
+                            )
                 except TaskResult.DoesNotExist:
                     return get_api_response(
                         True,
-                        {"message": "App creating", "is_created": False},
+                        {
+                            "message": "App creating",
+                            "deployed": False,
+                            "status": "Staged",
+                        },
                         500,
                     )
             platform_user = request.user.platform_user
@@ -73,6 +91,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
             }
             status = 200
         except Exception as e:
+            print(traceback.format_exc())
             success = False
             response = {"message": str(e)}
             status = 500
