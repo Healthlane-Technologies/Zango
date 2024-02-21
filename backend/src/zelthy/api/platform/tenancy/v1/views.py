@@ -74,7 +74,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
                             "deployed": False,
                             "status": "Staged",
                         },
-                        500,
+                        200,
                     )
             platform_user = request.user.platform_user
             apps = TenantModel.objects.all().exclude(schema_name="public")
