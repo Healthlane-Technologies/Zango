@@ -8,6 +8,7 @@ from zelthy.core.api import (
     get_api_response,
     ZelthyGenericPlatformAPIView,
 )
+from zelthy.core.utils import get_search_columns
 from zelthy.apps.shared.tenancy.models import TenantModel
 from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
 from zelthy.apps.permissions.models import PolicyModel, PermissionsModel
@@ -23,10 +24,34 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
+    def get_queryset(self, search, columns={}):
+        field_name_query_mapping = {
+            "policy_name": "name__icontains",
+            "description": "description__icontains",
+            "policy_id": "id__icontains",
+        }
+        if search is None and columns == {}:
+            return PolicyModel.objects.all().order_by("-modified_at")
+        query = {
+            field_name_query_mapping[column]: value for column, value in columns.items()
+        }
+        if columns == {}:
+            return (
+                PolicyModel.objects.filter(
+                    Q(name__icontains=search)
+                    | Q(description__icontains=search)
+                    | Q(id__icontains=search)
+                )
+                .order_by("-modified_at")
+                .distinct()
+            )
+        return PolicyModel.objects.filter(**query).order_by("-modified_at")
+
     def get(self, request, *args, **kwargs):
         try:
-            policies = PolicyModel.objects.all().order_by("-modified_at")
-
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            policies = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(policies, request, view=self)
             serializer = PolicySerializer(paginated_roles, many=True)
             paginated_roles_data = self.get_paginated_response_data(serializer.data)

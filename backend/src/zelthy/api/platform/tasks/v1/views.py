@@ -7,6 +7,7 @@ from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.apps.dynamic_models.workspace.base import Workspace
 from zelthy.apps.shared.tenancy.models import TenantModel
+from zelthy.core.utils import get_search_columns
 
 
 from .serializers import TaskSerializer
@@ -16,9 +17,36 @@ from .serializers import TaskSerializer
 class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
 
+    def get_queryset(self, search, columns={}):
+        name_field_query_mappping = {
+            "task_name": "name__icontains",
+            "task_id": "id__icontains",
+            "policy": "attached_policies__name__icontains",
+            "status": "is_enabled",
+        }
+        if search is None and columns == {}:
+            return AppTask.objects.all().order_by("-id")
+        if columns == {}:
+            return (
+                AppTask.objects.filter(
+                    Q(name__icontains=search)
+                    | Q(id__icontains=search)
+                    | Q(attached_policies__name__icontains=search)
+                )
+                .order_by("-id")
+                .distinct()
+            )
+        query = {
+            name_field_query_mappping[column]: value
+            for column, value in columns.items()
+        }
+        return AppTask.objects.filter(**query).order_by("-id")
+
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
         try:
-            app_tasks = AppTask.objects.filter(is_deleted=False).order_by("-id")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            app_tasks = self.get_queryset(search, columns)
             paginated_tasks = self.paginate_queryset(app_tasks, request, view=self)
             serializer = TaskSerializer(paginated_tasks, many=True)
             paginated_app_tasks = self.get_paginated_response_data(serializer.data)

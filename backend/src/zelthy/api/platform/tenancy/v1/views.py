@@ -17,6 +17,7 @@ from zelthy.apps.permissions.models import PolicyModel
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.permissions import IsPlatformUserAllowedApp
+from zelthy.core.utils import get_search_columns
 
 from .serializers import (
     TenantSerializerModel,
@@ -215,10 +216,31 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         ]
         return options
 
+    def get_queryset(self, search, columns={}):
+        name_field_query_mappping = {
+            "role": "name__icontains",
+            "policy": "policies__name",
+            "active": "is_active",
+        }
+        if search is None:
+            return UserRoleModel.objects.all().order_by("-created_at")
+        if columns == {}:
+            return (
+                UserRoleModel.objects.filter(
+                    Q(name__icontains=search) | Q(policies__name__icontains=search)
+                )
+                .order_by("-created_at")
+                .distinct()
+            )
+        query = {name_field_query_mappping[k]: v for k, v in columns.items()}
+        return UserRoleModel.objects.filter(**query).order_by("-created_at")
+
     def get(self, request, *args, **kwargs):
         try:
             include_dropdown_options = request.GET.get("include_dropdown_options")
-            roles = UserRoleModel.objects.all().order_by("-created_at")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            roles = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(roles, request, view=self)
             serializer = UserRoleSerializerModel(paginated_roles, many=True)
             paginated_roles_data = self.get_paginated_response_data(serializer.data)
@@ -338,10 +360,46 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         ]
         return options
 
+<<<<<<< HEAD
     def get(self, request, *args, **kwargs):
         try:
             include_dropdown_options = request.GET.get("include_dropdown_options")
             app_users = AppUserModel.objects.all().order_by("-modified_at")
+=======
+    def get_queryset(self, search, columns={}):
+        name_field_query_mappping = {
+            "user_name": "name__icontains",
+            "email": "email__icontains",
+            "user_id": "id__icontains",
+            "mobile": "mobile__icontains",
+            "roles_access": "roles__name__icontains",
+        }
+        if search is None and columns == {}:
+            return AppUserModel.objects.all().order_by("-modified_at")
+        if columns is None:
+            return (
+                AppUserModel.objects.filter(
+                    Q(name__icontains=search)
+                    | Q(email__icontains=search)
+                    | Q(id__icontains=search)
+                    | Q(mobile__icontains=search)
+                    | Q(roles__name__icontains=search)
+                )
+                .order_by("-modified_at")
+                .distinct()
+            )
+        query = {
+            name_field_query_mappping[key]: value for key, value in columns.items()
+        }
+        return AppUserModel.objects.filter(**query).order_by("-modified_at").distinct()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            include_dropdown_options = request.GET.get("include_dropdown_options")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            app_users = self.get_queryset(search, columns)
+>>>>>>> 3f0a5a7 (column based search added)
             app_users = self.paginate_queryset(app_users, request, view=self)
             serializer = AppUserModelSerializerModel(app_users, many=True)
             app_users_data = self.get_paginated_response_data(serializer.data)
