@@ -14,7 +14,7 @@ const config = {
   url: "https://zelthystatichosting.s3.ap-south-1.amazonaws.com",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "docs/",
+  baseUrl: "/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
