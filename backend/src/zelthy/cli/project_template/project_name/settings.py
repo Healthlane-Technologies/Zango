@@ -35,12 +35,16 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:8000",
     "http://*.zelthy.app",
-    "https://*.zelthy.app"
+    "https://*.zelthy.app",
+    "http://*.gitpod.io",
+    "https://*.gitpod.io"
 ]  # Change according to domain configured
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:1443",
     "http://*.zelthy.app",
-    "https://*.zelthy.app"
+    "https://*.zelthy.app",
+    "http://*.gitpod.io",
+    "https://*.gitpod.io"
 ]  # Change according to domain configured
 
 # Internationalization
