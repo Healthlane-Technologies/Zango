@@ -14,7 +14,7 @@ const config = {
   url: "https://zelthystatichosting.s3.ap-south-1.amazonaws.com",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
+  baseUrl: "/docs/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -73,7 +73,7 @@ const config = {
         logo: {
           alt: "Zelthy Logo",
           src: "img/zelthy_logo.png",
-          href: '/docs/documentation/introduction'
+          href: "/docs/docs/documentation/introduction",
         },
         items: [
           {
@@ -83,23 +83,23 @@ const config = {
             label: "Docs",
           },
           {
-            label: "Packages", 
+            label: "Packages",
             position: "left",
             type: "dropdown",
             items: [
-                {
-                  label: "Login",
-                  to: "/login"
-                },
-                {
-                  label: "Frame",
-                  to: "/frame"
-                },
-                {
-                  label: "Crud",
-                  to: "/crud"
-                }
-              ]
+              {
+                label: "Login",
+                to: "/login",
+              },
+              {
+                label: "Frame",
+                to: "/frame",
+              },
+              {
+                label: "Crud",
+                to: "/crud",
+              },
+            ],
           },
           // {
           //   href: "https://github.com/Healthlane-Technologies/zelthy3",
@@ -167,21 +167,21 @@ const config = {
         darkTheme: darkCodeTheme,
       },
       zoom: {
-        selector: '.markdown img',
+        selector: ".markdown img",
         background: {
-          light: 'rgb(255, 255, 255)',
-          dark: 'rgb(50, 50, 50)'
+          light: "rgb(255, 255, 255)",
+          dark: "rgb(50, 50, 50)",
         },
         config: {
           // options you can specify via https://github.com/francoischalifour/medium-zoom#usage
-          margin: 36
-        }
-      }
+          margin: 36,
+        },
+      },
     }),
 
   plugins: [
     require.resolve("@cmfcmf/docusaurus-search-local"),
-    'docusaurus-plugin-image-zoom'
+    "docusaurus-plugin-image-zoom",
   ],
 };
 
