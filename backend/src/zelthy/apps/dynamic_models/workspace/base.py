@@ -379,7 +379,7 @@ class Workspace:
                         match = pattern.pattern.regex.search(mod_url_path)
                         return pattern.callback, resolve
 
-        raise Http404()
+        return None, None
 
     def launch(self, params: dict) -> None:
         """
