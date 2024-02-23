@@ -9,6 +9,8 @@ import {
 	selectAppsData,
 	selectRerenderPage,
 	selectSortBy,
+	selectPollingTaskIds,
+	toggleRerenderPage,
 } from '../../slice';
 import { orderBy } from 'lodash';
 
@@ -16,6 +18,7 @@ export default function Platform() {
 	const appsData = useSelector(selectAppsData);
 	const rerenderPage = useSelector(selectRerenderPage);
 	const sortBy = useSelector(selectSortBy);
+	const pollingTaskIds = useSelector(selectPollingTaskIds);
 	const dispatch = useDispatch();
 
 	function updateAppsData(value) {
@@ -46,6 +49,36 @@ export default function Platform() {
 		};
 
 		makeApiCall();
+
+		if (pollingTaskIds?.length) {
+			pollingTaskIds?.map((eachTaskId) => {
+				if (window[`task${eachTaskId.split('-').join('')}`]) {
+				} else {
+					window[`task${eachTaskId.split('-').join('')}`] = setInterval(() => {
+						const makeTaskApiCall = async () => {
+							const { response, success } = await triggerApi({
+								url: `/api/v1/apps/?action=get_app_creation_status&task_id=${eachTaskId}`,
+								type: 'GET',
+								loader: false,
+							});
+							if (success && response) {
+								if (
+									response?.status === 'Deployed' ||
+									response?.status === 'Failed'
+								) {
+									clearInterval(
+										window[`task${eachTaskId.split('-').join('')}`]
+									);
+									dispatch(toggleRerenderPage());
+								}
+							}
+						};
+
+						makeTaskApiCall();
+					}, 5000);
+				}
+			});
+		}
 	}, [rerenderPage, sortBy]);
 
 	if (appsData) {

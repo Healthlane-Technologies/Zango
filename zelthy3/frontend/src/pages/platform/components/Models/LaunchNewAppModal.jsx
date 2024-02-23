@@ -11,6 +11,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
 	close,
 	selectIsLaunchNewAppModalOpen,
+	setPollingTastIds,
 	toggleRerenderPage,
 } from '../../slice';
 
@@ -45,6 +46,7 @@ const LaunchNewAppForm = ({ closeModal }) => {
 			});
 
 			if (success && response) {
+				dispatch(setPollingTastIds(response?.task_id));
 				closeModal();
 				dispatch(toggleRerenderPage());
 			}

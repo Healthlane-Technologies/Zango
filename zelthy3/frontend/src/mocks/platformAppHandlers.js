@@ -1,5 +1,6 @@
 import { rest } from 'msw';
 import moment from 'moment';
+let pollingDelayCount = 0;
 
 const appsMockData = [
 	{
@@ -269,8 +270,11 @@ export const platformAppHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					app_uuid: '6aadc375-75cc-4a74-b6d3-e421b063afb4',
 					message: 'App Launch Initiated Successfully',
+					app_uuid: '2586fece-15f9-436b-b617-18f46e63a6e6',
+					task_id: `${moment()
+						.format('m-ss')
+						.toString()}0b22c7f5-ab51-47ca-a55d-52d8cac55a12`,
 				},
 			})
 
@@ -286,6 +290,25 @@ export const platformAppHandlers = [
 	}),
 
 	rest.get('/api/v1/apps/', (req, res, ctx) => {
+		const url = new URL(req.url);
+		const action = url.searchParams.get('action');
+
+		if (action === 'get_app_creation_status') {
+			pollingDelayCount = pollingDelayCount + 1;
+			return res(
+				ctx.delay(500),
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					response: {
+						message: 'App created successfully',
+						deployed: pollingDelayCount > 4 ? true : false,
+						status: pollingDelayCount > 4 ? 'Deployed' : 'Staged',
+					},
+				})
+			);
+		}
+
 		return res(
 			ctx.delay(500),
 			ctx.status(200),

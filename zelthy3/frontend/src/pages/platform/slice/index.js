@@ -8,6 +8,7 @@ export const platformSlice = createSlice({
 		appPanelInitialData: null,
 		sortBy: 'last_modified',
 		rerenderPage: false,
+		pollingTastIds: [],
 	},
 	reducers: {
 		toggle: (state) => {
@@ -31,6 +32,9 @@ export const platformSlice = createSlice({
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
+		setPollingTastIds: (state, action) => {
+			state.pollingTastIds = [...state.pollingTastIds, action.payload];
+		},
 	},
 });
 
@@ -42,6 +46,7 @@ export const {
 	setAppPanelInitialData,
 	setSortBy,
 	toggleRerenderPage,
+	setPollingTastIds,
 } = platformSlice.actions;
 
 export const selectIsLaunchNewAppModalOpen = (state) =>
@@ -53,5 +58,7 @@ export const selectAppsData = (state) => state.platform.appsData;
 export const selectSortBy = (state) => state.platform.sortBy;
 export const selectAppPanelInitialData = (state) =>
 	state.platform.appPanelInitialData;
+
+export const selectPollingTaskIds = (state) => state.platform.pollingTastIds;
 
 export default platformSlice.reducer;
