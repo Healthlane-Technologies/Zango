@@ -165,7 +165,7 @@ SESSION_COOKIE_NAME = "zelthycookie"
 SESSION_COOKIE_SECURE = False  # To be changed for prod settings
 CSRF_COOKIE_SECURE = False  # To be changed for prod settings
 
-LOGIN_URL = "/login"
+LOGOUT_REDIRECT_URL = "/admin/login"
 
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_NO_REPEAT_DAYS = 180
