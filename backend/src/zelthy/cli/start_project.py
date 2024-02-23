@@ -66,6 +66,7 @@ def create_project(
     db_host,
     db_port,
     redis_host="127.0.0.1",
+    redis_port="6379",
 ):
     """
     Create a new Django project with the given project name and directory.
@@ -94,19 +95,11 @@ def create_project(
     command = f"{command} --template {str(project_template_path)}"
 
     subprocess.run(command, shell=True, check=True)
-
-    settings_file = os.path.join(project_root, project_name, "settings.py")
-    replace_placeholders_in_file(
-        settings_file,
-        {
-            "{db_name}": db_name,
-            "{db_user}": db_user,
-            "{db_password}": db_password,
-            "{db_host}": db_host,
-            "{db_port}": db_port,
-            "{redis_host}": redis_host,
-        },
+    env_file = open(f".env", "w")
+    env_file.write(
+        f"POSTGRES_DB={db_name}\nPOSTGRES_USER={db_user}\nPOSTGRES_PASSWORD={db_password}\nPOSTGRES_HOST={db_host}\nPOSTGRES_PORT={db_port}\nREDIS_HOST={redis_host}\nREDIS_PORT={redis_port}\nPROJECT_NAME={project_name}\n"
     )
+    env_file.close()
 
     return True, "Project created successfully"
 
@@ -157,6 +150,7 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--db_host", prompt=True, help="DB Host", default="127.0.0.1")
 @click.option("--db_port", prompt=True, help="DB Port", default="5432")
 @click.option("--redis_host", prompt=True, help="Redis Host", default="127.0.0.1")
+@click.option("--redis_port", prompt=True, help="Redis Port", default="6379")
 @click.option("--platform_username", prompt=False, help="Platform Username")
 @click.option(
     "--platform_domain_url",
@@ -179,6 +173,7 @@ def start_project(
     db_host,
     db_port,
     redis_host,
+    redis_port,
     platform_username,
     platform_user_password,
     platform_domain_url,
@@ -203,6 +198,7 @@ def start_project(
         db_host,
         db_port,
         redis_host,
+        redis_port,
     )
     if not project_status:
         raise click.ClickException(project_message)

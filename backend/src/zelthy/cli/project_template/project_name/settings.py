@@ -1,10 +1,15 @@
 import os
-from zelthy.config.settings.base import *
-
 from pathlib import Path
+import environ
+
+from zelthy.config.settings.base import *
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env(
+    DEBUG=(bool, True), REDIS_HOST=(str, "127.0.0.1"), REDIS_PORT=(str, "6379")
+)
+environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
 SECRET_KEY = "{{secret_key}}"
 
@@ -13,19 +18,38 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+PROJECT_NAME = env("PROJECT_NAME")
 
-WSGI_APPLICATION = "{{project_name}}.wsgi.application"
+WSGI_APPLICATION = f"{PROJECT_NAME}.wsgi.application"
 
 
 DATABASES = {
     "default": {
         "ENGINE": "django_tenants.postgresql_backend",
-        "NAME": "{db_name}",
-        "USER": "{db_user}",
-        "PASSWORD": "{db_password}",
-        "HOST": "{db_host}",
-        "PORT": "{db_port}",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT"),
         "ATOMIC_REQUESTS": True,
+    }
+}
+
+REDIS_HOST = env("REDIS_HOST")
+REDIS_PORT = env("REDIS_PORT")
+REDIS_PROTOCOL = "redis"
+
+REDIS_URL = f"{REDIS_PROTOCOL}://{REDIS_HOST}:{REDIS_PORT}/1"
+CELERY_BROKER_URL = REDIS_URL
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,  # Using DB 1 for cache
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "TIMEOUT": 300,  # Default timeout is 5 minutes, but adjust as needed
     }
 }
 
@@ -59,7 +83,7 @@ TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
 
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 PUBLIC_SCHEMA_URLCONF = "zelthy.config.urls_public"
-ROOT_URLCONF = "{{project_name}}.urls_tenants"
+ROOT_URLCONF = f"{PROJECT_NAME}.urls_tenants"
 
 ENV = "dev"
 
@@ -92,6 +116,3 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = "static/"
 STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
-
-REDIS_URL = "redis://{redis_host}:6379/1"
-CELERY_BROKER_URL = REDIS_URL
