@@ -1,9 +1,10 @@
 # Installing Zelthy: Manual Process
-To get started with Zelthy, you will need to install it using the Python package manager, pip. 
+
+To get started with Zelthy, you will need to install it using the Python package manager, pip.
 
 Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions [here](https://www.python.org/downloads/) and pip installation instructions [here](https://pip.pypa.io/en/stable/installation/).
 
-Once Python and pip are installed, you can create virtual environment in which zelthy will be installed. 
+Once Python and pip are installed, you can create virtual environment in which zelthy will be installed.
 
 Now you are ready to create and activate the virtual environment by running the following command in your terminal or command prompt
 
@@ -28,26 +29,25 @@ This command will download and install the latest version of Zelthy Framework al
 
 ### Key Features and Usage
 
-
 - **Project Management:**
-   Use zelthy3 to create new projects, manage existing projects, and configure project settings.
+  Use zelthy3 to create new projects, manage existing projects, and configure project settings.
 
 - **Database Migrations:**
-   Perform database migrations seamlessly to keep your application's data schema up-to-date.
+  Perform database migrations seamlessly to keep your application's data schema up-to-date.
 
 - **Application Development:**
-   Simplify app development by utilizing zelthy3's commands for app creation, configuration, and deployment.
+  Simplify app development by utilizing zelthy3's commands for app creation, configuration, and deployment.
 
 - **Extensive Command Options:**
-   Run `zelthy3 --help` to view a comprehensive list of available commands and their descriptions.
+  Run `zelthy3 --help` to view a comprehensive list of available commands and their descriptions.
 
 - **Command Specific Help:**
-   For detailed information about a specific command, run `zelthy3 [command] --help`.
-
+  For detailed information about a specific command, run `zelthy3 [command] --help`.
 
 To get started with **zelthy3 cli**, open your terminal and run the following commands:
 
 - To see a list of all available commands and their descriptions:
+
   ```
   zelthy3 --help
   ```
@@ -58,7 +58,6 @@ To get started with **zelthy3 cli**, open your terminal and run the following co
   ```
 
 **zelthy3** is an invaluable tool for efficiently managing your Zelthy projects and applications through the command line, enhancing your development and administrative capabilities.
-
 
 ### Prerequisites for Setting Up a Project
 
@@ -139,6 +138,7 @@ Once you've entered these details, the setup process will create the default pla
 With all the necessary configurations in place, the setup process will proceed to create your project's folder structure and populate it with boilerplate code. You're now ready to start developing your healthcare apps within the Zelthy platform.
 
 ##### Project Structure
+
 ```plaintext
 project_name/                  # Project root directory
 ├── manage.py                  # Django command-line utility for administrative tasks
@@ -153,7 +153,6 @@ project_name/                  # Project root directory
 ```
 
 Follow this guide, and you'll be well on your way to creating powerful and efficient healthcare applications using Zelthy.
-
 
 ## Running the Development Server
 
@@ -181,128 +180,52 @@ This command will initiate the development server, and you'll see output indicat
 
 Running the development server is a crucial step in your project setup, as it provides you with a local environment for app development and testing.
 
-# Using Docker to Create Zelthy Projects
-
-This guide outlines the steps to create and develop Zelthy projects without the need for local installations.
-
-# Develop
-
-## Prerequisites
-
-Make sure you have Docker and Docker Compose installed on your machine. If not, you can follow the installation instructions for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
-
-## Steps
-
-1. Clone the Zelthy3 repository:
-
-    ```bash
-    git clone https://github.com/zelthy/zelthy3.git
-    cd zelthy3
-    ```
-
-2. Run the following command from the root folder of the project:
-
-    ```bash
-    python zel_setup.py --build_core
-    ```
-
-    Use the `--build_core` option to build the Zelthy library for the first time. Subsequent projects can omit this step.
-
-3. This creates a project named `zelthy_project` in the `zproject` folder in the same directory.
-
-4. Customize the project creation using optional arguments:
-
-    ```bash
-    python zel_setup.py --project_name my_project --project_dir /path/to/my_project --server runserver --build_core --platform_username user@example.com --platform_user_password secret --skip_build_project
-    ```
-
-    - `--project_name`: Modifies the name of the project (Default: `zelthy_project`).
-    - `--project_dir`: Specifies the directory for project creation (Default: `zproject`).
-    - `--build_core`: Builds the Zelthy library (Default: `False`).
-    - `--platform_username`: The user email of the platform user (Default: `zelthy@mail.com`).
-    - `--platform_user_password`: The password for the platform user (Default: `Zelthy@123`).
-    - `--skip_build_project`: Skips building the project (Default: `False`).
-    - `--start`: Starts the project as soon as it is created (Default: `False`)
-
-5. To install any Zelthy package, add `PACKAGE_REPO_AWS_ACCESS_KEY_ID` and `PACKAGE_REPO_AWS_SECRET_ACCESS_KEY` to the `.env` file created in the `project_dir` and restart the containers.
-
-6. Subsequently, you can use `docker compose up` from the `project_dir` to start the project.
-
-
-# Rebuilding Core
-
-If you modify somehting in the core of the project, to rebuild it run the following command from the root of the zelthy3 project
-
-```bash
-python zel_setup.py --project_dir <project_dir> --rebuild_core
-```
-
-you can then run `docker compose up` from the project directory to start the project
-
-# Syncing Static Files
-
-You can sync static files by running `python manage.py collectstatic` from the project directory in the `<project>-app-1` container. Make sure to sync the static files before deploying
-
-# Deploy
-
-The necessary docker compose, nginx and gunicorn files to deploy your project are created in the project directory you can use it to deploy your apps easily
-
-## Steps
-
-- Replace `${PROJECT_NAME}` with your project name in the following files
-    - `config/nginx.conf`
-    - `prod.dockerfile`
-- Change the `CORS_ORIGIN_WHITELIST` and `CSRF_TRUSTED_ORIGINS` in the project settings to appropriate domain configured
-- Start the production server by running the two commands
-    ```bash
-    docker compose -f docker-compose.prod.yml build
-    docker compose -f docker-compose.prod.yml up
-    ```
-- You can access your server at `http://<domain>:1443` (By default the domain is localhost)
-- 
-
-
 # Celery Setup for Manual Mode
 
 ## Starting the celery worker
 
-- In project ``__init__.py`` file (``zprj/zprj/__init__.py``) add the below code snippet
-   ```
-   from zelthy.config.celery import app as celery_app
-   
-   __all__ = ["celery_app"]
-   
-   ```
-   Note: This step is only for existing projects. New projects will have this by default
+- In project `__init__.py` file (`zprj/zprj/__init__.py`) add the below code snippet
 
--  Start the redis service
-  
--  Start the celery worker
-   & navigate to the project root (where manage.py file is there)
-   ```
-   celery -A <project_name> worker -l INFO
-   ```
+  ```
+  from zelthy.config.celery import app as celery_app
+
+  __all__ = ["celery_app"]
+
+  ```
+
+  Note: This step is only for existing projects. New projects will have this by default
+
+- Start the redis service
+
+- Start the celery worker
+  & navigate to the project root (where manage.py file is there)
+
+  ```
+  celery -A <project_name> worker -l INFO
+  ```
 
 - Start the celery beat
-   & navigate to the project root (where manage.py file is there)
-   ```
-   celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
-   ```
+  & navigate to the project root (where manage.py file is there)
+  ```
+  celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+  ```
 
 ## Creating task and syncing it
 
-- Navigate to the module or package where you need to create the task and create ``tasks.py``
-  
-   ```
-   workspace
-      App_Name
-         module_name
-            tasks.py    --> Task File
-   ```
-- Add the task with ``@shared_task`` decorator
+- Navigate to the module or package where you need to create the task and create `tasks.py`
+
+  ```
+  workspace
+     App_Name
+        module_name
+           tasks.py    --> Task File
+  ```
+
+- Add the task with `@shared_task` decorator
+
   ```
   from celery import shared_task
-  
+
   @shared_task
   def download_task(request_data):
 
@@ -310,30 +233,25 @@ The necessary docker compose, nginx and gunicorn files to deploy your project ar
        pat = Patient.objects.create(
            name="Download oc"
        )
-   ```
+  ```
 
- - Navigate to App Panel and under Tasks Table sync the tasks
- - Executing task programmatically
+- Navigate to App Panel and under Tasks Table sync the tasks
+- Executing task programmatically
 
-   ```
+  ```
 
-   from zelthy.core.tasks import zelthy_task_executor
-   zelthy_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
+  from zelthy.core.tasks import zelthy_task_executor
+  zelthy_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
 
-   task_name can be taken from App Panel -> Tasks table
-   ```
+  task_name can be taken from App Panel -> Tasks table
+  ```
 
-   Example
-   ```
+  Example
 
-   from zelthy.core.tasks import zelthy_task_executor
-   zelthy_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
+  ```
 
-   task_name can be taken from App Panel -> Tasks table
-   ```
-   
- 
-     
-  
+  from zelthy.core.tasks import zelthy_task_executor
+  zelthy_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
 
-   
+  task_name can be taken from App Panel -> Tasks table
+  ```

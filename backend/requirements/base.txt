@@ -26,3 +26,4 @@ PyJWT==2.8.0
 XlsxWriter==3.1.9
 pydub==0.25.1
 django-celery-results==2.5.1
+django-environ==0.11.2

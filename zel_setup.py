@@ -11,15 +11,19 @@ def load_necessary_files(project_dir, project_name, without_db):
     if not os.path.exists(project_dir):
         os.mkdir(project_dir)
 
-    shutil.copytree("config", f"{project_dir}/config")
-    shutil.copy("zelthy3_prod.yml", f"{project_dir}/docker-compose.prod.yml")
+    shutil.copytree("deploy/config", f"{project_dir}/config")
+    shutil.copy(
+        "deploy/docker_compose.prod.yml", f"{project_dir}/docker-compose.prod.yml"
+    )
     if without_db:
         shutil.copy("zelthy3_without_db.yml", f"{project_dir}/docker-compose.yml")
     else:
-        shutil.copy("zelthy3_with_db.yml", f"{project_dir}/docker-compose.yml")
-    shutil.copy("dev.dockerfile", f"{project_dir}/dev.dockerfile")
-    shutil.copy("prod.dockerfile", f"{project_dir}/prod.dockerfile")
-    shutil.copy("init.sh", f"{project_dir}/init.sh")
+        shutil.copy(
+            "deploy/docker_compose.dev.yml", f"{project_dir}/docker-compose.yml"
+        )
+    shutil.copy("deploy/dev.dockerfile", f"{project_dir}/dev.dockerfile")
+    shutil.copy("deploy/prod.dockerfile", f"{project_dir}/prod.dockerfile")
+    shutil.copy("deploy/init.sh", f"{project_dir}/init.sh")
 
 
 def write_env_file(project_dir, args):
@@ -32,7 +36,8 @@ def write_env_file(project_dir, args):
         f.write(f"POSTGRES_DB=zelthy\n")
         f.write(f"POSTGRES_HOST=postgres\n")
         f.write(f"POSTGRES_PORT=5432\n")
-        f.write(f"REDIS_HOST=redis")
+        f.write(f"REDIS_HOST=redis\n")
+        f.write(f"REDIS_PORT=6379\n")
 
 
 def build_core():
