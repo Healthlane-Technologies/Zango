@@ -75,7 +75,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "zelthy.middleware.request.RequestMiddleware",
+    "zelthy.middleware.request.AppObjectAndRoleAssignmentMiddleware",
     # 'zelthy.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -107,7 +107,7 @@ TEMPLATES = [
             #     'django.contrib.staticfiles',  # Add this line
             # ],
             "loaders": [
-                "zelthy.template_loader.AppTemplateLoader",
+                "zelthy.core.template_loader.AppTemplateLoader",
                 "django.template.loaders.filesystem.Loader",
                 "django.template.loaders.app_directories.Loader",
             ],
