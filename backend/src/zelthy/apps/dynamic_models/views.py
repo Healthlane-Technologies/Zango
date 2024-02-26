@@ -53,7 +53,7 @@ class DynamicView(View, PermMixin):
                 else:
                     user_role = get_current_role()
                     if user_role.name == "AnonymousUsers":
-                        return redirect("/app/home/")
+                        return redirect("/login/")
                     return HttpResponseForbidden(
                         "You don't have permission to view this page"
                     )

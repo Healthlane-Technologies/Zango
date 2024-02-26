@@ -1,0 +1,131 @@
+{% load static %}
+
+{% load crispy_forms_tags %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <!-- Remove Tap Highlight on Windows Phone IE -->
+  <meta name="msapplication-tap-highlight" content="no" />
+
+  <!-- Primary Meta Tags -->
+  <title>Zelthy3</title>
+  <meta name="title" content="Zelthy3" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="{% static 'app_panel/css/styles.css' %}" />
+  <style>
+    .messageList {
+      position: fixed;
+      bottom: 80px;
+      left: 50px;
+      background: #EBEAFE;
+      border: 1px solid #8485F6;
+      box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.16);
+      border-radius: 4px;
+      font-weight: 500;
+      font-size: 12px;
+      line-height: 20px;
+      padding: 16px;
+      letter-spacing: 0.2px;
+      color: #000000;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="main-container" class="main">
+    <div id="content" style="margin-bottom: 120px;">
+      <div class="content-value">
+        <div class="banner-container">
+          <div class="logo">
+            <img id="desktop-logo" src="{% static 'app_panel/images/zelthyLogo.svg' %}" alt="#">
+            <img id="ipad-logo" src="{% static 'app_panel/images/zelthyLogoIpad.svg' %}" alt="#">
+            <img id="iphone-logo" src="{% static 'app_panel/images/zelthyLogoIphone.svg' %}" alt="#">
+          </div>
+          <p class="content-heading">build complex healthcare applications effortlessly</p>
+        </div>
+      </div>
+
+      <div id="AuthCard">
+        <script>
+          document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('submit-id-submit').disabled = true;
+            setTimeout(function () { document.getElementById('submit-id-submit').disabled = false; }, 1000);
+          })
+        </script>
+        <form action="" method="POST" id="initial-login">
+          <h3
+            style="font-weight: 600; font-size: 18px; line-height: 24px; text-align: center; letter-spacing: -0.2px; color: rgb(33, 36, 41); padding-bottom: 32px;">
+            Log In to your account</h3>
+
+          {% csrf_token %}
+          <input type="text" name="username" autofocus="" autocapitalize="none" autocomplete="username"
+            maxlength="150" placeholder="Enter Username" class="textinput form-control" required="">
+          <input type="password" name="password" autofocus="" autocapitalize="none" autocomplete="password"
+            maxlength="150" placeholder="Email Password" class="textinput form-control" required="">
+          <button type="submit"
+            style="width: 100%; background: rgb(80, 72, 237); border-radius: 4px; color: white; padding: 9px; margin: 12px 0px 0px; border: none; cursor: pointer; font-weight: 700; font-size: 16px; line-height: 24px;">
+            Login
+          </button>
+
+          {% comment %} <table>
+            {{ wizard.management_form }}
+            {% crispy wizard.form %}
+          </table> {% endcomment %}
+
+        </form>
+        {% comment %} <div id="messageListContainer" class="messageList" style="display: none;">
+          <p style="font-weight: 700; font-size: 14px;">Error</p>
+          {% if messages %}
+          <div id="list_div" class="display-message" style='text-align: center;'>
+            <ul style='list-style: none;'>
+              {% for message in messages %}
+              <li><span style=" ">{{ message }}</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div> {% endcomment %}
+      </div>
+    </div>
+    <div class="footer"
+      style="position: absolute; bottom: 32px; display: flex; justify-content: space-around; right:0; left:0; margin:0;">
+      <div class="footer-Copyright">Copyright © <span id="getYear"></span> Zelthy</div>
+      <div class="footer-content">
+        <a href="https://www.zelthy.com/privacy/" class="footer-term" target="_blank" rel="noopener">Terms</a>
+        <a href="https://www.zelthy.com/terms/" class="footer-privacy" target="_blank" rel="noopener">PRIVACY</a>
+      </div>
+    </div>
+  </div>
+  <script>
+
+
+    //setHeight of main-container
+    const mainContainer = document.getElementById("main-container");
+    mainContainer.style.height = "auto";
+    mainContainer.style.minHeight = "100vh";
+
+
+    var messageListContainer = document.getElementById("messageListContainer")
+    var listDiv = document.getElementById("list_div")
+    if (messageListContainer.contains(listDiv)) {
+      messageListContainer.style.display = "block";
+    }
+
+  </script>
+</body>
+
+</html>

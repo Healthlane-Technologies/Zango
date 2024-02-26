@@ -1,17 +1,20 @@
-from django.shortcuts import render
-from django.views.generic.base import TemplateView
 from django.contrib.auth.views import LoginView
+from django.shortcuts import redirect
 from rest_framework.views import APIView
 from zelthy.core.api import ZelthySessionPlatformAPIView, get_api_response
 
 
 # Create your views here.
-class PlatformUserLoginView(TemplateView):
+class PlatformUserLoginView(LoginView):
     """
     View to render the login page html.
     """
 
-    template_name = "platform_login.html"
+    template_name = "app_panel/app_panel_login.html"
+
+    def post(self, request, *args, **kwargs):
+        super().post(request, *args, **kwargs)
+        return redirect("/platform")
 
 
 class PlatformUserLoginAPIV1(APIView):
