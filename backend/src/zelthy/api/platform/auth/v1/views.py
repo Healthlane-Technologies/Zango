@@ -1,4 +1,4 @@
-from django.core.paginator import InvalidPage
+from django.db.models import Q
 
 from zelthy.core.api import (
     get_api_response,
@@ -8,6 +8,7 @@ from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.apps.shared.platformauth.models import PlatformUserModel
 from zelthy.apps.shared.tenancy.models import TenantModel
 from zelthy.core.permissions import IsSuperAdminPlatformUser
+from zelthy.core.utils import get_search_columns
 
 from .serializers import PlatformUserSerializerModel
 
@@ -24,11 +25,36 @@ class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         ]
         return options
 
+    def get_queryset(self, search, columns={}):
+        field_name_query_mappping = {
+            "user_name": "name__icontains",
+            "email": "email__icontains",
+            "user_id": "id__icontains",
+            "active": "is_active",
+            "apps_access": "apps__name__icontains",
+        }
+        if search is None:
+            return PlatformUserModel.objects.all().order_by("-modified_at")
+        if columns == {}:
+            return (
+                PlatformUserModel.objects.filter(
+                    Q(name__icontains=search)
+                    | Q(email__icontains=search)
+                    | Q(id__icontains=search)
+                    | Q(apps__name__icontains=search)
+                )
+                .order_by("-modified_at")
+                .distinct()
+            )
+        query = {field_name_query_mappping[k]: v for k, v in columns.items()}
+        return PlatformUserModel.objects.filter(**query).order_by("-modified_at")
+
     def get(self, request, *args, **kwargs):
         try:
-            print("request.GET: ", request.GET)
             include_dropdown_options = request.GET.get("include_dropdown_options")
-            platform_users = PlatformUserModel.objects.all().order_by("-modified_at")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            platform_users = self.get_queryset(search, columns)
             paginated_platform_users = self.paginate_queryset(
                 platform_users, request, view=self
             )
