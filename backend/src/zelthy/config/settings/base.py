@@ -75,7 +75,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "zelthy.middleware.request.AppObjectAndRoleAssignmentMiddleware",
+    "zelthy.middleware.request.UserRoleAndAppObjectAssignmentMiddleware",
     # 'zelthy.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
