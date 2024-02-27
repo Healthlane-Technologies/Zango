@@ -17,7 +17,7 @@ def create_directories(dirs):
 
 
 def get_installed_packages(tenant):
-    with open(f"workspaces/{tenant}/packages.json", "r") as f:
+    with open(f"workspaces/{tenant}/manifest.json", "r") as f:
         data = json.loads(f.read())
         packages = data["packages"]
     return {package["name"]: package["version"] for package in packages}
@@ -53,6 +53,15 @@ def get_all_packages(tenant=None):
     resp_data = []
     for package, data in packages.items():
         resp_data.append({"name": package, **data})
+    for local_package in installed_packages.keys():
+        if local_package not in packages.keys():
+            resp_data.append(
+                {
+                    "name": local_package,
+                    "status": "Installed",
+                    "installed_version": installed_packages[local_package],
+                }
+            )
     return resp_data
 
 
@@ -69,12 +78,12 @@ def update_settings_json(tenant, package_name, version):
 
 
 def update_packages_json(tenant, package_name, version):
-    with open(f"workspaces/{tenant}/packages.json", "r") as f:
+    with open(f"workspaces/{tenant}/manifest.json", "r") as f:
         data = json.loads(f.read())
 
     data["packages"].append({"name": package_name, "version": version})
 
-    with open(f"workspaces/{tenant}/packages.json", "w") as file:
+    with open(f"workspaces/{tenant}/manifest.json", "w") as file:
         json.dump(data, file, indent=4)
 
 

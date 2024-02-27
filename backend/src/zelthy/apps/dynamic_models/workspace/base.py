@@ -43,7 +43,6 @@ from zelthy.core.custom_pluginbase import get_plugin_source
 
 
 class Workspace:
-
     """
     This is the main interface for interacting with the workspace codebase.
     Workspace is initialized under the request response cycle. It is
@@ -191,7 +190,7 @@ class Workspace:
         """
         returns list of packages
         """
-        with open(self.path + "packages.json") as f:
+        with open(self.path + "manifest.json") as f:
             return json.loads(f.read())["packages"]
 
     def get_package_path(self, package_name: str) -> str:
