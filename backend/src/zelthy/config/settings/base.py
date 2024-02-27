@@ -31,7 +31,7 @@ SHARED_APPS = [
     # 'axes',
     # 'session_security',
     "django_celery_beat",
-    # 'django_celery_results',
+    "django_celery_results",
     "rest_framework",
     "knox",
     # 'nocaptcha_recaptcha',
@@ -52,8 +52,8 @@ TENANT_APPS = [
     "crispy_forms",
     "crispy_bootstrap5",
     "debug_toolbar",
-    "crispy_forms"
-    # "django_celery_results"
+    "crispy_forms",
+    "django_celery_results",
     # "cachalot",
 ]
 
@@ -75,7 +75,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "zelthy.middleware.request.RequestMiddleware",
+    "zelthy.middleware.request.UserRoleAndAppObjectAssignmentMiddleware",
     # 'zelthy.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -83,7 +83,6 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
-    "zelthy.middleware.request.HomePageMiddleware",
 ]
 
 
@@ -108,7 +107,7 @@ TEMPLATES = [
             #     'django.contrib.staticfiles',  # Add this line
             # ],
             "loaders": [
-                "zelthy.template_loader.AppTemplateLoader",
+                "zelthy.core.template_loader.AppTemplateLoader",
                 "django.template.loaders.filesystem.Loader",
                 "django.template.loaders.app_directories.Loader",
             ],
@@ -166,7 +165,7 @@ SESSION_COOKIE_NAME = "zelthycookie"
 SESSION_COOKIE_SECURE = False  # To be changed for prod settings
 CSRF_COOKIE_SECURE = False  # To be changed for prod settings
 
-LOGIN_URL = "/login"
+LOGOUT_REDIRECT_URL = "/admin/login"
 
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_NO_REPEAT_DAYS = 180
@@ -178,5 +177,5 @@ MEDIA_URL = "/media/"
 
 # Celery
 CELERY_BROKER_URL = REDIS_URL
-# CELERY_RESULT_BACKEND = "django-db"
+CELERY_RESULT_BACKEND = "django-db"
 X_FRAME_OPTIONS = "ALLOW"

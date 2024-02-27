@@ -1,6 +1,8 @@
 import json
 import traceback
 
+from django_celery_results.models import TaskResult
+
 from django.conf import settings
 from django.utils.decorators import method_decorator
 
@@ -36,6 +38,44 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
 
     def get(self, request, *args, **kwargs):
         try:
+            action = request.GET.get("action")
+            if action == "get_app_creation_status":
+                task_id = request.GET.get("task_id")
+                try:
+                    task = TaskResult.objects.get(task_id=task_id)
+                    if task.status == "SUCCESS":
+                        result = json.loads(task.result)
+                        if result["result"] == "success":
+                            return get_api_response(
+                                True,
+                                {
+                                    "message": "App created successfully",
+                                    "deployed": True,
+                                    "status": "Deployed",
+                                },
+                                200,
+                            )
+                        else:
+                            return get_api_response(
+                                False,
+                                {
+                                    "message": "App creation failed",
+                                    "deployed": False,
+                                    "status": "Failed",
+                                    "error": result["error"],
+                                },
+                                500,
+                            )
+                except TaskResult.DoesNotExist:
+                    return get_api_response(
+                        True,
+                        {
+                            "message": "App creating",
+                            "deployed": False,
+                            "status": "Staged",
+                        },
+                        200,
+                    )
             platform_user = request.user.platform_user
             apps = TenantModel.objects.all().exclude(schema_name="public")
 
@@ -51,6 +91,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
             }
             status = 200
         except Exception as e:
+            print(traceback.format_exc())
             success = False
             response = {"message": str(e)}
             status = 500
@@ -62,7 +103,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
         try:
             success, message = self.validate_data(data)
             if success:
-                app = TenantModel.create(
+                app, task_id = TenantModel.create(
                     name=data["name"],
                     schema_name=data["name"],
                     description=data["description"],
@@ -75,6 +116,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
                 result = {
                     "message": "App Launch Initiated Successfully",
                     "app_uuid": str(app.uuid),
+                    "task_id": task_id,
                 }
                 status = 200
             else:
