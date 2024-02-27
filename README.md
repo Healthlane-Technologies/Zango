@@ -1,6 +1,6 @@
 ## Zelthy is an open source multi-tenant Django framework for building enterprise apps
 
-- Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem:
+- Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem
 - Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows 
 - Built-in user management and user roles
 - Rich ecosystem of packages - Leverage the free packages to develop most of your app workflows. 
