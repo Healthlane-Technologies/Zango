@@ -43,7 +43,6 @@ from zelthy.core.custom_pluginbase import get_plugin_source
 
 
 class Workspace:
-
     """
     This is the main interface for interacting with the workspace codebase.
     Workspace is initialized under the request response cycle. It is
