@@ -1,273 +1,41 @@
-## How to install zelthy3
+## Zelthy is an open source multi-tenant Django framework for building enterprise apps
 
+- Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem:
+- Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows 
+- Built-in user management and user roles
+- Rich ecosystem of packages - Leverage the free packages to develop most of your app workflows. 
+- Granular policy and permission framework linking user roles with views and models
+- Open-core with all  non-enterprise features under the MIT License allowing commercial and private use.
 
 
-**Step 1:** Create a new directory and install virtualenv in it
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox/)
 
-```bash
-mkdir dir
-cd dir
-virtualenv .
-```
-
-**Step 2:** Activate the virtualenv
-
-```bash
-source bin/activate
-```
-
-**Step 3:** Install zelthy3 in the virtualenv
-
-If you are developing zelthy3
-
-```bash
-pip install -r /path to zelthy3 lib
-```
-    
-if you are using zelthy3 to develop apps
-```bash
-pip install /path to zelthy3 tar package
-```
-
-**Step 4:** Start your first zelthy3 project
-```bash
-zelthy3 startproject myfirstproject
-```
-
-
-
-
-####Issues:
-- zelthy3 is not working fine
-- 
-
-
-
-## How to develop applications on zelthy3?
-
-On launching an app (from the d-panel), a folder is provisioned for the app by the unique name of the app. The app’s folder will have a few folders and files to begin with:
-- An empty folder with the name "templates"
-- An empty folder with the name "static"
-- An empty folder with the name "media"
-- `settings.json` with some boilerplate settings shown below
-
-```json
-{
-    "version": "1.0.0",
-    "modules": [ //this should not be changed manually
-    ],
-    "routes": [
-    ]
-}
-
-```
-
-For developing features in the applications, modules need to be added:
-- Go to the app’s root directory and execute the command `python manage.py addmodule <module_name>`
-
-Modules can also be created inside any folder structure inside the app's root directory.
-   - Create any folder structure in the app’s root directory.
-   - Navigate to the desired path and execute the command `python manage.py addmodule <module_name>`
-
-On executing the `addmodule` command, the following will happen:
-- A directory by the name `<module_name>` is created in the path where the `addmodule` command is executed.
-- The module’s directory will have the following folders and files:
-   - `templates`
-     - `hello_world.html` a sample html file
-   - `views` 
-     - `pages` 
-        - `hello_world.py` a sample page
-    - `apis`
-        - `my_first_api.py` a sample API
-   - `datamodels`
-        - `my_first_model.py` boilerplate code for data model 
-   - `tests`
-   - `module_settings.json`
-
-When a module is created, it is automatically registered in settings.json. 
-
-The module_settings.json will have the below boilerplate entry consistent with the pages, apis, datamodels, etc. created in the newly created module
-
-```json
+![Zelthy High Level Architecture](https://docs.zelthy.com/assets/images/Architecture_Diagram-e6eb1b24fca0554edca1110a7de26449.png)
 
-{
- "pages": [
-    {
-        "name": "page1",
-        "path": "views/pages/hello_world.py",
-        "template": "",
-        "meta_title": "My First Page",
-        "perm": {
-            "is_public": false,
-            "allowed_roles": []
-        }        
-    }
- ],
- "apis": [
-    {
-        "name": "api1",
-        "path": "views/page1",
-        "perm": {
-            "is_public": false,
-            "allowed_roles": []
-        }        
-    }
- ],
- "datamodels": [
-    {
-        "name": "MyFirstModel",
-        "path": "datamodels/my_first_model.py"
-    }
- ],    
- "routes": 
-    [
-        {
-            "re_path": "^hello_world/$",
-            "view_path": "views/pages/hello_world.py"
-        },
-        {
-            "re_path": "^my_first_api/$",
-            "view_path": "views/my_first_api.py"
-        }
-    ]
-}
+#### App Panel - Central hub to manage all your apps
+![Zelthy App Panel](https://docs.zelthy.com/assets/images/app_panel_landing-af182a79b1f4735606e8941830997dc2.png)
 
 
-```
-It is not necessary to follow the same folder strucure or folder naming for views, pages, apis or datamodels. The only requirement is to include the items in the module_settings.json with the relevant path. 
+Perform tasks such as configuring permissions, managing user roles, and much more. 
 
+![Zelthy App Panel](https://docs.zelthy.com/assets/images/switching_to_app_view2-5846ede4e2a690d7b243dd51cf99559f.png)
 
-## Working with database migrations
 
-Zelthy3 utilizes Alembic for handling database migrations. The current version does not support generating automated migration scripts. The workflow for handling migrations in zelthy3 is as below:
+#### Drastically reduce your per app cost through Zelthy’s Multi-tenant approach:
 
-- Initialize the migration environment for the app with the below command (to be executed from the project's root directory)
+Zelthy redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
- ```bash
-    zelthy3 migration_init <app_name> --settings='firstproject.settings'
+![Zelthy Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
 
- ```
- This command will create a `migrations` folder within the root folder of the app and also create other necessary files to handle migration (env.py, script.py.mako) and an empty folder named `versions` to store migration scripts.
 
-- Once the migration environment is setup, we are ready to create our first migration revision. This process will generate an empty revision file where we need to define the migration manually.
+#### Installation:
+- Docker
+- Manual
+- Gitpod
 
- ```bash
-    zelthy3 migration_rev <app_name> --settings='firstproject.settings' --message='first_migration'
 
- ```
- You will notice that a new version file is created inside the versions folder.
+#### Get Involved:
+Coming soon
 
- - Now we are ready to implement the migration script in the newly created migration version. We only need to implement the upgrade and downgrade functions in the file. In this example we are creating a MyUsers table with fields id, name, email & city. Please not that all upgrade and downgrade functions must have schema kwarg and must match with the current apps' schema.
+#### Official Documentation: https://docs.zelthy.com/
 
- ```python
-    
-    def upgrade():
-        # ### commands auto generated by Alembic - please adjust! ###
-        op.create_table(
-            'MyUsers',
-            sa.Column('id', sa.Integer, primary_key=True),
-            sa.Column('name', sa.String(100), nullable=False),
-            sa.Column('email', sa.String(100), unique=True, nullable=False),
-            sa.Column('city', sa.String(100), nullable=False),
-            schema=<current_app_schema>
-        )
-
-
-    def downgrade() -> None:
-        # ### commands auto generated by Alembic - please adjust! ###
-        op.drop_table('MyUsers', schema=<current_app_schema>)
-
- 
- ```
-
-- Now we are ready to migrate to the database. For this we implement the command below. Note that the upgrade command will attempt to migrate all the pending migrations available in versions. The command also validates if the schema name is correctly defined in the migration scripts.
-
-```bash
-
- zelthy3 migration_upgrade <app_name> --settings='firstproject.settings'
-
-```
-Once the migration is successfuly done, the expected table will be created in the database and the alembic_versions table will have the version_number updated.
-
-- At this stage, lets try to make some more changes in our table. Let's add a new column `state`. For this we will need to create a new revision, add the relevant script in the updgrade and downgrade functions in the newly created revision files and then migrate to the database
-
-```bash
-    zelthy3 migration_rev <app_name> --settings='firstproject.settings' --message='added_state'
-```
-
-In the revision file that is created make the below changes
- ```python
-    
-    def upgrade():
-        # ### commands auto generated by Alembic - please adjust! ###
-        op.add_column(
-            'MyUsers', 
-            sa.Column('state', sa.String(100), nullable=True),
-            schema=<current_app_schema>)
-
-
-    def downgrade() -> None:
-        # ### commands auto generated by Alembic - please adjust! ###
-        op.drop_column('MyUsers', 'state', schema=<current_app_schema>)
-
- ```
- Now migrate to the database
-
-```bash
-    zelthy3 migration_upgrade <app_name> --settings='firstproject.settings'
-```
-
-You will notice that the MyUsers table in your database has a new column 'state' added and the alembic_versions has the version_number updated.
-
-- We can also rollback or downgrade applied migrations easily with the below command
-
-```bash
-zelthy3 migration_downgrade <app_name> --settings='firstproject.settings' --down=-1
-```
-This removes the state column and updates the version_number in the alembic_versions table
-
-Executing this command once more will remove the table completely from the database and sets the version_number in alembic_versions table to empty as expected.
-
-
-## How packages work in Zelthy3?
-
-Packages represent a collection of features built on zelthy3, generally reusable components or features that can be directly used to represent certain use cases. When installed packages are populated as one or more modules in the app.  
-
-Package - Migration, Collectstatic.
-
-- Install package zelthy3 install pkgname
-- Register the package in settings.json and update the package's settings
-- Once a package is registered as a module it becomes a 
-- Run app_migrate
-
-- Zelthy packages are dynamically executed.
-- Pages, APIs, Tasks etc. exposed by the installed packages have to be called seperately
-- 
-
-
-# Examples of packages:
- - Email Module: Email module can be a package that includes the following:
-    - datamodels to store Email Objects
-    - pages to host the email's inbox, outbox etc. with email sending functionality
-    - pages to configure email - e.g. smtp, imap configurations
-
-Usage of email module:
--   
-
-    <!-- roles are not known when module is developed -->
-
-How to modify module's code?
-- Ideally module's code should not be altered directly to keep it upgradable
-- 
-
-- SMS Module: 
-
-Pages need to be compatible with Frames
-
-
-How to install Frames?
- - Frames have the following aspects that need to be considered:
-    - Support of Menu 
-    - Select
-
-    
