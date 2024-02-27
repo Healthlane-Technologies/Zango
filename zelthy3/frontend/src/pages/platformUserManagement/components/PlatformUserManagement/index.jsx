@@ -5,6 +5,7 @@ import useApi from '../../../../hooks/useApi';
 import {
 	openIsAddNewUserModalOpen,
 	selectPlatformUserManagementData,
+	selectPlatformUserManagementTableData,
 	selectRerenderPage,
 	setPlatformUserManagementData,
 } from '../../slice';
@@ -21,6 +22,10 @@ export default function PlatformUserManagement() {
 	const platformUserManagementData = useSelector(
 		selectPlatformUserManagementData
 	);
+	const platformUserManagementTableData = useSelector(
+		selectPlatformUserManagementTableData
+	);
+
 	const dispatch = useDispatch();
 
 	const handleAddNewUser = () => {
@@ -34,9 +39,23 @@ export default function PlatformUserManagement() {
 	const triggerApi = useApi();
 
 	useEffect(() => {
+		let columnFilter = platformUserManagementTableData?.columns
+			? platformUserManagementTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/auth/platform-users/?include_dropdown_options=true`,
+				url: `/api/v1/auth/platform-users/?page=${
+					platformUserManagementTableData?.pageIndex + 1
+				}&page_size=${
+					platformUserManagementTableData?.pageSize
+				}&include_dropdown_options=true&search=${
+					platformUserManagementTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});

@@ -7,6 +7,7 @@ import {
 	selectAppTaskManagementData,
 	selectRerenderPage,
 	setAppTaskManagementData,
+	selectAppTaskManagementTableData,
 } from '../../slice';
 import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
 import UpdatePolicyModal from '../Models/UpdatePolicyModal';
@@ -14,9 +15,11 @@ import Table from '../Table';
 
 export default function AppTaskManagement() {
 	let { appId } = useParams();
-	const rerenderPage = useSelector(selectRerenderPage);
-
 	const appTaskManagementData = useSelector(selectAppTaskManagementData);
+	const taskManagementRolesTableData = useSelector(
+		selectAppTaskManagementTableData
+	);
+	const rerenderPage = useSelector(selectRerenderPage);
 
 	const dispatch = useDispatch();
 
@@ -27,9 +30,23 @@ export default function AppTaskManagement() {
 	const triggerApi = useApi();
 
 	useEffect(() => {
+		let columnFilter = taskManagementRolesTableData?.columns
+			? taskManagementRolesTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/tasks/?include_dropdown_options=true`,
+				url: `/api/v1/apps/${appId}/tasks/?page=${
+					taskManagementRolesTableData?.pageIndex + 1
+				}&page_size=${
+					taskManagementRolesTableData?.pageSize
+				}&include_dropdown_options=true&search=${
+					taskManagementRolesTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});

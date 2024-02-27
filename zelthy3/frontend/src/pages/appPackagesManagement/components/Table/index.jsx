@@ -4,19 +4,23 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from '@tanstack/react-table';
+import debounce from 'just-debounce-it';
+import { findIndex, set } from 'lodash';
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
+import { ReactComponent as DetailEyeIcon } from '../../../../assets/images/svg/detail-eye-icon.svg';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
-import { ReactComponent as DetailEyeIcon } from '../../../../assets/images/svg/detail-eye-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import {
 	openIsConfigurePackageModalOpen,
 	selectAppPackagesManagementData,
+	selectAppPackagesManagementTableData,
 	setAppPackagesManagementData,
+	setAppPackagesManagementTableData,
 } from '../../slice';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
@@ -24,8 +28,31 @@ import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const appPackagesManagementTableData = useSelector(
+		selectAppPackagesManagementTableData
+	);
 
 	const columnHelper = createColumnHelper();
+
+	const handleSearch = (value) => {
+		let searchData = { ...appPackagesManagementTableData, searchValue: value };
+		debounceSearch(searchData);
+	};
+
+	const handleColumnSearch = (data) => {
+		let tempTableData = JSON.parse(
+			JSON.stringify(appPackagesManagementTableData)
+		);
+		let index = findIndex(tempTableData?.columns, { id: data?.id });
+
+		if (index !== -1) {
+			set(tempTableData?.columns[index], 'value', data?.value);
+		} else {
+			tempTableData?.columns.push({ id: data?.id, value: data?.value });
+		}
+
+		debounceSearch(tempTableData);
+	};
 
 	const columns = [
 		columnHelper.accessor((row) => row.name, {
@@ -88,19 +115,14 @@ export default function Table({ tableData }) {
 		}),
 	];
 
-	const [{ pageIndex, pageSize }, setPagination] = useState({
-		pageIndex: 0,
-		pageSize: 10,
-	});
-
 	const defaultData = useMemo(() => [], []);
 
 	const pagination = useMemo(
 		() => ({
-			pageIndex,
-			pageSize,
+			pageIndex: appPackagesManagementTableData?.pageIndex,
+			pageSize: appPackagesManagementTableData?.pageSize,
 		}),
-		[pageIndex, pageSize]
+		[appPackagesManagementTableData]
 	);
 
 	const appPackagesManagementData = useSelector(
@@ -114,7 +136,18 @@ export default function Table({ tableData }) {
 		state: {
 			pagination,
 		},
-		onPaginationChange: setPagination,
+		onPaginationChange: (updater) => {
+			if (typeof updater !== 'function') return;
+
+			const newPageInfo = updater(table.getState().pagination);
+
+			dispatch(
+				setAppPackagesManagementTableData({
+					...appPackagesManagementTableData,
+					...newPageInfo,
+				})
+			);
+		},
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 	});
@@ -127,13 +160,28 @@ export default function Table({ tableData }) {
 
 	const triggerApi = useApi();
 
+	const debounceSearch = debounce((data) => {
+		dispatch(setAppPackagesManagementTableData(data));
+	}, 500);
+
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
+
+		let columnFilter = appPackagesManagementTableData?.columns
+			? appPackagesManagementTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/packages/?page=${
 					pageIndex + 1
-				}&page_size=${pageSize}&include_dropdown_options=true`,
+				}&page_size=${pageSize}&include_dropdown_options=true&search=${
+					appPackagesManagementTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -143,7 +191,7 @@ export default function Table({ tableData }) {
 		};
 
 		makeApiCall();
-	}, [pagination]);
+	}, [appPackagesManagementTableData]);
 
 	return (
 		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
@@ -156,7 +204,8 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Users by name / ID / role(s)"
+							placeholder="Search Packages by name"
+							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
 					{/* <TableFilterIcon />
@@ -246,7 +295,7 @@ export default function Table({ tableData }) {
 			<div className="flex border-t border-[#DDE2E5] py-[4px]">
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-						Total count: {appPackagesManagementData?.tasks?.total_records}
+						Total count: {appPackagesManagementData?.packages?.total_records}
 					</span>
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						<PageCountSelectField

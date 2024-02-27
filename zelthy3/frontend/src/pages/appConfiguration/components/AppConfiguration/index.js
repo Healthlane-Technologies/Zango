@@ -135,7 +135,7 @@ export default function AppConfiguration() {
 											(eachDomain, key) => {
 												return (
 													<a
-														href={`https://${eachDomain?.domain}`}
+														href={`http://${eachDomain?.domain}`}
 														alt="#"
 														target={'_blank'}
 														key={key}

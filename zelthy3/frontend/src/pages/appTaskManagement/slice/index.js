@@ -8,6 +8,12 @@ export const appTaskManagementSlice = createSlice({
 		rerenderPage: false,
 		appTaskManagementData: null,
 		appTaskManagementFormData: null,
+		appTaskManagementTableData: {
+			searchValue: '',
+			columns: [],
+			pageIndex: 0,
+			pageSize: 10,
+		},
 	},
 	reducers: {
 		toggleIsUpdatePolicyModalOpen: (state) => {
@@ -35,6 +41,9 @@ export const appTaskManagementSlice = createSlice({
 		setAppTaskManagementData: (state, action) => {
 			state.appTaskManagementData = action.payload;
 		},
+		setAppTaskManagementTableData: (state, action) => {
+			state.appTaskManagementTableData = action.payload;
+		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
@@ -49,6 +58,8 @@ export const {
 	openIsRemoveAllPoliciesModalOpen,
 	closeIsRemoveAllPoliciesModalOpen,
 	setAppTaskManagementData,
+	setAppTaskManagementTableData,
+
 	toggleRerenderPage,
 } = appTaskManagementSlice.actions;
 
@@ -63,6 +74,9 @@ export const selectRerenderPage = (state) =>
 
 export const selectAppTaskManagementData = (state) =>
 	state.appTaskManagement.appTaskManagementData;
+
+export const selectAppTaskManagementTableData = (state) =>
+	state.appTaskManagement.appTaskManagementTableData;
 
 export const selectAppTaskManagementFormData = (state) =>
 	state.appTaskManagement.appTaskManagementFormData;

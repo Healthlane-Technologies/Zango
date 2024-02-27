@@ -32,7 +32,7 @@ export const appConfigurationHandlers = [
 						fav_icon: '',
 						extra_config: null,
 						domains: [
-							{ domain: 'domainame1.com', is_primary: true },
+							{ domain: 'zel3-neapp.zelthy.in', is_primary: true },
 							{ domain: 'domainame2.com', is_primary: false },
 							{ domain: 'domainame3.com', is_primary: false },
 						],

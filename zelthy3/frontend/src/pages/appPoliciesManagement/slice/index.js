@@ -11,6 +11,12 @@ export const appPoliciesManagementSlice = createSlice({
 		rerenderPage: false,
 		appPoliciesManagementData: null,
 		appPoliciesManagementFormData: null,
+		appPoliciesManagementTableData: {
+			searchValue: '',
+			columns: [],
+			pageIndex: 0,
+			pageSize: 10,
+		},
 	},
 	reducers: {
 		toggleIsAddPolicyModalOpen: (state) => {
@@ -64,6 +70,9 @@ export const appPoliciesManagementSlice = createSlice({
 		setAppPoliciesManagementData: (state, action) => {
 			state.appPoliciesManagementData = action.payload;
 		},
+		setAppPoliciesManagementTableData: (state, action) => {
+			state.appPoliciesManagementTableData = action.payload;
+		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
@@ -85,6 +94,7 @@ export const {
 	openIsDeletePolicyModalOpen,
 	closeIsDeletePolicyModalOpen,
 	setAppPoliciesManagementData,
+	setAppPoliciesManagementTableData,
 	toggleRerenderPage,
 } = appPoliciesManagementSlice.actions;
 
@@ -108,6 +118,9 @@ export const selectRerenderPage = (state) =>
 
 export const selectAppPoliciesManagementData = (state) =>
 	state.appPoliciesManagement.appPoliciesManagementData;
+
+export const selectAppPoliciesManagementTableData = (state) =>
+	state.appPoliciesManagement.appPoliciesManagementTableData;
 
 export const selectAppPoliciesManagementFormData = (state) =>
 	state.appPoliciesManagement.appPoliciesManagementFormData;

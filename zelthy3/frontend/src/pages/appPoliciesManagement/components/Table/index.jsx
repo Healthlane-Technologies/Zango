@@ -4,6 +4,8 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from '@tanstack/react-table';
+import debounce from 'just-debounce-it';
+import { find, findIndex, set } from 'lodash';
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -11,11 +13,14 @@ import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
+import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
 import {
 	openIsViewPolicyModalOpen,
 	selectAppPoliciesManagementData,
+	selectAppPoliciesManagementTableData,
 	setAppPoliciesManagementData,
+	setAppPoliciesManagementTableData,
 } from '../../slice';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
@@ -23,11 +28,34 @@ import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const appPoliciesManagementTableData = useSelector(
+		selectAppPoliciesManagementTableData
+	);
 
 	const handleViewPolicyConfigure = (payload) => {
 		dispatch(openIsViewPolicyModalOpen(payload));
 	};
 	const columnHelper = createColumnHelper();
+
+	const handleSearch = (value) => {
+		let searchData = { ...appPoliciesManagementTableData, searchValue: value };
+		debounceSearch(searchData);
+	};
+
+	const handleColumnSearch = (data) => {
+		let tempTableData = JSON.parse(
+			JSON.stringify(appPoliciesManagementTableData)
+		);
+		let index = findIndex(tempTableData?.columns, { id: data?.id });
+
+		if (index !== -1) {
+			set(tempTableData?.columns[index], 'value', data?.value);
+		} else {
+			tempTableData?.columns.push({ id: data?.id, value: data?.value });
+		}
+
+		debounceSearch(tempTableData);
+	};
 
 	const columns = [
 		columnHelper.accessor((row) => row.id, {
@@ -107,19 +135,14 @@ export default function Table({ tableData }) {
 		}),
 	];
 
-	const [{ pageIndex, pageSize }, setPagination] = useState({
-		pageIndex: 0,
-		pageSize: 10,
-	});
-
 	const defaultData = useMemo(() => [], []);
 
 	const pagination = useMemo(
 		() => ({
-			pageIndex,
-			pageSize,
+			pageIndex: appPoliciesManagementTableData?.pageIndex,
+			pageSize: appPoliciesManagementTableData?.pageSize,
 		}),
-		[pageIndex, pageSize]
+		[appPoliciesManagementTableData]
 	);
 
 	const appPoliciesManagementData = useSelector(
@@ -133,7 +156,18 @@ export default function Table({ tableData }) {
 		state: {
 			pagination,
 		},
-		onPaginationChange: setPagination,
+		onPaginationChange: (updater) => {
+			if (typeof updater !== 'function') return;
+
+			const newPageInfo = updater(table.getState().pagination);
+
+			dispatch(
+				setAppPoliciesManagementTableData({
+					...appPoliciesManagementTableData,
+					...newPageInfo,
+				})
+			);
+		},
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 	});
@@ -146,13 +180,28 @@ export default function Table({ tableData }) {
 
 	const triggerApi = useApi();
 
+	const debounceSearch = debounce((data) => {
+		dispatch(setAppPoliciesManagementTableData(data));
+	}, 500);
+
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
+
+		let columnFilter = appPoliciesManagementTableData?.columns
+			? appPoliciesManagementTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/policies/?page=${
 					pageIndex + 1
-				}&page_size=${pageSize}&include_dropdown_options=true`,
+				}&page_size=${pageSize}&include_dropdown_options=true&search=${
+					appPoliciesManagementTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -162,7 +211,7 @@ export default function Table({ tableData }) {
 		};
 
 		makeApiCall();
-	}, [pagination]);
+	}, [appPoliciesManagementTableData]);
 
 	return (
 		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
@@ -175,7 +224,8 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Users by name / ID / role(s)"
+							placeholder="Search Polices by name / policy(s)"
+							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
 					{/* <TableFilterIcon />

@@ -5,6 +5,7 @@ import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	selectAppPackagesManagementData,
+	selectAppPackagesManagementTableData,
 	selectRerenderPage,
 	setAppPackagesManagementData,
 } from '../../slice';
@@ -14,9 +15,13 @@ import Table from '../Table';
 
 export default function AppPackagesManagement() {
 	let { appId } = useParams();
+	const appPackagesManagementData = useSelector(
+		selectAppPackagesManagementData
+	);
+	const appPackagesManagementTableData = useSelector(
+		selectAppPackagesManagementTableData
+	);
 	const rerenderPage = useSelector(selectRerenderPage);
-
-	const appTaskManagementData = useSelector(selectAppPackagesManagementData);
 
 	const dispatch = useDispatch();
 
@@ -27,9 +32,23 @@ export default function AppPackagesManagement() {
 	const triggerApi = useApi();
 
 	useEffect(() => {
+		let columnFilter = appPackagesManagementTableData?.columns
+			? appPackagesManagementTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/packages/?include_dropdown_options=true`,
+				url: `/api/v1/apps/${appId}/packages/?page=${
+					appPackagesManagementTableData?.pageIndex + 1
+				}&page_size=${
+					appPackagesManagementTableData?.pageSize
+				}&include_dropdown_options=true&search=${
+					appPackagesManagementTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -49,8 +68,8 @@ export default function AppPackagesManagement() {
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
 					<div className="flex grow flex-col overflow-x-auto">
-						{appTaskManagementData ? (
-							<Table tableData={appTaskManagementData?.packages} />
+						{appPackagesManagementData ? (
+							<Table tableData={appPackagesManagementData?.packages} />
 						) : null}
 					</div>
 				</div>

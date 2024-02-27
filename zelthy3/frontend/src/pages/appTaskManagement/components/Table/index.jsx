@@ -4,6 +4,8 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from '@tanstack/react-table';
+import debounce from 'just-debounce-it';
+import { find, findIndex, set } from 'lodash';
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,10 +14,13 @@ import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/im
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
 import ListCell from '../../../../components/Table/ListCell';
+import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
 import {
 	selectAppTaskManagementData,
+	selectAppTaskManagementTableData,
 	setAppTaskManagementData,
+	setAppTaskManagementTableData,
 } from '../../slice';
 import SyncTask from '../SyncTask';
 import PageCountSelectField from './PageCountSelectField';
@@ -24,8 +29,29 @@ import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const appTaskManagementTableData = useSelector(
+		selectAppTaskManagementTableData
+	);
 
 	const columnHelper = createColumnHelper();
+
+	const handleSearch = (value) => {
+		let searchData = { ...appTaskManagementTableData, searchValue: value };
+		debounceSearch(searchData);
+	};
+
+	const handleColumnSearch = (data) => {
+		let tempTableData = JSON.parse(JSON.stringify(appTaskManagementTableData));
+		let index = findIndex(tempTableData?.columns, { id: data?.id });
+
+		if (index !== -1) {
+			set(tempTableData?.columns[index], 'value', data?.value);
+		} else {
+			tempTableData?.columns.push({ id: data?.id, value: data?.value });
+		}
+
+		debounceSearch(tempTableData);
+	};
 
 	const columns = [
 		columnHelper.accessor((row) => row.id, {
@@ -95,10 +121,38 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.is_enabled, {
 			id: 'is_enabled',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Status
 					</span>
+					<div className="translate-y-[-2px]">
+						<TableDropdownFilter
+							key="is_enabled"
+							label="Status"
+							name="is_enabled"
+							id="is_enabled"
+							placeholder="Select"
+							value={
+								find(appTaskManagementTableData?.columns, { id: 'is_enabled' })
+									?.value
+									? find(appTaskManagementTableData?.columns, {
+											id: 'is_enabled',
+									  })?.value
+									: ''
+							}
+							optionsDataName="is_enabled"
+							optionsData={[
+								{ id: true, label: 'Scheduled' },
+								{ id: false, label: 'Disabled' },
+							]}
+							onChange={(value) => {
+								handleColumnSearch({
+									id: 'is_enabled',
+									value: value?.id,
+								});
+							}}
+						/>
+					</div>
 				</div>
 			),
 			cell: (info) => (
@@ -115,19 +169,14 @@ export default function Table({ tableData }) {
 		}),
 	];
 
-	const [{ pageIndex, pageSize }, setPagination] = useState({
-		pageIndex: 0,
-		pageSize: 10,
-	});
-
 	const defaultData = useMemo(() => [], []);
 
 	const pagination = useMemo(
 		() => ({
-			pageIndex,
-			pageSize,
+			pageIndex: appTaskManagementTableData?.pageIndex,
+			pageSize: appTaskManagementTableData?.pageSize,
 		}),
-		[pageIndex, pageSize]
+		[appTaskManagementTableData]
 	);
 
 	const appTaskManagementData = useSelector(selectAppTaskManagementData);
@@ -139,7 +188,18 @@ export default function Table({ tableData }) {
 		state: {
 			pagination,
 		},
-		onPaginationChange: setPagination,
+		onPaginationChange: (updater) => {
+			if (typeof updater !== 'function') return;
+
+			const newPageInfo = updater(table.getState().pagination);
+
+			dispatch(
+				setAppTaskManagementTableData({
+					...appTaskManagementTableData,
+					...newPageInfo,
+				})
+			);
+		},
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 	});
@@ -152,13 +212,28 @@ export default function Table({ tableData }) {
 
 	const triggerApi = useApi();
 
+	const debounceSearch = debounce((data) => {
+		dispatch(setAppTaskManagementTableData(data));
+	}, 500);
+
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
+
+		let columnFilter = appTaskManagementTableData?.columns
+			? appTaskManagementTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/tasks/?page=${
 					pageIndex + 1
-				}&page_size=${pageSize}&include_dropdown_options=true`,
+				}&page_size=${pageSize}&include_dropdown_options=true&search=${
+					appTaskManagementTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -168,7 +243,7 @@ export default function Table({ tableData }) {
 		};
 
 		makeApiCall();
-	}, [pagination]);
+	}, [appTaskManagementTableData]);
 
 	return (
 		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
@@ -181,7 +256,8 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Users by name / ID / role(s)"
+							placeholder="Search Tasks by name / ID / policy(s)"
+							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
 					<SyncTask />

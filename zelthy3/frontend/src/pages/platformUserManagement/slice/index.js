@@ -11,6 +11,12 @@ export const platformUserManagementSlice = createSlice({
 		rerenderPage: false,
 		platformUserManagementData: null,
 		platformUserManagementFormData: null,
+		platformUserManagementTableData: {
+			searchValue: '',
+			columns: [],
+			pageIndex: 0,
+			pageSize: 10,
+		},
 	},
 	reducers: {
 		toggleIsAddNewUserModalOpen: (state) => {
@@ -71,6 +77,9 @@ export const platformUserManagementSlice = createSlice({
 		setPlatformUserManagementData: (state, action) => {
 			state.platformUserManagementData = action.payload;
 		},
+		setPlatformUserManagementTableData: (state, action) => {
+			state.platformUserManagementTableData = action.payload;
+		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
@@ -94,6 +103,7 @@ export const {
 	openIsResetPasswordModalOpen,
 	closeIsResetPasswordModalOpen,
 	setPlatformUserManagementData,
+	setPlatformUserManagementTableData,
 	toggleRerenderPage,
 } = platformUserManagementSlice.actions;
 
@@ -117,6 +127,9 @@ export const selectRerenderPage = (state) =>
 
 export const selectPlatformUserManagementData = (state) =>
 	state.platformUserManagement.platformUserManagementData;
+
+export const selectPlatformUserManagementTableData = (state) =>
+	state.platformUserManagement.platformUserManagementTableData;
 
 export const selectPlatformUserManagementFormData = (state) =>
 	state.platformUserManagement.platformUserManagementFormData;

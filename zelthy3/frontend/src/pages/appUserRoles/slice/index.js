@@ -10,6 +10,12 @@ export const appUserRolesSlice = createSlice({
 		rerenderPage: false,
 		appUserRolesData: null,
 		appUserRolesFormData: null,
+		appUserRolesTableData: {
+			searchValue: '',
+			columns: [],
+			pageIndex: 0,
+			pageSize: 10,
+		},
 		isAppUserRolesDataEmpty: true,
 	},
 	reducers: {
@@ -65,6 +71,9 @@ export const appUserRolesSlice = createSlice({
 				? false
 				: true;
 		},
+		setAppUserRolesTableData: (state, action) => {
+			state.appUserRolesTableData = action.payload;
+		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
@@ -85,6 +94,7 @@ export const {
 	openIsActivateUserRolesModalOpen,
 	closeIsActivateUserRolesModalOpen,
 	setAppUserRolesData,
+	setAppUserRolesTableData,
 	toggleRerenderPage,
 } = appUserRolesSlice.actions;
 
@@ -107,6 +117,9 @@ export const selectAppUserRolesData = (state) =>
 
 export const selectAppUserRolesFormData = (state) =>
 	state.appUserRoles.appUserRolesFormData;
+
+export const selectAppUserRolesTableData = (state) =>
+	state.appUserRoles.appUserRolesTableData;
 
 export const selectIsAppUserRolesDataEmpty = (state) =>
 	state.appUserRoles.isAppUserRolesDataEmpty;

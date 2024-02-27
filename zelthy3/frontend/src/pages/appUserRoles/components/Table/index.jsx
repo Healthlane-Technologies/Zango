@@ -4,24 +4,51 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from '@tanstack/react-table';
+import debounce from 'just-debounce-it';
+import { find, findIndex, set } from 'lodash';
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
 import ListCell from '../../../../components/Table/ListCell';
+import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
-import { selectAppUserRolesData, setAppUserRolesData } from '../../slice';
+import {
+	selectAppUserRolesData,
+	selectAppUserRolesTableData,
+	setAppUserRolesData,
+	setAppUserRolesTableData,
+} from '../../slice';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const appUserRolesTableData = useSelector(selectAppUserRolesTableData);
 
 	const columnHelper = createColumnHelper();
+
+	const handleSearch = (value) => {
+		let searchData = { ...appUserRolesTableData, searchValue: value };
+		debounceSearch(searchData);
+	};
+
+	const handleColumnSearch = (data) => {
+		let tempTableData = JSON.parse(JSON.stringify(appUserRolesTableData));
+		let index = findIndex(tempTableData?.columns, { id: data?.id });
+
+		if (index !== -1) {
+			set(tempTableData?.columns[index], 'value', data?.value);
+		} else {
+			tempTableData?.columns.push({ id: data?.id, value: data?.value });
+		}
+
+		debounceSearch(tempTableData);
+	};
 
 	const columns = [
 		columnHelper.accessor((row) => row.name, {
@@ -57,10 +84,36 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.is_active, {
 			id: 'is_active',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Active/Inactive
 					</span>
+					<div className="translate-y-[-2px]">
+						<TableDropdownFilter
+							key="is_active"
+							label="Stockist"
+							name="is_active"
+							id="is_active"
+							placeholder="Select"
+							value={
+								find(appUserRolesTableData?.columns, { id: 'is_active' })?.value
+									? find(appUserRolesTableData?.columns, { id: 'is_active' })
+											?.value
+									: ''
+							}
+							optionsDataName="is_active"
+							optionsData={[
+								{ id: false, label: 'Inactive' },
+								{ id: true, label: 'Active' },
+							]}
+							onChange={(value) => {
+								handleColumnSearch({
+									id: 'is_active',
+									value: value?.id,
+								});
+							}}
+						/>
+					</div>
 				</div>
 			),
 			cell: (info) => (
@@ -94,19 +147,14 @@ export default function Table({ tableData }) {
 		}),
 	];
 
-	const [{ pageIndex, pageSize }, setPagination] = useState({
-		pageIndex: 0,
-		pageSize: 10,
-	});
-
 	const defaultData = useMemo(() => [], []);
 
 	const pagination = useMemo(
 		() => ({
-			pageIndex,
-			pageSize,
+			pageIndex: appUserRolesTableData?.pageIndex,
+			pageSize: appUserRolesTableData?.pageSize,
 		}),
-		[pageIndex, pageSize]
+		[appUserRolesTableData]
 	);
 
 	const appUserRolesData = useSelector(selectAppUserRolesData);
@@ -118,7 +166,19 @@ export default function Table({ tableData }) {
 		state: {
 			pagination,
 		},
-		onPaginationChange: setPagination,
+		onPaginationChange: (updater) => {
+			if (typeof updater !== 'function') return;
+
+			const newPageInfo = updater(table.getState().pagination);
+
+			dispatch(
+				setAppUserRolesTableData({
+					...appUserRolesTableData,
+					...newPageInfo,
+				})
+			);
+		},
+
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 	});
@@ -131,13 +191,28 @@ export default function Table({ tableData }) {
 
 	const triggerApi = useApi();
 
+	const debounceSearch = debounce((data) => {
+		dispatch(setAppUserRolesTableData(data));
+	}, 500);
+
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
+
+		let columnFilter = appUserRolesTableData?.columns
+			? appUserRolesTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/roles/?page=${
 					pageIndex + 1
-				}&page_size=${pageSize}&include_dropdown_options=true`,
+				}&page_size=${pageSize}&include_dropdown_options=true&search=${
+					appUserRolesTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -147,7 +222,7 @@ export default function Table({ tableData }) {
 		};
 
 		makeApiCall();
-	}, [pagination]);
+	}, [appUserRolesTableData]);
 
 	return (
 		<div className="flex grow flex-col overflow-auto">
@@ -160,7 +235,8 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search User roles by Access / Policy"
+							placeholder="Search User roles by role / policy(s)"
+							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
 					{/* <TableFilterIcon />

@@ -7,6 +7,7 @@ import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	openIsAddNewUserRolesModalOpen,
 	selectAppUserRolesData,
+	selectAppUserRolesTableData,
 	selectIsAppUserRolesDataEmpty,
 	selectRerenderPage,
 	setAppUserRolesData,
@@ -20,6 +21,7 @@ import Table from '../Table';
 export default function AppUserRoles() {
 	let { appId } = useParams();
 	const appUserRolesData = useSelector(selectAppUserRolesData);
+	const appUserRolesTableData = useSelector(selectAppUserRolesTableData);
 	const rerenderPage = useSelector(selectRerenderPage);
 	const isAppUserRolesDataEmpty = useSelector(selectIsAppUserRolesDataEmpty);
 
@@ -39,9 +41,23 @@ export default function AppUserRoles() {
 	const triggerApi = useApi();
 
 	useEffect(() => {
+		let columnFilter = appUserRolesTableData?.columns
+			? appUserRolesTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/roles/?include_dropdown_options=true`,
+				url: `/api/v1/apps/${appId}/roles/?page=${
+					appUserRolesTableData?.pageIndex + 1
+				}&page_size=${
+					appUserRolesTableData?.pageSize
+				}&include_dropdown_options=true&search=${
+					appUserRolesTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});

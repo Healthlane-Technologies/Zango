@@ -11,6 +11,12 @@ export const appUserManagementSlice = createSlice({
 		rerenderPage: false,
 		appUserManagementData: null,
 		appUserManagementFormData: null,
+		appUserManagementTableData: {
+			searchValue: '',
+			columns: [],
+			pageIndex: 0,
+			pageSize: 10,
+		},
 	},
 	reducers: {
 		toggleIsAddNewUserModalOpen: (state) => {
@@ -71,6 +77,9 @@ export const appUserManagementSlice = createSlice({
 		setAppUserManagementData: (state, action) => {
 			state.appUserManagementData = action.payload;
 		},
+		setAppUserManagementTableData: (state, action) => {
+			state.appUserManagementTableData = action.payload;
+		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
@@ -94,6 +103,7 @@ export const {
 	openIsResetPasswordModalOpen,
 	closeIsResetPasswordModalOpen,
 	setAppUserManagementData,
+	setAppUserManagementTableData,
 	toggleRerenderPage,
 } = appUserManagementSlice.actions;
 
@@ -117,6 +127,9 @@ export const selectRerenderPage = (state) =>
 
 export const selectAppUserManagementData = (state) =>
 	state.appUserManagement.appUserManagementData;
+
+export const selectAppUserManagementTableData = (state) =>
+	state.appUserManagement.appUserManagementTableData;
 
 export const selectAppUserManagementFormData = (state) =>
 	state.appUserManagement.appUserManagementFormData;

@@ -7,6 +7,7 @@ import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	openIsAddNewUserModalOpen,
 	selectAppUserManagementData,
+	selectAppUserManagementTableData,
 	selectRerenderPage,
 	setAppUserManagementData,
 } from '../../slice';
@@ -21,6 +22,9 @@ export default function UserManagement() {
 	let { appId } = useParams();
 	const rerenderPage = useSelector(selectRerenderPage);
 	const appUserManagementData = useSelector(selectAppUserManagementData);
+	const appUserManagementTableData = useSelector(
+		selectAppUserManagementTableData
+	);
 
 	const dispatch = useDispatch();
 
@@ -35,9 +39,23 @@ export default function UserManagement() {
 	const triggerApi = useApi();
 
 	useEffect(() => {
+		let columnFilter = appUserManagementTableData?.columns
+			? appUserManagementTableData?.columns
+					?.map(({ id, value }) => {
+						return `&search_${id}=${value}`;
+					})
+					.join('')
+			: '';
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/users/?include_dropdown_options=true`,
+				url: `/api/v1/apps/${appId}/users/?page=${
+					appUserManagementTableData?.pageIndex + 1
+				}&page_size=${
+					appUserManagementTableData?.pageSize
+				}&include_dropdown_options=true&search=${
+					appUserManagementTableData?.searchValue
+				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});

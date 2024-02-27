@@ -8,6 +8,12 @@ export const appPackagesManagementSlice = createSlice({
 		rerenderPage: false,
 		appPackagesManagementData: null,
 		appPackagesManagementFormData: null,
+		appPackagesManagementTableData: {
+			searchValue: '',
+			columns: [],
+			pageIndex: 0,
+			pageSize: 10,
+		},
 	},
 	reducers: {
 		toggleIsConfigurePackageModalOpen: (state) => {
@@ -35,6 +41,9 @@ export const appPackagesManagementSlice = createSlice({
 		setAppPackagesManagementData: (state, action) => {
 			state.appPackagesManagementData = action.payload;
 		},
+		setAppPackagesManagementTableData: (state, action) => {
+			state.appPackagesManagementTableData = action.payload;
+		},
 		toggleRerenderPage: (state) => {
 			state.rerenderPage = !state.rerenderPage;
 		},
@@ -49,6 +58,7 @@ export const {
 	openIsInstallPackageModalOpen,
 	closeIsInstallPackageModalOpen,
 	setAppPackagesManagementData,
+	setAppPackagesManagementTableData,
 	toggleRerenderPage,
 } = appPackagesManagementSlice.actions;
 
@@ -63,6 +73,9 @@ export const selectRerenderPage = (state) =>
 
 export const selectAppPackagesManagementData = (state) =>
 	state.appPackagesManagement.appPackagesManagementData;
+
+export const selectAppPackagesManagementTableData = (state) =>
+	state.appPackagesManagement.appPackagesManagementTableData;
 
 export const selectAppPackagesManagementFormData = (state) =>
 	state.appPackagesManagement.appPackagesManagementFormData;
