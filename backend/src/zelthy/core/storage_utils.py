@@ -7,16 +7,16 @@ from storages.backends.s3boto3 import S3Boto3Storage
 
 
 class S3StaticStorage(S3Boto3Storage):
-    location = settings.AWS_STATIC_STORAGE_LOCATION
+    location = getattr(settings, "AWS_STATIC_STORAGE_LOCATION", "static")
     default_acl = "public-read"
     querystring_auth = False
-    bucket_name = settings.AWS_STATIC_STORAGE_BUCKET_NAME
+    bucket_name = getattr(settings, "AWS_STATIC_STORAGE_BUCKET_NAME", "")
 
 
 class S3MediaStorage(S3Boto3Storage):
-    location = settings.AWS_MEDIA_STORAGE_LOCATION
+    location = getattr(settings, "AWS_MEDIA_STORAGE_LOCATION", "media")
     querystring_auth = True
-    bucket_name = settings.AWS_MEDIA_STORAGE_BUCKET_NAME
+    bucket_name = getattr(settings, "AWS_MEDIA_STORAGE_BUCKET_NAME", "")
 
 
 def RandomUniqueFileName(instance, filename):
