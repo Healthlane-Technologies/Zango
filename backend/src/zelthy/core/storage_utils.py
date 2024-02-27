@@ -24,13 +24,7 @@ def RandomUniqueFileName(instance, filename):
         path = connection.tenant.name + "/" + instance.__class__.__name__
         extension = filename.split(".")[-1]
         file_ = "%s.%s" % (uuid.uuid4(), extension)
-        print("data is ......................", path, file_, filename)
-        if (
-            settings.STORAGES.get("default", {}).get("BACKEND")
-            != "django.core.files.storage.FileSystemStorage"
-        ):
-            return os.path.join(path, file_)
-        return f"{os.path.join(path, file_)}"
+        return os.path.join(path, file_)
     except:
         return
 
