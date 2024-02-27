@@ -29,13 +29,23 @@ Zelthy redefines multi-tenancy by enabling multiple different apps to run on a s
 
 
 #### Installation:
-- Docker
-- Manual
-- Gitpod
+- [Docker](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/docker)
+- [Manual](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/manual)
+- [Gitpod]()
+
+#### Free Packages
+A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
+- [Login](https://docs.zelthy.com/login)
+- [Frames](https://docs.zelthy.com/frame)
+- [CRUD](https://docs.zelthy.com/crud)
+
 
 
 #### Get Involved:
 Coming soon
 
 #### Official Documentation: https://docs.zelthy.com/
+
+
+
 
