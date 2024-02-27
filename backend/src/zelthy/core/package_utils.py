@@ -53,6 +53,15 @@ def get_all_packages(tenant=None):
     resp_data = []
     for package, data in packages.items():
         resp_data.append({"name": package, **data})
+    for local_package in installed_packages.keys():
+        if local_package not in packages.keys():
+            resp_data.append(
+                {
+                    "name": local_package,
+                    "status": "Installed",
+                    "installed_version": installed_packages[local_package],
+                }
+            )
     return resp_data
 
 
