@@ -190,7 +190,7 @@ class Workspace:
         """
         returns list of packages
         """
-        with open(self.path + "packages.json") as f:
+        with open(self.path + "manifest.json") as f:
             return json.loads(f.read())["packages"]
 
     def get_package_path(self, package_name: str) -> str:
