@@ -217,10 +217,14 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         return options
 
     def get_queryset(self, search, columns={}):
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        if columns.get("is_active") == "false":
+            columns["is_active"] = False
         name_field_query_mappping = {
             "role": "name__icontains",
             "policy": "policies__name",
-            "active": "is_active",
+            "is_active": "is_active",
         }
         if search is None:
             return UserRoleModel.objects.all().order_by("-created_at")
@@ -367,12 +371,17 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             app_users = AppUserModel.objects.all().order_by("-modified_at")
 =======
     def get_queryset(self, search, columns={}):
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        if columns.get("is_active") == "false":
+            columns["is_active"] = False
         name_field_query_mappping = {
             "user_name": "name__icontains",
             "email": "email__icontains",
             "user_id": "id__icontains",
             "mobile": "mobile__icontains",
             "roles_access": "roles__name__icontains",
+            "is_active": "is_active",
         }
         if search is None and columns == {}:
             return AppUserModel.objects.all().order_by("-modified_at")

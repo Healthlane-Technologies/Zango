@@ -26,11 +26,16 @@ class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         return options
 
     def get_queryset(self, search, columns={}):
+        if columns.get("is_active"):
+            if columns.get("is_active") == "true":
+                columns["is_active"] = True
+            elif columns.get("is_active") == "false":
+                columns["is_active"] = False
         field_name_query_mappping = {
             "user_name": "name__icontains",
             "email": "email__icontains",
             "user_id": "id__icontains",
-            "active": "is_active",
+            "is_active": "is_active",
             "apps_access": "apps__name__icontains",
         }
         if search is None:

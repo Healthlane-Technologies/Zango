@@ -1,3 +1,5 @@
+import traceback
+
 from django.utils.decorators import method_decorator
 from django.db import connection
 
@@ -18,11 +20,16 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
 
     def get_queryset(self, search, columns={}):
+        if columns.get("is_enabled"):
+            if columns.get("is_enabled") == "true":
+                columns["is_enabled"] = True
+            elif columns.get("is_enabled") == "false":
+                columns["is_enabled"] = False
         name_field_query_mappping = {
             "task_name": "name__icontains",
             "task_id": "id__icontains",
             "policy": "attached_policies__name__icontains",
-            "status": "is_enabled",
+            "is_enabled": "is_enabled",
         }
         if search is None and columns == {}:
             return AppTask.objects.all().order_by("-id")
@@ -57,6 +64,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             }
             status = 200
         except Exception as e:
+            traceback.print_exc()
             success = False
             response = {"message": str(e)}
             status = 500
