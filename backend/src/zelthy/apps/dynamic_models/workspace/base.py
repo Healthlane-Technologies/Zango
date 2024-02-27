@@ -43,7 +43,6 @@ from zelthy.core.custom_pluginbase import get_plugin_source
 
 
 class Workspace:
-
     """
     This is the main interface for interacting with the workspace codebase.
     Workspace is initialized under the request response cycle. It is
@@ -379,7 +378,7 @@ class Workspace:
                         match = pattern.pattern.regex.search(mod_url_path)
                         return pattern.callback, resolve
 
-        raise Http404()
+        return None, None
 
     def launch(self, params: dict) -> None:
         """
