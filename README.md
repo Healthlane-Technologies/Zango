@@ -21,7 +21,7 @@ Perform tasks such as configuring permissions, managing user roles, and much mor
 ![Zelthy App Panel](https://docs.zelthy.com/assets/images/switching_to_app_view2-5846ede4e2a690d7b243dd51cf99559f.png)
 
 
-#### Drastically reduce your per app cost through Zelthy’s Multi-tenant approach:
+#### Drastically reduce your per app cost through Zelthy’s multi-tenant approach:
 
 Zelthy redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
