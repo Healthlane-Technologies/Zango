@@ -84,14 +84,10 @@ STORAGES = {
 #     "staticfiles": {"BACKEND": "zelthy.core.storage_utils.S3StaticStorage"},
 # }
 #
-AWS_MEDIA_STORAGE_BUCKET_NAME = "AWS_MEDIA_STORAGE_BUCKET_NAME"  # S3 Bucket Name
-AWS_MEDIA_STORAGE_LOCATION = (
-    "AWS_MEDIA_STORAGE_LOCATION"  # Prefix added to all the files uploaded
-)
-AWS_STATIC_STORAGE_BUCKET_NAME = "AWS_STATIC_STORAGE_BUCKET_NAME"  # S3 Bucket Name
-AWS_STATIC_STORAGE_LOCATION = (
-    "AWS_MEDIA_STORAGE_LOCATION"  # Prefix added to all the files uploaded
-)
+AWS_MEDIA_STORAGE_BUCKET_NAME = "media"  # S3 Bucket Name
+AWS_MEDIA_STORAGE_LOCATION = "media"  # Prefix added to all the files uploaded
+AWS_STATIC_STORAGE_BUCKET_NAME = "static"  # S3 Bucket Name
+AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = "static/"
