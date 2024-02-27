@@ -3,7 +3,7 @@ from threading import local
 _request_local = local()
 
 
-class AppObjectAndRoleAssignmentMiddleware:
+class UserRoleAndAppObjectAssignmentMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
