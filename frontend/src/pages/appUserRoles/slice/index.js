@@ -67,9 +67,12 @@ export const appUserRolesSlice = createSlice({
 		},
 		setAppUserRolesData: (state, action) => {
 			state.appUserRolesData = action.payload;
-			state.isAppUserRolesDataEmpty = action.payload?.roles?.records?.length
-				? false
-				: true;
+			state.isAppUserRolesDataEmpty =
+				action.payload?.roles?.records?.length ||
+				state?.appUserRolesTableData?.searchValue ||
+				state?.appUserRolesTableData?.columns?.length
+					? false
+					: true;
 		},
 		setAppUserRolesTableData: (state, action) => {
 			state.appUserRolesTableData = action.payload;

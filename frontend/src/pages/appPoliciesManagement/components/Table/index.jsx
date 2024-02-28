@@ -28,6 +28,7 @@ import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const searchRef = React.useRef(null);
 	const appPoliciesManagementTableData = useSelector(
 		selectAppPoliciesManagementTableData
 	);
@@ -213,6 +214,10 @@ export default function Table({ tableData }) {
 		makeApiCall();
 	}, [appPoliciesManagementTableData]);
 
+	useEffect(() => {
+		searchRef.current.value = appPoliciesManagementTableData?.searchValue || '';
+	}, []);
+
 	return (
 		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
 			<div className="flex bg-[#F0F3F4]">
@@ -220,6 +225,7 @@ export default function Table({ tableData }) {
 					<div className="flex grow items-center gap-[8px]">
 						<TableSearchIcon />
 						<input
+							ref={searchRef}
 							id="searchValue"
 							name="searchValue"
 							type="text"

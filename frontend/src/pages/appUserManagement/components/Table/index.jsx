@@ -29,6 +29,7 @@ import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const searchRef = React.useRef(null);
 	const appUserManagementTableData = useSelector(
 		selectAppUserManagementTableData
 	);
@@ -95,6 +96,7 @@ export default function Table({ tableData }) {
 							}
 							optionsDataName="is_active"
 							optionsData={[
+								{ id: '', label: '-select-' },
 								{ id: 'false', label: 'Inactive' },
 								{ id: 'true', label: 'Active' },
 							]}
@@ -298,6 +300,10 @@ export default function Table({ tableData }) {
 		makeApiCall();
 	}, [appUserManagementTableData]);
 
+	useEffect(() => {
+		searchRef.current.value = appUserManagementTableData?.searchValue || '';
+	}, []);
+
 	return (
 		<div className="flex max-w-[calc(100vw_-_88px)] grow flex-col overflow-auto">
 			<div className="flex bg-[#F0F3F4]">
@@ -305,6 +311,7 @@ export default function Table({ tableData }) {
 					<div className="flex grow items-center gap-[8px]">
 						<TableSearchIcon />
 						<input
+							ref={searchRef}
 							id="searchValue"
 							name="searchValue"
 							type="text"
