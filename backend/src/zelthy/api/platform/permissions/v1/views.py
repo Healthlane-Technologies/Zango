@@ -30,7 +30,7 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "description": "description__icontains",
             "policy_id": "id__icontains",
         }
-        if search is None and columns == {}:
+        if search == "" and columns == {}:
             return PolicyModel.objects.all().order_by("-modified_at")
         query = {
             field_name_query_mapping[column]: value for column, value in columns.items()
