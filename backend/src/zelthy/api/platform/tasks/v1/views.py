@@ -20,19 +20,17 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
 
     def get_queryset(self, search, columns={}):
-        if columns.get("is_enabled"):
-            if columns.get("is_enabled") == "true":
-                columns["is_enabled"] = True
-            elif columns.get("is_enabled") == "false":
-                columns["is_enabled"] = False
         name_field_query_mappping = {
             "task_name": "name__icontains",
             "task_id": "id__icontains",
             "policy": "attached_policies__name__icontains",
             "is_enabled": "is_enabled",
         }
-        if search is None and columns == {}:
+        if search == "" and columns == {}:
             return AppTask.objects.all().order_by("-id")
+        is_enabled = True
+        if columns.get("is_enabled"):
+            is_enabled = True if columns.pop("is_enabled") == "true" else False
         if columns == {}:
             return (
                 AppTask.objects.filter(
@@ -40,6 +38,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                     | Q(id__icontains=search)
                     | Q(attached_policies__name__icontains=search)
                 )
+                .filter(is_enabled=is_enabled)
                 .order_by("-id")
                 .distinct()
             )
@@ -47,7 +46,11 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             name_field_query_mappping[column]: value
             for column, value in columns.items()
         }
-        return AppTask.objects.filter(**query).order_by("-id")
+        return (
+            AppTask.objects.filter(**query)
+            .filter(is_enabled=is_enabled)
+            .order_by("-id")
+        )
 
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
         try:

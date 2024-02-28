@@ -217,27 +217,31 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         return options
 
     def get_queryset(self, search, columns={}):
-        if columns.get("is_active") == "true":
-            columns["is_active"] = True
-        if columns.get("is_active") == "false":
-            columns["is_active"] = False
         name_field_query_mappping = {
             "role": "name__icontains",
             "policy": "policies__name",
             "is_active": "is_active",
         }
-        if search is None:
+        if search == "" and columns == {}:
             return UserRoleModel.objects.all().order_by("-created_at")
+        is_active = True
+        if columns.get("is_active"):
+            is_active = True if columns.pop("is_active") == "true" else False
         if columns == {}:
             return (
                 UserRoleModel.objects.filter(
                     Q(name__icontains=search) | Q(policies__name__icontains=search)
                 )
+                .filter(is_active=is_active)
                 .order_by("-created_at")
                 .distinct()
             )
         query = {name_field_query_mappping[k]: v for k, v in columns.items()}
-        return UserRoleModel.objects.filter(**query).order_by("-created_at")
+        return (
+            UserRoleModel.objects.filter(**query)
+            .filter(is_active=is_active)
+            .order_by("-created_at")
+        )
 
     def get(self, request, *args, **kwargs):
         try:
@@ -258,6 +262,7 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 response["dropdown_options"] = self.get_dropdown_options()
             status = 200
         except Exception as e:
+            traceback.print_exc()
             success = False
             response = {"message": str(e)}
             status = 500
@@ -371,10 +376,6 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             app_users = AppUserModel.objects.all().order_by("-modified_at")
 =======
     def get_queryset(self, search, columns={}):
-        if columns.get("is_active") == "true":
-            columns["is_active"] = True
-        if columns.get("is_active") == "false":
-            columns["is_active"] = False
         name_field_query_mappping = {
             "user_name": "name__icontains",
             "email": "email__icontains",
@@ -383,9 +384,12 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "roles_access": "roles__name__icontains",
             "is_active": "is_active",
         }
-        if search is None and columns == {}:
+        if search == "" and columns == {}:
             return AppUserModel.objects.all().order_by("-modified_at")
-        if columns is None:
+        is_active = True
+        if columns.get("is_active"):
+            is_active = True if columns.pop("is_active") == "true" else False
+        if columns == {}:
             return (
                 AppUserModel.objects.filter(
                     Q(name__icontains=search)
@@ -394,13 +398,19 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                     | Q(mobile__icontains=search)
                     | Q(roles__name__icontains=search)
                 )
+                .filter(is_active=is_active)
                 .order_by("-modified_at")
                 .distinct()
             )
         query = {
             name_field_query_mappping[key]: value for key, value in columns.items()
         }
-        return AppUserModel.objects.filter(**query).order_by("-modified_at").distinct()
+        return (
+            AppUserModel.objects.filter(**query)
+            .filter(is_active=is_active)
+            .order_by("-modified_at")
+            .distinct()
+        )
 
     def get(self, request, *args, **kwargs):
         try:
