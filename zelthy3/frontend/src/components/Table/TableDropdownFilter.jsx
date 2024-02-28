@@ -46,7 +46,7 @@ const TableDropdownFilter = ({
 	};
 
 	useEffect(() => {
-		if (optionsData && value !== '') {
+		if (optionsData && value) {
 			setSelected(optionsData.find((eachData) => eachData?.id === value));
 		}
 	}, [value]);

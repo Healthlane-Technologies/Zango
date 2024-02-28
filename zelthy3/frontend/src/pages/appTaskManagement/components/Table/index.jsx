@@ -142,8 +142,8 @@ export default function Table({ tableData }) {
 							}
 							optionsDataName="is_enabled"
 							optionsData={[
-								{ id: true, label: 'Scheduled' },
-								{ id: false, label: 'Disabled' },
+								{ id: 'true', label: 'Scheduled' },
+								{ id: 'false', label: 'Disabled' },
 							]}
 							onChange={(value) => {
 								handleColumnSearch({

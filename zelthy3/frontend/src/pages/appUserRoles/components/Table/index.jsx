@@ -103,8 +103,8 @@ export default function Table({ tableData }) {
 							}
 							optionsDataName="is_active"
 							optionsData={[
-								{ id: false, label: 'Inactive' },
-								{ id: true, label: 'Active' },
+								{ id: 'false', label: 'Inactive' },
+								{ id: 'true', label: 'Active' },
 							]}
 							onChange={(value) => {
 								handleColumnSearch({

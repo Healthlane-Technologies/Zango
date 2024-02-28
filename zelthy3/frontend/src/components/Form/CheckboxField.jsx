@@ -6,10 +6,7 @@ export default function CheckboxField({ label, content, ...props }) {
 	const [field, meta] = useField({ ...props });
 	return (
 		<div className="my-1 flex flex-col items-start gap-1">
-			<label
-				htmlFor={props.id || props.name}
-				className="relative flex items-center gap-4"
-			>
+			<label className="relative flex items-center gap-4">
 				{props.value ? (
 					<div className="relative h-[20px] w-[20px] rounded-sm border-2 border-primary bg-primary">
 						<IconToggleTick className="absolute inset-0 top-[3px] left-[2px]" />
