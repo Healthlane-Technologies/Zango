@@ -5,7 +5,7 @@
 - Built-in user management and user roles
 - Rich ecosystem of packages - Leverage the free packages to develop most of your app workflows. 
 - Granular policy and permission framework linking user roles with views and models
-- Open-core with all  non-enterprise features under the MIT License allowing commercial and private use.
+- Open-core with all  non-enterprise features under the  Apache License allowing commercial and private use.
 
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox/)
