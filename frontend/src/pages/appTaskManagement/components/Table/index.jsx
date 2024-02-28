@@ -29,6 +29,7 @@ import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
+	const searchRef = React.useRef(null);
 	const appTaskManagementTableData = useSelector(
 		selectAppTaskManagementTableData
 	);
@@ -142,6 +143,7 @@ export default function Table({ tableData }) {
 							}
 							optionsDataName="is_enabled"
 							optionsData={[
+								{ id: '', label: '-select-' },
 								{ id: 'true', label: 'Scheduled' },
 								{ id: 'false', label: 'Disabled' },
 							]}
@@ -245,6 +247,10 @@ export default function Table({ tableData }) {
 		makeApiCall();
 	}, [appTaskManagementTableData]);
 
+	useEffect(() => {
+		searchRef.current.value = appTaskManagementTableData?.searchValue || '';
+	}, []);
+
 	return (
 		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
 			<div className="flex bg-[#F0F3F4]">
@@ -252,6 +258,7 @@ export default function Table({ tableData }) {
 					<div className="flex grow items-center gap-[8px]">
 						<TableSearchIcon />
 						<input
+							ref={searchRef}
 							id="searchValue"
 							name="searchValue"
 							type="text"

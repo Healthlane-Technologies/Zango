@@ -27,6 +27,7 @@ import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
+	const searchRef = React.useRef(null);
 	const columnHelper = createColumnHelper();
 	const platformUserManagementTableData = useSelector(
 		selectPlatformUserManagementTableData
@@ -95,6 +96,7 @@ export default function Table({ tableData }) {
 							}
 							optionsDataName="is_active"
 							optionsData={[
+								{ id: '', label: '-select-' },
 								{ id: 'false', label: 'Inactive' },
 								{ id: 'true', label: 'Active' },
 							]}
@@ -255,6 +257,11 @@ export default function Table({ tableData }) {
 		makeApiCall();
 	}, [platformUserManagementTableData]);
 
+	useEffect(() => {
+		searchRef.current.value =
+			platformUserManagementTableData?.searchValue || '';
+	}, []);
+
 	return (
 		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
 			<div className="flex bg-[#F0F3F4]">
@@ -262,6 +269,7 @@ export default function Table({ tableData }) {
 					<div className="flex grow items-center gap-[8px]">
 						<TableSearchIcon />
 						<input
+							ref={searchRef}
 							id="searchValue"
 							name="searchValue"
 							type="text"

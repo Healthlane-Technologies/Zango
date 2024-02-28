@@ -61,7 +61,9 @@ const TableDropdownFilter = ({
 							ref={(ref) => setReferenceElement(ref)}
 							id={props.id || props.name}
 						>
-							<TableColumnFilterIcon />
+							<TableColumnFilterIcon
+								className={`${value ? 'text-primary' : 'text-[#6C747D]'}`}
+							/>
 						</Listbox.Button>
 						<Transition
 							as={Fragment}
@@ -129,7 +131,8 @@ const TableDropdownFilter = ({
 										>
 											{({ selected }) => (
 												<div className="flex items-center gap-[8px] px-[12px] py-[4px]">
-													{selected ? (
+													{selected &&
+													filteredOptions[index].label !== '-select-' ? (
 														<span className="relative flex min-h-[12px] min-w-[12px] items-center">
 															<SelectCheckIcon />
 														</span>
@@ -139,6 +142,10 @@ const TableDropdownFilter = ({
 													<span
 														className={`block truncate ${
 															selected ? 'font-normal' : 'font-lato font-normal'
+														} ${
+															filteredOptions[index].label === '-select-'
+																? 'text-[#6C747D]'
+																: ''
 														} ${
 															filteredOptions[index].unavailable || false
 																? 'opacity-50'
