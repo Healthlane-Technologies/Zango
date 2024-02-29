@@ -419,31 +419,17 @@ class Workspace:
                 with open(policy_file) as f:
                     policy = json.load(f)
                     for policy_details in policy["policies"]:
-                        try:
-                            PolicyModel.objects.get(
-                                name=policy_details["name"],
-                                path=policy_path,
-                            )
-                            PolicyModel.objects.filter(
-                                name=policy_details["name"],
-                                path=policy_path,
-                            ).update(
-                                description=policy_details["description"],
-                                statement=policy_details["statement"],
-                            )
-                            existing_policies.remove(
-                                PolicyModel.objects.get(
-                                    name=policy_details["name"],
-                                    path=policy_path,
-                                ).id
-                            )
-                        except PolicyModel.DoesNotExist:
-                            PolicyModel.objects.create(
-                                name=policy_details["name"],
-                                description=policy_details["description"],
-                                path=policy_path,
-                                statement=policy_details["statement"],
-                            )
+                        policy, created = PolicyModel.objects.update_or_create(
+                            name=policy_details["name"],
+                            path=policy_path,
+                            defaults={
+                                "description": policy_details.get("description", ""),
+                                "type": "user",
+                                "statement": policy_details["statement"],
+                            },
+                        )
+                        if not created:
+                            existing_policies.remove(policy.id)
 
         for policy_id in existing_policies:
             PolicyModel.objects.get(id=policy_id).delete()
