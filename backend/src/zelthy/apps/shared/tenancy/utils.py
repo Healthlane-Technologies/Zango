@@ -47,11 +47,8 @@ DEFAULT_THEME_CONFIG = {
 
 def assign_policies_to_anonymous_user(schema_name):
     with schema_context(schema_name):
-        app_landing_view_access = PolicyModel.objects.get(name="AppLandingViewAccess")
         anonymous_users_role = UserRoleModel.objects.get(name="AnonymousUsers")
-        anonymous_users_role.policies.add(app_landing_view_access)
         anonymous_users_role.policies.add(
             PolicyModel.objects.get(name="AllowFromAnywhere")
         )
         anonymous_users_role.save()
-
