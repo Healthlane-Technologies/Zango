@@ -3,6 +3,7 @@ import traceback
 
 from django.conf import settings
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 from zelthy.core.api import (
     get_api_response,
@@ -30,22 +31,17 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "description": "description__icontains",
             "policy_id": "id__icontains",
         }
+        records = PolicyModel.objects.all().order_by("-modified_at")
         if search == "" and columns == {}:
-            return PolicyModel.objects.all().order_by("-modified_at")
-        query = {
-            field_name_query_mapping[column]: value for column, value in columns.items()
-        }
-        if columns == {}:
-            return (
-                PolicyModel.objects.filter(
-                    Q(name__icontains=search)
-                    | Q(description__icontains=search)
-                    | Q(id__icontains=search)
-                )
-                .order_by("-modified_at")
-                .distinct()
-            )
-        return PolicyModel.objects.filter(**query).order_by("-modified_at")
+            return records
+        filters = Q()
+        for field_name, query in field_name_query_mapping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns.get(field_name)})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
 
     def get(self, request, *args, **kwargs):
         try:

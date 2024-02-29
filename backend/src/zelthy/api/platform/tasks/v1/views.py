@@ -2,6 +2,7 @@ import traceback
 
 from django.utils.decorators import method_decorator
 from django.db import connection
+from django.db.models import Q
 
 from zelthy.core.api import get_api_response, ZelthyGenericPlatformAPIView
 from zelthy.apps.tasks.models import AppTask
@@ -21,36 +22,28 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
     def get_queryset(self, search, columns={}):
         name_field_query_mappping = {
-            "task_name": "name__icontains",
-            "task_id": "id__icontains",
-            "policy": "attached_policies__name__icontains",
+            "name": "name__icontains",
+            "id": "id__icontains",
+            "attached_policies": "attached_policies__name__icontains",
             "is_enabled": "is_enabled",
         }
+        if columns.get("is_enabled") == "" or columns.get("is_enabled") is None:
+            name_field_query_mappping.pop("is_enabled")
+        if columns.get("is_enabled") == "true":
+            columns["is_enabled"] = True
+        if columns.get("is_enabled") == "false":
+            columns["is_enabled"] = False
+        records = AppTask.objects.all().order_by("-id")
         if search == "" and columns == {}:
-            return AppTask.objects.all().order_by("-id")
-        is_enabled = True
-        if columns.get("is_enabled"):
-            is_enabled = True if columns.pop("is_enabled") == "true" else False
-        if columns == {}:
-            return (
-                AppTask.objects.filter(
-                    Q(name__icontains=search)
-                    | Q(id__icontains=search)
-                    | Q(attached_policies__name__icontains=search)
-                )
-                .filter(is_enabled=is_enabled)
-                .order_by("-id")
-                .distinct()
-            )
-        query = {
-            name_field_query_mappping[column]: value
-            for column, value in columns.items()
-        }
-        return (
-            AppTask.objects.filter(**query)
-            .filter(is_enabled=is_enabled)
-            .order_by("-id")
-        )
+            return records
+        filters = Q()
+        for field_name, query in name_field_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns.get(field_name)})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
 
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
         try:

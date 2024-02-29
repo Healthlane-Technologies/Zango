@@ -33,29 +33,23 @@ class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "is_active": "is_active",
             "apps_access": "apps__name__icontains",
         }
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        elif columns.get("is_active") == "false":
+            columns["is_active"] = False
+        elif columns.get("is_active") == "" or columns.get("is_active") is None:
+            field_name_query_mappping.pop("is_active")
+        records = PlatformUserModel.objects.all().order_by("-modified_at")
         if search == "" and columns == {}:
-            return PlatformUserModel.objects.all().order_by("-modified_at")
-        is_active = True
-        if columns.get("is_active"):
-            is_active = True if columns.pop("is_active") == "true" else False
-        if columns == {}:
-            return (
-                PlatformUserModel.objects.filter(
-                    Q(name__icontains=search)
-                    | Q(email__icontains=search)
-                    | Q(id__icontains=search)
-                    | Q(apps__name__icontains=search)
-                )
-                .filter(is_active=is_active)
-                .order_by("-modified_at")
-                .distinct()
-            )
-        query = {field_name_query_mappping[k]: v for k, v in columns.items()}
-        return (
-            PlatformUserModel.objects.filter(**query)
-            .filter(is_active=is_active)
-            .order_by("-modified_at")
-        )
+            return records
+        filters = Q()
+        for field_name, query in field_name_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns[field_name]})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
 
     def get(self, request, *args, **kwargs):
         try:
