@@ -13,7 +13,7 @@ export default function SyncTask() {
 	const dispatch = useDispatch();
 	const triggerApi = useApi();
 
-	let handleSyncTaskClick = () => {
+	let handleSyncPolicyClick = () => {
 		let dynamicFormData = transformToFormData({});
 
 		setIsLoading(true);
@@ -42,10 +42,10 @@ export default function SyncTask() {
 			<button
 				type="button"
 				className="flex items-center gap-[12px]"
-				onClick={handleSyncTaskClick}
+				onClick={handleSyncPolicyClick}
 			>
 				<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
-					Sync Task
+					Sync Policy
 				</span>
 				<TableSyncIcon
 					className={`h-[20px] min-h-[20px] w-[20px] min-w-[20px] ${
