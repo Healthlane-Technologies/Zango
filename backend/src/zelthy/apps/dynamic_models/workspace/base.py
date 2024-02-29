@@ -403,7 +403,6 @@ class Workspace:
         existing_policies = list(
             PolicyModel.objects.filter(type="user").values_list("id", flat=True)
         )
-        result = []
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
@@ -417,22 +416,35 @@ class Workspace:
                 else:
                     policy_path = model_module.split(".")[2]
                 with open(policy_file) as f:
-                    policy = json.load(f)
+                    try:
+                        policy = json.load(f)
+                    except json.decoder.JSONDecodeError as e:
+                        raise Exception(f"Error parsing {policy_file}: {e}")
                     for policy_details in policy["policies"]:
-                        policy, created = PolicyModel.objects.update_or_create(
-                            name=policy_details["name"],
-                            path=policy_path,
-                            defaults={
-                                "description": policy_details.get("description", ""),
-                                "type": "user",
-                                "statement": policy_details["statement"],
-                            },
-                        )
-                        if not created:
-                            existing_policies.remove(policy.id)
+                        if type(policy_details["statement"]) is not dict:
+                            raise Exception(
+                                f"Policy {policy_details['name']} has an invalid statement"
+                            )
+                        try:
+                            policy, created = PolicyModel.objects.update_or_create(
+                                name=policy_details["name"],
+                                path=policy_path,
+                                defaults={
+                                    "description": policy_details.get(
+                                        "description", ""
+                                    ),
+                                    "type": "user",
+                                    "statement": policy_details["statement"],
+                                },
+                            )
+                            if not created:
+                                if policy.id not in existing_policies:
+                                    raise Exception(f"Policy name already exists")
+                                existing_policies.remove(policy.id)
+                        except Exception as e:
+                            raise Exception(
+                                f"Error creating policy {policy_details['name']} in {policy_path}: {e}"
+                            )
 
         for policy_id in existing_policies:
             PolicyModel.objects.get(id=policy_id).delete()
-
-        print("Result is ", result)
-        return result

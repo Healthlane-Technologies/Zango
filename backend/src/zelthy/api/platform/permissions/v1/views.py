@@ -70,7 +70,6 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 status = 200
                 success = True
             except Exception as e:
-                traceback.print_exc()
                 response = {"message": str(e)}
                 status = 500
                 success = False
@@ -145,25 +144,6 @@ class PolicyDetailViewAPIV1(ZelthyGenericPlatformAPIView):
                     error_message = "Invalid data"
 
                 result = {"message": error_message}
-        except Exception as e:
-            success = False
-            result = {"message": str(e)}
-            status_code = 500
-
-        return get_api_response(success, result, status_code)
-
-    def delete(self, request, *args, **kwargs):
-        try:
-            obj = self.get_obj(**kwargs)
-            if obj.type != "system":
-                obj.delete()
-                success = True
-                status_code = 200
-                result = {"message": "Policy Deleted Successfully"}
-            else:
-                success = False
-                status_code = 400
-                result = {"message": "System policy cannot be deleted"}
         except Exception as e:
             success = False
             result = {"message": str(e)}
