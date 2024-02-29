@@ -380,6 +380,12 @@ class Workspace:
 
         return None, None
 
+    def is_dev_started(self):
+        """
+        Check if development has been started by evaluating the existence of modules or packages.
+        """
+        return self.modules or self.packages
+
     def launch(self, params: dict) -> None:
         """
         launch workspace, provision folders with boilerplate code, run migration
