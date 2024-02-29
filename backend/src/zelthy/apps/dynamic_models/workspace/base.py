@@ -5,7 +5,8 @@ import re
 
 from django.conf import settings
 from django.db import connection
-from django.http import Http404
+
+from zelthy.apps.permissions.models import PolicyModel
 
 # from zelthy.core.pluginbase1 import PluginBase, PluginSource
 
@@ -397,3 +398,55 @@ class Workspace:
 
     def migrate(self):
         return
+
+    def sync_policies(self):
+        existing_policies = list(
+            PolicyModel.objects.filter(type="user").values_list("id", flat=True)
+        )
+        result = []
+        modules = self.get_all_module_paths()
+        for module in modules:
+            policy_file = f"{module}/policies.json"
+            if os.path.isfile(policy_file):
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/policies"
+                )
+                model_module = model_module.lstrip("/").replace("/", ".")
+                if "packages" in model_module:
+                    policy_path = ".".join(model_module.split(".")[2:5])
+                else:
+                    policy_path = model_module.split(".")[2]
+                with open(policy_file) as f:
+                    policy = json.load(f)
+                    for policy_details in policy["policies"]:
+                        try:
+                            PolicyModel.objects.get(
+                                name=policy_details["name"],
+                                path=policy_path,
+                            )
+                            PolicyModel.objects.filter(
+                                name=policy_details["name"],
+                                path=policy_path,
+                            ).update(
+                                description=policy_details["description"],
+                                statement=policy_details["statement"],
+                            )
+                            existing_policies.remove(
+                                PolicyModel.objects.get(
+                                    name=policy_details["name"],
+                                    path=policy_path,
+                                ).id
+                            )
+                        except PolicyModel.DoesNotExist:
+                            PolicyModel.objects.create(
+                                name=policy_details["name"],
+                                description=policy_details["description"],
+                                path=policy_path,
+                                statement=policy_details["statement"],
+                            )
+
+        for policy_id in existing_policies:
+            PolicyModel.objects.get(id=policy_id).delete()
+
+        print("Result is ", result)
+        return result
