@@ -380,7 +380,7 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             columns["is_active"] = True
         elif columns.get("is_active") == "false":
             columns["is_active"] = False
-        elif columns.get("is_active") == "":
+        elif columns.get("is_active") == "" or columns.get("is_active") is None:
             name_field_query_mappping.pop("is_active")
         records = AppUserModel.objects.all().order_by("-modified_at")
         if search == "" and columns == {}:
