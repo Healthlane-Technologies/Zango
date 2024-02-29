@@ -35,6 +35,16 @@ const newPolicy = () => {
 				expiry: '26/12/23',
 			},
 		},
+		roles: [
+			{
+				id: 2,
+				name: 'SystemUsers',
+			},
+			{
+				id: 1,
+				name: 'AnonymousUsers',
+			},
+		],
 		type: faker.helpers.shuffle(['system', 'user'])[0],
 	};
 };
@@ -79,7 +89,24 @@ export const appPoliciesManagementHandlers = [
 						records: slicedData,
 					},
 					dropdown_options: {
-						apps: [],
+						roles: [
+							{
+								id: 2,
+								label: 'SystemUsers',
+							},
+							{
+								id: 1,
+								label: 'AnonymousUsers',
+							},
+							{
+								id: 3,
+								label: 'Executive',
+							},
+							{
+								id: 4,
+								label: 'custom',
+							},
+						],
 					},
 					message: 'Platform user fetched successfully',
 				},

@@ -73,7 +73,7 @@ export default function AppPoliciesManagement() {
 			<div className="flex grow flex-col gap-[20px]">
 				<div className="flex items-center justify-between py-[24px] pl-[40px] pr-[48px]">
 					<BreadCrumbs />
-					{isAppPoliciesManagementDataEmpty ? null : (
+					{/* {isAppPoliciesManagementDataEmpty ? null : (
 						<button
 							type="button"
 							onClick={handleAddPolicy}
@@ -84,7 +84,7 @@ export default function AppPoliciesManagement() {
 							</span>
 							<AddUserIcon />
 						</button>
-					)}
+					)} */}
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
 					{isAppPoliciesManagementDataEmpty ? (

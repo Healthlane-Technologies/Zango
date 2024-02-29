@@ -22,6 +22,8 @@ import {
 	setAppPoliciesManagementData,
 	setAppPoliciesManagementTableData,
 } from '../../slice';
+import SyncTask from '../SyncTask';
+import ListRoleCell from './ListRoleCell';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
@@ -134,6 +136,17 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
+		columnHelper.accessor((row) => row.roles, {
+			id: 'roles',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						Roles
+					</span>
+				</div>
+			),
+			cell: (info) => <ListRoleCell data={info.getValue()} />,
+		}),
 	];
 
 	const defaultData = useMemo(() => [], []);
@@ -234,6 +247,7 @@ export default function Table({ tableData }) {
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
+					<SyncTask />
 					{/* <TableFilterIcon />
 					<TableColumnFilterIcon /> */}
 				</div>
