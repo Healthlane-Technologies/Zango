@@ -3,12 +3,18 @@ import json
 from rest_framework import serializers
 from zelthy.apps.shared.tenancy.models import TenantModel, Domain
 from zelthy.apps.permissions.models import PolicyModel
+from zelthy.apps.appauth.models import UserRoleModel
 
 
 class PolicySerializer(serializers.ModelSerializer):
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = PolicyModel
-        fields = "__all__"
+        fields = ["id", "name", "statement", "roles", "description", "type"]
+
+    def get_roles(self, obj):
+        return list(UserRoleModel.objects.filter(policies=obj).values("id", "name"))
 
     def create(self, validated_data):
         statement = json.loads(validated_data["statement"])
@@ -25,5 +31,18 @@ class PolicySerializer(serializers.ModelSerializer):
         if validated_data.get("statement"):
             statement = json.loads(validated_data["statement"])
             validated_data["statement"] = statement
+        existing_roles = list(
+            UserRoleModel.objects.filter(policies=instance).values_list("id", flat=True)
+        )
+        roles = validated_data.pop("roles", [])
+        print(roles, existing_roles)
+        for role in existing_roles:
+            if role not in roles:
+                role_obj = UserRoleModel.objects.get(id=role)
+                role_obj.policies.remove(instance.id)
+
+        for role in roles:
+            role_obj = UserRoleModel.objects.get(id=role)
+            role_obj.policies.add(instance.id)
 
         return super(PolicySerializer, self).update(instance, validated_data)

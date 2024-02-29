@@ -1,8 +1,7 @@
-import json
 import traceback
 
-from django.conf import settings
 from django.utils.decorators import method_decorator
+from django.db import connection
 
 from zelthy.core.api import (
     get_api_response,
@@ -14,6 +13,9 @@ from zelthy.apps.permissions.models import PolicyModel, PermissionsModel
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.permissions import IsPlatformUserAllowedApp
+from zelthy.apps.appauth.models import UserRoleModel
+from zelthy.apps.dynamic_models.workspace.base import Workspace
+
 
 from .serializers import PolicySerializer
 
@@ -22,6 +24,13 @@ from .serializers import PolicySerializer
 class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
+
+    def get_dropdown_options(self):
+        options = {}
+        options["roles"] = [
+            {"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()
+        ]
+        return options
 
     def get(self, request, *args, **kwargs):
         try:
@@ -36,6 +45,8 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 "policies": paginated_roles_data,
                 "message": "All policies fetched successfully",
             }
+            if request.GET.get("include_dropdown_options"):
+                response["dropdown_options"] = self.get_dropdown_options()
             status = 200
         except Exception as e:
             success = False
@@ -44,13 +55,33 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
         return get_api_response(success, response, status)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, app_uuid, *args, **kwargs):
         data = request.data
+        action = request.GET.get("action", None)
+        if action == "sync_policies":
+            try:
+                tenant = TenantModel.objects.get(uuid=app_uuid)
+                connection.set_tenant(tenant)
+                with connection.cursor() as c:
+                    ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                    ws.ready()
+                    ws.sync_policies()
+                response = {"message": "Policies synced successfully"}
+                status = 200
+                success = True
+            except Exception as e:
+                traceback.print_exc()
+                response = {"message": str(e)}
+                status = 500
+                success = False
+            return get_api_response(success, response, status)
         policy_serializer = PolicySerializer(data=data)
         if policy_serializer.is_valid():
             success = True
             status_code = 200
-            policy = policy_serializer.save()
+            policy = policy_serializer.save(
+                **{"roles": request.data.getlist("roles", [])}
+            )
             result = {"message": "Policy Created Successfully", "policy_id": policy.id}
         else:
             success = False
@@ -95,7 +126,7 @@ class PolicyDetailViewAPIV1(ZelthyGenericPlatformAPIView):
             obj = self.get_obj(**kwargs)
             serializer = PolicySerializer(instance=obj, data=request.data, partial=True)
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(**{"roles": request.data.getlist("roles", [])})
                 success = True
                 status_code = 200
                 result = {
@@ -114,6 +145,25 @@ class PolicyDetailViewAPIV1(ZelthyGenericPlatformAPIView):
                     error_message = "Invalid data"
 
                 result = {"message": error_message}
+        except Exception as e:
+            success = False
+            result = {"message": str(e)}
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            obj = self.get_obj(**kwargs)
+            if obj.type != "system":
+                obj.delete()
+                success = True
+                status_code = 200
+                result = {"message": "Policy Deleted Successfully"}
+            else:
+                success = False
+                status_code = 400
+                result = {"message": "System policy cannot be deleted"}
         except Exception as e:
             success = False
             result = {"message": str(e)}
