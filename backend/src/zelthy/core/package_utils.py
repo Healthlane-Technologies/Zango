@@ -77,7 +77,7 @@ def update_settings_json(tenant, package_name, version):
         json.dump(data, file, indent=4)
 
 
-def update_packages_json(tenant, package_name, version):
+def update_manifest_json(tenant, package_name, version):
     with open(f"workspaces/{tenant}/manifest.json", "r") as f:
         data = json.loads(f.read())
 
@@ -155,7 +155,7 @@ def install_package(package_name, version, tenant):
         #         f"tmp/{package_name}/{version}/",
         #         f"workspaces/{tenant}/packages/{package_name}",
         #     )
-        update_packages_json(tenant, package_name, version)
+        update_manifest_json(tenant, package_name, version)
         update_settings_json(tenant, package_name, version)
 
         subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
