@@ -1,16 +1,18 @@
-import asyncio
+import os
+
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.utils.decorators import method_decorator
+from django.conf import settings
 
 from django.views.generic import View
 from django.http import Http404
-from django.core import signing
 
-from .workspace.base import Workspace
 from zelthy.core.utils import get_current_role
 from zelthy.apps.dynamic_models.permissions import is_platform_user
+
+from .workspace.base import Workspace
 
 
 class PermMixin:
@@ -27,22 +29,44 @@ class PermMixin:
         return user_role.has_perm(request, "view", view_name=view_name)
 
 
+def default_landing_view(request):
+    """
+    Renders the default landing page for the application.
+
+    This view is displayed when the application root URL is accessed for the first time
+    after installation and development server is not yet started.
+    """
+
+    project_name = os.path.basename(settings.BASE_DIR)
+    context = {"project_name": project_name, "app_name": request.tenant.name}
+
+    return render(request, "default_landing.html", context)
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class DynamicView(View, PermMixin):
     """
     this class is responsible for building the
     """
 
-    def get_view(self, request):
+    def get_workspace(self, request):
         ws = Workspace(request.tenant, request)
         ws.ready()
-        view, resolve = ws.match_view(request)
+        return ws
+
+    def get_view(self, request):
+        view, resolve = self.workspace.match_view(request)
         return view, resolve
 
     def dispatch(self, request, *args, **kwargs):
         if self.has_user_access_perm(request, *args, **kwargs):
+            self.workspace = self.get_workspace(request)
             view, resolve = self.get_view(request)
-            view_name = ".".join(resolve.__dict__["_func_path"].split(".")[5:]) if resolve else None
+            view_name = (
+                ".".join(resolve.__dict__["_func_path"].split(".")[5:])
+                if resolve
+                else None
+            )
             if view and view_name:
                 kwargs = resolve.__dict__["kwargs"]
                 if request.internal_routing or self.has_view_perm(
@@ -57,10 +81,10 @@ class DynamicView(View, PermMixin):
                     return HttpResponseForbidden(
                         "You don't have permission to view this page"
                     )
-            
+
             # View Not Found
-            if request.path == "/":
-                return redirect("/app/home/")
+            if request.path == "/" and not self.workspace.is_dev_started():
+                return default_landing_view(request)
 
             raise Http404()
         return HttpResponseForbidden("You don't have permission to view this page")
