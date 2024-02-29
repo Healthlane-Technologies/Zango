@@ -1,3 +1,4 @@
+import re
 import uuid
 from collections import namedtuple
 
@@ -6,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django_tenants.models import TenantMixin, DomainMixin
+from django.core.exceptions import ValidationError
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
@@ -37,6 +39,22 @@ STATUSES = [
     Choice("suspended", "Suspended"),
     Choice("deleted", "Deleted"),
 ]
+
+SQL_IDENTIFIER_RE = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]{4,62}$")
+SQL_SCHEMA_NAME_RESERVED_RE = re.compile(r"^pg_", re.IGNORECASE)
+
+
+def _is_valid_identifier(identifier):
+    return bool(SQL_IDENTIFIER_RE.match(identifier))
+
+
+def _is_valid_tenant_name(name):
+    return _is_valid_identifier(name) and not SQL_SCHEMA_NAME_RESERVED_RE.match(name)
+
+
+def _check_tenant_name(name):
+    if not _is_valid_tenant_name(name):
+        raise ValidationError("Invalid string used for the Tenant Name")
 
 
 class TenantModel(TenantMixin, FullAuditMixin):
@@ -115,6 +133,7 @@ class TenantModel(TenantMixin, FullAuditMixin):
 
     @classmethod
     def create(cls, name, schema_name, description, **other_params):
+        _check_tenant_name(name)
         obj = cls.objects.create(
             name=name, schema_name=schema_name, description=description, **other_params
         )
