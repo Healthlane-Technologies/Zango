@@ -5,6 +5,7 @@ from django_celery_results.models import TaskResult
 
 from django.conf import settings
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 from zelthy.core.api import (
     get_api_response,
@@ -218,30 +219,27 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
     def get_queryset(self, search, columns={}):
         name_field_query_mappping = {
-            "role": "name__icontains",
-            "policy": "policies__name",
+            "name": "name__icontains",
+            "attached_policies": "policies__name",
             "is_active": "is_active",
         }
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        elif columns.get("is_active") == "false":
+            columns["is_active"] = False
+        elif columns.get("is_active") == "" or columns.get("is_active") is None:
+            name_field_query_mappping.pop("is_active")
+        records = UserRoleModel.objects.all().order_by("-modified_at")
         if search == "" and columns == {}:
-            return UserRoleModel.objects.all().order_by("-created_at")
-        is_active = True
-        if columns.get("is_active"):
-            is_active = True if columns.pop("is_active") == "true" else False
-        if columns == {}:
-            return (
-                UserRoleModel.objects.filter(
-                    Q(name__icontains=search) | Q(policies__name__icontains=search)
-                )
-                .filter(is_active=is_active)
-                .order_by("-created_at")
-                .distinct()
-            )
-        query = {name_field_query_mappping[k]: v for k, v in columns.items()}
-        return (
-            UserRoleModel.objects.filter(**query)
-            .filter(is_active=is_active)
-            .order_by("-created_at")
-        )
+            return records
+        filters = Q()
+        for field_name, query in name_field_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns.get(field_name)})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
 
     def get(self, request, *args, **kwargs):
         try:
@@ -369,12 +367,6 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         ]
         return options
 
-<<<<<<< HEAD
-    def get(self, request, *args, **kwargs):
-        try:
-            include_dropdown_options = request.GET.get("include_dropdown_options")
-            app_users = AppUserModel.objects.all().order_by("-modified_at")
-=======
     def get_queryset(self, search, columns={}):
         name_field_query_mappping = {
             "user_name": "name__icontains",
@@ -384,33 +376,23 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "roles_access": "roles__name__icontains",
             "is_active": "is_active",
         }
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        elif columns.get("is_active") == "false":
+            columns["is_active"] = False
+        elif columns.get("is_active") == "":
+            name_field_query_mappping.pop("is_active")
+        records = AppUserModel.objects.all().order_by("-modified_at")
         if search == "" and columns == {}:
-            return AppUserModel.objects.all().order_by("-modified_at")
-        is_active = True
-        if columns.get("is_active"):
-            is_active = True if columns.pop("is_active") == "true" else False
-        if columns == {}:
-            return (
-                AppUserModel.objects.filter(
-                    Q(name__icontains=search)
-                    | Q(email__icontains=search)
-                    | Q(id__icontains=search)
-                    | Q(mobile__icontains=search)
-                    | Q(roles__name__icontains=search)
-                )
-                .filter(is_active=is_active)
-                .order_by("-modified_at")
-                .distinct()
-            )
-        query = {
-            name_field_query_mappping[key]: value for key, value in columns.items()
-        }
-        return (
-            AppUserModel.objects.filter(**query)
-            .filter(is_active=is_active)
-            .order_by("-modified_at")
-            .distinct()
-        )
+            return records
+        filters = Q()
+        for field_name, query in name_field_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns[field_name]})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
 
     def get(self, request, *args, **kwargs):
         try:
@@ -418,7 +400,6 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             app_users = self.get_queryset(search, columns)
->>>>>>> 3f0a5a7 (column based search added)
             app_users = self.paginate_queryset(app_users, request, view=self)
             serializer = AppUserModelSerializerModel(app_users, many=True)
             app_users_data = self.get_paginated_response_data(serializer.data)
