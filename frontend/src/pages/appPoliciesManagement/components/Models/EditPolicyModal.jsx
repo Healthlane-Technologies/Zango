@@ -1,13 +1,14 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import * as Yup from 'yup';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsEditPolicyModalOpen,
 	selectAppPoliciesManagementData,
@@ -15,10 +16,6 @@ import {
 	selectIsEditPolicyModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
-
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { useParams } from 'react-router-dom';
-import MultiSelectField from '../../../../components/Form/MultiSelectField';
 
 const EditPolicyForm = ({ closeModal }) => {
 	let { appId } = useParams();
@@ -53,7 +50,7 @@ const EditPolicyForm = ({ closeModal }) => {
 			tempValues['phone'] = '+91' + tempValues['phone'];
 		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
