@@ -24,7 +24,6 @@ class PolicySerializer(serializers.ModelSerializer):
         return super(PolicySerializer, self).create(validated_data)
 
     def update(self, instance, validated_data):
-        validated_data = validated_data
         if instance.type == "system":
             # For System Policy Only role can be updated
             updated_allowed_fields = ["roles"]
