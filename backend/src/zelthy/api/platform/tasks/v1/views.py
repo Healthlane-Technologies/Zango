@@ -1,5 +1,8 @@
+import traceback
+
 from django.utils.decorators import method_decorator
 from django.db import connection
+from django.db.models import Q
 
 from zelthy.core.api import get_api_response, ZelthyGenericPlatformAPIView
 from zelthy.apps.tasks.models import AppTask
@@ -7,6 +10,7 @@ from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.apps.dynamic_models.workspace.base import Workspace
 from zelthy.apps.shared.tenancy.models import TenantModel
+from zelthy.core.utils import get_search_columns
 
 
 from .serializers import TaskSerializer
@@ -16,9 +20,36 @@ from .serializers import TaskSerializer
 class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
 
+    def get_queryset(self, search, columns={}):
+        name_field_query_mappping = {
+            "name": "name__icontains",
+            "id": "id__icontains",
+            "attached_policies": "attached_policies__name__icontains",
+            "is_enabled": "is_enabled",
+        }
+        if columns.get("is_enabled") == "" or columns.get("is_enabled") is None:
+            name_field_query_mappping.pop("is_enabled")
+        if columns.get("is_enabled") == "true":
+            columns["is_enabled"] = True
+        if columns.get("is_enabled") == "false":
+            columns["is_enabled"] = False
+        records = AppTask.objects.all().order_by("-id")
+        if search == "" and columns == {}:
+            return records
+        filters = Q()
+        for field_name, query in name_field_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns.get(field_name)})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
+
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
         try:
-            app_tasks = AppTask.objects.filter(is_deleted=False).order_by("-id")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            app_tasks = self.get_queryset(search, columns)
             paginated_tasks = self.paginate_queryset(app_tasks, request, view=self)
             serializer = TaskSerializer(paginated_tasks, many=True)
             paginated_app_tasks = self.get_paginated_response_data(serializer.data)
@@ -29,6 +60,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             }
             status = 200
         except Exception as e:
+            traceback.print_exc()
             success = False
             response = {"message": str(e)}
             status = 500

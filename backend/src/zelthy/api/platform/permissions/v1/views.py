@@ -1,12 +1,14 @@
 import traceback
 
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 from django.db import connection
 
 from zelthy.core.api import (
     get_api_response,
     ZelthyGenericPlatformAPIView,
 )
+from zelthy.core.utils import get_search_columns
 from zelthy.apps.shared.tenancy.models import TenantModel
 from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
 from zelthy.apps.permissions.models import PolicyModel, PermissionsModel
@@ -25,6 +27,24 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     pagination_class = ZelthyAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
+    def get_queryset(self, search, columns={}):
+        field_name_query_mapping = {
+            "policy_name": "name__icontains",
+            "description": "description__icontains",
+            "policy_id": "id__icontains",
+        }
+        records = PolicyModel.objects.all().order_by("-modified_at")
+        if search == "" and columns == {}:
+            return records
+        filters = Q()
+        for field_name, query in field_name_query_mapping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns.get(field_name)})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
+
     def get_dropdown_options(self):
         options = {}
         options["roles"] = [
@@ -34,8 +54,9 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
     def get(self, request, *args, **kwargs):
         try:
-            policies = PolicyModel.objects.all().order_by("-modified_at")
-
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            policies = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(policies, request, view=self)
             serializer = PolicySerializer(paginated_roles, many=True)
             paginated_roles_data = self.get_paginated_response_data(serializer.data)

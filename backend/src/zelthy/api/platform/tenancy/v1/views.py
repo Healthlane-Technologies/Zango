@@ -5,6 +5,7 @@ from django_celery_results.models import TaskResult
 
 from django.conf import settings
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 from zelthy.core.api import (
     get_api_response,
@@ -17,6 +18,7 @@ from zelthy.apps.permissions.models import PolicyModel
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.permissions import IsPlatformUserAllowedApp
+from zelthy.core.utils import get_search_columns
 
 from .serializers import (
     TenantSerializerModel,
@@ -200,10 +202,36 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         ]
         return options
 
+    def get_queryset(self, search, columns={}):
+        name_field_query_mappping = {
+            "name": "name__icontains",
+            "attached_policies": "policies__name",
+            "is_active": "is_active",
+        }
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        elif columns.get("is_active") == "false":
+            columns["is_active"] = False
+        elif columns.get("is_active") == "" or columns.get("is_active") is None:
+            name_field_query_mappping.pop("is_active")
+        records = UserRoleModel.objects.all().order_by("-modified_at")
+        if search == "" and columns == {}:
+            return records
+        filters = Q()
+        for field_name, query in name_field_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns.get(field_name)})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
+
     def get(self, request, *args, **kwargs):
         try:
             include_dropdown_options = request.GET.get("include_dropdown_options")
-            roles = UserRoleModel.objects.all().order_by("-created_at")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            roles = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(roles, request, view=self)
             serializer = UserRoleSerializerModel(paginated_roles, many=True)
             paginated_roles_data = self.get_paginated_response_data(serializer.data)
@@ -217,6 +245,7 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 response["dropdown_options"] = self.get_dropdown_options()
             status = 200
         except Exception as e:
+            traceback.print_exc()
             success = False
             response = {"message": str(e)}
             status = 500
@@ -323,10 +352,39 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         ]
         return options
 
+    def get_queryset(self, search, columns={}):
+        name_field_query_mappping = {
+            "user_name": "name__icontains",
+            "email": "email__icontains",
+            "user_id": "id__icontains",
+            "mobile": "mobile__icontains",
+            "roles_access": "roles__name__icontains",
+            "is_active": "is_active",
+        }
+        if columns.get("is_active") == "true":
+            columns["is_active"] = True
+        elif columns.get("is_active") == "false":
+            columns["is_active"] = False
+        elif columns.get("is_active") == "" or columns.get("is_active") is None:
+            name_field_query_mappping.pop("is_active")
+        records = AppUserModel.objects.all().order_by("-modified_at")
+        if search == "" and columns == {}:
+            return records
+        filters = Q()
+        for field_name, query in name_field_query_mappping.items():
+            if field_name in columns:
+                filters &= Q(**{query: columns[field_name]})
+            else:
+                if search:
+                    filters |= Q(**{query: search})
+        return records.filter(filters).distinct()
+
     def get(self, request, *args, **kwargs):
         try:
             include_dropdown_options = request.GET.get("include_dropdown_options")
-            app_users = AppUserModel.objects.all().order_by("-modified_at")
+            search = request.GET.get("search", None)
+            columns = get_search_columns(request)
+            app_users = self.get_queryset(search, columns)
             app_users = self.paginate_queryset(app_users, request, view=self)
             serializer = AppUserModelSerializerModel(app_users, many=True)
             app_users_data = self.get_paginated_response_data(serializer.data)
