@@ -24,10 +24,15 @@ class PolicySerializer(serializers.ModelSerializer):
         return super(PolicySerializer, self).create(validated_data)
 
     def update(self, instance, validated_data):
+        validated_data = validated_data
         if instance.type == "system":
-            raise serializers.ValidationError(
-                "Updates are not allowed for system policy."
-            )
+            # For System Policy Only role can be updated
+            updated_allowed_fields = ["roles"]
+            fields_list = list(validated_data.keys())
+            for field in fields_list:
+                if field not in updated_allowed_fields:
+                    validated_data.pop(field)
+
         if validated_data.get("statement"):
             statement = json.loads(validated_data["statement"])
             validated_data["statement"] = statement
@@ -35,7 +40,6 @@ class PolicySerializer(serializers.ModelSerializer):
             UserRoleModel.objects.filter(policies=instance).values_list("id", flat=True)
         )
         roles = validated_data.pop("roles", [])
-        print(roles, existing_roles)
         for role in existing_roles:
             if role not in roles:
                 role_obj = UserRoleModel.objects.get(id=role)
