@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
+import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
@@ -8,6 +9,7 @@ import {
 	selectRerenderPage,
 	setAppTaskManagementData,
 	selectAppTaskManagementTableData,
+	selectIsAppTaskManagementDataEmpty,
 } from '../../slice';
 import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
 import UpdatePolicyModal from '../Models/UpdatePolicyModal';
@@ -20,6 +22,9 @@ export default function AppTaskManagement() {
 		selectAppTaskManagementTableData
 	);
 	const rerenderPage = useSelector(selectRerenderPage);
+	const isAppTaskManagementDataEmpty = useSelector(
+		selectIsAppTaskManagementDataEmpty
+	);
 
 	const dispatch = useDispatch();
 
@@ -65,11 +70,36 @@ export default function AppTaskManagement() {
 					<BreadCrumbs />
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
-					<div className="flex grow flex-col overflow-x-auto">
-						{appTaskManagementData ? (
+					{isAppTaskManagementDataEmpty ? (
+						<div className="flex grow flex-col items-center justify-center gap-[56px]">
+							<div className="flex flex-col items-center justify-center gap-[8px]">
+								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
+									set-up task management(s)
+								</h3>
+								<p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
+									description to be added
+								</p>
+							</div>
+							{/* <button
+								type="button"
+								onClick={handleAddNewUser}
+								className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
+							>
+								<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
+									Create New Task
+								</span>
+								<AddUserIcon />
+							</button> */}
+						</div>
+					) : appTaskManagementData ? (
+						<div className="flex grow flex-col overflow-x-auto">
 							<Table tableData={appTaskManagementData?.tasks} />
-						) : null}
-					</div>
+						</div>
+					) : null}
+
+					{/* {appTaskManagementData ? (
+						<Table tableData={appTaskManagementData?.tasks} />
+					) : null} */}
 				</div>
 			</div>
 			<UpdatePolicyModal />

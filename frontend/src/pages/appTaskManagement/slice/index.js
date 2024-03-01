@@ -14,6 +14,7 @@ export const appTaskManagementSlice = createSlice({
 			pageIndex: 0,
 			pageSize: 10,
 		},
+		isAppTaskManagementDataEmpty: true,
 	},
 	reducers: {
 		toggleIsUpdatePolicyModalOpen: (state) => {
@@ -40,6 +41,12 @@ export const appTaskManagementSlice = createSlice({
 		},
 		setAppTaskManagementData: (state, action) => {
 			state.appTaskManagementData = action.payload;
+			state.isAppTaskManagementDataEmpty =
+				action.payload?.tasks?.records?.length ||
+				state?.appTaskManagementTableData?.searchValue ||
+				state?.appTaskManagementTableData?.columns?.length
+					? false
+					: true;
 		},
 		setAppTaskManagementTableData: (state, action) => {
 			state.appTaskManagementTableData = action.payload;
@@ -80,5 +87,8 @@ export const selectAppTaskManagementTableData = (state) =>
 
 export const selectAppTaskManagementFormData = (state) =>
 	state.appTaskManagement.appTaskManagementFormData;
+
+export const selectIsAppTaskManagementDataEmpty = (state) =>
+	state.appTaskManagement.isAppTaskManagementDataEmpty;
 
 export default appTaskManagementSlice.reducer;

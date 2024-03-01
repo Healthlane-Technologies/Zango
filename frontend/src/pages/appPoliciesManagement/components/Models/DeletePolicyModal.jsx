@@ -4,12 +4,16 @@ import { Fragment, useState, useEffect } from 'react';
 import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import {
+	transformToFormData,
+	transformToFormDataOrder,
+} from '../../../../utils/helper';
 import useApi from '../../../../hooks/useApi';
 
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	closeIsDeletePolicyModalOpen,
+	selectAppPoliciesManagementFormData,
 	selectIsDeletePolicyModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
@@ -22,34 +26,24 @@ const DeletePolicyForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
-	const triggerApi = useApi();
-	let initialValues = {
-		full_name: '',
-		email: '',
-		phone: '',
-	};
+	const appPoliciesManagementFormData = useSelector(
+		selectAppPoliciesManagementFormData
+	);
 
-	let validationSchema = Yup.object({
-		full_name: Yup.string().required('Required'),
-		email: Yup.string().email('Invalid email address').required('Required'),
-		phone: Yup.string()
-			.min(9, 'Must be 9 digits')
-			.max(9, 'Must be 9 digits')
-			.required('Required'),
-	});
+	const triggerApi = useApi();
+	let initialValues = {};
+
+	let validationSchema = Yup.object({});
 
 	let onSubmit = (values) => {
 		let tempValues = values;
-		if (tempValues['phone']) {
-			tempValues['phone'] = '+91' + tempValues['phone'];
-		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/generate-order/`,
-				type: 'POST',
+				url: `/api/v1/apps/${appId}/policies/${appPoliciesManagementFormData?.id}/`,
+				type: 'DELETE',
 				loader: true,
 				payload: dynamicFormData,
 			});

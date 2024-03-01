@@ -40,7 +40,7 @@ export const appPackagesManagementHandlers = [
 		const pageIndex = parseInt(req.url.searchParams.get('page')) || 0;
 		const pageSize = parseInt(req.url.searchParams.get('page_size')) || 10;
 		const action = req.url.searchParams.get('action');
-
+		const searchValue = req.url.searchParams.get('search') || '';
 		let slicedData = data.slice(
 			pageIndex * pageSize,
 			(pageIndex + 1) * pageSize
@@ -70,7 +70,7 @@ export const appPackagesManagementHandlers = [
 						total_pages: Math.ceil(data.length / pageSize),
 						next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
 						previous: null,
-						records: slicedData,
+						records: searchValue ? [] : slicedData,
 					},
 					dropdown_options: {
 						policies: [

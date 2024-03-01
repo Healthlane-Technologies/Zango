@@ -17,6 +17,7 @@ export const appUserManagementSlice = createSlice({
 			pageIndex: 0,
 			pageSize: 10,
 		},
+		isAppUserManagementDataEmpty: true,
 	},
 	reducers: {
 		toggleIsAddNewUserModalOpen: (state) => {
@@ -76,6 +77,12 @@ export const appUserManagementSlice = createSlice({
 		},
 		setAppUserManagementData: (state, action) => {
 			state.appUserManagementData = action.payload;
+			state.isAppUserManagementDataEmpty =
+				action.payload?.users?.records?.length ||
+				state?.appUserManagementTableData?.searchValue ||
+				state?.appUserManagementTableData?.columns?.length
+					? false
+					: true;
 		},
 		setAppUserManagementTableData: (state, action) => {
 			state.appUserManagementTableData = action.payload;
@@ -133,5 +140,8 @@ export const selectAppUserManagementTableData = (state) =>
 
 export const selectAppUserManagementFormData = (state) =>
 	state.appUserManagement.appUserManagementFormData;
+
+export const selectIsAppUserManagementDataEmpty = (state) =>
+	state.appUserManagement.isAppUserManagementDataEmpty;
 
 export default appUserManagementSlice.reducer;
