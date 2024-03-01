@@ -27,14 +27,6 @@ from .serializers import (
 
 
 class AppViewAPIV1(ZelthyGenericPlatformAPIView):
-    def validate_data(self, data):
-        if TenantModel.objects.filter(name=data["name"]).exists():
-            success, message = False, "App name already taken"
-        elif len(data["name"]) < 5:
-            success, message = False, "App name must have at least 5 charecters"
-        else:
-            success, message = True, ""
-        return success, message
 
     def get(self, request, *args, **kwargs):
         try:
@@ -101,27 +93,20 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
     def post(self, request, *args, **kwargs):
         data = request.data
         try:
-            success, message = self.validate_data(data)
-            if success:
-                app, task_id = TenantModel.create(
-                    name=data["name"],
-                    schema_name=data["name"],
-                    description=data["description"],
-                    tenant_type="app",
-                    status="staged",
-                )
-                # TODO: trigger celery task once celery integration is done
-                # task = launch_new_app.delay(str(app.uuid), countdown=30)
-                # result = {"app_uuid": str(app.uuid), "task_uuid": str(task)}
-                result = {
-                    "message": "App Launch Initiated Successfully",
-                    "app_uuid": str(app.uuid),
-                    "task_id": task_id,
-                }
-                status = 200
-            else:
-                result = {"message": message}
-                status = 400
+            app, task_id = TenantModel.create(
+                name=data["name"],
+                schema_name=data["name"],
+                description=data["description"],
+                tenant_type="app",
+                status="staged",
+            )
+            result = {
+                "message": "App Launch Initiated Successfully",
+                "app_uuid": str(app.uuid),
+                "task_id": task_id,
+            }
+            status = 200
+            success = True
         except Exception as e:
             # logger.error(traceback.format_exc())
             result = {"message": str(e)}
