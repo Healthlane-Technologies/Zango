@@ -41,7 +41,11 @@ export default function Table({ tableData }) {
 	const columnHelper = createColumnHelper();
 
 	const handleSearch = (value) => {
-		let searchData = { ...appPoliciesManagementTableData, searchValue: value };
+		let searchData = {
+			...appPoliciesManagementTableData,
+			searchValue: value,
+			pageIndex: 0,
+		};
 		debounceSearch(searchData);
 	};
 
@@ -57,7 +61,12 @@ export default function Table({ tableData }) {
 			tempTableData?.columns.push({ id: data?.id, value: data?.value });
 		}
 
-		debounceSearch(tempTableData);
+		let searchData = {
+			...tempTableData,
+			pageIndex: 0,
+		};
+
+		debounceSearch(searchData);
 	};
 
 	const columns = [
@@ -252,7 +261,7 @@ export default function Table({ tableData }) {
 					<TableColumnFilterIcon /> */}
 				</div>
 			</div>
-			<div className="flex max-w-[calc(100vw_-_88px)] grow overflow-x-auto overflow-y-auto">
+			<div className="relative flex max-w-[calc(100vw_-_88px)] grow overflow-x-auto overflow-y-auto">
 				<table className="h-fit w-full border-collapse">
 					<thead className="sticky top-0 z-[2] bg-[#ffffff]">
 						{table.getHeaderGroups().map((headerGroup) => (
@@ -308,6 +317,13 @@ export default function Table({ tableData }) {
 						))}
 					</tbody>
 				</table>
+				{table.getRowModel().rows?.length ? null : (
+					<div className="absolute inset-0 flex items-center justify-center">
+						<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+							No data
+						</span>
+					</div>
+				)}
 			</div>
 			<div className="flex border-t border-[#DDE2E5] py-[4px]">
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">

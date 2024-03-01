@@ -70,6 +70,7 @@ export const appPoliciesManagementHandlers = [
 	rest.get('/api/v1/apps/:appId/policies/', (req, res, ctx) => {
 		const pageIndex = parseInt(req.url.searchParams.get('page')) || 0;
 		const pageSize = parseInt(req.url.searchParams.get('page_size')) || 10;
+		const searchValue = req.url.searchParams.get('search') || '';
 		let slicedData = data.slice(
 			pageIndex * pageSize,
 			(pageIndex + 1) * pageSize
@@ -86,7 +87,7 @@ export const appPoliciesManagementHandlers = [
 						total_pages: Math.ceil(data.length / pageSize),
 						next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
 						previous: null,
-						records: slicedData,
+						records: searchValue ? [] : slicedData,
 					},
 					dropdown_options: {
 						roles: [
@@ -135,6 +136,19 @@ export const appPoliciesManagementHandlers = [
 				success: true,
 				response: {
 					message: 'Platform user fetched successfully',
+				},
+			})
+		);
+	}),
+
+	rest.delete('/api/v1/apps/:appId/policies/:id', (req, res, ctx) => {
+		return res(
+			ctx.delay(500),
+			ctx.status(200),
+			ctx.json({
+				success: true,
+				response: {
+					message: 'Policy deleted successfully',
 				},
 			})
 		);
