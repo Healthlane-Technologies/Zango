@@ -10,7 +10,7 @@ def create_default_policies(apps, schema_editor):
         name="AllowFromAnywhere",
         type="system",
         statement={"permissions": [{"type": "userAccess", "accessIP": ["0.0.0.0/0"]}]},
-        description="",
+        description="Policy to allow access from anywhere",
     )
 
 
