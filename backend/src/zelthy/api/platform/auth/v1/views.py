@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.conf import settings
 
 from zelthy.core.api import (
     get_api_response,
@@ -153,7 +154,10 @@ class AppPanelDetailsView(ZelthyGenericPlatformAPIView):
             obj = self.get_obj(request, **kwargs)
             serializer = PlatformUserSerializerModel(obj)
             success = True
-            response = {"app_data": {"user_logged_in": serializer.data}}
+            response = {
+                "app_data": {"user_logged_in": serializer.data},
+                "is_codeassist_enabled": getattr(settings, "CODEASSIST_ENABLED", False),
+            }
             status = 200
         except Exception as e:
             success = False
