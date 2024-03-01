@@ -69,7 +69,8 @@ class PolicyModel(FullAuditMixin):
         ("user", "USER"),
     ]
 
-    name = models.CharField("Name of the policy", max_length=50, unique=True)
+    name = models.CharField("Name of the policy", max_length=50)
+    path = models.CharField("Policy path", max_length=300, blank=True, null=True)
     description = models.CharField(
         "Description of the policy", max_length=300, blank=True
     )
@@ -93,6 +94,9 @@ class PolicyModel(FullAuditMixin):
         return valid_policies.filter(
             statement__permissions__contains=[{"type": "userAccess"}]
         )
+
+    class Meta:
+        unique_together = ("name", "path")
 
 
 class PolicyGroupModel(FullAuditMixin):
