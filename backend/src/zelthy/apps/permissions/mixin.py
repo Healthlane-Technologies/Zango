@@ -46,7 +46,7 @@ class PermissionMixin:
                 return True
         return False
 
-    def get_annonymous_userrole_policies(self):
+    def get_anonymous_userrole_policies(self):
         """
         Get the anonymous userrole policies.
 
@@ -77,7 +77,7 @@ class PermissionMixin:
             # If current user role is not anonymous, include anonymous user role policies
             # as non-anonymous user role can access views available to anonymous user role.
             if self.name != "AnonymousUsers":
-                anonymous_userrole_policies = self.get_annonymous_userrole_policies()
+                anonymous_userrole_policies = self.get_anonymous_userrole_policies()
                 valid_policies_qs = valid_policies_qs | anonymous_userrole_policies
             qs = valid_policies_qs.filter(
                 statement__permissions__contains=[{"type": perm_type, "name": view}]
