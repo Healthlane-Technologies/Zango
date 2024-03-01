@@ -1,34 +1,42 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import * as Yup from 'yup';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
+import MultiSelectField from '../../../../components/Form/MultiSelectField';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormData } from '../../../../utils/helper';
 import {
 	closeIsEditPolicyModalOpen,
+	selectAppPoliciesManagementData,
 	selectAppPoliciesManagementFormData,
 	selectIsEditPolicyModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
 
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { useParams } from 'react-router-dom';
-
 const EditPolicyForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
+	const appPoliciesManagementData = useSelector(
+		selectAppPoliciesManagementData
+	);
+
 	const appPoliciesManagementFormData = useSelector(
 		selectAppPoliciesManagementFormData
 	);
+
 	const triggerApi = useApi();
 	let initialValues = {
 		name: appPoliciesManagementFormData?.name ?? '',
 		description: appPoliciesManagementFormData?.description ?? '',
+		roles:
+			appPoliciesManagementFormData?.roles?.map(({ id, name }) => {
+				return id;
+			}) ?? [],
 	};
 
 	let validationSchema = Yup.object({
@@ -42,7 +50,7 @@ const EditPolicyForm = ({ closeModal }) => {
 			tempValues['phone'] = '+91' + tempValues['phone'];
 		}
 
-		let dynamicFormData = transformToFormDataOrder(tempValues);
+		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
@@ -91,6 +99,7 @@ const EditPolicyForm = ({ closeModal }) => {
 										value={formik.values.name}
 										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 										placeholder="Enter policy name"
+										disabled={true}
 									/>
 									{formik.touched.name && formik.errors.name ? (
 										<div className="font-lato text-form-xs text-[#cc3300]">
@@ -114,6 +123,7 @@ const EditPolicyForm = ({ closeModal }) => {
 										value={formik.values.description}
 										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 										placeholder="Enter policy Description"
+										disabled={true}
 									/>
 									{formik.touched.description && formik.errors.description ? (
 										<div className="font-lato text-form-xs text-[#cc3300]">
@@ -121,6 +131,19 @@ const EditPolicyForm = ({ closeModal }) => {
 										</div>
 									) : null}
 								</div>
+								<MultiSelectField
+									key="roles"
+									label="Roles"
+									name="roles"
+									id="roles"
+									placeholder="Select roles"
+									value={get(formik.values, 'roles', [])}
+									optionsDataName="roles"
+									optionsData={
+										appPoliciesManagementData?.dropdown_options?.roles ?? []
+									}
+									formik={formik}
+								/>
 							</div>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">

@@ -1,5 +1,10 @@
 import { useCallback, useContext } from 'react';
-import { callGetApi, callPostApi, callPutApi } from '../services/api';
+import {
+	callDeleteApi,
+	callGetApi,
+	callPostApi,
+	callPutApi,
+} from '../services/api';
 import { ErrorMessageContext } from '../context/ErrorMessageContextProvider';
 import { LoaderContext } from '../context/LoaderContextProvider';
 import toast from 'react-hot-toast';
@@ -57,6 +62,11 @@ export default function useApi() {
 						fullUrl: apiDetails.url,
 					});
 					break;
+				case 'DELETE':
+					apiRequest = await callDeleteApi({
+						fullUrl: apiDetails.url,
+					});
+					break;
 				default:
 					apiRequest = await callGetApi({
 						fullUrl: apiDetails.url,
@@ -109,6 +119,30 @@ export default function useApi() {
 					return {
 						response: {
 							message: 'Server Error',
+						},
+						success: false,
+						responseStatus: apiRequest.status,
+					};
+				} catch (error) {
+					notify('error', 'Success', 'Server Error');
+
+					return {
+						response: {
+							message: 'Server Error',
+						},
+						success: false,
+						responseStatus: apiRequest.status,
+					};
+				}
+			} else if (apiRequest.status === 500) {
+				try {
+					const { response, success } = await apiRequest.json();
+
+					setErrorMessage(response.message);
+
+					return {
+						response: {
+							message: response.message,
 						},
 						success: false,
 						responseStatus: apiRequest.status,

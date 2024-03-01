@@ -22,6 +22,8 @@ import {
 	setAppPoliciesManagementData,
 	setAppPoliciesManagementTableData,
 } from '../../slice';
+import SyncTask from '../SyncTask';
+import ListRoleCell from './ListRoleCell';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
 import RowMenu from './RowMenu';
@@ -39,7 +41,11 @@ export default function Table({ tableData }) {
 	const columnHelper = createColumnHelper();
 
 	const handleSearch = (value) => {
-		let searchData = { ...appPoliciesManagementTableData, searchValue: value };
+		let searchData = {
+			...appPoliciesManagementTableData,
+			searchValue: value,
+			pageIndex: 0,
+		};
 		debounceSearch(searchData);
 	};
 
@@ -55,7 +61,12 @@ export default function Table({ tableData }) {
 			tempTableData?.columns.push({ id: data?.id, value: data?.value });
 		}
 
-		debounceSearch(tempTableData);
+		let searchData = {
+			...tempTableData,
+			pageIndex: 0,
+		};
+
+		debounceSearch(searchData);
 	};
 
 	const columns = [
@@ -133,6 +144,17 @@ export default function Table({ tableData }) {
 					</span>
 				</div>
 			),
+		}),
+		columnHelper.accessor((row) => row.roles, {
+			id: 'roles',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						Roles
+					</span>
+				</div>
+			),
+			cell: (info) => <ListRoleCell data={info.getValue()} />,
 		}),
 	];
 
@@ -234,11 +256,12 @@ export default function Table({ tableData }) {
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
+					<SyncTask />
 					{/* <TableFilterIcon />
 					<TableColumnFilterIcon /> */}
 				</div>
 			</div>
-			<div className="flex max-w-[calc(100vw_-_88px)] grow overflow-x-auto overflow-y-auto">
+			<div className="relative flex max-w-[calc(100vw_-_88px)] grow overflow-x-auto overflow-y-auto">
 				<table className="h-fit w-full border-collapse">
 					<thead className="sticky top-0 z-[2] bg-[#ffffff]">
 						{table.getHeaderGroups().map((headerGroup) => (
@@ -294,6 +317,13 @@ export default function Table({ tableData }) {
 						))}
 					</tbody>
 				</table>
+				{table.getRowModel().rows?.length ? null : (
+					<div className="absolute inset-0 flex items-center justify-center">
+						<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+							No data
+						</span>
+					</div>
+				)}
 			</div>
 			<div className="flex border-t border-[#DDE2E5] py-[4px]">
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">

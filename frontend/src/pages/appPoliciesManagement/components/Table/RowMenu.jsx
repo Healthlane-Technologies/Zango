@@ -56,7 +56,6 @@ export default function RowMenu({ rowData }) {
 									type="button"
 									className="flex w-full disabled:opacity-50"
 									onClick={handleEditPolicy}
-									disabled={rowData?.type === 'system' ? true : false}
 								>
 									<div
 										className={`${
@@ -73,12 +72,13 @@ export default function RowMenu({ rowData }) {
 								</button>
 							)}
 						</Menu.Item>
-						<Menu.Item>
+						{/* <Menu.Item>
 							{({ active }) => (
 								<button
 									type="button"
-									className="flex  w-full"
+									className="flex  w-full disabled:opacity-50"
 									onClick={handleDeletePolicy}
+									disabled={rowData?.type === 'system' ? true : false}
 								>
 									<div
 										className={`${
@@ -95,7 +95,7 @@ export default function RowMenu({ rowData }) {
 									</div>
 								</button>
 							)}
-						</Menu.Item>
+						</Menu.Item> */}
 					</div>
 				</Menu.Items>
 			</Transition>
