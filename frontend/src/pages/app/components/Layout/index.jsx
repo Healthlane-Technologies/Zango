@@ -11,11 +11,14 @@ import SideMenu from './SideMenu';
 import DragablePopover from './Chatbot/DragablePopover';
 import Draggable, { DraggableCore } from 'react-draggable';
 import { Resizable, ResizableBox } from 'react-resizable';
+import { useSelector } from 'react-redux';
+import { selectAppPanelInitialData } from '../../../platform/slice';
 
 export default function Layout({ children }) {
 	useWindowSizeHeight();
 
 	const navRef = useRef(null);
+	const appPanelInitialData = useSelector(selectAppPanelInitialData);
 
 	useLayoutEffect(() => {
 		function setElementOffsetHeight() {
@@ -32,6 +35,7 @@ export default function Layout({ children }) {
 		return () => window.removeEventListener('resize', heightChange);
 	}, []);
 
+	console.log('appPanelInitialData', appPanelInitialData);
 	return (
 		<>
 			<nav
@@ -54,10 +58,14 @@ export default function Layout({ children }) {
 				{/* <Draggable> */}
 				{/* <ResizableBox width={200} height={200}></ResizableBox> */}
 				{/* </Draggable> */}
-				<div className="absolute bottom-[8px] left-[96px] z-[51]">
-					<DragablePopover />
-				</div>
-				<Chatbot />
+				{appPanelInitialData?.is_codeassist_enabled ? (
+					<>
+						<div className="absolute bottom-[8px] left-[96px] z-[51]">
+							<DragablePopover />
+						</div>
+						<Chatbot />
+					</>
+				) : null}
 			</main>
 		</>
 	);
