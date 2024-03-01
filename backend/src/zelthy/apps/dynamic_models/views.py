@@ -63,7 +63,7 @@ class DynamicView(View, PermMixin):
             self.workspace = self.get_workspace(request)
             view, resolve = self.get_view(request)
             view_name = (
-                ".".join(resolve.__dict__["_func_path"].split(".")[5:])
+                ".".join(resolve.__dict__["_func_path"].split(".")[3:])
                 if resolve
                 else None
             )
