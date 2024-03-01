@@ -67,6 +67,23 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         return self.name
 
 
+    @property
+    def is_user_active(self, role_name=None):
+        if role_name:
+            user_role = self._get_user_role(role_name)
+            if user_role:
+                return user_role.is_active and self.is_active
+            return False
+        return self.is_active
+
+    @property
+    def roles(self):
+        
+        roles = UserRoleModel.objects.none()
+        for user_role in AppUserRoleModel.objects.filter(user = self).only('role'):
+            roles |= UserRoleModel.objects.filter(pk=user_role.role.pk)
+        return roles
+
     def get_app_object(self, role_id):
         if self.app_objects:
             object_uuid = self.app_objects.get(str(role_id), None)
@@ -101,13 +118,24 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         return False
 
     def add_roles(self, role_ids):
-        
-        AppUserRoleModel.objects.filter(user=self).delete()
+        roles = UserRoleModel.objects.filter(id__in=role_ids)
+        for role in roles:
+            if self.roles.filter(id = role.id).exists():
+                self.roles.filter(id = role.id).update(is_active = True)
+            else:
+                AppUserRoleModel.objects.create(user = self, role=role)
 
+    def remove_roles(self, role_ids):
+        roles = UserRoleModel.objects.filter(id__in=role_ids)
+        for role in roles:
+            AppUserRoleModel.objects.filter(user=self, role=role).delete()
+    
+    def update_roles(self, role_ids):
+        AppUserRoleModel.objects.filter(user=self).delete()
         roles = UserRoleModel.objects.filter(id__in=role_ids)
         for role in roles:
             AppUserRoleModel.objects.create(user = self, role=role)
-
+            
 
     def check_password_validity(self, password):
         """
@@ -153,7 +181,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                         "Another user already exists matching the provided credentials"
                     )
                 else:
-                    if not cls.validate_password(password):
+                    if password and not cls.validate_password(password):
                         message = """
                             Invalid password. Password must follow rules
                             1. Must have at least 8 characters
@@ -169,7 +197,11 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                             mobile=mobile,
                         )
                         app_user.add_roles(role_ids)
-                        app_user.set_password(password)
+                        if password:
+                            app_user.set_password(password)
+                        else:
+                            app_user.set_unusable_password() # Ask Rajat
+                            
                         if require_verification:
                             app_user.is_active = False
                         else:
@@ -225,7 +257,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
             role_ids = data.getlist("roles", [])
             if role_ids:
-                self.add_roles(role_ids)
+                self.update_roles(role_ids)
 
             is_active = data.get("is_active", self.is_active)
             if isinstance(is_active, str):
@@ -291,22 +323,10 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             self.is_active = False
             self.save()
 
-    @property
-    def is_user_active(self, role_name=None):
-        if role_name:
-            user_role = self._get_user_role(role_name)
-            if user_role:
-                return user_role.is_active and self.is_active
-            return False
-        return self.is_active
+    @classmethod
+    def filter_users(cls, query):
+        return cls.objects.filter(**query)
 
-    @property
-    def roles(self):
-        
-        roles = UserRoleModel.objects.none()
-        for user_role in AppUserRoleModel.objects.filter(user = self).only('role'):
-            roles |= UserRoleModel.objects.filter(pk=user_role.role.pk)
-        return roles
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
