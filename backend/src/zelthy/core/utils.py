@@ -76,3 +76,11 @@ def get_datetime_in_tenant_timezone(datetime_val, tenant):
 def get_datetime_str_in_tenant_timezone(datetime_val, tenant):
     datetime_val = get_datetime_in_tenant_timezone(datetime_val, tenant)
     return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")
+
+
+def get_search_columns(request):
+    search_columns = {}
+    for key, value in request.GET.items():
+        if key.startswith("search_"):
+            search_columns[key.replace("search_", "")] = value
+    return search_columns

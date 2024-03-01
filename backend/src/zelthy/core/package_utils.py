@@ -6,8 +6,11 @@ import shutil
 import subprocess
 
 from django.conf import settings
+from django.db import connection
 
 from zelthy.core.utils import get_current_request_url
+from zelthy.apps.dynamic_models.workspace.base import Workspace
+from zelthy.apps.shared.tenancy.models import TenantModel
 
 
 def create_directories(dirs):
@@ -17,7 +20,7 @@ def create_directories(dirs):
 
 
 def get_installed_packages(tenant):
-    with open(f"workspaces/{tenant}/packages.json", "r") as f:
+    with open(f"workspaces/{tenant}/manifest.json", "r") as f:
         data = json.loads(f.read())
         packages = data["packages"]
     return {package["name"]: package["version"] for package in packages}
@@ -53,6 +56,15 @@ def get_all_packages(tenant=None):
     resp_data = []
     for package, data in packages.items():
         resp_data.append({"name": package, **data})
+    for local_package in installed_packages.keys():
+        if local_package not in packages.keys():
+            resp_data.append(
+                {
+                    "name": local_package,
+                    "status": "Installed",
+                    "installed_version": installed_packages[local_package],
+                }
+            )
     return resp_data
 
 
@@ -68,13 +80,13 @@ def update_settings_json(tenant, package_name, version):
         json.dump(data, file, indent=4)
 
 
-def update_packages_json(tenant, package_name, version):
-    with open(f"workspaces/{tenant}/packages.json", "r") as f:
+def update_manifest_json(tenant, package_name, version):
+    with open(f"workspaces/{tenant}/manifest.json", "r") as f:
         data = json.loads(f.read())
 
     data["packages"].append({"name": package_name, "version": version})
 
-    with open(f"workspaces/{tenant}/packages.json", "w") as file:
+    with open(f"workspaces/{tenant}/manifest.json", "w") as file:
         json.dump(data, file, indent=4)
 
 
@@ -146,7 +158,7 @@ def install_package(package_name, version, tenant):
         #         f"tmp/{package_name}/{version}/",
         #         f"workspaces/{tenant}/packages/{package_name}",
         #     )
-        update_packages_json(tenant, package_name, version)
+        update_manifest_json(tenant, package_name, version)
         update_settings_json(tenant, package_name, version)
 
         subprocess.run(f"sudo python manage.py sync_static {tenant}", shell=True)
@@ -156,6 +168,13 @@ def install_package(package_name, version, tenant):
                 f"python manage.py ws_migrate {tenant} --package {package_name}",
                 shell=True,
             )
+        tenant_obj = TenantModel.objects.get(name=tenant)
+        connection.set_tenant(tenant_obj)
+        with connection.cursor() as c:
+            ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+            ws.ready()
+            ws.sync_tasks(tenant)
+            ws.sync_policies()
 
         return "Package Installed"
     except Exception as e:

@@ -60,9 +60,6 @@ USE_TZ = True
 
 
 # ROOT_URLCONF = '{{project_name}}.urls'
-STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
-STATIC_URL = "static/"
 
 import os
 
@@ -76,27 +73,33 @@ ENV = "dev"
 
 PHONENUMBER_DEFAULT_REGION = "IN"
 
-USE_S3 = os.getenv("USE_S3") == "TRUE"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-if USE_S3:
-    AWS_ACCESS_KEY_ID = "AWS ACCESS KEY"
-    AWS_SECRET_ACCESS_KEY = "ASW SECRET KEY"
+AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
+AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
+AWS_S3_REGION_NAME = "AWS_S3_REGION_NAME"
 
-    AWS_S3_REGION_NAME = "AWS S3 REGION"
-    AWS_STORAGE_BUCKET_NAME = "AWS BUCKET NAME"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 
-    AWS_QUERYSTRING_AUTH = True
-    AWS_S3_ENCRYPTION = True
+# To change the media storage to S3 you can use the BACKEND class provided by the default storage
+# To change the static storage to S3 you can use the BACKEND class provided by the staticfiles storage
+# STORAGES = {
+#     "default": {"BACKEND": "zelthy.core.storage_utils.S3MediaStorage"},
+#     "staticfiles": {"BACKEND": "zelthy.core.storage_utils.S3StaticStorage"},
+# }
+#
+AWS_MEDIA_STORAGE_BUCKET_NAME = "media"  # S3 Bucket Name
+AWS_MEDIA_STORAGE_LOCATION = "media"  # Prefix added to all the files uploaded
+AWS_STATIC_STORAGE_BUCKET_NAME = "static"  # S3 Bucket Name
+AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
-    S3_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
-
-    MEDIA_DIRECTORY = "/media/"
-    MEDIA_URL = S3_URL + MEDIA_DIRECTORY
-    DEFAULT_FILE_STORAGE = "zelthy.core.storage_utils.MediaS3Boto3Storage"
-    AWS_QUERYSTRING_EXPIRE = 600
-else:
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = os.path.join(BASE_DIR, "workspaces")
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_URL = "static/"
+STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
 
 REDIS_URL = "redis://{redis_host}:6379/1"
 CELERY_BROKER_URL = REDIS_URL
