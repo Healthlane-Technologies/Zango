@@ -40,7 +40,7 @@ STATUSES = [
     Choice("deleted", "Deleted"),
 ]
 
-SQL_IDENTIFIER_RE = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]{4,62}$")
+SQL_IDENTIFIER_RE = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]{4,30}$")
 SQL_SCHEMA_NAME_RESERVED_RE = re.compile(r"^pg_", re.IGNORECASE)
 
 
