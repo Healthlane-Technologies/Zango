@@ -35,7 +35,6 @@ export default function Layout({ children }) {
 		return () => window.removeEventListener('resize', heightChange);
 	}, []);
 
-	console.log('appPanelInitialData', appPanelInitialData);
 	return (
 		<>
 			<nav
