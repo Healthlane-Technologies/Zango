@@ -10,6 +10,7 @@ import {
 	selectAppUserManagementTableData,
 	selectRerenderPage,
 	setAppUserManagementData,
+	selectIsAppUserManagementDataEmpty,
 } from '../../slice';
 import ActivateUserModal from '../Models/ActivateUserModal';
 import AddNewUserModal from '../Models/AddNewUserModal';
@@ -24,6 +25,9 @@ export default function UserManagement() {
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const appUserManagementTableData = useSelector(
 		selectAppUserManagementTableData
+	);
+	const isAppUserManagementDataEmpty = useSelector(
+		selectIsAppUserManagementDataEmpty
 	);
 
 	const dispatch = useDispatch();
@@ -72,19 +76,42 @@ export default function UserManagement() {
 			<div className="flex grow flex-col gap-[20px]">
 				<div className="flex items-center justify-between py-[12px] pl-[40px] pr-[48px]">
 					<BreadCrumbs />
-					<button
-						type="button"
-						onClick={handleAddNewUser}
-						className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
-					>
-						<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
-							New User
-						</span>
-						<AddUserIcon />
-					</button>
+					{isAppUserManagementDataEmpty ? null : (
+						<button
+							type="button"
+							onClick={handleAddNewUser}
+							className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
+						>
+							<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
+								New User
+							</span>
+							<AddUserIcon />
+						</button>
+					)}
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
-					{appUserManagementData ? (
+					{isAppUserManagementDataEmpty ? (
+						<div className="flex grow flex-col items-center justify-center gap-[56px]">
+							<div className="flex flex-col items-center justify-center gap-[8px]">
+								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
+									set-up user(s)
+								</h3>
+								<p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
+									description to be added
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={handleAddNewUser}
+								className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
+							>
+								<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
+									Create New User
+								</span>
+								<AddUserIcon />
+							</button>
+						</div>
+					) : appUserManagementData ? (
 						<Table tableData={appUserManagementData?.users} />
 					) : null}
 				</div>

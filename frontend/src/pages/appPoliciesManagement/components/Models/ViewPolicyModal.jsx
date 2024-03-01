@@ -206,7 +206,7 @@ export default function ViewPolicyModal() {
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
 												{appPoliciesManagementFormData?.name}
 											</h4>
-											{isEditViewPolicy ? null : (
+											{/* {isEditViewPolicy ? null : (
 												<button
 													type="button"
 													onClick={handleEditJson}
@@ -221,7 +221,7 @@ export default function ViewPolicyModal() {
 														Edit JSON
 													</span>
 												</button>
-											)}
+											)} */}
 										</div>
 									</Dialog.Title>
 									{isEditViewPolicy ? (

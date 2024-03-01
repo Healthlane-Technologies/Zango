@@ -9,9 +9,8 @@ module.exports = {
 			.map((f) => path.resolve(__dirname, f)),
 	},
 	output: {
-		publicPath: '/',
-		filename: `build/static/js/${metadata.buildMajor}.${metadata.buildMinor}.${metadata.buildPatch}/build.v${metadata.buildMajor}.${metadata.buildMinor}.${metadata.buildPatch}.min.js`,
-		// filename: `build/static/js/build.min.js`,
+		path: path.resolve(__dirname, '../backend/src/zelthy/assets/app_panel/js'),
+		filename: `build.v${metadata.buildMajor}.${metadata.buildMinor}.${metadata.buildPatch}.min.js`,
 	},
 	module: {
 		rules: [

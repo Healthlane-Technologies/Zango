@@ -150,6 +150,7 @@ export const appUsersManagementHandlers = [
 	rest.get('/api/v1/apps/:appId/users/', (req, res, ctx) => {
 		const pageIndex = parseInt(req.url.searchParams.get('page')) || 0;
 		const pageSize = parseInt(req.url.searchParams.get('page_size')) || 10;
+		const searchValue = req.url.searchParams.get('search') || '';
 		let slicedData = data.slice(
 			pageIndex * pageSize,
 			(pageIndex + 1) * pageSize
@@ -166,7 +167,7 @@ export const appUsersManagementHandlers = [
 						total_pages: Math.ceil(data.length / pageSize),
 						next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
 						previous: null,
-						records: slicedData,
+						records: searchValue ? [] : slicedData,
 					},
 					dropdown_options: {
 						roles: [
