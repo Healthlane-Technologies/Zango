@@ -6,8 +6,11 @@ import shutil
 import subprocess
 
 from django.conf import settings
+from django.db import connection
 
 from zelthy.core.utils import get_current_request_url
+from zelthy.apps.dynamic_models.workspace.base import Workspace
+from zelthy.apps.shared.tenancy.models import TenantModel
 
 
 def create_directories(dirs):
@@ -165,6 +168,13 @@ def install_package(package_name, version, tenant):
                 f"python manage.py ws_migrate {tenant} --package {package_name}",
                 shell=True,
             )
+        tenant_obj = TenantModel.objects.get(name=tenant)
+        connection.set_tenant(tenant_obj)
+        with connection.cursor() as c:
+            ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+            ws.ready()
+            ws.sync_tasks(tenant)
+            ws.sync_policies()
 
         return "Package Installed"
     except Exception as e:

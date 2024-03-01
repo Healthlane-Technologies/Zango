@@ -5,7 +5,8 @@ import re
 
 from django.conf import settings
 from django.db import connection
-from django.http import Http404
+
+from zelthy.apps.permissions.models import PolicyModel
 
 # from zelthy.core.pluginbase1 import PluginBase, PluginSource
 
@@ -397,3 +398,53 @@ class Workspace:
 
     def migrate(self):
         return
+
+    def sync_policies(self):
+        existing_policies = list(
+            PolicyModel.objects.filter(type="user").values_list("id", flat=True)
+        )
+        modules = self.get_all_module_paths()
+        for module in modules:
+            policy_file = f"{module}/policies.json"
+            if os.path.isfile(policy_file):
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/policies"
+                )
+                model_module = model_module.lstrip("/").replace("/", ".")
+                if "packages" in model_module:
+                    policy_path = ".".join(model_module.split(".")[2:5])
+                else:
+                    policy_path = model_module.split(".")[2]
+                with open(policy_file) as f:
+                    try:
+                        policy = json.load(f)
+                    except json.decoder.JSONDecodeError as e:
+                        raise Exception(f"Error parsing {policy_file}: {e}")
+                    for policy_details in policy["policies"]:
+                        if type(policy_details["statement"]) is not dict:
+                            raise Exception(
+                                f"Policy {policy_details['name']} has an invalid statement"
+                            )
+                        try:
+                            policy, created = PolicyModel.objects.update_or_create(
+                                name=policy_details["name"],
+                                path=policy_path,
+                                defaults={
+                                    "description": policy_details.get(
+                                        "description", ""
+                                    ),
+                                    "type": "user",
+                                    "statement": policy_details["statement"],
+                                },
+                            )
+                            if not created:
+                                if policy.id not in existing_policies:
+                                    raise Exception(f"Policy name already exists")
+                                existing_policies.remove(policy.id)
+                        except Exception as e:
+                            raise Exception(
+                                f"Error creating policy {policy_details['name']} in {policy_path}: {e}"
+                            )
+
+        for policy_id in existing_policies:
+            PolicyModel.objects.get(id=policy_id).delete()
