@@ -114,7 +114,7 @@ def create_project(
     # sys.path.insert(
 
 
-def create_public_tenant():
+def create_public_tenant(platform_domain_url="localhost"):
     from zelthy.apps.shared.tenancy.models import TenantModel, Domain
 
     # Creating public tenant
@@ -127,7 +127,9 @@ def create_public_tenant():
         )
 
         # Creating domain
-        Domain.objects.create(tenant=public_tenant, domain="localhost", is_primary=True)
+        Domain.objects.create(
+            tenant=public_tenant, domain=platform_domain_url, is_primary=True
+        )
 
 
 def create_platform_user(platform_username, platform_username_password):
@@ -157,6 +159,12 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--redis_host", prompt=True, help="Redis Host", default="127.0.0.1")
 @click.option("--platform_username", prompt=False, help="Platform Username")
 @click.option(
+    "--platform_domain_url",
+    prompt=False,
+    help="Platform Domain URL",
+    default="localhost",
+)
+@click.option(
     "--platform_user_password",
     prompt=False,
     hide_input=True,
@@ -173,6 +181,7 @@ def start_project(
     redis_host,
     platform_username,
     platform_user_password,
+    platform_domain_url,
 ):
     """Create Project"""
     if directory:
@@ -209,7 +218,7 @@ def start_project(
     call_command("migrate_schemas", schema="public")
 
     # Creating Public Tenant
-    create_public_tenant()
+    create_public_tenant(platform_domain_url=platform_domain_url)
 
     # Prompting default platform user details
     if not platform_username:
