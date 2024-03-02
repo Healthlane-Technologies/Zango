@@ -1,0 +1,35 @@
+import os
+
+from django.templatetags.static import static as original_static
+from django import template
+
+from zelthy.core.utils import get_current_request
+
+register = template.Library()
+
+@register.filter
+def autoincrement(static_file_path):
+    try:
+        request = get_current_request()
+        app_name = request.tenant.name
+        app_static_file_path = "workspaces/%s/"%(app_name)  
+        file_path = app_static_file_path+static_file_path
+        build_file_path = app_static_file_path+static_file_path
+        path_parts = build_file_path.split('/')
+        build_folder_path_without_file = '/'.join(path_parts[:-1])
+        # passed file's name and extension
+        name, extension = path_parts[-1].split('.', 1)
+        folder_contents  = os.listdir(build_folder_path_without_file+'/static')
+        build_files = [filename for filename in folder_contents \
+                        if filename.split('.')[0] == name and filename.endswith(extension)
+                        ]
+        if build_files:
+            latest_build_file =  '/'+ sorted(build_files)[-1]
+            file_path = build_folder_path_without_file+latest_build_file
+    except Exception as e:
+        
+        import traceback
+        print("AUTOINCREMENT - FILE PATH is", file_path)
+        print(traceback.format_exc())
+        
+    return file_path
