@@ -23,6 +23,9 @@ services:
     build:
       context: .
       dockerfile: dev.dockerfile
+      args:
+        - UID=${UID}
+        - GID=${GID}
     ports:
       - "8000:8000"
     depends_on:
@@ -36,7 +39,12 @@ services:
       - .:/zelthy/
 
   celery:
-    image: zelthy3
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+      args:
+        - UID=${UID}
+        - GID=${GID}
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
     volumes:
       - .:/zelthy/
