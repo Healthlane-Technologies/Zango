@@ -51,14 +51,21 @@ services:
     env_file:
       - .env
     depends_on:
-      - app
-      - redis
-      - celery_beat
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+        
 
   redis:
     image: redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   celery_beat:
     image: kczelthy/zelthy3:0.1.0
@@ -68,8 +75,11 @@ services:
     env_file:
       - .env
     depends_on:
-      - app
-      - redis
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
 
 volumes:
   dev_db:
