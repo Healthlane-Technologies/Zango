@@ -2,11 +2,11 @@
 
 This guide outlines the steps to create and develop Zelthy projects without the need for local installations.
 
-# Develop
+# Installing Zelthy with Docker
 
 ## Prerequisites
 
-Make sure you have Docker and Docker Compose installed on your machine. If not, you can follow the installation instructions for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
+To begin using Zelthy through Docker installation, ensure that Docker and Docker Compose are installed on your machine. If not, follow the installation instructions for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
 
 ## Steps
 
@@ -20,17 +20,17 @@ Make sure you have Docker and Docker Compose installed on your machine. If not, 
 2. Run the following command from the root folder of the project:
 
    ```bash
-   python zel_setup.py --build_core
+   python setup_project.py <directory>
    ```
 
-   Use the `--build_core` option to build the Zelthy library for the first time. Subsequent projects can omit this step.
+   You can use the `--build_core` option to build the Zelthy library
 
-3. This creates a project named `zelthy_project` in the `zproject` folder in the same directory.
+3. This creates a project named `zelthy_project` in the `zproject` folder in the specified directory.
 
 4. Customize the project creation using optional arguments:
 
    ```bash
-   python zel_setup.py --project_name my_project --project_dir /path/to/my_project --server runserver --build_core --platform_username user@example.com --platform_user_password secret --skip_build_project
+   python setup_project.py --project_name my_project --project_dir /path/to/my_project --build_core --platform_username user@example.com --platform_user_password secret --skip_build_project
    ```
 
    - `--project_name`: Modifies the name of the project (Default: `zelthy_project`).
@@ -38,26 +38,29 @@ Make sure you have Docker and Docker Compose installed on your machine. If not, 
    - `--build_core`: Builds the Zelthy library (Default: `False`).
    - `--platform_username`: The user email of the platform user (Default: `zelthy@mail.com`).
    - `--platform_user_password`: The password for the platform user (Default: `Zelthy@123`).
-   - `--skip_build_project`: Skips building the project (Default: `False`).
-   - `--start`: Starts the project as soon as it is created (Default: `False`)
 
-5. To install any Zelthy package, add `PACKAGE_REPO_AWS_ACCESS_KEY_ID` and `PACKAGE_REPO_AWS_SECRET_ACCESS_KEY` to the `.env` file created in the `project_dir` and restart the containers.
+5. Docker is started as a non root user, run the below commands to export the host UID and GID
 
-6. Subsequently, you can use `docker compose up` from the `project_dir` to start the project.
+```bash
+export UID=$(id -u)
+export GID=$(id -g)
+```
+
+6. Run `docker compose up` in the project directory to start the project
 
 # Rebuilding Core
 
 If you modify somehting in the core of the project, to rebuild it run the following command from the root of the zelthy3 project
 
 ```bash
-python zel_setup.py --project_dir <project_dir> --rebuild_core
+python setup_project.py --project_dir <project_dir> --rebuild_core
 ```
 
-you can then run `docker compose up` from the project directory to start the project
-
-# Syncing Static Files
+# Syncing Static Files And Running Migrations
 
 You can sync static files by running `python manage.py collectstatic` from the project directory in the `<project>-app-1` container. Make sure to sync the static files before deploying
+
+You can run migrations by running `python manage.py ws_makemigrations <project_name>` and `python manage.py ws_migrate <project_name` from the project directory in the container
 
 # Deploy
 
