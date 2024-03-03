@@ -1,4 +1,4 @@
-FROM zelthy3:latest
+FROM kczelthy/zelthy3:0.1.0
 
 ARG UID
 ARG GID

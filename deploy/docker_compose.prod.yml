@@ -45,7 +45,7 @@ services:
     volumes:
       - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
   celery:
-    image: zelthy3
+    image: kczelthy/zelthy3:0.1.0
     command: >-
       /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l
       info"
@@ -62,7 +62,7 @@ services:
     ports:
       - "6379:6379"
   celery_beat:
-    image: zelthy3
+    image: kczelthy/zelthy3:0.1.0
     command: >-
       /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info
       --scheduler django_celery_beat.schedulers:DatabaseScheduler"
