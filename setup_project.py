@@ -116,12 +116,6 @@ if __name__ == "__main__":
         help="Whether to set up without a database",
     )
     parser.add_argument(
-        "--skip_build_project",
-        action="store_true",
-        default=False,
-        help="Whether to skip the build step",
-    )
-    parser.add_argument(
         "--project_dir", default="zproject", help="The project directory"
     )
     parser.add_argument(
@@ -138,7 +132,6 @@ if __name__ == "__main__":
         default="Zelthy@123",
         help="The platform user password",
     )
-    parser.add_argument("--start", action="store_true", default=False)
     parser.add_argument("--rebuild_core", action="store_true", default=False)
     args = parser.parse_args()
     try:
@@ -151,6 +144,5 @@ if __name__ == "__main__":
             rebuild_core(args.project_dir)
         load_necessary_files(args.project_dir, args.project_name, args.without_db)
         write_env_file(args.project_dir, args)
-        setup_project(args.project_dir, args.project_name, args.without_db, args.start)
     except Exception:
         traceback.print_exc()
