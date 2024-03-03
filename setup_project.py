@@ -5,24 +5,37 @@ import traceback
 import shutil
 import signal
 import subprocess
+import pwd
 
 
 def load_necessary_files(project_dir, project_name, without_db):
     if not os.path.exists(project_dir):
         os.mkdir(project_dir)
 
-    shutil.copytree("config", f"{project_dir}/config")
-    shutil.copy("zelthy3_prod.yml", f"{project_dir}/docker-compose.prod.yml")
+    shutil.copytree("deploy/config", f"{project_dir}/config")
+    shutil.copy(
+        "deploy/docker_compose.prod.yml", f"{project_dir}/docker-compose.prod.yml"
+    )
     if without_db:
         shutil.copy("zelthy3_without_db.yml", f"{project_dir}/docker-compose.yml")
     else:
-        shutil.copy("zelthy3_with_db.yml", f"{project_dir}/docker-compose.yml")
-    shutil.copy("dev.dockerfile", f"{project_dir}/dev.dockerfile")
-    shutil.copy("prod.dockerfile", f"{project_dir}/prod.dockerfile")
-    shutil.copy("init.sh", f"{project_dir}/init.sh")
+        shutil.copy(
+            "deploy/docker_compose.dev.yml", f"{project_dir}/docker-compose.yml"
+        )
+    shutil.copy("deploy/dev.dockerfile", f"{project_dir}/dev.dockerfile")
+    shutil.copy("deploy/prod.dockerfile", f"{project_dir}/prod.dockerfile")
+    shutil.copy("deploy/init.sh", f"{project_dir}/init.sh")
 
 
 def write_env_file(project_dir, args):
+    # Get the current process' real user id (UID)
+    current_uid = os.getuid()
+
+    # Get the current process' real group id (GID)
+    current_gid = os.getgid()
+
+    # Retrieve the username associated with the current UID
+    current_username = pwd.getpwuid(current_uid).pw_name
     with open(f"{project_dir}/.env", "w") as f:
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
@@ -32,7 +45,8 @@ def write_env_file(project_dir, args):
         f.write(f"POSTGRES_DB=zelthy\n")
         f.write(f"POSTGRES_HOST=postgres\n")
         f.write(f"POSTGRES_PORT=5432\n")
-        f.write(f"REDIS_HOST=redis")
+        f.write(f"REDIS_HOST=redis\n")
+        f.write(f"REDIS_PORT=6379\n")
 
 
 def build_core():
@@ -102,12 +116,6 @@ if __name__ == "__main__":
         help="Whether to set up without a database",
     )
     parser.add_argument(
-        "--skip_build_project",
-        action="store_true",
-        default=False,
-        help="Whether to skip the build step",
-    )
-    parser.add_argument(
         "--project_dir", default="zproject", help="The project directory"
     )
     parser.add_argument(
@@ -124,7 +132,6 @@ if __name__ == "__main__":
         default="Zelthy@123",
         help="The platform user password",
     )
-    parser.add_argument("--start", action="store_true", default=False)
     parser.add_argument("--rebuild_core", action="store_true", default=False)
     args = parser.parse_args()
     try:
@@ -137,6 +144,5 @@ if __name__ == "__main__":
             rebuild_core(args.project_dir)
         load_necessary_files(args.project_dir, args.project_name, args.without_db)
         write_env_file(args.project_dir, args)
-        setup_project(args.project_dir, args.project_name, args.without_db, args.start)
     except Exception:
         traceback.print_exc()

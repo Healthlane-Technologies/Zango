@@ -1,11 +1,14 @@
 import os
 from setuptools import setup, find_packages
+from pathlib import Path
 
 
 PROJECT_DIR = os.path.dirname(__file__)
 REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
 
-PLATFORM_VERSION = "0.1.0"
+README = os.path.join(Path(__file__).resolve().parent.parent, "README.md")
+
+PLATFORM_VERSION = "0.0.1rc"
 
 
 def get_requirements(env):
@@ -19,11 +22,13 @@ install_requires = get_requirements("base")
 setup(
     name="zelthy3",
     version=PLATFORM_VERSION,
-    description="Zelthy3 AppDev Framework",
+    license='Apache License 2.0',
+    description="Zelthy3: multi-tenant Django framework for building business apps",
+    long_description=open(README).read(),
+    long_description_content_type="text/markdown",
     author='Zelthy ("Healthlane Technologies")',
-    author_email="platform@zelthy.com",
+    author_email="maintainers@zelthy.com",
     url="https://github.com/Healthlane-Technologies/zelthy3",
-    # packages=find_packages(),
     package_dir={"": "src"},
     packages=find_packages("src"),
     package_data={
@@ -38,11 +43,11 @@ setup(
     classifiers=[
         "Framework :: Django",
         "Programming Language :: Python",
-        # Other classifiers...
     ],
     entry_points={
         "console_scripts": [
             "zelthy3=zelthy.cli:cli",
         ],
     },
+    license_files=["LICENSE"]
 )
