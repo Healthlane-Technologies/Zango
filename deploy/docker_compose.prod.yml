@@ -2,12 +2,8 @@ version: "3.8"
 services:
   postgres:
     image: postgres
-    environment:
-      POSTGRES_USER: "${POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_PORT: "${POSTGRES_PORT}"
-      PROJECT_NAME: "${PROJECT_NAME}"
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     healthcheck:
@@ -30,19 +26,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      SERVER: gunicorn
-      POSTGRES_USER: "${POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_HOST: "${POSTGRES_HOST}"
-      POSTGRES_PORT: "${POSTGRES_PORT}"
-      PROJECT_NAME: "${PROJECT_NAME}"
-      PLATFORM_USERNAME: "${PLATFORM_USERNAME}"
-      PLATFORM_USER_PASSWORD: "${PLATFORM_USER_PASSWORD}"
-      PACKAGE_REPO_AWS_SECRET_ACCESS_KEY: "${PACKAGE_REPO_AWS_SECRET_ACCESS_KEY}"
-      PACKAGE_REPO_AWS_ACCESS_KEY_ID: "${PACKAGE_REPO_AWS_ACCESS_KEY_ID}"
-      REDIS_HOST: ${REDIS_HOST}
       ENV: prod
     volumes:
       - ".:/zelthy/"
@@ -54,19 +40,19 @@ services:
       - "1443:1443"
     depends_on:
       - app
-    environment:
-      - "PROJECT_NAME=${PROJECT_NAME}"
+    env_file:
+      - .env
     volumes:
       - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
   celery:
-    image: zelthy3
+    image: kczelthy/zelthy3:0.1.0
     command: >-
       /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l
       info"
     volumes:
       - ".:/zelthy/"
-    environment:
-      - "PROJECT_NAME=${PROJECT_NAME}"
+    env_file:
+      - .env
     depends_on:
       - app
       - redis
@@ -76,14 +62,14 @@ services:
     ports:
       - "6379:6379"
   celery_beat:
-    image: zelthy3
+    image: kczelthy/zelthy3:0.1.0
     command: >-
       /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info
       --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - ".:/zelthy/"
-    environment:
-      - "PROJECT_NAME=${PROJECT_NAME}"
+    env_file:
+      - .env
     depends_on:
       - app
       - redis
