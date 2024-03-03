@@ -20,7 +20,7 @@ To begin using Zelthy through Docker installation, ensure that Docker and Docker
 2. Run the following command from the root folder of the project:
 
    ```bash
-   python setup_project.py <directory>
+   python setup_project.py --project_dir <directory>
    ```
 
    You can use the `--build_core` option to build the Zelthy library
@@ -40,14 +40,16 @@ To begin using Zelthy through Docker installation, ensure that Docker and Docker
    - `--platform_user_password`: The password for the platform user (Default: `Zelthy@123`).
    - `--start`: Starts the project as soon as it is created (Default: `False`)
 
-5. Docker is started as a non root user, run the below commands to export the host UID and GID
+5. Navigate to ``project_dir`` to start the project.
+
+6. Docker is started as a non root user, run the below commands to export the host UID and GID
 
 ```bash
 export UID=$(id -u)
 export GID=$(id -g)
 ```
 
-6. Run `docker compose up` in the project directory to start the project
+7. Run `docker compose up` in the project directory to start the project
 
 # Rebuilding Core
 
