@@ -127,24 +127,6 @@ INTERNAL_IPS = [
     # ...
 ]
 
-REDIS_HOST = "127.0.0.1"
-REDIS_PORT = 6379
-REDIS_PROTOCOL = "redis"
-
-REDIS_URL = f"{REDIS_PROTOCOL}://{REDIS_HOST}:{REDIS_PORT}/1"
-
-
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,  # Using DB 1 for cache
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "TIMEOUT": 300,  # Default timeout is 5 minutes, but adjust as needed
-    }
-}
-
 # DEBUG_TOOLBAR_PANELS += ['cachalot.panels.CachalotPanel',]
 
 CACHALOT_ENABLED = False
@@ -176,6 +158,8 @@ PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = os.getenv("PACKAGE_REPO_AWS_SECRET_ACCESS_K
 MEDIA_URL = "/media/"
 
 # Celery
-CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = "django-db"
 X_FRAME_OPTIONS = "ALLOW"
+
+PACKAGE_BUCKET_NAME = "zelthy3-packages"
+CODEASSIST_ENABLED = True
