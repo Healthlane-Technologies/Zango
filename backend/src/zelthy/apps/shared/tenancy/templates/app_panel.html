@@ -2,19 +2,22 @@
 
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Zelthy App Panel" />
-    <title>Zelthy App Panel</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <script>
-  		var csrf_token = "{{ csrf_token }}";
-	  </script>
-    <script src="{% static 'app_panel/js/build.v1.0.42.min.js' %}"></script>
-  </body>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Zelthy App Panel" />
+  <title>Zelthy App Panel</title>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <script>
+    var csrf_token = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'app_panel/js/build.v1.0.43.min.js' %}"></script>
+</body>
+
 </html>
