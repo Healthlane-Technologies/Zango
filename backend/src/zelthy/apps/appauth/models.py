@@ -66,11 +66,9 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     def __str__(self):
         return self.name
 
-
-    @property
     def is_user_active(self, role_name=None):
         if role_name:
-            user_role = self._get_user_role(role_name)
+            user_role = self._get_role_mapping(role_name)
             if user_role:
                 return user_role.is_active and self.is_active
             return False
@@ -78,9 +76,8 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
     @property
     def roles(self):
-        
         roles = UserRoleModel.objects.none()
-        for user_role in AppUserRoleModel.objects.filter(user = self).only('role'):
+        for user_role in AppUserRoleMappingModel.objects.filter(user = self, is_active = True).only('role'):
             roles |= UserRoleModel.objects.filter(pk=user_role.role.pk)
         return roles
 
@@ -119,22 +116,23 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
     def add_roles(self, role_ids):
         roles = UserRoleModel.objects.filter(id__in=role_ids)
+        assigned_roles = AppUserRoleMappingModel.objects.filter(user = self)
         for role in roles:
-            if self.roles.filter(id = role.id).exists():
-                self.roles.filter(id = role.id).update(is_active = True)
+            if assigned_roles.filter(role = role).exists():
+                assigned_roles.filter(role = role).update(is_active = True)
             else:
-                AppUserRoleModel.objects.create(user = self, role=role)
+                AppUserRoleMappingModel.objects.create(user = self, role=role)
 
     def remove_roles(self, role_ids):
         roles = UserRoleModel.objects.filter(id__in=role_ids)
         for role in roles:
-            AppUserRoleModel.objects.filter(user=self, role=role).delete()
+            AppUserRoleMappingModel.objects.filter(user=self, role=role).delete()
     
     def update_roles(self, role_ids):
-        AppUserRoleModel.objects.filter(user=self).delete()
+        AppUserRoleMappingModel.objects.filter(user=self).delete()
         roles = UserRoleModel.objects.filter(id__in=role_ids)
         for role in roles:
-            AppUserRoleModel.objects.create(user = self, role=role)
+            AppUserRoleMappingModel.objects.create(user = self, role=role)
             
 
     def check_password_validity(self, password):
@@ -298,14 +296,18 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             return False
         return True
 
-    def _get_user_role(self, role_name):
-        if role_name:
-            return AppUserRoleModel.objects.filter(user=self, role__name=role_name).last()
-        return
+    def _get_role_mapping(self, role_name):
+        try:
+            return AppUserRoleMappingModel.objects.get(user=self, role__name=role_name, is_active = True)
+        except:
+            pass
+
+    def has_role(self, role_name):
+        return True if self._get_role_mapping(role_name=role_name) else False
 
     def activate(self, role_name=None):
         if role_name:
-            user_role = self._get_user_role(role_name)
+            user_role = self._get_role_mapping(role_name)
             if user_role:
                 user_role.is_active = True
                 user_role.save()
@@ -315,7 +317,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     
     def deactivate(self, role_name=None):
         if role_name:
-            user_role = self._get_user_role(role_name)
+            user_role = self._get_role_mapping(role_name)
             if user_role:
                 user_role.is_active = False
                 user_role.save()
@@ -332,7 +334,7 @@ class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
 
 
-class AppUserRoleModel(models.Model):
+class AppUserRoleMappingModel(models.Model):
 
     user = models.ForeignKey(AppUserModel, related_name='app_user', on_delete=models.CASCADE)
     role = models.ForeignKey(UserRoleModel, related_name='app_user_role', on_delete=models.CASCADE)
