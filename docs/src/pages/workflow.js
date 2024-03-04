@@ -16,7 +16,7 @@ export default function Home() {
         title="Embedded Content"
         width="100%"
         height="100vh"
-        src="https://docs.zelthy.com/workflow1/docs/documentation/introduction/"
+        src="https://docs.zelthy.com/workflow1/docs/documentation/overview/"
         frameBorder="0"
         allowFullScreen
       ></iframe>
