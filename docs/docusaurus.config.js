@@ -98,6 +98,10 @@ const config = {
                 {
                   label: "Crud",
                   to: "/crud"
+                },
+                {
+                  label: "Workflow",
+                  to: "/workflow"
                 }
               ]
           },

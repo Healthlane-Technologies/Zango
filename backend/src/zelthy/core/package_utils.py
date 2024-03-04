@@ -1,16 +1,16 @@
-import boto3
-import zipfile
 import os
+import zipfile
 import json
 import shutil
 import subprocess
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
 
 from django.conf import settings
 from django.db import connection
 
 from zelthy.core.utils import get_current_request_url
-from zelthy.apps.dynamic_models.workspace.base import Workspace
-from zelthy.apps.shared.tenancy.models import TenantModel
 
 
 def create_directories(dirs):
@@ -33,10 +33,11 @@ def get_all_packages(tenant=None):
     packages = {}
     s3 = boto3.client(
         "s3",
-        aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
+        config=Config(signature_version=UNSIGNED),
     )
-    s3_package_data = s3.list_objects(Bucket="zelthy3-packages", Prefix="packages/")
+    s3_package_data = s3.list_objects(
+        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/"
+    )
     for package in s3_package_data["Contents"]:
         name = package["Key"]
         name = name[9:]
@@ -128,10 +129,9 @@ def install_package(package_name, version, tenant):
         create_directories([f"workspaces/{tenant}/packages"])
         resource = boto3.resource(
             "s3",
-            aws_access_key_id=settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY,
+            config=Config(signature_version=UNSIGNED),
         )
-        bucket = resource.Bucket("zelthy3-packages")
+        bucket = resource.Bucket(settings.PACKAGE_BUCKET_NAME)
         bucket.download_file(
             f"packages/{package_name}/{version}/codebase/",
             f"workspaces/{tenant}/packages/{package_name}.zip",
@@ -168,6 +168,10 @@ def install_package(package_name, version, tenant):
                 f"python manage.py ws_migrate {tenant} --package {package_name}",
                 shell=True,
             )
+
+        from zelthy.apps.dynamic_models.workspace.base import Workspace
+        from zelthy.apps.shared.tenancy.models import TenantModel
+
         tenant_obj = TenantModel.objects.get(name=tenant)
         connection.set_tenant(tenant_obj)
         with connection.cursor() as c:
