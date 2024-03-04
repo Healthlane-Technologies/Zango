@@ -1,4 +1,4 @@
-FROM kczelthy/zelthy3:0.1.0
+FROM kczelthy/zelthy3:latest
 
 RUN pip install gunicorn
 WORKDIR /zelthy/
