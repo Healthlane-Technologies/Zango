@@ -66,7 +66,7 @@ export default function RowMenu({ rowData }) {
 											Edit Policy
 										</span>
 										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											edit name, permissions JSON
+											edit roles
 										</span>
 									</div>
 								</button>
