@@ -6,7 +6,7 @@ from pathlib import Path
 PROJECT_DIR = os.path.dirname(__file__)
 REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
 
-README = os.path.join(Path(__file__).resolve().parent.parent, "README.md")
+README = os.path.join(PROJECT_DIR, "README.md")
 
 PLATFORM_VERSION = "0.1.0"
 
