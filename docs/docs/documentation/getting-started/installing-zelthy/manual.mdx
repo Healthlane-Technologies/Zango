@@ -3,11 +3,12 @@ sidebar_label: Manual
 ---
 
 # Installing Zelthy: Manual Process
-To get started with Zelthy, you will need to install it using the Python package manager, pip. 
+
+To get started with Zelthy, you will need to install it using the Python package manager, pip.
 
 Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions [here](https://www.python.org/downloads/) and pip installation instructions [here](https://pip.pypa.io/en/stable/installation/).
 
-Once Python and pip are installed, you can will need to install virtualenv to create virtual environment in which zelthy will be installed. 
+Once Python and pip are installed, you can will need to install virtualenv to create virtual environment in which zelthy will be installed.
 
 Now you are ready to create and activate the virtual environment by running the following command in your terminal or command prompt
 
@@ -24,35 +25,31 @@ pip install zelthy3
 
 This command will download and install the latest version of Zelthy Framework along with its dependencies.
 
-
-
-
 ## zelthy3: The Zelthy CLI
 
 **zelthy3** is the command-line interface (CLI) tool provided by Zelthy, designed to facilitate the management of projects and applications within the Zelthy platform. This powerful tool streamlines various tasks such as project creation, database migrations, and much more. Here's a brief overview of Zelthy3 and how to use it:
 
 ### Key Features and Usage
 
-
 - **Project Management:**
-   Use zelthy3 to create new projects, manage existing projects, and configure project settings.
+  Use zelthy3 to create new projects, manage existing projects, and configure project settings.
 
 - **Database Migrations:**
-   Perform database migrations seamlessly to keep your application's data schema up-to-date.
+  Perform database migrations seamlessly to keep your application's data schema up-to-date.
 
 - **Application Development:**
-   Simplify app development by utilizing zelthy3's commands for app creation, configuration, and deployment.
+  Simplify app development by utilizing zelthy3's commands for app creation, configuration, and deployment.
 
 - **Extensive Command Options:**
-   Run `zelthy3 --help` to view a comprehensive list of available commands and their descriptions.
+  Run `zelthy3 --help` to view a comprehensive list of available commands and their descriptions.
 
 - **Command Specific Help:**
-   For detailed information about a specific command, run `zelthy3 [command] --help`.
-
+  For detailed information about a specific command, run `zelthy3 [command] --help`.
 
 To get started with **zelthy3 cli**, open your terminal and run the following commands:
 
 - To see a list of all available commands and their descriptions:
+
   ```
   zelthy3 --help
   ```
@@ -64,7 +61,6 @@ To get started with **zelthy3 cli**, open your terminal and run the following co
 
 **zelthy3** is an invaluable tool for efficiently managing your Zelthy projects and applications through the command line, enhancing your development and administrative capabilities.
 
-
 ### Prerequisites for Setting Up a Project
 
 Before you embark on setting up your project with Zelthy, there are certain prerequisites that need to be met. One of the crucial prerequisites is the setup of a PostgreSQL database. Here's a brief guide on what needs to be done:
@@ -74,20 +70,21 @@ Before you embark on setting up your project with Zelthy, there are certain prer
 To get started, follow these steps to set up a PostgreSQL database:
 
 #### 1. **Install PostgreSQL:**
-   - If you haven't already, you'll need to install PostgreSQL on your system. You can download the PostgreSQL installer for your platform from the official website: [PostgreSQL Downloads](https://www.postgresql.org/download/)
+
+- If you haven't already, you'll need to install PostgreSQL on your system. You can download the PostgreSQL installer for your platform from the official website: [PostgreSQL Downloads](https://www.postgresql.org/download/)
 
 #### 2. **Create a Fresh Database:**
-   - Once PostgreSQL is installed, open your terminal or a PostgreSQL client.
-   - Use the following command to create a new database. Replace `your_database_name` with the desired name for your project's database:
-     ```
-     createdb your_database_name
-     ```
-   - Ensure that the newly created database is fresh without any existing tables or data.
+
+- Once PostgreSQL is installed, open your terminal or a PostgreSQL client.
+- Use the following command to create a new database. Replace `your_database_name` with the desired name for your project's database:
+  ```
+  createdb your_database_name
+  ```
+- Ensure that the newly created database is fresh without any existing tables or data.
 
 With the PostgreSQL database set up and ready to go, you can proceed with setting up your Zelthy project, confident that you have the necessary infrastructure in place.
 
 Keep in mind that the exact steps for installing PostgreSQL may vary depending on your operating system. Be sure to consult the PostgreSQL documentation or installation guide for your specific platform if you encounter any issues during the installation process.
-
 
 ## Setting Up the Project
 
@@ -136,6 +133,7 @@ Once you've entered these details, the setup process will create the default pla
 With all the necessary configurations in place, the setup process will proceed to create your project's folder structure and populate it with boilerplate code. You're now ready to start developing your healthcare apps within the Zelthy platform.
 
 ##### Project Structure
+
 ```plaintext
 project_name/                  # Project root directory
 ├── manage.py                  # Django command-line utility for administrative tasks
@@ -150,7 +148,6 @@ project_name/                  # Project root directory
 ```
 
 Follow this guide, and you'll be well on your way to creating powerful and efficient healthcare applications using Zelthy.
-
 
 ## Running the Development Server
 
@@ -177,3 +174,36 @@ python manage.py runserver
 This command will initiate the development server, and you'll see output indicating that the server is running. By default, the server will be available at `http://localhost:8000/`.
 
 Running the development server is a crucial step in your project setup, as it provides you with a local environment for app development and testing.
+
+## Starting Celery Serivces
+
+Celery uses Redis as a message broker, you can start redis container by following
+the below steps
+
+### Redis Setup
+
+Run the below command in your terminal to create a redis container
+
+```bash
+docker run --name <name> -d -p 6379:6379 redis
+```
+
+ex:
+
+```bash
+docker run --name zelthy_redis -d -p 6379:6379 redis
+```
+
+### Starting the celery worker
+
+Perform the below steps from the root directory of the project
+
+```
+celery -A <project_name> worker -l INFO
+```
+
+### Starting Celery beat
+
+```
+celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
