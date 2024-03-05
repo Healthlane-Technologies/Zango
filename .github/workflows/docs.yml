@@ -4,7 +4,7 @@ name: dev-build-and-deploy
 on:
   push:
     branches:
-      - main
+      - development
   workflow_dispatch: # Put here!!
 jobs:
   # To build the project
