@@ -1,0 +1,47 @@
+---
+sidebar_label: Migrating Model
+---
+
+# Migrating Model
+
+Migrating Models in Zelthy is a straightforward process that allows you to apply changes made to your model definitions. This ensures that your data structure remains up-to-date and aligned with your evolving application requirements. 
+
+The migration process is similar to Django and consists of two main steps: `ws_makemigration` and `ws_migrate`.
+
+### Step 1: Generate Migrations with `ws_makemigration`
+
+The `ws_makemigration` command is used to create migration files for your models. These migration files capture all changes made to your model definitions, such as adding new fields, modifying existing ones, or establishing new relationships. To generate migrations
+
+Navigate to your project root directory and run following command
+
+```shell
+python manage.py ws_makemigration <app_name>
+```
+
+- If the `migrations` folder does not already exist inside your app's folder, it will be created.
+- Migration files are generated and placed within this `migrations` folder.
+
+```plaintext
+workspaces
+├── YourApp
+│   ├── migrations
+│      ├── 001_initial.py
+│   ├── YourModule
+│       ├── models.py
+```
+
+### Step 2: Apply Migrations with `ws_migrate`
+
+Once you've generated migration files, you can apply these changes to your database using the `ws_migrate` command. This command automatically detects dependencies between migrations and ensures they are executed in the correct order. To apply the migrations:
+
+Navigate to your project root directory and run following command
+
+```shell
+python manage.py ws_migrate <app_name>
+```
+
+- The migration process will execute, and the changes defined in your migration files will be reflected in the database schema.
+
+Every Zelthy Models which created by extending the ``DynamicModelBase`` class inherit these fields (``created_at``, ``created_by``, ``modified_at``, ``modified_by``), providing a consistent and standardized approach to data tracking and user accountability.
+
+Zelthy's migration system offers a robust and efficient way to manage changes to your models, making it easy to maintain an up-to-date and flexible data structure that aligns with your application's evolving needs.

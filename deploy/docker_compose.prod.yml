@@ -1,0 +1,77 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_PORT}"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - "prod_db:/var/lib/postgresql/data"
+  app:
+    build:
+      context: .
+      dockerfile: prod.dockerfile
+      args:
+        - "PROJECT_NAME=${PROJECT_NAME}"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      ENV: prod
+    volumes:
+      - ".:/zelthy/"
+  nginx:
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    ports:
+      - "1443:1443"
+    depends_on:
+      - app
+    env_file:
+      - .env
+    volumes:
+      - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
+  celery:
+    image: kczelthy/zelthy3:latest
+    command: >-
+      /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l
+      info"
+    volumes:
+      - ".:/zelthy/"
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - redis
+      - celery_beat
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+  celery_beat:
+    image: kczelthy/zelthy3:latest
+    command: >-
+      /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - ".:/zelthy/"
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - redis
+volumes:
+  prod_db: null
