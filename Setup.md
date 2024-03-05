@@ -91,6 +91,20 @@ docker run -d \
    postgres:latest
 ```
 
+### Redis Setup
+
+Run the below command in your terminal to create a redis container
+
+```bash
+docker run --name <name> -d -p 6379:6379 redis
+```
+
+ex:
+
+```bash
+docker run --name zelthy_redis -d -p 6379:6379 redis
+```
+
 ## Setting Up the Project
 
 Setting up your project with Zelthy is a straightforward process. Follow these steps to create your project's root folder, initialize the project, and configure the necessary settings:
@@ -180,35 +194,19 @@ This command will initiate the development server, and you'll see output indicat
 
 Running the development server is a crucial step in your project setup, as it provides you with a local environment for app development and testing.
 
-# Celery Setup for Manual Mode
+Perform the below steps from the root directory of the project
 
-## Starting the celery worker
+### Starting the celery worker
 
-- In project `__init__.py` file (`zprj/zprj/__init__.py`) add the below code snippet
+```
+celery -A <project_name> worker -l INFO
+```
 
-  ```
-  from zelthy.config.celery import app as celery_app
+### Starting Celery beat
 
-  __all__ = ["celery_app"]
-
-  ```
-
-  Note: This step is only for existing projects. New projects will have this by default
-
-- Start the redis service
-
-- Start the celery worker
-  & navigate to the project root (where manage.py file is there)
-
-  ```
-  celery -A <project_name> worker -l INFO
-  ```
-
-- Start the celery beat
-  & navigate to the project root (where manage.py file is there)
-  ```
-  celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
-  ```
+```
+celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
 
 ## Creating task and syncing it
 
