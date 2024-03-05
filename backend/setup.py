@@ -8,7 +8,7 @@ REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
 
 README = os.path.join(Path(__file__).resolve().parent.parent, "README.md")
 
-PLATFORM_VERSION = "0.0.1rc"
+PLATFORM_VERSION = "0.1.0"
 
 
 def get_requirements(env):
@@ -22,7 +22,7 @@ install_requires = get_requirements("base")
 setup(
     name="zelthy3",
     version=PLATFORM_VERSION,
-    license='Apache License 2.0',
+    license="Apache License 2.0",
     description="Zelthy3: multi-tenant Django framework for building business apps",
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
@@ -49,5 +49,5 @@ setup(
             "zelthy3=zelthy.cli:cli",
         ],
     },
-    license_files=["LICENSE"]
+    license_files=["LICENSE"],
 )
