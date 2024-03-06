@@ -94,9 +94,9 @@ export default function AppUserRoles() {
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
 									set-up user role(s)
 								</h3>
-								<p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
+								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
 									description to be added
-								</p>
+								</p> */}
 							</div>
 							<button
 								type="button"
