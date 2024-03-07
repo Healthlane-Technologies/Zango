@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres
+    env_file:
+      - .env.loadtest
+    ports:
+      - "5432:5432"
+
+  server:
+    build:
+      context: .
+    env_file:
+      - .env.loadtest
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/zelthy
