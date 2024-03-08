@@ -68,9 +68,9 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
     def is_user_active(self, role_name=None):
         if role_name:
-            user_role = self._get_role_mapping(role_name)
-            if user_role:
-                return user_role.is_active and self.is_active
+            user_role_mapping = self._get_role_mapping(role_name)
+            if user_role_mapping:
+                return user_role_mapping.is_active and self.is_active
             return False
         return self.is_active
 
@@ -298,29 +298,30 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
     def _get_role_mapping(self, role_name):
         try:
-            return AppUserRoleMappingModel.objects.get(user=self, role__name=role_name, is_active = True)
+            return AppUserRoleMappingModel.objects.get(user=self, role__name=role_name)
         except:
             pass
 
     def has_role(self, role_name):
-        return True if self._get_role_mapping(role_name=role_name) else False
+        user_role_mapping = self._get_role_mapping(role_name=role_name)
+        return True if user_role_mapping and user_role_mapping.is_active else False
 
     def activate(self, role_name=None):
         if role_name:
-            user_role = self._get_role_mapping(role_name)
-            if user_role:
-                user_role.is_active = True
-                user_role.save()
+            user_role_mapping = self._get_role_mapping(role_name)
+            if user_role_mapping:
+                user_role_mapping.is_active = True
+                user_role_mapping.save()
         else:
             self.is_active = True
             self.save()
     
     def deactivate(self, role_name=None):
         if role_name:
-            user_role = self._get_role_mapping(role_name)
-            if user_role:
-                user_role.is_active = False
-                user_role.save()
+            user_role_mapping = self._get_role_mapping(role_name)
+            if user_role_mapping:
+                user_role_mapping.is_active = False
+                user_role_mapping.save()
         else:
             self.is_active = False
             self.save()
