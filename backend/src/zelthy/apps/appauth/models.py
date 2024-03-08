@@ -57,7 +57,6 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 
 class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
-    roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
         PolicyGroupModel, related_name="user_policy_groups"
@@ -67,6 +66,20 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     def __str__(self):
         return self.name
 
+    def is_user_active(self, role_name=None):
+        if role_name:
+            user_role = self._get_role_mapping(role_name)
+            if user_role:
+                return user_role.is_active and self.is_active
+            return False
+        return self.is_active
+
+    @property
+    def roles(self):
+        roles = UserRoleModel.objects.none()
+        for user_role in AppUserRoleMappingModel.objects.filter(user = self, is_active = True).only('role'):
+            roles |= UserRoleModel.objects.filter(pk=user_role.role.pk)
+        return roles
 
     def get_app_object(self, role_id):
         if self.app_objects:
@@ -102,9 +115,25 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         return False
 
     def add_roles(self, role_ids):
-        self.roles.clear()
         roles = UserRoleModel.objects.filter(id__in=role_ids)
-        self.roles.add(*roles)
+        assigned_roles = AppUserRoleMappingModel.objects.filter(user = self)
+        for role in roles:
+            if assigned_roles.filter(role = role).exists():
+                assigned_roles.filter(role = role).update(is_active = True)
+            else:
+                AppUserRoleMappingModel.objects.create(user = self, role=role)
+
+    def remove_roles(self, role_ids):
+        roles = UserRoleModel.objects.filter(id__in=role_ids)
+        for role in roles:
+            AppUserRoleMappingModel.objects.filter(user=self, role=role).delete()
+    
+    def update_roles(self, role_ids):
+        AppUserRoleMappingModel.objects.filter(user=self).delete()
+        roles = UserRoleModel.objects.filter(id__in=role_ids)
+        for role in roles:
+            AppUserRoleMappingModel.objects.create(user = self, role=role)
+            
 
     def check_password_validity(self, password):
         """
@@ -150,7 +179,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                         "Another user already exists matching the provided credentials"
                     )
                 else:
-                    if not cls.validate_password(password):
+                    if password and not cls.validate_password(password):
                         message = """
                             Invalid password. Password must follow rules
                             1. Must have at least 8 characters
@@ -166,7 +195,11 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                             mobile=mobile,
                         )
                         app_user.add_roles(role_ids)
-                        app_user.set_password(password)
+                        if password:
+                            app_user.set_password(password)
+                        else:
+                            app_user.set_unusable_password() # Ask Rajat
+                            
                         if require_verification:
                             app_user.is_active = False
                         else:
@@ -222,7 +255,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
             role_ids = data.getlist("roles", [])
             if role_ids:
-                self.add_roles(role_ids)
+                self.update_roles(role_ids)
 
             is_active = data.get("is_active", self.is_active)
             if isinstance(is_active, str):
@@ -263,6 +296,47 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             return False
         return True
 
+    def _get_role_mapping(self, role_name):
+        try:
+            return AppUserRoleMappingModel.objects.get(user=self, role__name=role_name, is_active = True)
+        except:
+            pass
+
+    def has_role(self, role_name):
+        return True if self._get_role_mapping(role_name=role_name) else False
+
+    def activate(self, role_name=None):
+        if role_name:
+            user_role = self._get_role_mapping(role_name)
+            if user_role:
+                user_role.is_active = True
+                user_role.save()
+        else:
+            self.is_active = True
+            self.save()
+    
+    def deactivate(self, role_name=None):
+        if role_name:
+            user_role = self._get_role_mapping(role_name)
+            if user_role:
+                user_role.is_active = False
+                user_role.save()
+        else:
+            self.is_active = False
+            self.save()
+
+    @classmethod
+    def filter_users(cls, query):
+        return cls.objects.filter(**query)
+
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
+
+
+class AppUserRoleMappingModel(models.Model):
+
+    user = models.ForeignKey(AppUserModel, related_name='app_user', on_delete=models.CASCADE)
+    role = models.ForeignKey(UserRoleModel, related_name='app_user_role', on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+
