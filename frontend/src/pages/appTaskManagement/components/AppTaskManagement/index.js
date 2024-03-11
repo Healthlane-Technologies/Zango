@@ -13,6 +13,7 @@ import {
 } from '../../slice';
 import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
 import UpdatePolicyModal from '../Models/UpdatePolicyModal';
+import SyncTask from '../SyncTask';
 import Table from '../Table';
 
 export default function AppTaskManagement() {
@@ -76,30 +77,17 @@ export default function AppTaskManagement() {
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
 									set-up task management(s)
 								</h3>
-								<p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
+								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
 									description to be added
-								</p>
+								</p> */}
 							</div>
-							{/* <button
-								type="button"
-								onClick={handleAddNewUser}
-								className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
-							>
-								<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
-									Create New Task
-								</span>
-								<AddUserIcon />
-							</button> */}
+							<SyncTask theme="dark" />
 						</div>
 					) : appTaskManagementData ? (
 						<div className="flex grow flex-col overflow-x-auto">
 							<Table tableData={appTaskManagementData?.tasks} />
 						</div>
 					) : null}
-
-					{/* {appTaskManagementData ? (
-						<Table tableData={appTaskManagementData?.tasks} />
-					) : null} */}
 				</div>
 			</div>
 			<UpdatePolicyModal />
