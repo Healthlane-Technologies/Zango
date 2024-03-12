@@ -31,6 +31,7 @@ const sidebars = {
           items: [
             'documentation/getting-started/installing-zelthy/manual',
             'documentation/getting-started/installing-zelthy/docker',
+            'documentation/getting-started/installing-zelthy/gitpod',
           ],
         },
         'documentation/getting-started/accessing-app-panel',
