@@ -8,7 +8,7 @@
 - Open-core with all  non-enterprise features under the  Apache License allowing commercial and private use.
 
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox/)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox-official/)
 
 ![Zelthy High Level Architecture](https://docs.zelthy.com/assets/images/Architecture_Diagram-e6eb1b24fca0554edca1110a7de26449.png)
 
