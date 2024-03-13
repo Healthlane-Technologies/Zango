@@ -7,40 +7,11 @@ from django.conf import settings
 from django.db import connection
 
 from zelthy.apps.permissions.models import PolicyModel
-
-# from zelthy.core.pluginbase1 import PluginBase, PluginSource
+from zelthy.apps.appauth.models import UserRoleModel
+from zelthy.core.custom_pluginbase import get_plugin_source
 
 from .lifecycle import Lifecycle
 from .wtree import WorkspaceTreeNode
-from zelthy.apps.appauth.models import UserRoleModel
-
-# class CustomPluginSource(PluginSource):
-#     def load_plugin(self, name):
-#         with self:
-#             return __import__(self.base.package + '.' + name,
-#                               globals(), {}, ['__name__'])
-
-# class CustomPluginBase(PluginBase):
-
-#     def make_plugin_source(self, *args, **kwargs):
-#         """Creates a plugin source for this plugin base and returns it.
-#         All parameters are forwarded to :class:`PluginSource`.
-#         """
-#         return CustomPluginSource(self, *args, **kwargs)
-
-# from zelthy.core.custom_pluginbase import CustomPluginSource, CustomPluginBase
-# # dummy python package to act as container for plugins
-# plugin_base = CustomPluginBase(package='_workspaces')
-
-
-# def get_plugin_source(name):
-#     path = str(settings.BASE_DIR) + "/workspaces/" + name
-#     return plugin_base.make_plugin_source(searchpath=[path])
-
-from zelthy.core.custom_pluginbase import get_plugin_source
-
-# import gc
-# gc.set_debug(gc.DEBUG_LEAK)
 
 
 class Workspace:
@@ -90,8 +61,6 @@ class Workspace:
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
         self.models = []  # sorted with bfs
-        # self.plugin_source = self.get_plugin_source()
-        # self.wtee = self.get_wtree()
 
     @classmethod
     def get_plugin_source(cls):
@@ -400,6 +369,37 @@ class Workspace:
         return
 
     def sync_policies(self):
+        """
+        Syncs policies defined in each module and package with the PolicyModel.
+
+        This method iterates over all modules and packages within the workspace and checks for a 'policies.json' file.
+        If found, it parses the file to retrieve policy definitions and saves or updates them.
+
+        Raises:
+            Exception: If there's an error parsing the policy file or creating/updating the PolicyModel instance.
+
+        Notes:
+            - The policy file should follow a specific structure:
+                {
+                    "policies": [
+                        {
+                            "name": "PolicyName",
+                            "description": "Description of the policy",
+                            "statement": {
+                                "permissions": [
+                                    {
+                                        "name": "customers.views.CustomerCrudView",
+                                        "type": "view"
+                                    }
+                                ]
+                            }
+                        },
+                        ...
+                    ]
+                }
+            - Policies with the same name and path are updated if they already exist.
+            - Existing policies not found in the modules or packages are deleted.
+        """
         existing_policies = list(
             PolicyModel.objects.filter(type="user").values_list("id", flat=True)
         )
