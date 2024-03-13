@@ -37,6 +37,10 @@ services:
       ENV: dev
     volumes:
       - .:/zelthy/
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -ltn | grep -q 8000"]
+      timeout: 5s
+      retries: 3
 
   celery:
     build:
@@ -52,10 +56,9 @@ services:
       - .env
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
-        
 
   redis:
     image: redis
@@ -76,7 +79,7 @@ services:
       - .env
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
 

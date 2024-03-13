@@ -1,5 +1,7 @@
 FROM kczelthy/zelthy3:latest
 
+RUN apt-get install net-tools
+
 ARG UID
 ARG GID
 
