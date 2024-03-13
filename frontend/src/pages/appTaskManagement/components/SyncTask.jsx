@@ -6,7 +6,7 @@ import useApi from '../../../hooks/useApi';
 import { transformToFormData } from '../../../utils/helper';
 import { toggleRerenderPage } from '../slice';
 
-export default function SyncTask() {
+export default function SyncTask({ theme = 'light' }) {
 	let { appId } = useParams();
 
 	const [isLoading, setIsLoading] = useState(false);
@@ -41,16 +41,24 @@ export default function SyncTask() {
 		<div className="flex items-center gap-[16px]">
 			<button
 				type="button"
-				className="flex items-center gap-[12px]"
+				className={`flex items-center gap-[12px] ${
+					theme === 'light'
+						? 'bg-transparent'
+						: 'rounded-[4px] bg-primary px-[16px] py-[7px]'
+				}`}
 				onClick={handleSyncTaskClick}
 			>
-				<span className="font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-primary">
+				<span
+					className={`font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] ${
+						theme === 'light' ? 'text-primary' : 'text-[#fff]'
+					}`}
+				>
 					Sync Task
 				</span>
 				<TableSyncIcon
 					className={`h-[20px] min-h-[20px] w-[20px] min-w-[20px] ${
-						isLoading ? 'animate-spin' : ''
-					}`}
+						theme === 'light' ? 'text-primary' : 'text-[#fff]'
+					} ${isLoading ? 'animate-spin' : ''}`}
 				/>
 			</button>
 			{/* <span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
