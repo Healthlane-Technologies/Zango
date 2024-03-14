@@ -11,6 +11,13 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+ENTERPRISE_PUBLIC_APPS = []
+ENTERPRISE_TENANT_APPS = []
+try:
+    __import__("zelthy_enterprise.apps.auditlog")
+    ENTERPRISE_TENANT_APPS.append("zelthy_enterprise.apps.auditlog")
+except ImportError:
+    pass
 
 SHARED_APPS = [
     "django_tenants",  # mandatory
@@ -55,7 +62,7 @@ TENANT_APPS = [
     "crispy_forms",
     "django_celery_results",
     # "cachalot",
-]
+] + ENTERPRISE_TENANT_APPS
 
 INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
