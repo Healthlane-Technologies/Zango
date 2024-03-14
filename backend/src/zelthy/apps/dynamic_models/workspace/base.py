@@ -1,4 +1,5 @@
 from __future__ import annotations
+import inspect
 import json
 import os
 import re
@@ -9,6 +10,9 @@ from django.db import connection
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
 from zelthy.core.custom_pluginbase import get_plugin_source
+from zelthy.apps.dynamic_models.models import DynamicModelBase
+
+# from zelthy.core.pluginbase1 import PluginBase, PluginSource
 
 from .lifecycle import Lifecycle
 from .wtree import WorkspaceTreeNode
@@ -254,7 +258,17 @@ class Workspace:
             if m.split(".")[2] == "packages" and migration:
                 continue
             split = m.split(".")[2:]
-            self.plugin_source.load_plugin(".".join(split))
+            module = self.plugin_source.load_plugin(".".join(split))
+            if "zelthy_enterprise.apps.auditlog" in settings.ENTERPRISE_TENANT_APPS:
+                from zelthy_enterprise.apps.auditlog.registry import auditlog
+
+                for name, obj in inspect.getmembers(module):
+                    if (
+                        isinstance(obj, type)
+                        and issubclass(obj, DynamicModelBase)
+                        and obj != DynamicModelBase
+                    ):
+                        auditlog.register(obj)
         return
 
     def sync_tasks(self, tenant_name) -> None:

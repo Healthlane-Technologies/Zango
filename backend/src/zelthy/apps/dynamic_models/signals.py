@@ -12,3 +12,17 @@ def set_created_modified_by(sender, instance, **kwargs):
     else:
         instance.modified_by = user
     return
+
+
+def create_object_store_entry(sender, instance, created, **kwargs):
+    if created:
+        from zelthy.apps.dynamic_models.models import ObjectStore
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(sender)
+        ObjectStore.objects.create(
+            object_uuid=instance.object_uuid,
+            content_type=content_type,
+            object_id=instance.pk,
+            content_object=instance,
+        )
