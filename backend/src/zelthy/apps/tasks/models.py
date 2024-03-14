@@ -6,6 +6,7 @@ from django_celery_beat.models import PeriodicTask
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.apps.permissions.models import PolicyModel
+from zelthy.apps.auditlogs.registry import auditlog
 
 
 class AppTask(FullAuditMixin):
@@ -78,3 +79,11 @@ class AppTask(FullAuditMixin):
             obj.save()
 
         super(AppTask, self).save(*args, **kwargs)
+
+
+auditlog.register(
+    AppTask,
+    m2m_fields={
+        "attached_policies",
+    },
+)

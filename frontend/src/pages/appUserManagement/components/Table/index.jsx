@@ -204,12 +204,12 @@ export default function Table({ tableData }) {
 			cell: (info) => (
 				<div className="flex h-full flex-col gap-[4px] border-b border-[#F0F3F4] py-[14px] px-[20px]">
 					<span className="w-fit min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-						{formatTableDate(info.getValue())}
-					</span>
-					<span className="w-fit min-w-max text-start font-lato text-[12px] font-normal leading-[16px] tracking-[0.2px] text-[#A3ABB1]">
 						{info.row.original?.last_login
 							? formatTableDate(info.row.original?.last_login)
 							: null}
+					</span>
+					<span className="w-fit min-w-max text-start font-lato text-[12px] font-normal leading-[16px] tracking-[0.2px] text-[#A3ABB1]">
+						{formatTableDate(info.getValue())}
 					</span>
 				</div>
 			),

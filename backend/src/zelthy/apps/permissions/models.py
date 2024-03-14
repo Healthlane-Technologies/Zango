@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import JSONField
 from django.db.models.query import QuerySet
 from zelthy.core.model_mixins import FullAuditMixin
+from zelthy.apps.auditlogs.registry import auditlog
 
 
 class PermissionsModel(FullAuditMixin):
@@ -108,3 +109,8 @@ class PolicyGroupModel(FullAuditMixin):
 
     def __str__(self):
         return self.name
+
+
+auditlog.register(PolicyModel)
+auditlog.register(PermissionsModel)
+auditlog.register(PolicyGroupModel)
