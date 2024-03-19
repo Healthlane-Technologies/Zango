@@ -1,5 +1,21 @@
 #!/bin/bash
 
+source .env.loadtest
+
+# Create the locust.conf file
+echo "users = $USERS
+spawn_rate = $SPAWN_RATE
+run_time = $RUNTIME
+headless = $HEADLESS
+locustfile = $LOCUSTFILE" > locust.conf
+
+# Generate the loadtest.py file
+python add_loadtest.py $PLATFORM $MODULES
+
+# Start the server
+docker compose up -d
+
+
 servers=("runserver" "gunicorn_sync" "gunicorn_async" "daphne")
 cur=$(date +"%y_%m_%d")
 if [ ! -d "loadtest_results/$cur" ]; then
@@ -13,29 +29,8 @@ if [ ! -d "loadtest_results/$cur" ]; then
     done
 fi
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -t|--tenants)
-            tenants="$2"
-            shift 2
-            ;;
-        -p|--platform)
-            platform="$2"
-            shift 2
-            ;;
-        -s|--server)
-            server="$2"
-            shift 2
-            ;;
-        *)
-            echo "Invalid flag: $1"
-            exit 1
-            ;;
-    esac
-done
-
 for ((i = 0; i < tenants; i++)); do
-    nohup locust --config=locust.conf --host="http://app${i}.zelthy.com:8000/" --html "loadtest_results/${cur}/${platform}/${server}/loadtest_${i}.html" &
+    nohup locust --config=locust.conf --host="http://app${i}.zelthy.com:8000/" --html "loadtest_results/${cur}/${PLATFORM}/${SERVER}/loadtest_${i}.html" &
 done
 
 # Sleep for a while to allow locust processes to start

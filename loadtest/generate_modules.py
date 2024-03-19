@@ -12,6 +12,7 @@ django.setup()
 
 from django.conf import settings
 from django.core.management import call_command
+from django_tenants.utils import schema_context
 from zelthy.apps.shared.tenancy.models import TenantModel, Domain
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.dynamic_models.workspace.base import Workspace
@@ -186,7 +187,9 @@ def update_settings(tenant_name, num: int):
 
 
 def migration_operations(tenant: str):
+    print("Running make migration")
     subprocess.run(f"python manage.py ws_makemigration {tenant}", shell=True)
+    print("Running migration")
     subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
 
     # call_command(
@@ -203,50 +206,51 @@ def migration_operations(tenant: str):
 
 
 def create_tenant_and_domain(tenant, index):
-    ten = TenantModel.objects.create(
-        name=tenant, schema_name=tenant, description="desc", tenant_type="app"
-    )
-    # Creating schema
-    ten.create_schema(check_if_exists=True)
+    with schema_context("public"):
+        ten = TenantModel.objects.create(
+            name=tenant, schema_name=tenant, description="desc", tenant_type="app"
+        )
+        # Creating schema
+        ten.create_schema(check_if_exists=True)
 
-    # migrating schema
-    call_command(
-        "migrate_schemas",
-        tenant=True,
-        schema_name=ten.schema_name,
-        interactive=False,
-    )
+        # migrating schema
+        call_command(
+            "migrate_schemas",
+            tenant=True,
+            schema_name=ten.schema_name,
+            interactive=False,
+        )
 
-    # Create workspace Folder
-    project_base_dir = settings.BASE_DIR
+        # Create workspace Folder
+        project_base_dir = settings.BASE_DIR
 
-    workspace_dir = os.path.join(project_base_dir, "workspaces")
-    if not os.path.exists(workspace_dir):
-        os.makedirs(workspace_dir)
+        workspace_dir = os.path.join(project_base_dir, "workspaces")
+        if not os.path.exists(workspace_dir):
+            os.makedirs(workspace_dir)
 
-    # Creating app folder with the initial files
-    template_directory = os.path.join(
-        os.path.dirname(zelthy.apps.shared.tenancy.__file__),
-        "workspace_folder_template",
-    )
-    cookiecutter_context = {"app_name": ten.name}
+        # Creating app folder with the initial files
+        template_directory = os.path.join(
+            os.path.dirname(zelthy.apps.shared.tenancy.__file__),
+            "workspace_folder_template",
+        )
+        cookiecutter_context = {"app_name": ten.name}
 
-    cookiecutter.main.cookiecutter(
-        template_directory,
-        extra_context=cookiecutter_context,
-        output_dir=workspace_dir,
-        no_input=True,
-    )
+        cookiecutter.main.cookiecutter(
+            template_directory,
+            extra_context=cookiecutter_context,
+            output_dir=workspace_dir,
+            no_input=True,
+        )
 
-    ten.status = "deployed"
-    connection.set_tenant(ten)
-    allow_from_anywhere = PolicyModel.objects.get(name="AllowFromAnywhere")
-    allow_from_anywhere.role_policies.add(
-        UserRoleModel.objects.get(name="AnonymousUsers")
-    )
-    allow_from_anywhere.save()
-    ten.save()
-    domain = Domain.objects.create(tenant=ten, domain=f"app{index}.zelthy.com")
+        ten.status = "deployed"
+        connection.set_tenant(ten)
+        allow_from_anywhere = PolicyModel.objects.get(name="AllowFromAnywhere")
+        allow_from_anywhere.role_policies.add(
+            UserRoleModel.objects.get(name="AnonymousUsers")
+        )
+        allow_from_anywhere.save()
+        ten.save()
+        domain = Domain.objects.create(tenant=ten, domain=f"app{index}.zelthy.com")
 
 
 if __name__ == "__main__":
