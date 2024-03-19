@@ -1,7 +1,6 @@
 import ipaddress
 from django.utils import timezone
 from django.db.models import Q
-from .models import PermissionsModel, PolicyModel
 
 
 class PermissionMixin:
@@ -61,6 +60,8 @@ class PermissionMixin:
         return anonymous_userrole_policies
 
     def get_policies(self, perm_type, view=None, model=None):
+        from .models import PermissionsModel, PolicyModel
+
         policy_groups = self.policy_groups.all()
         policies_qs = self.policies.all() | PolicyModel.objects.filter(
             policy_groups__in=policy_groups
@@ -112,6 +113,8 @@ class PermissionMixin:
         return False
 
     def get_model_perms(self, model):
+        from .models import PermissionsModel, PolicyModel
+
         policy_groups = self.policy_groups.all()
         policies_qs = self.policies.all() | PolicyModel.objects.filter(
             policy_groups__in=policy_groups

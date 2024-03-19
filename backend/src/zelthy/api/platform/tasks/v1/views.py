@@ -78,6 +78,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             status = 200
             success = True
         except Exception as e:
+            traceback.print_exc()
             response = {"message": str(e)}
             status = 500
             success = False

@@ -15,6 +15,7 @@ from django.core.exceptions import (
     FieldDoesNotExist,
     ObjectDoesNotExist,
     ValidationError,
+    FieldError,
 )
 from django.db import DEFAULT_DB_ALIAS, models
 from django.db.models import Q, QuerySet
@@ -55,72 +56,17 @@ class LogEntryManager(models.Manager):
             get_additional_data = getattr(instance, "get_additional_data", None)
             if callable(get_additional_data):
                 kwargs.setdefault("additional_data", get_additional_data())
-
-            # Delete log entries with the same pk as a newly created model. This should only be necessary when an pk is
-            # used twice.
-            # if kwargs.get("action", None) is "CREATE":
-            #     if (
-            #         kwargs.get("object_id", None) is not None
-            #         and self.filter(
-            #             content_type=kwargs.get("content_type"),
-            #             object_id=kwargs.get("object_id"),
-            #         ).exists()
-            #     ):
-            #         self.filter(
-            #             content_type=kwargs.get("content_type"),
-            #             object_id=kwargs.get("object_id"),
-            #         ).delete()
-            #     else:
-            #         self.filter(
-            #             content_type=kwargs.get("content_type"),
-            #             object_pk=kwargs.get("object_pk", ""),
-            #         ).delete()
             db = instance._state.db
             request = get_current_request()
-            # change_log = {
-            #     "changes": json.loads(changes),
-            #     "action": kwargs.get("action"),
-            #     "actor": (
-            #         request.user.name
-            #         if str(request.user) != "AnonymousUser"
-            #         else "AnonymousUser"
-            #     ),
-            #     "remote_addr": request.META.get("REMOTE_ADDR"),
-            # }
-
-            # if kwargs.get("action", None) is AuditLogEntry.Action.CREATE:
-            #     if (
-            #         kwargs.get("object_id", None) is not None
-            #         and self.filter(
-            #             object_uuid=instance.object_uuid,
-            #         ).exists()
-            #     ):
-            #         self.filter(
-            #             object_uuid=instance.object_uuid,
-            #         ).delete()
-            #     else:
-            #         self.filter(
-            #             object_uuid=instance.object_uuid,
-            #         ).delete()
-            # save AuditLogEntry to same database instance is using
             db = instance._state.db
-            obj = ObjectStore.objects.get(object_uuid=instance.object_uuid)
+            try:
+                obj = ObjectStore.objects.get(object_uuid=instance.object_uuid)
+                kwargs["object_ref"] = obj
+            except FieldError:
+                pass
             kwargs["remote_addr"] = request.META.get("REMOTE_ADDR")
-            # kwargs["object_uuid"] = instance.object_uuid
-            kwargs["object_ref"] = obj
             if str(request.user) != "AnonymousUser":
                 kwargs["actor_id"] = request.user.id
-            kwargs.pop("content_type", None)
-            kwargs.pop("object_pk", None)
-            kwargs.pop("object_id", None)
-            # kwargs["actor"] = (
-            #     (
-            #         request.user.name
-            #         if str(request.user) != "AnonymousUser"
-            #         else "AnonymousUser"
-            #     ),
-            # )
-            # raise Exception("Kwargs is", kwargs)
             return (
                 self.create(**kwargs)
                 if db is None or db == ""
@@ -384,7 +330,21 @@ class LogEntry(models.Model):
             (ACCESS, _("access")),
         )
 
-    object_ref = models.ForeignKey(ObjectStore, on_delete=models.DO_NOTHING)
+    content_type = models.ForeignKey(
+        to="contenttypes.ContentType",
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("content type"),
+    )
+    object_pk = models.CharField(
+        db_index=True, max_length=255, verbose_name=_("object pk")
+    )
+    object_id = models.BigIntegerField(
+        blank=True, db_index=True, null=True, verbose_name=_("object id")
+    )
+    object_ref = models.ForeignKey(
+        ObjectStore, on_delete=models.DO_NOTHING, null=True, blank=True
+    )
     object_repr = models.TextField(verbose_name=_("object representation"))
     serialized_data = models.JSONField(null=True)
     action = models.PositiveSmallIntegerField(
