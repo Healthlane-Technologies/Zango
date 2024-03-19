@@ -15,8 +15,11 @@ from django.db.models import (
 from django.utils import timezone as django_timezone
 from django.utils.encoding import smart_str
 from django.db.models.fields.reverse_related import ManyToOneRel
+from django.conf import settings
 
 from zelthy.apps.dynamic_models.fields import ZOneToOneField, ZForeignKey
+from zelthy.core.storage_utils import ZFileField
+from zelthy.core.utils import get_current_request
 
 
 def track_field(field):

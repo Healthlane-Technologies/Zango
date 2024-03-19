@@ -259,16 +259,15 @@ class Workspace:
                 continue
             split = m.split(".")[2:]
             module = self.plugin_source.load_plugin(".".join(split))
-            if "zelthy_enterprise.apps.auditlog" in settings.ENTERPRISE_TENANT_APPS:
-                from zelthy_enterprise.apps.auditlog.registry import auditlog
+            from zelthy.apps.auditlog.registry import auditlog
 
-                for name, obj in inspect.getmembers(module):
-                    if (
-                        isinstance(obj, type)
-                        and issubclass(obj, DynamicModelBase)
-                        and obj != DynamicModelBase
-                    ):
-                        auditlog.register(obj)
+            for name, obj in inspect.getmembers(module):
+                if (
+                    isinstance(obj, type)
+                    and issubclass(obj, DynamicModelBase)
+                    and obj != DynamicModelBase
+                ):
+                    auditlog.register(obj)
         return
 
     def sync_tasks(self, tenant_name) -> None:

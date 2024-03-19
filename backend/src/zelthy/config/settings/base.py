@@ -13,11 +13,6 @@ ALLOWED_HOSTS = []
 
 ENTERPRISE_PUBLIC_APPS = []
 ENTERPRISE_TENANT_APPS = []
-try:
-    __import__("zelthy_enterprise.apps.auditlog")
-    ENTERPRISE_TENANT_APPS.append("zelthy_enterprise.apps.auditlog")
-except ImportError:
-    pass
 
 SHARED_APPS = [
     "django_tenants",  # mandatory
@@ -30,7 +25,7 @@ SHARED_APPS = [
     "django.contrib.admin",
     "crispy_forms",
     "crispy_bootstrap5",
-    "debug_toolbar",
+    # "debug_toolbar",
     # 'phonenumber_field',
     # 'django_otp',
     # 'django_otp.plugins.otp_static',
@@ -55,10 +50,11 @@ TENANT_APPS = [
     "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
     "zelthy.apps.tasks",
+    "zelthy.apps.auditlog",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
-    "debug_toolbar",
+    # "debug_toolbar",
     "crispy_forms",
     "django_celery_results",
     # "cachalot",
@@ -88,7 +84,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
+    # "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
 ]
 
