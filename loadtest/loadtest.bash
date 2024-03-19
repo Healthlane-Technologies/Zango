@@ -4,8 +4,8 @@ source .env.loadtest
 
 # Create the locust.conf file
 echo "users = $USERS
-spawn_rate = $SPAWN_RATE
-run_time = $RUNTIME
+spawn-rate = $SPAWN_RATE
+run-time = $RUNTIME
 headless = $HEADLESS
 locustfile = $LOCUSTFILE" > locust.conf
 
@@ -15,6 +15,14 @@ python add_loadtest.py $PLATFORM $MODULES
 # Start the server
 docker compose up -d
 
+until curl -f http://app0.zelthy.com:8000/mod0/view1
+do
+    echo "Waiting for server to start"
+    sleep 1
+done
+
+echo "Server Started"
+echo "Beginning loadtest"
 
 servers=("runserver" "gunicorn_sync" "gunicorn_async" "daphne")
 cur=$(date +"%y_%m_%d")
@@ -29,7 +37,7 @@ if [ ! -d "loadtest_results/$cur" ]; then
     done
 fi
 
-for ((i = 0; i < tenants; i++)); do
+for ((i = 0; i < $TENANTS; i++)); do
     nohup locust --config=locust.conf --host="http://app${i}.zelthy.com:8000/" --html "loadtest_results/${cur}/${PLATFORM}/${SERVER}/loadtest_${i}.html" &
 done
 
