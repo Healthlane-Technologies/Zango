@@ -8,13 +8,10 @@ Configuring policies and permissions is a fundamental aspect of access control w
 
 ## Policy Config JSON Structure
 
-The Policy Config JSON consists of two main sections:
+The Policy Config JSON consists of the following sections:
 
 ### Permissions
 Under the "permissions" section, you define the specifics of each permission that the policy contains. Each permission can be configured individually based on its type. This section essentially outlines what users or user roles are allowed to do within the context of the policy.
-
-### Configurations
-The "configurations" section holds policy-wide settings that influence the overall behavior of the policy. One example is the "expiry" setting, which defines when the policy becomes invalid.
 
 ## Exploring Different Permission Types
 
@@ -42,9 +39,6 @@ View Type Permissions grant access to specific views in your application, enabli
                 "name": "doctor.views.DoctorCrudView"
             }
         ],
-        "configurations": {
-            "expiry": "26/12/23",
-        }
     }
     ```
 
@@ -61,10 +55,7 @@ User Access Type Permissions regulate application access at the user level, ensu
         {
             "type": "userAccess",
             "accessIP": "0.0.0.0/32"
-        }],
-        configurations: {
-            expiry: "26/12/23"
-        }
+        }]
     }
     ```
 
