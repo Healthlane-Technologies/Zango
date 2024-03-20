@@ -117,9 +117,10 @@ const sidebars = {
           items: [
             'documentation/permission-framework/policies/viewing-policies',
             'documentation/permission-framework/policies/creating-a-policy',
-            'documentation/permission-framework/policies/policy-config-json',
+            'documentation/permission-framework/policies/syncing-policy',
             'documentation/permission-framework/policies/assigning-policies',
-            'documentation/permission-framework/policies/editing-policy-config',
+            'documentation/permission-framework/policies/policy-config-json',
+            // 'documentation/permission-framework/policies/editing-policy-config',
             // 'documentation/permission-framework/policies/archiving-a-policy',
           ],
         },
