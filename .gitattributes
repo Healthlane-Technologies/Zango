@@ -1,0 +1,8 @@
+# excluding docs
+docs/** linguist-documentation
+
+# excluding assets
+backend/src/zelthy/assets/** linguist-vendored 
+
+# excluding frontend
+frontend/** linguist-vendored  
