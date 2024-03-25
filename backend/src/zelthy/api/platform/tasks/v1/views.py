@@ -39,10 +39,10 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         filters = Q()
         for field_name, query in name_field_query_mappping.items():
             if field_name in columns:
-                filters &= Q(**{query: columns.get(field_name)})
+                filters &= Q(**{query: columns[field_name]})
             else:
                 if search:
-                    filters |= Q(**{query: search})
+                    filters |= Q(**{query: f"%{search}%"})
         return records.filter(filters).distinct()
 
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
@@ -50,9 +50,11 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             app_tasks = self.get_queryset(search, columns)
-            paginated_tasks = self.paginate_queryset(app_tasks, request, view=self)
+            paginated_tasks = self.paginate_queryset(
+                app_tasks, request, view=self)
             serializer = TaskSerializer(paginated_tasks, many=True)
-            paginated_app_tasks = self.get_paginated_response_data(serializer.data)
+            paginated_app_tasks = self.get_paginated_response_data(
+                serializer.data)
             success = True
             response = {
                 "tasks": paginated_app_tasks,
@@ -71,7 +73,8 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
             with connection.cursor() as c:
-                ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                ws = Workspace(connection.tenant, request=None,
+                               as_systemuser=True)
                 ws.ready()
                 ws.sync_tasks(tenant.name)
             response = {"message": "Tasks synced successfully"}
