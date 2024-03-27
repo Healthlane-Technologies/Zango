@@ -5,16 +5,15 @@
 </h1>
 
 
-[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)
+[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)  • [Discord](https://discord.gg/qgbxfWeC)
 
 
 [![PyPI version](https://badge.fury.io/py/zelthy3.svg)](https://badge.fury.io/py/zelthy3)
 ![docs](https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zelthy3/docs.yml?branch=main)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Discord](https://img.shields.io/discord/1219168013790744596?color=%237289DA&label=Join%20our%20Discord%20Server&logo=discord&logoColor=white&style=flat-square)](https://discord.gg/qgbxfWeC)
 
 
-## Zelthy is an open source multi-tenant Django framework for building enterprise apps
+## Zelthy is an open source multi-tenant Django framework for building business apps
 
 - Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem
 - Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows 
