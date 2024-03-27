@@ -39,17 +39,21 @@ def get_package_url(request, path, package_name):
 
 def get_current_request_url(request, domain=None):
     # Determine the protocol (HTTP or HTTPS) based on the request's is_secure() method.
-    if settings.ENV == "dev":
-        protocol = "https" if request.is_secure() else "http"
-    else:
+    print("Request meta : ", request.META, flush=True)
+    print("Request headers : ", request.headers, flush=True)
+    secure = (
+        request.headers.get("X-Forwarded-Proto") == "https"
+        or request.meta.get("HTTP_X_FORWARDED_PROTO") == "https"
+    )
+    if secure:
         protocol = "https"
+    else:
+        protocol = "http"
 
     # Get the hostname (domain) from the request.
     if not domain:
         domain = request.get_host()
-
-    # Get the port from the request. Use the standard ports (80 for HTTP, 443 for HTTPS) as default.
-    if settings.ENV == "dev":
+    if not secure:
         port = request.META.get("SERVER_PORT", "")
         if (protocol == "http" and port == "80") or (
             protocol == "https" and port == "443"
