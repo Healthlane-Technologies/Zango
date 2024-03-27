@@ -54,7 +54,7 @@ A few essential packages are freely available. These packages enable development
 
 #### 🌟 [Get Involved and Make a Difference!](https://discord.gg/qgbxfWeC)
 
-Your contribution to Zelthy3 can shape its future and make it even more amazing. Here's how you can get involved:
+Join our community and help build **the framework for business apps**. Here's how you can get involved:
 
 - **Star the Repo:** Show your support by giving us a star! ⭐️
 - **Spread the Word:** Share Zelthy3 with your colleagues and friends. 📣
