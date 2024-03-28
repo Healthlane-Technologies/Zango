@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 from django.db import connection
-
+from django.core.management.base import CommandError
 from django.core.management.commands.makemigrations import (
     Command as MakeMigrationsCommand,
 )
@@ -71,4 +71,13 @@ class Command(MakeMigrationsCommand):
             w.load_models()
         else:
             w.load_models(migration=True)
+        # Check if the provided app labels are valid
+        invalid_apps = [label for label in app_labels if not w.is_valid_app(label)]
+        if invalid_apps:
+            # Raise an error if any invalid app labels are found
+            invalid_app_names = ", ".join(invalid_apps)
+            raise CommandError (
+                f"The app name(s) '{invalid_app_names}' provided as argument(s) is/are invalid. "
+                f"Please ensure that you have entered the correct app name(s) and try again."
+            )
         super().handle("dynamic_models", **options)
