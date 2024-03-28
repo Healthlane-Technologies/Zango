@@ -5,7 +5,7 @@
 </h1>
 
 
-[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)
+[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)  • [Discord](https://discord.gg/qgbxfWeC)
 
 
 [![PyPI version](https://badge.fury.io/py/zelthy3.svg)](https://badge.fury.io/py/zelthy3)
@@ -13,7 +13,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
-## Zelthy is an open source multi-tenant Django framework for building enterprise apps
+## Zelthy is an open source multi-tenant Django framework for building business apps
 
 - Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem
 - Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows 
@@ -39,12 +39,12 @@ Zelthy redefines multi-tenancy by enabling multiple different apps to run on a s
 ![Zelthy Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
 
 
-#### Getting Started:
+####  🚀 Getting Started:
 - [Docker](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/docker)
 - [Manual](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/manual)
 - [Gitpod](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/gitpod)
 
-#### Free Packages
+#### 📦 Free Packages
 A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
 - [Login](https://docs.zelthy.com/login)
 - [Frames](https://docs.zelthy.com/frame)
@@ -52,13 +52,18 @@ A few essential packages are freely available. These packages enable development
 - [Workflow](https://docs.zelthy.com/workflow)
 
 
-#### Contributing:
-You can contribute to Zelthy3 in many ways, including:
-- Leave your star in this repo.
-- Share with your colleagues and friends
-- Share your suggestions on our slack channel
-- Create issues if you find something not working as expected or if you have suggestions on enhancements.
-- Provide pull requests for any open issues
+#### 🌟 [Get Involved and Make a Difference!](https://discord.gg/qgbxfWeC)
+
+Join our community and help build **the framework for business apps**. Here's how you can get involved:
+
+- **Star the Repo:** Show your support by giving us a star! ⭐️
+- **Spread the Word:** Share Zelthy3 with your colleagues and friends. 📣
+- **Join the Conversation:** Share your brilliant ideas and suggestions on Discord [here](https://discord.gg/qgbxfWeC). 💬
+- **Report Issues:** Notice something not quite right? Let us know by creating an issue. Your feedback is invaluable! 🐛
+- **Contribute Code:** Dive into open issues and send pull requests to help us squash bugs and implement exciting enhancements. 🛠️
+
+Together, let's build something incredible! ✨🚀
+
 
 
 #### Official Documentation: https://docs.zelthy.com/
