@@ -106,8 +106,14 @@ class PlatformUserModel(AbstractZelthyUserModel):
                     )
                 else:
                     if not cls.validate_password(password):
-                        message = "Invalid password. Password must follow rules xyz"
-                    else:
+                        message = """Invalid Password
+
+                                    The password provided does not meet the required criteria. Please ensure that your password follows these rules:
+                                    1. Must contain at least 8 characters.
+                                    2. Must contain at least one uppercase letter.
+                                    3. Must contain at least one lowercase letter.
+                                    4. Must contain at least one number.
+                                    5. Must contain at least one special character."""
                         platform_user = cls.objects.create(
                             name=name,
                             email=email,
@@ -154,7 +160,14 @@ class PlatformUserModel(AbstractZelthyUserModel):
             password = data.get("password")
             if password:
                 if not self.validate_password(password):
-                    message = "Invalid password. Password must follow rules xyz"
+                    message = """Invalid Password
+
+                                    The password provided does not meet the required criteria. Please ensure that your password follows these rules:
+                                    1. Must contain at least 8 characters.
+                                    2. Must contain at least one uppercase letter.
+                                    3. Must contain at least one lowercase letter.
+                                    4. Must contain at least one number.
+                                    5. Must contain at least one special character."""
                     return {"success": False, "message": message}
 
                 self.set_password(password)
