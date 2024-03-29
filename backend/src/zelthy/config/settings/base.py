@@ -163,3 +163,45 @@ X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+   
+    'formatters': {
+            'verbose': {
+                'format' : "%(uuid)s [%(schema_name)s:%(domain_url)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
+                'datefmt' : "%d/%b/%Y %H:%M:%S"
+            }            
+        },
+
+    'filters': {
+        'zelthy_log_filter': {
+            '()': 'zelthy.core.log_file.ZelthyLogFilter',
+        }
+    },
+    'handlers': {
+
+        'file': {
+            'level': 'INFO', 
+            'class': 'logging.handlers.RotatingFileHandler',
+            'maxBytes': 1024*1024*5, # 5 MB
+            'formatter': 'verbose',  # Use the custom formatter
+            'filters': ['zelthy_log_filter'],
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'zelthy': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        }
+    },
+}
