@@ -8,6 +8,15 @@ from pathlib import Path
 from django.db import connection
 
 
+class IPAddressMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        logging.request = request
+        response = self.get_response(request)
+        return response
+
 class ZelthyLogFilter(logging.Filter):
 
     def filter(self, record):
@@ -17,6 +26,18 @@ class ZelthyLogFilter(logging.Filter):
             print(e)
             print("Exception in str conversion of log record of type: ", type(record.msg))
             record_msg = "In Exception"
+
+       # Extract client IP address from the request object in logging context
+        request = getattr(logging, 'request', None)
+        if request:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                record.remote_addr = x_forwarded_for.split(',')[0]
+            else:
+                record.remote_addr = request.META.get('REMOTE_ADDR')
+        else:
+            record.remote_addr = "N/A"  # Default value if request object is not available
+        
 
         record.msg = record_msg
         record.uuid = str(uuid.uuid4())

@@ -83,6 +83,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
+    "zelthy.core.log_file.IPAddressMiddleware"
 ]
 
 
@@ -172,7 +173,7 @@ LOGGING = {
    
     'formatters': {
             'verbose': {
-                'format' : "%(uuid)s [%(schema_name)s:%(domain_url)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
+                'format' : "%(uuid)s [%(schema_name)s:%(domain_url)s][%(remote_addr)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
                 'datefmt' : "%d/%b/%Y %H:%M:%S"
             }            
         },
