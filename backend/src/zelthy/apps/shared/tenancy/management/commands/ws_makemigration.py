@@ -64,7 +64,7 @@ class Command(MakeMigrationsCommand):
                 pass  # Creates an empty __init__.py file
 
         settings.MIGRATION_MODULES = {
-            f"dynamic_models": f"workspaces.{options['workspace']}.migrations"
+            "dynamic_models": f"workspaces.{options['workspace']}.migrations"
         }
         w = Workspace(tenant_obj, None, True)
         if options["is_package_migration"]:

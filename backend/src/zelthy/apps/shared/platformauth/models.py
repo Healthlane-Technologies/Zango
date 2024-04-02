@@ -2,19 +2,15 @@ import uuid
 from django.db import models
 from django.db.models import Q
 
-from django.contrib.auth.models import AbstractBaseUser
 
 # from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
 
 from django.contrib.auth.models import User
 
 from zelthy.apps.shared.tenancy.models import TenantModel
 
 from .abstract_model import AbstractZelthyUserModel
-
-from zelthy.core.model_mixins import FullAuditMixin
 
 
 class PlatformUserModel(AbstractZelthyUserModel):

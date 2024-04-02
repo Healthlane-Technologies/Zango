@@ -116,7 +116,7 @@ html {
     display: flex;
     flex-direction: column;
     padding: 28px 60px;
-    
+
     overflow: hidden;
     position: relative;
 }

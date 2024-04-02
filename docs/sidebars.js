@@ -199,7 +199,7 @@ const sidebars = {
           ],
         },
       ]
-    }, 
+    },
     {
       type: 'category',
       label: 'Async Tasks',

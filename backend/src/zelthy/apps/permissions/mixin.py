@@ -1,7 +1,7 @@
 import ipaddress
 from django.utils import timezone
 from django.db.models import Q
-from .models import PermissionsModel, PolicyModel
+from .models import PolicyModel
 
 
 class PermissionMixin:
@@ -36,7 +36,7 @@ class PermissionMixin:
                 for ip in allowed_ips:
                     if ipaddress.ip_address(request.META["REMOTE_ADDR"]) in ip:
                         return True
-            except:
+            except Exception:
                 pass
         return False
 

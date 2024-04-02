@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import environ
 
-from zelthy.config.settings.base import *
+from zelthy.config.settings.base import *  # noqa
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -76,8 +76,6 @@ USE_TZ = True
 
 
 # ROOT_URLCONF = '{{project_name}}.urls'
-
-import os
 
 TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
 

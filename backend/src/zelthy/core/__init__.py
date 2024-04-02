@@ -1,1 +1,1 @@
-from .tasks import zelthy_task_executor
+from .tasks import zelthy_task_executor  # NOQA

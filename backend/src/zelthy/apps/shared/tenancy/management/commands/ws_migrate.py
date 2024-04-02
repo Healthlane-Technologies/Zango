@@ -1,5 +1,3 @@
-import os
-
 from django_tenants.management.commands.migrate_schemas import MigrateSchemasCommand
 from django.conf import settings
 from django.db import connection
@@ -29,11 +27,11 @@ class Command(MigrateSchemasCommand):
             )
         if options["package"] is None:
             settings.MIGRATION_MODULES = {
-                f"dynamic_models": f"workspaces.{ options['workspace']}.migrations"
+                "dynamic_models": f"workspaces.{ options['workspace']}.migrations"
             }
         else:
             settings.MIGRATION_MODULES = {
-                f"dynamic_models": f"workspaces.{ options['workspace']}.packages.{options['package']}.migrations"
+                "dynamic_models": f"workspaces.{ options['workspace']}.packages.{options['package']}.migrations"
             }
         options["schema_name"] = tenant_obj.schema_name
         super().handle(*args, **options)

@@ -1,5 +1,4 @@
-from functools import partial
-from celery import shared_task, current_task
+from celery import shared_task
 from django.db import connection
 
 
@@ -12,7 +11,7 @@ def zelthy_task_executor(tenant_name, task_name, *args, **kwargs):
     tenant = TenantModel.objects.get(name=tenant_name)
 
     connection.set_tenant(tenant)
-    with connection.cursor() as c:
+    with connection.cursor():
         task_obj = AppTask.objects.get(name=task_name)
 
         ws = Workspace(connection.tenant, request=None, as_systemuser=True)

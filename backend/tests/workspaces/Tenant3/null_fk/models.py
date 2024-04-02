@@ -3,8 +3,9 @@ Regression tests for proper working of ForeignKey(null=True).
 """
 
 from django.db import models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
+from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey
 from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+
 
 class SystemDetails(DynamicModelBase):
     details = models.TextField()
@@ -31,7 +32,6 @@ class NPost(DynamicModelBase):
 class Comment(DynamicModelBase):
     post = ZForeignKey(NPost, models.SET_NULL, null=True)
     comment_text = models.CharField(max_length=250)
-
 
 
 # Ticket 15823

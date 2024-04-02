@@ -1,7 +1,6 @@
 import json
 
 from rest_framework import serializers
-from zelthy.apps.shared.tenancy.models import TenantModel, Domain
 from zelthy.apps.permissions.models import PolicyModel
 from zelthy.apps.appauth.models import UserRoleModel
 

@@ -13,7 +13,7 @@ workspaces
 ├── YourApp
 │   ├── YourModule
 │       ├── views.py
-│     
+│
 │   ...
 ```
 
@@ -24,26 +24,26 @@ workspaces
 2. **Import Dependencies**:
    - At the beginning of your `views.py` file, import any necessary dependencies or Zelthy-specific modules.
    - Any imports inside the `views.py` file should be relative to that file. For example:
-   
+
    ```text
       workspaces
       ├── YourApp
       │   ├── YourModule
       │       ├── helpers.py
       │       ├── views.py
-      │     
+      │
       │   ...
    ```
 
    ```python
-   
+
    # Correct: Import relative to views.py
    from .helpers import some_function
 
    # Avoid: Avoid absolute imports
    from YourApp.YourModule.some_module import SomeClass
 
-   # Accross module imports 
+   # Accross module imports
    from ..module2.models import SomeModel
 
 3. **Define Your View**:
@@ -56,6 +56,6 @@ workspaces
    - For API views, you can use Zelthy's `JsonResponse` class to return JSON data.
    - For template views, you can use Zelthy's `render` function to render an HTML template and return it as an HTTP response.
 
-That's the basic process of creating views in Zelthy. Whether you're building API views to expose data or template views to render web pages, Zelthy's architecture closely aligns with Django, making it intuitive for developers familiar with Django's framework. 
+That's the basic process of creating views in Zelthy. Whether you're building API views to expose data or template views to render web pages, Zelthy's architecture closely aligns with Django, making it intuitive for developers familiar with Django's framework.
 
 Additionally, for template views, you can reference your HTML templates as needed, as explained in the [Templates](../templates/overview) section of this documentation.

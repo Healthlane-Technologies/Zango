@@ -1,12 +1,12 @@
 from django.conf.urls import url
 
-from .views import *
+from .views import UserRoleAPIV1
 
 
 urlpatterns = [
-            url(
-                regex=r'^api/v1/user-role/(?P<app_id>[\w-]+)/$', 
-                view=UserRoleAPIV1.as_view(),
-                name='api-v1-userrole'
-            ),
-        ]
+    url(
+        regex=r"^api/v1/user-role/(?P<app_id>[\w-]+)/$",
+        view=UserRoleAPIV1.as_view(),
+        name="api-v1-userrole",
+    ),
+]

@@ -7,621 +7,1264 @@ import zelthy3.backend.apps.tenants.dynamic_models.fields
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='A',
+            name="A",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('x', models.IntegerField(default=10)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("x", models.IntegerField(default=10)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='C',
+            name="C",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('y', models.IntegerField(default=10)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("y", models.IntegerField(default=10)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='DataPoint',
+            name="DataPoint",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=20)),
-                ('value', models.CharField(max_length=20)),
-                ('another_value', models.CharField(blank=True, max_length=20)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=20)),
+                ("value", models.CharField(max_length=20)),
+                ("another_value", models.CharField(blank=True, max_length=20)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Domain',
+            name="Domain",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Family',
+            name="Family",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Favorites',
+            name="Favorites",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Foo',
+            name="Foo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('a', models.CharField(max_length=10)),
-                ('d', models.DecimalField(decimal_places=3, max_digits=5)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("a", models.CharField(max_length=10)),
+                ("d", models.DecimalField(decimal_places=3, max_digits=5)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Forum',
+            name="Forum",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('forum_name', models.CharField(max_length=32)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("forum_name", models.CharField(max_length=32)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='FUser',
+            name="FUser",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=200)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Genus',
+            name="Genus",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('family', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.family')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "family",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.family",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Image',
+            name="Image",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Item',
+            name="Item",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=100)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=100)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Kingdom',
+            name="Kingdom",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('domain', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.domain')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "domain",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.domain",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Klass',
+            name="Klass",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='ManualPrimaryKey',
+            name="ManualPrimaryKey",
             fields=[
-                ('primary_key', models.CharField(max_length=10, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=50)),
+                (
+                    "primary_key",
+                    models.CharField(max_length=10, primary_key=True, serialize=False),
+                ),
+                ("name", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='OUser',
+            name="OUser",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('username', models.CharField(max_length=100)),
-                ('email', models.EmailField(max_length=254)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("username", models.CharField(max_length=100)),
+                ("email", models.EmailField(max_length=254)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Parent1',
+            name="Parent1",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name1', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name1", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Parent2',
+            name="Parent2",
             fields=[
-                ('id2', models.AutoField(primary_key=True, serialize=False)),
-                ('name2', models.CharField(max_length=50)),
+                ("id2", models.AutoField(primary_key=True, serialize=False)),
+                ("name2", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Place',
+            name="Place",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('address', models.CharField(max_length=80)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                ("address", models.CharField(max_length=80)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='PropertyValue',
+            name="PropertyValue",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('label', models.CharField(max_length=100)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("label", models.CharField(max_length=100)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='School',
+            name="School",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_public', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("is_public", models.BooleanField(default=False)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='SystemDetails',
+            name="SystemDetails",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('details', models.TextField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("details", models.TextField()),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Target',
+            name="Target",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50, unique=True)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Test',
+            name="Test",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('b', models.IntegerField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("b", models.IntegerField()),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Topping',
+            name="Topping",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=30)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=30)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='UniqueNumber',
+            name="UniqueNumber",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('number', models.IntegerField(unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("number", models.IntegerField(unique=True)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='UserStatResult',
+            name="UserStatResult",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('results', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("results", models.CharField(max_length=50)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Pointer',
+            name="Pointer",
             fields=[
-                ('other', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='dynamic_models.target')),
+                (
+                    "other",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="dynamic_models.target",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Restaurant',
+            name="Restaurant",
             fields=[
-                ('place', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='dynamic_models.place')),
-                ('serves_hot_dogs', models.BooleanField(default=False)),
-                ('serves_pizza', models.BooleanField(default=False)),
+                (
+                    "place",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="dynamic_models.place",
+                    ),
+                ),
+                ("serves_hot_dogs", models.BooleanField(default=False)),
+                ("serves_pizza", models.BooleanField(default=False)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='ToFieldPointer',
+            name="ToFieldPointer",
             fields=[
-                ('target', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='dynamic_models.target', to_field='name')),
+                (
+                    "target",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="dynamic_models.target",
+                        to_field="name",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='UniqueNumberChild',
+            name="UniqueNumberChild",
             fields=[
-                ('uniquenumber_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='dynamic_models.uniquenumber')),
+                (
+                    "uniquenumber_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="dynamic_models.uniquenumber",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
-            bases=('dynamic_models.uniquenumber',),
+            bases=("dynamic_models.uniquenumber",),
         ),
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('city', models.CharField(max_length=100)),
-                ('state', models.CharField(max_length=2)),
-                ('user', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.ouser')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("city", models.CharField(max_length=100)),
+                ("state", models.CharField(max_length=2)),
+                (
+                    "user",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.ouser",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='UndergroundBar',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('serves_cocktails', models.BooleanField(default=True)),
-                ('place', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(null=True, on_delete=django.db.models.deletion.SET_NULL, to='dynamic_models.place')),
-            ],
-            options={
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='SystemInfo',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('system_name', models.CharField(max_length=32)),
-                ('system_details', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.systemdetails')),
-            ],
-            options={
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
-            name='Species',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('genus', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.genus')),
-            ],
-            options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='RelatedPoint',
+            name="UndergroundBar",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=20)),
-                ('data', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.datapoint')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("serves_cocktails", models.BooleanField(default=True)),
+                (
+                    "place",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="dynamic_models.place",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='RelatedModel',
+            name="SystemInfo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('link', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.manualprimarykey')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("system_name", models.CharField(max_length=32)),
+                (
+                    "system_details",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.systemdetails",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Property',
+            name="Species",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('key', models.CharField(max_length=100)),
-                ('item', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='props', to='dynamic_models.item')),
-                ('value', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='dynamic_models.propertyvalue')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "genus",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.genus",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Product',
+            name="RelatedPoint",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('image', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(null=True, on_delete=django.db.models.deletion.SET_NULL, to='dynamic_models.image')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=20)),
+                (
+                    "data",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.datapoint",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Poll',
+            name="RelatedModel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('question', models.CharField(max_length=200)),
-                ('creator', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.fuser')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "link",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.manualprimarykey",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Pointer2',
+            name="Property",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('other', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='second_pointer', to='dynamic_models.target')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("key", models.CharField(max_length=100)),
+                (
+                    "item",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="props",
+                        to="dynamic_models.item",
+                    ),
+                ),
+                (
+                    "value",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="dynamic_models.propertyvalue",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Phylum',
+            name="Product",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('kingdom', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.kingdom')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "image",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="dynamic_models.image",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Order',
+            name="Poll",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('klass', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.klass')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("question", models.CharField(max_length=200)),
+                (
+                    "creator",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.fuser",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='OneBar',
+            name="Pointer2",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('serves_cocktails', models.BooleanField(default=True)),
-                ('place', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.place')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "other",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="second_pointer",
+                        to="dynamic_models.target",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='NPost',
+            name="Phylum",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=32)),
-                ('forum', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='dynamic_models.forum')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "kingdom",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.kingdom",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='MultiModel',
+            name="Order",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('link1', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.place')),
-                ('link2', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.manualprimarykey')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "klass",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.klass",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="OneBar",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("serves_cocktails", models.BooleanField(default=True)),
+                (
+                    "place",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.place",
+                    ),
+                ),
+            ],
+            options={
+                "abstract": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="NPost",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=32)),
+                (
+                    "forum",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="dynamic_models.forum",
+                    ),
+                ),
+            ],
+            options={
+                "abstract": False,
+            },
+        ),
+        migrations.CreateModel(
+            name="MultiModel",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "link1",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.place",
+                    ),
+                ),
+                (
+                    "link2",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.manualprimarykey",
+                    ),
+                ),
+            ],
+            options={
+                "abstract": False,
             },
         ),
         migrations.AddField(
-            model_name='klass',
-            name='phylum',
-            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.phylum'),
+            model_name="klass",
+            name="phylum",
+            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="dynamic_models.phylum"
+            ),
         ),
         migrations.CreateModel(
-            name='HybridSpecies',
+            name="HybridSpecies",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('parent_1', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='child_1', to='dynamic_models.species')),
-                ('parent_2', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='child_2', to='dynamic_models.species')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "parent_1",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="child_1",
+                        to="dynamic_models.species",
+                    ),
+                ),
+                (
+                    "parent_2",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="child_2",
+                        to="dynamic_models.species",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='HiddenPointer',
+            name="HiddenPointer",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('target', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='hidden+', to='dynamic_models.target')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "target",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="hidden+",
+                        to="dynamic_models.target",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.AddField(
-            model_name='forum',
-            name='system_info',
-            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.systeminfo'),
+            model_name="forum",
+            name="system_info",
+            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="dynamic_models.systeminfo",
+            ),
         ),
         migrations.AddField(
-            model_name='family',
-            name='order',
-            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.order'),
+            model_name="family",
+            name="order",
+            field=zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="dynamic_models.order"
+            ),
         ),
         migrations.CreateModel(
-            name='Director',
+            name="Director",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_temp', models.BooleanField(default=False)),
-                ('school', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.school')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("is_temp", models.BooleanField(default=False)),
+                (
+                    "school",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.school",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Comment',
+            name="Comment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('comment_text', models.CharField(max_length=250)),
-                ('post', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='dynamic_models.npost')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("comment_text", models.CharField(max_length=250)),
+                (
+                    "post",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="dynamic_models.npost",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Choice',
+            name="Choice",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('poll', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='poll_choice', to='dynamic_models.poll')),
-                ('related_poll', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='related_choice', to='dynamic_models.poll')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "poll",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="poll_choice",
+                        to="dynamic_models.poll",
+                    ),
+                ),
+                (
+                    "related_poll",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="related_choice",
+                        to="dynamic_models.poll",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Bar',
+            name="Bar",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('b', models.CharField(max_length=10)),
-                ('a', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(default=workspaces.Tenant3.foreign_key.models.get_foo, on_delete=django.db.models.deletion.CASCADE, related_name='bars', to='dynamic_models.foo')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("b", models.CharField(max_length=10)),
+                (
+                    "a",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        default=workspaces.Tenant3.foreign_key.models.get_foo,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="bars",
+                        to="dynamic_models.foo",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='B',
+            name="B",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('y', models.IntegerField(default=10)),
-                ('a', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.a')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("y", models.IntegerField(default=10)),
+                (
+                    "a",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.a",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='Waiter',
+            name="Waiter",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
-                ('restaurant', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.restaurant')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
+                (
+                    "restaurant",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.restaurant",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='UserStat',
+            name="UserStat",
             fields=[
-                ('user', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, serialize=False, to='dynamic_models.ouser')),
-                ('posts', models.IntegerField()),
-                ('results', zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.userstatresult')),
+                (
+                    "user",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        serialize=False,
+                        to="dynamic_models.ouser",
+                    ),
+                ),
+                ("posts", models.IntegerField()),
+                (
+                    "results",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.userstatresult",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='StatDetails',
+            name="StatDetails",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('comments', models.IntegerField()),
-                ('base_stats', zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(on_delete=django.db.models.deletion.CASCADE, to='dynamic_models.userstat')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("comments", models.IntegerField()),
+                (
+                    "base_stats",
+                    zelthy3.backend.apps.tenants.dynamic_models.fields.ZOneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dynamic_models.userstat",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
     ]

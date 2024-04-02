@@ -7,17 +7,16 @@ from workspaces.Tenant3.foreign_key.models import (
     Klass,
     Order,
     Phylum,
-    Species
+    Species,
 )
 import unittest
 from zelthy3.backend.apps.tenants.dynamic_models.workspace.base import Workspace
 from django_tenants.utils import get_tenant_model
-from django.db import connection, models
+from django.db import connection
 from django.core.exceptions import FieldError
 
 
 class TestSelectRelated(unittest.TestCase):
-
     def create_tree(self, stringtree):
         """
         Helper to create a complete tree.
@@ -42,7 +41,7 @@ class TestSelectRelated(unittest.TestCase):
                     setattr(obj, parent.__class__.__name__.lower(), parent)
                 obj.save()
                 parent = obj
-    
+
     def setUp(self) -> None:
         self.create_tree(
             "Eukaryota Animalia Anthropoda Insecta Diptera Drosophilidae Drosophila "
@@ -59,7 +58,7 @@ class TestSelectRelated(unittest.TestCase):
             "Eukaryota Fungi Basidiomycota Homobasidiomycatae Agaricales Amanitacae "
             "Amanita muscaria"
         )
-    
+
     def test_access_fks_without_select_related(self):
         """
         Normally, accessing FKs doesn't fill in related objects
@@ -68,7 +67,7 @@ class TestSelectRelated(unittest.TestCase):
             fly = Species.objects.get(name="melanogaster")
             domain = fly.genus.family.order.klass.phylum.kingdom.domain
             self.assertEqual(domain.name, "Eukaryota")
-    
+
     def test_access_fks_with_select_related(self):
         """
         A select_related() call will fill in those related objects without any
@@ -80,7 +79,7 @@ class TestSelectRelated(unittest.TestCase):
             ).get(name="sapiens")
             domain = person.genus.family.order.klass.phylum.kingdom.domain
             self.assertEqual(domain.name, "Eukaryota")
-    
+
     def test_list_without_select_related(self):
         with connection.cursor() as c:
             world = Species.objects.all()
@@ -94,7 +93,7 @@ class TestSelectRelated(unittest.TestCase):
                     "Hominidae",
                 ],
             )
-    
+
     def test_list_with_select_related(self):
         """select_related() applies to entire lists, not just items."""
         with connection.cursor() as c:
@@ -109,7 +108,7 @@ class TestSelectRelated(unittest.TestCase):
                     "Hominidae",
                 ],
             )
-    
+
     def test_list_with_depth(self):
         """
         Passing a relationship field lookup specifier to select_related() will
@@ -122,7 +121,7 @@ class TestSelectRelated(unittest.TestCase):
             self.assertEqual(
                 sorted(orders), ["Agaricales", "Diptera", "Fabales", "Primates"]
             )
-    
+
     def test_select_related_with_extra(self):
         with connection.cursor() as c:
             s = (
@@ -131,7 +130,7 @@ class TestSelectRelated(unittest.TestCase):
                 .extra(select={"a": "select_related_species.id + 10"})[0]
             )
             self.assertEqual(s.id + 10, s.a)
-    
+
     def test_certain_fields(self):
         """
         The optional fields passed to select_related() control which related
@@ -147,7 +146,7 @@ class TestSelectRelated(unittest.TestCase):
                 sorted(families),
                 ["Amanitacae", "Drosophilidae", "Fabaceae", "Hominidae"],
             )
-    
+
     def test_more_certain_fields(self):
         """
         In this case, we explicitly say to select the 'genus' and
@@ -159,7 +158,7 @@ class TestSelectRelated(unittest.TestCase):
             )
             orders = [o.genus.family.order.name for o in world]
             self.assertEqual(orders, ["Agaricales"])
-    
+
     def test_field_traversal(self):
         with connection.cursor() as c:
             s = (
@@ -170,12 +169,12 @@ class TestSelectRelated(unittest.TestCase):
                 .genus.family.order.name
             )
             self.assertEqual(s, "Diptera")
-    
+
     def test_none_clears_list(self):
         with connection.cursor() as c:
             queryset = Species.objects.select_related("genus").select_related(None)
             self.assertIs(queryset.query.select_related, False)
-    
+
     def test_chaining(self):
         with connection.cursor() as c:
             parent_1, parent_2 = Species.objects.all()[:2]
@@ -188,17 +187,19 @@ class TestSelectRelated(unittest.TestCase):
             obj = queryset[0]
             self.assertEqual(obj.parent_1, parent_1)
             self.assertEqual(obj.parent_2, parent_2)
-    
+
     def test_reverse_relation_caching(self):
         with connection.cursor() as c:
             species = (
-                Species.objects.select_related("genus").filter(name="melanogaster").first()
+                Species.objects.select_related("genus")
+                .filter(name="melanogaster")
+                .first()
             )
             self.assertEqual(species.genus.name, "Drosophila")
             # The species_set reverse relation isn't cached.
             self.assertEqual(species.genus._state.fields_cache, {})
             self.assertEqual(species.genus.species_set.first().name, "melanogaster")
-    
+
     def test_select_related_after_values(self):
         """
         Running select_related() after calling values() raises a TypeError
@@ -214,51 +215,35 @@ class TestSelectRelated(unittest.TestCase):
         message = "Cannot call select_related() after .values() or .values_list()"
         with self.assertRaises(TypeError):
             list(Species.objects.values_list("name").select_related("genus"))
-    
+
     def test_non_relational_field(self):
         with connection.cursor() as c:
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Species.objects.select_related("name__some_field"))
 
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Species.objects.select_related("name"))
 
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Domain.objects.select_related("name"))
-    
+
     def test_non_relational_field_nested(self):
         with connection.cursor() as c:
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Species.objects.select_related("genus__name"))
-    
+
     def test_reverse_relational_field(self):
         with connection.cursor() as c:
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Species.objects.select_related("child_1"))
-    
+
     def test_invalid_field(self):
         with connection.cursor() as c:
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Species.objects.select_related("invalid_field"))
 
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Species.objects.select_related("genus__related_invalid_field"))
 
-            with self.assertRaises(
-                FieldError
-            ):
+            with self.assertRaises(FieldError):
                 list(Domain.objects.select_related("invalid_field"))

@@ -1,5 +1,3 @@
-import traceback
-
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 from django.db import connection
@@ -10,8 +8,7 @@ from zelthy.core.api import (
 )
 from zelthy.core.utils import get_search_columns
 from zelthy.apps.shared.tenancy.models import TenantModel
-from zelthy.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
-from zelthy.apps.permissions.models import PolicyModel, PermissionsModel
+from zelthy.apps.permissions.models import PolicyModel
 from zelthy.core.common_utils import set_app_schema_path
 from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.permissions import IsPlatformUserAllowedApp
@@ -83,7 +80,7 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             try:
                 tenant = TenantModel.objects.get(uuid=app_uuid)
                 connection.set_tenant(tenant)
-                with connection.cursor() as c:
+                with connection.cursor():
                     ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                     ws.ready()
                     ws.sync_policies()

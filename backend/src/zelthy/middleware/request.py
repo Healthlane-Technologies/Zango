@@ -19,10 +19,10 @@ class UserRoleAndAppObjectAssignmentMiddleware:
         from django.apps import apps
 
         model = apps.get_model("appauth", "UserRoleModel")
-        obj_store_model = apps.get_model("object_store", "ObjectStore")
+        obj_store_model = apps.get_model("object_store", "ObjectStore")  # noqa
         try:
             _request_local.user_role = model.objects.get(id=request.session["role_id"])
-        except:
+        except Exception:
             if request.tenant.tenant_type == "app":
                 _request_local.user_role = model.objects.get(name="AnonymousUsers")
             else:

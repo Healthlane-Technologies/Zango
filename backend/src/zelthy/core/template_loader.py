@@ -6,7 +6,6 @@ from django.template.loaders.base import Loader as BaseLoader
 
 
 class AppTemplateLoader(BaseLoader):
-
     is_usable = True
 
     def get_template_sources(self, template_name, template_dirs=None):

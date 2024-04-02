@@ -48,7 +48,7 @@ class ObjectStore(models.Model):
                                 content_model = [obj]
                                 break
 
-                    except:
+                    except Exception:
                         pass
 
                 # If content model found, retrieve the object by primary key

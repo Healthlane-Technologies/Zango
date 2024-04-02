@@ -36,8 +36,8 @@ class PasswordChangeViewAPIV1(ZelthySessionAppAPIView, PasswordValidationMixin):
         Validates that the email is not already in use.
         """
         try:
-            user = authenticate(username=email, password=password)
-        except:
+            authenticate(username=email, password=password)
+        except Exception:
             raise ValidationError(
                 "The current password you have entered is wrong. Please try again!"
             )

@@ -1,1 +1,1 @@
-from zelthy.core import internal_requests
+from zelthy.core import internal_requests  # noqa

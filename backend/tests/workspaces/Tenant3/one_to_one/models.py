@@ -5,8 +5,12 @@ To define a one-to-one relationship, use ``OneToOneField()``.
 
 In this example, a ``Place`` optionally can be a ``Restaurant``.
 """
+
 from django.db import models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
+from zelthy3.backend.apps.tenants.dynamic_models.fields import (
+    ZForeignKey,
+    ZOneToOneField,
+)
 from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
 
 
@@ -85,9 +89,7 @@ class HiddenPointer(DynamicModelBase):
 
 
 class ToFieldPointer(DynamicModelBase):
-    target = ZOneToOneField(
-        Target, models.CASCADE, to_field="name", primary_key=True
-    )
+    target = ZOneToOneField(Target, models.CASCADE, to_field="name", primary_key=True)
 
 
 # Test related objects visibility.
@@ -110,13 +112,6 @@ class Director(DynamicModelBase):
     is_temp = models.BooleanField(default=False)
     school = ZOneToOneField(School, models.CASCADE)
     objects = DirectorManager()
-
-
-
-
-
-
-
 
 
 class OUser(DynamicModelBase):

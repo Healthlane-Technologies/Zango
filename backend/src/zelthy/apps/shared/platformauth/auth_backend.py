@@ -1,7 +1,7 @@
 """Defines which authentication backend for plaform users."""
+
 from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
-from django.db import connection
 
 from .models import PlatformUserModel
 from django.contrib.auth.models import User

@@ -1,22 +1,27 @@
 from zelthy.backend.apps.dynamic_models.workspace.base import Workspace
 from django_tenants.utils import get_tenant_model
-from django.db import connection, models
-from zelthy.backend.apps.dynamic_models.fields import ZForeignKey
-from zelthy.backend.apps.dynamic_models.models import DynamicModelBase
-from django.core.exceptions import FieldError
-from workspaces.Tenant3.null_fk.models import Comment, Forum, Item, NPost, PropertyValue, SystemDetails, SystemInfo
+from django.db import connection
+from workspaces.Tenant3.null_fk.models import (
+    Comment,
+    Forum,
+    Item,
+    NPost,
+    PropertyValue,
+    SystemDetails,
+    SystemInfo,
+)
 import unittest
 from django.db.models import Q
 
-class TestForeignKey(unittest.TestCase):
 
+class TestForeignKey(unittest.TestCase):
     def setUp(self) -> None:
         tenant_model = get_tenant_model()
         env = tenant_model.objects.get(name="Tenant3")
         connection.set_tenant(env)
         ws = Workspace(connection.tenant)
         ws.ready()
-    
+
     def test_null_fk(self):
         d = SystemDetails.objects.create(details="First details")
         s = SystemInfo.objects.create(system_name="First forum", system_details=d)

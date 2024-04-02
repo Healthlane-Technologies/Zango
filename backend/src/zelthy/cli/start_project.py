@@ -8,7 +8,6 @@ import django
 from django.core.management import call_command
 
 import zelthy
-from .utils import replace_placeholders_in_file
 
 
 def test_db_conection(db_name, db_user, db_password, db_host, db_port):
@@ -95,7 +94,7 @@ def create_project(
     command = f"{command} --template {str(project_template_path)}"
 
     subprocess.run(command, shell=True, check=True)
-    env_file = open(f".env", "w")
+    env_file = open(".env", "w")
     env_file.write(
         f"POSTGRES_DB={db_name}\nPOSTGRES_USER={db_user}\nPOSTGRES_PASSWORD={db_password}\nPOSTGRES_HOST={db_host}\nPOSTGRES_PORT={db_port}\nREDIS_HOST={redis_host}\nREDIS_PORT={redis_port}\nPROJECT_NAME={project_name}\n"
     )

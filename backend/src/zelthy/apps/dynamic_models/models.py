@@ -10,7 +10,6 @@ from django.contrib.contenttypes.models import ContentType
 
 from zelthy.apps.appauth.models import AppUserModel
 from zelthy.core.utils import get_current_request, get_current_role
-from zelthy.apps.shared.platformauth.models import PlatformUserModel
 from zelthy.apps.dynamic_models.permissions import is_platform_user
 
 from zelthy.apps.object_store.models import ObjectStore
@@ -143,9 +142,9 @@ def replace_special_context(data):
                 data[key] = replace_special_context(value)
             elif isinstance(value, str) and "{{" in value and "}}" in value:
                 if value == "{{user}}":
-                    data[
-                        key
-                    ] = AppUserModel.objects.all().first()  # get_current_request().user
+                    data[key] = (
+                        AppUserModel.objects.all().first()
+                    )  # get_current_request().user
                 elif value == "{{user_role}}":
                     data[key] = get_current_role()
                 elif value == "{{user_role_id}}":

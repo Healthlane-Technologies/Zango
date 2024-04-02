@@ -76,7 +76,7 @@ class Workspace:
         try:
             if request.internal_routing:
                 return True
-        except:
+        except Exception:
             pass
         if request:
             user = request.user
@@ -262,7 +262,6 @@ class Workspace:
         get topologically sorted list of tasks from packages and modules and
         import tasks.py files in that order
         """
-        from zelthy.config.celery import app
         from celery import Task
         import inspect
         from zelthy.apps.tasks.models import AppTask
@@ -345,7 +344,7 @@ class Workspace:
                 for pattern in urlpatterns:
                     resolve = pattern.resolve(mod_url_path)  # find view
                     if resolve:
-                        match = pattern.pattern.regex.search(mod_url_path)
+                        pattern.pattern.regex.search(mod_url_path)
                         return pattern.callback, resolve
 
         return None, None
@@ -421,7 +420,7 @@ class Workspace:
                     except json.decoder.JSONDecodeError as e:
                         raise Exception(f"Error parsing {policy_file}: {e}")
                     for policy_details in policy["policies"]:
-                        if type(policy_details["statement"]) is not dict:
+                        if isinstance(policy_details["statement"], dict):
                             raise Exception(
                                 f"Policy {policy_details['name']} has an invalid statement"
                             )
@@ -439,7 +438,7 @@ class Workspace:
                             )
                             if not created:
                                 if policy.id not in existing_policies:
-                                    raise Exception(f"Policy name already exists")
+                                    raise Exception("Policy name already exists")
                                 existing_policies.remove(policy.id)
                         except Exception as e:
                             raise Exception(

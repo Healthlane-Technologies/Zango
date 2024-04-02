@@ -70,7 +70,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         try:
             tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
-            with connection.cursor() as c:
+            with connection.cursor():
                 ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                 ws.ready()
                 ws.sync_tasks(tenant.name)

@@ -12,7 +12,7 @@ Non-relational fields in Zelthy Model are equivalent to Django's standard field 
 
 Example
 1. **CharField**: Used for short text strings like names, titles, or labels.
-   
+
    ```python
    from django.db import models
 
@@ -21,7 +21,7 @@ Example
    ```
 
 2. **IntegerField**: Ideal for storing whole numbers.
-   
+
    ```python
    from django.db import models
 
@@ -30,7 +30,7 @@ Example
    ```
 
 3. **DateField**: Designed to hold date values.
-   
+
    ```python
    from django.db import models
 
@@ -39,7 +39,7 @@ Example
    ```
 
 4. **BooleanField**: Represents true/false values.
-   
+
    ```python
    from django.db import models
 
@@ -71,10 +71,10 @@ Relational fields in Zelthy models are specialized field types imported from Zel
        related_model = ZOneToOneField(RelatedModel, null=True, blank=True, on_delete=models.CASCADE)
    ```
 
-3. **ManyToManyField**: 
+3. **ManyToManyField**:
 
     Coming Soon . . .
-  
+
 
 These relational fields enable you to create complex data relationships and structures tailored to the unique needs of your tenants or clients.
 

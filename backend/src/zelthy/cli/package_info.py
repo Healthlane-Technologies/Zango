@@ -27,6 +27,6 @@ def list_packages(tenant):
         else:
             click.echo("No Workspaces Found, execute command from the project root")
     else:
-        click.echo(f"List of available Packages")
+        click.echo("List of available Packages")
         for package in available_packages:
             click.echo(f"{package['name']} : {package['versions']}")

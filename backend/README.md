@@ -1,5 +1,5 @@
 <h1 align="center">
-    <a href="https://www.zelthy.com/"> 
+    <a href="https://www.zelthy.com/">
     <img src="https://yt3.googleusercontent.com/e1HArJ9U7Pj8MIf2MKGYW_6GGqdvwUTucgR6gs5u7LaBvAIfZT1INRASf0fOMC7ISVTDYqMPXw=s176-c-k-c0x00ffffff-no-rj" alt="Zelthy" width="80px">
     </a>
 </h1>
@@ -16,9 +16,9 @@
 ## Zelthy is an open source multi-tenant Django framework for building enterprise apps
 
 - Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem
-- Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows 
+- Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows
 - Built-in user management and user roles
-- Rich ecosystem of packages - Leverage the free packages to develop most of your app workflows. 
+- Rich ecosystem of packages - Leverage the free packages to develop most of your app workflows.
 - Granular policy and permission framework linking user roles with views and models
 - Open-core with all  non-enterprise features under the  Apache License allowing commercial and private use.
 
@@ -28,7 +28,7 @@
 ![Zelthy High Level Architecture](https://docs.zelthy.com/assets/images/Architecture_Diagram-e6eb1b24fca0554edca1110a7de26449.png)
 
 #### App Panel - Central hub to manage all your apps
-Perform tasks such as configuring permissions, managing user roles, and much more. 
+Perform tasks such as configuring permissions, managing user roles, and much more.
 
 ![Zelthy App Panel](https://github.com/Healthlane-Technologies/zelthy3/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
 
@@ -45,7 +45,7 @@ Zelthy redefines multi-tenancy by enabling multiple different apps to run on a s
 - [Gitpod](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/gitpod)
 
 #### Free Packages
-A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
+A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.
 - [Login](https://docs.zelthy.com/login)
 - [Frames](https://docs.zelthy.com/frame)
 - [CRUD](https://docs.zelthy.com/crud)
@@ -62,7 +62,3 @@ You can contribute to Zelthy3 in many ways, including:
 
 
 #### Official Documentation: https://docs.zelthy.com/
-
-
-
-

@@ -15,7 +15,6 @@ from django_tenants.utils import (
     get_public_schema_urlconf,
 )
 from django_tenants.middleware.main import TenantMainMiddleware
-from django.conf import settings
 from django.utils import timezone
 
 
@@ -152,6 +151,6 @@ class TimezoneMiddleware(MiddlewareMixin):
                 for tz in timezones:
                     timezone_country[tz] = countrycode
             settings.PHONENUMBER_DEFAULT_REGION = timezone_country[tzname]
-        except Exception as e:
+        except Exception:
             timezone.deactivate()
         return self.get_response(request)

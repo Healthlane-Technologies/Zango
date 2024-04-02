@@ -1,23 +1,15 @@
 import unittest
-from decimal import Decimal
 from workspaces.Tenant3.update.models import (
     A,
     B,
     D,
-    DataPoint,
-    RelatedPoint,
-    UniqueNumber,
-    UniqueNumberChild,
 )
 from zelthy3.backend.apps.tenants.dynamic_models.workspace.base import Workspace
 from django_tenants.utils import get_tenant_model
-from django.db import connection, models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey
-from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
-from django.core.exceptions import FieldError
+from django.db import connection
+
 
 class TestForeignKey(unittest.TestCase):
-
     def setUp(self) -> None:
         tenant_model = get_tenant_model()
         env = tenant_model.objects.get(name="Tenant3")
@@ -30,7 +22,7 @@ class TestForeignKey(unittest.TestCase):
             for x in range(20):
                 B.objects.create(a=self.a1)
                 D.objects.create(a=self.a1)
-    
+
     def test_nonempty_update(self):
         """
         Update changes the right number of rows for a nonempty queryset

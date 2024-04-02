@@ -1,6 +1,7 @@
 from django.db import models
-from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey, ZOneToOneField
+from zelthy3.backend.apps.tenants.dynamic_models.fields import ZForeignKey
 from zelthy3.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+
 
 class DataPoint(DynamicModelBase):
     name = models.CharField(max_length=20)

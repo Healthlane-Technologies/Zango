@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$ENV" = "dev" ]; then 
+if [ "$ENV" = "dev" ]; then
     if [ -d "$PROJECT_NAME" ]; then
         echo "restarting existing project"
     else

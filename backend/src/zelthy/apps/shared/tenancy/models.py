@@ -10,9 +10,7 @@ from django_tenants.models import TenantMixin, DomainMixin
 from django.core.exceptions import ValidationError
 
 from zelthy.core.model_mixins import FullAuditMixin
-from zelthy.core.storage_utils import RandomUniqueFileName, ZFileField
-from zelthy.apps.permissions.models import PolicyModel
-from zelthy.apps.appauth.models import UserRoleModel
+from zelthy.core.storage_utils import ZFileField
 
 
 from .tasks import initialize_workspace
@@ -22,8 +20,6 @@ from .utils import (
     TIMEZONES,
     DATEFORMAT,
     DATETIMEFORMAT,
-    DEFAULT_THEME_CONFIG,
-    assign_policies_to_anonymous_user,
 )
 
 Choice = namedtuple("Choice", ["value", "display"])

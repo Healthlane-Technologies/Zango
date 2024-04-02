@@ -174,14 +174,14 @@ def install_package(package_name, version, tenant):
 
         tenant_obj = TenantModel.objects.get(name=tenant)
         connection.set_tenant(tenant_obj)
-        with connection.cursor() as c:
+        with connection.cursor():
             ws = Workspace(connection.tenant, request=None, as_systemuser=True)
             ws.ready()
             ws.sync_tasks(tenant)
             ws.sync_policies()
 
         return "Package Installed"
-    except Exception as e:
+    except Exception:
         import traceback
 
         return f"Package could not be installed\n Error: {traceback.format_exc()}"

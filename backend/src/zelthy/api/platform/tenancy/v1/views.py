@@ -3,7 +3,6 @@ import traceback
 
 from django_celery_results.models import TaskResult
 
-from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 
@@ -29,7 +28,6 @@ from .serializers import (
 
 
 class AppViewAPIV1(ZelthyGenericPlatformAPIView):
-
     def get(self, request, *args, **kwargs):
         try:
             action = request.GET.get("action")

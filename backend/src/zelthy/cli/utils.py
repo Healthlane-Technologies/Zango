@@ -1,6 +1,3 @@
-import re
-
-
 def replace_placeholders_in_file(filename, replacements):
     """
     Replaces placeholders in a file with specified values.

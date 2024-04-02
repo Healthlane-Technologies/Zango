@@ -1,4 +1,3 @@
-from importlib import import_module
 import pytz
 import json
 
@@ -13,7 +12,6 @@ def get_current_request():
 
 def get_current_role():
     from ..middleware.request import _request_local
-    from django.apps import apps
 
     # model = apps.get_model('appauth', 'UserRoleModel')
     return getattr(_request_local, "user_role", None)

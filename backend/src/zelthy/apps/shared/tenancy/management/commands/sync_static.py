@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 import os
 import shutil
 from django.conf import settings
@@ -35,8 +35,8 @@ class Command(BaseCommand):
         wks_obj = TenantModel.objects.get(name=options["workspace"])
         connection.set_tenant(wks_obj)
         ws = Workspace(wks_obj, None, True)
-        destination_path = settings.STATICFILES_DIRS[1] + "/workspaces/%s" % (
-            options["workspace"]
+        destination_path = (
+            settings.STATICFILES_DIRS[1] + "/workspaces/%s" % (options["workspace"])
         )
         if not os.path.exists(f"workspaces/{options['workspace']}/static"):
             os.makedirs(f"workspaces/{options['workspace']}/static")

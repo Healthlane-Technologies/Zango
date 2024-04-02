@@ -1,8 +1,8 @@
-import uuid
 from django.db.models import Q
 from django.db import models
 from django.db.models import JSONField
-from django.db.models.query import QuerySet
+from django.utils import timezone
+
 from zelthy.core.model_mixins import FullAuditMixin
 
 
@@ -22,45 +22,45 @@ class PermissionsModel(FullAuditMixin):
     def __str__(self):
         return self.name
 
-    @classmethod
-    def sync_perms(cls):
-        """
-        inspects the codebase and syncs the permissions
-        """
-        from django.db import connection
+    # @classmethod
+    # def sync_perms(cls):
+    #     """
+    #     inspects the codebase and syncs the permissions
+    #     """
+    #     from django.db import connection
 
-        app_dir = get_app_base_dir(connection.tenant)
-        # iterate through all views and add view perms
-        app_settings = get_app_settings(connection.tenant)
-        # routes = get_app_settings(connection.tenant)['routes']
-        routes = get_root_routes(connection.tenant)
-        for route in routes:
-            url_file = get_mod_url_filepath(connection.tenant, route["module"])
-            with url_file.open() as f:
-                _url_file = f.read()
-            # zcode = ZPreprocessor(
-            #               _url_file,
-            #               tenant=connection.tenant,
-            #               parent_path=url_file.parent,
-            #               app_dir=app_dir,
-            #               app_settings=app_settings
-            #               )
-            # c = ZimportStack(zcode, tenant=connection.tenant)
-            # c.process_import_and_execute()
-            # urlpatterns = c._globals['urlpatterns']
-            for pattern in urlpatterns:
-                if pattern.callback.__name__ == "view":
-                    view_name = pattern.callback.view_class.__name__
-                else:
-                    view_name = pattern.callback.__name__
-                # perms.append(route["module"]+"/"+view_name)
-                cls.objects.get_or_create(
-                    name=route["module"] + "/" + view_name, type="view"
-                )
+    #     app_dir = get_app_base_dir(connection.tenant)
+    # iterate through all views and add view perms
+    # app_settings = get_app_settings(connection.tenant)
+    # routes = get_app_settings(connection.tenant)['routes']
+    # routes = get_root_routes(connection.tenant)
+    # for route in routes:
+    #     url_file = get_mod_url_filepath(connection.tenant, route["module"])
+    #     with url_file.open() as f:
+    #         _url_file = f.read()
+    # zcode = ZPreprocessor(
+    #               _url_file,
+    #               tenant=connection.tenant,
+    #               parent_path=url_file.parent,
+    #               app_dir=app_dir,
+    #               app_settings=app_settings
+    #               )
+    # c = ZimportStack(zcode, tenant=connection.tenant)
+    # c.process_import_and_execute()
+    # urlpatterns = c._globals['urlpatterns']
+    # for pattern in urlpatterns:
+    #     if pattern.callback.__name__ == "view":
+    #         view_name = pattern.callback.view_class.__name__
+    #     else:
+    #         view_name = pattern.callback.__name__
+    #     # perms.append(route["module"]+"/"+view_name)
+    #     cls.objects.get_or_create(
+    #         name=route["module"] + "/" + view_name, type="view"
+    #     )
 
-        # iterate through all datamodels and add datamodel perms
+    # iterate through all datamodels and add datamodel perms
 
-        return
+    # return
 
 
 class PolicyModel(FullAuditMixin):

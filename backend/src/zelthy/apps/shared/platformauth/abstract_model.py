@@ -6,7 +6,6 @@ from django.contrib.auth.models import AbstractBaseUser
 # from django.xcontrib.postgres.fields import JSONField
 from django.db.models import JSONField
 from django.utils import timezone
-from django.contrib.auth.models import User
 
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -14,7 +13,6 @@ from phonenumber_field.modelfields import PhoneNumberField
 # from backend.core.storage_utils import S3PrivateFileField, RandomUniqueFileName
 from zelthy.core.storage_utils import RandomUniqueFileName
 from zelthy.core.model_mixins import FullAuditMixin
-from phonenumber_field.modelfields import PhoneNumberField
 
 
 class AbstractZelthyUserModel(AbstractBaseUser, FullAuditMixin):

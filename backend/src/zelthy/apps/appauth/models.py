@@ -11,9 +11,7 @@ from zelthy.apps.object_store.models import ObjectStore
 from zelthy.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
 
 
-from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.apps.shared.platformauth.abstract_model import (
-    AbstractZelthyUserModel,
     AbstractOldPasswords,
 )
 
@@ -67,14 +65,12 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     def __str__(self):
         return self.name
 
-
     def get_app_object(self, role_id):
         if self.app_objects:
             object_uuid = self.app_objects.get(str(role_id), None)
             if object_uuid:
                 return ObjectStore.get_object(object_uuid)
         return None
-
 
     def has_perm(self, request, perm_type, view=None, dataModel=None):
         if perm_type == "userAccess":
@@ -129,7 +125,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         role_ids=[],
         force_password_reset=True,
         require_verification=True,
-        app_objects=None
+        app_objects=None,
     ):
         """ """
         success = False
@@ -185,7 +181,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                         message = "App User created successfully."
             except Exception as e:
                 message = str(e)
-        return {"success": success, "message": message, 'app_user': app_user}
+        return {"success": success, "message": message, "app_user": app_user}
 
     def update_user(self, data):
         success = False

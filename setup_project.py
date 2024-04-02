@@ -5,7 +5,6 @@ import traceback
 import shutil
 import signal
 import subprocess
-import pwd
 
 
 def load_necessary_files(project_dir, project_name, without_db):
@@ -28,25 +27,17 @@ def load_necessary_files(project_dir, project_name, without_db):
 
 
 def write_env_file(project_dir, args):
-    # Get the current process' real user id (UID)
-    current_uid = os.getuid()
-
-    # Get the current process' real group id (GID)
-    current_gid = os.getgid()
-
-    # Retrieve the username associated with the current UID
-    current_username = pwd.getpwuid(current_uid).pw_name
     with open(f"{project_dir}/.env", "w") as f:
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
         f.write(f"PROJECT_NAME={args.project_name}\n")
-        f.write(f"POSTGRES_USER=zelthy_admin\n")
-        f.write(f"POSTGRES_PASSWORD=zelthy3pass\n")
-        f.write(f"POSTGRES_DB=zelthy\n")
-        f.write(f"POSTGRES_HOST=postgres\n")
-        f.write(f"POSTGRES_PORT=5432\n")
-        f.write(f"REDIS_HOST=redis\n")
-        f.write(f"REDIS_PORT=6379\n")
+        f.write("POSTGRES_USER=zelthy_admin\n")
+        f.write("POSTGRES_PASSWORD=zelthy3pass\n")
+        f.write("POSTGRES_DB=zelthy\n")
+        f.write("POSTGRES_HOST=postgres\n")
+        f.write("POSTGRES_PORT=5432\n")
+        f.write("REDIS_HOST=redis\n")
+        f.write("REDIS_PORT=6379\n")
 
 
 def build_core():
@@ -92,7 +83,7 @@ def setup_project(project_dir, project_name, without_db, start=False):
 
 def rebuild_core(project_dir):
     try:
-        subprocess.run(f"docker build -t zelthy3 .", shell=True, check=True)
+        subprocess.run("docker build -t zelthy3 .", shell=True, check=True)
         subprocess.run(
             f"docker compose -f {project_dir}/docker-compose.yml build",
             shell=True,

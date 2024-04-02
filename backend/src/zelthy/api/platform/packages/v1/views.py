@@ -1,4 +1,3 @@
-from django.utils.decorators import method_decorator
 from django.core import signing
 
 from zelthy.core.api import get_api_response, ZelthyGenericPlatformAPIView

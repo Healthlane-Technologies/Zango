@@ -2,7 +2,6 @@ import unittest
 from zelthy3.backend.apps.tenants.dynamic_models.workspace.base import Workspace
 from django_tenants.utils import get_tenant_model
 from django.db import connection
-from django.core.exceptions import FieldError
 from workspaces.Tenant3.one_to_one.models import (
     Image,
     Parent1,
@@ -15,8 +14,8 @@ from workspaces.Tenant3.one_to_one.models import (
     UserStatResult,
 )
 
-class TestSelectRelatedOneToOne(unittest.TestCase):
 
+class TestSelectRelatedOneToOne(unittest.TestCase):
     def setUp(self) -> None:
         tenant_model = get_tenant_model()
         env = tenant_model.objects.get(name="Tenant3")
@@ -44,7 +43,7 @@ class TestSelectRelatedOneToOne(unittest.TestCase):
             # p2.save()
             # c2 = Child2(name1="Child2 Parent1", parent2=p2, value=2)
             # c2.save()
-    
+
     def test_basic(self):
         with connection.cursor() as c:
             u = OUser.objects.select_related("userprofile").get(username="test")
@@ -90,7 +89,6 @@ class TestSelectRelatedOneToOne(unittest.TestCase):
             u = OUser.objects.select_related().get(username="test")
             self.assertEqual(u.userstat.posts, 150)
 
-
     def test_follow_inheritance(self):
         with connection.cursor() as c:
             stat = UserStat.objects.select_related("user", "advanceduserstat").get(
@@ -132,15 +130,12 @@ class TestSelectRelatedOneToOne(unittest.TestCase):
         Ticket #13839: select_related() should NOT cache None
         for missing objects on a reverse 0-1 relation.
         """
-        
 
         with connection.cursor() as c:
             Image.objects.create(name="imag1")
             image = Image.objects.select_related("product").get()
             with self.assertRaises(Product.DoesNotExist):
                 image.product
-
-
 
     def test_multiple_subclass(self):
         with connection.cursor() as c:
@@ -153,10 +148,9 @@ class TestSelectRelatedOneToOne(unittest.TestCase):
             self.assertEqual(p.child2.name1, "Child2 Parent1")
 
     # def test_self_relation(self):
-        
+
     #     with connection.cursor() as c:
     #         item1 = LinkedList.objects.create(name="item1")
     #         LinkedList.objects.create(name="item2", previous_item=item1)
     #         item1_db = LinkedList.objects.select_related("next_item").get(name="item1")
     #         self.assertEqual(item1_db.next_item.name, "item2")
-        

@@ -196,7 +196,7 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
     def createUser(self, execution_json, **kwargs):
         try:
             if AppUserModel.objects.filter(email=execution_json["email"]).exists():
-                return (False, f"This email ID is already taken")
+                return (False, "This email ID is already taken")
             user = AppUserModel.objects.create(
                 email=execution_json["email"],
                 name=execution_json["name"],
@@ -212,10 +212,8 @@ class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
         if UserRoleModel.objects.filter(
             name__icontains=execution_json["role_name"]
         ).exists():
-            return (False, f"User Role with this name already exists!")
-        role = UserRoleModel.objects.create(
-            name=execution_json["role_name"], is_active=True
-        )
+            return (False, "User Role with this name already exists!")
+        UserRoleModel.objects.create(name=execution_json["role_name"], is_active=True)
         return (True, "Succesfully executed")
 
     def mapRole(self, execution_json, **kwargs):

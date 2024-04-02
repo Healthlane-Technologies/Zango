@@ -25,7 +25,7 @@ def RandomUniqueFileName(instance, filename):
         extension = filename.split(".")[-1]
         file_ = "%s.%s" % (uuid.uuid4(), extension)
         return os.path.join(path, file_)
-    except:
+    except Exception:
         return
 
 
@@ -48,7 +48,7 @@ def validate_file_extension(value):
         ".zip",
         ".ico",
     ]
-    if not ext.lower() in valid_extensions:
+    if ext.lower() not in valid_extensions:
         raise ValidationError(
             "The file type you are trying to upload is not supported."
         )
