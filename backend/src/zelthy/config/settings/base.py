@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     # "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
+    "zelthy.apps.auditlog.middleware.AuditlogMiddleware",
 ]
 
 

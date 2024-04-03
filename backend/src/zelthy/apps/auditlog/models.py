@@ -56,20 +56,11 @@ class LogEntryManager(models.Manager):
             if callable(get_additional_data):
                 kwargs.setdefault("additional_data", get_additional_data())
             db = instance._state.db
-            request = get_current_request()
-            db = instance._state.db
             try:
                 obj = ObjectStore.objects.get(object_uuid=instance.object_uuid)
                 kwargs["object_ref"] = obj
             except (FieldError, AttributeError):
                 pass
-            kwargs["remote_addr"] = request.META.get("REMOTE_ADDR")
-            if str(request.user) != "AnonymousUser":
-                # check type of class
-                if getattr(request.user, "is_superuser", None):
-                    kwargs["platform_actor_id"] = request.user.id
-                else:
-                    kwargs["tenant_actor_id"] = request.user.id
             return (
                 self.create(**kwargs)
                 if db is None or db == ""
@@ -357,7 +348,7 @@ class LogEntry(models.Model):
     changes = models.JSONField(null=True, verbose_name=_("change message"))
     tenant_actor = models.ForeignKey(
         to="appauth.AppUserModel",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,
         blank=True,
         null=True,
         related_name="+",
@@ -365,7 +356,7 @@ class LogEntry(models.Model):
     )
     platform_actor = models.ForeignKey(
         to="platformauth.PlatformUserModel",
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,
         blank=True,
         null=True,
         related_name="+",

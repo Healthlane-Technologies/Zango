@@ -1,7 +1,10 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 
 from zelthy.apps.auditlog.cid import set_cid
 from zelthy.apps.auditlog.context import set_actor
+from zelthy.apps.appauth.models import AppUserModel
+from zelthy.apps.shared.platformauth.models import PlatformUserModel
+from zelthy.apps.dynamic_models.permissions import get_platform_user
 
 
 class AuditlogMiddleware:
@@ -33,14 +36,18 @@ class AuditlogMiddleware:
     @staticmethod
     def _get_actor(request):
         user = getattr(request, "user", None)
-        if isinstance(user, get_user_model()) and user.is_authenticated:
+        if user is None or isinstance(user, AnonymousUser):
+            platform_user = get_platform_user(request)
+            if platform_user:
+                user = platform_user
+                return user
+        if user.is_authenticated:
             return user
         return None
 
     def __call__(self, request):
         remote_addr = self._get_remote_addr(request)
         user = self._get_actor(request)
-
         set_cid(request)
 
         with set_actor(actor=user, remote_addr=remote_addr):
