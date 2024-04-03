@@ -114,6 +114,7 @@ class PlatformUserModel(AbstractZelthyUserModel):
                                     3. Must contain at least one lowercase letter.
                                     4. Must contain at least one number.
                                     5. Must contain at least one special character."""
+                    else:
                         platform_user = cls.objects.create(
                             name=name,
                             email=email,
