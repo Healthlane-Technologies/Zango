@@ -10,36 +10,121 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
-        ('object_store', '0001_initial'),
-        ('appauth', '0006_appusermodel_app_objects'),
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("object_store", "0001_initial"),
+        ("appauth", "0006_appusermodel_app_objects"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='LogEntry',
+            name="LogEntry",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('object_pk', models.CharField(db_index=True, max_length=255, verbose_name='object pk')),
-                ('object_id', models.BigIntegerField(blank=True, db_index=True, null=True, verbose_name='object id')),
-                ('object_repr', models.TextField(verbose_name='object representation')),
-                ('serialized_data', models.JSONField(null=True)),
-                ('action', models.PositiveSmallIntegerField(choices=[(0, 'create'), (1, 'update'), (2, 'delete'), (3, 'access')], db_index=True, verbose_name='action')),
-                ('changes_text', models.TextField(blank=True, verbose_name='change message')),
-                ('changes', models.JSONField(null=True, verbose_name='change message')),
-                ('cid', models.CharField(blank=True, db_index=True, max_length=255, null=True, verbose_name='Correlation ID')),
-                ('remote_addr', models.GenericIPAddressField(blank=True, null=True, verbose_name='remote address')),
-                ('timestamp', models.DateTimeField(db_index=True, default=django.utils.timezone.now, verbose_name='timestamp')),
-                ('additional_data', models.JSONField(blank=True, null=True, verbose_name='additional data')),
-                ('actor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='appauth.appusermodel', verbose_name='actor')),
-                ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='contenttypes.contenttype', verbose_name='content type')),
-                ('object_ref', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.DO_NOTHING, to='object_store.objectstore')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "object_pk",
+                    models.CharField(
+                        db_index=True, max_length=255, verbose_name="object pk"
+                    ),
+                ),
+                (
+                    "object_id",
+                    models.BigIntegerField(
+                        blank=True, db_index=True, null=True, verbose_name="object id"
+                    ),
+                ),
+                ("object_repr", models.TextField(verbose_name="object representation")),
+                ("serialized_data", models.JSONField(null=True)),
+                (
+                    "action",
+                    models.PositiveSmallIntegerField(
+                        choices=[
+                            (0, "create"),
+                            (1, "update"),
+                            (2, "delete"),
+                            (3, "access"),
+                        ],
+                        db_index=True,
+                        verbose_name="action",
+                    ),
+                ),
+                (
+                    "changes_text",
+                    models.TextField(blank=True, verbose_name="change message"),
+                ),
+                ("changes", models.JSONField(null=True, verbose_name="change message")),
+                (
+                    "cid",
+                    models.CharField(
+                        blank=True,
+                        db_index=True,
+                        max_length=255,
+                        null=True,
+                        verbose_name="Correlation ID",
+                    ),
+                ),
+                (
+                    "remote_addr",
+                    models.GenericIPAddressField(
+                        blank=True, null=True, verbose_name="remote address"
+                    ),
+                ),
+                (
+                    "timestamp",
+                    models.DateTimeField(
+                        db_index=True,
+                        default=django.utils.timezone.now,
+                        verbose_name="timestamp",
+                    ),
+                ),
+                (
+                    "additional_data",
+                    models.JSONField(
+                        blank=True, null=True, verbose_name="additional data"
+                    ),
+                ),
+                (
+                    "actor",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to="appauth.appusermodel",
+                        verbose_name="actor",
+                    ),
+                ),
+                (
+                    "content_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="+",
+                        to="contenttypes.contenttype",
+                        verbose_name="content type",
+                    ),
+                ),
+                (
+                    "object_ref",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="object_store.objectstore",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'log entry',
-                'verbose_name_plural': 'log entries',
-                'ordering': ['-timestamp'],
-                'get_latest_by': 'timestamp',
+                "verbose_name": "log entry",
+                "verbose_name_plural": "log entries",
+                "ordering": ["-timestamp"],
+                "get_latest_by": "timestamp",
             },
         ),
     ]

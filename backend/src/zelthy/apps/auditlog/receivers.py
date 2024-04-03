@@ -155,12 +155,6 @@ def make_log_m2m_changes(field_name):
     @check_disable
     def log_m2m_changes(signal, action, **kwargs):
         """Handle m2m_changed and call LogEntry.objects.log_m2m_changes as needed."""
-        print("Action is ", action)
-        print("Queryset is ", kwargs["model"].objects.all())
-        print(
-            "Other queryset is ",
-            kwargs["model"].objects.filter(pk__in=kwargs["pk_set"]),
-        )
         if action not in ["post_add", "post_clear", "post_remove"]:
             return
 

@@ -12,9 +12,9 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
     timestamp = serializers.SerializerMethodField()
     action = serializers.SerializerMethodField()
     object = serializers.CharField(source="object_repr")
+    object_uuid = serializers.SerializerMethodField()
 
     def get_action(self, obj):
-
         return obj.get_action_display().capitalize()
 
     def get_timestamp(self, obj):
@@ -31,6 +31,10 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
             return actor.user.username
         return None
 
+    def get_object_uuid(self, obj):
+        if obj.object_ref is not None:
+            return str(obj.object_ref.object_uuid)
+
     class Meta:
         model = LogEntry
         fields = [
@@ -38,6 +42,8 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
             "actor",
             "action",
             "object",
+            "object_id",
+            "object_uuid",
             "timestamp",
             "changes",
         ]

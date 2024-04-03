@@ -3,7 +3,6 @@ import time
 from contextvars import ContextVar
 from functools import partial
 
-from django.contrib.auth import get_user_model
 from django.db.models.signals import pre_save
 
 from zelthy.apps.auditlog.models import LogEntry
@@ -47,6 +46,10 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
 
     This function becomes a valid signal receiver when it is curried with the actor and a dispatch id.
     """
+    from zelthy.apps.appauth.models import AppUserModel
+    from zelthy.apps.shared.platformauth.models import PlatformUserModel
+    from django.contrib.auth.models import User
+
     try:
         auditlog = auditlog_value.get()
     except LookupError:
@@ -54,14 +57,28 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
     else:
         if signal_duid != auditlog["signal_duid"]:
             return
-        auth_user_model = get_user_model()
         if (
             sender == LogEntry
-            and isinstance(user, auth_user_model)
-            and instance.actor is None
+            and isinstance(user, AppUserModel)
+            and instance.tenant_actor is None
         ):
-            instance.actor = user
-
+            instance.tenant_actor = user
+        elif (
+            sender == LogEntry
+            and isinstance(user, PlatformUserModel)
+            and instance.platform_actor is None
+        ):
+            instance.platform_actor = user
+        elif (
+            sender == LogEntry
+            and isinstance(user, User)
+            and instance.platform_actor is None
+        ):
+            try:
+                platform_user = PlatformUserModel.objects.get(user=user)
+                instance.platform_actor = platform_user
+            except Exception:
+                pass
         instance.remote_addr = auditlog["remote_addr"]
 
 

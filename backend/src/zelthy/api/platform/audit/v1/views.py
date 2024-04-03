@@ -52,8 +52,10 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "tenant_actor": "tenant_actor__name__icontains",
             "platform_actor": "platform_actor__name__icontains",
             "object_id": "object_id",
-            "log_id": "id",
+            "id": "id",
             "object_repr": "object_repr__icontains",
+            "changes": "changes__icontains",
+            "object_uuid": "object_ref__object_uuid__icontains",
         }
         search_filters = {
             "log_id": self.process_id,
