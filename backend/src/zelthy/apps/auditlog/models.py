@@ -26,9 +26,7 @@ from django.utils.encoding import smart_str
 from django.utils.translation import gettext_lazy as _
 
 from zelthy.apps.auditlog.diff import mask_str
-from zelthy.core.utils import get_current_request
 from zelthy.apps.object_store.models import ObjectStore
-from zelthy.apps.exportjob.models import ExportJob
 
 DEFAULT_OBJECT_REPR = "<error forming object repr>"
 
@@ -59,7 +57,7 @@ class LogEntryManager(models.Manager):
             try:
                 obj = ObjectStore.objects.get(object_uuid=instance.object_uuid)
                 kwargs["object_ref"] = obj
-            except (FieldError, AttributeError):
+            except (FieldError, AttributeError, ObjectStore.DoesNotExist):
                 pass
             return (
                 self.create(**kwargs)
@@ -348,7 +346,7 @@ class LogEntry(models.Model):
     changes = models.JSONField(null=True, verbose_name=_("change message"))
     tenant_actor = models.ForeignKey(
         to="appauth.AppUserModel",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
         related_name="+",
@@ -356,7 +354,7 @@ class LogEntry(models.Model):
     )
     platform_actor = models.ForeignKey(
         to="platformauth.PlatformUserModel",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
         related_name="+",
@@ -599,7 +597,3 @@ def _changes_func() -> Callable[[LogEntry], Dict]:
     if settings.AUDITLOG_USE_TEXT_CHANGES_IF_JSON_IS_NOT_PRESENT:
         return json_then_text
     return default
-
-
-class AuditLogExport(ExportJob):
-    file = models.FileField()
