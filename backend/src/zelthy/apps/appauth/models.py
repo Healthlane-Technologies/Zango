@@ -9,15 +9,12 @@ from zelthy.core.model_mixins import FullAuditMixin
 
 from zelthy.apps.object_store.models import ObjectStore
 from zelthy.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
-
-
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.apps.shared.platformauth.abstract_model import (
     AbstractZelthyUserModel,
     AbstractOldPasswords,
 )
-
-from ..permissions.models import PolicyModel, PolicyGroupModel
+from zelthy.apps.auditlog.registry import auditlog
 
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.mixin import PermissionMixin
@@ -26,10 +23,10 @@ from ..permissions.mixin import PermissionMixin
 class UserRoleModel(FullAuditMixin, PermissionMixin):
     name = models.CharField("Unique Name of the User Role", max_length=50, unique=True)
     policies = models.ManyToManyField(
-        PolicyModel, related_name="role_policies", blank=True
+        "permissions.PolicyModel", related_name="role_policies", blank=True
     )
     policy_groups = models.ManyToManyField(
-        PolicyGroupModel, related_name="role_policy_groups", blank=True
+        "permissions.PolicyGroupModel", related_name="role_policy_groups", blank=True
     )
     config = models.JSONField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -58,15 +55,16 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
-    policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
+    policies = models.ManyToManyField(
+        "permissions.PolicyModel", related_name="user_policies"
+    )
     policy_groups = models.ManyToManyField(
-        PolicyGroupModel, related_name="user_policy_groups"
+        "permissions.PolicyGroupModel", related_name="user_policy_groups"
     )
     app_objects = models.JSONField(null=True)
 
     def __str__(self):
         return self.name
-
 
     def get_app_object(self, role_id):
         if self.app_objects:
@@ -74,7 +72,6 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
             if object_uuid:
                 return ObjectStore.get_object(object_uuid)
         return None
-
 
     def has_perm(self, request, perm_type, view=None, dataModel=None):
         if perm_type == "userAccess":
@@ -129,7 +126,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
         role_ids=[],
         force_password_reset=True,
         require_verification=True,
-        app_objects=None
+        app_objects=None,
     ):
         """ """
         success = False
@@ -185,7 +182,7 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
                         message = "App User created successfully."
             except Exception as e:
                 message = str(e)
-        return {"success": success, "message": message, 'app_user': app_user}
+        return {"success": success, "message": message, "app_user": app_user}
 
     def update_user(self, data):
         success = False
@@ -266,3 +263,8 @@ class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
+
+
+auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
+auditlog.register(OldPasswords)
+auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
