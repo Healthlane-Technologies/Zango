@@ -11,9 +11,6 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
-ENTERPRISE_PUBLIC_APPS = []
-ENTERPRISE_TENANT_APPS = []
-
 SHARED_APPS = [
     "django_tenants",  # mandatory
     # 'zelthy',
@@ -25,7 +22,7 @@ SHARED_APPS = [
     "django.contrib.admin",
     "crispy_forms",
     "crispy_bootstrap5",
-    # "debug_toolbar",
+    "debug_toolbar",
     # 'phonenumber_field',
     # 'django_otp',
     # 'django_otp.plugins.otp_static',
@@ -54,11 +51,11 @@ TENANT_APPS = [
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
-    # "debug_toolbar",
+    "debug_toolbar",
     "crispy_forms",
     "django_celery_results",
     # "cachalot",
-] + ENTERPRISE_TENANT_APPS
+]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
@@ -84,7 +81,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    # "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
     "zelthy.apps.auditlog.middleware.AuditlogMiddleware",
 ]
