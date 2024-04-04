@@ -25,10 +25,10 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
     permission_classes = (IsSuperAdminPlatformUser,)
     pagination_class = ZelthyAPIPagination
 
-    def process_timestamp(self, timestamp):
+    def process_timestamp(self, timestamp, timezone):
         try:
-            ts = json.loads(json.loads(timestamp))
-            tz = pytz.timezone(connection.tenant.timezone)
+            ts = json.loads(timestamp)
+            tz = pytz.timezone(timezone)
             ts["start"] = tz.localize(
                 datetime.strptime(ts["start"] + "-" + "00:00", "%Y-%m-%d-%H:%M"),
                 is_dst=None,
@@ -38,7 +38,7 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 is_dst=None,
             )
             return ts
-        except ValueError:
+        except Exception:
             return None
 
     def process_id(self, id):
@@ -47,7 +47,7 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         except ValueError:
             return None
 
-    def get_queryset(self, search, columns={}):
+    def get_queryset(self, search, tenant, columns={}):
 
         field_name_query_mapping = {
             "tenant_actor": "tenant_actor__name__icontains",
@@ -75,35 +75,55 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                     filters |= Q(**{query: search})
         records = records.filter(filters).distinct()
         if columns.get("timestamp"):
-            processed = self.process_timestamp(columns.get("timestamp"))
+            processed = self.process_timestamp(
+                columns.get("timestamp"), tenant.timezone
+            )
             if processed is not None:
                 records = records.filter(
                     timestamp__gte=processed["start"], timestamp__lte=processed["end"]
                 )
         if columns.get("action"):
             records = records.filter(action=columns.get("action"))
+        if columns.get("object_type"):
+            records = records.filter(
+                content_type=ContentType.objects.get(id=columns.get("object_type"))
+            )
         return records
 
     def get_dropdown_options(self):
         options = {}
         options["action"] = [
             {
-                "id": "0",
+                "id": 0,
                 "label": "Create",
             },
             {
-                "id": "1",
+                "id": 1,
                 "label": "Update",
             },
             {
-                "id": "2",
+                "id": 2,
                 "label": "Delete",
             },
             {
-                "id": "3",
+                "id": 3,
                 "label": "Access",
             },
         ]
+        options["object_type"] = []
+        object_types = list(
+            LogEntry.objects.all()
+            .values_list("content_type_id", "content_type__model")
+            .order_by("content_type__model")
+            .distinct()
+        )
+        for object_type in object_types:
+            options["object_type"].append(
+                {
+                    "id": object_type[0],
+                    "label": object_type[1],
+                }
+            )
         return options
 
     def get(self, request, *args, **kwargs):
@@ -113,7 +133,7 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             include_dropdown_options = request.GET.get("include_dropdown_options")
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
-            audit_logs = self.get_queryset(search, columns)
+            audit_logs = self.get_queryset(search, tenant, columns)
             paginated_audit_logs = self.paginate_queryset(
                 audit_logs, request, view=self
             )

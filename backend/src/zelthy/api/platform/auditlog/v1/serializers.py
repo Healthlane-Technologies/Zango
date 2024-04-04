@@ -13,6 +13,7 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
     action = serializers.SerializerMethodField()
     object = serializers.CharField(source="object_repr")
     object_uuid = serializers.SerializerMethodField()
+    object_type = serializers.SerializerMethodField()
 
     def get_action(self, obj):
         return obj.get_action_display().capitalize()
@@ -35,6 +36,9 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         if obj.object_ref is not None:
             return str(obj.object_ref.object_uuid)
 
+    def get_object_type(self, obj):
+        return obj.content_type.model
+
     class Meta:
         model = LogEntry
         fields = [
@@ -44,6 +48,7 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
             "object",
             "object_id",
             "object_uuid",
+            "object_type",
             "timestamp",
             "changes",
         ]
