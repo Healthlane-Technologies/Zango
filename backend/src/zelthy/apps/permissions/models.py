@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models import JSONField
 from django.db.models.query import QuerySet
 from zelthy.core.model_mixins import FullAuditMixin
-from zelthy.apps.auditlog.registry import auditlog
+from zelthy.apps.auditlogs.registry import auditlog
 
 
 class PermissionsModel(FullAuditMixin):

@@ -47,7 +47,7 @@ TENANT_APPS = [
     "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
     "zelthy.apps.tasks",
-    "zelthy.apps.auditlog",
+    "zelthy.apps.auditlogs",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -83,7 +83,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
-    "zelthy.apps.auditlog.middleware.AuditlogMiddleware",
+    "zelthy.apps.auditlogs.middleware.AuditlogMiddleware",
 ]
 
 

@@ -259,7 +259,7 @@ class Workspace:
                 continue
             split = m.split(".")[2:]
             module = self.plugin_source.load_plugin(".".join(split))
-            from zelthy.apps.auditlog.registry import auditlog
+            from zelthy.apps.auditlogs.registry import auditlog
 
             for name, obj in inspect.getmembers(module):
                 if (
