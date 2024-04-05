@@ -94,19 +94,19 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         options = {}
         options["action"] = [
             {
-                "id": 0,
+                "id": "0",
                 "label": "Create",
             },
             {
-                "id": 1,
+                "id": "1",
                 "label": "Update",
             },
             {
-                "id": 2,
+                "id": "2",
                 "label": "Delete",
             },
             {
-                "id": 3,
+                "id": "3",
                 "label": "Access",
             },
         ]
