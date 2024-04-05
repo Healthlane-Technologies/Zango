@@ -53,7 +53,12 @@ services:
         condition: service_healthy
 
   celery:
-    image: kczelthy/zelthy3:latest
+    build:
+      context: .
+      dockerfile: prod.dockerfile
+      args:
+        - UID=${UID}
+        - GID=${GID}
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
     volumes:
       - .:/zelthy/
