@@ -5,7 +5,7 @@
 </h1>
 
 
-[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)  • [Discord](https://discord.gg/qgbxfWeC)
+[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)  • [Discord](https://discord.com/invite/WHvVjU23e7)
 
 
 [![PyPI version](https://badge.fury.io/py/zelthy3.svg)](https://badge.fury.io/py/zelthy3)
@@ -52,13 +52,13 @@ A few essential packages are freely available. These packages enable development
 - [Workflow](https://docs.zelthy.com/workflow)
 
 
-#### 🌟 [Get Involved and Make a Difference!](https://discord.gg/qgbxfWeC)
+#### 🌟 [Get Involved and Make a Difference!](https://discord.com/invite/WHvVjU23e7)
 
 Join our community and help build **the framework for business apps**. Here's how you can get involved:
 
 - **Star the Repo:** Show your support by giving us a star! ⭐️
 - **Spread the Word:** Share Zelthy3 with your colleagues and friends. 📣
-- **Join the Conversation:** Share your brilliant ideas and suggestions on Discord [here](https://discord.gg/qgbxfWeC). 💬
+- **Join the Conversation:** Share your brilliant ideas and suggestions on Discord [here](https://discord.com/invite/WHvVjU23e7). 💬
 - **Report Issues:** Notice something not quite right? Let us know by creating an issue. Your feedback is invaluable! 🐛
 - **Contribute Code:** Dive into open issues and send pull requests to help us squash bugs and implement exciting enhancements. 🛠️
 
