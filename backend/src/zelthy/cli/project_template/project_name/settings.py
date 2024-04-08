@@ -116,3 +116,16 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = "static/"
 STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
+
+
+# Check if the log folder exists, if not, create it
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
+
+# Check if the log file exists, if not, create it
+if not os.path.exists(log_file):
+    with open(log_file, 'a'):
+        pass  # Create an empty file
+
+
+LOGGING['handlers']['file']['filename'] =  log_file
