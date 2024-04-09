@@ -6,7 +6,7 @@ from django_celery_beat.models import PeriodicTask
 
 from zelthy.core.model_mixins import FullAuditMixin
 from zelthy.apps.permissions.models import PolicyModel
-from zelthy.apps.auditlog.registry import auditlog
+from zelthy.apps.auditlogs.registry import auditlog
 
 
 class AppTask(FullAuditMixin):

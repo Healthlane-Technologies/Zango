@@ -14,7 +14,7 @@ from zelthy.core.api.utils import ZelthyAPIPagination
 from zelthy.core.permissions import IsSuperAdminPlatformUser
 from zelthy.core.utils import get_search_columns
 from zelthy.apps.shared.tenancy.models import TenantModel
-from zelthy.apps.auditlog.models import LogEntry
+from zelthy.apps.auditlogs.models import LogEntry
 from zelthy.core.common_utils import set_app_schema_path
 
 from .serializers import AuditLogSerializerModel
@@ -22,7 +22,6 @@ from .serializers import AuditLogSerializerModel
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    permission_classes = (IsSuperAdminPlatformUser,)
     pagination_class = ZelthyAPIPagination
 
     def process_timestamp(self, timestamp, timezone):
@@ -47,7 +46,7 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         except ValueError:
             return None
 
-    def get_queryset(self, search, tenant, columns={}):
+    def get_queryset(self, search, tenant, columns={}, model_type=None):
 
         field_name_query_mapping = {
             "tenant_actor": "tenant_actor__name__icontains",
@@ -63,7 +62,20 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             "object_id": self.process_id,
             "timestamp": self.process_timestamp,
         }
-        records = LogEntry.objects.all().order_by("-id")
+        if model_type == "dynamic_models":
+            records = (
+                LogEntry.objects.all()
+                .order_by("-id")
+                .filter(content_type__app_label=model_type)
+            )
+        elif model_type == "core_models":
+            records = (
+                LogEntry.objects.all()
+                .order_by("-id")
+                .exclude(content_type__app_label="dynamic_models")
+            )
+        else:
+            records = LogEntry.objects.all().order_by("-id")
         if search == "" and columns == {}:
             return records
         filters = Q()
@@ -105,10 +117,6 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 "id": "2",
                 "label": "Delete",
             },
-            {
-                "id": "3",
-                "label": "Access",
-            },
         ]
         options["object_type"] = []
         object_types = list(
@@ -131,9 +139,10 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             app_uuid = kwargs.get("app_uuid")
             tenant = TenantModel.objects.get(uuid=app_uuid)
             include_dropdown_options = request.GET.get("include_dropdown_options")
+            model_type = request.GET.get("model_type", None)
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
-            audit_logs = self.get_queryset(search, tenant, columns)
+            audit_logs = self.get_queryset(search, tenant, columns, model_type)
             paginated_audit_logs = self.paginate_queryset(
                 audit_logs, request, view=self
             )

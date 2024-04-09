@@ -3,12 +3,13 @@ import importlib
 from rest_framework import serializers
 
 from zelthy.api.platform.tenancy.v1.serializers import AppUserModelSerializerModel
-from zelthy.apps.auditlog.models import LogEntry
+from zelthy.apps.auditlogs.models import LogEntry
 from zelthy.core.utils import get_datetime_str_in_tenant_timezone, get_current_request
 
 
 class AuditLogSerializerModel(serializers.ModelSerializer):
     actor = serializers.SerializerMethodField()
+    actor_type = serializers.SerializerMethodField()
     timestamp = serializers.SerializerMethodField()
     action = serializers.SerializerMethodField()
     object = serializers.CharField(source="object_repr")
@@ -24,13 +25,18 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         )
 
     def get_actor(self, obj):
-        actor = obj.tenant_actor
-        if actor is not None:
-            return actor.name
-        actor = obj.platform_actor
-        if actor is not None:
-            return actor.user.username
-        return None
+        return (
+            obj.tenant_actor.name
+            if obj.tenant_actor
+            else obj.platform_actor.name if obj.platform_actor else None
+        )
+
+    def get_actor_type(self, obj):
+        return (
+            "tenant_actor"
+            if obj.tenant_actor
+            else "platform_actor" if obj.platform_actor else None
+        )
 
     def get_object_uuid(self, obj):
         if obj.object_ref is not None:
@@ -44,6 +50,7 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         fields = [
             "id",
             "actor",
+            "actor_type",
             "action",
             "object",
             "object_id",

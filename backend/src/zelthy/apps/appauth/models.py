@@ -14,7 +14,7 @@ from zelthy.apps.shared.platformauth.abstract_model import (
     AbstractZelthyUserModel,
     AbstractOldPasswords,
 )
-from zelthy.apps.auditlog.registry import auditlog
+from zelthy.apps.auditlogs.registry import auditlog
 
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.mixin import PermissionMixin
