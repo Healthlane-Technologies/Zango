@@ -3,6 +3,8 @@ import os
 from django_tenants.management.commands.migrate_schemas import MigrateSchemasCommand
 from django.conf import settings
 from django.db import connection
+from django.core.management.base import CommandError
+
 from zelthy.apps.shared.tenancy.models import TenantModel
 
 
@@ -35,5 +37,12 @@ class Command(MigrateSchemasCommand):
             settings.MIGRATION_MODULES = {
                 f"dynamic_models": f"workspaces.{ options['workspace']}.packages.{options['package']}.migrations"
             }
+        try:
+            settings.MIGRATION_MODULES = {app_label: app_migration_path}
+        except AttributeError:
+            raise CommandError(
+                f"Failed to set migration modules for '{app_label}'. "
+                f"Please check your settings configuration and try again."
+            )
         options["schema_name"] = tenant_obj.schema_name
         super().handle(*args, **options)
