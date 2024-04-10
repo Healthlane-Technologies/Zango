@@ -18,6 +18,8 @@
     var csrf_token = "{{ csrf_token }}";
   </script>
   <script src="{% static 'app_panel/js/build.v1.0.44.min.js' %}"></script>
+  <script src="{% static 'js/jquery/3.7.1/jquery.min.js' %}"></script>
+  {% include 'session_security/all.html' %}
 </body>
 
 </html>

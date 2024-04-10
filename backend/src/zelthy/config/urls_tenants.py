@@ -7,8 +7,7 @@ urlpatterns = [
     re_path(r"^", include("zelthy.apps.appauth.urls")),
     re_path(r"api/auth/", include("knox.urls")),
     re_path(r"api/", include("zelthy.api.app_auth.urls")),
-    path("__debug__/", include("debug_toolbar.urls")),
-    re_path(r"^((?:[\w\-:.,]+/)*)$", include("zelthy.apps.dynamic_models.urls")),
+    re_path(r"session_security/", include("session_security.urls")),
 ]
 
 if settings.DEBUG:
@@ -16,3 +15,8 @@ if settings.DEBUG:
         path("__debug__/", include("debug_toolbar.urls")),
     ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# include dynamic views
+urlpatterns += [
+    re_path(r"^((?:[\w\-:.,]+/)*)$", include("zelthy.apps.dynamic_models.urls")),
+]

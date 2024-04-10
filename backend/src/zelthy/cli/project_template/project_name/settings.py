@@ -7,7 +7,11 @@ from zelthy.config.settings.base import *
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env(
-    DEBUG=(bool, True), REDIS_HOST=(str, "127.0.0.1"), REDIS_PORT=(str, "6379")
+    DEBUG=(bool, True),
+    REDIS_HOST=(str, "127.0.0.1"),
+    REDIS_PORT=(str, "6379"),
+    SESSION_SECURITY_WARN_AFTER=(int, 1700),
+    SESSION_SECURITY_EXPIRE_AFTER=(int, 1800),
 )
 environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -116,3 +120,7 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = "static/"
 STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
+
+# Session Security
+SESSION_SECURITY_WARN_AFTER = env("SESSION_SECURITY_WARN_AFTER")
+SESSION_SECURITY_EXPIRE_AFTER = env("SESSION_SECURITY_EXPIRE_AFTER")
