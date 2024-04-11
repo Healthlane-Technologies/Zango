@@ -1,6 +1,6 @@
 import sys
 import os
-
+from datetime import timedelta
 import zelthy
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -48,6 +48,7 @@ TENANT_APPS = [
     "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
     "zelthy.apps.tasks",
+    "zelthy.apps.accesslogs",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -55,6 +56,7 @@ TENANT_APPS = [
     "crispy_forms",
     "django_celery_results",
     # "cachalot",
+    "axes",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -83,10 +85,12 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 
 AUTHENTICATION_BACKENDS = (
+    "axes.backends.AxesStandaloneBackend",
     "zelthy.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
     "zelthy.apps.appauth.auth_backend.AppUserModelBackend",
 )
@@ -163,3 +167,13 @@ X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
+
+# Axes lockout
+AXES_BEHIND_REVERSE_PROXY = True
+AXES_COOLOFF_TIME = timedelta(seconds=100)
+AXES_LOCK_OUT_AT_FAILURE = True
+AXES_LOGIN_FAILURE_LIMIT = 5
+AXES_ENABLED = True
+AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = True
+AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_ENABLE_ACCESS_FAILURE_LOG = True
