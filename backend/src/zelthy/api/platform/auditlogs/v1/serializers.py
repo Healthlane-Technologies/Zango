@@ -12,7 +12,6 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
     actor_type = serializers.SerializerMethodField()
     timestamp = serializers.SerializerMethodField()
     action = serializers.SerializerMethodField()
-    object = serializers.CharField(source="object_repr")
     object_uuid = serializers.SerializerMethodField()
     object_type = serializers.SerializerMethodField()
 
@@ -52,7 +51,6 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
             "actor",
             "actor_type",
             "action",
-            "object",
             "object_id",
             "object_uuid",
             "object_type",
