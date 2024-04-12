@@ -1,4 +1,4 @@
-django>=3.0
+django==4.2.11
 psycopg2-binary
 django-tenants
 djangorestframework
@@ -28,3 +28,4 @@ pydub==0.25.1
 django-celery-results==2.5.1
 django-environ==0.11.2
 pytz==2024.1
+django-session-security==2.6.7
