@@ -28,4 +28,3 @@ pydub==0.25.1
 django-celery-results==2.5.1
 django-environ==0.11.2
 pytz==2024.1
-pydub==0.25.1
