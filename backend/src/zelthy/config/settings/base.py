@@ -146,8 +146,8 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = (
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 SESSION_COOKIE_NAME = "zelthycookie"
-SESSION_COOKIE_SECURE = False  # To be changed for prod settings
-CSRF_COOKIE_SECURE = False  # To be changed for prod settings
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 LOGOUT_REDIRECT_URL = "/admin/login"
 
