@@ -124,3 +124,9 @@ STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
 # Session Security
 SESSION_SECURITY_WARN_AFTER = env("SESSION_SECURITY_WARN_AFTER")
 SESSION_SECURITY_EXPIRE_AFTER = env("SESSION_SECURITY_EXPIRE_AFTER")
+
+if DEBUG or ENV == "dev":
+    # Disable secure cookies in development or debugging environments
+    # to simplify troubleshooting and testing.
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
