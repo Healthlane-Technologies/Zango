@@ -10,9 +10,9 @@ from django.contrib.auth.signals import (
     user_logged_in,
 )
 
-from .models import AppUserAccessLogs
+from .models import AppAccessLogs
 from ..appauth.models import UserRoleModel
-from zelthy.core.utils import get_current_request, get_current_role
+from zelthy.core.utils import get_current_request
 
 
 @receiver(user_login_failed)
@@ -20,7 +20,7 @@ def login_failure_handler(sender, **kwargs):
     creds = kwargs.get("credentials", {})
     request = kwargs.get("request", get_current_request())
     client_ip, is_routable = get_client_ip(request)
-    access_log = AppUserAccessLogs.objects.create(
+    access_log = AppAccessLogs.objects.create(
         ip_address=client_ip,
         http_accept=request.META.get("HTTP_ACCEPT", "<unknown>"),
         path_info=request.META.get("PATH_INFO", "<unknown>"),
@@ -34,28 +34,44 @@ def login_failure_handler(sender, **kwargs):
 
 @receiver(user_logged_in)
 def user_logged_in_handler(sender, request, user, **kwargs):
+    try:
+        client_ip, is_routable = get_client_ip(request)
+        username = request.POST.get("auth-username") or request.data.get("username")
+        user_role = None
+        access_log = AppAccessLogs.objects.create(
+            ip_address=client_ip,
+            http_accept=request.META.get("HTTP_ACCEPT", "<unknown>"),
+            path_info=request.META.get("PATH_INFO", "<unknown>"),
+            username=username,
+            user_agent=get_client_user_agent(request),
+            attempt_time=datetime.now(),
+            attempt_type="login",
+            is_login_successful=True,
+            user=user,
+        )
 
-    client_ip, is_routable = get_client_ip(request)
-    username = request.POST.get("auth-username") or request.data.get("username")
-    access_log = AppUserAccessLogs.objects.create(
-        ip_address=client_ip,
-        http_accept=request.META.get("HTTP_ACCEPT", "<unknown>"),
-        path_info=request.META.get("PATH_INFO", "<unknown>"),
-        username=username,
-        user_agent=get_client_user_agent(request),
-        attempt_time=datetime.now(),
-        attempt_type="login",
-        is_login_successful=True,
-        user=user,
-        role=UserRoleModel.objects.filter(
-            id=getattr(request, "selected_role_id")
-        ).last(),
-    )
+        if getattr(request, "selected_role_id", ""):
+            user_role = UserRoleModel.objects.filter(
+                id=getattr(request, "selected_role_id")
+            ).last()
+
+        elif getattr(request, "parser_context", ""):
+            user_role = UserRoleModel.objects.filter(
+                name=request.parser_context.get("kwargs", {}).get("role_name")
+            ).last()
+
+        if user_role:
+            access_log.role = user_role
+            access_log.save()
+    except:
+        import traceback
+
+        print(traceback.format_exc())
 
 
 @receiver(user_logged_out)
 def user_logged_out_handler(sender, user, **kwargs):
-    access_log = AppUserAccessLogs.objects.filter(
+    access_log = AppAccessLogs.objects.filter(
         user=user, session_expired_at__isnull=True
     ).last()
 

@@ -1,5 +1,6 @@
 import sys
 import os
+import environ
 from datetime import timedelta
 import zelthy
 
@@ -168,14 +169,19 @@ X_FRAME_OPTIONS = "ALLOW"
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
 
-# Axes lockout
-AXES_BEHIND_REVERSE_PROXY = True
-AXES_COOLOFF_TIME = timedelta(seconds=900)
-AXES_LOCK_OUT_AT_FAILURE = True
-AXES_LOGIN_FAILURE_LIMIT = 6
+
+# Axes Lockout
+env = environ.Env(
+    AXES_BEHIND_REVERSE_PROXY=(bool, False),
+    AXES_COOLOFF_TIME=(int, 900),
+    AXES_LOCK_OUT_AT_FAILURE=(bool, True),
+    AXES_LOGIN_FAILURE_LIMIT=(int, 6),
+)
+
 AXES_ENABLED = True
-AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = True
-AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
-AXES_ENABLE_ACCESS_FAILURE_LOG = True
 AXES_DISABLE_SUCCESS_ACCESS_LOG = True
 AXES_LOCKOUT_TEMPLATE = "account_lock_out.html"
+AXES_BEHIND_REVERSE_PROXY = env("AXES_BEHIND_REVERSE_PROXY")
+AXES_LOGIN_FAILURE_LIMIT = env("AXES_LOGIN_FAILURE_LIMIT")
+AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
+AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))

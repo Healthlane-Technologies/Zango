@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class CompanyusersAppConfig(AppConfig):
+class AccesslogsAppConfig(AppConfig):
 
     name = "zelthy.apps.accesslogs"
 

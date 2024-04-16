@@ -4,7 +4,7 @@ from axes.models import AccessBase
 from ..appauth.models import AppUserModel, UserRoleModel
 
 
-class AppUserAccessLogs(AccessBase):
+class AppAccessLogs(AccessBase):
 
     user = models.ForeignKey(AppUserModel, null=True, on_delete=models.CASCADE)
     role = models.ForeignKey(
@@ -13,3 +13,6 @@ class AppUserAccessLogs(AccessBase):
     attempt_type = models.CharField(max_length=20, null=True)
     is_login_successful = models.BooleanField(default=False)
     session_expired_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(AccessBase.Meta):
+        app_label = "accesslogs"
