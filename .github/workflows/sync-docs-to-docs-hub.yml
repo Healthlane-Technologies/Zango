@@ -32,4 +32,3 @@ jobs:
           commit-message: "Sync Zelthy3 docs"
           user-email: ravi@zelthy.com
           target-branch: staging
-      
