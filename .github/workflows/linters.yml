@@ -1,11 +1,13 @@
 name: Linters
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+  push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
 
 jobs:
   ruff:
