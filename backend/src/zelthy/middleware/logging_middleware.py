@@ -15,13 +15,8 @@ class LoggingMiddleware:
         schema_name = request.tenant.schema_name
         ip_address = request.META.get('REMOTE_ADDR', '127.0.0.1')
 
-
         # Use a context manager to bind the context
         with logger.contextualize(schema_name=schema_name, ip_address=ip_address, log_uuid=log_uuid):
-            logger.bind(
-                schema_name=schema_name, ip_address=ip_address, log_uuid=log_uuid
-            )
             response = self.get_response(request)
 
-        # response = self.get_response(request)
         return response
