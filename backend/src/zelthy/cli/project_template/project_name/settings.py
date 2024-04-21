@@ -13,6 +13,8 @@ environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
 SECRET_KEY = "{{secret_key}}"
 
+OTEL_IS_ENABLED = True
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

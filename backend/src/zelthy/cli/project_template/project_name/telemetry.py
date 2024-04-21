@@ -1,7 +1,10 @@
-import logging
 import os
 import sys
-
+import uuid
+import logging
+from pathlib import Path
+from loguru import logger
+from .settings import OTEL_IS_ENABLED
 from opentelemetry import metrics, trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
@@ -25,12 +28,7 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry import trace
 
-
-
-def otel_is_enabled():
-
-    #Todo: Add this "otel_is_enabled" flag in env
-    return True
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class LogGuruCompatibleLoggerHandler(LoggingHandler):
@@ -39,7 +37,7 @@ class LogGuruCompatibleLoggerHandler(LoggingHandler):
         # the extra log context developers can add on the extra dict. Here unnest
         # them as attributes on the record itself so otel can export them properly.
         for k, v in record.extra.items():
-            setattr(record, f"baserow.{k}", v)
+            setattr(record, f"zelthy.{k}", v)
         del record.extra
 
         # by default otel doesn't send funcName, rename it so it does.
@@ -47,43 +45,58 @@ class LogGuruCompatibleLoggerHandler(LoggingHandler):
         super().emit(record)
 
 
+def uuid_sink(record):
+    """
+    Custom sink function that adds a UUID to each log record.
+    """
+    # Generate a UUID for the log record
+    record["extra"]["uuid"] = str(uuid.uuid4())
+    return record
+
+
 def setup_logging():
     """
     This function configures loguru and optionally sets up open telemetry log exporting
     using a loguru sink.
-
-    It is not run as part of setup_logging_and_telemetry as we want this to run
-    after Django has set up its own logging. If we run prior to Django, it will teardown
-    any log handlers we set up in here causing errors due to the exporters being flushed
-    immediately with no contents.
     """
-
-
-    from loguru import logger
 
     # A slightly customized default loguru format which includes the process id.
     loguru_format = (
-        f"<magenta>{os.getpid()}|</magenta>"
+        "<magenta>{extra[uuid]}|</magenta>"
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>|"
+        "[{extra[schema_name]}:testlogapp.zelthy.com][{extra[ip_address]}]|"
         "<level>{level}</level>|"
         "<cyan>{name}</cyan>:"
         "<cyan>{function}</cyan>:"
         "<cyan>{line}</cyan> - "
         "<level>{message}</level>"
     )
-
+    
     # Remove the default loguru stderr sink
     logger.remove()
-    # Replace it with our format, loguru recommends sending application logs to stderr.
+    
+    log_folder = os.path.join(BASE_DIR, 'log')
+    log_file = os.path.join(log_folder, 'server.log')
+
+    # Check if the log folder exists, if not, create it
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+
+    # Check if the log file exists, if not, create it
+    if not os.path.exists(log_file):
+        with open(log_file, 'a'):
+            pass  # Create an empty file
+
     logger.add(
-        sys.stderr, format=loguru_format, level="INFO"
+        log_file, format=loguru_format, level="INFO", filter=uuid_sink
     )
+    
     logger.info("Logger setup.")
 
 
 def setup_telemetry(add_django_instrumentation: bool):
     """
-    Sets up logging and when the env var BASEROW_ENABLE_OTEL is set to any non-blank
+    Sets up logging and when the env var ZELTHY_ENABLE_OTEL is set to any non-blank
     string and this function is called metrics will be setup and sent according to
     the OTEL env vars you can find described at:
     - https://opentelemetry.io/docs/reference/specification/protocol/exporter/
@@ -93,7 +106,7 @@ def setup_telemetry(add_django_instrumentation: bool):
         process that is processing requests. Don't enable this for a celery process etc.
     """
 
-    if otel_is_enabled():
+    if OTEL_IS_ENABLED:
         _setup_standard_backend_instrumentation()
 
         # # Add console exporter

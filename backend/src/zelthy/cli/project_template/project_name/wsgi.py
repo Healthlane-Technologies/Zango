@@ -12,7 +12,7 @@ from django.db import connection
 # The telemetry instrumentation library setup needs to run prior to django's setup.
 setup_telemetry(add_django_instrumentation=True)
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "Mylogs.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{{project_name}}.settings")
 
 application = get_wsgi_application()
 
