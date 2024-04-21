@@ -83,6 +83,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
+    "zelthy.middleware.logging_middleware.LoggingMiddleware"
 ]
 
 
@@ -163,3 +164,48 @@ X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'loguru': {
+            'level': 'INFO',
+            'class': 'zelthy.core.loguru_handler.LoguruHandler',
+        },
+        'file': {
+            'level': 'INFO', 
+            'class': 'logging.handlers.RotatingFileHandler',
+            'maxBytes': 1024*1024*5, # 5 MB
+            'formatter': 'verbose', # Use the custom formatter
+            'filters': ['custom_filter'],
+        },
+    },
+    'root': {
+        'handlers': ['loguru', 'file'], # Add 'file' handler here if you want to use it
+        'level': 'INFO',
+    },
+    'formatters': {
+        'verbose': {
+            'format': "%(uuid)s [%(schema_name)s:%(domain_url)s][%(remote_addr)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
+            'datefmt': "%d/%b/%Y %H:%M:%S"
+        }            
+    },
+    'filters': {
+        'custom_filter': {
+            '()': 'zelthy.core.log_file.CustomFilter',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'zelthy': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        }
+    },
+}
