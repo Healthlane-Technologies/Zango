@@ -3,7 +3,7 @@ from django.apps import AppConfig
 
 class AccesslogsAppConfig(AppConfig):
 
-    name = "zelthy.apps.accesslogs"
+    name = "zelthy.apps.access_logs"
 
     def ready(self):
-        import zelthy.apps.accesslogs.signals
+        import zelthy.apps.access_logs.signals

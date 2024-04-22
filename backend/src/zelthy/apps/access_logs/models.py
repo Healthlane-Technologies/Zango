@@ -1,10 +1,10 @@
 from django.db import models
 from axes.models import AccessBase
 
-from ..appauth.models import AppUserModel, UserRoleModel
+from zelthy.apps.appauth.models import AppUserModel, UserRoleModel
 
 
-class AppAccessLogs(AccessBase):
+class AppAccessLog(AccessBase):
 
     user = models.ForeignKey(AppUserModel, null=True, on_delete=models.CASCADE)
     role = models.ForeignKey(
@@ -15,4 +15,4 @@ class AppAccessLogs(AccessBase):
     session_expired_at = models.DateTimeField(null=True, blank=True)
 
     class Meta(AccessBase.Meta):
-        app_label = "accesslogs"
+        app_label = "access_logs"

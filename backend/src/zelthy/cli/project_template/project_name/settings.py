@@ -116,3 +116,15 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = "static/"
 STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
+
+# Axes Lockout
+env = environ.Env(
+    AXES_BEHIND_REVERSE_PROXY=(bool, False),
+    AXES_COOLOFF_TIME=(int, 900),
+    AXES_LOCK_OUT_AT_FAILURE=(bool, True),
+    AXES_LOGIN_FAILURE_LIMIT=(int, 6),
+)
+AXES_BEHIND_REVERSE_PROXY = env("AXES_BEHIND_REVERSE_PROXY")
+AXES_LOGIN_FAILURE_LIMIT = env("AXES_LOGIN_FAILURE_LIMIT")
+AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
+AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))
