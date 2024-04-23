@@ -11,6 +11,9 @@ import appConfigurationReducer from '../pages/appConfiguration/slice';
 import appThemeConfigurationReducer from '../pages/appThemeConfiguration/slice';
 import appPackagesManagementReducer from '../pages/appPackagesManagement/slice';
 import appChatbotReducer from '../pages/app/slice';
+import appAuditLogsReducer from '../pages/appAuditLogs/slice';
+import appApplicationObjectsLogsReducer from '../pages/appApplicationObjectsLogs/slice';
+import appFrameworkObjectsLogsReducer from '../pages/appFrameworkObjectsLogs/slice';
 
 export default configureStore({
 	reducer: {
@@ -25,5 +28,8 @@ export default configureStore({
 		appThemeConfiguration: appThemeConfigurationReducer,
 		appPackagesManagement: appPackagesManagementReducer,
 		appChatbot: appChatbotReducer,
+		appAuditLogs: appAuditLogsReducer,
+		appApplicationObjectsLogs: appApplicationObjectsLogsReducer,
+		appFrameworkObjectsLogs: appFrameworkObjectsLogsReducer,
 	},
 });

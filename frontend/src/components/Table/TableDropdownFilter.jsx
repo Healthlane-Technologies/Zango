@@ -8,6 +8,7 @@ import { ReactComponent as FormSelectSearchCloseIcon } from '../../assets/images
 import { ReactComponent as SelectCheckIcon } from '../../assets/images/svg/select-check-icon.svg';
 import { ReactComponent as SelectSearchIcon } from '../../assets/images/svg/select-search-icon.svg';
 import { ReactComponent as TableColumnFilterIcon } from '../../assets/images/svg/table-column-filter-icon.svg';
+import { ReactComponent as CloseIcon } from '../../assets/images/svg/close-icon.svg';
 
 const TableDropdownFilter = ({
 	label,
@@ -27,7 +28,7 @@ const TableDropdownFilter = ({
 	const [searchTerm, setSearchTerm] = useState('');
 
 	const [selected, setSelected] = useState(
-		optionsData.find((eachData) => eachData.id === value) || {
+		optionsData.find((eachData) => eachData.id == value) || {
 			label: placeholder,
 			id: '',
 			unavailable: true,
@@ -47,7 +48,7 @@ const TableDropdownFilter = ({
 
 	useEffect(() => {
 		if (optionsData && value) {
-			setSelected(optionsData.find((eachData) => eachData?.id === value));
+			setSelected(optionsData.find((eachData) => eachData?.id == value));
 		}
 	}, [value]);
 
@@ -75,9 +76,9 @@ const TableDropdownFilter = ({
 							style={styles['popper']}
 							{...attributes['popper']}
 						>
-							<Listbox.Options className="absolute z-[1] h-fit max-h-96 w-full min-w-[168px] overflow-y-auto bg-white font-lato text-base shadow-form-select focus:outline-none sm:text-sm">
+							<Listbox.Options className="absolute z-[1] h-fit max-h-96 min-w-max overflow-y-auto bg-white font-lato text-base shadow-form-select focus:outline-none sm:text-sm">
 								{optionsData?.length > 0 ? (
-									<div className="py-[8px] px-[16px]">
+									<div className="flex items-center gap-[16px] py-[8px] px-[16px]">
 										<div className="relative flex w-full gap-[8px] rounded-[4px] border border-[#DDE2E5] px-[12px] py-[8px]">
 											<input
 												type="text"
@@ -103,6 +104,9 @@ const TableDropdownFilter = ({
 												<SelectSearchIcon className="h-[16px] min-h-[16px] w-[16px] min-w-[16px]" />
 											</label>
 										</div>{' '}
+										<button type="button" onClick={() => handleChange(null)}>
+											<CloseIcon className="h-[10px] w-[10px]" />
+										</button>
 									</div>
 								) : null}
 
@@ -132,7 +136,7 @@ const TableDropdownFilter = ({
 											{({ selected }) => (
 												<div className="flex items-center gap-[8px] px-[12px] py-[4px]">
 													{selected &&
-													filteredOptions[index].label !== '-select-' ? (
+													filteredOptions[index].label != '-select-' ? (
 														<span className="relative flex min-h-[12px] min-w-[12px] items-center">
 															<SelectCheckIcon />
 														</span>
@@ -143,7 +147,7 @@ const TableDropdownFilter = ({
 														className={`block truncate ${
 															selected ? 'font-normal' : 'font-lato font-normal'
 														} ${
-															filteredOptions[index].label === '-select-'
+															filteredOptions[index].label == '-select-'
 																? 'text-[#6C747D]'
 																: ''
 														} ${
