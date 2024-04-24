@@ -20,7 +20,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 
-WSGI_APPLICATION = "nurseEducator.wsgi.application"
+WSGI_APPLICATION = "dksh.wsgi.application"
 
 REDIS_HOST = env("REDIS_HOST")
 REDIS_PORT = env("REDIS_PORT")
@@ -79,7 +79,7 @@ TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
 
 SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
 PUBLIC_SCHEMA_URLCONF = "zelthy.config.urls_public"
-ROOT_URLCONF = "nurseEducator.urls_tenants"
+ROOT_URLCONF = "dksh.urls_tenants"
 
 ENV = "dev"
 
