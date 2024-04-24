@@ -15,7 +15,7 @@ from zelthy.api.platform.permissions.v1 import urls as permissions_v1_urls
 from zelthy.api.platform.packages.v1 import urls as packages_v1_urls
 from zelthy.api.platform.tasks.v1 import urls as tasks_v1_urls
 from zelthy.api.platform.codeassist.v1 import urls as codeassist_v1_urls
-from zelthy.api.platform.auditlog.v1 import urls as auditlog_v1_urls
+from zelthy.api.platform.auditlogs.v1 import urls as auditlog_v1_urls
 
 
 urlpatterns = [
