@@ -102,7 +102,7 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             )
         return records
 
-    def get_dropdown_options(self):
+    def get_dropdown_options(self, model_type=None):
         options = {}
         options["action"] = [
             {
@@ -119,12 +119,29 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
             },
         ]
         options["object_type"] = []
-        object_types = list(
-            LogEntry.objects.all()
-            .values_list("content_type_id", "content_type__model")
-            .order_by("content_type__model")
-            .distinct()
-        )
+        if model_type == "dynamic_models":
+            object_types = list(
+                LogEntry.objects.all()
+                .values_list("content_type_id", "content_type__model")
+                .order_by("content_type__model")
+                .distinct()
+                .filter(content_type__app_label__contains="dynamic_models")
+            )
+        elif model_type == "core_models":
+            object_types = list(
+                LogEntry.objects.all()
+                .values_list("content_type_id", "content_type__model")
+                .order_by("content_type__model")
+                .distinct()
+                .exclude(content_type__app_label__contains="dynamic_models")
+            )
+        else:
+            object_types = list(
+                LogEntry.objects.all()
+                .values_list("content_type_id", "content_type__model")
+                .order_by("content_type__model")
+                .distinct()
+            )
         for object_type in object_types:
             options["object_type"].append(
                 {
@@ -156,7 +173,7 @@ class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
                 "message": "Audit logs fetched successfully",
             }
             if include_dropdown_options:
-                response["dropdown_options"] = self.get_dropdown_options()
+                response["dropdown_options"] = self.get_dropdown_options(model_type)
             status = 200
         except Exception as e:
             traceback.print_exc()
