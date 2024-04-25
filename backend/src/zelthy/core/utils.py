@@ -39,11 +39,9 @@ def get_package_url(request, path, package_name):
 
 def get_current_request_url(request, domain=None):
     # Determine the protocol (HTTP or HTTPS) based on the request's is_secure() method.
-    print("Request meta : ", request.META, flush=True)
-    print("Request headers : ", request.headers, flush=True)
     secure = (
         request.headers.get("X-Forwarded-Proto") == "https"
-        or request.meta.get("HTTP_X_FORWARDED_PROTO") == "https"
+        or request.META.get("HTTP_X_FORWARDED_PROTO") == "https"
     )
     if secure:
         protocol = "https"

@@ -1,6 +1,7 @@
 FROM kczelthy/zelthy3:latest
 
 RUN apt-get install net-tools
+RUN apt install ffmpeg -y
 
 ARG UID
 ARG GID
