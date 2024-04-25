@@ -144,7 +144,7 @@ const TableDropdownFilter = ({
 														<span className="relative flex min-h-[12px] min-w-[12px] items-center"></span>
 													)}
 													<span
-														className={`block truncate ${
+														className={`block truncate capitalize ${
 															selected ? 'font-normal' : 'font-lato font-normal'
 														} ${
 															filteredOptions[index].label == '-select-'

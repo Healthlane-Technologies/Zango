@@ -105,7 +105,7 @@ export default function AppFrameworkObjectsLogs() {
 						<div className="flex grow flex-col items-center justify-center gap-[56px]">
 							<div className="flex flex-col items-center justify-center gap-[8px]">
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
-									audit logs
+									framework objects logs
 								</h3>
 								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
 									description to be added
