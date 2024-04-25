@@ -59,11 +59,6 @@ def user_logged_in_handler(sender, request, user, **kwargs):
                     id=getattr(request, "selected_role_id")
                 ).last()
 
-            elif getattr(request, "parser_context", ""):
-                user_role = UserRoleModel.objects.filter(
-                    name=request.parser_context.get("kwargs", {}).get("role_name")
-                ).last()
-
             if user_role:
                 access_log.role = user_role
                 access_log.save()
