@@ -229,8 +229,12 @@ export default function Table({ tableData }) {
 			),
 			cell: (info) => (
 				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-						{info.getValue() ? info.getValue() : '-'}
+					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+						{info.getValue()
+							? info.row.original?.actor_type === 'platform_actor'
+								? `${info.getValue()} *`
+								: info.getValue()
+							: '-'}
 					</span>
 				</div>
 			),
@@ -531,7 +535,7 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Audit Logs by ID / object / actor / changes"
+							placeholder="Search Audit Logs by Object ID / Log ID / actor / changes"
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>

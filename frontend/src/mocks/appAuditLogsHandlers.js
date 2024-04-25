@@ -87,7 +87,8 @@ const newPolicy = () => {
 const newUser = () => {
 	return {
 		id: faker.number.int({ min: 1000, max: 9999 }),
-		actor: null,
+		actor: 'actor',
+		actor_type: 'platform_actor',
 		action: 'Update',
 		object: 'Role2',
 		object_id: 2,
