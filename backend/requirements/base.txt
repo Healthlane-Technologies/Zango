@@ -29,3 +29,5 @@ django-celery-results==2.5.1
 django-environ==0.11.2
 pytz==2024.1
 django-session-security==2.6.7
+beautifulsoup4==4.12.3
+python3-saml==1.16.0
