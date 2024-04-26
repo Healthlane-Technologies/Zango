@@ -7,33 +7,33 @@ register = template.Library()
 
 
 @register.filter()
-def humanize_timedelta(timedeltaobj):
+def humanize_timedelta(timedelta_obj):
     """
     Calculate the total number of days, hours, minutes, and seconds from the given timedelta object.
 
     Parameters:
-    timedeltaobj (timedelta): A timedelta object representing a duration of time.
+    timedelta_obj (timedelta): A timedelta object representing a duration of time.
 
     Returns:
     str: A formatted string with the total days, hours, minutes, and seconds calculated from the timedelta object.
     """
-    secs = timedeltaobj.total_seconds()
-    timetot = ""
-    if secs > 86400:  # 60sec * 60min * 24hrs
-        days = secs // 86400
-        timetot += "{} days".format(int(days))
-        secs = secs - days * 86400
+    seconds = timedelta_obj.total_seconds()
+    time_total = ""
+    if seconds > 86400:  # 60sec * 60min * 24hrs
+        days = seconds // 86400
+        time_total += "{} days".format(int(days))
+        seconds = seconds - days * 86400
 
-    if secs > 3600:
-        hrs = secs // 3600
-        timetot += " {} hours".format(int(hrs))
-        secs = secs - hrs * 3600
+    if seconds > 3600:
+        hrs = seconds // 3600
+        time_total += " {} hours".format(int(hrs))
+        seconds = seconds - hrs * 3600
 
-    if secs > 60:
-        mins = secs // 60
-        timetot += " {} minutes".format(int(mins))
-        secs = secs - mins * 60
+    if seconds > 60:
+        mins = seconds // 60
+        time_total += " {} minutess".format(int(mins))
+        seconds = seconds - mins * 60
 
-    if secs > 0:
-        timetot += " {} seconds".format(int(secs))
-    return timetot
+    if seconds > 0:
+        time_total += " {} seconds".format(int(seconds))
+    return time_total
