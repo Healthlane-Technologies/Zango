@@ -28,3 +28,5 @@ pydub==0.25.1
 django-celery-results==2.5.1
 django-environ==0.11.2
 pytz==2024.1
+django-axes==6.4.0
+django-ipware==6.0.4

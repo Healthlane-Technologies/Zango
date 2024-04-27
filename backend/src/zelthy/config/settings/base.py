@@ -1,6 +1,7 @@
 import sys
 import os
-
+import environ
+from datetime import timedelta
 import zelthy
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -28,7 +29,7 @@ SHARED_APPS = [
     # 'django_otp',
     # 'django_otp.plugins.otp_static',
     # 'django_otp.plugins.otp_totp',
-    # 'axes',
+    "axes",
     # 'session_security',
     "django_celery_beat",
     "django_celery_results",
@@ -48,6 +49,7 @@ TENANT_APPS = [
     "zelthy.apps.object_store",
     "zelthy.apps.dynamic_models",
     "zelthy.apps.tasks",
+    "zelthy.apps.access_logs",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -55,6 +57,7 @@ TENANT_APPS = [
     "crispy_forms",
     "django_celery_results",
     # "cachalot",
+    "axes",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -83,10 +86,12 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zelthy.middleware.tenant.TimezoneMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 
 AUTHENTICATION_BACKENDS = (
+    "axes.backends.AxesStandaloneBackend",
     "zelthy.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
     "zelthy.apps.appauth.auth_backend.AppUserModelBackend",
 )
@@ -108,7 +113,10 @@ TEMPLATES = [
             # ],
             "loaders": [
                 "zelthy.core.template_loader.AppTemplateLoader",
-                "django.template.loaders.filesystem.Loader",
+                (
+                    "django.template.loaders.filesystem.Loader",
+                    [os.path.join(os.path.dirname(zelthy.__file__), "templates")],
+                ),
                 "django.template.loaders.app_directories.Loader",
             ],
         },
@@ -163,3 +171,12 @@ X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
+
+
+AXES_ENABLED = True
+AXES_DISABLE_SUCCESS_ACCESS_LOG = True
+AXES_LOCKOUT_TEMPLATE = "core/error_pages/account_lockout.html"
+AXES_BEHIND_REVERSE_PROXY = False
+AXES_FAILURE_LIMIT = 6
+AXES_LOCK_OUT_AT_FAILURE = True
+AXES_COOLOFF_TIME = timedelta(seconds=900)
