@@ -143,9 +143,9 @@ def replace_special_context(data):
                 data[key] = replace_special_context(value)
             elif isinstance(value, str) and "{{" in value and "}}" in value:
                 if value == "{{user}}":
-                    data[
-                        key
-                    ] = AppUserModel.objects.all().first()  # get_current_request().user
+                    data[key] = (
+                        AppUserModel.objects.all().first()
+                    )  # get_current_request().user
                 elif value == "{{user_role}}":
                     data[key] = get_current_role()
                 elif value == "{{user_role_id}}":
@@ -388,15 +388,6 @@ class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
             return super().save(*args, **kwargs)
         if is_create_operation and self.has_perm("create"):
             resp = super().save(*args, **kwargs)
-
-            # Create an object in ObjectStore when object is getting created
-            content_type = ContentType.objects.get_for_model(self)
-            ObjectStore.objects.create(
-                object_uuid=self.object_uuid,
-                content_type=content_type,
-                object_id=self.pk,
-                content_object=self,
-            )
             return resp
         if self.pk and self.has_perm("edit"):
             return super().save(*args, **kwargs)

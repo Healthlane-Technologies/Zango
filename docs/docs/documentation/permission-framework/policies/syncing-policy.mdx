@@ -1,0 +1,49 @@
+---
+sidebar_label: Syncing Policies
+---
+
+# Syncing and Viewing Policies
+
+In Zelthy, policies can be managed through the "Policies" page in the App Panel. This page allows users to view, synchronize, and manage all policies defined within the application.
+
+![Policies](/img/permission-framework/policy-table.png)
+
+### Viewing Policies
+
+To view the list of policies:
+
+- **Navigate to the Policies Page**: Click on the "Policies" menu in the App Panel. This will take you to the Policies page.
+  
+- **View the Policy List**: The Policies page displays a table view of all policies defined within the application. You can see details such as Policy name, configuration, description, and roles.
+
+:::note
+Keep in mind that due to potential synchronization delays, not all policies may be immediately visible. If you don't see the latest policies, consider syncing the policies as described below.
+:::
+
+### Syncing Policies
+
+To synchronize the list of policies:
+
+- **Navigate to the Policiess Page**: Click on the "Policies" menu in the App Panel if you're not already on the Policiess page.
+  
+- **Initiate Sync**: Click on the "Sync Policy" button located within the Policies page.
+
+- **Wait for Synchronization**: The system will begin syncing the policies from the updated codebase. A loading indicator will appear to indicate the sync process is in progress.
+
+- **View Updated List**: Once the synchronization is complete, the Policies page will display the updated list of policies. You should now see any new policies added or removed policies based on the changes made in the codebase.
+
+
+### Policy Validation Rules:
+
+1. **Unique Names within Modules:**
+   Policies with the same name within the same module are not permitted.
+
+2. **Update Existing Policies:**
+   If a policy with the same name and path already exists, it will be updated with the new configuration.
+
+3. **Deletion of Missing Policies:**
+   Policies existing in the database but not found in the modules or packages are automatically deleted.
+   
+   These validation rules ensure the integrity and coherence of the policy management system within the Zelthy platform.
+
+By following these steps, you can easily view and synchronize the Policies defined within your Zelthy application, ensuring that your policy management remains up-to-date with the latest codebase changes.
