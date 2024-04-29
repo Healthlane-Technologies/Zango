@@ -29,7 +29,7 @@ SHARED_APPS = [
     # 'django_otp.plugins.otp_static',
     # 'django_otp.plugins.otp_totp',
     # 'axes',
-    # 'session_security',
+    "session_security",
     "django_celery_beat",
     "django_celery_results",
     "rest_framework",
@@ -75,6 +75,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "session_security.middleware.SessionSecurityMiddleware",
     "zelthy.middleware.request.UserRoleAndAppObjectAssignmentMiddleware",
     # 'zelthy.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -144,8 +145,8 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = (
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 SESSION_COOKIE_NAME = "zelthycookie"
-SESSION_COOKIE_SECURE = False  # To be changed for prod settings
-CSRF_COOKIE_SECURE = False  # To be changed for prod settings
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 LOGOUT_REDIRECT_URL = "/admin/login"
 
@@ -163,3 +164,15 @@ X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
+
+# Session Security
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SECURITY_WARN_AFTER = 1700
+SESSION_SECURITY_EXPIRE_AFTER = 1800
+
+# List of url names that should be ignored by the session security middleware.
+# For example the request of history_sidebar is made without user intervention,
+# as such it should not be used to update the user’s last activity datetime.
+SESSION_SECURITY_PASSIVE_URL_NAMES = [
+    "history_sidebar",
+]
