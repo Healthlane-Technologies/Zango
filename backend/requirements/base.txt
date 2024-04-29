@@ -28,3 +28,8 @@ pydub==0.25.1
 django-celery-results==2.5.1
 django-environ==0.11.2
 pytz==2024.1
+pytest==8.0.0
+pytest-cov==4.1.0
+pytest-django==4.8.0
+pytest-excel==1.6.0
+pytest-mock==3.12.0
