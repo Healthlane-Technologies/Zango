@@ -27,6 +27,8 @@ def get_app_object():
 
 
 def get_package_url(request, path, package_name):
+    if not request:
+        request = get_mock_request()
     with open(f"workspaces/{request.tenant.name}/settings.json", "r") as f:
         data = json.loads(f.read())
     for route in data["package_routes"]:
@@ -37,19 +39,34 @@ def get_package_url(request, path, package_name):
     return ""
 
 
+def get_mock_request(**kwargs):
+    from django.db import connection
+    from django.http import HttpRequest
+
+    request = HttpRequest()
+    request.path = kwargs.get("path")
+    request.tenant = connection.tenant
+    request.method = kwargs.get("method", "GET")
+    request.META = kwargs.get("META", {})
+    request.header = kwargs.get("header", {})
+
+    return request
+
 def get_current_request_url(request, domain=None):
     # Determine the protocol (HTTP or HTTPS) based on the request's is_secure() method.
-    if settings.ENV == "dev":
-        protocol = "https" if request.is_secure() else "http"
-    else:
+    secure = (
+        request.headers.get("X-Forwarded-Proto") == "https"
+        or request.META.get("HTTP_X_FORWARDED_PROTO") == "https"
+    )
+    if secure:
         protocol = "https"
+    else:
+        protocol = "http"
 
     # Get the hostname (domain) from the request.
     if not domain:
         domain = request.get_host()
-
-    # Get the port from the request. Use the standard ports (80 for HTTP, 443 for HTTPS) as default.
-    if settings.ENV == "dev":
+    if not secure:
         port = request.META.get("SERVER_PORT", "")
         if (protocol == "http" and port == "80") or (
             protocol == "https" and port == "443"
