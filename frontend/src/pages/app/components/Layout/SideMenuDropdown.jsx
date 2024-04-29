@@ -37,7 +37,7 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 					ref={(ref) => setReferenceElement(ref)}
 				>
 					<div
-						className={`flex cursor-pointer flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						className={`flex w-full cursor-pointer flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
 							isCurrentPage ? 'bg-[#d3c9a4]' : 'bg-transparent'
 						}`}
 					>
