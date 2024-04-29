@@ -85,7 +85,7 @@ export const PlatformAppRoutes = () => {
 					path="/audit-logs/framework-objects-logs//*"
 					element={<AppFrameworkObjectsLogsRoutes />}
 				/>
-				<Route path="/access-logs//*" element={<AppAccessLogs />} />
+				{/* <Route path="/access-logs//*" element={<AppAccessLogs />} /> */}
 				<Route
 					path="*"
 					element={<Navigate to="./app-settings/app-configuration//*" />}
