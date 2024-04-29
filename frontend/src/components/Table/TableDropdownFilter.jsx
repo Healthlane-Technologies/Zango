@@ -98,7 +98,7 @@ const TableDropdownFilter = ({
 												</div>
 											)}
 											<label
-												for="search"
+												htmlFor="search"
 												className="relative flex items-center text-[#D4D4D4]"
 											>
 												<SelectSearchIcon className="h-[16px] min-h-[16px] w-[16px] min-w-[16px]" />

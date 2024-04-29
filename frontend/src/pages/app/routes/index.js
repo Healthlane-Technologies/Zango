@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import useApi from '../../../hooks/useApi';
+import AppAccessLogs from '../../appAccessLogs/components/AppAccessLogs';
 import { AppApplicationObjectsLogsRoutes } from '../../appApplicationObjectsLogs/routes';
 import { AppAuditLogsRoutes } from '../../appAuditLogs/routes';
 import { AppConfigurationRoutes } from '../../appConfiguration/routes';
@@ -84,6 +85,7 @@ export const PlatformAppRoutes = () => {
 					path="/audit-logs/framework-objects-logs//*"
 					element={<AppFrameworkObjectsLogsRoutes />}
 				/>
+				<Route path="/access-logs//*" element={<AppAccessLogs />} />
 				<Route
 					path="*"
 					element={<Navigate to="./app-settings/app-configuration//*" />}
