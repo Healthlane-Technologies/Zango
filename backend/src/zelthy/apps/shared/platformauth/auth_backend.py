@@ -9,14 +9,15 @@ from django.contrib.auth.models import User
 
 class PlatformUserModelBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None):
-        try:
-            user = PlatformUserModel.objects.get(Q(email=username) | Q(mobile=username))
-            pwd_valid = user.check_password(password)
-            if pwd_valid and user.is_active:
-                return user.user
-            return None
-        except PlatformUserModel.DoesNotExist:
-            return None
+        if request and request.tenant.tenant_type == 'shared':
+            try:
+                user = PlatformUserModel.objects.get(Q(email=username) | Q(mobile=username))
+                pwd_valid = user.check_password(password)
+                if pwd_valid and user.is_active:
+                    return user.user
+                return None
+            except PlatformUserModel.DoesNotExist:
+                return None
 
     def get_user(self, user_id):
         """
