@@ -1,68 +1,83 @@
 <h1 align="center">
-    <a href="https://www.zelthy.com/"> 
-    <img src="https://yt3.googleusercontent.com/e1HArJ9U7Pj8MIf2MKGYW_6GGqdvwUTucgR6gs5u7LaBvAIfZT1INRASf0fOMC7ISVTDYqMPXw=s176-c-k-c0x00ffffff-no-rj" alt="Zelthy" width="80px">
+    <a target="_blank" href="https://www.zelthy.com/framework?referer=zelthy3-repo-landing"> 
+        <img src="https://zelthy-dev-static.s3.ap-south-1.amazonaws.com/zango_logo_bk.svg" alt="ZCore" >
     </a>
 </h1>
 
+<hr>
 
-[Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)
+### **✨ Build microservices as tenants on a Django monolith. Avoid the infra & operational overheads. Scale effortlessly. ✨** 
+<a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a> 
+<hr>  
+<p align="center">
+  <a href="#">
+        <img alt="PyPI version" src="https://badge.fury.io/py/zango.svg"></a> 
+  <a href="#">
+      <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zelthy3/docs.yml?branch=main"></a> 
+  <a href="https://opensource.org/licenses/Apache-2.0" target="_blank">
+      <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"> </a>
+</p>
+
+<p align="center">
+  <a href="https://www.zango.dev" target="_blank">Website</a> |
+  <a href="https://www.zango.dev/docs/category/getting-started" target="_blank">Getting Started </a>|
+  <a href="https://zango.dev/docs" target="_blank">Docs</a> |
+  <a href="https://discord.com/invite/WHvVjU23e7" target="_blank">Discord</a>
+</p> 
 
 
-[![PyPI version](https://badge.fury.io/py/zelthy3.svg)](https://badge.fury.io/py/zelthy3)
-![docs](https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zelthy3/docs.yml?branch=main)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+**Zango** is a web application development framework built upon Django, designed to host multiple apps or microservices as tenants on a single monolith under the hood. 
 
 
-## Zelthy is an open source multi-tenant Django framework for building enterprise apps
-
-- Quickly build enterprise ready apps, leveraging the power of Django and Zelthy package ecosystem
-- Host multiple apps on a single deployment with complete isolation - Each app can have its own data models and workflows 
-- Built-in user management and user roles
-- Rich ecosystem of packages - Leverage the free packages to develop most of your app workflows. 
-- Granular policy and permission framework linking user roles with views and models
-- Open-core with all  non-enterprise features under the  Apache License allowing commercial and private use.
-
+- Leverage the stengths of Django, an already proven and battle tested web framework
+- Make available the basics of business web apps/ microservices as part of the framework
+- Host multiple apps or microservices on a single monolith under the hood.
+- Security & Compliances are built in.
+- Suite of essential packages to serve as the building blocks of Apps
+- Use case packages to build the industry specific use cases
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox-official/)
 
-![Zelthy High Level Architecture](https://docs.zelthy.com/assets/images/Architecture_Diagram-e6eb1b24fca0554edca1110a7de26449.png)
 
-#### App Panel - Central hub to manage all your apps
+#### App Panel - Central hub to manage all your apps/ microservices
 Perform tasks such as configuring permissions, managing user roles, and much more. 
 
-![Zelthy App Panel](https://github.com/Healthlane-Technologies/zelthy3/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
+![Zango App Panel](https://github.com/Healthlane-Technologies/zelthy3/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
 
-#### Drastically reduce your per app cost through Zelthy’s multi-tenant approach:
+#### Drastically reduce your infrastructural and operational overheads, hosting multiple apps/ microservices on a single deployment:
 
-Zelthy redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
+Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
-![Zelthy Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
+![Zango Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
 
 
-#### Getting Started:
-- [Docker](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/docker)
-- [Manual](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/manual)
-- [Gitpod](https://docs.zelthy.com/docs/documentation/getting-started/installing-zelthy/gitpod)
+####  🚀 Getting Started:
+- [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
+- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
+- [Manual](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual)
 
-#### Free Packages
+
+#### 📦 Free Packages
 A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
-- [Login](https://docs.zelthy.com/login)
-- [Frames](https://docs.zelthy.com/frame)
-- [CRUD](https://docs.zelthy.com/crud)
-- [Workflow](https://docs.zelthy.com/workflow)
+- [Basic Auth](https://www.zango.dev/docs/login/introduction)
+- [Frames](https://www.zango.dev/docs/frame/introduction)
+- [CRUD](https://www.zango.dev/docs/crud/introduction) 
+- [Workflow](https://www.zango.dev/docs/workflow/overview)
 
 
-#### Contributing:
-You can contribute to Zelthy3 in many ways, including:
-- Leave your star in this repo.
-- Share with your colleagues and friends
-- Share your suggestions on our slack channel
-- Create issues if you find something not working as expected or if you have suggestions on enhancements.
-- Provide pull requests for any open issues
+#### 🌟 Get Involved and Make a Difference
+
+Join our community and help build **Zango**. Here's how you can get involved:
+
+- **Star the Repo:** Show your support by giving us a star! ⭐️
+- **Spread the Word:** Share Zango with your colleagues and friends. 📣
+- **Join the Conversation:** Share your brilliant ideas and suggestions on Discord [here](https://discord.com/invite/WHvVjU23e7). 💬
+- **Report Issues:** Notice something not quite right? Let us know by creating an issue. Your feedback is invaluable! 🐛
+- **Contribute Code:** Dive into open issues and send pull requests to help us squash bugs and implement exciting enhancements. 🛠️
+
+Together, let's build something incredible! ✨🚀
 
 
-#### Official Documentation: https://docs.zelthy.com/
 
-
-
-
+#### Official Documentation: https://zango.dev/docs

@@ -11,7 +11,7 @@
 <hr>  
 <p align="center">
   <a href="#">
-        <img alt="PyPI version" src="https://badge.fury.io/py/zelthy3.svg"></a> 
+        <img alt="PyPI version" src="https://badge.fury.io/py/zango.svg"></a> 
   <a href="#">
       <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zelthy3/docs.yml?branch=main"></a> 
   <a href="https://opensource.org/licenses/Apache-2.0" target="_blank">

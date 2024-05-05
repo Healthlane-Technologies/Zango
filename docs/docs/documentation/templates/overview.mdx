@@ -1,10 +1,10 @@
 # Templates
 
-Templates in Zelthy serve the same purpose as they do in Django or other web frameworks. They provide a way to separate the design or presentation layer from the business logic of your application. In Zelthy, you can use templates to generate HTML dynamically based on data and user interactions. Here's what you need to know about working with templates in Zelthy:
+Templates in Zango serve the same purpose as they do in Django or other web frameworks. They provide a way to separate the design or presentation layer from the business logic of your application. In Zango, you can use templates to generate HTML dynamically based on data and user interactions. Here's what you need to know about working with templates in Zango:
 
 ## Directory
 
-In Zelthy, template files should be placed inside a folder named "templates" within the module's folder. This structure helps keep your templates organized and accessible to Zelthy's template engine.
+In Zango, template files should be placed inside a folder named "templates" within the module's folder. This structure helps keep your templates organized and accessible to Zango's template engine.
 
 ```text
 workspaces
@@ -15,7 +15,7 @@ workspaces
 │   ...
 ```
 ## Template Syntax and Inheritance
-Zelthy's template syntax closely resembles Django templates, making it familiar for developers acquainted with Django. You can use variables, control structures, and template tags to create dynamic and interactive HTML content. For example:
+Zango's template syntax closely resembles Django templates, making it familiar for developers acquainted with Django. You can use variables, control structures, and template tags to create dynamic and interactive HTML content. For example:
 
 ```html
 <!-- Variable -->
@@ -27,7 +27,7 @@ Zelthy's template syntax closely resembles Django templates, making it familiar 
 {% endfor %}
 ```
 
-Just like Django, Zelthy supports template inheritance. You can create a base template with the common structure and elements and then extend it in other templates. This facilitates code reuse and helps in maintaining a consistent layout across your application. For instance:
+Just like Django, Zango supports template inheritance. You can create a base template with the common structure and elements and then extend it in other templates. This facilitates code reuse and helps in maintaining a consistent layout across your application. For instance:
 
 ```plaintext
 workspaces
@@ -53,7 +53,7 @@ workspaces
 
 ## Rendering
 
-Zelthy uses a template engine to render templates. When a view function or class generates a response, it often includes data that needs to be inserted into a template. The template engine takes care of this process.
+Zango uses a template engine to render templates. When a view function or class generates a response, it often includes data that needs to be inserted into a template. The template engine takes care of this process.
 
 Example,
 ```plaintext
@@ -73,7 +73,7 @@ workspaces
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zelthy Sample Template View</title>
+    <title>Zango Sample Template View</title>
 </head>
 <body>
     <h1>List of Items</h1>
@@ -104,11 +104,11 @@ class SampleTemplateView(TemplateView):
 
 ## Static Files
 
-Static files like CSS stylesheets, JavaScript files, and images can be served in Zelthy using the `{% zstatic %}` template tag. You'll need to configure your project to handle static files properly.
+Static files like CSS stylesheets, JavaScript files, and images can be served in Zango using the `{% zstatic %}` template tag. You'll need to configure your project to handle static files properly.
 
 ```html
 {% load zstatic %}
 <link rel="stylesheet" type="text/css" href="{% zstatic 'styles.css' %}">
 ```
 
-In summary, templates in Zelthy follow the same principles as other web frameworks like Django. They provide a way to separate your application's logic from its presentation, making your code more maintainable and scalable. By using template tags, filters, and template inheritance, you can create dynamic and visually appealing web pages in your Zelthy applications.
+In summary, templates in Zango follow the same principles as other web frameworks like Django. They provide a way to separate your application's logic from its presentation, making your code more maintainable and scalable. By using template tags, filters, and template inheritance, you can create dynamic and visually appealing web pages in your Zango applications.
