@@ -51,12 +51,12 @@ These non-relational fields behave just like their Django counterparts, making t
 
 ## Relational Fields
 
-Relational fields in Zelthy models are specialized field types imported from Zelthy's `zelthy.apps.dynamic_models.fields`. They allow you to establish relationships between Data Models, offering more flexibility in your data modeling approach. Here are some common relational field types:
+Relational fields in Zelthy models are specialized field types imported from Zelthy's `zcore.apps.dynamic_models.fields`. They allow you to establish relationships between Data Models, offering more flexibility in your data modeling approach. Here are some common relational field types:
 
 1. **OneToOneField**: Defines a one-to-one relationship between two models.
 
    ```python
-   from zelthy.apps.dynamic_models.fields import ZOneToOneField
+   from zcore.apps.dynamic_models.fields import ZOneToOneField
 
    class MyModel(DynamicModelBase):
        related_model = ZOneToOneField(RelatedModel, null=True, blank=True, on_delete=models.CASCADE)
@@ -65,7 +65,7 @@ Relational fields in Zelthy models are specialized field types imported from Zel
 2. **ForeignKey**: Establishes a many-to-one relationship between two DDMs.
 
    ```python
-   from zelthy.apps.dynamic_models.fields import ZForeignKey
+   from zcore.apps.dynamic_models.fields import ZForeignKey
 
    class MyModel(DynamicModelBase):
        related_model = ZOneToOneField(RelatedModel, null=True, blank=True, on_delete=models.CASCADE)

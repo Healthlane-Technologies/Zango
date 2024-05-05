@@ -238,7 +238,7 @@ celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:
 
   ```
 
-  from zelthy.core.tasks import zelthy_task_executor
+  from zcore.core.tasks import zelthy_task_executor
   zelthy_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
 
   task_name can be taken from App Panel -> Tasks table
@@ -248,7 +248,7 @@ celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:
 
   ```
 
-  from zelthy.core.tasks import zelthy_task_executor
+  from zcore.core.tasks import zelthy_task_executor
   zelthy_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
 
   task_name can be taken from App Panel -> Tasks table
