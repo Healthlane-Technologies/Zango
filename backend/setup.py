@@ -20,10 +20,10 @@ install_requires = get_requirements("base")
 
 
 setup(
-    name="zelthy3",
+    name="zcore",
     version=PLATFORM_VERSION,
     license="Apache License 2.0",
-    description="Zelthy3: multi-tenant Django framework for building business apps",
+    description="zcore: multi-tenant Django framework for building business apps",
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
     author='Zelthy ("Healthlane Technologies")',
@@ -32,7 +32,7 @@ setup(
     package_dir={"": "src"},
     packages=find_packages("src"),
     package_data={
-        "zelthy": [
+        "zcore": [
             "cli/project_template/**/*",
             "assets/**",
             "**/templates/**",
@@ -46,7 +46,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "zelthy3=zelthy.cli:cli",
+            "zcore=zcore.cli:cli",
         ],
     },
     license_files=["LICENSE"],

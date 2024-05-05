@@ -28,7 +28,7 @@ workspaces
 In Zelthy, Model classes need to extend `DynamicModelBase`, a base class provided by Zelthy's framework. This extension is essential to make your model dynamic and tenant-specific. Here's an example of defining a Model class:
 
 ```python
-from zelthy.apps.dynamic_models.models import DynamicModelBase
+from zcore.apps.dynamic_models.models import DynamicModelBase
 
 class CustomModel(DynamicModelBase):
     name = models.CharField(max_length=100)
@@ -40,11 +40,11 @@ The non-relational fields, such as `CharField` and `TextField`, are defined just
 
 ## Step 3: Relational Fields
 
-For relational fields, such as ForeignKey and OneToOneField, you'll need to import them from `zelthy.apps.dynamic_models.fields` instead of Django's `models`. Here's an example:
+For relational fields, such as ForeignKey and OneToOneField, you'll need to import them from `zcore.apps.dynamic_models.fields` instead of Django's `models`. Here's an example:
 
 ```python
-from zelthy.apps.dynamic_models.fields import ZForeignKey
-from zelthy.apps.dynamic_models.fields import ZOneToOneField
+from zcore.apps.dynamic_models.fields import ZForeignKey
+from zcore.apps.dynamic_models.fields import ZOneToOneField
 
 class CustomModel(DynamicModelBase):
     name = models.CharField(max_length=100)
