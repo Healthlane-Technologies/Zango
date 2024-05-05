@@ -1,7 +1,7 @@
 import sys
 import os
 
-import zelthy
+import zcore
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

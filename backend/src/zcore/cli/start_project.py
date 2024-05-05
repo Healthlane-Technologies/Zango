@@ -7,7 +7,7 @@ import click
 import django
 from django.core.management import call_command
 
-import zelthy
+import zcore
 from .utils import replace_placeholders_in_file
 
 
