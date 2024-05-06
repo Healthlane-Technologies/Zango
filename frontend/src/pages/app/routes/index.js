@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import useApi from '../../../hooks/useApi';
-import { AppAccessLogsRoutes } from '../../appAccessLogs/routes';
 import { AppApplicationObjectsLogsRoutes } from '../../appApplicationObjectsLogs/routes';
 import { AppConfigurationRoutes } from '../../appConfiguration/routes';
 import { setAppConfigurationData } from '../../appConfiguration/slice';
@@ -87,7 +86,6 @@ export const PlatformAppRoutes = () => {
 					path="*"
 					element={<Navigate to="./app-settings/app-configuration//*" />}
 				/>
-				<Route path="/access-logs//*" element={<AppAccessLogsRoutes />} />
 			</Routes>
 		</Layout>
 	);
