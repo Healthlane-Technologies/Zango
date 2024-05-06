@@ -95,11 +95,21 @@ def create_project(
     command = f"{command} --template {str(project_template_path)}"
 
     subprocess.run(command, shell=True, check=True)
-    env_file = open(f".env", "w")
-    env_file.write(
-        f"POSTGRES_DB={db_name}\nPOSTGRES_USER={db_user}\nPOSTGRES_PASSWORD={db_password}\nPOSTGRES_HOST={db_host}\nPOSTGRES_PORT={db_port}\nREDIS_HOST={redis_host}\nREDIS_PORT={redis_port}\nPROJECT_NAME={project_name}\n"
-    )
-    env_file.close()
+    env_keys = {
+        "POSTGRES_DB": db_name,
+        "POSTGRES_USER": db_user,
+        "POSTGRES_PASSWORD": db_password,
+        "POSTGRES_HOST": db_host,
+        "POSTGRES_PORT": db_port,
+        "REDIS_HOST": redis_host,
+        "REDIS_PORT": redis_port,
+        "PROJECT_NAME": project_name,
+    }
+    with open(f".env", "a+") as f:
+        fcontent = f.read()
+        for key, value in env_keys.items():
+            if key not in fcontent:
+                f.write(f"{key}={value}\n")
 
     return True, "Project created successfully"
 
