@@ -8,28 +8,25 @@ import debounce from 'just-debounce-it';
 import { find, findIndex, set } from 'lodash';
 import moment from 'moment';
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
 import HeaderInfo from '../../../../components/Table/HeaderInfo';
-import ListCell from '../../../../components/Table/ListCell';
 import ListGeneralCell from '../../../../components/Table/ListGeneralCell';
+import PageCountSelectField from '../../../../components/Table/PageCountSelectField';
+import ResizableInput from '../../../../components/Table/ResizableInput';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
-import { formatTableDate } from '../../../../utils/formats';
 import {
 	selectAppFrameworkObjectsLogsData,
 	selectAppFrameworkObjectsLogsTableData,
-	setAppFrameworkObjectsLogsTableData,
 	setAppFrameworkObjectsLogsData,
+	setAppFrameworkObjectsLogsTableData,
 } from '../../slice';
-import PageCountSelectField from './PageCountSelectField';
-import ResizableInput from './ResizableInput';
-import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
@@ -590,9 +587,7 @@ export default function Table({ tableData }) {
 									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
 								></td>
 
-								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex">
-									{/* <RowMenu rowData={row.original} /> */}
-								</td>
+								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex"></td>
 							</tr>
 						))}
 					</tbody>

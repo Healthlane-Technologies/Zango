@@ -25,10 +25,6 @@ export default function AppAccessLogs() {
 	);
 	const dispatch = useDispatch();
 
-	const handleAddNewUser = () => {
-		dispatch(openIsAddNewUserRolesModalOpen());
-	};
-
 	function updateAppAccessLogsData(value) {
 		dispatch(setAppAccessLogsData(value));
 	}
@@ -77,9 +73,6 @@ export default function AppAccessLogs() {
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
 									access log(s)
 								</h3>
-								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
-									description to be added
-								</p> */}
 							</div>
 						</div>
 					) : appAccessLogsData ? (

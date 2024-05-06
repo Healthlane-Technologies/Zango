@@ -1,12 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { ReactComponent as EachSideMenuIcon } from '../../../../assets/images/svg/each-side-menu-icon.svg';
 import { ReactComponent as AppPackagesIcon } from '../../../../assets/images/svg/app-packages-icon.svg';
 import { ReactComponent as AppPolicyIcon } from '../../../../assets/images/svg/app-policy-icon.svg';
 import { ReactComponent as AppSettingsIcon } from '../../../../assets/images/svg/app-settings-icon.svg';
 import { ReactComponent as AppTasksIcon } from '../../../../assets/images/svg/app-tasks-icon.svg';
 import { ReactComponent as AppUserManagementIcon } from '../../../../assets/images/svg/app-user-management-icon.svg';
 import { ReactComponent as AppUserRoleIcon } from '../../../../assets/images/svg/app-user-role-icon.svg';
-import { ReactComponent as AppAuditLogsIcon } from '../../../../assets/images/svg/app-audit-logs-icon.svg';
 import SideMenuDropdown from './SideMenuDropdown';
 
 export default function SideMenu() {
@@ -65,21 +63,6 @@ export default function SideMenu() {
 					Policies
 				</span>
 			</NavLink>
-
-			{/* <SideMenuDropdown
-				Icon={EachSideMenuIcon}
-				label="Permission Management"
-				sublinks={[
-					// {
-					// 	url: `permission-management/permissions/`,
-					// 	label: 'Permissions',
-					// },
-					{
-						url: `permission-management/policies/`,
-						label: 'Policies',
-					},
-				]}
-			/> */}
 			<NavLink
 				to={`tasks-management/`}
 				className={({ isActive, isPending }) =>
@@ -106,19 +89,6 @@ export default function SideMenu() {
 					Packages
 				</span>
 			</NavLink>
-			{/* <NavLink
-				to={`audit-logs/`}
-				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
-						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
-					}`
-				}
-			>
-				<AppAuditLogsIcon />
-				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
-					Audit Logs
-				</span>
-			</NavLink> */}
 			<SideMenuDropdown
 				Icon={AppSettingsIcon}
 				label="Audit Logs"
@@ -133,7 +103,7 @@ export default function SideMenu() {
 					},
 				]}
 			/>
-			{/* <NavLink
+			<NavLink
 				to={`access-logs/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -145,7 +115,7 @@ export default function SideMenu() {
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 					Access Logs
 				</span>
-			</NavLink> */}
+			</NavLink>
 		</div>
 	);
 }

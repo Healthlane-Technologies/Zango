@@ -1,10 +1,8 @@
-import { usePopper } from 'react-popper';
 import { Listbox, Transition } from '@headlessui/react';
-import { Fragment, useRef, useState, useEffect } from 'react';
-
-import { ReactComponent as NavSearchDownArrowIcon } from '../../../../assets/images/svg/nav-select-down-arrow.svg';
-import { ReactComponent as SelectCheckIcon } from '../../../../assets/images/svg/select-check-icon.svg';
-import { ReactComponent as DownArrowIcon } from '../../../../assets/images/svg/down-arrow-icon.svg';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { usePopper } from 'react-popper';
+import { ReactComponent as DownArrowIcon } from '../../assets/images/svg/down-arrow-icon.svg';
+import { ReactComponent as SelectCheckIcon } from '../../assets/images/svg/select-check-icon.svg';
 
 export default function PageCountSelectField({
 	label,

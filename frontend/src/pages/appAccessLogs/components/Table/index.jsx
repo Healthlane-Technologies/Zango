@@ -13,6 +13,8 @@ import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
+import PageCountSelectField from '../../../../components/Table/PageCountSelectField';
+import ResizableInput from '../../../../components/Table/ResizableInput';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
@@ -22,9 +24,6 @@ import {
 	setAppAccessLogsData,
 	setAppAccessLogsTableData,
 } from '../../slice';
-import PageCountSelectField from './PageCountSelectField';
-import ResizableInput from './ResizableInput';
-import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
@@ -489,8 +488,6 @@ export default function Table({ tableData }) {
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
-					{/* <TableFilterIcon />
-					<TableColumnFilterIcon /> */}
 				</div>
 			</div>
 			<div className="relative flex max-w-[calc(100vw_-_88px)] grow overflow-x-auto overflow-y-auto">
@@ -541,9 +538,7 @@ export default function Table({ tableData }) {
 									key="extra-cell2"
 									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
 								></td>
-								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex">
-									<RowMenu rowData={row.original} />
-								</td>
+								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex"></td>
 							</tr>
 						))}
 					</tbody>

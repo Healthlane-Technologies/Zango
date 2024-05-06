@@ -8,28 +8,25 @@ import debounce from 'just-debounce-it';
 import { find, findIndex, set } from 'lodash';
 import moment from 'moment';
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
 import HeaderInfo from '../../../../components/Table/HeaderInfo';
-import ListCell from '../../../../components/Table/ListCell';
 import ListGeneralCell from '../../../../components/Table/ListGeneralCell';
+import PageCountSelectField from '../../../../components/Table/PageCountSelectField';
+import ResizableInput from '../../../../components/Table/ResizableInput';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
-import { formatTableDate } from '../../../../utils/formats';
 import {
 	selectAppApplicationObjectsLogsData,
 	selectAppApplicationObjectsLogsTableData,
-	setAppApplicationObjectsLogsTableData,
 	setAppApplicationObjectsLogsData,
+	setAppApplicationObjectsLogsTableData,
 } from '../../slice';
-import PageCountSelectField from './PageCountSelectField';
-import ResizableInput from './ResizableInput';
-import RowMenu from './RowMenu';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
@@ -199,24 +196,6 @@ export default function Table({ tableData }) {
 			),
 		}),
 
-		// columnHelper.accessor((row) => row.object, {
-		// 	id: 'object',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
-		// 			<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				Object
-		// 			</span>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => (
-		// 		<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-		// 			<span className="text-pretty text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-		// 				{info.getValue()}
-		// 			</span>
-		// 		</div>
-		// 	),
-		// }),
-
 		columnHelper.accessor((row) => row.actor, {
 			id: 'actor',
 			header: () => (
@@ -251,135 +230,8 @@ export default function Table({ tableData }) {
 					/>
 				</div>
 			),
-			cell: (info) => (
-				<ListGeneralCell data={info.getValue()} info={info} />
-				// <div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
-				// 	{/* <span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-				// 		{JSON.stringify(info.getValue())}
-				// 	</span> */}
-				// 	<table class="table-auto">
-				// 		<thead>
-				// 			<tr>
-				// 				<th></th>
-				// 				<th></th>
-				// 			</tr>
-				// 		</thead>
-				// 		<tbody>
-				// 			{Object.entries(info.getValue()).map((eachChange) => {
-				// 				if (!Array.isArray(eachChange[1])) {
-				// 					return (
-				// 						<>
-				// 							<tr>
-				// 								<td className="pr-[24px]">
-				// 									<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-				// 										field
-				// 									</span>
-				// 								</td>
-				// 								<td className="pr-[10px]">
-				// 									<span className="flex gap-[10px] text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-				// 										:{''}
-				// 										<span>{eachChange[0].split('_').join(' ')}</span>
-				// 									</span>
-				// 								</td>
-				// 							</tr>
-				// 							<tr>
-				// 								<td className="pr-[24px]">
-				// 									<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-				// 										type
-				// 									</span>
-				// 								</td>
-				// 								<td className="pr-[10px]">
-				// 									<span className="flex gap-[10px] text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-				// 										:{''}
-				// 										<span>{eachChange[1]?.type}</span>
-				// 									</span>
-				// 								</td>
-				// 							</tr>
-				// 							<tr>
-				// 								<td className="pr-[24px]">
-				// 									<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-				// 										objects
-				// 									</span>
-				// 								</td>
-				// 								<td className="pr-[10px]">
-				// 									<span className="flex gap-[10px] whitespace-nowrap text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-				// 										:{''}
-				// 										<span>{eachChange[1]?.objects.join(', ')}</span>
-				// 									</span>
-				// 								</td>
-				// 							</tr>
-				// 							<tr>
-				// 								<td className="pr-[24px]">
-				// 									<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-				// 										operation
-				// 									</span>
-				// 								</td>
-				// 								<td className="pr-[10px]">
-				// 									<span className="flex gap-[10px] text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-				// 										:{''}
-				// 										<span>{eachChange[1]?.operation}</span>
-				// 									</span>
-				// 								</td>
-				// 							</tr>
-				// 						</>
-				// 					);
-				// 				}
-
-				// 				return (
-				// 					<tr>
-				// 						<td className="pr-[24px] align-top">
-				// 							<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-				// 								{eachChange[0].split('_').join(' ')}
-				// 							</span>
-				// 						</td>
-				// 						<td className="pr-[10px] align-top">
-				// 							<span className="flex gap-[10px] text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-				// 								:{''}
-				// 								{eachChange[1].map(
-				// 									(changesValue, index, arrayContext) => {
-				// 										if (
-				// 											index === 0 &&
-				// 											info.row.original?.action === 'Create'
-				// 										) {
-				// 											return <></>;
-				// 										}
-				// 										return (
-				// 											<span
-				// 												className={`text-balance text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] ${
-				// 													arrayContext?.length - 1 !== index
-				// 														? 'whitespace-nowrap text-[#A3ABB1]'
-				// 														: ''
-				// 												}`}
-				// 											>
-				// 												{!changesValue ? '<empty>' : changesValue}
-				// 												{arrayContext?.length - 1 !== index
-				// 													? ' ->'
-				// 													: ''}
-				// 											</span>
-				// 										);
-				// 									}
-				// 								)}
-				// 							</span>
-				// 						</td>
-				// 					</tr>
-				// 				);
-				// 			})}
-				// 		</tbody>
-				// 	</table>
-				// </div>
-			),
+			cell: (info) => <ListGeneralCell data={info.getValue()} info={info} />,
 		}),
-		// columnHelper.accessor((row) => row.policies, {
-		// 	id: 'policies',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
-		// 			<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				Policy
-		// 			</span>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => <ListCell data={info.getValue()} />,
-		// }),
 		columnHelper.accessor((row) => row.action, {
 			id: 'action',
 			header: () => (
@@ -539,8 +391,6 @@ export default function Table({ tableData }) {
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
-					{/* <TableFilterIcon />
-					<TableColumnFilterIcon /> */}
 				</div>
 			</div>
 			<div className="relative flex grow overflow-x-auto overflow-y-auto">
@@ -592,9 +442,7 @@ export default function Table({ tableData }) {
 									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
 								></td>
 
-								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex">
-									{/* <RowMenu rowData={row.original} /> */}
-								</td>
+								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex"></td>
 							</tr>
 						))}
 					</tbody>
