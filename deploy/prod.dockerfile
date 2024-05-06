@@ -1,4 +1,4 @@
-FROM kczelthy/zelthy3:latest
+FROM kczelthy/zcore:latest
 
 RUN pip install gunicorn
 RUN apt-get install net-tools

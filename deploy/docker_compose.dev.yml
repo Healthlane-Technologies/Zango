@@ -71,7 +71,7 @@ services:
       retries: 3
 
   celery_beat:
-    image: kczelthy/zelthy3:latest
+    image: kczelthy/zcore:latest
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/zelthy/

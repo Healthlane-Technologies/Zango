@@ -51,7 +51,7 @@ def write_env_file(project_dir, args):
 
 def build_core():
     try:
-        subprocess.run("docker build -t zelthy3 .", shell=True, check=True)
+        subprocess.run("docker build -t zcore .", shell=True, check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error: {e}")
 
@@ -92,7 +92,7 @@ def setup_project(project_dir, project_name, without_db, start=False):
 
 def rebuild_core(project_dir):
     try:
-        subprocess.run(f"docker build -t zelthy3 .", shell=True, check=True)
+        subprocess.run(f"docker build -t zcore .", shell=True, check=True)
         subprocess.run(
             f"docker compose -f {project_dir}/docker-compose.yml build",
             shell=True,
