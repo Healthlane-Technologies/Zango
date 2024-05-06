@@ -1,6 +1,6 @@
 {
 	"name": "apps-msd-ind-order-tracking-platform-fe",
-	"version": "1.0.0",
+	"version": "1.1.1",
 	"private": true,
 	"dependencies": {
 		"@faker-js/faker": "^8.0.2",
