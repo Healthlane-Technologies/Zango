@@ -1,14 +1,11 @@
 from functools import wraps
 
 from django.conf import settings
-from django.dispatch import Signal, receiver
 
 from zelthy.apps.auditlogs.context import auditlog_disabled
 from zelthy.apps.auditlogs.diff import model_instance_diff
 from zelthy.apps.auditlogs.models import LogEntry
 from zelthy.apps.auditlogs.signals import post_log, pre_log
-
-custom = Signal()
 
 
 def check_disable(signal_handler):

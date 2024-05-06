@@ -14,12 +14,9 @@ from django.db.models import (
 )
 from django.utils import timezone as django_timezone
 from django.utils.encoding import smart_str
-from django.db.models.fields.reverse_related import ManyToOneRel
 from django.conf import settings
 
 from zelthy.apps.dynamic_models.fields import ZOneToOneField, ZForeignKey
-from zelthy.core.storage_utils import ZFileField
-from zelthy.core.utils import get_current_request
 
 
 def track_field(field):
@@ -98,7 +95,11 @@ def get_field_value(obj, field):
         elif isinstance(field, DateTimeField):
             # DateTimeFields are timezone-aware, so we need to convert the field
             # to its naive form before we can accurately compare them for changes.
-            value = field.to_python(getattr(obj, field.name, None))
+            value = getattr(obj, field.name, None)
+            try:
+                value = field.to_python(value)
+            except TypeError:
+                return value
             if (
                 value is not None
                 and settings.USE_TZ
@@ -112,10 +113,10 @@ def get_field_value(obj, field):
             value = smart_str(
                 getattr(obj, field.get_attname(), None), strings_only=True
             )
-        elif isinstance(field, ManyToOneRel):
-            value = None
         else:
             value = smart_str(getattr(obj, field.name, None))
+            if type(value).__name__ == "__proxy__":
+                value = str(value)
     except ObjectDoesNotExist:
         value = (
             field.default

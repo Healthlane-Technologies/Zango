@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
 
 from zelthy.apps.auditlogs.cid import set_cid
 from zelthy.apps.auditlogs.context import set_actor
@@ -15,9 +16,14 @@ class AuditlogMiddleware:
 
     def __init__(self, get_response=None):
         self.get_response = get_response
+        if not isinstance(settings.AUDITLOG_DISABLE_REMOTE_ADDR, bool):
+            raise TypeError("Setting 'AUDITLOG_DISABLE_REMOTE_ADDR' must be a boolean")
 
     @staticmethod
     def _get_remote_addr(request):
+        if settings.AUDITLOG_DISABLE_REMOTE_ADDR:
+            return None
+
         # In case there is no proxy, return the original address
         if not request.headers.get("X-Forwarded-For"):
             return request.META.get("REMOTE_ADDR")
