@@ -15,7 +15,7 @@ else
         zcore start-project $PROJECT_NAME --db_name="$POSTGRES_DB" --db_user="$POSTGRES_USER" --db_password="$POSTGRES_PASSWORD" --db_host="$POSTGRES_HOST" --db_port="$POSTGRES_PORT" --platform_username="$PLATFORM_USERNAME" --platform_user_password="$PLATFORM_USER_PASSWORD" --redis_host="$REDIS_HOST" --redis_port="$REDIS_PORT"
     fi
     cd "$PROJECT_NAME"
-    cp /zelthy/config/gunicorn.conf.py .
+    cp /zcore/config/gunicorn.conf.py .
     python manage.py collectstatic --noinput
     python manage.py migrate_schemas
     gunicorn -c gunicorn.conf.py "$PROJECT_NAME".wsgi

@@ -17,6 +17,6 @@ RUN apt update && \
 USER zelthy_user
 
 
-COPY init.sh /zelthy/
-WORKDIR /zelthy/
+COPY init.sh /zcore/
+WORKDIR /zcore/
 CMD ["/bin/sh", "init.sh"]

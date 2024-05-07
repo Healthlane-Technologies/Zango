@@ -106,7 +106,7 @@ def rebuild_core(project_dir):
 if __name__ == "__main__":
     args = sys.argv[1:]
     parser = argparse.ArgumentParser(
-        prog="zelthy_setup", description="Helps you develop with zelthy locally"
+        prog="zcore_setup", description="Helps you develop with zelthy locally"
     )
     parser.add_argument("--project_name", default="", help="The name of the project")
     parser.add_argument(
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             build_core()
             sys.exit(0)
         if args.project_name == "":
-            args.project_name = "zelthy_project"
+            args.project_name = "zcore_project"
         if args.rebuild_core:
             rebuild_core(args.project_dir)
         load_necessary_files(args.project_dir, args.project_name, args.without_db)

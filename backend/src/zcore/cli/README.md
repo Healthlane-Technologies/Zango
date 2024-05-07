@@ -1,6 +1,6 @@
 ### start-project
 ``` sh
-Usage: zelthy3 start-project [OPTIONS] PROJECT_NAME
+Usage: zcore start-project [OPTIONS] PROJECT_NAME
 
   Create Project
 

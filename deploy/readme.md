@@ -25,7 +25,7 @@ To begin using Zelthy through Docker installation, ensure that Docker and Docker
 
    You can use the `--build_core` option to build the Zelthy library
 
-3. This creates a project named `zelthy_project` in the `zproject` folder in the specified directory.
+3. This creates a project named `zcore_project` in the `zproject` folder in the specified directory.
 
 4. Customize the project creation using optional arguments:
 
@@ -33,7 +33,7 @@ To begin using Zelthy through Docker installation, ensure that Docker and Docker
    python setup_project.py --project_name my_project --project_dir /path/to/my_project --build_core --platform_username user@example.com --platform_user_password secret --skip_build_project
    ```
 
-   - `--project_name`: Modifies the name of the project (Default: `zelthy_project`).
+   - `--project_name`: Modifies the name of the project (Default: `zcore_project`).
    - `--project_dir`: Specifies the directory for project creation (Default: `zproject`).
    - `--build_core`: Builds the Zelthy library (Default: `False`).
    - `--platform_username`: The user email of the platform user (Default: `zelthy@mail.com`).

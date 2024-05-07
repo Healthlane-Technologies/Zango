@@ -36,7 +36,7 @@ services:
     environment:
       ENV: dev
     volumes:
-      - .:/zelthy/
+      - .:/zcore/
     healthcheck:
       test: ["CMD-SHELL", "netstat -ltn | grep -q 8000"]
       timeout: 5s
@@ -51,7 +51,7 @@ services:
         - GID=${GID}
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
     volumes:
-      - .:/zelthy/
+      - .:/zcore/
     env_file:
       - .env
     depends_on:
@@ -74,7 +74,7 @@ services:
     image: kczelthy/zcore:latest
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
-      - .:/zelthy/
+      - .:/zcore/
     env_file:
       - .env
     depends_on:

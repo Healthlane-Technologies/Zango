@@ -17,6 +17,6 @@ RUN apt update && \
 # Set the non-root user as the default user
 USER zelthy_user
 
-COPY init.sh /zelthy/
-WORKDIR /zelthy/
+COPY init.sh /zcore/
+WORKDIR /zcore/
 CMD ["/bin/sh", "init.sh"]
