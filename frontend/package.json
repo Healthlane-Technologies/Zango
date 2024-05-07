@@ -3,6 +3,7 @@
 	"version": "1.1.1",
 	"private": true,
 	"dependencies": {
+		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",
 		"@faker-js/faker": "^8.0.2",
 		"@headlessui/react": "^1.7.7",
 		"@monaco-editor/react": "^4.6.0",
