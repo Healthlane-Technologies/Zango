@@ -32,6 +32,7 @@ export default function AppTable({ tableData }) {
 	return (
 		<Table
 			localTableData={appUserRolesTableData}
+			searchPlaceholder={'Search User roles by role / policy(s)'}
 			tableData={appUserRolesData?.roles}
 			columns={columns({
 				debounceSearch,

@@ -35,6 +35,7 @@ export default function AppTable({ tableData }) {
 	return (
 		<Table
 			localTableData={platformUserManagementTableData}
+			searchPlaceholder={'Search Users by name / ID / role(s)'}
 			tableData={platformUserManagementData?.platform_users}
 			columns={columns({
 				debounceSearch,
@@ -46,6 +47,7 @@ export default function AppTable({ tableData }) {
 			updatePageData={updatePageData}
 			updateLocalTableData={updateLocalTableData}
 			RowMenu={RowMenu}
+			haveSideMenu={false}
 		/>
 	);
 }

@@ -1,12 +1,10 @@
 import {
-	createColumnHelper,
 	flexRender,
 	getCoreRowModel,
 	useReactTable,
 } from '@tanstack/react-table';
 import debounce from 'just-debounce-it';
 import { useEffect, useMemo, useRef } from 'react';
-import { useDispatch } from 'react-redux';
 import { ReactComponent as TablePaginationNextIcon } from '../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../assets/images/svg/table-search-icon.svg';
@@ -16,6 +14,7 @@ import ResizableInput from './ResizableInput';
 
 function Table({
 	columns,
+	searchPlaceholder = 'Search',
 	localTableData,
 	pageData,
 	tableData,
@@ -24,6 +23,7 @@ function Table({
 	updateLocalTableData,
 	RowMenu,
 	apiUrl,
+	haveSideMenu = true,
 }) {
 	console.log('HERER');
 	const searchRef = useRef(null);
@@ -63,29 +63,15 @@ function Table({
 				...localTableData,
 				...newPageInfo,
 			});
-			// dispatch(
-			// 	setPlatformUserManagementTableData({
-			// 		...localTableData,
-			// 		...newPageInfo,
-			// 	})
-			// );
 		},
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 	});
 
-	const dispatch = useDispatch();
-
-	// function updatePlatformUserManagementData(value) {
-	// 	updatePageData(value);
-	// 	dispatch(setPlatformUserManagementData(value));
-	// }
-
 	const triggerApi = useApi();
 
 	const debounceSearch = debounce((data) => {
 		updateLocalTableData(data);
-		// dispatch(setPlatformUserManagementTableData(data));
 	}, 500);
 
 	useEffect(() => {
@@ -122,7 +108,11 @@ function Table({
 	}, []);
 
 	return (
-		<div className="flex max-w-[100vw] grow flex-col overflow-auto">
+		<div
+			className={`flex ${
+				haveSideMenu ? 'max-w-[calc(100vw_-_88px)]' : 'max-w-[100vw]'
+			}  grow flex-col overflow-auto`}
+		>
 			<div className="flex bg-[#F0F3F4]">
 				<div className="flex grow items-center gap-[24px] py-[13px] pl-[24px] pr-[32px]">
 					<div className="flex grow items-center gap-[8px]">
@@ -133,7 +123,7 @@ function Table({
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Users by name / ID / role(s)"
+							placeholder={searchPlaceholder}
 							onChange={(e) => handleSearch(e?.target?.value)}
 						/>
 					</div>
