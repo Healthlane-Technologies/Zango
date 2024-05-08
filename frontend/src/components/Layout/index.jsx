@@ -6,7 +6,12 @@ import { useWindowSizeHeight } from '../../utils/helper';
 import NavSearchForm from './NavSearchForm';
 import ProfileMenu from './ProfileMenu';
 
-export default function Layout({ showFooter = false, children }) {
+export default function Layout({
+	showFooter = false,
+	children,
+	SideMenu = null,
+	CodeAssist = null,
+}) {
 	const navRef = useRef(null);
 	const footerRef = useRef(null);
 
@@ -49,10 +54,14 @@ export default function Layout({ showFooter = false, children }) {
 			</nav>
 			<main
 				className={`${
-					showFooter ? 'small-device-height-fix' : 'small-device-height-fix2'
+					showFooter || !SideMenu
+						? 'small-device-height-fix'
+						: 'small-device-height-fix2'
 				}  flex grow overflow-y-auto`}
 			>
+				{SideMenu}
 				{children}
+				{CodeAssist}
 			</main>
 			{showFooter ? (
 				<footer

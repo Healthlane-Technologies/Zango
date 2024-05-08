@@ -1,8 +1,7 @@
-import React from 'react';
-import { useRef, useState } from 'react';
+import React, { useState } from 'react';
+import { ReactComponent as RestartIcon } from '../../../../assets/images/svg/restart-icon.svg';
+import useApi from '../../../../hooks/useApi';
 import BotChat from './BotChat';
-import { ReactComponent as RestartIcon } from '../../../../../assets/images/svg/restart-icon.svg';
-import useApi from '../../../../../hooks/useApi';
 
 const ChatText = ({
 	data,

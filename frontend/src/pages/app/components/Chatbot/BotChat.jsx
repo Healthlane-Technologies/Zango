@@ -2,20 +2,18 @@ import Editor from '@monaco-editor/react';
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { ReactComponent as CopyIcon } from '../../../../../assets/images/svg/copy-icon.svg';
-import { ReactComponent as DislikeIcon } from '../../../../../assets/images/svg/dislike-icon.svg';
-import { ReactComponent as LikeIcon } from '../../../../../assets/images/svg/like-icon.svg';
-import { ReactComponent as PopoutIcon } from '../../../../../assets/images/svg/popout-icon.svg';
-import useApi from '../../../../../hooks/useApi';
-import { openIsDraggablePopoverOpen, setPopOverLink } from '../../../slice';
+import { ReactComponent as CopyIcon } from '../../../../assets/images/svg/copy-icon.svg';
+import { ReactComponent as PopoutIcon } from '../../../../assets/images/svg/popout-icon.svg';
+import useApi from '../../../../hooks/useApi';
+import { openIsDraggablePopoverOpen, setPopOverLink } from '../../slice';
 
 const BotChat = ({ item, executionData }) => {
 	const [executionMsg, setExecutionMsg] = useState('');
 	const [hideCommit, setHideCommit] = useState(false);
 	const dispatch = useDispatch();
-	let { appId } = useParams();
 	const triggerApi = useApi();
-	// console.log(item, executionData, executionData?.allow_execution);
+	let { appId } = useParams();
+
 	const handleCommit = (data) => {
 		console.log('print commit data here', data);
 		let postData = data;
@@ -60,7 +58,7 @@ const BotChat = ({ item, executionData }) => {
 						) : item.content_meta.type === 'code' ? (
 							<div className="relative w-full">
 								<CopyIcon
-									className="absolute top-0 right-0 z-10 cursor-pointer"
+									className="absolute right-0 top-0 z-10 cursor-pointer"
 									onClick={() => {
 										navigator.clipboard.writeText(item.content);
 									}}
@@ -83,7 +81,7 @@ const BotChat = ({ item, executionData }) => {
 						) : (
 							<div className="relative mt-2">
 								<PopoutIcon
-									className="absolute top-[12px] right-[12px] z-10 cursor-pointer"
+									className="absolute right-[12px] top-[12px] z-10 cursor-pointer"
 									onClick={() => {
 										dispatch(setPopOverLink(item.content));
 										dispatch(openIsDraggablePopoverOpen());
@@ -122,10 +120,6 @@ const BotChat = ({ item, executionData }) => {
 					</div>
 				)}
 			</div>
-			{/* <div className="flex grow justify-end gap-[8px] self-end text-right">
-				<LikeIcon className="cursor-pointer" />
-				<DislikeIcon className="cursor-pointer" />
-			</div> */}
 		</div>
 	);
 };

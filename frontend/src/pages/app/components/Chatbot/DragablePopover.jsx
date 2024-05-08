@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import Draggable from 'react-draggable';
 import { useDispatch, useSelector } from 'react-redux';
 import { ResizableBox } from 'react-resizable';
-import { ReactComponent as CloseIcon } from '../../../../../assets/images/svg/close-icon.svg';
-import { ReactComponent as RefreshIcon } from '../../../../../assets/images/svg/refresh-icon.svg';
+import { ReactComponent as CloseIcon } from '../../../../assets/images/svg/close-icon.svg';
+import { ReactComponent as RefreshIcon } from '../../../../assets/images/svg/refresh-icon.svg';
 import {
 	closeIsDraggablePopoverOpen,
 	openIsDraggablePopoverOpen,
 	selectIsDraggablePopoverOpen,
 	selectPopOverLink,
-} from '../../../slice';
+} from '../../slice';
 
 const DragablePopover = () => {
 	const isDraggablePopoverOpen = useSelector(selectIsDraggablePopoverOpen);
@@ -42,7 +42,7 @@ const DragablePopover = () => {
 						resizeHandles={['ne', 'e', 'n']}
 					>
 						<div className="relative flex flex-grow rounded-[6px] bg-[#F0F3F4] p-[8px] pt-[30px]">
-							<div className="fixed top-[6px] right-[20px] flex cursor-pointer items-center gap-[8px]">
+							<div className="fixed right-[20px] top-[6px] flex cursor-pointer items-center gap-[8px]">
 								<RefreshIcon
 									className="w-3"
 									onClick={() => {

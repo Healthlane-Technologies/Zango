@@ -1,23 +1,20 @@
 import { Formik } from 'formik';
 import _ from 'lodash';
-import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
+import Lottie from 'lottie-react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Popper } from 'react-popper';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
-import { ReactComponent as ChatbotIcon } from '../../../../../assets/images/svg/chatbot-icon.svg';
-import { ReactComponent as CloseIcon } from '../../../../../assets/images/svg/close-icon.svg';
-import { ReactComponent as PlusIcon } from '../../../../../assets/images/svg/plus-icon.svg';
-import { ReactComponent as SendIcon } from '../../../../../assets/images/svg/send-icon.svg';
-import Lottie from 'lottie-react';
-import animationData from '../../../../../assets/images/zelthy-loader.json';
-// import launchingAppLoaderGif from '../../../../../assets/images/gif/launching-app-loader.gif';
-
-import useApi from '../../../../../hooks/useApi';
+import { ReactComponent as ChatbotIcon } from '../../../../assets/images/svg/chatbot-icon.svg';
+import { ReactComponent as CloseIcon } from '../../../../assets/images/svg/close-icon.svg';
+import { ReactComponent as PlusIcon } from '../../../../assets/images/svg/plus-icon.svg';
+import { ReactComponent as SendIcon } from '../../../../assets/images/svg/send-icon.svg';
+import animationData from '../../../../assets/images/zelthy-loader.json';
+import useApi from '../../../../hooks/useApi';
 import ChatText from './ChatText';
 import RadioPillField from './RadioPillField';
 
 const Chatbot = () => {
-	// const [activeConversationId, setActiveConversationId] = useState('');
 	const [userMessage, setUserMessage] = useState('');
 	const [isNewConversation, setIsNewConversation] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
@@ -178,9 +175,6 @@ const Chatbot = () => {
 				payload: update_conversation_form,
 			});
 			if (success && response) {
-				// updateAppConfigurationData(response);
-				// updateMessages(response, isNewConversation);
-
 				getConversationMessages(response.conversation_id);
 
 				setErrorMessage('');
@@ -238,12 +232,12 @@ const Chatbot = () => {
 						>
 							<div className="mx-3 h-[80vh] w-[800px] rounded-[6px] bg-white shadow-table-menu">
 								<div className="border-[#DDE2E5} relative h-[64px] border-b-[1px]">
-									<div className="fixed top-[16px] left-[26px] text-lg font-semibold text-[#000]">
+									<div className="fixed left-[26px] top-[16px] text-lg font-semibold text-[#000]">
 										Code Assist
 									</div>
 
 									<div
-										className="fixed top-[16px] right-[26px] cursor-pointer"
+										className="fixed right-[26px] top-[16px] cursor-pointer"
 										onClick={() => closePopover()}
 									>
 										<CloseIcon />
@@ -336,11 +330,6 @@ const Chatbot = () => {
 															>
 																<SendIcon className="h-4 w-4" />
 															</button>
-															{/* <input
-															type="submit"
-															// className="left-[-9999px], absolute h-[1px] w-[1px]"
-															// tabindex="-1"
-														/> */}
 														</div>
 
 														<div className="flex gap-[10px] divide-x-[1px]">

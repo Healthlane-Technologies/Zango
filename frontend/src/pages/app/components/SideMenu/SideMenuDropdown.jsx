@@ -1,10 +1,8 @@
-import { usePopper } from 'react-popper';
-import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { ReactComponent as EachSideMenuIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
-import { ReactComponent as SidemenuArrowIcon } from '../../../../assets/images/svg/sidemenu-arrow-icon.svg';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import { usePopper } from 'react-popper';
 import { NavLink, useLocation } from 'react-router-dom';
+import { ReactComponent as SidemenuArrowIcon } from '../../../../assets/images/svg/sidemenu-arrow-icon.svg';
 
 export default function SideMenuDropdown({ label, Icon, sublinks }) {
 	const location = useLocation();
@@ -45,7 +43,7 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 						<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
 							{label}
 						</span>
-						<SidemenuArrowIcon className="absolute right-[2px] bottom-[2px]" />
+						<SidemenuArrowIcon className="absolute bottom-[2px] right-[2px]" />
 					</div>
 				</Menu.Button>
 				<Transition
@@ -55,7 +53,7 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 					style={styles['popper']}
 					{...attributes['popper']}
 				>
-					<Menu.Items className="absolute top-[30px] right-0 w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
+					<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
 						<div className="flex flex-col gap-[6px] px-[20px] py-[12px]">
 							{sublinks?.map(({ url, label }) => {
 								return (
@@ -72,7 +70,7 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 															} relative flex w-full flex-col rounded-[2px]`}
 														>
 															{isActive ? (
-																<span className="absolute top-[6px] left-[-8px] h-[4px] w-[4px] rounded bg-black"></span>
+																<span className="absolute left-[-8px] top-[6px] h-[4px] w-[4px] rounded bg-black"></span>
 															) : null}
 															<span className="text-start font-lato text-[11px] font-bold leading-[16px] tracking-[0.2px] text-[#212429]">
 																{label}
@@ -85,31 +83,6 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 									</Menu.Item>
 								);
 							})}
-
-							{/* <Menu.Item>
-								{({ active }) => (
-									<NavLink
-										to={`app-settings/app-theme-configuration/`}
-										className="flex flex-col items-center justify-center bg-transparent"
-										children={({ isActive }) => {
-											return (
-												<div
-													className={`${
-														active ? '' : ''
-													} relative flex w-full flex-col rounded-[2px]`}
-												>
-													{isActive ? (
-														<span className="absolute top-[6px] left-[-8px] h-[4px] w-[4px] rounded bg-black"></span>
-													) : null}
-													<span className="text-start font-lato text-[11px] font-bold leading-[16px] tracking-[0.2px] text-[#212429]">
-														App Theme Configuration
-													</span>
-												</div>
-											);
-										}}
-									/>
-								)}
-							</Menu.Item> */}
 						</div>
 					</Menu.Items>
 				</Transition>

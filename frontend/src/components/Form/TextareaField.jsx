@@ -11,6 +11,7 @@ function TextareaField({ label, content, type = 'text', key, id, ...props }) {
 				{label}
 			</label>
 			<textarea
+				type={type}
 				className="min-h-[89px] rounded-[6px] rounded-[6px] border border border-[#DDE2E5] border-[#DDE2E5] px-[16px] px-[16px] py-[14px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
 				{...field}
 				{...props}
