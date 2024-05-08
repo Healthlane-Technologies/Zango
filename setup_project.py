@@ -125,11 +125,11 @@ if __name__ == "__main__":
         help="Whether to skip the build step",
     )
     parser.add_argument(
-        "--platform_username", default="zelthy@mail.com", help="The platform username"
+        "--platform_username", default="platform_admin@zelthy.com", help="The platform username"
     )
     parser.add_argument(
         "--platform_user_password",
-        default="Zelthy@123",
+        default="ZCore@123",
         help="The platform user password",
     )
     parser.add_argument("--rebuild_core", action="store_true", default=False)

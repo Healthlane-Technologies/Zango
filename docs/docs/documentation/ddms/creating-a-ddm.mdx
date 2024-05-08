@@ -4,13 +4,13 @@ sidebar_label: Creating a Model
 
 # Creating a Model
 
-Models in Zelthy are a powerful way to define custom data structures tailored to the unique needs of individual tenants in a multi-tenant application. Defining a Model class in Zelthy is quite similar to creating a model class in Django, with a few distinctions.
+Models in ZCore are a powerful way to define custom data structures tailored to the unique needs of individual tenants in a multi-tenant application. Defining a Model class in ZCore is quite similar to creating a model class in Django, with a few distinctions.
 
-Here, we'll walk you through the process of creating a Model in Zelthy:
+Here, we'll walk you through the process of creating a Model in ZCore:
 
 ## Step 1: File Location
 
-Models are defined inside the module folder of your Zelthy application, in a file named `models.py`. This file serves as the blueprint for your data models within a specific module.
+Models are defined inside the module folder of your ZCore application, in a file named `models.py`. This file serves as the blueprint for your data models within a specific module.
 
 ```plaintext
 workspaces
@@ -25,7 +25,7 @@ workspaces
 
 ## Step 2: Extending DynamicModelBase
 
-In Zelthy, Model classes need to extend `DynamicModelBase`, a base class provided by Zelthy's framework. This extension is essential to make your model dynamic and tenant-specific. Here's an example of defining a Model class:
+In ZCore, Model classes need to extend `DynamicModelBase`, a base class provided by ZCore's framework. This extension is essential to make your model dynamic and tenant-specific. Here's an example of defining a Model class:
 
 ```python
 from zcore.apps.dynamic_models.models import DynamicModelBase
@@ -55,6 +55,6 @@ class CustomModel(DynamicModelBase):
 
 ## Step 4: Define Your Fields
 
-Customize your Model class by adding fields that match your tenant's specific data requirements. You can include various field types provided by Django and Zelthy to represent different data types, including text, numbers, dates, and more.
+Customize your Model class by adding fields that match your tenant's specific data requirements. You can include various field types provided by Django and ZCore to represent different data types, including text, numbers, dates, and more.
 
-With these steps, you've successfully created a Model in Zelthy, allowing you to have unique data structures for each tenant within your multi-tenant application. This flexibility empowers you to meet the diverse needs of your clients or organizations while maintaining data isolation and security.
+With these steps, you've successfully created a Model in ZCore, allowing you to have unique data structures for each tenant within your multi-tenant application. This flexibility empowers you to meet the diverse needs of your clients or organizations while maintaining data isolation and security.

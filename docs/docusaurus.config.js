@@ -6,7 +6,7 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: "Zelthy Docs",
+  title: "ZCore Docs",
   tagline: "Next-Gen HealthCare App Development Platform",
   favicon: "img/favicon.ico",
 
@@ -69,9 +69,9 @@ const config = {
       // Replace with your project's social card
       image: "img/zelthy-social-card.jpg",
       navbar: {
-        title: "Zelthy Docs",
+        title: "ZCore Docs",
         logo: {
-          alt: "Zelthy Logo",
+          alt: "ZCore Logo",
           src: "img/zelthy_logo.png",
           href: '/docs/documentation/introduction'
         },
@@ -154,7 +154,7 @@ const config = {
           //   title: "More",
           //   items: [
           //     {
-          //       label: "Zelthy",
+          //       label: "ZCore",
           //       href: "https://zelthy.com",
           //     },
           //     {

@@ -26,7 +26,7 @@ const sidebars = {
       items: [
         {
           type: 'category',
-          label: 'Installing Zelthy',
+          label: 'Installing ZCore',
           collapsed: true,
           items: [
             'documentation/getting-started/installing-zelthy/manual',

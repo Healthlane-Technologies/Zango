@@ -1,10 +1,10 @@
-# Installing Zelthy: Manual Process
+# Installing ZCore: Manual Process
 
-To get started with Zelthy, you will need to install it using the Python package manager, pip.
+To get started with ZCore, you will need to install it using the Python package manager, pip.
 
 Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions [here](https://www.python.org/downloads/) and pip installation instructions [here](https://pip.pypa.io/en/stable/installation/).
 
-Once Python and pip are installed, you can create virtual environment in which zelthy will be installed.
+Once Python and pip are installed, you can create virtual environment in which zcore will be installed.
 
 Now you are ready to create and activate the virtual environment by running the following command in your terminal or command prompt
 
@@ -13,55 +13,55 @@ python3 -m venv <virtual_environment_name>
 source <virtual_environment_name>/bin/activate
 ```
 
-install the Zelthy Open Source Platform by running the following command in your terminal or command prompt
+install the ZCore Open Source Platform by running the following command in your terminal or command prompt
 
 ```shell
-git clone https://github.com/Healthlane-Technologies/zelthy3.git
+git clone https://github.com/Healthlane-Technologies/zcore.git
 cd backend
 pip install -e .
 ```
 
-This command will download and install the latest version of Zelthy Framework along with its dependencies.
+This command will download and install the latest version of ZCore Framework along with its dependencies.
 
-## zelthy3: The Zelthy CLI
+## zcore: The ZCore CLI
 
-**zelthy3** is the command-line interface (CLI) tool provided by Zelthy, designed to facilitate the management of projects and applications within the Zelthy platform. This powerful tool streamlines various tasks such as project creation, database migrations, and much more. Here's a brief overview of Zelthy3 and how to use it:
+**zcore** is the command-line interface (CLI) tool provided by ZCore, designed to facilitate the management of projects and applications within the ZCore platform. This powerful tool streamlines various tasks such as project creation, database migrations, and much more. Here's a brief overview of ZCore and how to use it:
 
 ### Key Features and Usage
 
 - **Project Management:**
-  Use zelthy3 to create new projects, manage existing projects, and configure project settings.
+  Use zcore to create new projects, manage existing projects, and configure project settings.
 
 - **Database Migrations:**
   Perform database migrations seamlessly to keep your application's data schema up-to-date.
 
 - **Application Development:**
-  Simplify app development by utilizing zelthy3's commands for app creation, configuration, and deployment.
+  Simplify app development by utilizing zcore's commands for app creation, configuration, and deployment.
 
 - **Extensive Command Options:**
-  Run `zelthy3 --help` to view a comprehensive list of available commands and their descriptions.
+  Run `zcore --help` to view a comprehensive list of available commands and their descriptions.
 
 - **Command Specific Help:**
-  For detailed information about a specific command, run `zelthy3 [command] --help`.
+  For detailed information about a specific command, run `zcore [command] --help`.
 
-To get started with **zelthy3 cli**, open your terminal and run the following commands:
+To get started with **zcore cli**, open your terminal and run the following commands:
 
 - To see a list of all available commands and their descriptions:
 
   ```
-  zelthy3 --help
+  zcore --help
   ```
 
 - To get detailed information about a specific command (replace `[command]` with the desired command):
   ```
-  zelthy3 [command] --help
+  zcore [command] --help
   ```
 
-**zelthy3** is an invaluable tool for efficiently managing your Zelthy projects and applications through the command line, enhancing your development and administrative capabilities.
+**zcore** is an invaluable tool for efficiently managing your ZCore projects and applications through the command line, enhancing your development and administrative capabilities.
 
 ### Prerequisites for Setting Up a Project
 
-Before you embark on setting up your project with Zelthy, there are certain prerequisites that need to be met. One of the crucial prerequisites is the setup of a PostgreSQL database. Here's a brief guide on what needs to be done:
+Before you embark on setting up your project with ZCore, there are certain prerequisites that need to be met. One of the crucial prerequisites is the setup of a PostgreSQL database. Here's a brief guide on what needs to be done:
 
 ### PostgreSQL Database Setup
 
@@ -82,11 +82,11 @@ ex:
 
 ```bash
 docker run -d \
-   --name zelthy_postgres_db \
+   --name zcore_postgres_db \
    -p 5432:5432 \
-   -e POSTGRES_USER=zelthy_admin \
-   -e POSTGRES_PASSWORD=zelthy3pass \
-   -e POSTGRES_DB=zelthy_db \
+   -e POSTGRES_USER=zcore_admin \
+   -e POSTGRES_PASSWORD=zcorepass \
+   -e POSTGRES_DB=zcore_db \
    -v db:/var/lib/postgresql/data \
    postgres:latest
 ```
@@ -102,23 +102,23 @@ docker run --name <name> -d -p 6379:6379 redis
 ex:
 
 ```bash
-docker run --name zelthy_redis -d -p 6379:6379 redis
+docker run --name zcore_redis -d -p 6379:6379 redis
 ```
 
 ## Setting Up the Project
 
-Setting up your project with Zelthy is a straightforward process. Follow these steps to create your project's root folder, initialize the project, and configure the necessary settings:
+Setting up your project with ZCore is a straightforward process. Follow these steps to create your project's root folder, initialize the project, and configure the necessary settings:
 
 #### 1. Choose a Directory:
 
 Navigate to the directory where you want to create your project's root folder. You can use your preferred file explorer or the command line to create and navigate to this directory.
 
-#### 2. Install Zelthy and Start a New Project:
+#### 2. Install ZCore and Start a New Project:
 
-After installing Zelthy, you can use the `zelthy3 start-project` command to initiate the creation of a new project. Replace `"MyFirstProject"` with your preferred project name.
+After installing ZCore, you can use the `zcore start-project` command to initiate the creation of a new project. Replace `"MyFirstProject"` with your preferred project name.
 
 ```bash
-zelthy3 start-project "MyFirstProject"
+zcore start-project "MyFirstProject"
 ```
 
 #### 3. Provide Database Credentials:
@@ -131,7 +131,7 @@ During the project setup, you'll be prompted to provide your PostgreSQL database
 - **Database Host**
 - **Database Port** (default is usually 5432)
 
-If the provided credentials are incorrect or if there are issues with the database connection, the setup process will throw errors and cancel the project creation. This is because Zelthy will create schemas and perform migrations during the project's creation.
+If the provided credentials are incorrect or if there are issues with the database connection, the setup process will throw errors and cancel the project creation. This is because ZCore will create schemas and perform migrations during the project's creation.
 
 #### 4. Migrate Schemas and Create Public Tenant:
 
@@ -149,7 +149,7 @@ Once you've entered these details, the setup process will create the default pla
 
 #### 6. Project Folder Structure and Boilerplate Code:
 
-With all the necessary configurations in place, the setup process will proceed to create your project's folder structure and populate it with boilerplate code. You're now ready to start developing your healthcare apps within the Zelthy platform.
+With all the necessary configurations in place, the setup process will proceed to create your project's folder structure and populate it with boilerplate code. You're now ready to start developing your healthcare apps within the ZCore platform.
 
 ##### Project Structure
 
@@ -166,11 +166,11 @@ project_name/                  # Project root directory
     └── wsgi.py                # WSGI config for the project
 ```
 
-Follow this guide, and you'll be well on your way to creating powerful and efficient healthcare applications using Zelthy.
+Follow this guide, and you'll be well on your way to creating powerful and efficient healthcare applications using ZCore.
 
 ## Running the Development Server
 
-Now that you've set up your project using Zelthy, the next step is to start the development server. This server allows you to access App Panel, where you can begin creating your healthcare apps. Follow these steps to run the development server:
+Now that you've set up your project using ZCore, the next step is to start the development server. This server allows you to access App Panel, where you can begin creating your healthcare apps. Follow these steps to run the development server:
 
 #### 1. Navigate to Your Project Folder:
 
@@ -238,8 +238,8 @@ celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:
 
   ```
 
-  from zcore.core.tasks import zelthy_task_executor
-  zelthy_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
+  from zcore.core.tasks import zcore_task_executor
+  zcore_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
 
   task_name can be taken from App Panel -> Tasks table
   ```
@@ -248,8 +248,8 @@ celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:
 
   ```
 
-  from zcore.core.tasks import zelthy_task_executor
-  zelthy_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
+  from zcore.core.tasks import zcore_task_executor
+  zcore_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
 
   task_name can be taken from App Panel -> Tasks table
   ```

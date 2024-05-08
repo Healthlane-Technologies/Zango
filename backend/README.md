@@ -8,7 +8,7 @@
 [Website](https://www.zelthy.com/framework) • [Getting Started](https://docs.zelthy.com/docs/category/getting-started) • [Docs](https://docs.zelthy.com/)
 
 
-[![PyPI version](https://badge.fury.io/py/zelthy3.svg)](https://badge.fury.io/py/zelthy3)
+[![PyPI version](https://badge.fury.io/py/zcorepy.svg)](https://badge.fury.io/py/zcorepy)
 ![docs](https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zelthy3/docs.yml?branch=main)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 

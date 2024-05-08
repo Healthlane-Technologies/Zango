@@ -1,20 +1,20 @@
-# Using Docker to Create Zelthy Projects
+# Using Docker to Create ZCore Projects
 
-This guide outlines the steps to create and develop Zelthy projects without the need for local installations.
+This guide outlines the steps to create and develop ZCore projects without the need for local installations.
 
-# Installing Zelthy with Docker
+# Installing ZCore with Docker
 
 ## Prerequisites
 
-To begin using Zelthy through Docker installation, ensure that Docker and Docker Compose are installed on your machine. If not, follow the installation instructions for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
+To begin using ZCore through Docker installation, ensure that Docker and Docker Compose are installed on your machine. If not, follow the installation instructions for [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
 
 ## Steps
 
-1. Clone the Zelthy3 repository:
+1. Clone the ZCore repository:
 
    ```bash
-   git clone https://github.com/zelthy/zelthy3.git
-   cd zelthy3
+   git clone https://github.com/Healthlane-Technologies/zcore.git
+   cd zcore
    ```
 
 2. Run the following command from the root folder of the project:
@@ -23,7 +23,7 @@ To begin using Zelthy through Docker installation, ensure that Docker and Docker
    python setup_project.py <directory>
    ```
 
-   You can use the `--build_core` option to build the Zelthy library
+   You can use the `--build_core` option to build the ZCore library
 
 3. This creates a project named `zcore_project` in the `zproject` folder in the specified directory.
 
@@ -35,9 +35,9 @@ To begin using Zelthy through Docker installation, ensure that Docker and Docker
 
    - `--project_name`: Modifies the name of the project (Default: `zcore_project`).
    - `--project_dir`: Specifies the directory for project creation (Default: `zproject`).
-   - `--build_core`: Builds the Zelthy library (Default: `False`).
-   - `--platform_username`: The user email of the platform user (Default: `zelthy@mail.com`).
-   - `--platform_user_password`: The password for the platform user (Default: `Zelthy@123`).
+   - `--build_core`: Builds the ZCore library (Default: `False`).
+   - `--platform_username`: The user email of the platform user (Default: `platform_admin@zelthy.com`).
+   - `--platform_user_password`: The password for the platform user (Default: `ZCore@123`).
 
 5. Docker is started as a non root user, run the below commands to export the host UID and GID
 
@@ -50,7 +50,7 @@ export GID=$(id -g)
 
 # Rebuilding Core
 
-If you modify somehting in the core of the project, to rebuild it run the following command from the root of the zelthy3 project
+If you modify somehting in the core of the project, to rebuild it run the following command from the root of the zcore project
 
 ```bash
 python setup_project.py --project_dir <project_dir> --rebuild_core
