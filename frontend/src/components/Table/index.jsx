@@ -23,6 +23,7 @@ function Table({
 	updatePageData,
 	updateLocalTableData,
 	RowMenu,
+	apiUrl,
 }) {
 	console.log('HERER');
 	const searchRef = useRef(null);
@@ -100,7 +101,7 @@ function Table({
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/auth/${pageId}/?page=${
+				url: `${apiUrl}?page=${
 					pageIndex + 1
 				}&page_size=${pageSize}&include_dropdown_options=true&search=${
 					localTableData?.searchValue

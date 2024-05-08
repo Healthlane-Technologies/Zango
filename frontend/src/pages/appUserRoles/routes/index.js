@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import AppUserRoles from '../components/AppUserRoles/index.js';
+import AppUserRoles from '../components/AppUserRoles';
 
 export const AppUserRolesRoutes = () => {
 	return (

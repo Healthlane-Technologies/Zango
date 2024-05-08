@@ -225,7 +225,11 @@ const EditThemeForm = ({ closeModal }) => {
 							</div>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
-							<SubmitButton label={'Save'} allowDisabled={false} />
+							<SubmitButton
+								label={'Save'}
+								allowDisabled={false}
+								formik={formik}
+							/>
 						</div>
 					</form>
 				);

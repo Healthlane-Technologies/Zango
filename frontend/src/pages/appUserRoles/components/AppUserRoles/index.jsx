@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
@@ -12,11 +12,11 @@ import {
 	selectRerenderPage,
 	setAppUserRolesData,
 } from '../../slice';
-import ActivateUserRolesModal from '../Models/ActivateUserRolesModal';
-import AddNewUserRolesModal from '../Models/AddNewUserRolesModal';
-import DeactivateUserRolesModal from '../Models/DeactivateUserRolesModal';
-import EditUserRolesDetailsModal from '../Models/EditUserDetailsRolesModal';
-import Table from '../Table';
+import AppTable from '../AppTable';
+import ActivateUserRolesModal from '../Modals/ActivateUserRolesModal';
+import AddNewUserRolesModal from '../Modals/AddNewUserRolesModal';
+import DeactivateUserRolesModal from '../Modals/DeactivateUserRolesModal';
+import EditUserRolesDetailsModal from '../Modals/EditUserDetailsRolesModal';
 
 export default function AppUserRoles() {
 	let { appId } = useParams();
@@ -25,9 +25,6 @@ export default function AppUserRoles() {
 	const rerenderPage = useSelector(selectRerenderPage);
 	const isAppUserRolesDataEmpty = useSelector(selectIsAppUserRolesDataEmpty);
 
-	const [isEmpty, setisEmpty] = useState(
-		appUserRolesData?.roles?.records?.length ? false : true
-	);
 	const dispatch = useDispatch();
 
 	const handleAddNewUser = () => {
@@ -94,9 +91,6 @@ export default function AppUserRoles() {
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
 									set-up user role(s)
 								</h3>
-								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
-									description to be added
-								</p> */}
 							</div>
 							<button
 								type="button"
@@ -110,7 +104,7 @@ export default function AppUserRoles() {
 							</button>
 						</div>
 					) : appUserRolesData ? (
-						<Table tableData={appUserRolesData?.users} />
+						<AppTable tableData={appUserRolesData?.users} />
 					) : null}
 				</div>
 			</div>

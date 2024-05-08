@@ -54,9 +54,7 @@ export default function Layout({
 			</nav>
 			<main
 				className={`${
-					showFooter || !SideMenu
-						? 'small-device-height-fix'
-						: 'small-device-height-fix2'
+					showFooter ? 'small-device-height-fix' : 'small-device-height-fix2'
 				}  flex grow overflow-y-auto`}
 			>
 				{SideMenu}

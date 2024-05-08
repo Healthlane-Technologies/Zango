@@ -42,6 +42,7 @@ export default function AppTable({ tableData }) {
 			})}
 			pageData={platformUserManagementData}
 			pageId={'platform-users'}
+			apiUrl={`/api/v1/auth/platform-users/`}
 			updatePageData={updatePageData}
 			updateLocalTableData={updateLocalTableData}
 			RowMenu={RowMenu}
