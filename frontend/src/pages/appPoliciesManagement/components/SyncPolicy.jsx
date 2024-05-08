@@ -6,7 +6,7 @@ import useApi from '../../../hooks/useApi';
 import { transformToFormData } from '../../../utils/helper';
 import { toggleRerenderPage } from '../slice';
 
-export default function SyncTask() {
+export default function SyncPolicy() {
 	let { appId } = useParams();
 
 	const [isLoading, setIsLoading] = useState(false);
@@ -53,9 +53,6 @@ export default function SyncTask() {
 					}`}
 				/>
 			</button>
-			{/* <span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-				last synced 2 min ago
-			</span> */}
 		</div>
 	);
 }

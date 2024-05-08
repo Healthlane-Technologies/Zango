@@ -24,6 +24,7 @@ function Table({
 	RowMenu,
 	apiUrl,
 	haveSideMenu = true,
+	SearchFilters = null,
 }) {
 	console.log('HERER');
 	const searchRef = useRef(null);
@@ -127,6 +128,7 @@ function Table({
 							onChange={(e) => handleSearch(e?.target?.value)}
 						/>
 					</div>
+					{SearchFilters}
 				</div>
 			</div>
 			<div className="relative flex grow overflow-x-auto overflow-y-auto">
