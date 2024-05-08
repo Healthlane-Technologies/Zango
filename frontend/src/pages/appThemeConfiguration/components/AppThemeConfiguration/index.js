@@ -4,24 +4,20 @@ import { useParams } from 'react-router-dom';
 import { ReactComponent as AddThemeIcon } from '../../../../assets/images/svg/add-theme-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
-import {
-	selectAppConfigurationData,
-	setAppConfigurationData,
-} from '../../../appConfiguration/slice';
+import { setAppConfigurationData } from '../../../appConfiguration/slice';
 import {
 	openIsAddThemeModalOpen,
 	selectAppThemeConfigurationData,
 	selectRerenderPage,
 	setAppThemeConfigurationData,
 } from '../../slice';
-import AddThemeModal from '../Models/AddThemeModal';
-import EditThemeModal from '../Models/EditThemeModal';
+import AddThemeModal from '../Modals/AddThemeModal';
+import EditThemeModal from '../Modals/EditThemeModal';
 import EachTheme from './EachTheme';
 
 export default function AppThemeConfiguration() {
 	let { appId } = useParams();
 	const rerenderPage = useSelector(selectRerenderPage);
-	const appConfigurationData = useSelector(selectAppConfigurationData);
 
 	const appThemeConfigurationData = useSelector(
 		selectAppThemeConfigurationData
