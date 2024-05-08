@@ -6,7 +6,7 @@ from ..permissions import IsAuthenticatedPlatformUser, IsAuthenticatedAppUser
 
 
 
-class ZelthySessionPlatformAPIView(APIView):
+class ZCoreSessionPlatformAPIView(APIView):
     """
     This is the base class for developing Platform APIs that need to support only session based
     authentication. Expected use cases include APIs that must be supported only with session and NOT token
@@ -16,12 +16,12 @@ class ZelthySessionPlatformAPIView(APIView):
     permission_classes = (IsAuthenticatedPlatformUser,)
     
 
-class ZelthySessionAppAPIView(APIView):
+class ZCoreSessionAppAPIView(APIView):
     """
     Base API view for developing Session Authenticated Platform APIs
     Use Case: Platform APIs accessed by the web apps on the same domain
     CSRF Not Exempted
-    This API expects zelthycookie & csrftoken as Cookies. zelthycookie should 
+    This API expects ZCoreCookie & csrftoken as Cookies. ZCoreCookie should 
     represent an active platform user.
     Additional Perms: Request should pass whitelisting setting of Platform
     """
@@ -31,7 +31,7 @@ class ZelthySessionAppAPIView(APIView):
 
 
 
-class ZelthyTokenPlatformAPIView(APIView):
+class ZCoreTokenPlatformAPIView(APIView):
     """
     This is the base class for developing Platform APIs that need to support only token based
     authentication. Expected use cases include APIs that will be used by third parties only
@@ -43,18 +43,18 @@ class ZelthyTokenPlatformAPIView(APIView):
 
 
 
-class ZelthyGenericPlatformAPIView(APIView):
+class ZCoreGenericPlatformAPIView(APIView):
     """
     This is the base auth class for developing Platform APIs that need to support both
     token based authentication as well as session cookie based authentication.
-    The Zelthy platform webapp must use session based authentication and should provide csrftoken as well.
+    The ZCore platform webapp must use session based authentication and should provide csrftoken as well.
     """
 
     authentication_classes = (SessionAuthentication,
                                 TokenAuthentication)
     permission_classes = (IsAuthenticatedPlatformUser,)
 
-class ZelthyGenericAppAPIView(APIView):
+class ZCoreGenericAppAPIView(APIView):
 
     authentication_classes = (TokenAuthentication, SessionAuthentication)
     permission_classes = (IsAuthenticatedAppUser,)

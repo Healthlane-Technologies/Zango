@@ -8,12 +8,12 @@ from django.contrib.auth.hashers import check_password
 from zcore.core.model_mixins import FullAuditMixin
 
 from zcore.apps.object_store.models import ObjectStore
-from zcore.apps.shared.platformauth.abstract_model import AbstractZelthyUserModel
+from zcore.apps.shared.platformauth.abstract_model import AbstractZCoreUserModel
 
 
 from zcore.core.model_mixins import FullAuditMixin
 from zcore.apps.shared.platformauth.abstract_model import (
-    AbstractZelthyUserModel,
+    AbstractZCoreUserModel,
     AbstractOldPasswords,
 )
 
@@ -56,7 +56,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
         super().delete(*args, **kwargs)
 
 
-class AppUserModel(AbstractZelthyUserModel, PermissionMixin):
+class AppUserModel(AbstractZCoreUserModel, PermissionMixin):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(

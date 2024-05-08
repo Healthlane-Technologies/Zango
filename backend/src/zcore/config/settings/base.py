@@ -66,7 +66,7 @@ TENANT_DOMAIN_MODEL = "tenancy.Domain"
 
 
 MIDDLEWARE = [
-    "zcore.middleware.tenant.ZelthyTenantMainMiddleware",
+    "zcore.middleware.tenant.ZCoreTenantMainMiddleware",
     # 'zcore.middleware.context_middleware.SimpleContextMiddleware',
     # 'zcore.middleware.tenant_url_switch.url_switch_middleware',
     # 'django_tenants.middleware.main.TenantMainMiddleware',
@@ -144,7 +144,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = (
 
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-SESSION_COOKIE_NAME = "zelthycookie"
+SESSION_COOKIE_NAME = "zcorecookie"
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 

@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect
 from rest_framework.views import APIView
-from zcore.core.api import ZelthySessionPlatformAPIView, get_api_response
+from zcore.core.api import ZCoreSessionPlatformAPIView, get_api_response
 
 
 # Create your views here.
@@ -21,7 +21,7 @@ class PlatformUserLoginAPIV1(APIView):
     pass
 
 
-class PlatformUserProfileAPIV1(ZelthySessionPlatformAPIView):
+class PlatformUserProfileAPIV1(ZCoreSessionPlatformAPIView):
     """ """
 
     def get_profile_data(self, request):

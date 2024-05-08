@@ -12,12 +12,12 @@ from django.contrib.auth.models import User
 
 from zcore.apps.shared.tenancy.models import TenantModel
 
-from .abstract_model import AbstractZelthyUserModel
+from .abstract_model import AbstractZCoreUserModel
 
 from zcore.core.model_mixins import FullAuditMixin
 
 
-class PlatformUserModel(AbstractZelthyUserModel):
+class PlatformUserModel(AbstractZCoreUserModel):
     is_staff = models.BooleanField(
         _("staff status"),
         default=False,

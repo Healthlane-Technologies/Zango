@@ -19,7 +19,7 @@ from django.conf import settings
 from django.utils import timezone
 
 
-class ZelthyTenantMainMiddleware(TenantMainMiddleware):
+class ZCoreTenantMainMiddleware(TenantMainMiddleware):
     TENANT_NOT_FOUND_EXCEPTION = Http404
 
     @staticmethod

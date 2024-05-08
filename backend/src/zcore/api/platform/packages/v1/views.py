@@ -1,18 +1,18 @@
 from django.utils.decorators import method_decorator
 from django.core import signing
 
-from zcore.core.api import get_api_response, ZelthyGenericPlatformAPIView
+from zcore.core.api import get_api_response, ZCoreGenericPlatformAPIView
 from zcore.core.package_utils import (
     get_all_packages,
     install_package,
     get_package_configuration_url,
 )
-from zcore.core.api.utils import ZelthyAPIPagination
+from zcore.core.api.utils import ZCoreAPIPagination
 from zcore.apps.shared.tenancy.models import TenantModel, Domain
 
 
-class PackagesViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    pagination_class = ZelthyAPIPagination
+class PackagesViewAPIV1(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
+    pagination_class = ZCoreAPIPagination
 
     def get_app_obj(self, app_uuid):
         obj = TenantModel.objects.get(uuid=app_uuid)

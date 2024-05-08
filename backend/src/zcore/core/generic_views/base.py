@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from ..permissions import IsAuthenticatedPlatformUser, IsAuthenticatedAppUser
 
 
-class ZelthySessionPlatformView(IsAuthenticatedPlatformUser, View):
+class ZCoreSessionPlatformView(IsAuthenticatedPlatformUser, View):
     """
     View only accessible to authenticated platform users.
     """
@@ -12,11 +12,11 @@ class ZelthySessionPlatformView(IsAuthenticatedPlatformUser, View):
     def as_view(cls):
         login_url = None
         return login_required(
-            super(ZelthySessionPlatformView, cls).as_view(), login_url=login_url
+            super(ZCoreSessionPlatformView, cls).as_view(), login_url=login_url
         )
 
 
-class ZelthySessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateView):
+class ZCoreSessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateView):
     """
     TemplateView only accessible to authenticated platform users.
     """
@@ -25,11 +25,11 @@ class ZelthySessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateVie
     def as_view(cls):
         login_url = "/admin/login/"
         return login_required(
-            super(ZelthySessionPlatformTemplateView, cls).as_view(), login_url=login_url
+            super(ZCoreSessionPlatformTemplateView, cls).as_view(), login_url=login_url
         )
 
 
-class ZelthySessionAppView(IsAuthenticatedAppUser, View):
+class ZCoreSessionAppView(IsAuthenticatedAppUser, View):
     """
     View only accessible to authenticated app users.
     """
@@ -38,10 +38,10 @@ class ZelthySessionAppView(IsAuthenticatedAppUser, View):
     def as_view(cls):
         login_url = None
         return login_required(
-            super(ZelthySessionAppView, cls).as_view(), login_url=login_url
+            super(ZCoreSessionAppView, cls).as_view(), login_url=login_url
         )
 
-class ZelthySessionAppTemplateView(IsAuthenticatedAppUser, TemplateView):
+class ZCoreSessionAppTemplateView(IsAuthenticatedAppUser, TemplateView):
     """
     TemplateView only accessible to authenticated app users.
     """
@@ -50,5 +50,5 @@ class ZelthySessionAppTemplateView(IsAuthenticatedAppUser, TemplateView):
     def as_view(cls):
         login_url = None
         return login_required(
-            super(ZelthySessionAppTemplateView, cls).as_view(), login_url=login_url
+            super(ZCoreSessionAppTemplateView, cls).as_view(), login_url=login_url
         )

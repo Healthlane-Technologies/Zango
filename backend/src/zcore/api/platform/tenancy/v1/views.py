@@ -9,14 +9,14 @@ from django.db.models import Q
 
 from zcore.core.api import (
     get_api_response,
-    ZelthyGenericPlatformAPIView,
+    ZCoreGenericPlatformAPIView,
 )
 from zcore.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zcore.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT, DATEFORMAT
 from zcore.apps.appauth.models import UserRoleModel, AppUserModel
 from zcore.apps.permissions.models import PolicyModel
 from zcore.core.common_utils import set_app_schema_path
-from zcore.core.api.utils import ZelthyAPIPagination
+from zcore.core.api.utils import ZCoreAPIPagination
 from zcore.core.permissions import IsPlatformUserAllowedApp
 from zcore.core.utils import get_search_columns
 
@@ -28,7 +28,7 @@ from .serializers import (
 )
 
 
-class AppViewAPIV1(ZelthyGenericPlatformAPIView):
+class AppViewAPIV1(ZCoreGenericPlatformAPIView):
     def get(self, request, *args, **kwargs):
         try:
             action = request.GET.get("action")
@@ -116,7 +116,7 @@ class AppViewAPIV1(ZelthyGenericPlatformAPIView):
         return get_api_response(success, result, status)
 
 
-class AppDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+class AppDetailViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
@@ -189,8 +189,8 @@ class AppDetailViewAPIV1(ZelthyGenericPlatformAPIView):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    pagination_class = ZelthyAPIPagination
+class UserRoleViewAPIV1(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
+    pagination_class = ZCoreAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_dropdown_options(self):
@@ -278,7 +278,7 @@ class UserRoleViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserRoleDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+class UserRoleDetailViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
@@ -337,8 +337,8 @@ class UserRoleDetailViewAPIV1(ZelthyGenericPlatformAPIView):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    pagination_class = ZelthyAPIPagination
+class UserViewAPIV1(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
+    pagination_class = ZCoreAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_dropdown_options(self):
@@ -426,7 +426,7 @@ class UserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+class UserDetailViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
@@ -466,7 +466,7 @@ class UserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
         return get_api_response(success, result, status_code)
 
 
-class ThemeViewAPIV1(ZelthyGenericPlatformAPIView):
+class ThemeViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_app_tenant(self):
@@ -526,7 +526,7 @@ class ThemeViewAPIV1(ZelthyGenericPlatformAPIView):
         return get_api_response(success, result, status_code)
 
 
-class ThemeDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+class ThemeDetailViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):

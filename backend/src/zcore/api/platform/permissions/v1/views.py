@@ -6,14 +6,14 @@ from django.db import connection
 
 from zcore.core.api import (
     get_api_response,
-    ZelthyGenericPlatformAPIView,
+    ZCoreGenericPlatformAPIView,
 )
 from zcore.core.utils import get_search_columns
 from zcore.apps.shared.tenancy.models import TenantModel
 from zcore.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
 from zcore.apps.permissions.models import PolicyModel, PermissionsModel
 from zcore.core.common_utils import set_app_schema_path
-from zcore.core.api.utils import ZelthyAPIPagination
+from zcore.core.api.utils import ZCoreAPIPagination
 from zcore.core.permissions import IsPlatformUserAllowedApp
 from zcore.apps.appauth.models import UserRoleModel
 from zcore.apps.dynamic_models.workspace.base import Workspace
@@ -23,8 +23,8 @@ from .serializers import PolicySerializer
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    pagination_class = ZelthyAPIPagination
+class PolicyViewAPIV1(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
+    pagination_class = ZCoreAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_queryset(self, search, columns={}):
@@ -120,7 +120,7 @@ class PolicyViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class PolicyDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+class PolicyDetailViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):

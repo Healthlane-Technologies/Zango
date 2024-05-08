@@ -6,7 +6,7 @@ from django.utils.decorators import method_decorator
 from django.conf import settings
 
 from zcore.core.common_utils import set_app_schema_path
-from zcore.core.api import get_api_response, ZelthyGenericPlatformAPIView
+from zcore.core.api import get_api_response, ZCoreGenericPlatformAPIView
 
 from zcore.apps.permissions.models import PolicyModel
 from zcore.apps.appauth.models import AppUserModel, UserRoleModel
@@ -16,7 +16,7 @@ from .utils import lambda_invocation
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class ConversationViewAPIV1(ZelthyGenericPlatformAPIView):
+class ConversationViewAPIV1(ZCoreGenericPlatformAPIView):
     def get_app_obj(self, **kwargs):
         obj = TenantModel.objects.get(uuid=kwargs.get("app_uuid"))
         return obj
@@ -57,7 +57,7 @@ class ConversationViewAPIV1(ZelthyGenericPlatformAPIView):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class ExecutionViewAPIV1(ZelthyGenericPlatformAPIView):
+class ExecutionViewAPIV1(ZCoreGenericPlatformAPIView):
     def get_app_obj(self, **kwargs):
         obj = TenantModel.objects.get(uuid=kwargs.get("app_uuid"))
         return obj
