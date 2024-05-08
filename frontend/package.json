@@ -1,6 +1,6 @@
 {
-	"name": "apps-msd-ind-order-tracking-platform-fe",
-	"version": "1.1.1",
+	"name": "zelthy3-app-panel",
+	"version": "2.0.0",
 	"private": true,
 	"dependencies": {
 		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",
@@ -36,7 +36,6 @@
 		"react-router-dom": "^6.6.1",
 		"react-scripts": "5.0.1",
 		"react-window": "^1.8.8",
-		"react-zxing": "^1.1.0",
 		"shortid": "^2.2.16",
 		"uglifyjs-webpack-plugin": "^2.2.0",
 		"web-vitals": "^2.1.0",

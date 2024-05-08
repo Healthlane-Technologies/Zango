@@ -10,10 +10,9 @@ import { PlatformUserManagementRoutes } from '../pages/platformUserManagement/ro
 
 export const AppRoutes = () => {
 	const location = useLocation();
-	let pathnameArray = location.pathname.split('/').filter((each) => each);
 	const dispatch = useDispatch();
-
 	const triggerApi = useApi();
+	let pathnameArray = location.pathname.split('/').filter((each) => each);
 
 	useEffect(() => {
 		const makeApiCall = async () => {
@@ -29,7 +28,7 @@ export const AppRoutes = () => {
 		};
 
 		makeApiCall();
-	}, []);
+	}, [triggerApi, dispatch]);
 
 	return (
 		<>

@@ -75,7 +75,6 @@ input[type='number'] {
 
 /* :not(:required) hides these rules from IE9 and below */
 .overlay-spinner:not(:required) {
-	/* hide "loading..." text */
 	font: 0/0 a;
 	color: transparent;
 	text-shadow: none;
@@ -99,14 +98,9 @@ input[type='number'] {
 
 /* temp spinner */
 .mini-spinner {
-	/* position: absolute; */
 	z-index: 1051;
 	overflow: show;
 	margin: auto;
-	/* top: 0;
-	left: 0;
-	bottom: 0;
-	right: 0; */
 	width: 50px;
 	height: 50px;
 }
@@ -125,7 +119,6 @@ input[type='number'] {
 }
 
 /* Animation */
-
 @-webkit-keyframes spinner {
 	0% {
 		-webkit-transform: rotate(0deg);
@@ -310,7 +303,6 @@ input[type='number'] {
 	position: relative;
 }
 .react-resizable-handle {
-	/* z-index: 100; */
 	position: absolute;
 	width: 20px;
 	height: 20px;

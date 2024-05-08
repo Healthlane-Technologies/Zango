@@ -1,39 +1,22 @@
-import { useSelector, useDispatch } from 'react-redux';
-import { open } from '../../slice';
-import { ReactComponent as LaunchNewAppIcon } from '../../../../assets/images/svg/launch-new-app-icon.svg';
+import LaunchNewAppButton from './LaunchNewAppButton';
 
 export default function FirstApp() {
-	const dispatch = useDispatch();
-
-	const handleLaunchNewApp = () => {
-		dispatch(open());
-	};
-
 	return (
-		<div className="flex grow flex-col px-[48px] py-[24px]">
-			<span className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
+		<div className="px-[48px] py-[24px] flex grow flex-col">
+			<span className="text-[22px] leading-[28px] text-[#000000] font-source-sans-pro font-semibold">
 				Apps
 			</span>
-			<div className="flex grow flex-col items-center justify-center gap-[56px]">
-				<div className="flex flex-col items-center justify-center gap-[8px]">
-					<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
+			<div className="gap-[56px] flex grow flex-col items-center justify-center">
+				<div className="gap-[8px] flex flex-col items-center justify-center">
+					<h3 className="first-app-text text-[64px] font-[700] leading-[72px] font-source-sans-pro">
 						start by launching your first app
 					</h3>
-					<p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
+					<p className="text-[18px] leading-[24px] text-[#212429] font-source-sans-pro font-semibold">
 						setting up an app have never been so easy and seamless
 					</p>
 				</div>
 				<div>
-					<button
-						type="button"
-						onClick={handleLaunchNewApp}
-						className="flex grow gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
-					>
-						<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
-							Launch New App
-						</span>
-						<LaunchNewAppIcon />
-					</button>
+					<LaunchNewAppButton />
 				</div>
 			</div>
 		</div>

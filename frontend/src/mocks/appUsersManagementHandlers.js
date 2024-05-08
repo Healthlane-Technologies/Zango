@@ -88,7 +88,7 @@ const newUser = () => {
 	return {
 		id: faker.number.int({ min: 1000, max: 9999 }),
 		name: faker.person.fullName(),
-		mobile: faker.phone.number('+91 #########'),
+		mobile: faker.phone.number(),
 		email: faker.internet.email().toLowerCase(),
 		roles: makeRoles(faker.number.int({ min: 1, max: 4 })),
 		policies: makePolicies(faker.number.int({ min: 1, max: 5 })),
