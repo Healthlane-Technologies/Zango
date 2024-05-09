@@ -9,8 +9,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.utils.decorators import method_decorator
 
-from zcore.core.api import get_api_response, ZelthyGenericPlatformAPIView
-from zcore.core.api.utils import ZelthyAPIPagination
+from zcore.core.api import get_api_response, ZCoreGenericPlatformAPIView
+from zcore.core.api.utils import ZCoreAPIPagination
 from zcore.core.permissions import IsSuperAdminPlatformUser
 from zcore.core.utils import get_search_columns
 from zcore.apps.shared.tenancy.models import TenantModel
@@ -21,8 +21,8 @@ from .serializers import AuditLogSerializerModel
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class AuditLogViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    pagination_class = ZelthyAPIPagination
+class AuditLogViewAPIV1(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
+    pagination_class = ZCoreAPIPagination
 
     def process_timestamp(self, timestamp, timezone):
         try:

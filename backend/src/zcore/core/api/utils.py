@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from rest_framework.pagination import PageNumberPagination
 
 
-class ZelthyAPIPagination(PageNumberPagination):
+class ZCoreAPIPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = "page_size"
     max_page_size = 100

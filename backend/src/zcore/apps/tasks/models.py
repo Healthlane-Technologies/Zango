@@ -13,7 +13,7 @@ class AppTask(FullAuditMixin):
     name = models.CharField(max_length=255, unique=True)
     is_enabled = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
-    task = "zcore.core.tasks.zelthy_task_executor"
+    task = "zcore.core.tasks.zcore_task_executor"
     interval = models.ForeignKey(
         IntervalSchedule,
         on_delete=models.CASCADE,

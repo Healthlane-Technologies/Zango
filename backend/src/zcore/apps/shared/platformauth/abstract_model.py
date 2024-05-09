@@ -17,7 +17,7 @@ from zcore.core.model_mixins import FullAuditMixin
 from phonenumber_field.modelfields import PhoneNumberField
 
 
-class AbstractZelthyUserModel(AbstractBaseUser, FullAuditMixin):
+class AbstractZCoreUserModel(AbstractBaseUser, FullAuditMixin):
     name = models.CharField("full name of user", max_length=75)
     email = models.EmailField("email address", null=True, blank=True)
     mobile = PhoneNumberField("mobile number", null=True, blank=True)

@@ -23,7 +23,7 @@ setup(
     name="zcore",
     version=PLATFORM_VERSION,
     license="Apache License 2.0",
-    description="zcore: multi-tenant Django framework for building business apps",
+    description="ZCore: multi-tenant Django framework for building business apps",
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
     author='Zelthy ("Healthlane Technologies")',

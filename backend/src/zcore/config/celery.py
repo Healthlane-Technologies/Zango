@@ -9,7 +9,7 @@ project_name = os.path.basename(current_project_dir)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
 
 # Creating a Celery application instance
-app = Celery("zelthy")
+app = Celery("zcore")
 
 # Configuring the Celery app using the Django settings
 app.config_from_object("django.conf:settings", namespace="CELERY")

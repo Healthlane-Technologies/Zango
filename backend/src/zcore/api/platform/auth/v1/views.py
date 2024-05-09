@@ -3,9 +3,9 @@ from django.conf import settings
 
 from zcore.core.api import (
     get_api_response,
-    ZelthyGenericPlatformAPIView,
+    ZCoreGenericPlatformAPIView,
 )
-from zcore.core.api.utils import ZelthyAPIPagination
+from zcore.core.api.utils import ZCoreAPIPagination
 from zcore.apps.shared.platformauth.models import PlatformUserModel
 from zcore.apps.shared.tenancy.models import TenantModel
 from zcore.core.permissions import IsSuperAdminPlatformUser
@@ -14,9 +14,9 @@ from zcore.core.utils import get_search_columns
 from .serializers import PlatformUserSerializerModel
 
 
-class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
+class PlatformUserViewAPIV1(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
     permission_classes = (IsSuperAdminPlatformUser,)
-    pagination_class = ZelthyAPIPagination
+    pagination_class = ZCoreAPIPagination
 
     def get_dropdown_options(self):
         options = {}
@@ -104,7 +104,7 @@ class PlatformUserViewAPIV1(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
         return get_api_response(success, result, status)
 
 
-class PlatformUserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
+class PlatformUserDetailViewAPIV1(ZCoreGenericPlatformAPIView):
     permission_classes = (IsSuperAdminPlatformUser,)
 
     def get_obj(self, **kwargs):
@@ -144,7 +144,7 @@ class PlatformUserDetailViewAPIV1(ZelthyGenericPlatformAPIView):
         return get_api_response(success, result, status_code)
 
 
-class AppPanelDetailsView(ZelthyGenericPlatformAPIView):
+class AppPanelDetailsView(ZCoreGenericPlatformAPIView):
     def get_obj(self, request, **kwargs):
         obj = PlatformUserModel.objects.get(id=request.user.id)
         return obj

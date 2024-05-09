@@ -15,7 +15,10 @@ from zcore.api.platform.permissions.v1 import urls as permissions_v1_urls
 from zcore.api.platform.packages.v1 import urls as packages_v1_urls
 from zcore.api.platform.tasks.v1 import urls as tasks_v1_urls
 from zcore.api.platform.codeassist.v1 import urls as codeassist_v1_urls
+<<<<<<< HEAD
 from zcore.api.platform.auditlogs.v1 import urls as auditlog_v1_urls
+=======
+>>>>>>> rename_zcore
 
 
 urlpatterns = [

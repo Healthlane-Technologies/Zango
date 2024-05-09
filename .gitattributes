@@ -2,7 +2,7 @@
 docs/** linguist-documentation
 
 # excluding assets
-backend/src/zelthy/assets/** linguist-vendored 
+backend/src/zcore/assets/** linguist-vendored 
 
 # excluding frontend
 frontend/** linguist-vendored  

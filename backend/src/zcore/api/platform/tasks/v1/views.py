@@ -4,9 +4,9 @@ from django.utils.decorators import method_decorator
 from django.db import connection
 from django.db.models import Q
 
-from zcore.core.api import get_api_response, ZelthyGenericPlatformAPIView
+from zcore.core.api import get_api_response, ZCoreGenericPlatformAPIView
 from zcore.apps.tasks.models import AppTask
-from zcore.core.api.utils import ZelthyAPIPagination
+from zcore.core.api.utils import ZCoreAPIPagination
 from zcore.core.common_utils import set_app_schema_path
 from zcore.apps.dynamic_models.workspace.base import Workspace
 from zcore.apps.shared.tenancy.models import TenantModel
@@ -17,8 +17,8 @@ from .serializers import TaskSerializer
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
-    pagination_class = ZelthyAPIPagination
+class AppTaskView(ZCoreGenericPlatformAPIView, ZCoreAPIPagination):
+    pagination_class = ZCoreAPIPagination
 
     def get_queryset(self, search, columns={}):
         name_field_query_mappping = {
@@ -86,7 +86,7 @@ class AppTaskView(ZelthyGenericPlatformAPIView, ZelthyAPIPagination):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class AppTaskDetailView(ZelthyGenericPlatformAPIView):
+class AppTaskDetailView(ZCoreGenericPlatformAPIView):
     def get(self, request, app_uuid, task_uuid, *args, **kwargs):
         try:
             app_task = AppTask.objects.get(id=task_uuid)

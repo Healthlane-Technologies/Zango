@@ -3,8 +3,8 @@ from django.core.exceptions import ValidationError
 
 from zcore.core.api import (
     get_api_response,
-    ZelthyGenericAppAPIView,
-    ZelthySessionAppAPIView,
+    ZCoreGenericAppAPIView,
+    ZCoreSessionAppAPIView,
 )
 from zcore.api.app_auth.profile.v1.utils import PasswordValidationMixin
 from zcore.apps.appauth.models import OldPasswords
@@ -12,7 +12,7 @@ from zcore.apps.appauth.models import OldPasswords
 from .serializers import ProfileSerializer
 
 
-class ProfileViewAPIV1(ZelthyGenericAppAPIView):
+class ProfileViewAPIV1(ZCoreGenericAppAPIView):
     def get(self, request, *args, **kwargs):
         serializer = ProfileSerializer(request.user)
         success = True
@@ -30,7 +30,7 @@ class ProfileViewAPIV1(ZelthyGenericAppAPIView):
         return get_api_response(success, response, status)
 
 
-class PasswordChangeViewAPIV1(ZelthySessionAppAPIView, PasswordValidationMixin):
+class PasswordChangeViewAPIV1(ZCoreSessionAppAPIView, PasswordValidationMixin):
     def clean_password(self, email, password):
         """
         Validates that the email is not already in use.

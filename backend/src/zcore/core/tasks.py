@@ -4,7 +4,7 @@ from django.db import connection
 
 
 @shared_task
-def zelthy_task_executor(tenant_name, task_name, *args, **kwargs):
+def zcore_task_executor(tenant_name, task_name, *args, **kwargs):
     from zcore.apps.dynamic_models.workspace.base import Workspace
     from zcore.apps.shared.tenancy.models import TenantModel
     from zcore.apps.tasks.models import AppTask
@@ -25,14 +25,14 @@ def zelthy_task_executor(tenant_name, task_name, *args, **kwargs):
         return task_fun(*args, **kwargs)
 
 
-def zelthy_task(task_fun, *args, **kwargs):
-    def get_zelthy_task_executor(**options):
-        return zelthy_task_executor
+def zcore_task(task_fun, *args, **kwargs):
+    def get_zcore_task_executor(**options):
+        return zcore_task_executor
 
     def original_function(*args, **kwargs):
         return task_fun(*args, **kwargs)
 
-    task_executor = get_zelthy_task_executor()
+    task_executor = get_zcore_task_executor()
     task_executor.original_function = original_function
 
     return task_executor
