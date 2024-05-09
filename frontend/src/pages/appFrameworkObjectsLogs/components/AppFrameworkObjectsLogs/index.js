@@ -4,17 +4,16 @@ import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
-	openIsAddNewUserModalOpen,
 	selectAppFrameworkObjectsLogsData,
 	selectAppFrameworkObjectsLogsTableData,
 	selectIsAppFrameworkObjectsLogsDataEmpty,
 	selectRerenderPage,
 	setAppFrameworkObjectsLogsData,
 } from '../../slice';
-import Table from '../Table';
+import AppTable from '../AppTable';
 
 export default function AppFrameworkObjectsLogs() {
-	let { appId } = useParams();
+	const { appId } = useParams();
 	const rerenderPage = useSelector(selectRerenderPage);
 	const appFrameworkObjectsLogsData = useSelector(
 		selectAppFrameworkObjectsLogsData
@@ -27,10 +26,6 @@ export default function AppFrameworkObjectsLogs() {
 	);
 
 	const dispatch = useDispatch();
-
-	const handleAddNewUser = () => {
-		dispatch(openIsAddNewUserModalOpen());
-	};
 
 	function updateAppFrameworkObjectsLogsData(value) {
 		dispatch(setAppFrameworkObjectsLogsData(value));
@@ -92,7 +87,7 @@ export default function AppFrameworkObjectsLogs() {
 							</div>
 						</div>
 					) : appFrameworkObjectsLogsData ? (
-						<Table tableData={appFrameworkObjectsLogsData?.audit_logs} />
+						<AppTable tableData={appFrameworkObjectsLogsData?.audit_logs} />
 					) : null}
 				</div>
 			</div>
