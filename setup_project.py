@@ -40,9 +40,9 @@ def write_env_file(project_dir, args):
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
         f.write(f"PROJECT_NAME={args.project_name}\n")
-        f.write(f"POSTGRES_USER=zelthy_admin\n")
-        f.write(f"POSTGRES_PASSWORD=zelthy3pass\n")
-        f.write(f"POSTGRES_DB=zelthy\n")
+        f.write(f"POSTGRES_USER=zcore_admin\n")
+        f.write(f"POSTGRES_PASSWORD=zcorepass\n")
+        f.write(f"POSTGRES_DB=zcore\n")
         f.write(f"POSTGRES_HOST=postgres\n")
         f.write(f"POSTGRES_PORT=5432\n")
         f.write(f"REDIS_HOST=redis\n")
@@ -80,7 +80,7 @@ def setup_project(project_dir, project_name, without_db, start=False):
                 f"docker compose -f {project_dir}/docker-compose.yml up", shell=True
             )
             signal.signal(
-                signal.SIGINT, lambda sig, frame: print("\nStopping zelthy environment")
+                signal.SIGINT, lambda sig, frame: print("\nStopping zcore environment")
             )
             proc.wait()
         except subprocess.CalledProcessError as e:
@@ -106,7 +106,7 @@ def rebuild_core(project_dir):
 if __name__ == "__main__":
     args = sys.argv[1:]
     parser = argparse.ArgumentParser(
-        prog="zcore_setup", description="Helps you develop with zelthy locally"
+        prog="zcore_setup", description="Helps you develop with zcore locally"
     )
     parser.add_argument("--project_name", default="", help="The name of the project")
     parser.add_argument(
@@ -125,7 +125,9 @@ if __name__ == "__main__":
         help="Whether to skip the build step",
     )
     parser.add_argument(
-        "--platform_username", default="platform_admin@zelthy.com", help="The platform username"
+        "--platform_username",
+        default="platform_admin@zelthy.com",
+        help="The platform username",
     )
     parser.add_argument(
         "--platform_user_password",
