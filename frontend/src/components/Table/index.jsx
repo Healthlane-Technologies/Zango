@@ -21,8 +21,9 @@ function Table({
 	pageId,
 	updatePageData,
 	updateLocalTableData,
-	RowMenu,
+	RowMenu = null,
 	apiUrl,
+	apiQuery = '',
 	haveSideMenu = true,
 	SearchFilters = null,
 }) {
@@ -88,11 +89,11 @@ function Table({
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `${apiUrl}?page=${
-					pageIndex + 1
-				}&page_size=${pageSize}&include_dropdown_options=true&search=${
-					localTableData?.searchValue
-				}${columnFilter?.length ? columnFilter : ''}`,
+				url: `${apiUrl}?page=${pageIndex + 1}&page_size=${pageSize}${
+					apiQuery ? apiQuery : ''
+				}&include_dropdown_options=true&search=${localTableData?.searchValue}${
+					columnFilter?.length ? columnFilter : ''
+				}`,
 				type: 'GET',
 				loader: true,
 			});
@@ -181,7 +182,7 @@ function Table({
 								></td>
 
 								<td className="sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] from-0% to-90% px-[32px]  group-hover:flex">
-									<RowMenu rowData={row.original} />
+									{RowMenu ? <RowMenu rowData={row.original} /> : null}
 								</td>
 							</tr>
 						))}

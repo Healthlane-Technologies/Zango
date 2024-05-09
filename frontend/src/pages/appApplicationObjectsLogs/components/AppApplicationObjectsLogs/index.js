@@ -10,7 +10,7 @@ import {
 	selectRerenderPage,
 	setAppApplicationObjectsLogsData,
 } from '../../slice';
-import Table from '../Table';
+import AppTable from '../AppTable';
 
 export default function AppApplicationObjectsLogs() {
 	let { appId } = useParams();
@@ -87,7 +87,7 @@ export default function AppApplicationObjectsLogs() {
 							</div>
 						</div>
 					) : appApplicationObjectsLogsData ? (
-						<Table tableData={appApplicationObjectsLogsData?.audit_logs} />
+						<AppTable />
 					) : null}
 				</div>
 			</div>
