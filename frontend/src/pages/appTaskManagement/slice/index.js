@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 export const appTaskManagementSlice = createSlice({
 	name: 'appTaskManagement',
 	initialState: {
-		isUpdatePolicyModalOpen: false,
+		isUpdateTaskModalOpen: false,
 		isRemoveAllPoliciesModalOpen: false,
 		rerenderPage: false,
 		appTaskManagementData: null,
@@ -17,15 +17,15 @@ export const appTaskManagementSlice = createSlice({
 		isAppTaskManagementDataEmpty: true,
 	},
 	reducers: {
-		toggleIsUpdatePolicyModalOpen: (state) => {
-			state.isUpdatePolicyModalOpen += !state.isUpdatePolicyModalOpen;
+		toggleIsUpdateTaskModalOpen: (state) => {
+			state.isUpdateTaskModalOpen += !state.isUpdateTaskModalOpen;
 		},
-		openIsUpdatePolicyModalOpen: (state, action) => {
-			state.isUpdatePolicyModalOpen = true;
+		openIsUpdateTaskModalOpen: (state, action) => {
+			state.isUpdateTaskModalOpen = true;
 			state.appTaskManagementFormData = action.payload;
 		},
-		closeIsUpdatePolicyModalOpen: (state) => {
-			state.isUpdatePolicyModalOpen = false;
+		closeIsUpdateTaskModalOpen: (state) => {
+			state.isUpdateTaskModalOpen = false;
 			state.appTaskManagementFormData = null;
 		},
 		toggleIsRemoveAllPoliciesModalOpen: (state) => {
@@ -58,9 +58,9 @@ export const appTaskManagementSlice = createSlice({
 });
 
 export const {
-	toggleIsUpdatePolicyModalOpen,
-	openIsUpdatePolicyModalOpen,
-	closeIsUpdatePolicyModalOpen,
+	toggleIsUpdateTaskModalOpen,
+	openIsUpdateTaskModalOpen,
+	closeIsUpdateTaskModalOpen,
 	toggleIsRemoveAllPoliciesModalOpen,
 	openIsRemoveAllPoliciesModalOpen,
 	closeIsRemoveAllPoliciesModalOpen,
@@ -70,8 +70,8 @@ export const {
 	toggleRerenderPage,
 } = appTaskManagementSlice.actions;
 
-export const selectIsUpdatePolicyModalOpen = (state) =>
-	state.appTaskManagement.isUpdatePolicyModalOpen;
+export const selectIsUpdateTaskModalOpen = (state) =>
+	state.appTaskManagement.isUpdateTaskModalOpen;
 
 export const selectIsRemoveAllPoliciesModalOpen = (state) =>
 	state.appTaskManagement.isRemoveAllPoliciesModalOpen;

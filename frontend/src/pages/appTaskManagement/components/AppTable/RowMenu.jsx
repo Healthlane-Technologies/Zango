@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import {
 	openIsRemoveAllPoliciesModalOpen,
-	openIsUpdatePolicyModalOpen,
+	openIsUpdateTaskModalOpen,
 } from '../../slice';
 
 export default function RowMenu({ rowData }) {
@@ -26,7 +26,7 @@ export default function RowMenu({ rowData }) {
 	const dispatch = useDispatch();
 
 	const handleEditUserDetails = () => {
-		dispatch(openIsUpdatePolicyModalOpen(rowData));
+		dispatch(openIsUpdateTaskModalOpen(rowData));
 	};
 
 	const handleDeactivateUser = () => {
@@ -48,7 +48,7 @@ export default function RowMenu({ rowData }) {
 				style={styles['popper']}
 				{...attributes['popper']}
 			>
-				<Menu.Items className="absolute top-[30px] right-0 w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+				<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 					<div className="p-[4px]">
 						<Menu.Item>
 							{({ active }) => (

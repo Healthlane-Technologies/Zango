@@ -61,9 +61,6 @@ export default function SyncTask({ theme = 'light' }) {
 					} ${isLoading ? 'animate-spin' : ''}`}
 				/>
 			</button>
-			{/* <span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-				last synced 2 min ago
-			</span> */}
 		</div>
 	);
 }
