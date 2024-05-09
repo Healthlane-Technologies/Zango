@@ -19,16 +19,17 @@ from zcore.apps.shared.platformauth.abstract_model import (
 from zcore.apps.auditlogs.registry import auditlog
 
 # from .perm_mixin import PolicyQsMixin
+from ..permissions.models import PolicyModel, PolicyGroupModel
 from ..permissions.mixin import PermissionMixin
 
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
     name = models.CharField("Unique Name of the User Role", max_length=50, unique=True)
     policies = models.ManyToManyField(
-        "permissions.PolicyModel", related_name="role_policies", blank=True
+        PolicyModel, related_name="role_policies", blank=True
     )
     policy_groups = models.ManyToManyField(
-        "permissions.PolicyGroupModel", related_name="role_policy_groups", blank=True
+        PolicyGroupModel, related_name="role_policy_groups", blank=True
     )
     config = models.JSONField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -57,11 +58,9 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 class AppUserModel(AbstractZCoreUserModel, PermissionMixin):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
-    policies = models.ManyToManyField(
-        "permissions.PolicyModel", related_name="user_policies"
-    )
+    policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
-        "permissions.PolicyGroupModel", related_name="user_policy_groups"
+        PolicyGroupModel, related_name="user_policy_groups"
     )
     app_objects = models.JSONField(null=True)
 
