@@ -1,3 +1,5 @@
+
+from decorator_include import decorator_include
 from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
 
@@ -6,7 +8,7 @@ from .views import *
 
 urlpatterns = [
     re_path(
-        r'^login/', 
+        r'^', 
         PlatformUserLoginView.as_view(),
         name='platform-login'
     ),
