@@ -1,27 +1,9 @@
 import { createColumnHelper } from '@tanstack/react-table';
-import { findIndex, set } from 'lodash';
-import { openIsConfigurePackageModalOpen } from '../../slice';
 import { ReactComponent as DetailEyeIcon } from '../../../../assets/images/svg/detail-eye-icon.svg';
+import { openIsConfigurePackageModalOpen } from '../../slice';
 
-function columns({ debounceSearch, localTableData, dispatch }) {
+function columns({ dispatch }) {
 	const columnHelper = createColumnHelper();
-	const handleColumnSearch = (data) => {
-		let tempTableData = JSON.parse(JSON.stringify(localTableData));
-		let index = findIndex(tempTableData?.columns, { id: data?.id });
-
-		if (index !== -1) {
-			set(tempTableData?.columns[index], 'value', data?.value);
-		} else {
-			tempTableData?.columns.push({ id: data?.id, value: data?.value });
-		}
-
-		let searchData = {
-			...tempTableData,
-			pageIndex: 0,
-		};
-
-		debounceSearch(searchData);
-	};
 
 	const columnsData = [
 		columnHelper.accessor((row) => row.name, {

@@ -1,28 +1,11 @@
 import { createColumnHelper } from '@tanstack/react-table';
-import { find, findIndex, set } from 'lodash';
-import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
+import { find } from 'lodash';
 import ListCell from '../../../../components/Table/ListCell';
-import { formatTableDate } from '../../../../utils/formats';
+import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
+import { handleColumnSearch } from '../../../../utils/table';
 
 function columns({ debounceSearch, localTableData }) {
 	const columnHelper = createColumnHelper();
-	const handleColumnSearch = (data) => {
-		let tempTableData = JSON.parse(JSON.stringify(localTableData));
-		let index = findIndex(tempTableData?.columns, { id: data?.id });
-
-		if (index !== -1) {
-			set(tempTableData?.columns[index], 'value', data?.value);
-		} else {
-			tempTableData?.columns.push({ id: data?.id, value: data?.value });
-		}
-
-		let searchData = {
-			...tempTableData,
-			pageIndex: 0,
-		};
-
-		debounceSearch(searchData);
-	};
 
 	const columnsData = [
 		columnHelper.accessor((row) => row.name, {
@@ -81,10 +64,14 @@ function columns({ debounceSearch, localTableData }) {
 								{ id: 'true', label: 'Active' },
 							]}
 							onChange={(value) => {
-								handleColumnSearch({
-									id: 'is_active',
-									value: value?.id,
-								});
+								handleColumnSearch(
+									{
+										id: 'is_active',
+										value: value?.id,
+									},
+									localTableData,
+									debounceSearch
+								);
 							}}
 						/>
 					</div>

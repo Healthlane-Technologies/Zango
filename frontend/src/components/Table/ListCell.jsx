@@ -8,7 +8,7 @@ const ListCell = ({ data }) => {
 	};
 
 	return (
-		<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 			{data.map((eachApp, index) => {
 				return (
 					<div key={eachApp?.uuid} className="flex items-center gap-[12px]">

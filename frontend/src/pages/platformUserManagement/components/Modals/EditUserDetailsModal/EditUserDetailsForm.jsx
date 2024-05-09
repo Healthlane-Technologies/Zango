@@ -6,7 +6,7 @@ import InputField from '../../../../../components/Form/InputField';
 import MultiSelectField from '../../../../../components/Form/MultiSelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormData } from '../../../../../utils/helper';
+import { transformToFormData } from '../../../../../utils/form';
 import {
 	selectPlatformUserManagementData,
 	selectPlatformUserManagementFormData,

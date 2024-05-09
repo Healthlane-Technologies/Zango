@@ -9,7 +9,7 @@ import SelectField from '../../../../../components/Form/SelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { getFontFamily } from '../../../../../utils/fonts';
-import { transformToFormDataStringify } from '../../../../../utils/helper';
+import { transformToFormDataStringify } from '../../../../../utils/form';
 import { toggleRerenderPage } from '../../../slice';
 import ColorPicker from '../../AppThemeConfiguration/ColorPicker';
 

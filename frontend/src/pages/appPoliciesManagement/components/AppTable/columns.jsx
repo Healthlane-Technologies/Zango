@@ -1,33 +1,8 @@
 import { createColumnHelper } from '@tanstack/react-table';
-import { find, findIndex, set } from 'lodash';
-import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
-import ListCell from '../../../../components/Table/ListCell';
-import { formatTableDate } from '../../../../utils/formats';
 import ListRoleCell from './ListRoleCell';
 
-function columns({
-	debounceSearch,
-	localTableData,
-	handleViewPolicyConfigure,
-}) {
+function columns({ handleViewPolicyConfigure }) {
 	const columnHelper = createColumnHelper();
-	const handleColumnSearch = (data) => {
-		let tempTableData = JSON.parse(JSON.stringify(localTableData));
-		let index = findIndex(tempTableData?.columns, { id: data?.id });
-
-		if (index !== -1) {
-			set(tempTableData?.columns[index], 'value', data?.value);
-		} else {
-			tempTableData?.columns.push({ id: data?.id, value: data?.value });
-		}
-
-		let searchData = {
-			...tempTableData,
-			pageIndex: 0,
-		};
-
-		debounceSearch(searchData);
-	};
 
 	const columnsData = [
 		columnHelper.accessor((row) => row.id, {

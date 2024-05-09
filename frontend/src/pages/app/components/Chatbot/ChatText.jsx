@@ -31,7 +31,6 @@ const ChatText = ({
 			payload: payloadData,
 		});
 		if (success && response) {
-			console.log('print restart response here', response);
 			getConversationHistory();
 		} else {
 			setErrorMessage(response.message);

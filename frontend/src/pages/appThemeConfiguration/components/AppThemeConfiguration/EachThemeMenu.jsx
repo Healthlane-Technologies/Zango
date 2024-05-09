@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import useApi from '../../../../hooks/useApi';
-import { transformToFormData } from '../../../../utils/helper';
+import { transformToFormData } from '../../../../utils/form';
 import { openIsEditThemeModalOpen, toggleRerenderPage } from '../../slice';
 
 export default function EachThemeMenu({ data }) {

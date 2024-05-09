@@ -22,7 +22,7 @@ export default function ErrorMessageModal({
 			>
 				<div
 					ref={modalContentRef}
-					className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0"
+					className="flex min-h-screen items-center justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0"
 				>
 					<Transition.Child
 						as={Fragment}
@@ -58,23 +58,16 @@ export default function ErrorMessageModal({
 							<div className="flex w-full flex-col items-center rounded-[6px] bg-white">
 								<Dialog.Title
 									as="h3"
-									className="text-xxs text-modal-title w-full px-6 pt-8 pb-[32px] font-lato font-black uppercase"
+									className="text-xxs text-modal-title w-full px-6 pb-[32px] pt-8 font-lato font-black uppercase"
 								>
 									Error
 								</Dialog.Title>
-								<button
-									type="button"
-									className="absolute top-4 right-4"
-									onClick={() => setVisible(false)}
-								>
-									{/* <IconModalClose /> */}
-								</button>
 								<div className="mb-[32px] w-full px-6">
 									<div className="w-full text-center text-[#808187]">
 										{errorMessage}
 									</div>
 								</div>
-								<footer className="flex w-full flex-row items-center justify-end border-t border-[#3F4151] py-3 px-4">
+								<footer className="flex w-full flex-row items-center justify-end border-t border-[#3F4151] px-4 py-3">
 									<button
 										className="form-primary-cta"
 										onClick={() => setVisible(false)}

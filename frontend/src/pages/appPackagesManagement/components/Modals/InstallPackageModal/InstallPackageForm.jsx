@@ -7,7 +7,7 @@ import InputField from '../../../../../components/Form/InputField';
 import SelectField from '../../../../../components/Form/SelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormData } from '../../../../../utils/helper';
+import { transformToFormData } from '../../../../../utils/form';
 import {
 	selectAppPackagesManagementFormData,
 	toggleRerenderPage,

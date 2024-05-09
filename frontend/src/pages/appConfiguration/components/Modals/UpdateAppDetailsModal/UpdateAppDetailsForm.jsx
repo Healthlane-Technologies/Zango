@@ -10,7 +10,8 @@ import SelectField from '../../../../../components/Form/SelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import TextareaField from '../../../../../components/Form/TextareaField';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormData } from '../../../../../utils/helper';
+import { transformToFormData } from '../../../../../utils/form';
+
 import { selectAppConfigurationData, toggleRerenderPage } from '../../../slice';
 
 const UpdateAppDetailsForm = ({ closeModal }) => {

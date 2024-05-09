@@ -34,7 +34,7 @@ export default function HeaderInfo({ message }) {
 					style={styles['popper']}
 					{...attributes['popper']}
 				>
-					<Menu.Items className="absolute top-[30px] right-0 min-w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+					<Menu.Items className="absolute right-0 top-[30px] min-w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 						<div className="p-[4px]">
 							<Menu.Item>
 								{({ active }) => (

@@ -1,14 +1,15 @@
 import { useCallback, useContext } from 'react';
+import toast from 'react-hot-toast';
+import Notifications from '../components/Notifications';
+import { ErrorMessageContext } from '../context/ErrorMessageContextProvider';
+import { LoaderContext } from '../context/LoaderContextProvider';
 import {
 	callDeleteApi,
 	callGetApi,
 	callPostApi,
 	callPutApi,
 } from '../services/api';
-import { ErrorMessageContext } from '../context/ErrorMessageContextProvider';
-import { LoaderContext } from '../context/LoaderContextProvider';
-import toast from 'react-hot-toast';
-import Notifications from '../components/Notifications';
+import { isMockApi } from '../utils/helper';
 
 const notify = (type, title, description) =>
 	toast.custom(
@@ -79,11 +80,13 @@ export default function useApi() {
 
 			if (apiRequest.status === 200) {
 				try {
-					// if (apiRequest.redirected) {
-					// 	if (apiRequest.url.indexOf('login') !== -1) {
-					// 		window.location = apiRequest.url;
-					// 	}
-					// }
+					if (!isMockApi()) {
+						if (apiRequest.redirected) {
+							if (apiRequest.url.indexOf('login') !== -1) {
+								window.location = apiRequest.url;
+							}
+						}
+					}
 					const { response, success } = await apiRequest.json();
 
 					if (!success) {

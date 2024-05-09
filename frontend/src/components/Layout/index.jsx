@@ -2,7 +2,7 @@ import debounce from 'just-debounce-it';
 import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ReactComponent as ZelthyIcon } from '../../assets/images/svg/zelthy-icon.svg';
-import { useWindowSizeHeight } from '../../utils/helper';
+import { useWindowSizeHeight } from '../../utils/responsiveFix';
 import NavSearchForm from './NavSearchForm';
 import ProfileMenu from './ProfileMenu';
 

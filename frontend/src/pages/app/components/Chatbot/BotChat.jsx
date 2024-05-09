@@ -15,7 +15,6 @@ const BotChat = ({ item, executionData }) => {
 	let { appId } = useParams();
 
 	const handleCommit = (data) => {
-		console.log('print commit data here', data);
 		let postData = data;
 
 		let formdata = new FormData();
@@ -32,7 +31,6 @@ const BotChat = ({ item, executionData }) => {
 			if (success && response) {
 				setHideCommit(true);
 				setExecutionMsg(response.message);
-				console.log('print execution data', response);
 			} else {
 				setHideCommit(false);
 				if (response.message) {

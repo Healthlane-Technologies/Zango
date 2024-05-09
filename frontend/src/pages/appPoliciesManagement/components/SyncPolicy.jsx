@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TableSyncIcon } from '../../../assets/images/svg/sync-icon.svg';
 import useApi from '../../../hooks/useApi';
-import { transformToFormData } from '../../../utils/helper';
+import { transformToFormData } from '../../../utils/form';
 import { toggleRerenderPage } from '../slice';
 
 export default function SyncPolicy() {

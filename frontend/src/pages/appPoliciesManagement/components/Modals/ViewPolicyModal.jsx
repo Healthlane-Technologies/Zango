@@ -7,7 +7,7 @@ import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import useApi from '../../../../hooks/useApi';
-import { transformToFormDataStringify } from '../../../../utils/helper';
+import { transformToFormDataStringify } from '../../../../utils/form';
 import {
 	closeIsViewPolicyModalOpen,
 	selectAppPoliciesManagementFormData,
@@ -191,11 +191,11 @@ export default function ViewPolicyModal() {
 					>
 						<div className="fixed inset-0 overflow-y-auto">
 							<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
-								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[1001px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pt-[52px] pb-[40px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[32px] md:pt-[32px]">
-									<div className="flex justify-end md:absolute md:top-0 md:right-0">
+								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[1001px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pb-[40px] pt-[52px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[32px] md:pt-[32px]">
+									<div className="flex justify-end md:absolute md:right-0 md:top-0">
 										<button
 											type="button"
-											className="flex justify-end focus:outline-none md:absolute md:top-[16px] md:right-[16px]"
+											className="flex justify-end focus:outline-none md:absolute md:right-[16px] md:top-[16px]"
 											onClick={closeModal}
 										>
 											<ModalCloseIcon />

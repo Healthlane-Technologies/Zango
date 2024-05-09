@@ -5,7 +5,7 @@ import * as Yup from 'yup';
 import { ReactComponent as ActivateUserRolesIcon } from '../../../../../assets/images/svg/activate-icon.svg';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormDataOrder } from '../../../../../utils/helper';
+import { transformToFormDataOrder } from '../../../../../utils/form';
 import { selectAppUserRolesFormData, toggleRerenderPage } from '../../../slice';
 
 const ActivateUserRolesForm = ({ closeModal }) => {

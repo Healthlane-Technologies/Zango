@@ -16,9 +16,7 @@ function Table({
 	columns,
 	searchPlaceholder = 'Search',
 	localTableData,
-	pageData,
 	tableData,
-	pageId,
 	updatePageData,
 	updateLocalTableData,
 	RowMenu = null,
@@ -27,7 +25,6 @@ function Table({
 	haveSideMenu = true,
 	SearchFilters = null,
 }) {
-	console.log('HERER');
 	const searchRef = useRef(null);
 
 	const handleSearch = (value) => {

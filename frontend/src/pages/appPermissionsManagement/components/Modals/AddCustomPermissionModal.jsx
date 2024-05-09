@@ -1,24 +1,18 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-
-import { useField, Formik, FieldArray, Field, ErrorMessage } from 'formik';
+import { Formik } from 'formik';
+import { Fragment } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import * as Yup from 'yup';
-import { get } from 'lodash';
-import { transformToFormDataOrder } from '../../../../utils/helper';
+import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
 import useApi from '../../../../hooks/useApi';
-
-import { useSelector, useDispatch } from 'react-redux';
+import { transformToFormDataOrder } from '../../../../utils/form';
 import {
-	closeIsEditCustomPermissionModalOpen,
-	selectIsEditCustomPermissionModalOpen,
+	closeIsAddCustomPermissionModalOpen,
+	selectIsAddCustomPermissionModalOpen,
 	toggleRerenderPage,
 } from '../../slice';
 
-import { ReactComponent as ModalCloseIcon } from '../../../../assets/images/svg/modal-close-icon.svg';
-import { useParams } from 'react-router-dom';
-
-const EditCustomPermissionForm = ({ closeModal }) => {
-	let { appId } = useParams();
+const AddCustomPermissionForm = ({ closeModal }) => {
 	const dispatch = useDispatch();
 
 	const triggerApi = useApi();
@@ -75,53 +69,51 @@ const EditCustomPermissionForm = ({ closeModal }) => {
 						onSubmit={formik.handleSubmit}
 					>
 						<div className="flex grow flex-col gap-[24px]">
-							<div className="flex grow flex-col gap-[24px]">
-								<div className="flex flex-col gap-[4px]">
-									<label
-										htmlFor="policy"
-										className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-									>
-										Permission Name
-									</label>
-									<input
-										id="policy"
-										name="policy"
-										type="text"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.policy}
-										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-										placeholder="Enter Permission Name"
-									/>
-									{formik.touched.policy && formik.errors.policy ? (
-										<div className="font-lato text-form-xs text-[#cc3300]">
-											{formik.errors.policy}
-										</div>
-									) : null}
-								</div>
-								<div className="flex flex-col gap-[4px]">
-									<label
-										htmlFor="policy"
-										className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-									>
-										Description
-									</label>
-									<textarea
-										id="policy"
-										name="policy"
-										type="text"
-										onChange={formik.handleChange}
-										onBlur={formik.handleBlur}
-										value={formik.values.policy}
-										className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-										placeholder="Enter Permission Description"
-									/>
-									{formik.touched.policy && formik.errors.policy ? (
-										<div className="font-lato text-form-xs text-[#cc3300]">
-											{formik.errors.policy}
-										</div>
-									) : null}
-								</div>
+							<div className="flex flex-col gap-[4px]">
+								<label
+									htmlFor="policy"
+									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+								>
+									Permission Name
+								</label>
+								<input
+									id="policy"
+									name="policy"
+									type="text"
+									onChange={formik.handleChange}
+									onBlur={formik.handleBlur}
+									value={formik.values.policy}
+									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+									placeholder="Enter Permission Name"
+								/>
+								{formik.touched.policy && formik.errors.policy ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.policy}
+									</div>
+								) : null}
+							</div>
+							<div className="flex flex-col gap-[4px]">
+								<label
+									htmlFor="policy"
+									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
+								>
+									Description
+								</label>
+								<textarea
+									id="policy"
+									name="policy"
+									type="text"
+									onChange={formik.handleChange}
+									onBlur={formik.handleBlur}
+									value={formik.values.policy}
+									className="rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
+									placeholder="Enter Permission Description"
+								/>
+								{formik.touched.policy && formik.errors.policy ? (
+									<div className="font-lato text-form-xs text-[#cc3300]">
+										{formik.errors.policy}
+									</div>
+								) : null}
 							</div>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
@@ -130,7 +122,7 @@ const EditCustomPermissionForm = ({ closeModal }) => {
 								className="flex w-full items-center justify-center rounded-[4px] bg-primary px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]"
 								disabled={!(formik.isValid && formik.dirty)}
 							>
-								<span>Save</span>
+								<span>Add Custom Permission</span>
 							</button>
 						</div>
 					</form>
@@ -140,19 +132,19 @@ const EditCustomPermissionForm = ({ closeModal }) => {
 	);
 };
 
-export default function EditCustomPermissionModal() {
-	const isEditCustomPermissionModalOpen = useSelector(
-		selectIsEditCustomPermissionModalOpen
+export default function AddCustomPermissionModal() {
+	const isAddCustomPermissionModalOpen = useSelector(
+		selectIsAddCustomPermissionModalOpen
 	);
 	const dispatch = useDispatch();
 
 	function closeModal() {
-		dispatch(closeIsEditCustomPermissionModalOpen());
+		dispatch(closeIsAddCustomPermissionModalOpen());
 	}
 
 	return (
 		<>
-			<Transition appear show={isEditCustomPermissionModalOpen} as={Fragment}>
+			<Transition appear show={isAddCustomPermissionModalOpen} as={Fragment}>
 				<Dialog as="div" className="relative z-10" onClose={() => {}}>
 					<Transition.Child
 						as={Fragment}
@@ -177,11 +169,11 @@ export default function EditCustomPermissionModal() {
 					>
 						<div className="fixed inset-0 overflow-y-auto">
 							<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
-								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[498px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pt-[52px] pb-[40px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[72px] md:pt-[32px]">
-									<div className="flex justify-end md:absolute md:top-0 md:right-0">
+								<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[498px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pb-[40px] pt-[52px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[72px] md:pt-[32px]">
+									<div className="flex justify-end md:absolute md:right-0 md:top-0">
 										<button
 											type="button"
-											className="flex justify-end focus:outline-none md:absolute md:top-[16px] md:right-[16px]"
+											className="flex justify-end focus:outline-none md:absolute md:right-[16px] md:top-[16px]"
 											onClick={closeModal}
 										>
 											<ModalCloseIcon />
@@ -190,11 +182,11 @@ export default function EditCustomPermissionModal() {
 									<Dialog.Title as="div" className="flex flex-col gap-2">
 										<div className="flex flex-col gap-[2px]">
 											<h4 className="font-source-sans-pro text-[22px] font-semibold leading-[28px]">
-												Edit Custom Permission
+												Add Custom Permission
 											</h4>
 										</div>
 									</Dialog.Title>
-									<EditCustomPermissionForm closeModal={closeModal} />
+									<AddCustomPermissionForm closeModal={closeModal} />
 								</Dialog.Panel>
 							</div>
 						</div>

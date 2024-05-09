@@ -6,7 +6,7 @@ import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormData } from '../../../../../utils/helper';
+import { transformToFormData } from '../../../../../utils/form';
 import {
 	selectAppUserManagementFormData,
 	toggleRerenderPage,

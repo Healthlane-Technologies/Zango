@@ -1,10 +1,21 @@
 import toast from 'react-hot-toast';
 import { ReactComponent as NotificationCloseIcon } from '../../assets/images/svg/notification-close-icon.svg';
 
-export default function SuccessToast({ toastRef, title, description }) {
+export default function Toast({
+	toastRef,
+	title,
+	description,
+	type = 'success',
+}) {
 	return (
 		<div
-			className={`relative flex max-w-[247px] flex-col items-start gap-[12px] rounded-[4px] border border-[#8485F6] bg-[#EBEAFE] p-[16px] shadow-notification ${
+			className={`relative flex max-w-[247px] flex-col items-start gap-[12px] rounded-[4px] border ${
+				{
+					success: 'border-[#8485F6] bg-[#EBEAFE]',
+					warning: 'border-[#FECF7F] bg-[#fef7ef]',
+					error: 'border-[#AB1032] bg-[#ffefef]',
+				}[type]
+			} p-[16px] shadow-notification ${
 				toastRef.visible ? 'animate-enter' : 'animate-leave'
 			}`}
 		>
@@ -16,7 +27,7 @@ export default function SuccessToast({ toastRef, title, description }) {
 			</p>
 			<button
 				onClick={() => toast.dismiss(toastRef.id)}
-				className="absolute top-[12px] right-[16px]"
+				className="absolute right-[16px] top-[12px]"
 			>
 				<NotificationCloseIcon />
 			</button>

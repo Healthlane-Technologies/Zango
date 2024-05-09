@@ -1,30 +1,14 @@
 import { createColumnHelper } from '@tanstack/react-table';
-import { find, findIndex, set } from 'lodash';
+import { find } from 'lodash';
 import moment from 'moment';
 import HeaderInfo from '../../../../components/Table/HeaderInfo';
 import ListGeneralCell from '../../../../components/Table/ListGeneralCell';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
+import { handleColumnSearch } from '../../../../utils/table';
 
 function columns({ debounceSearch, localTableData, tableData }) {
 	const columnHelper = createColumnHelper();
-	const handleColumnSearch = (data) => {
-		let tempTableData = JSON.parse(JSON.stringify(localTableData));
-		let index = findIndex(tempTableData?.columns, { id: data?.id });
-
-		if (index !== -1) {
-			set(tempTableData?.columns[index], 'value', data?.value);
-		} else {
-			tempTableData?.columns.push({ id: data?.id, value: data?.value });
-		}
-
-		let searchData = {
-			...tempTableData,
-			pageIndex: 0,
-		};
-
-		debounceSearch(searchData);
-	};
 
 	const columnsData = [
 		columnHelper.accessor((row) => row.object_type, {
@@ -53,10 +37,14 @@ function columns({ debounceSearch, localTableData, tableData }) {
 							optionsDataName="object_type"
 							optionsData={tableData?.dropdown_options?.object_type}
 							onChange={(value) => {
-								handleColumnSearch({
-									id: 'object_type',
-									value: value?.id,
-								});
+								handleColumnSearch(
+									{
+										id: 'object_type',
+										value: value?.id,
+									},
+									localTableData,
+									debounceSearch
+								);
 							}}
 						/>
 					</div>
@@ -113,10 +101,14 @@ function columns({ debounceSearch, localTableData, tableData }) {
 							optionsDataName="timestamp"
 							optionsData={tableData?.dropdown_options?.timestamp}
 							onChange={(value) => {
-								handleColumnSearch({
-									id: 'timestamp',
-									value: value,
-								});
+								handleColumnSearch(
+									{
+										id: 'timestamp',
+										value: value,
+									},
+									localTableData,
+									debounceSearch
+								);
 							}}
 						/>
 					</div>
@@ -211,10 +203,14 @@ function columns({ debounceSearch, localTableData, tableData }) {
 							optionsDataName="action"
 							optionsData={tableData?.dropdown_options?.action}
 							onChange={(value) => {
-								handleColumnSearch({
-									id: 'action',
-									value: value?.id,
-								});
+								handleColumnSearch(
+									{
+										id: 'action',
+										value: value?.id,
+									},
+									localTableData,
+									debounceSearch
+								);
 							}}
 						/>
 					</div>

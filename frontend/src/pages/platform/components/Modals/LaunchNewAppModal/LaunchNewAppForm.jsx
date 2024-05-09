@@ -6,7 +6,7 @@ import InputField from '../../../../../components/Form/InputField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import TextareaField from '../../../../../components/Form/TextareaField';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormDataOrder } from '../../../../../utils/helper';
+import { transformToFormDataOrder } from '../../../../../utils/form';
 import { setPollingTastIds, toggleRerenderPage } from '../../../slice';
 
 const LaunchNewAppForm = ({ closeModal }) => {

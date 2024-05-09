@@ -128,7 +128,7 @@ export const platformUsersMangementHandlers = [
 							},
 						],
 					},
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -141,7 +141,7 @@ export const platformUsersMangementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -154,7 +154,7 @@ export const platformUsersMangementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);

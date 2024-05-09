@@ -5,7 +5,7 @@ import * as Yup from 'yup';
 import { ReactComponent as DeactivateUserIcon } from '../../../../../assets/images/svg/deactivate-user-icon.svg';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
-import { transformToFormData } from '../../../../../utils/helper';
+import { transformToFormData } from '../../../../../utils/form';
 import {
 	selectAppUserManagementFormData,
 	toggleRerenderPage,

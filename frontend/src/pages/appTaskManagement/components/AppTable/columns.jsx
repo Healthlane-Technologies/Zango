@@ -1,27 +1,11 @@
 import { createColumnHelper } from '@tanstack/react-table';
-import { find, findIndex, set } from 'lodash';
+import { find } from 'lodash';
 import ListCell from '../../../../components/Table/ListCell';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
+import { handleColumnSearch } from '../../../../utils/table';
 
 function columns({ debounceSearch, localTableData }) {
 	const columnHelper = createColumnHelper();
-	const handleColumnSearch = (data) => {
-		let tempTableData = JSON.parse(JSON.stringify(localTableData));
-		let index = findIndex(tempTableData?.columns, { id: data?.id });
-
-		if (index !== -1) {
-			set(tempTableData?.columns[index], 'value', data?.value);
-		} else {
-			tempTableData?.columns.push({ id: data?.id, value: data?.value });
-		}
-
-		let searchData = {
-			...tempTableData,
-			pageIndex: 0,
-		};
-
-		debounceSearch(searchData);
-	};
 
 	const columnsData = [
 		columnHelper.accessor((row) => row.id, {
@@ -116,10 +100,14 @@ function columns({ debounceSearch, localTableData }) {
 								{ id: 'false', label: 'Disabled' },
 							]}
 							onChange={(value) => {
-								handleColumnSearch({
-									id: 'is_enabled',
-									value: value?.id,
-								});
+								handleColumnSearch(
+									{
+										id: 'is_enabled',
+										value: value?.id,
+									},
+									localTableData,
+									debounceSearch
+								);
 							}}
 						/>
 					</div>
