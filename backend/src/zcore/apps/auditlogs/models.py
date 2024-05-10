@@ -36,16 +36,36 @@ class LogEntryManager(models.Manager):
     Custom manager for the :py:class:`LogEntry` model.
     """
 
-    def log_create(self, instance, force_log=False, **kwargs):
+    def log_create(self, instance, force_log: bool = False, **kwargs):
+        """
+        Helper method to create a new log entry. This method automatically populates some fields when no
+        explicit value is given.
+
+        :param instance: The model instance to log a change for.
+        :type instance: Model
+        :param force_log: Create a LogEntry even if no changes exist.
+        :type force_log: bool
+        :param kwargs: Field overrides for the :py:class:`LogEntry` object.
+        :return: The new log entry or `None` if there were no changes.
+        :rtype: LogEntry
+        """
+        from zcore.apps.auditlogs.cid import get_cid
         changes = kwargs.get("changes", None)
         pk = self._get_pk_value(instance)
 
-        if changes is not None:
+        if changes is not None or force_log:
             kwargs.setdefault(
                 "content_type", ContentType.objects.get_for_model(instance)
             )
             kwargs.setdefault("object_pk", pk)
-            kwargs.setdefault("object_repr", smart_str(instance))
+            try:
+                object_repr = smart_str(instance)
+            except ObjectDoesNotExist:
+                object_repr = DEFAULT_OBJECT_REPR
+            kwargs.setdefault("object_repr", object_repr)
+            kwargs.setdefault(
+                "serialized_data", self._get_serialized_data_or_none(instance)
+            )
 
             if isinstance(pk, int):
                 kwargs.setdefault("object_id", pk)
@@ -53,17 +73,14 @@ class LogEntryManager(models.Manager):
             get_additional_data = getattr(instance, "get_additional_data", None)
             if callable(get_additional_data):
                 kwargs.setdefault("additional_data", get_additional_data())
-            db = instance._state.db
             try:
                 obj = ObjectStore.objects.get(object_uuid=instance.object_uuid)
                 kwargs["object_ref"] = obj
             except (FieldError, AttributeError, ObjectStore.DoesNotExist):
                 pass
-            return (
-                self.create(**kwargs)
-                if db is None or db == ""
-                else self.using(db).create(**kwargs)
-            )
+            # set correlation id
+            kwargs.setdefault("cid", get_cid())
+            return self.create(**kwargs)
 
         return None
 
@@ -213,6 +230,8 @@ class LogEntryManager(models.Manager):
 
     def _get_serialized_data_or_none(self, instance):
         from zcore.apps.auditlogs.registry import auditlog
+        if not auditlog.contains(instance.__class__):
+            return None
 
         opts = auditlog.get_serialize_options(instance.__class__)
         if not opts["serialize_data"]:
@@ -441,7 +460,9 @@ class LogEntry(models.Model):
         from zcore.apps.auditlogs.registry import auditlog
 
         model = self.content_type.model_class()
-        model_fields = auditlog.get_model_fields(model._meta.model)
+        model_fields = None
+        if auditlog.contains(model._meta.model):
+            model_fields = auditlog.get_model_fields(model._meta.model)
         changes_display_dict = {}
         # grab the changes_dict and iterate through
         for field_name, values in self.changes_dict.items():
@@ -502,9 +523,11 @@ class LogEntry(models.Model):
                         value = f"{value[:140]}..."
 
                     values_display.append(value)
-            verbose_name = model_fields["mapping_fields"].get(
-                field.name, getattr(field, "verbose_name", field.name)
-            )
+            # Use verbose_name from mapping if available, otherwise determine from field
+            if model_fields and field.name in model_fields["mapping_fields"]:
+                verbose_name = model_fields["mapping_fields"][field.name]
+            else:
+                verbose_name = getattr(field, "verbose_name", field.name)
             changes_display_dict[verbose_name] = values_display
         return changes_display_dict
 

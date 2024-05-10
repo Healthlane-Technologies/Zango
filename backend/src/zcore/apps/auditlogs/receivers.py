@@ -1,14 +1,12 @@
 from functools import wraps
 
 from django.conf import settings
-from django.dispatch import Signal, receiver
 
 from zcore.apps.auditlogs.context import auditlog_disabled
 from zcore.apps.auditlogs.diff import model_instance_diff
 from zcore.apps.auditlogs.models import LogEntry
 from zcore.apps.auditlogs.signals import post_log, pre_log
 
-custom = Signal()
 
 
 def check_disable(signal_handler):
