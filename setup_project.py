@@ -47,6 +47,8 @@ def write_env_file(project_dir, args):
         f.write(f"POSTGRES_PORT=5432\n")
         f.write(f"REDIS_HOST=redis\n")
         f.write(f"REDIS_PORT=6379\n")
+        if args.platform_domain_url:
+            f.write(f"PLATFORM_DOMAIN_URL={args.platform_domain_url}\n")
 
 
 def build_core():
@@ -134,6 +136,7 @@ if __name__ == "__main__":
         default="ZCore@123",
         help="The platform user password",
     )
+    parser.add_argument("--platform_domain_url", default=None)
     parser.add_argument("--rebuild_core", action="store_true", default=False)
     args = parser.parse_args()
     try:

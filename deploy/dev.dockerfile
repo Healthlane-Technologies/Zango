@@ -1,4 +1,4 @@
-FROM kczelthy/zcore:latest
+FROM zcore:latest
 
 RUN apt-get install net-tools
 RUN apt install ffmpeg -y
