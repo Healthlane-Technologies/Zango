@@ -1,7 +1,7 @@
 # Image of workspace. Learn more: https://www.gitpod.io/docs/configure/workspaces/workspace-image
 image: gitpod/workspace-full:latest
 checkoutLocation: 'core'
-workspaceLocation: 'core/zcore_sandbox'
+workspaceLocation: 'core'
 tasks: 
   - name: URLs
     command: |
@@ -67,16 +67,16 @@ tasks:
       cd /workspace/core/zelthy3
       git checkout feat/GitPod
       docker build -t zcore .
-      if [ ! -d "/workspace/zcore_sandbox" ]; then
-        python setup_project.py --project_dir /workspace/zcore_sandbox --platform_domain_url $platform_domain_url
-        cd /workspace/zcore_sandbox
+      if [ ! -d "/workspace/core/zcore_sandbox" ]; then
+        python setup_project.py --project_dir /workspace/core/zcore_sandbox --platform_domain_url $platform_domain_url
+        cd /workspace/core/zcore_sandbox
         echo "CORS_ORIGIN_WHITELIST=https://*.gitpod.io" >> .env
         echo "CSRF_TRUSTED_ORIGINS=https://*.gitpod.io" >> .env
       else
-        cd /workspace/zcore_sandbox
+        cd /workspace/core/zcore_sandbox
       fi
 
-      if [ ! -d "/workspace/zcore_sandbox/zcore_project" ]; then
+      if [ ! -d "/workspace/core/zcore_sandbox/zcore_project" ]; then
         # Building project
         DOCKER_BUILDKIT=0 HOST_UID=$(id -u) HOST_GID=$(id -g) docker-compose build
         
@@ -90,7 +90,7 @@ tasks:
         docker-compose up
       fi
 
-      sudo chown -R gitpod:gitpod /workspace/zcore_sandbox/zcore_project
+      sudo chown -R gitpod:gitpod /workspace/core/zcore_sandbox/zcore_project
   
 ports:
   - port: 8000
