@@ -1,6 +1,7 @@
 # Image of workspace. Learn more: https://www.gitpod.io/docs/configure/workspaces/workspace-image
 image: gitpod/workspace-full:latest
-
+checkoutLocation: '/workspace/core'
+workspaceLocation: '/workspace/zcore_sandbox'
 tasks: 
   - name: URLs
     command: |
@@ -63,7 +64,7 @@ tasks:
       app_server_port=8000
 
       platform_domain_url="${app_server_port}-${workspace_id}.${cluster_host}"
-
+      cd /workspace/core/zelthy3
       git checkout feat/GitPod
       docker build -t zcore .
       if [ ! -d "/workspace/zcore_sandbox" ]; then
