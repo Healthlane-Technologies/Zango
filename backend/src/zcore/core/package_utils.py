@@ -133,20 +133,13 @@ def install_package(package_name, version, tenant):
         )
         bucket = resource.Bucket(settings.PACKAGE_BUCKET_NAME)
         bucket.download_file(
-            f"packages/{package_name}/{version}/codebase/",
+            f"packages/{package_name}/{version}/{package_name}.zip",
             f"workspaces/{tenant}/packages/{package_name}.zip",
         )
         with zipfile.ZipFile(
             f"workspaces/{tenant}/packages/{package_name}.zip", "r"
         ) as zip_ref:
             zip_ref.extractall(f"workspaces/{tenant}/packages")
-        shutil.move(
-            f"workspaces/{tenant}/packages/pkg-zelthy3-{package_name}-{version}/{package_name}",
-            f"workspaces/{tenant}/packages/",
-        )
-        shutil.rmtree(
-            f"workspaces/{tenant}/packages/pkg-zelthy3-{package_name}-{version}"
-        )
         os.remove(f"workspaces/{tenant}/packages/{package_name}.zip")
         # cache_package(
         #     package_name, version, f"workspaces/{tenant}/packages/{package_name}"
