@@ -64,7 +64,7 @@ tasks:
 
       platform_domain_url="${app_server_port}-${workspace_id}.${cluster_host}"
 
-      git checkout feat/sandbox
+      git checkout feat/GitPod
       docker build -t zcore .
       if [ ! -d "/workspace/zcore_sandbox" ]; then
         python setup_project.py --project_dir /workspace/zcore_sandbox --platform_domain_url $platform_domain_url
