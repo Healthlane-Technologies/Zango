@@ -1,0 +1,17 @@
+name: release package
+
+on:
+  push:
+    branches:
+      - main
+    # paths:
+    #   - "zelthy3/manifest.json"
+
+permissions: write-all
+
+jobs:
+  sync:
+    uses: Healthlane-Technologies/zelthy-ci-cd-workflows/.github/workflows/package-release-workflow.yml@v5
+    with:
+      manifest-file-path: "crud/manifest.json"
+    secrets: inherit
