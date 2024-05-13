@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import Platform from '../components/Platform';
 
-export const PlatformRoutes = () => {
+const PlatformRoutes = () => {
 	return (
 		<Layout showFooter={true}>
 			<Routes>
@@ -12,3 +12,4 @@ export const PlatformRoutes = () => {
 		</Layout>
 	);
 };
+export default PlatformRoutes;

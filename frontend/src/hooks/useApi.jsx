@@ -115,7 +115,7 @@ export default function useApi() {
 				}
 			} else if (apiRequest.status === 400) {
 				try {
-					const { response, success } = await apiRequest.json();
+					const { response } = await apiRequest.json();
 
 					setErrorMessage(response.message);
 
@@ -139,7 +139,7 @@ export default function useApi() {
 				}
 			} else if (apiRequest.status === 500) {
 				try {
-					const { response, success } = await apiRequest.json();
+					const { response } = await apiRequest.json();
 
 					setErrorMessage(response.message);
 

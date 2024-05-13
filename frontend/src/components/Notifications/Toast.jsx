@@ -9,7 +9,7 @@ export default function Toast({
 }) {
 	return (
 		<div
-			className={`relative flex max-w-[247px] flex-col items-start gap-[12px] rounded-[4px] border ${
+			className={`relative flex min-w-[200px] max-w-[247px] flex-col items-start gap-[12px] rounded-[4px] border ${
 				{
 					success: 'border-[#8485F6] bg-[#EBEAFE]',
 					warning: 'border-[#FECF7F] bg-[#fef7ef]',

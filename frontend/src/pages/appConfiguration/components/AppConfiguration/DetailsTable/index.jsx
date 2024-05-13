@@ -29,7 +29,7 @@ function DetailsTable() {
 						appConfigurationData?.app?.logo ? (
 							<img
 								src={appConfigurationData?.app?.logo}
-								className="h-[56px] w-[56px]"
+								className="h-[56px] w-[56px]  object-contain"
 								alt="#"
 							/>
 						) : (
@@ -43,7 +43,7 @@ function DetailsTable() {
 						appConfigurationData?.app?.fav_icon ? (
 							<img
 								src={appConfigurationData?.app?.fav_icon}
-								className="h-[56px] w-[56px]"
+								className="h-[56px] w-[56px] object-contain"
 								alt="#"
 							/>
 						) : (

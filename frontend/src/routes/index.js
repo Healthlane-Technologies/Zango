@@ -3,10 +3,10 @@ import { Toaster } from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import useApi from '../hooks/useApi';
-import { PlatformAppRoutes } from '../pages/app/routes';
-import { PlatformRoutes } from '../pages/platform/routes';
+import PlatformAppRoutes from '../pages/app/routes';
+import PlatformRoutes from '../pages/platform/routes';
 import { setAppPanelInitialData } from '../pages/platform/slice';
-import { PlatformUserManagementRoutes } from '../pages/platformUserManagement/routes';
+import PlatformUserManagementRoutes from '../pages/platformUserManagement/routes';
 
 export const AppRoutes = () => {
 	const location = useLocation();

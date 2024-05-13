@@ -12,14 +12,14 @@ import { AppPermissionsManagementRoutes } from '../../appPermissionsManagement/r
 import { AppPoliciesManagementRoutes } from '../../appPoliciesManagement/routes';
 import { AppTaskManagementRoutes } from '../../appTaskManagement/routes';
 import { AppThemeConfigurationRoutes } from '../../appThemeConfiguration/routes';
-import { AppUserManagementRoutes } from '../../appUserManagement/routes';
-import { AppUserRolesRoutes } from '../../appUserRoles/routes';
+import AppUserManagementRoutes from '../../appUserManagement/routes';
+import AppUserRolesRoutes from '../../appUserRoles/routes';
 import { selectAppPanelInitialData } from '../../platform/slice';
 import Chatbot from '../components/Chatbot';
 import DragablePopover from '../components/Chatbot/DragablePopover';
 import SideMenu from '../components/SideMenu';
 
-export const PlatformAppRoutes = () => {
+const PlatformAppRoutes = () => {
 	let { appId } = useParams();
 
 	const dispatch = useDispatch();
@@ -108,3 +108,5 @@ export const PlatformAppRoutes = () => {
 		</Layout>
 	);
 };
+
+export default PlatformAppRoutes;
