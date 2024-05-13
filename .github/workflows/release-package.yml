@@ -13,5 +13,5 @@ jobs:
   sync:
     uses: Healthlane-Technologies/zelthy-ci-cd-workflows/.github/workflows/package-release-workflow.yml@v5
     with:
-      manifest-file-path: "crud/manifest.json"
+      manifest-file-path: "manifest.json"
     secrets: inherit
