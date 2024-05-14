@@ -23,7 +23,7 @@ class ZCoreSessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateView
 
     @classmethod
     def as_view(cls):
-        login_url = "/admin/login/"
+        login_url = "/auth/login/"
         return login_required(
             super(ZCoreSessionPlatformTemplateView, cls).as_view(), login_url=login_url
         )

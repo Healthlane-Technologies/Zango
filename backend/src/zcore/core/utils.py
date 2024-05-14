@@ -2,10 +2,6 @@ from importlib import import_module
 import pytz
 import json
 
-from django.conf import settings
-from django.http import Http404
-from ipware.ip import get_client_ip
-
 
 def get_current_request():
     from ..middleware.request import _request_local
@@ -100,11 +96,3 @@ def get_search_columns(request):
         if key.startswith("search_"):
             search_columns[key.replace("search_", "")] = value
     return search_columns
-
-def internal_access_only(f):
-    def decorate_view(request):
-        client_ip, is_routable = get_client_ip(request)
-        if settings.ENV in ["staging", "prod"] and not client_ip in settings.INTERNAL_IPS:
-            raise Http404
-        return f(request)
-    return decorate_view
