@@ -4,13 +4,13 @@ sidebar_label: Creating an Async Task
 
 # Creating an Async Task
 
-In ZCore, asynchronous tasks are defined as functions within a `tasks.py` file located inside any module folder of your application. These tasks leverage the `@shared_task` function decorator to indicate that they should be executed asynchronously.
+In Zango, asynchronous tasks are defined as functions within a `tasks.py` file located inside any module folder of your application. These tasks leverage the `@shared_task` function decorator to indicate that they should be executed asynchronously.
 
 #### Steps to Create an Async Task
 
 1. **Create a `tasks.py` File**: Within the module folder of your app, create a file named `tasks.py`. This file will contain the definition of your asynchronous tasks.
 
-2. **Define the Task Function**: Inside the `tasks.py` file, define your asynchronous task as a regular Python function. Use the `@shared_task` decorator from ZCore to mark the function as an asynchronous task.
+2. **Define the Task Function**: Inside the `tasks.py` file, define your asynchronous task as a regular Python function. Use the `@shared_task` decorator from Zango to mark the function as an asynchronous task.
 
 ```python
 # tasks.py
@@ -27,4 +27,4 @@ def my_async_task():
 
 4. **Repeat as Needed**: You can define any number of asynchronous tasks within the `tasks.py` file. Each task should be defined as a separate function with the `@shared_task` decorator.
 
-By following these steps, you can create and define asynchronous tasks in ZCore, allowing you to offload time-consuming operations and improve the overall performance and responsiveness of your application.
+By following these steps, you can create and define asynchronous tasks in Zango, allowing you to offload time-consuming operations and improve the overall performance and responsiveness of your application.

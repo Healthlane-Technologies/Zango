@@ -1,8 +1,8 @@
-from zcore.backend.apps.dynamic_models.workspace.base import Workspace
+from zango.backend.apps.dynamic_models.workspace.base import Workspace
 from django_tenants.utils import get_tenant_model
 from django.db import connection, models
-from zcore.backend.apps.dynamic_models.fields import ZForeignKey
-from zcore.backend.apps.dynamic_models.models import DynamicModelBase
+from zango.backend.apps.dynamic_models.fields import ZForeignKey
+from zango.backend.apps.dynamic_models.models import DynamicModelBase
 from django.core.exceptions import FieldError
 from workspaces.Tenant3.null_fk.models import (
     Comment,
