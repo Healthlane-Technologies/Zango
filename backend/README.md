@@ -13,7 +13,7 @@
   <a href="#">
         <img alt="PyPI version" src="https://badge.fury.io/py/zango.svg"></a> 
   <a href="#">
-      <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zelthy3/docs.yml?branch=main"></a> 
+      <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/Healthlane-Technologies/zango/sync-docs-to-docs-hub.yml?branch=main"></a> 
   <a href="https://opensource.org/licenses/Apache-2.0" target="_blank">
       <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"> </a>
 </p>
@@ -43,7 +43,7 @@
 #### App Panel - Central hub to manage all your apps/ microservices
 Perform tasks such as configuring permissions, managing user roles, and much more. 
 
-![Zango App Panel](https://github.com/Healthlane-Technologies/zelthy3/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
+![Zango App Panel](https://github.com/Healthlane-Technologies/zango/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
 
 #### Drastically reduce your infrastructural and operational overheads, hosting multiple apps/ microservices on a single deployment:
 
