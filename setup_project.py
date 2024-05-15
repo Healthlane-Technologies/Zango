@@ -40,9 +40,9 @@ def write_env_file(project_dir, args):
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
         f.write(f"PROJECT_NAME={args.project_name}\n")
-        f.write(f"POSTGRES_USER=zelthy_admin\n")
-        f.write(f"POSTGRES_PASSWORD=zelthy3pass\n")
-        f.write(f"POSTGRES_DB=zelthy\n")
+        f.write(f"POSTGRES_USER=zango_admin\n")
+        f.write(f"POSTGRES_PASSWORD=zangopass\n")
+        f.write(f"POSTGRES_DB=zango\n")
         f.write(f"POSTGRES_HOST=postgres\n")
         f.write(f"POSTGRES_PORT=5432\n")
         f.write(f"REDIS_HOST=redis\n")
@@ -51,7 +51,7 @@ def write_env_file(project_dir, args):
 
 def build_core():
     try:
-        subprocess.run("docker build -t zelthy3 .", shell=True, check=True)
+        subprocess.run("docker build -t zango .", shell=True, check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error: {e}")
 
@@ -80,7 +80,7 @@ def setup_project(project_dir, project_name, without_db, start=False):
                 f"docker compose -f {project_dir}/docker-compose.yml up", shell=True
             )
             signal.signal(
-                signal.SIGINT, lambda sig, frame: print("\nStopping zelthy environment")
+                signal.SIGINT, lambda sig, frame: print("\nStopping zango environment")
             )
             proc.wait()
         except subprocess.CalledProcessError as e:
@@ -92,7 +92,7 @@ def setup_project(project_dir, project_name, without_db, start=False):
 
 def rebuild_core(project_dir):
     try:
-        subprocess.run(f"docker build -t zelthy3 .", shell=True, check=True)
+        subprocess.run(f"docker build -t zango .", shell=True, check=True)
         subprocess.run(
             f"docker compose -f {project_dir}/docker-compose.yml build",
             shell=True,
@@ -106,7 +106,7 @@ def rebuild_core(project_dir):
 if __name__ == "__main__":
     args = sys.argv[1:]
     parser = argparse.ArgumentParser(
-        prog="zelthy_setup", description="Helps you develop with zelthy locally"
+        prog="zango_setup", description="Helps you develop with zango locally"
     )
     parser.add_argument("--project_name", default="", help="The name of the project")
     parser.add_argument(
@@ -125,11 +125,13 @@ if __name__ == "__main__":
         help="Whether to skip the build step",
     )
     parser.add_argument(
-        "--platform_username", default="zelthy@mail.com", help="The platform username"
+        "--platform_username",
+        default="platform_admin@zelthy.com",
+        help="The platform username",
     )
     parser.add_argument(
         "--platform_user_password",
-        default="Zelthy@123",
+        default="Zango@123",
         help="The platform user password",
     )
     parser.add_argument("--rebuild_core", action="store_true", default=False)
@@ -139,7 +141,7 @@ if __name__ == "__main__":
             build_core()
             sys.exit(0)
         if args.project_name == "":
-            args.project_name = "zelthy_project"
+            args.project_name = "zango_project"
         if args.rebuild_core:
             rebuild_core(args.project_dir)
         load_necessary_files(args.project_dir, args.project_name, args.without_db)

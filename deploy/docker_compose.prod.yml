@@ -32,7 +32,7 @@ services:
     environment:
       ENV: prod
     volumes:
-      - .:/zelthy/
+      - .:/zango/
     healthcheck:
       test: ["CMD-SHELL", "netstat -ltn | grep -q 8000"]
       timeout: 5s
@@ -46,8 +46,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./${PROJECT_NAME}/static:/zelthy/${PROJECT_NAME}/static
-      - ./${PROJECT_NAME}/media:/zelthy/${PROJECT_NAME}/media
+      - ./${PROJECT_NAME}/static:/zango/${PROJECT_NAME}/static
+      - ./${PROJECT_NAME}/media:/zango/${PROJECT_NAME}/media
     depends_on:
       app:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
         - GID=${GID}
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
     volumes:
-      - .:/zelthy/
+      - .:/zango/
     env_file:
       - .env
     depends_on:
@@ -81,10 +81,10 @@ services:
       retries: 3
 
   celery_beat:
-    image: kczelthy/zelthy3:latest
+    image: kczelthy/zango:latest
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
-      - .:/zelthy/
+      - .:/zango/
     env_file:
       - .env
     depends_on:
