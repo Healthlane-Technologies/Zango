@@ -20,10 +20,10 @@ install_requires = get_requirements("base")
 
 
 setup(
-    name="zcore",
+    name="zango",
     version=PLATFORM_VERSION,
     license="Apache License 2.0",
-    description="ZCore: multi-tenant Django framework for building business apps",
+    description="Zango: multi-tenant Django framework for building business apps",
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
     author='Zelthy ("Healthlane Technologies")',
@@ -32,7 +32,7 @@ setup(
     package_dir={"": "src"},
     packages=find_packages("src"),
     package_data={
-        "zcore": [
+        "zango": [
             "cli/project_template/**/*",
             "assets/**",
             "**/templates/**",
@@ -46,7 +46,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "zcore=zcore.cli:cli",
+            "zango=zango.cli:cli",
         ],
     },
     license_files=["LICENSE"],

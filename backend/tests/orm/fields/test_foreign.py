@@ -1,11 +1,11 @@
 import unittest
 from decimal import Decimal
 from workspaces.Tenant3.foreign_key.models import Foo, Bar, Test, FUser, Poll, Choice
-from zcore.backend.apps.tenants.dynamic_models.workspace.base import Workspace
+from zango.backend.apps.tenants.dynamic_models.workspace.base import Workspace
 from django_tenants.utils import get_tenant_model
 from django.db import connection, models
-from zcore.backend.apps.tenants.dynamic_models.fields import ZForeignKey
-from zcore.backend.apps.tenants.dynamic_models.models import DynamicModelBase
+from zango.backend.apps.tenants.dynamic_models.fields import ZForeignKey
+from zango.backend.apps.tenants.dynamic_models.models import DynamicModelBase
 from django.core.exceptions import FieldError
 
 
