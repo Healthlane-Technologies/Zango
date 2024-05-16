@@ -1,6 +1,6 @@
-Copyright (c) Healthlane Technologies Pvt. Ltd. ("Zelthy")
+Copyright (c) Healthlane Technologies Pvt. Ltd. ("Zango")
 
-Parts of Zelthy's software are licensed as follows:
+Parts of Zango's software are licensed as follows:
 
 * All content residing under the "docs/" directory of this repository is licensed under
   "Creative Commons: CC BY-SA 4.0 license".
@@ -8,10 +8,10 @@ Parts of Zelthy's software are licensed as follows:
   directory exists, is licensed under the license defined in "enterprise/LICENSE".
 * All client-side JavaScript (when served directly or after being compiled, arranged,
   augmented, or combined), is licensed under the "MIT Expat" license.
-* All third party components incorporated into Zelthy are licensed under
+* All third party components incorporated into Zango are licensed under
   the original license provided by the owner of the applicable component.
-* Content outside of the above mentioned directories or restrictions above [Zelthy
-  Developer's Edition ("Zelthy DE")] is available under the "Apache Version 2.0, January 2004" 
+* Content outside of the above mentioned directories or restrictions above [Zango
+  Developer's Edition ("Zango DE")] is available under the "Apache Version 2.0, January 2004" 
   license as defined below.
 
 
