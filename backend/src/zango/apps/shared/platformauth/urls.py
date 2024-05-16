@@ -8,6 +8,6 @@ from zango.apps.shared.platformauth.views import (
 
 
 urlpatterns = [
-    re_path(r"^login/", PlatformUserLoginView.as_view(), name="login"),
-    re_path(r"^logout/", PlatformUserLogoutView.as_view(), name="logout"),
+    re_path(r"^login/", PlatformUserLoginView.as_view(), name="platform-login"),
+    re_path(r"^logout/", PlatformUserLogoutView.as_view(), name="platform-logout"),
 ]
