@@ -7,7 +7,7 @@ import {
 import debounce from 'just-debounce-it';
 import { find, findIndex, set } from 'lodash';
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
@@ -20,8 +20,8 @@ import { formatTableDate } from '../../../../utils/formats';
 import {
 	selectAppUserManagementData,
 	selectAppUserManagementTableData,
-	setAppUserManagementTableData,
 	setAppUserManagementData,
+	setAppUserManagementTableData,
 } from '../../slice';
 import PageCountSelectField from './PageCountSelectField';
 import ResizableInput from './ResizableInput';
@@ -181,17 +181,6 @@ export default function Table({ tableData }) {
 			),
 			cell: (info) => <ListCell data={info.getValue()} />,
 		}),
-		// columnHelper.accessor((row) => row.policies, {
-		// 	id: 'policies',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
-		// 			<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				Policy
-		// 			</span>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => <ListCell data={info.getValue()} />,
-		// }),
 		columnHelper.accessor((row) => row.created_at, {
 			id: 'created_at',
 			header: () => (
@@ -204,12 +193,12 @@ export default function Table({ tableData }) {
 			cell: (info) => (
 				<div className="flex h-full flex-col gap-[4px] border-b border-[#F0F3F4] py-[14px] px-[20px]">
 					<span className="w-fit min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-						{formatTableDate(info.getValue())}
-					</span>
-					<span className="w-fit min-w-max text-start font-lato text-[12px] font-normal leading-[16px] tracking-[0.2px] text-[#A3ABB1]">
 						{info.row.original?.last_login
 							? formatTableDate(info.row.original?.last_login)
 							: null}
+					</span>
+					<span className="w-fit min-w-max text-start font-lato text-[12px] font-normal leading-[16px] tracking-[0.2px] text-[#A3ABB1]">
+						{formatTableDate(info.getValue())}
 					</span>
 				</div>
 			),
@@ -329,8 +318,6 @@ export default function Table({ tableData }) {
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
-					{/* <TableFilterIcon />
-					<TableColumnFilterIcon /> */}
 				</div>
 			</div>
 			<div className="relative flex grow overflow-x-auto overflow-y-auto">
