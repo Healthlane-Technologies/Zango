@@ -30,6 +30,7 @@ export const AppRoutes = () => {
 		makeApiCall();
 	}, [triggerApi, dispatch]);
 
+	// TODO: pages structure for app and platform pages
 	return (
 		<>
 			<Routes>

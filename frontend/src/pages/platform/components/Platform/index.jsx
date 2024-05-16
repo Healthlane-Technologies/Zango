@@ -78,6 +78,7 @@ export default function Platform() {
 	if (appsData) {
 		return (
 			<>
+				{/* TODO: change FirstApp component to LandingPage */}
 				{appsData?.length ? <Apps /> : <FirstApp />}
 				<LaunchNewAppModal />
 			</>

@@ -48,7 +48,9 @@ export default function AppTable() {
 			})}
 			pageData={appApplicationObjectsLogsData}
 			pageId={'users'}
+			// TODO: global api reference
 			apiUrl={`/api/v1/apps/${appId}/auditlog/`}
+			// TODO: remove apiQuery
 			apiQuery={`&model_type=dynamic_models`}
 			updatePageData={updatePageData}
 			updateLocalTableData={updateLocalTableData}

@@ -71,6 +71,10 @@ export default function UserManagement() {
 		makeApiCall();
 	}, [rerenderPage]);
 
+	if (!appUserManagementData) {
+		return null;
+	}
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[20px]">

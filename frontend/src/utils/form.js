@@ -1,6 +1,7 @@
 import forEach from 'lodash/forEach';
 import isEmpty from 'lodash/isEmpty';
 
+// TODO: Add function comments
 export function transformToFormData(
 	data,
 	formData = new FormData(),
