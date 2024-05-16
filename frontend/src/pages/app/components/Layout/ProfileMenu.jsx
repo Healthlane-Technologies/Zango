@@ -37,7 +37,7 @@ export default function ProfileMenu() {
 					style={styles['popper']}
 					{...attributes['popper']}
 				>
-					<Menu.Items className="absolute top-[30px] right-0 min-w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+					<Menu.Items className="absolute right-0 top-[30px] min-w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 						<div className="p-[4px]">
 							<div className="flex w-full flex-col rounded-[2px] px-[12px] py-[8px]">
 								<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
@@ -52,7 +52,7 @@ export default function ProfileMenu() {
 						<div className="p-[4px]">
 							<Menu.Item>
 								{({ active }) => (
-									<a href="/admin/logout/">
+									<a href="/auth/logout/">
 										<div
 											className={`${
 												active ? 'bg-[#F0F3F4]' : ''

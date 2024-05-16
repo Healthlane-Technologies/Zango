@@ -39,7 +39,7 @@ export default function Layout({ children }) {
 			>
 				<div className="flex items-center justify-between gap-[48px]">
 					<Link to="/platform">
-						<ZelthyIcon />
+						<ZelthyIcon className="max-h-[20px] w-fit" />
 					</Link>
 					<NavSearchForm />
 				</div>
@@ -61,7 +61,7 @@ export default function Layout({ children }) {
 					•
 				</span>
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-					© {new Date().getFullYear()} zelthy
+					© {new Date().getFullYear()} HEALTHLANE TECHNOLOGIES PVT. LTD
 				</span>
 				<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•

@@ -74,7 +74,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.object_type, {
 			id: 'object_type',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Object Type
 					</span>
@@ -107,7 +107,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full min-w-max flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full min-w-max flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -117,14 +117,14 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.object_id, {
 			id: 'object_id',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Object Id
 					</span>
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full min-w-max flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full min-w-max flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 						{info.getValue() ? info.getValue() : '-'}
 					</span>
@@ -134,7 +134,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.timestamp, {
 			id: 'timestamp',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						DATE AND TIME
 					</span>
@@ -168,9 +168,9 @@ export default function Table({ tableData }) {
 			),
 			cell: (info) => {
 				return (
-					<div className="flex h-full flex-col gap-[8px] border-b border-[#F0F3F4] py-[14px] px-[20px]">
+					<div className="flex h-full flex-col gap-[8px] border-b border-[#F0F3F4] px-[20px] py-[14px]">
 						<span className="min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-							{moment(info.getValue()).format('DD MMM YYYY, h:mma')}
+							{info.getValue()}
 						</span>
 					</div>
 				);
@@ -215,7 +215,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.actor, {
 			id: 'actor',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[10px] whitespace-nowrap border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[10px] whitespace-nowrap border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Actor
 					</span>
@@ -223,7 +223,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 						{info.getValue()
 							? info.row.original?.actor_type === 'platform_actor'
@@ -237,7 +237,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.changes, {
 			id: 'changes',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[10px] whitespace-nowrap border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[10px] whitespace-nowrap border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						CHANGES
 					</span>
@@ -378,7 +378,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.action, {
 			id: 'action',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Action
 					</span>
@@ -411,7 +411,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col gap-[4px] border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col gap-[4px] border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="w-fit min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -554,12 +554,12 @@ export default function Table({ tableData }) {
 									</th>
 								))}
 								<th key="extra-head" className="p-0 align-top">
-									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
 									</div>
 								</th>
 								<th key="extra-head2" className="p-0 align-top">
-									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
 									</div>
 								</th>
@@ -578,16 +578,16 @@ export default function Table({ tableData }) {
 									</td>
 								))}
 								<td key="extra-cell" className="w-full">
-									<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+									<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 										<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]"></span>
 									</div>
 								</td>
 								<td
 									key="extra-cell2"
-									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
+									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] px-[20px] py-[14px] group-hover:hidden"
 								></td>
 
-								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex"></td>
+								<td className="sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] from-0% to-90% px-[32px]  group-hover:flex"></td>
 							</tr>
 						))}
 					</tbody>
