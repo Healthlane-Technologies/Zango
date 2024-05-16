@@ -1,7 +1,5 @@
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect
-from django.contrib.auth import logout
-from rest_framework.views import APIView
 
 
 # Create your views here.
@@ -17,11 +15,11 @@ class PlatformUserLoginView(LoginView):
         return redirect("/platform")
 
 
-class PlatformUserLogoutView(APIView):
+class PlatformUserLogoutView(LogoutView):
     """
     View to logout the user.
     """
 
     def get(self, request, *args, **kwargs):
-        logout(request)
+        super().get(request, *args, **kwargs)
         return redirect("/auth/login")
