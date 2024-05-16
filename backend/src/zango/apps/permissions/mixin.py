@@ -61,7 +61,6 @@ class PermissionMixin:
 
     def get_policies(self, perm_type, view=None, model=None):
         from .models import PermissionsModel, PolicyModel
-
         policy_groups = self.policy_groups.all()
         policies_qs = self.policies.all() | PolicyModel.objects.filter(
             policy_groups__in=policy_groups

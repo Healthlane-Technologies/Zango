@@ -9,27 +9,12 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Extract branch name
-        shell: bash
-        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-        id: extract_branch
-
-      - name: Push to zelthy3-docs-hub repository
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          source-directory: "docs"
-          target-directory: "all_docs/zelthy3"
-          destination-github-username: "Healthlane-Technologies"
-          destination-repository-name: "zelthy3-docs-hub"
-          commit-message: "Sync Zelthy3 docs"
-          user-email: ravi@zelthy.com
-          target-branch: staging
-      
+    uses: Healthlane-Technologies/zelthy-ci-cd-workflows/.github/workflows/sync-docs-to-docs-hub.yml@v5
+    with:
+      source-directory: "docs"
+      target-directory: "all_docs/zelthy3"
+      destination-github-username: "Healthlane-Technologies"
+      destination-repository-name: "zelthy3-docs-hub"
+      commit-message: "Sync zcore package docs"
+      target-branch: staging
+    secrets: inherit

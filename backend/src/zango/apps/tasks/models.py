@@ -80,7 +80,6 @@ class AppTask(FullAuditMixin):
 
         super(AppTask, self).save(*args, **kwargs)
 
-
 auditlog.register(
     AppTask,
     m2m_fields={

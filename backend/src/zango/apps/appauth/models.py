@@ -269,3 +269,4 @@ class OldPasswords(AbstractOldPasswords):
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
+

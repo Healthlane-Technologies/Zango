@@ -12,8 +12,6 @@ from zango.apps.appauth.models import UserRoleModel
 from zango.core.custom_pluginbase import get_plugin_source
 from zango.apps.dynamic_models.models import DynamicModelBase
 
-# from zango.core.pluginbase1 import PluginBase, PluginSource
-
 from .lifecycle import Lifecycle
 from .wtree import WorkspaceTreeNode
 
