@@ -23,10 +23,7 @@ const TableDateRangeFilter = ({
 	const [newEndDate, setNewEndDate] = useState(
 		value?.end ? moment(value?.end, 'YYYY-MM-DD') : null
 	);
-	// const [date, setDate] = useState({
-	// 	start: value?.start ? value?.start : null,
-	// 	end: value?.end ? value?.end : null,
-	// });
+
 	const [focusedInput, setFocusedInput] = useState(null);
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);

@@ -1,7 +1,7 @@
 # Auditlogs
 
 Adding audit logs to a system is a crucial step towards enhancing security, accountability, and transparency.
-We have used the version 3.0.0-beta.4 of the library [django-auditlog](https://github.com/jazzband/django-auditlog) to add support for auditlog in the zelthy framework while implementing some changes to suit our framework
+We have used the version 3.0.0 of the library [django-auditlog](https://github.com/jazzband/django-auditlog) to add support for auditlog in the zelthy framework while implementing some changes to suit our framework
 
 ## Changes Made To `django-auditlog` Library
 
@@ -16,6 +16,7 @@ We have used the version 3.0.0-beta.4 of the library [django-auditlog](https://g
 In the zelthy3 framework by default all the core models and the dynamic models will be registered for auditlogs automatically, to control which models and fields of dynamic models need to be logged a custom meta class for DynamicModels `DynamicModelMeta` can be used
 
 eg: To exclude a model
+
 ```python
 class Model(DynamicModelBase):
     # Fields ...
@@ -25,6 +26,7 @@ class Model(DynamicModelBase):
 ```
 
 eg: To exclude fields
+
 ```python
 class Model(DynamicModelBase):
     # Fields ...
@@ -76,4 +78,3 @@ Import statements modified
 9. `registry.py`
 
 Import statements modified
-
