@@ -12,6 +12,7 @@ env = environ.Env(
     REDIS_PORT=(str, "6379"),
     SESSION_SECURITY_WARN_AFTER=(int, 1700),
     SESSION_SECURITY_EXPIRE_AFTER=(int, 1800),
+    INTERNAL_IPS=(list, []),
 )
 environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -130,3 +131,7 @@ if DEBUG or ENV == "dev":
     # to simplify troubleshooting and testing.
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+
+# INTERNAL_IPS can contain a list of IP addresses or CIDR blocks that are considered internal.
+# Both individual IP addresses and CIDR notation (e.g., '192.168.1.1' or '192.168.1.0/24') can be provided.
+INTERNAL_IPS = env("INTERNAL_IPS")

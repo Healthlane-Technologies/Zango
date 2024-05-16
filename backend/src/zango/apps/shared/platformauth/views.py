@@ -1,7 +1,5 @@
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect
-from rest_framework.views import APIView
-from zango.core.api import ZangoSessionPlatformAPIView, get_api_response
 
 
 # Create your views here.
@@ -17,22 +15,11 @@ class PlatformUserLoginView(LoginView):
         return redirect("/platform")
 
 
-class PlatformUserLoginAPIV1(APIView):
-    pass
-
-
-class PlatformUserProfileAPIV1(ZangoSessionPlatformAPIView):
-    """ """
-
-    def get_profile_data(self, request):
-        data = {}
-        data["name"] = request.user.platform_user.name
-        data["email"] = request.user.platform_user.email
-        data["mobile"] = request.user.platform_user.mobile
-        data["role"] = "Platform User"
-        data["user_uuid"] = request.user.username
-        return data
+class PlatformUserLogoutView(LogoutView):
+    """
+    View to logout the user.
+    """
 
     def get(self, request, *args, **kwargs):
-        data = self.get_profile_data(request)
-        return get_api_response(True, data, 200)
+        super().get(request, *args, **kwargs)
+        return redirect("/auth/login")
