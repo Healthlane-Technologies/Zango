@@ -11,8 +11,6 @@ from django.core.exceptions import ValidationError
 
 from zango.core.model_mixins import FullAuditMixin
 from zango.core.storage_utils import RandomUniqueFileName, ZFileField
-from zango.apps.permissions.models import PolicyModel
-from zango.apps.appauth.models import UserRoleModel
 
 
 from .tasks import initialize_workspace

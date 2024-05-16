@@ -1,8 +1,8 @@
 import sys
 from django.apps import AppConfig
 from django.conf import settings
-from django.db.models.signals import pre_save
-from .signals import set_created_modified_by
+from django.db.models.signals import pre_save, post_save
+from .signals import set_created_modified_by, create_object_store_entry
 
 
 class DynamicModelsConfig(AppConfig):
@@ -22,6 +22,7 @@ class DynamicModelsConfig(AppConfig):
                 original_register_model(app_label, model)
             else:
                 pre_save.connect(set_created_modified_by, sender=model)
+                post_save.connect(create_object_store_entry, sender=model)
                 self.apps.do_pending_operations(model)
                 self.apps.clear_cache()
 

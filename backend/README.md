@@ -6,8 +6,10 @@
 
 <hr>
 
-### **✨ Build microservices as tenants on a Django monolith. Avoid the infra & operational overheads. Scale effortlessly. ✨** 
-<a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a> 
+### **✨ Build microservices as tenants on a Django monolith. Avoid the infra & operational overheads. Scale effortlessly. ✨**
+
+<a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a>
+
 <hr>  
 <p align="center">
   <a href="#">
@@ -23,12 +25,9 @@
   <a href="https://www.zango.dev/docs/category/getting-started" target="_blank">Getting Started </a>|
   <a href="https://zango.dev/docs" target="_blank">Docs</a> |
   <a href="https://discord.com/invite/WHvVjU23e7" target="_blank">Discord</a>
-</p> 
+</p>
 
-
-
-**Zango** is a web application development framework built upon Django, designed to host multiple apps or microservices as tenants on a single monolith under the hood. 
-
+**Zango** is a web application development framework built upon Django, designed to host multiple apps or microservices as tenants on a single monolith under the hood.
 
 - Leverage the stengths of Django, an already proven and battle tested web framework
 - Make available the basics of business web apps/ microservices as part of the framework
@@ -39,9 +38,9 @@
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox-official/)
 
-
 #### App Panel - Central hub to manage all your apps/ microservices
-Perform tasks such as configuring permissions, managing user roles, and much more. 
+
+Perform tasks such as configuring permissions, managing user roles, and much more.
 
 ![Zango App Panel](https://github.com/Healthlane-Technologies/zango/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
 
@@ -51,20 +50,20 @@ Zango redefines multi-tenancy by enabling multiple different apps to run on a si
 
 ![Zango Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
 
+#### 🚀 Getting Started:
 
-####  🚀 Getting Started:
 - [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
-- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
+- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker)
 - [Manual](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual)
 
-
 #### 📦 Free Packages
-A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
+
+A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.
+
 - [Basic Auth](https://www.zango.dev/docs/login/introduction)
 - [Frames](https://www.zango.dev/docs/frame/introduction)
-- [CRUD](https://www.zango.dev/docs/crud/introduction) 
+- [CRUD](https://www.zango.dev/docs/crud/introduction)
 - [Workflow](https://www.zango.dev/docs/workflow/overview)
-
 
 #### 🌟 Get Involved and Make a Difference
 
@@ -77,7 +76,5 @@ Join our community and help build **Zango**. Here's how you can get involved:
 - **Contribute Code:** Dive into open issues and send pull requests to help us squash bugs and implement exciting enhancements. 🛠️
 
 Together, let's build something incredible! ✨🚀
-
-
 
 #### Official Documentation: https://zango.dev/docs

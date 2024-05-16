@@ -16,10 +16,10 @@ from zango.apps.shared.platformauth.abstract_model import (
     AbstractZangoUserModel,
     AbstractOldPasswords,
 )
-
-from ..permissions.models import PolicyModel, PolicyGroupModel
+from zango.apps.auditlogs.registry import auditlog
 
 # from .perm_mixin import PolicyQsMixin
+from ..permissions.models import PolicyModel, PolicyGroupModel
 from ..permissions.mixin import PermissionMixin
 
 
@@ -264,3 +264,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
+
+
+auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
+auditlog.register(OldPasswords)
+auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
+

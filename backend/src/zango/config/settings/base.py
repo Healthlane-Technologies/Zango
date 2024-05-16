@@ -48,6 +48,7 @@ TENANT_APPS = [
     "zango.apps.object_store",
     "zango.apps.dynamic_models",
     "zango.apps.tasks",
+    "zango.apps.auditlogs",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -84,6 +85,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zango.middleware.tenant.TimezoneMiddleware",
+    "zango.apps.auditlogs.middleware.AuditlogMiddleware",
 ]
 
 

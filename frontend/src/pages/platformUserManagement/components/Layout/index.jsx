@@ -36,7 +36,7 @@ export default function Layout({ children }) {
 			>
 				<div className="flex items-center justify-between gap-[48px]">
 					<Link to="/platform">
-						<ZelthyIcon />
+						<ZelthyIcon className="max-h-[20px] w-fit" />
 					</Link>
 					<NavSearchForm />
 				</div>
