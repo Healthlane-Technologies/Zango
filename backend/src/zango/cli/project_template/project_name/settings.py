@@ -132,4 +132,6 @@ if DEBUG or ENV == "dev":
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
+# INTERNAL_IPS can contain a list of IP addresses or CIDR blocks that are considered internal.
+# Both individual IP addresses and CIDR notation (e.g., '192.168.1.1' or '192.168.1.0/24') can be provided.
 INTERNAL_IPS = env("INTERNAL_IPS")
