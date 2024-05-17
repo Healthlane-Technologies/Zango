@@ -1,7 +1,14 @@
 import forEach from 'lodash/forEach';
 import isEmpty from 'lodash/isEmpty';
 
-// TODO: Add function comments
+/**
+ * Transforming formik form object data to formData
+ *
+ * @param {*} data - form data
+ * @param {*} formData - new FormData
+ * @param {*} parentKey
+ * @returns modified formdata
+ */
 export function transformToFormData(
 	data,
 	formData = new FormData(),
@@ -31,6 +38,14 @@ export function transformToFormData(
 	return formData;
 }
 
+/**
+ * Transforming formik form object data to formData but nested array value will be stringified
+ *
+ * @param {*} data - form data
+ * @param {*} formData - new FormData
+ * @param {*} parentKey
+ * @returns modified formdata
+ */
 export function transformToFormDataOrder(
 	data,
 	formData = new FormData(),
@@ -54,6 +69,14 @@ export function transformToFormDataOrder(
 	return formData;
 }
 
+/**
+ * Transforming formik form object data to formData, all nested array and object value will be stringified
+ *
+ * @param {*} data - form data
+ * @param {*} formData - new FormData
+ * @param {*} parentKey
+ * @returns modified formdata
+ */
 export function transformToFormDataStringify(
 	data,
 	formData = new FormData(),

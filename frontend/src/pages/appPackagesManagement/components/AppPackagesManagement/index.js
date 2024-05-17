@@ -58,7 +58,11 @@ export default function AppPackagesManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appPackagesManagementTableData]);
+
+	if (!appPackagesManagementData) {
+		return null;
+	}
 
 	return (
 		<>

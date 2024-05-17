@@ -61,7 +61,11 @@ export default function AppTaskManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, taskManagementRolesTableData]);
+
+	if (!appTaskManagementData) {
+		return null;
+	}
 
 	return (
 		<>

@@ -65,7 +65,8 @@ export default function AppPoliciesManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appPoliciesManagementTableData]);
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[20px]">

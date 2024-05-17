@@ -52,7 +52,7 @@ export default function ProfileMenu() {
 						<div className="p-[4px]">
 							<Menu.Item>
 								{({ active }) => (
-									<a href="/admin/logout/">
+									<a href="/auth/logout/">
 										<div
 											className={`${
 												active ? 'bg-[#F0F3F4]' : ''

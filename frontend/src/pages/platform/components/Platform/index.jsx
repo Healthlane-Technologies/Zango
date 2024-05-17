@@ -12,7 +12,7 @@ import {
 } from '../../slice';
 import LaunchNewAppModal from '../Modals/LaunchNewAppModal';
 import Apps from './Apps';
-import FirstApp from './FirstApp';
+import LandingPage from './LandingPage';
 
 export default function Platform() {
 	const appsData = useSelector(selectAppsData);
@@ -78,8 +78,7 @@ export default function Platform() {
 	if (appsData) {
 		return (
 			<>
-				{/* TODO: change FirstApp component to LandingPage */}
-				{appsData?.length ? <Apps /> : <FirstApp />}
+				{appsData?.length ? <Apps /> : <LandingPage />}
 				<LaunchNewAppModal />
 			</>
 		);

@@ -53,11 +53,11 @@ export default function AppFrameworkObjectsLogs() {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/auditlog/?page=${
+				url: `/api/v1/apps/${appId}/auditlog/?model_type=core_models&page=${
 					appFrameworkObjectsLogsTableData?.pageIndex + 1
 				}&page_size=${
 					appFrameworkObjectsLogsTableData?.pageSize
-				}&model_type=core_models&include_dropdown_options=true&search=${
+				}&include_dropdown_options=true&search=${
 					appFrameworkObjectsLogsTableData?.searchValue
 				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
@@ -69,7 +69,11 @@ export default function AppFrameworkObjectsLogs() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appFrameworkObjectsLogsTableData]);
+
+	if (!appFrameworkObjectsLogsData) {
+		return null;
+	}
 
 	return (
 		<>
@@ -87,7 +91,7 @@ export default function AppFrameworkObjectsLogs() {
 							</div>
 						</div>
 					) : appFrameworkObjectsLogsData ? (
-						<AppTable tableData={appFrameworkObjectsLogsData?.audit_logs} />
+						<AppTable />
 					) : null}
 				</div>
 			</div>

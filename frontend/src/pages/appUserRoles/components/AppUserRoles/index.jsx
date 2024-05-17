@@ -64,7 +64,11 @@ export default function AppUserRoles() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appUserRolesTableData]);
+
+	if (!appUserRolesData) {
+		return null;
+	}
 
 	return (
 		<>

@@ -1,6 +1,5 @@
 import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { useEffect, useMemo } from 'react';
-import useApi from '../../hooks/useApi';
+import { useMemo } from 'react';
 import TableBody from './TableBody';
 import TableEmpty from './TableEmpty';
 import TableFooter from './TableFooter';
@@ -12,11 +11,8 @@ function Table({
 	searchPlaceholder = 'Search',
 	localTableData,
 	tableData,
-	updatePageData,
 	updateLocalTableData,
 	RowMenu = null,
-	apiUrl,
-	apiQuery = '',
 	haveSideMenu = true,
 	SearchFilters = null,
 }) {
@@ -50,56 +46,6 @@ function Table({
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 	});
-
-	const triggerApi = useApi();
-
-	useEffect(() => {
-		let { pageIndex, pageSize } = pagination;
-
-		let columnFilter = localTableData?.columns
-			? localTableData?.columns
-					?.filter(({ id, value }) => {
-						if (
-							typeof value === 'object' &&
-							!Array.isArray(value) &&
-							isNaN(parseInt(value))
-						) {
-							return value?.start && value?.end;
-						} else {
-							return value;
-						}
-					})
-					?.map(({ id, value }) => {
-						if (
-							typeof value === 'object' &&
-							!Array.isArray(value) &&
-							isNaN(parseInt(value))
-						) {
-							return `&search_${id}=${JSON.stringify(value)}`;
-						} else {
-							return `&search_${id}=${value}`;
-						}
-					})
-					.join('')
-			: '';
-
-		const makeApiCall = async () => {
-			const { response, success } = await triggerApi({
-				url: `${apiUrl}?page=${pageIndex + 1}&page_size=${pageSize}${
-					apiQuery ? apiQuery : ''
-				}&include_dropdown_options=true&search=${localTableData?.searchValue}${
-					columnFilter?.length ? columnFilter : ''
-				}`,
-				type: 'GET',
-				loader: true,
-			});
-			if (success && response) {
-				updatePageData(response);
-			}
-		};
-
-		makeApiCall();
-	}, [localTableData]);
 
 	return (
 		<div

@@ -5,13 +5,12 @@ import Table from '../../../../components/Table';
 import {
 	selectPlatformUserManagementData,
 	selectPlatformUserManagementTableData,
-	setPlatformUserManagementData,
 	setPlatformUserManagementTableData,
 } from '../../slice';
 import columns from './columns';
 import RowMenu from './RowMenu';
 
-export default function AppTable({ tableData }) {
+export default function AppTable() {
 	const platformUserManagementTableData = useSelector(
 		selectPlatformUserManagementTableData
 	);
@@ -23,10 +22,6 @@ export default function AppTable({ tableData }) {
 	const updateLocalTableData = (data) => {
 		dispatch(setPlatformUserManagementTableData(data));
 	};
-
-	function updatePageData(value) {
-		dispatch(setPlatformUserManagementData(value));
-	}
 
 	const debounceSearch = debounce((data) => {
 		dispatch(setPlatformUserManagementTableData(data));
@@ -41,10 +36,6 @@ export default function AppTable({ tableData }) {
 				debounceSearch,
 				localTableData: platformUserManagementTableData,
 			})}
-			pageData={platformUserManagementData}
-			pageId={'platform-users'}
-			apiUrl={`/api/v1/auth/platform-users/`}
-			updatePageData={updatePageData}
 			updateLocalTableData={updateLocalTableData}
 			RowMenu={RowMenu}
 			haveSideMenu={false}

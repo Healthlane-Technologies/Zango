@@ -16,7 +16,7 @@ export default function FileUpload({ formik, label, id, fileValue }) {
 					</label>
 					<label
 						htmlFor={id}
-						className={`flex w-full items-center justify-between rounded-[6px] border border border-[#DDE2E5] border-[#D5D5D5] px-[16px] py-[14px] font-lato hover:outline-0 focus:outline-0 ${
+						className={`flex w-full items-center justify-between rounded-[6px] border border border-[#D5D5D5] border-[#DDE2E5] px-[16px] py-[14px] font-lato hover:outline-0 focus:outline-0 ${
 							formik.values[id]?.name
 								? 'text-[#000000]'
 								: 'border-dashed text-[#9A9A9A]'
@@ -24,7 +24,7 @@ export default function FileUpload({ formik, label, id, fileValue }) {
 					>
 						<div className="flex w-[calc(100%_-_16px)] items-center gap-[12px]">
 							{formik.values[id]?.name ? (
-								<a href={previewUrl} target="_blank">
+								<a href={previewUrl} target="_blank" rel="noreferrer">
 									<img
 										className="h-[32px] min-h-[32px] w-[32px] min-w-[32px]"
 										src={previewUrl}
@@ -72,7 +72,7 @@ export default function FileUpload({ formik, label, id, fileValue }) {
 				</div>
 			</div>
 			{fileValue && !formik.values.logo ? (
-				<a href={fileValue} alt="" target={'_blank'}>
+				<a href={fileValue} alt="" target={'_blank'} rel="noreferrer">
 					<span className="font-lato text-[14px] font-bold leading-[20px] text-primary">
 						File Link
 					</span>

@@ -41,6 +41,10 @@ export default function AppConfiguration() {
 		makeApiCall();
 	}, [rerenderPage]);
 
+	if (!appConfigurationData) {
+		return null;
+	}
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[40px]">

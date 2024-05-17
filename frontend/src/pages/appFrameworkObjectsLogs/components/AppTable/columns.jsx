@@ -118,7 +118,7 @@ function columns({ debounceSearch, localTableData, tableData }) {
 				return (
 					<div className="flex h-full flex-col gap-[8px] border-b border-[#F0F3F4] px-[20px] py-[14px]">
 						<span className="min-w-max text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-							{moment(info.getValue()).format('DD MMM YYYY, h:mma')}
+							{info.getValue()}
 						</span>
 					</div>
 				);

@@ -28,7 +28,7 @@ const TableDropdownFilter = ({
 	const [searchTerm, setSearchTerm] = useState('');
 
 	const [selected, setSelected] = useState(
-		optionsData.find((eachData) => eachData.id == value) || {
+		optionsData.find((eachData) => eachData.id === value) || {
 			label: placeholder,
 			id: '',
 			unavailable: true,
@@ -48,9 +48,9 @@ const TableDropdownFilter = ({
 
 	useEffect(() => {
 		if (optionsData && value) {
-			setSelected(optionsData.find((eachData) => eachData?.id == value));
+			setSelected(optionsData.find((eachData) => eachData?.id === value));
 		}
-	}, [value]);
+	}, [value, optionsData]);
 
 	return (
 		<div className="flex w-full flex-col gap-[4px]">
@@ -136,7 +136,7 @@ const TableDropdownFilter = ({
 											{({ selected }) => (
 												<div className="flex items-center gap-[8px] px-[12px] py-[4px]">
 													{selected &&
-													filteredOptions[index].label != '-select-' ? (
+													filteredOptions[index].label !== '-select-' ? (
 														<span className="relative flex min-h-[12px] min-w-[12px] items-center">
 															<SelectCheckIcon />
 														</span>
@@ -147,7 +147,7 @@ const TableDropdownFilter = ({
 														className={`block truncate capitalize ${
 															selected ? 'font-normal' : 'font-lato font-normal'
 														} ${
-															filteredOptions[index].label == '-select-'
+															filteredOptions[index].label === '-select-'
 																? 'text-[#6C747D]'
 																: ''
 														} ${

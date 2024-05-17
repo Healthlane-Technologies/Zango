@@ -1,5 +1,12 @@
 import { useLayoutEffect } from 'react';
 
+/**
+ * Delay callback execution to avoid frequent calls.
+ *
+ * @param {*} func - callback
+ * @param {*} timeout - delay in milisecond
+ * @returns
+ */
 function debounce(func, timeout = 0) {
 	let timer;
 	return (...args) => {
@@ -10,6 +17,9 @@ function debounce(func, timeout = 0) {
 	};
 }
 
+/**
+ * Update "--app-height" css variable, whenever component layout is created, which will help to modify children component height in css.
+ */
 function updateSize() {
 	let vh = window.innerHeight * 0.01;
 	document.documentElement.style.setProperty('--vh', `${vh}px`);

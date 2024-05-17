@@ -69,7 +69,7 @@ export default function UserManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appUserManagementTableData]);
 
 	if (!appUserManagementData) {
 		return null;

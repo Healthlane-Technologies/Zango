@@ -3,20 +3,16 @@ import debounce from 'just-debounce-it';
 import * as React from 'react';
 import { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
 import Table from '../../../../components/Table';
 import {
 	selectAppUserManagementData,
 	selectAppUserManagementTableData,
-	setAppUserManagementData,
 	setAppUserManagementTableData,
 } from '../../slice';
 import columns from './columns';
 import RowMenu from './RowMenu';
 
 export default function AppTable() {
-	let { appId } = useParams();
-
 	const appUserManagementTableData = useSelector(
 		selectAppUserManagementTableData
 	);
@@ -62,10 +58,6 @@ export default function AppTable() {
 		dispatch(setAppUserManagementTableData(data));
 	};
 
-	function updatePageData(value) {
-		dispatch(setAppUserManagementData(value));
-	}
-
 	const debounceSearch = debounce((data) => {
 		dispatch(setAppUserManagementTableData(data));
 	}, 500);
@@ -79,10 +71,6 @@ export default function AppTable() {
 				debounceSearch,
 				localTableData: appUserManagementTableData,
 			})}
-			pageData={appUserManagementData}
-			pageId={'users'}
-			apiUrl={`/api/v1/apps/${appId}/users/`}
-			updatePageData={updatePageData}
 			updateLocalTableData={updateLocalTableData}
 			RowMenu={RowMenu}
 		/>

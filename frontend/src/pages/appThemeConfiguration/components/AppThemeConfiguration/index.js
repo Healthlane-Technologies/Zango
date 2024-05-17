@@ -69,6 +69,10 @@ export default function AppThemeConfiguration() {
 		makeApiCall();
 	}, [rerenderPage]);
 
+	if (!appThemeConfigurationData) {
+		return null;
+	}
+
 	return (
 		<>
 			<div className="flex grow flex-col gap-[40px]">

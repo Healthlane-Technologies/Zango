@@ -53,11 +53,11 @@ export default function AppApplicationObjectsLogs() {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/auditlog/?page=${
+				url: `/api/v1/apps/${appId}/auditlog/?model_type=dynamic_models&page=${
 					appApplicationObjectsLogsTableData?.pageIndex + 1
 				}&page_size=${
 					appApplicationObjectsLogsTableData?.pageSize
-				}&model_type=dynamic_models&include_dropdown_options=true&search=${
+				}&include_dropdown_options=true&search=${
 					appApplicationObjectsLogsTableData?.searchValue
 				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
@@ -69,7 +69,11 @@ export default function AppApplicationObjectsLogs() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appApplicationObjectsLogsTableData]);
+
+	if (!appApplicationObjectsLogsData) {
+		return null;
+	}
 
 	return (
 		<>

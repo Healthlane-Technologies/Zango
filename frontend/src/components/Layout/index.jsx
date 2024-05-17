@@ -1,7 +1,7 @@
 import debounce from 'just-debounce-it';
 import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ReactComponent as ZelthyIcon } from '../../assets/images/svg/zelthy-icon.svg';
+import { ReactComponent as BrandIcon } from '../../assets/images/svg/brand-icon.svg';
 import { useWindowSizeHeight } from '../../utils/responsiveFix';
 import NavSearchForm from './NavSearchForm';
 import ProfileMenu from './ProfileMenu';
@@ -44,7 +44,7 @@ export default function Layout({
 			>
 				<div className="flex items-center justify-between gap-[48px]">
 					<Link to="/platform">
-						<ZelthyIcon />
+						<BrandIcon className="h-[20px] w-fit" />
 					</Link>
 					<NavSearchForm />
 				</div>
@@ -73,7 +73,7 @@ export default function Layout({
 						•
 					</span>
 					<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-						© {new Date().getFullYear()} zelthy
+						© {new Date().getFullYear()} HEALTHLANE TECHNOLOGIES PVT. LTD
 					</span>
 					<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 						•
@@ -82,6 +82,7 @@ export default function Layout({
 						href="https://docs.zelthy.com/"
 						alt="#"
 						target={'_blank'}
+						rel="noreferrer"
 						className="m-0 inline-flex p-0"
 					>
 						<span className="font-lato text-[11px] leading-[16px] text-[#495057]">

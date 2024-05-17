@@ -65,7 +65,11 @@ export default function PlatformUserManagement() {
 			: '';
 
 		makeApiCall(columnFilter);
-	}, [rerenderPage]);
+	}, [rerenderPage, platformUserManagementTableData]);
+
+	if (!platformUserManagementData) {
+		return null;
+	}
 
 	return (
 		<>
