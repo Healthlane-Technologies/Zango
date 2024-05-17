@@ -42,7 +42,7 @@
 
 Perform tasks such as configuring permissions, managing user roles, and much more.
 
-![Zango App Panel](https://github.com/Healthlane-Technologies/zango/assets/22682748/b593a821-ec1d-4082-a590-e5ed52cb0c28)
+![Zango App Panel](https://github.com/Healthlane-Technologies/Zango/assets/22682748/69f42dec-4ca1-4d19-974f-e83c2ddb7324)
 
 #### Drastically reduce your infrastructural and operational overheads, hosting multiple apps/ microservices on a single deployment:
 
