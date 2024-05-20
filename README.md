@@ -50,8 +50,7 @@ Perform tasks such as configuring permissions, managing user roles, and much mor
 
 Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
-![Zango Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
-
+![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
 
 ####  🚀 Getting Started:
 - [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
