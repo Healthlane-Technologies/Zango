@@ -105,8 +105,8 @@ def create_project(
         "REDIS_PORT": redis_port,
         "PROJECT_NAME": project_name,
     }
+    fcontent = open(".env", "r").read()
     with open(f".env", "a+") as f:
-        fcontent = f.read()
         for key, value in env_keys.items():
             if key not in fcontent:
                 f.write(f"{key}={value}\n")
