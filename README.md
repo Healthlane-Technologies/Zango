@@ -60,10 +60,10 @@ Zango redefines multi-tenancy by enabling multiple different apps to run on a si
 
 #### 📦 Free Packages
 A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
-- <a href="https://www.zango.dev/docs/basic-auth/introduction" target="_blank">Basic Auth</a>
-- <a href="https://www.zango.dev/docs/frame/introduction" target="_blank">Frames</a>
-- <a href="https://www.zango.dev/docs/crud/introduction" target="_blank">CRUD</a>
-- <a href="https://www.zango.dev/docs/workflow/overview" target="_blank">Workflow</a>
+- [Basic Auth](https://www.zango.dev/docs/basic-auth/introduction)
+- [Frames](https://www.zango.dev/docs/frame/introduction)
+- [CRUD](https://www.zango.dev/docs/crud/introduction) 
+- [Workflow](https://www.zango.dev/docs/workflow/overview)
 
 
 #### 🌟 Get Involved and Make a Difference
