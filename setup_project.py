@@ -137,7 +137,7 @@ if __name__ == "__main__":
         help="The platform user password",
     )
     parser.add_argument("--rebuild_core", action="store_true", default=False)
-    parser.add_argument("--platform_domain_url", default=None)
+    parser.add_argument("--platform_domain_url", default="localhost")
     args = parser.parse_args()
     try:
         if args.build_core:
