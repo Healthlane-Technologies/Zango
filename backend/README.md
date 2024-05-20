@@ -36,7 +36,7 @@
 - Suite of essential packages to serve as the building blocks of Apps
 - Use case packages to build the industry specific use cases
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox-official/)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/Zango/)
 
 #### App Panel - Central hub to manage all your apps/ microservices
 
@@ -48,7 +48,7 @@ Perform tasks such as configuring permissions, managing user roles, and much mor
 
 Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
-![Zango Scaling](https://zelthy-initium-production-static.s3.amazonaws.com/static/zelthymain/react-images/cost-effective-scaling.svg)
+![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
 
 #### 🚀 Getting Started:
 
@@ -60,10 +60,10 @@ Zango redefines multi-tenancy by enabling multiple different apps to run on a si
 
 A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.
 
-- [Basic Auth](https://www.zango.dev/docs/login/introduction)
-- [Frames](https://www.zango.dev/docs/frame/introduction)
-- [CRUD](https://www.zango.dev/docs/crud/introduction)
-- [Workflow](https://www.zango.dev/docs/workflow/overview)
+- <a href="https://www.zango.dev/docs/basic-auth/introduction" target="_blank">Basic Auth</a>
+- <a href="https://www.zango.dev/docs/frame/introduction" target="_blank">Frames</a>
+- <a href="https://www.zango.dev/docs/crud/introduction" target="_blank">CRUD</a>
+- <a href="https://www.zango.dev/docs/workflow/overview" target="_blank">Workflow</a>
 
 #### 🌟 Get Involved and Make a Difference
 
