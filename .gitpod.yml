@@ -40,8 +40,8 @@ tasks:
 
       printf "\n${GREEN}Platform URL :${NC}\n"
       printf "${GREEN}%s${NC}\n" "$platform_domain_url/platform"
-      printf "\n${GREEN}username: admin@zelthy.com ${NC}"
-      printf "\n${GREEN}password: Zelthy@123 ${NC}\n"
+      printf "\n${GREEN}username: platform_admin@zelthy.com ${NC}"
+      printf "\n${GREEN}password: Zango@123 ${NC}\n"
 
       printf "\n${GREEN}App URLs :${NC}\n"
       for url in "${app_urls[@]}"; do
@@ -53,7 +53,6 @@ tasks:
       cd /workspace/zango-sandbox/zango
       export UID=$(id -u)
       export GID=$(id -g)
-      chmod +x init.sh
       # Run the gp info --json containing workspace info like workspace_id, url
       info=$(gp info --json)
 
