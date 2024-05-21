@@ -105,6 +105,8 @@ def create_project(
         "REDIS_PORT": redis_port,
         "PROJECT_NAME": project_name,
     }
+    if not os.path.exists(".env"):
+        open(".env", "w").close()
     fcontent = open(".env", "r").read()
     with open(f".env", "a+") as f:
         for key, value in env_keys.items():
