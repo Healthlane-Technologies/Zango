@@ -216,3 +216,14 @@ export const getCookie = () => {
 
 	return csrfToken;
 };
+
+export const getPlatformVersion = () => {
+	let platformVersion = '';
+
+	/*eslint-disable */
+	if (platform_version !== 'undefined') {
+		platformVersion = platform_version;
+	}
+
+	return platformVersion;
+};
