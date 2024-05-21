@@ -9,12 +9,12 @@ on:
 
 jobs:
   sync:
-    uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub.yml@v5
+    uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub.yml@v0.1.3
     with:
       source-directory: "docs"
-      target-directory: "all_docs/zelthy3"
+      target-directory: "all_docs/zango"
       destination-github-username: "Healthlane-Technologies"
-      destination-repository-name: "zelthy3-docs-hub"
-      commit-message: "Sync zcore package docs"
+      destination-repository-name: "zango-docs-hub"
+      commit-message: "Sync zango package docs"
       target-branch: staging
     secrets: inherit
