@@ -52,6 +52,16 @@ Zango redefines multi-tenancy by enabling multiple different apps to run on a si
 
 ![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
 
+
+#### Staying ahead
+
+Star Zango on GitHub and be instantly notified of new releases.
+
+![star us](https://github.com/Healthlane-Technologies/Zango/assets/12683350/15b97240-c381-472b-a112-7c701a29ccda)
+
+
+
+
 ####  🚀 Getting Started:
 - [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
 - [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
