@@ -1,0 +1,50 @@
+name: Sync docs to docs hub
+on:
+  workflow_call:
+    inputs:
+      source-directory:
+        required: true
+        type: string
+      target-directory:
+        required: true
+        type: string
+      destination-github-username:
+        required: true
+        type: string
+      destination-repository-name:
+        required: true
+        type: string
+      commit-message:
+        required: true
+        type: string
+      target-branch:
+        required: true
+        type: string
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Push to zelthy3-docs-hub repository
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          source-directory: ${{ inputs.source-directory }}
+          target-directory: ${{ inputs.target-directory }}
+          destination-github-username: ${{ inputs.destination-github-username }}
+          destination-repository-name: ${{ inputs.destination-repository-name }}
+          commit-message: ${{ inputs.commit-message }}
+          user-email: ${{ secrets.USER_EMAIL }}
+          target-branch: ${{ inputs.target-branch }}
+      
+      - name: Notify on z-deployment_notifs slack channel
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: New deployment in documentation environment of ${{ github.event.repository.name }}
+          SLACK_CHANNEL: "z-deployment-notifs"
