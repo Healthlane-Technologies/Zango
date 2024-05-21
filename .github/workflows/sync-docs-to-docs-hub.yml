@@ -9,7 +9,7 @@ on:
 
 jobs:
   sync:
-    uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub.yml@v0.2.0
+    uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub-main.yml@v0.2.0
     with:
       source-directory: "docs"
       target-directory: "all_docs/zango"
