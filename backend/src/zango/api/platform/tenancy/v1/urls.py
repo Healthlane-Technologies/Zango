@@ -16,6 +16,7 @@ from zango.api.platform.packages.v1 import urls as packages_v1_urls
 from zango.api.platform.tasks.v1 import urls as tasks_v1_urls
 from zango.api.platform.codeassist.v1 import urls as codeassist_v1_urls
 from zango.api.platform.auditlogs.v1 import urls as auditlog_v1_urls
+from zango.api.platform.codeassistV2.v1 import urls as codeassistV2_v1_urls
 
 
 urlpatterns = [
@@ -58,6 +59,7 @@ urlpatterns = [
     re_path(r"^(?P<app_uuid>[\w-]+)/packages/$", include(packages_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/tasks/", include(tasks_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/code-assist/", include(codeassist_v1_urls)),
+    re_path(r"^(?P<app_uuid>[\w-]+)/code-assist-v2/", include(codeassistV2_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/auditlog/", include(auditlog_v1_urls)),
     path("", include(permissions_v1_urls)),
 ]

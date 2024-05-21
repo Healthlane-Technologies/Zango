@@ -1,0 +1,24 @@
+import requests
+import json
+
+from django.utils.decorators import method_decorator
+
+from zango.core.common_utils import set_app_schema_path
+from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
+from zango.codeassist.models.app_spec import ApplicationSpec
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class ConversationViewAPIV1(ZangoGenericPlatformAPIView):
+
+    def get(self, request, app_uuid, *args, **kwargs):
+        # resp = requests.get(
+        #     f"https://e0312d0b4f18e54cb6e44831ce6bf350.serveo.net"
+        # ).json()["content"]
+        # print("The response content is : ", json.loads(resp))
+        resp = """
+        {"modules":[{"name":"patient_module","path":"patient_module","models":[{"name":"Patient","fields":[{"name":"name","type":"CharField","constraints":{"max_length":50}},{"name":"date_of_birth","type":"DateField","constraints":{}},{"name":"gender","type":"CharField","constraints":{"max_length":50}}]},{"name":"Doctor","fields":[{"name":"name","type":"CharField","constraints":{"max_length":50}},{"name":"specialization","type":"CharField","constraints":{"max_length":50}}]}],"migrate_models":false,"policies":{"policies":[{"name":"PatientViewAccess","description":"Patient View Policy","statement":{"permissions":[{"name":"patient_module.views.PatientCrudView","type":"view"}]}},{"name":"DoctorViewAccess","description":"Doctor View Policy","statement":{"permissions":[{"name":"doctor_module.views.DoctorCrudView","type":"view"}]}}]},"views":[{"name":"PatientCrudView","page_title":"Patient","add_btn_title":"Add Patient","workflow":{"name":"PatientWorkflow","status_transitions":[{"name":"mark_completed","display_name":"Mark Completed","description":"Mark patient as completed","from_status":"Pending","to_status":"Completed","form":null,"confirmation_message":"Are you sure you want to mark this project as completed?"},{"name":"mark_in_progress","display_name":"Mark In Progress","description":"Mark patient as in progress","from_status":"Pending","to_status":"In Progress","form":null,"confirmation_message":"Are you sure you want to mark this project as in progress?"}],"meta":{"statuses":{"Pending":{"color":"#229470","label":"Pending"},"In Progress":{"color":"#229471","label":"In Progress"},"Completed":{"color":"#229472","label":"Completed"}},"model":"Patient","on_create_status":"Pending"}},"table":{"name":"PatientTable","fields":[{"name":"name","type":"CharField","constraints":{"max_length":50}},{"name":"date_of_birth","type":"DateField","constraints":{}},{"name":"gender","type":"CharField","constraints":{"max_length":50}}],"meta":{"model":"Patient","fields":["name","date_of_birth","gender"],"row_selector":{},"detail_class":{"name":"PatientDetail","fields":[{"name":"name","type":"ModelCol","constraints":{"display_as":"Name"}},{"name":"date_of_birth","type":"ModelCol","constraints":{"display_as":"Date of Birth"}}],"meta":{"fields":["name","start_date"]}}},"row_actions":[],"table_actions":[]},"form":{"name":"PatientForm","fields":[{"name":"name","type":"CharField","constraints":{"max_length":50}},{"name":"date_of_birth","type":"DateField","constraints":{}},{"name":"gender","type":"CharField","constraints":{"max_length":50}}],"meta":{"model":"Patient","title":"Patient","order":["name","date_of_birth","gender"]}},"model":"Patient"}],"settings":{"version":"1.0.0","modules":[{"name":"patient_module","path":"patient_module"}],"app_routes":[{"module":"patient_module","re_path":"^patients/","url":"patient_urls"},{"module":"doctor_module","re_path":"^doctors/","url":"doctor_urls"}]},"urls":[{"url":"patient/","view":"PatientCrudView"},{"url":"doctor/","view":"DoctorCrudView"}]}],"roles":[{"name":"patient_role","frame":{"menu":[{"url":"patient/","icon":null,"name":"Patient","children":null},{"url":"doctor/","icon":null,"name":"Doctor","children":null}],"config":{"color":{"accent":"#DDE2E5","header":"#FFFFFF","primary":"#DDE2E5","sidebar":"#E1D6AE","secondary":"#E1D6AE","background":"#FFFFFF","typography":"#212429","headerBorder":"#DDE2E5"}},"login_url":null,"display_edit_profile":true,"allow_change_password":true,"display_change_password":true},"login":{"landing_url":"patient/"},"generic_login":null},{"name":"doctor_role","frame":{"menu":[{"url":"doctor/","icon":null,"name":"Doctor","children":null},{"url":"patient/","icon":null,"name":"Patient","children":null}],"config":{"color":{"accent":"#DDE2E5","header":"#FFFFFF","primary":"#DDE2E5","sidebar":"#E1D6AE","secondary":"#E1D6AE","background":"#FFFFFF","typography":"#212429","headerBorder":"#DDE2E5"}},"login_url":null,"display_edit_profile":true,"allow_change_password":true,"display_change_password":true},"login":{"landing_url":"doctor/"},"generic_login":null}],"tenant":"CodeAssist"}
+        """
+        parse_resp = ApplicationSpec.model_validate(json.loads(resp))
+        parse_resp.apply()
+        return get_api_response(True, "", 200)

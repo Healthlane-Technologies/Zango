@@ -52,6 +52,7 @@ def get_mock_request(**kwargs):
 
     return request
 
+
 def get_current_request_url(request, domain=None):
     # Determine the protocol (HTTP or HTTPS) based on the request's is_secure() method.
     secure = (
@@ -77,6 +78,7 @@ def get_current_request_url(request, domain=None):
     else:
         port_string = ""
 
+    return f"https://{domain}"
     # Construct and return the complete URL.
     current_url = f"{protocol}://{domain}{port_string}"
     return current_url
