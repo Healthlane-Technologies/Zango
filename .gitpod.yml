@@ -40,7 +40,7 @@ tasks:
 
       printf "\n${GREEN}Platform URL :${NC}\n"
       printf "${GREEN}%s${NC}\n" "$platform_domain_url/platform"
-      printf "\n${GREEN}username: platform_admin@zelthy.com ${NC}"
+      printf "\n${GREEN}username: platform_admin@zango.dev ${NC}"
       printf "\n${GREEN}password: Zango@123 ${NC}\n"
 
       printf "\n${GREEN}App URLs :${NC}\n"

@@ -36,7 +36,7 @@ To begin using Zango through Docker installation, ensure that Docker and Docker 
    - `--project_name`: Modifies the name of the project (Default: `zango_project`).
    - `--project_dir`: Specifies the directory for project creation (Default: `zproject`).
    - `--build_core`: Builds the Zango library (Default: `False`).
-   - `--platform_username`: The user email of the platform user (Default: `platform_admin@zelthy.com`).
+   - `--platform_username`: The user email of the platform user (Default: `platform_admin@zango.dev`).
    - `--platform_user_password`: The password for the platform user (Default: `Zango@123`).
 
 5. Docker is started as a non root user, run the below commands to export the host UID and GID
