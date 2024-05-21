@@ -128,7 +128,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--platform_username",
-        default="platform_admin@zelthy.com",
+        default="platform_admin@zango.dev",
         help="The platform username",
     )
     parser.add_argument(

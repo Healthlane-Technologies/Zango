@@ -2,7 +2,10 @@ import debounce from 'just-debounce-it';
 import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ReactComponent as ZelthyIcon } from '../../../../assets/images/svg/zelthy-icon.svg';
-import { useWindowSizeHeight } from '../../../../utils/helper';
+import {
+	getPlatformVersion,
+	useWindowSizeHeight,
+} from '../../../../utils/helper';
 import NavSearchForm from './NavSearchForm';
 import ProfileMenu from './ProfileMenu';
 
@@ -55,7 +58,7 @@ export default function Layout({ children }) {
 				className="flex items-center justify-center gap-[8px] border-t-[1px] border-[#DDE2E5] p-[8px]"
 			>
 				<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-					V 3.0
+					V {getPlatformVersion()}
 				</span>
 				<span className="font-lato text-[12px] font-bold leading-[16px] text-[#C7CED3]">
 					•
@@ -67,13 +70,13 @@ export default function Layout({ children }) {
 					•
 				</span>
 				<a
-					href="https://docs.zelthy.com/"
+					href="https://www.zango.dev/docs/"
 					alt="#"
 					target={'_blank'}
 					className="m-0 inline-flex p-0"
 				>
 					<span className="font-lato text-[11px] leading-[16px] text-[#495057]">
-						Documents
+						Docs
 					</span>
 				</a>
 

@@ -1,7 +1,4 @@
-import os
 from zango.core.generic_views.base import ZangoSessionPlatformTemplateView
-from zango.apps.permissions.models import PolicyModel
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
 
 
 class AppPanelView(ZangoSessionPlatformTemplateView):
@@ -10,3 +7,10 @@ class AppPanelView(ZangoSessionPlatformTemplateView):
     """
 
     template_name = "app_panel.html"
+
+    def get_context_data(self, **kwargs):
+        import zango
+
+        context = super().get_context_data(**kwargs)
+        context["platform_version"] = zango.__version__
+        return context
