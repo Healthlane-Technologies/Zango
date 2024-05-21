@@ -1,0 +1,96 @@
+# Image of workspace. Learn more: https://www.gitpod.io/docs/configure/workspaces/workspace-image
+image: gitpod/workspace-full:latest
+checkoutLocation: "zango-sandbox/zango"
+workspaceLocation: "zango-sandbox"
+
+tasks:
+  - name: URLs
+    command: |
+      cd /workspace/
+
+      # Run the gp info --json containing workspace info like workspace_id, url
+      info=$(gp info --json)
+
+      # Extract the workspace ID
+      workspace_id=$(echo "$info" | jq -r '.workspace_id')
+
+      # Extract cluster host
+      cluster_host=$(echo "$info" | jq -r '.cluster_host')
+
+      # array to store app urls
+      app_urls=()
+
+      # Expose local ports
+      for port in {8000..8001}; do
+        nohup gp ports expose $port > nohup.out 2>&1 &
+      done
+
+      # Storing URLs
+      for port in {8001..8002}; do
+        gp ports visibility $port:public
+        app_url="${port}-${workspace_id}.${cluster_host}"
+        app_urls+=("$app_url") 
+      done
+
+      platform_domain_url=$(gp url 8000)
+
+      # Printing the URLs
+      GREEN='\033[0;32m'  # ANSI color code for green
+      NC='\033[0m'        # ANSI color code to reset to default
+
+      printf "\n${GREEN}Platform URL :${NC}\n"
+      printf "${GREEN}%s${NC}\n" "$platform_domain_url/platform"
+      printf "\n${GREEN}username: platform_admin@zelthy.com ${NC}"
+      printf "\n${GREEN}password: Zango@123 ${NC}\n"
+
+      printf "\n${GREEN}App URLs :${NC}\n"
+      for url in "${app_urls[@]}"; do
+          printf "${GREEN}%s${NC}\n" "$url"
+      done
+
+  - name: Setup and start the project
+    command: |
+      cd /workspace/zango-sandbox/zango
+      export UID=$(id -u)
+      export GID=$(id -g)
+      # Run the gp info --json containing workspace info like workspace_id, url
+      info=$(gp info --json)
+
+      # Extract the workspace ID
+      workspace_id=$(echo "$info" | jq -r '.workspace_id')
+
+      # Extract cluster host
+      cluster_host=$(echo "$info" | jq -r '.cluster_host')
+
+      app_server_port=8000
+
+      platform_domain_url="${app_server_port}-${workspace_id}.${cluster_host}"
+
+      if [ ! -d "/workspace/zango-sandbox/sandbox" ]; then
+        python setup_project.py --project_dir /workspace/zango-sandbox/sandbox --platform_domain_url $platform_domain_url
+        cd /workspace/zango-sandbox/sandbox
+        echo "CORS_ORIGIN_WHITELIST=https://*.gitpod.io" >> .env
+        echo "CSRF_TRUSTED_ORIGINS=https://*.gitpod.io" >> .env
+      else
+        cd /workspace/zango-sandbox/sandbox
+      fi
+
+      if [ ! -d "/workspace/zango-sandbox/sandbox/zango_project" ]; then
+        # Building project
+        DOCKER_BUILDKIT=0 HOST_UID=$(id -u) HOST_GID=$(id -g) docker-compose build
+        
+        # starting services
+        docker-compose up
+      else
+        # Starting server
+        echo "Existing project, Starting server..."
+        
+        # starting services
+        docker-compose up
+      fi
+
+      sudo chown -R gitpod:gitpod /workspace/zango-sandbox/sandbox/zango_project
+
+ports:
+  - port: 8000
+    visibility: public

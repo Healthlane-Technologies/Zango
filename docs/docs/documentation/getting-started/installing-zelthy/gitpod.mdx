@@ -15,7 +15,7 @@ sidebar_label: GitPod
 
 To get started with using Zango in gitpod, you can click on the button below:
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/zelthy3-gitpod-sandbox-official/)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/Zango/)
 
 Please refer to the video above and follow the steps to launch the workspace and set up the Zango project.
 
@@ -51,15 +51,15 @@ All the Zango services, such as the app server, database, Celery, and Redis, are
 To run the management commands, you will need to enter the app container:
 
 ```bash
-docker exec -it zelthy3-gitpod-sandbox-official-app-1 bash
+docker exec -it sandbox-app-1 bash
 ```
 
-Once you are in the app container, you can run the management commands from the ``zelthy_project`` directory:
+Once you are in the app container, you can run the management commands from the ``zango_project`` directory:
 
 Example:
 
 ```bash
-gitpod@b1be57580132:/zelthy/zelthy_project$ python manage.py ws_migrate <app_name>
+gitpod@b1be57580132:/zango/zango_project$ python manage.py ws_migrate <app_name>
 ```
 
 

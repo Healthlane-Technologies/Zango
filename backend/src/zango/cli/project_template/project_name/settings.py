@@ -13,6 +13,9 @@ env = environ.Env(
     SESSION_SECURITY_WARN_AFTER=(int, 1700),
     SESSION_SECURITY_EXPIRE_AFTER=(int, 1800),
     INTERNAL_IPS=(list, []),
+    ALLOWED_HOSTS=(list, ["*"]),
+    CORS_ORIGIN_WHITELIST=(list, ["http://localhost:1443", "http://localhost:8000"]),
+    CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:1443", "http://localhost:8000"]),
 )
 environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -21,7 +24,7 @@ SECRET_KEY = "{{secret_key}}"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 PROJECT_NAME = env("PROJECT_NAME")
 
@@ -61,12 +64,12 @@ CACHES = {
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:8000"
-]  # Change according to domain configured
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:1443"
-]  # Change according to domain configured
+CORS_ORIGIN_WHITELIST = env(
+    "CORS_ORIGIN_WHITELIST"
+)  # Change according to domain configured
+CSRF_TRUSTED_ORIGINS = env(
+    "CSRF_TRUSTED_ORIGINS"
+)  # Change according to domain configured
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
