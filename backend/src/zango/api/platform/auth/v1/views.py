@@ -155,8 +155,10 @@ class AppPanelDetailsView(ZangoGenericPlatformAPIView):
             serializer = PlatformUserSerializerModel(obj)
             success = True
             response = {
-                "app_data": {"user_logged_in": serializer.data},
-                "is_codeassist_enabled": getattr(settings, "CODEASSIST_ENABLED", False),
+                "app_data": {
+                    "user_logged_in": serializer.data,
+                    "is_codeassist_enabled": getattr(settings, "CODEASSIST_ENABLED", False)
+                },
             }
             status = 200
         except Exception as e:
