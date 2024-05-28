@@ -4,11 +4,11 @@ import 'react-dates/initialize';
 import 'react-dates/lib/css/_datepicker.css';
 import { usePopper } from 'react-popper';
 import { FixedSizeList as List } from 'react-window';
+import { ReactComponent as CloseIcon } from '../../assets/images/svg/close-icon.svg';
 import { ReactComponent as FormSelectSearchCloseIcon } from '../../assets/images/svg/form-select-search-close-icon.svg';
 import { ReactComponent as SelectCheckIcon } from '../../assets/images/svg/select-check-icon.svg';
 import { ReactComponent as SelectSearchIcon } from '../../assets/images/svg/select-search-icon.svg';
 import { ReactComponent as TableColumnFilterIcon } from '../../assets/images/svg/table-column-filter-icon.svg';
-import { ReactComponent as CloseIcon } from '../../assets/images/svg/close-icon.svg';
 
 const TableDropdownFilter = ({
 	label,
@@ -28,7 +28,7 @@ const TableDropdownFilter = ({
 	const [searchTerm, setSearchTerm] = useState('');
 
 	const [selected, setSelected] = useState(
-		optionsData.find((eachData) => eachData.id == value) || {
+		optionsData.find((eachData) => eachData.id === value) || {
 			label: placeholder,
 			id: '',
 			unavailable: true,
@@ -48,9 +48,9 @@ const TableDropdownFilter = ({
 
 	useEffect(() => {
 		if (optionsData && value) {
-			setSelected(optionsData.find((eachData) => eachData?.id == value));
+			setSelected(optionsData.find((eachData) => eachData?.id === value));
 		}
-	}, [value]);
+	}, [value, optionsData]);
 
 	return (
 		<div className="flex w-full flex-col gap-[4px]">
@@ -78,7 +78,7 @@ const TableDropdownFilter = ({
 						>
 							<Listbox.Options className="absolute z-[1] h-fit max-h-96 min-w-max overflow-y-auto bg-white font-lato text-base shadow-form-select focus:outline-none sm:text-sm">
 								{optionsData?.length > 0 ? (
-									<div className="flex items-center gap-[16px] py-[8px] px-[16px]">
+									<div className="flex items-center gap-[16px] px-[16px] py-[8px]">
 										<div className="relative flex w-full gap-[8px] rounded-[4px] border border-[#DDE2E5] px-[12px] py-[8px]">
 											<input
 												type="text"
@@ -136,7 +136,7 @@ const TableDropdownFilter = ({
 											{({ selected }) => (
 												<div className="flex items-center gap-[8px] px-[12px] py-[4px]">
 													{selected &&
-													filteredOptions[index].label != '-select-' ? (
+													filteredOptions[index].label !== '-select-' ? (
 														<span className="relative flex min-h-[12px] min-w-[12px] items-center">
 															<SelectCheckIcon />
 														</span>
@@ -147,7 +147,7 @@ const TableDropdownFilter = ({
 														className={`block truncate capitalize ${
 															selected ? 'font-normal' : 'font-lato font-normal'
 														} ${
-															filteredOptions[index].label == '-select-'
+															filteredOptions[index].label === '-select-'
 																? 'text-[#6C747D]'
 																: ''
 														} ${

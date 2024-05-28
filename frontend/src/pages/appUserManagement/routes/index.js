@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppUserManagement from '../components/AppUserManagement/index.js';
 
-export const AppUserManagementRoutes = () => {
+const AppUserManagementRoutes = () => {
 	return (
 		<Routes>
 			<Route path="" element={<AppUserManagement />} />
@@ -9,3 +9,5 @@ export const AppUserManagementRoutes = () => {
 		</Routes>
 	);
 };
+
+export default AppUserManagementRoutes;

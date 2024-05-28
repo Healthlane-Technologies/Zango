@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import AppConfiguration from '../components/AppConfiguration/index.js';
+import AppConfiguration from '../components/AppConfiguration';
 
 export const AppConfigurationRoutes = () => {
 	return (

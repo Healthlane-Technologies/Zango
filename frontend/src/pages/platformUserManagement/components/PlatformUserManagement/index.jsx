@@ -9,12 +9,12 @@ import {
 	selectRerenderPage,
 	setPlatformUserManagementData,
 } from '../../slice';
-import ActivateUserModal from '../Models/ActivateUserModal';
-import AddNewUserModal from '../Models/AddNewUserModal';
-import DeactivateUserModal from '../Models/DeactivateUserModal';
-import EditUserDetailsModal from '../Models/EditUserDetailsModal';
-import ResetPasswordModal from '../Models/ResetPasswordModal';
-import Table from '../Table';
+import ActivateUserModal from '../Modals/ActivateUserModal';
+import AddNewUserModal from '../Modals/AddNewUserModal';
+import DeactivateUserModal from '../Modals/DeactivateUserModal';
+import EditUserDetailsModal from '../Modals/EditUserDetailsModal';
+import ResetPasswordModal from '../Modals/ResetPasswordModal';
+import AppTable from '../AppTable';
 
 export default function PlatformUserManagement() {
 	const rerenderPage = useSelector(selectRerenderPage);
@@ -38,6 +38,23 @@ export default function PlatformUserManagement() {
 
 	const triggerApi = useApi();
 
+	const makeApiCall = async (columnFilter) => {
+		const { response, success } = await triggerApi({
+			url: `/api/v1/auth/platform-users/?page=${
+				platformUserManagementTableData?.pageIndex + 1
+			}&page_size=${
+				platformUserManagementTableData?.pageSize
+			}&include_dropdown_options=true&search=${
+				platformUserManagementTableData?.searchValue
+			}${columnFilter?.length ? columnFilter : ''}`,
+			type: 'GET',
+			loader: true,
+		});
+		if (success && response) {
+			updatePlatformUserManagementData(response);
+		}
+	};
+
 	useEffect(() => {
 		let columnFilter = platformUserManagementTableData?.columns
 			? platformUserManagementTableData?.columns
@@ -47,25 +64,12 @@ export default function PlatformUserManagement() {
 					.join('')
 			: '';
 
-		const makeApiCall = async () => {
-			const { response, success } = await triggerApi({
-				url: `/api/v1/auth/platform-users/?page=${
-					platformUserManagementTableData?.pageIndex + 1
-				}&page_size=${
-					platformUserManagementTableData?.pageSize
-				}&include_dropdown_options=true&search=${
-					platformUserManagementTableData?.searchValue
-				}${columnFilter?.length ? columnFilter : ''}`,
-				type: 'GET',
-				loader: true,
-			});
-			if (success && response) {
-				updatePlatformUserManagementData(response);
-			}
-		};
+		makeApiCall(columnFilter);
+	}, [rerenderPage, platformUserManagementTableData]);
 
-		makeApiCall();
-	}, [rerenderPage]);
+	if (!platformUserManagementData) {
+		return null;
+	}
 
 	return (
 		<>
@@ -87,7 +91,7 @@ export default function PlatformUserManagement() {
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
 					{platformUserManagementData ? (
-						<Table tableData={platformUserManagementData?.platform_users} />
+						<AppTable tableData={platformUserManagementData?.platform_users} />
 					) : null}
 				</div>
 			</div>

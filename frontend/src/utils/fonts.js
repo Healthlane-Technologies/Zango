@@ -1,3 +1,7 @@
+/**
+ * helper function returns available fonts object
+ * @returns object with id and label of fonts
+ */
 export function getFontFamily() {
 	let data = {
 		kind: 'webfonts#webfontList',

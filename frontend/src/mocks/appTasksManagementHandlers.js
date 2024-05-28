@@ -117,7 +117,7 @@ export const appTasksManagementHandlers = [
 							{ id: 4, label: 'Policy 4' },
 						],
 					},
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -144,7 +144,7 @@ export const appTasksManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -157,7 +157,7 @@ export const appTasksManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);

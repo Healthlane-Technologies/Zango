@@ -1,17 +1,12 @@
-import { useDispatch, useSelector } from 'react-redux';
-import { ReactComponent as LaunchNewAppIcon } from '../../../../../assets/images/svg/launch-new-app-icon.svg';
-import { open, selectAppsData } from '../../../slice';
+import { useSelector } from 'react-redux';
+import { selectAppsData } from '../../../slice';
+import LaunchNewAppButton from '../LaunchNewAppButton';
 import EachApp from './EachApp';
 import Filters from './Filters';
 import LaunchingApp from './LaunchingApp';
 
 export default function Apps() {
 	const appsData = useSelector(selectAppsData);
-	const dispatch = useDispatch();
-
-	const handleLaunchNewApp = () => {
-		dispatch(open());
-	};
 
 	return (
 		<div className="flex grow flex-col gap-[32px] px-[20px] pt-[29px] md:px-[46px]">
@@ -19,17 +14,8 @@ export default function Apps() {
 				<span className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
 					Apps
 				</span>
-
 				<div>
-					<button
-						onClick={handleLaunchNewApp}
-						className="flex grow gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
-					>
-						<span className="font-lato text-[14px] font-bold leading-[20px] text-[#FFFFFF]">
-							Launch New App
-						</span>
-						<LaunchNewAppIcon />
-					</button>
+					<LaunchNewAppButton />
 				</div>
 			</div>
 			<div className="flex grow flex-col gap-[16px] overflow-y-auto">

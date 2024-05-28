@@ -109,7 +109,7 @@ export const appPoliciesManagementHandlers = [
 							},
 						],
 					},
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -122,7 +122,7 @@ export const appPoliciesManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -135,7 +135,7 @@ export const appPoliciesManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -148,7 +148,7 @@ export const appPoliciesManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Policy deleted successfully',
+					message: 'Success',
 				},
 			})
 		);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { ReactComponent as TableSyncIcon } from '../../../assets/images/svg/sync-icon.svg';
 import useApi from '../../../hooks/useApi';
-import { transformToFormData } from '../../../utils/helper';
+import { transformToFormData } from '../../../utils/form';
 import { toggleRerenderPage } from '../slice';
 
 export default function SyncPermissions() {
