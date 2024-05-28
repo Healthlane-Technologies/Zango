@@ -70,6 +70,7 @@
 	},
 	"devDependencies": {
 		"autoprefixer": "^10.4.13",
+		"cypress": "^13.10.0",
 		"form-data": "^4.0.0",
 		"postcss": "^8.4.20",
 		"prettier": "^2.8.1",
