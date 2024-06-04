@@ -6,7 +6,7 @@
 
 <hr>
 
-### **✨ Build microservices as tenants on a Django monolith. Avoid the infra & operational overheads. Scale effortlessly. ✨** 
+### **✨ Django framework to build enterprise ready business applications. Rapid development. Multiple applications as independently deployable units on a single monolith ✨** 
 <a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a> 
 <hr>  
 <p align="center">
@@ -27,7 +27,7 @@
 
 
 
-**Zango** is a web application development framework built upon Django, designed to host multiple apps or microservices as tenants on a single monolith under the hood. 
+**Zango** is a web application development framework built upon Django, designed to enable rapid development of enterprise ready business applications. 
 
 
 - Leverage the stengths of Django, an already proven and battle tested web framework
