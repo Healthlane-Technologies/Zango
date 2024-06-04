@@ -2,7 +2,7 @@ import os
 import json
 import requests
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict
 from .forms import Form
 
@@ -21,13 +21,13 @@ class WorkFlowMeta(BaseModel):
 
 
 class StatusTransition(BaseModel):
-    name: str
-    display_name: str
-    description: str
-    from_status: str
-    to_status: str
-    form: str | None = None
-    confirmation_message: str | None = None
+    name: str = Field(default="")
+    display_name: str = Field(default="")
+    description: str = Field(default="")
+    from_status: str = Field(default="")
+    to_status: str = Field(default="")
+    form: str | None = Field(default=None)
+    confirmation_message: str | None = Field(default=None)
 
 
 class WorkFlow(BaseModel):

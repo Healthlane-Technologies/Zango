@@ -1,21 +1,16 @@
 import os
 import subprocess
-from typing import List, Union
-from pydantic import BaseModel
+from typing import List, Dict
+from pydantic import BaseModel, Field
 import json
 import requests
 
-from .policy import Policies, Policy, Statement, Permission
+from .policy import Policies, Policy, Permission, Statement
 from .models import Model
 from .crud import CrudView
 from .packages.frame import Frame
 from .packages.login import LoginConfig, GenericLoginConfig
-from .workflow import WorkFlow
-from .forms import Form
-from .crud import CrudTable
-from .detail import Detail
 from .packages.frame import Frame
-from .packages.login import LoginConfig, GenericLoginConfig
 
 from zango.codeassist import URL, TENANT_URL
 
@@ -50,26 +45,35 @@ class Settings(BaseModel):
             f.write(f"{json.dumps(settings)}")
 
 
-class Url(BaseModel):
-    url: str
-    view: str
+class Role(BaseModel):
+    name: str
+    policies: List[List[str]]
+
+    def apply(self, tenant):
+        from zango.apps.permissions.models import PolicyModel
+        from zango.apps.appauth.models import UserRoleModel
+
+        try:
+            role = UserRoleModel.objects.get(name=self.name)
+        except UserRoleModel.DoesNotExist:
+            role = UserRoleModel.objects.create(name=self.name)
+            role.save()
+        for policy in self.policies:
+            try:
+                policy = PolicyModel.objects.get(name=policy[0], path=policy[1])
+            except PolicyModel.DoesNotExist:
+                pass
+            role.policies.add(policy)
 
 
 class Module(BaseModule):
-    models: List[Model] = []
-    migrate_models: bool = False
-    workflows: List[WorkFlow] = []
-    tables: List[CrudTable]
-    forms: List[Form] = []
-    details: List[Detail] = []
-    views: List[CrudView] = []
-    settings: Settings
-    urls: List[Url] | None = None
+    models: List[Model] = Field(default_factory=list)
+    migrate_models: bool = Field(default=False)
+    views: List[CrudView] = Field(default_factory=list)
 
     def apply(self, tenant):
         if not os.path.exists(os.path.join("workspaces", tenant, self.name)):
             os.mkdir(os.path.join("workspaces", tenant, self.name))
-        self.settings.apply(tenant)
         for model in self.models:
             model.apply(tenant, self.name)
         if self.migrate_models:
@@ -91,46 +95,36 @@ class Module(BaseModule):
                 for view in self.views
             ]
         )
-        with open(
-            os.path.join("workspaces", tenant, self.name, "policies.json"), "w"
-        ) as f:
-            f.write(f"{policies.model_dump_json()}")
+        policies.apply(tenant, self.name)
         resp = requests.post(
             f"{URL}/generate-urls",
-            json=json.dumps([{"url": url.url, "view": url.view} for url in self.urls]),
+            json=json.dumps({"views": [v.name for v in self.views]}),
+            headers={"Content-Type": "application/json"},
         )
         with open(os.path.join("workspaces", tenant, self.name, "urls.py"), "w") as f:
             f.write(resp.json()["content"])
         for view in self.views:
             view.apply(tenant, self.name)
-        for table in self.tables:
-            table.apply(tenant, self.name)
-        for form in self.forms:
-            form.apply(tenant, self.name)
-        for detail in self.details:
-            detail.apply(tenant, self.name)
-        for workflow in self.workflows:
-            workflow.apply(tenant, self.name)
 
 
-class Role(BaseModel):
-    name: str
+class PackageConfigs(BaseModel):
+    frame: List[Frame] | None = Field(default_factory=list)
+    login: List[LoginConfig] | None = Field(default_factory=list)
+    genericLoginConfig: GenericLoginConfig | None = GenericLoginConfig()
 
-    def apply(self, tenant):
-        from zango.apps.appauth.models import UserRoleModel
-
-        try:
-            role = UserRoleModel.objects.get(name=self.name)
-        except UserRoleModel.DoesNotExist:
-            role = UserRoleModel.objects.create(name=self.name)
-            role.save()
+    def apply(self):
+        for frame in self.frame:
+            frame.apply()
+        for login in self.login:
+            login.apply()
+        self.genericLoginConfig.apply()
 
 
 class ApplicationSpec(BaseModel):
     modules: List[Module]
-    roles: List[Role] = []
     tenant: str
-    package_configs: List[LoginConfig | GenericLoginConfig | Frame] = []
+    package_configs: PackageConfigs | None = PackageConfigs()
+    roles: List[Role] = Field(default_factory=list)
 
     def apply(self):
         if not os.path.exists(
@@ -149,5 +143,17 @@ class ApplicationSpec(BaseModel):
             module.apply(self.tenant)
         for role in self.roles:
             role.apply(self.tenant)
-        for package_config in self.package_configs:
-            package_config.apply()
+        self.package_configs.apply()
+        settings = Settings(
+            version="0.1.0",
+            modules=[
+                BaseModule(name=module.name, path=module.path)
+                for module in self.modules
+            ],
+            app_routes=[
+                AppRoute(module=module.name, url="{{ url }}") for module in self.modules
+            ],
+        )
+        settings.apply(self.tenant)
+        for role in self.roles:
+            role.apply(self.tenant)

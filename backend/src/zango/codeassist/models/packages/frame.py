@@ -36,7 +36,7 @@ class ConfigItem(BaseModel):
 
 class Frame(BaseModel):
     role: str
-    menu: List[MenuItem]
+    menu: List[MenuItem] | None = []
     config: ConfigItem = ConfigItem()
     login_url: str | None = None
     display_edit_profile: bool = True

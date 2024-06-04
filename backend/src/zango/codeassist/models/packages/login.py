@@ -2,21 +2,21 @@ import requests
 import json
 
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from zango.codeassist import TENANT_URL
 
 
 class GenericLoginConfig(BaseModel):
-    card_color: str
-    card_title: str
-    header_text: str
-    corner_radius: int
-    logo_placement: str
-    paragraph_text: str
-    card_text_color: str
-    background_color: str
-    paragraph_text_color: str
+    card_color: str = Field(default="#FFFFFF")
+    card_title: str = Field(default="")
+    header_text: str = Field(default="")
+    corner_radius: int = Field(default=4)
+    logo_placement: str = Field(default="topLeft")
+    paragraph_text: str = Field(default="")
+    card_text_color: str = Field(default="#6c747d")
+    background_color: str = Field(default="#5048ED")
+    paragraph_text_color: str = Field(default="#FFFFFF")
 
     def apply(self):
         requests.post(
