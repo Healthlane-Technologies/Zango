@@ -26,8 +26,8 @@ class StatusTransition(BaseModel):
     description: str
     from_status: str
     to_status: str
-    form: str | None
-    confirmation_message: str | None
+    form: str | None = None
+    confirmation_message: str | None = None
 
 
 class WorkFlow(BaseModel):

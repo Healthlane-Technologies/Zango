@@ -5,9 +5,15 @@ from pydantic import BaseModel
 import json
 import requests
 
-from .policy import Policies
+from .policy import Policies, Policy, Statement, Permission
 from .models import Model
 from .crud import CrudView
+from .packages.frame import Frame
+from .packages.login import LoginConfig, GenericLoginConfig
+from .workflow import WorkFlow
+from .forms import Form
+from .crud import CrudTable
+from .detail import Detail
 from .packages.frame import Frame
 from .packages.login import LoginConfig, GenericLoginConfig
 
@@ -52,7 +58,10 @@ class Url(BaseModel):
 class Module(BaseModule):
     models: List[Model] = []
     migrate_models: bool = False
-    policies: Policies | None = None
+    workflows: List[WorkFlow] = []
+    tables: List[CrudTable]
+    forms: List[Form] = []
+    details: List[Detail] = []
     views: List[CrudView] = []
     settings: Settings
     urls: List[Url] | None = None
@@ -66,12 +75,26 @@ class Module(BaseModule):
         if self.migrate_models:
             subprocess.run(f"python manage.py ws_makemigration {tenant}", shell=True)
             subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
-        if self.policies:
-            with open(
-                os.path.join("workspaces", tenant, self.name, "policies.json"), "w"
-            ) as f:
-                f.write(f"{self.policies.model_dump_json()}")
-
+        policies = Policies(
+            policies=[
+                Policy(
+                    name=f"{view.name}AccessPolicy",
+                    description=f"{view.name} access policy",
+                    statement=Statement(
+                        permissions=[
+                            Permission(
+                                name=f"{self.name}.views.{view.name}", type="view"
+                            )
+                        ],
+                    ),
+                )
+                for view in self.views
+            ]
+        )
+        with open(
+            os.path.join("workspaces", tenant, self.name, "policies.json"), "w"
+        ) as f:
+            f.write(f"{policies.model_dump_json()}")
         resp = requests.post(
             f"{URL}/generate-urls",
             json=json.dumps([{"url": url.url, "view": url.view} for url in self.urls]),
@@ -80,13 +103,18 @@ class Module(BaseModule):
             f.write(resp.json()["content"])
         for view in self.views:
             view.apply(tenant, self.name)
+        for table in self.tables:
+            table.apply(tenant, self.name)
+        for form in self.forms:
+            form.apply(tenant, self.name)
+        for detail in self.details:
+            detail.apply(tenant, self.name)
+        for workflow in self.workflows:
+            workflow.apply(tenant, self.name)
 
 
 class Role(BaseModel):
     name: str
-    frame: Frame | None = None
-    login: LoginConfig | None = None
-    generic_login: GenericLoginConfig | None = None
 
     def apply(self, tenant):
         from zango.apps.appauth.models import UserRoleModel
@@ -97,38 +125,12 @@ class Role(BaseModel):
             role = UserRoleModel.objects.create(name=self.name)
             role.save()
 
-        if self.frame:
-            requests.post(
-                f"{TENANT_URL}/frame/configure/orm/",
-                data={
-                    "user_role_id": role.pk,
-                    "config": json.loads(self.frame.model_dump_json()),
-                },
-                headers={"Content-Type": "application/json"},
-            )
-        if self.login:
-            requests.post(
-                f"{TENANT_URL}/login/configure/orm/loginconfig/",
-                data={
-                    "user_role_id": role.pk,
-                    "config": json.loads(self.login.model_dump_json()),
-                },
-                headers={"Content-Type": "application/json"},
-            )
-        if self.generic_login:
-            requests.post(
-                f"{TENANT_URL}/login/configure/orm/genericloginconfig/",
-                data={
-                    "config": json.loads(self.generic_login.model_dump_json()),
-                },
-                headers={"Content-Type": "application/json"},
-            )
-
 
 class ApplicationSpec(BaseModel):
     modules: List[Module]
     roles: List[Role] = []
     tenant: str
+    package_configs: List[LoginConfig | GenericLoginConfig | Frame] = []
 
     def apply(self):
         if not os.path.exists(
@@ -147,3 +149,5 @@ class ApplicationSpec(BaseModel):
             module.apply(self.tenant)
         for role in self.roles:
             role.apply(self.tenant)
+        for package_config in self.package_configs:
+            package_config.apply()

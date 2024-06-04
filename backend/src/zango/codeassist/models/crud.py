@@ -30,7 +30,7 @@ class CrudMeta(BaseModel):
     model: str
     fields: List[str]
     row_selector: Dict[str, str | bool]
-    detail_class: Detail | None = None
+    detail_class: str
 
 
 class CrudTable(BaseModel):
@@ -48,17 +48,15 @@ class CrudTable(BaseModel):
         with open(os.path.join("workspaces", tenant, module, "tables.py"), "a+") as f:
             f.write(resp.json()["content"])
             f.write("\n\n")
-        if self.meta.detail_class:
-            self.meta.detail_class.apply(tenant, module)
 
 
 class CrudView(BaseModel):
     name: str
     page_title: str
     add_btn_title: str
-    workflow: WorkFlow | None = None
-    table: CrudTable
-    form: Form | None = None
+    workflow: str | None
+    table: str
+    form: str | None
     model: str
 
     def apply(self, tenant, module):
@@ -69,8 +67,3 @@ class CrudView(BaseModel):
         with open(os.path.join("workspaces", tenant, module, "views.py"), "a+") as f:
             f.write(resp.json()["content"])
             f.write("\n\n")
-        if self.workflow:
-            self.workflow.apply(tenant, module)
-        if self.form:
-            self.form.apply(tenant, module)
-        self.table.apply(tenant, module)

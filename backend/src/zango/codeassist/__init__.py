@@ -1,2 +1,2 @@
-URL = "https://9781ba9f89a4cb5a7cc658fd0471fa30.serveo.net"
-TENANT_URL = "https://e5bd6abd8bf29598d103c36f0275a39e.serveo.net"
+URL = "https://b74a9e28e378eb48e2ca71622c31b03a.serveo.net"
+TENANT_URL = "https://07ae9e3184900d875c9bbe1e99b924e6.serveo.net"
