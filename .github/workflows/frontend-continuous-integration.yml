@@ -1,0 +1,57 @@
+name: Continuous Integration for Frontend
+
+on:
+  push:
+#    branches:
+#      - main
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['14.x']
+        python-version: ['3.x']
+#    permissions:
+#      contents: write
+    steps:
+      - name: Checkout project code
+        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ github.head_ref }}
+
+      - name: Setup Python based on matrix
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Execute setup script for configuration, asumes frontend as project directory
+        run: python setup_project.py --project_dir 'frontend'
+
+      - name: Set up Node.js based on matrix
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies from frontend
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build project, sets CI as empty string to not treat warnings as errors
+        run:
+          npm run --prefix frontend build
+        env:
+          CI: ""
+
+      - name: Tag build with timestamp and move into assets folder inside frontend
+        run: |
+          cd frontend
+          timestamp=$(date +'%Y%m%dT%H%M%S') # Generate timestamp
+          mv build $timestamp
+          mv $timestamp src/assets/$timestamp
+
+#      - name: Commit all changed files back to the repository
+#        uses: stefanzweifel/git-auto-commit-action@v5
