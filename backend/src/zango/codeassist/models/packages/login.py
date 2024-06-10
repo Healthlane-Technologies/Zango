@@ -4,7 +4,7 @@ import json
 from typing import List
 from pydantic import BaseModel, Field
 
-from zango.codeassist import TENANT_URL
+from zango.core.utils import get_package_url
 
 
 class GenericLoginConfig(BaseModel):
@@ -19,8 +19,8 @@ class GenericLoginConfig(BaseModel):
     paragraph_text_color: str = Field(default="#FFFFFF")
 
     def apply(self):
-        requests.post(
-            f"{TENANT_URL}/login/configure/orm/genericloginconfig/",
+        resp = requests.post(
+            get_package_url(None, "configure/orm/generic_login_config/", "login"),
             data={
                 "config": json.loads(self.model_dump_json()),
             },
@@ -30,7 +30,7 @@ class GenericLoginConfig(BaseModel):
 
 class LoginConfig(BaseModel):
     role: str
-    landing_url: str
+    landing_url: str = Field(default="/frame/router")
 
     def apply(self):
         try:
@@ -39,13 +39,14 @@ class LoginConfig(BaseModel):
             user_role = UserRoleModel.objects.get(name=self.role)
             config = json.loads(self.model_dump_json())
             del config["role"]
-            requests.post(
-                f"{TENANT_URL}/login/configure/orm/loginconfig/",
+            resp = requests.post(
+                get_package_url(None, "configure/orm/login_config/", "login"),
                 data={
                     "user_role_id": user_role.pk,
                     "config": config,
                 },
                 headers={"Content-Type": "application/json"},
             )
+            print("The response is ", resp.json())
         except Exception as e:
             print(e)

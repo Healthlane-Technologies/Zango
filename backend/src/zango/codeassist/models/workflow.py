@@ -36,7 +36,9 @@ class WorkFlow(BaseModel):
     meta: WorkFlowMeta
 
     def apply(self, tenant, module):
-        resp = requests.post(f"{URL}/generate-workflow", json=json.loads(self.json()))
+        resp = requests.post(
+            f"{URL}/generate-workflow", json=json.loads(self.model_dump_json())
+        )
         with open(
             os.path.join("workspaces", tenant, module, "workflows.py"), "a+"
         ) as f:

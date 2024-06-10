@@ -1,7 +1,11 @@
+import json
+
 from django.core.management.base import BaseCommand
 from django.db import connection
 from zango.apps.shared.tenancy.models import TenantModel
 from zango.apps.dynamic_models.workspace.base import Workspace
+
+from zango.codeassist.user.spec import AppSpec
 
 
 class Command(BaseCommand):
@@ -13,8 +17,7 @@ class Command(BaseCommand):
             help="Action to be performed.",
         )
         parser.add_argument(
-            "jsonspec",
-            help="The schema name to be used.",
+            "--jsonspec", help="The schema name to be used.", required=True
         )
         parser.add_argument(
             "workspace",
@@ -30,3 +33,6 @@ class Command(BaseCommand):
                 spec = open(options["jsonspec"], "r").read()
             except Exception as e:
                 raise Exception("Failed to open schema file")
+
+            appspec = AppSpec.model_validate_json(spec)
+            appspec.apply()

@@ -5,6 +5,7 @@ from zango.codeassist.models.app_spec import (
     ApplicationSpec,
     Module as ModuleCodeSpec,
     Role as RoleCodeSpec,
+    Package,
 )
 from zango.codeassist.models.crud import (
     CrudTable as CrudTableCodeSpec,
@@ -87,7 +88,6 @@ class CrudView(BaseModel):
 
 class Frame(BaseModel):
     role: str
-    menu: List[str]
 
 
 class Login(BaseModel):
@@ -201,6 +201,7 @@ class AppSpec(BaseModel):
     user_stories: List[str]
     package_configs: PackageConfigs | None = PackageConfigs()
     roles: List[Role] = Field(default_factory=list)
+    packages: List[Package] = Field(default_factory=list)
 
     def apply(self):
 
@@ -211,9 +212,6 @@ class AppSpec(BaseModel):
                 "frame": [
                     FrameCodeSpec(
                         role=package_config.role,
-                        menu=[
-                            MenuItem(url=url, name="") for url in package_config.menu
-                        ],
                     )
                     for package_config in self.package_configs.frame
                 ],
@@ -236,6 +234,7 @@ class AppSpec(BaseModel):
                 )
                 for role in self.roles
             ],
+            packages=self.packages,
         )
 
         application_spec.apply()

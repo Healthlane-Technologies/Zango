@@ -3,7 +3,8 @@ import requests
 from typing import List
 from pydantic import BaseModel
 
-from zango.codeassist import URL, TENANT_URL
+from zango.codeassist import URL
+from zango.core.utils import get_package_url
 
 
 class Child(BaseModel):
@@ -13,9 +14,9 @@ class Child(BaseModel):
 
 
 class MenuItem(BaseModel):
+    name: str
     url: str = ""
     icon: str | None = None
-    name: str
     children: List[Child] | None = None
 
 
@@ -51,7 +52,7 @@ class Frame(BaseModel):
             config = json.loads(self.model_dump_json())
             del config["role"]
             requests.post(
-                f"{TENANT_URL}/frame/configure/orm/",
+                get_package_url(None, "configure/orm/", "frame"),
                 data={
                     "user_role_id": user_role.pk,
                     "config": config,

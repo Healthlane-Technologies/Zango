@@ -12,7 +12,9 @@ from .packages.frame import Frame
 from .packages.login import LoginConfig, GenericLoginConfig
 from .packages.frame import Frame
 
-from zango.codeassist import URL, TENANT_URL
+from zango.codeassist import URL
+from zango.core.package_utils import install_package
+from zango.codeassist.models.packages.frame import MenuItem
 
 
 class BaseModule(BaseModel):
@@ -58,17 +60,29 @@ class Role(BaseModel):
         except UserRoleModel.DoesNotExist:
             role = UserRoleModel.objects.create(name=self.name)
             role.save()
-        for policy in self.policies:
+            allow_from_anywhere = PolicyModel.objects.get(name="AllowFromAnywhere")
+            role.policies.add(allow_from_anywhere)
+            role.save()
             try:
-                policy = PolicyModel.objects.get(name=policy[0], path=policy[1])
+                frame_router = PolicyModel.objects.get(
+                    name="FrameRouterViewAccess", path="packages.frame.router"
+                )
+                role.policies.add(frame_router)
+                role.save()
             except PolicyModel.DoesNotExist:
                 pass
-            role.policies.add(policy)
+        for policy in self.policies:
+            try:
+                policy_obj = PolicyModel.objects.get(name=policy[0], path=policy[1])
+            except PolicyModel.DoesNotExist:
+                pass
+            role.policies.add(policy_obj)
+            role.save()
 
 
 class Module(BaseModule):
     models: List[Model] = Field(default_factory=list)
-    migrate_models: bool = Field(default=False)
+    migrate_models: bool = Field(default=True)
     views: List[CrudView] = Field(default_factory=list)
 
     def apply(self, tenant):
@@ -120,13 +134,43 @@ class PackageConfigs(BaseModel):
         self.genericLoginConfig.apply()
 
 
+class Package(BaseModel):
+    name: str
+    version: str
+
+    def apply(self, tenant):
+        resp = install_package(self.name, self.version, tenant)
+        print(f"Installing package {self.name} {self.version}: {resp} ")
+        if resp != "Package already installed":
+            if getattr(self, f"post_install_{self.name}", None):
+                getattr(self, f"post_install_{self.name}")(tenant)
+
+    def post_install_login(self, tenant):
+        from zango.apps.permissions.models import PolicyModel
+        from zango.apps.appauth.models import UserRoleModel
+
+        try:
+            role = UserRoleModel.objects.get(name="AnonymousUsers")
+            login_access = PolicyModel.objects.get(
+                name="LoginViewAccess", path="packages.login.appauth"
+            )
+            role.policies.add(login_access)
+            role.save()
+        except Exception as e:
+            print(e)
+            return
+
+
 class ApplicationSpec(BaseModel):
     modules: List[Module]
     tenant: str
     package_configs: PackageConfigs | None = PackageConfigs()
     roles: List[Role] = Field(default_factory=list)
+    packages: List[Package] = Field(default_factory=list)
 
     def apply(self):
+        for package in self.packages:
+            package.apply(self.tenant)
         if not os.path.exists(
             os.path.join(
                 "workspaces",
@@ -139,11 +183,6 @@ class ApplicationSpec(BaseModel):
                     self.tenant,
                 )
             )
-        for module in self.modules:
-            module.apply(self.tenant)
-        for role in self.roles:
-            role.apply(self.tenant)
-        self.package_configs.apply()
         settings = Settings(
             version="0.1.0",
             modules=[
@@ -151,9 +190,34 @@ class ApplicationSpec(BaseModel):
                 for module in self.modules
             ],
             app_routes=[
-                AppRoute(module=module.name, url="{{ url }}") for module in self.modules
+                AppRoute(module=module.name, re_path=f"^{module.name}/", url="urls")
+                for module in self.modules
             ],
         )
         settings.apply(self.tenant)
+        for module in self.modules:
+            module.apply(self.tenant)
         for role in self.roles:
             role.apply(self.tenant)
+
+        for frame in self.package_configs.frame:
+            menu = []
+            for module in self.modules:
+                for view in module.views:
+                    resp = json.loads(
+                        requests.post(
+                            f"{URL}/generate-frame-menu",
+                            json={
+                                "url": f"{module.name}/",
+                                "view_name": view.name,
+                            },
+                        ).json()["content"]
+                    )
+                    menu.append(
+                        MenuItem(
+                            url=resp["url"],
+                            name=resp["title"],
+                        )
+                    )
+            frame.menu = menu
+        self.package_configs.apply()
