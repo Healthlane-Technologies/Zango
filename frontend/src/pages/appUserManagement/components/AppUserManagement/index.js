@@ -87,19 +87,27 @@ export default function UserManagement() {
 	return (
 		<>
 <<<<<<< HEAD
+<<<<<<< HEAD
 			<div data-cy="add_user" className="flex grow flex-col gap-[20px]">
 =======
 			<div data-cy="addUser" className="flex grow flex-col gap-[20px]">
 >>>>>>> f9ef4ffb (cypress locator addition)
+=======
+			<div data-cy="add_user" className="flex grow flex-col gap-[20px]">
+>>>>>>> c893349c (locators)
 				<div className="flex items-center justify-between py-[12px] pl-[40px] pr-[48px]">
 					<BreadCrumbs />
 					{isAppUserManagementDataEmpty ? null : (
 						<button
 <<<<<<< HEAD
+<<<<<<< HEAD
 							data-cy="new_user_button"
 =======
 							data-cy="newUserButton"
 >>>>>>> f9ef4ffb (cypress locator addition)
+=======
+							data-cy="new_user_button"
+>>>>>>> c893349c (locators)
 							type="button"
 							onClick={handleAddNewUser}
 							className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
@@ -121,10 +129,14 @@ export default function UserManagement() {
 							</div>
 							<button
 <<<<<<< HEAD
+<<<<<<< HEAD
 								data-cy="add_user_button"
 =======
 								data-cy="addUserRole"
 >>>>>>> f9ef4ffb (cypress locator addition)
+=======
+								data-cy="add_user_role"
+>>>>>>> c893349c (locators)
 								type="button"
 								onClick={handleAddNewUser}
 								className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
