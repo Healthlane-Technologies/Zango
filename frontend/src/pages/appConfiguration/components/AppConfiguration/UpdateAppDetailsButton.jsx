@@ -8,7 +8,11 @@ function UpdateAppDetailsButton() {
 	};
 
 	return (
+<<<<<<< HEAD
 		<button data-cy="update_details_button" type="button" onClick={handleUpdateAppDetails} className="flex">
+=======
+		<button data-cy="updateAppDetails" type="button" onClick={handleUpdateAppDetails} className="flex">
+>>>>>>> f9ef4ffb (cypress locator addition)
 			<span className="font-lato text-[14px] font-bold leading-[20px] text-primary">
 				update details
 			</span>

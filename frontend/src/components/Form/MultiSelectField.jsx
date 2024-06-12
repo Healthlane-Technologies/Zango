@@ -76,7 +76,11 @@ const MultiSelectField = ({
 			>
 				{label}
 			</label>
+<<<<<<< HEAD
 			<div data-cy="dropdown_field" className="flex flex-col gap-[12px]">
+=======
+			<div data-cy="userRolesDropdown" className="flex flex-col gap-[12px]">
+>>>>>>> f9ef4ffb (cypress locator addition)
 				<Listbox value={selected} onChange={handleChange} multiple>
 					<div className="relative">
 						<Listbox.Button

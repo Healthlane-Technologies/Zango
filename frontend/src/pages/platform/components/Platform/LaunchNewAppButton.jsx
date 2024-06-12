@@ -10,7 +10,11 @@ function LaunchNewAppButton() {
 	};
 	return (
 		<button
+<<<<<<< HEAD
 			data-cy="launch_app_button"
+=======
+			data-cy="launchAppButton"
+>>>>>>> f9ef4ffb (cypress locator addition)
 			type="button"
 			onClick={handleLaunchNewApp}
 			className="gap-[8px] rounded-[4px] px-[16px] py-[7px] flex grow bg-primary"
