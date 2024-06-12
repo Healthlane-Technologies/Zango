@@ -77,11 +77,12 @@ export default function UserManagement() {
 
 	return (
 		<>
-			<div className="flex grow flex-col gap-[20px]">
+			<div data-cy="addUser" className="flex grow flex-col gap-[20px]">
 				<div className="flex items-center justify-between py-[12px] pl-[40px] pr-[48px]">
 					<BreadCrumbs />
 					{isAppUserManagementDataEmpty ? null : (
 						<button
+							data-cy="newUserButton"
 							type="button"
 							onClick={handleAddNewUser}
 							className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
@@ -102,6 +103,7 @@ export default function UserManagement() {
 								</h3>
 							</div>
 							<button
+								data-cy="addUserRole"
 								type="button"
 								onClick={handleAddNewUser}
 								className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"

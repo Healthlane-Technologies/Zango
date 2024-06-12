@@ -8,7 +8,7 @@ function UpdateAppDetailsButton() {
 	};
 
 	return (
-		<button type="button" onClick={handleUpdateAppDetails} className="flex">
+		<button data-cy="updateAppDetails" type="button" onClick={handleUpdateAppDetails} className="flex">
 			<span className="font-lato text-[14px] font-bold leading-[20px] text-primary">
 				update details
 			</span>
