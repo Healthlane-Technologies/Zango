@@ -53,7 +53,7 @@ export default function AppConfiguration() {
 				</div>
 				<div className="flex grow flex-col gap-[20px] pl-[40px] pr-[48px]">
 					<div className="flex items-end gap-[24px]">
-						<h3 className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
+						<h3 data-cy="app_name_details_view" className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
 							{appConfigurationData?.app?.name}
 						</h3>
 						<UpdateAppDetailsButton />

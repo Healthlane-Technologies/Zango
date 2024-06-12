@@ -76,7 +76,7 @@ const MultiSelectField = ({
 			>
 				{label}
 			</label>
-			<div data-cy="userRolesDropdown" className="flex flex-col gap-[12px]">
+			<div data-cy="user_roles_dropdown" className="flex flex-col gap-[12px]">
 				<Listbox value={selected} onChange={handleChange} multiple>
 					<div className="relative">
 						<Listbox.Button
