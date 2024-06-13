@@ -25,14 +25,20 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        wks_obj = TenantModel.objects.get(name=options["workspace"])
-        connection.set_tenant(wks_obj)
-        ws = Workspace(wks_obj, None, True)
-        if options["action"] == "create":
-            try:
-                spec = open(options["jsonspec"], "r").read()
-            except Exception as e:
-                raise Exception("Failed to open schema file")
+        try:
+            wks_obj = TenantModel.objects.get(name=options["workspace"])
+            connection.set_tenant(wks_obj)
+            ws = Workspace(wks_obj, None, True)
+            if options["action"] == "create":
+                try:
+                    spec = open(options["jsonspec"], "r").read()
+                except Exception as e:
+                    raise Exception("Failed to open schema file")
 
-            appspec = AppSpec.model_validate_json(spec)
-            appspec.apply()
+                appspec = AppSpec.model_validate_json(spec)
+                appspec.apply()
+        except Exception as e:
+            import traceback
+
+            print("Exception", e, flush=True)
+            print(traceback.format_exc(), flush=True)

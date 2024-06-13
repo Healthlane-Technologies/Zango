@@ -5,7 +5,7 @@ from zango.codeassist.models.app_spec import (
     ApplicationSpec,
     Module as ModuleCodeSpec,
     Role as RoleCodeSpec,
-    Package,
+    PackageConfigs,
 )
 from zango.codeassist.models.crud import (
     CrudTable as CrudTableCodeSpec,
@@ -41,15 +41,17 @@ class ModelField(BaseModel):
     type: str
 
 
-class Model(BaseModel):
-    name: str
-    fields: List[ModelField]
+# class Model(BaseModel):
+#     name: str
+#     fields: List[ModelField]
+#     user_stories: List[str] = []
 
 
 class WorkFlow(BaseModel):
     name: str
     statuses: List[str]
     transitions: List[List[str]]
+    user_stories: List[str] = []
 
     """
     on_create_status - it is assumed that the on_create_status will be the first status
@@ -58,22 +60,20 @@ class WorkFlow(BaseModel):
 
 class CrudTable(BaseModel):
     name: str
-    fields: List[str]
     row_actions: List[str] = Field(default_factory=list)
     table_actions: List[str] = Field(default_factory=list)
-    model: str
     detail_class: str
+    user_stories: List[str] = []
 
 
 class Form(BaseModel):
     name: str
-    fields: List[str]
-    model: str
+    user_stories: List[str] = []
 
 
 class Detail(BaseModel):
     name: str
-    fields: List[str]
+    user_stories: List[str] = []
 
 
 class CrudView(BaseModel):
@@ -86,27 +86,13 @@ class CrudView(BaseModel):
     model: str
 
 
-class Frame(BaseModel):
-    role: str
-
-
-class Login(BaseModel):
-    role: str
-    landing_url: str
-
-
-class PackageConfigs(BaseModel):
-    frame: List[Frame] | None = Field(default_factory=list)
-    login: List[Login] | None = Field(default_factory=list)
-
-
 class Role(BaseModel):
     name: str
 
 
 class Module(BaseModel):
     name: str
-    models: List[Model] = []
+    models: Dict[str, List[ModelField]] = Field(default_factory=dict)
     # migrate_models: bool = False
     views: List[CrudView] = []
 
@@ -117,8 +103,8 @@ class Module(BaseModel):
             views=[
                 CrudViewCodeSpec(
                     name=view.name,
-                    page_title="",
-                    add_btn_title="",
+                    page_title="{{title}}",
+                    add_btn_title="{{add_btn_title}}",
                     workflow=WorkFlowCodeSpec(
                         name=view.workflow.name,
                         status_transitions=[
@@ -136,41 +122,61 @@ class Module(BaseModel):
                                 )
                                 for status in view.workflow.statuses
                             },
-                            model="",
-                            on_create_status="",
+                            on_create_status=view.workflow.statuses[0],
                         ),
+                        user_stories=view.workflow.user_stories,
                     ),
                     table=CrudTableCodeSpec(
                         name=view.table.name,
                         fields=[
-                            TableField(name=field, type="", constraints={})
-                            for field in view.table.fields
+                            TableField(
+                                name=field.name,
+                                type="{{table_field_type}}",
+                                constraints={},
+                            )
+                            for field in self.models[view.model]
                         ],
                         row_actions=[],
                         table_actions=[],
                         meta=CrudMeta(
-                            model=view.table.model,
+                            model=view.model,
                             detail_class=DetailCodeSpec(
                                 name=view.detail.name,
                                 fields=[
-                                    DetailField(name=field, type="", constraints={})
-                                    for field in view.detail.fields
+                                    DetailField(
+                                        name=field.name,
+                                        type="{{detail_field_type}}",
+                                        constraints={},
+                                    )
+                                    for field in self.models[view.model]
                                 ],
-                                meta=DetailMeta(fields=view.detail.fields),
+                                meta=DetailMeta(
+                                    fields=[
+                                        field.name for field in self.models[view.model]
+                                    ]
+                                ),
                             ),
-                            fields=view.table.fields,
+                            fields=[field.name for field in self.models[view.model]],
                             row_selector={},
                         ),
+                        user_stories=view.table.user_stories,
                     ),
                     form=FormCodeSpec(
                         name=view.form.name,
                         fields=[
-                            FormField(name=field, type="", constraints={})
-                            for field in view.form.fields
+                            FormField(
+                                name=field.name,
+                                type="{{form_field_type}}",
+                                constraints={},
+                            )
+                            for field in self.models[view.model]
                         ],
                         meta=FormMeta(
-                            model=view.form.model, title="", order=view.form.fields
+                            model=view.model,
+                            title="{{form_title}}",
+                            order=[field.name for field in self.models[view.model]],
                         ),
+                        user_stories=view.form.user_stories,
                     ),
                     model=view.model,
                 )
@@ -178,63 +184,106 @@ class Module(BaseModel):
             ],
             models=[
                 ModelCodeSpec(
-                    name=model.name,
+                    name=model,
                     fields=[
                         ModelFieldCodeSpec(
                             name=field.name,
                             type=field.type,
                             constraints={},
                         )
-                        for field in model.fields
                     ],
                 )
-                for model in self.models
+                for model, fields in self.models.items()
+                for field in fields
             ],
         )
         return module
 
 
+class Package(BaseModel):
+    name: str
+    version: str
+
+
 class AppSpec(BaseModel):
     modules: List[Module]
-    tenant: str
-    requirement_spec: str
-    user_stories: List[str]
-    package_configs: PackageConfigs | None = PackageConfigs()
-    roles: List[Role] = Field(default_factory=list)
-    packages: List[Package] = Field(default_factory=list)
+    app_name: str
+    roles: List[str] = Field(default_factory=list)
 
     def apply(self):
 
         application_spec = ApplicationSpec(
             modules=[module.apply() for module in self.modules],
-            tenant=self.tenant,
-            package_configs={
-                "frame": [
-                    FrameCodeSpec(
-                        role=package_config.role,
-                    )
-                    for package_config in self.package_configs.frame
-                ],
-                "login": [
-                    LoginConfig(
-                        role=package_config.role, landing_url=package_config.landing_url
-                    )
-                    for package_config in self.package_configs.login
-                ],
-            },
+            app_name=self.app_name,
             roles=[
                 RoleCodeSpec(
-                    name=role.name,
+                    name=role,
                     policies=[
                         [f"{view.name}AccessPolicy", module.name]
                         for module in self.modules
                         for view in module.views
-                        if role.name in view.roles
+                        if role in view.roles
                     ],
                 )
                 for role in self.roles
             ],
-            packages=self.packages,
+            package_configs=PackageConfigs(
+                frame=[
+                    FrameCodeSpec(
+                        role=role,
+                    )
+                    for role in self.roles
+                ],
+                login=[
+                    LoginConfig(
+                        role=role,
+                    )
+                    for role in self.roles
+                ],
+            ),
         )
 
         application_spec.apply()
+
+
+app_spec = AppSpec(
+    app_name="CodeAssist",
+    modules=[
+        Module(
+            name="users",
+            models={
+                "User": [ModelField(name="name", type="string")],
+                "Role": [ModelField(name="name", type="string")],
+            },
+            views=[
+                CrudView(
+                    name="UserCrudView",
+                    roles=["admin"],
+                    workflow=WorkFlow(
+                        name="users_workflow",
+                        statuses=["active", "inactive"],
+                        transitions=[["active", "inactive"], ["inactive", "active"]],
+                        user_stories=[
+                            "User can be active if the user name is not john",
+                        ],
+                    ),
+                    table=CrudTable(
+                        name="users_table",
+                        row_actions=[],
+                        table_actions=[],
+                        model="User",
+                        detail_class="users_detail",
+                    ),
+                    form=Form(name="users_form", user_stories=[]),
+                    model="User",
+                    detail=Detail(name="users_detail", user_stories=[]),
+                )
+            ],
+        ),
+    ],
+    roles=[
+        "admin",
+    ],
+)
+
+app_spec.apply()

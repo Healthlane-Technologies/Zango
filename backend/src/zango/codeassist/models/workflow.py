@@ -16,7 +16,6 @@ class WorkFlowStatus(BaseModel):
 
 class WorkFlowMeta(BaseModel):
     statuses: Dict[str, WorkFlowStatus]
-    model: str
     on_create_status: str
 
 
@@ -34,10 +33,16 @@ class WorkFlow(BaseModel):
     name: str
     status_transitions: List[StatusTransition]
     meta: WorkFlowMeta
+    user_stories: List[str] = []
 
-    def apply(self, tenant, module):
+    def apply(self, tenant, module, workflow_model, models):
         resp = requests.post(
-            f"{URL}/generate-workflow", json=json.loads(self.model_dump_json())
+            f"{URL}/generate-workflow",
+            json={
+                "workflow": self.model_dump(),
+                "workflow_model": workflow_model,
+                "models": [model.model_dump() for model in models],
+            },
         )
         with open(
             os.path.join("workspaces", tenant, module, "workflows.py"), "a+"

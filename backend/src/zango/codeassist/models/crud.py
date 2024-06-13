@@ -39,17 +39,21 @@ class CrudTable(BaseModel):
     meta: CrudMeta
     row_actions: List[RowAction]
     table_actions: List = Field(default_factory=list)
+    user_stories: List[str] = Field(default_factory=list)
 
-    def apply(self, tenant, module):
+    def apply(self, tenant, module, models):
         resp = requests.post(
             f"{URL}/generate-crud-table",
-            json=json.loads(self.model_dump_json()),
+            json={
+                "table": json.loads(self.model_dump_json()),
+                "models": [json.loads(model.model_dump_json()) for model in models],
+            },
         )
         with open(os.path.join("workspaces", tenant, module, "tables.py"), "a+") as f:
             f.write(resp.json()["content"])
             f.write("\n\n")
         if self.meta.detail_class:
-            self.meta.detail_class.apply(tenant, module)
+            self.meta.detail_class.apply(tenant, module, models)
 
 
 class CrudView(BaseModel):
@@ -61,20 +65,20 @@ class CrudView(BaseModel):
     form: Form | None
     model: str
 
-    def apply(self, tenant, module):
+    def apply(self, tenant, module, models):
         resp = requests.post(
             f"{URL}/generate-crud-view",
-            json=json.loads(self.model_dump_json()),
+            json=self.model_dump(),
         )
         with open(os.path.join("workspaces", tenant, module, "views.py"), "a+") as f:
             f.write(resp.json()["content"])
             f.write("\n\n")
 
         if self.workflow:
-            self.workflow.apply(tenant, module)
+            self.workflow.apply(tenant, module, self.model, models)
 
         if self.form:
-            self.form.apply(tenant, module)
+            self.form.apply(tenant, module, models)
 
         if self.table:
-            self.table.apply(tenant, module)
+            self.table.apply(tenant, module, models)

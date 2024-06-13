@@ -92,7 +92,7 @@ class Module(BaseModule):
             model.apply(tenant, self.name)
         if self.migrate_models:
             subprocess.run(f"python manage.py ws_makemigration {tenant}", shell=True)
-            subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
+            # subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
         policies = Policies(
             policies=[
                 Policy(
@@ -118,7 +118,7 @@ class Module(BaseModule):
         with open(os.path.join("workspaces", tenant, self.name, "urls.py"), "w") as f:
             f.write(resp.json()["content"])
         for view in self.views:
-            view.apply(tenant, self.name)
+            view.apply(tenant, self.name, self.models)
 
 
 class PackageConfigs(BaseModel):
@@ -163,24 +163,24 @@ class Package(BaseModel):
 
 class ApplicationSpec(BaseModel):
     modules: List[Module]
-    tenant: str
+    app_name: str
     package_configs: PackageConfigs | None = PackageConfigs()
     roles: List[Role] = Field(default_factory=list)
     packages: List[Package] = Field(default_factory=list)
 
     def apply(self):
         for package in self.packages:
-            package.apply(self.tenant)
+            package.apply(self.app_name)
         if not os.path.exists(
             os.path.join(
                 "workspaces",
-                self.tenant,
+                self.app_name,
             )
         ):
             os.mkdir(
                 os.path.join(
                     "workspaces",
-                    self.tenant,
+                    self.app_name,
                 )
             )
         settings = Settings(
@@ -194,11 +194,11 @@ class ApplicationSpec(BaseModel):
                 for module in self.modules
             ],
         )
-        settings.apply(self.tenant)
+        settings.apply(self.app_name)
         for module in self.modules:
-            module.apply(self.tenant)
+            module.apply(self.app_name)
         for role in self.roles:
-            role.apply(self.tenant)
+            role.apply(self.app_name)
 
         for frame in self.package_configs.frame:
             menu = []

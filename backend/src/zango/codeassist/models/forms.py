@@ -23,11 +23,15 @@ class Form(BaseModel):
     name: str
     fields: List[FormField]
     meta: FormMeta
+    user_stories: List[str] = []
 
-    def apply(self, tenant, module):
+    def apply(self, tenant, module, models):
         resp = requests.post(
             f"{URL}/generate-form",
-            json=json.loads(self.model_dump_json()),
+            json={
+                "form": self.model_dump(),
+                "models": [model.model_dump() for model in models],
+            },
         )
         with open(os.path.join("workspaces", tenant, module, "forms.py"), "a+") as f:
             f.write(resp.json()["content"])
