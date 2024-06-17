@@ -230,8 +230,15 @@ def start_project(
 
      # Prompting default platform user details
     while True:
+        temp_username = platform_username
+        platform_username = None
+        platform_user_password = None
+
         if not platform_username:
             click.echo("Please enter platform user email")
+            platform_username = click.prompt("Email")
+        else:
+            click.echo("Please enter platform user email\nPrevious Attempt: " + temp_username)
             platform_username = click.prompt("Email")
         if not platform_user_password:
             platform_user_password = click.prompt(
@@ -244,7 +251,7 @@ def start_project(
         if user_creation_result["success"]:
             break
         else:
-            click.echo("User Creation Failed!")
+            user_creation_result["message"]
             retry = click.prompt("Do you want to try again? (yes/no)", default="yes")
             if retry.lower() != "yes":
                 raise click.ClickException("User creation aborted by the user.")
