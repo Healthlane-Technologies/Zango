@@ -234,7 +234,7 @@ def start_project(
         platform_username = None
         platform_user_password = None
 
-        if not platform_username:
+        if not temp_username:
             click.echo("Please enter platform user email")
             platform_username = click.prompt("Email")
         else:
