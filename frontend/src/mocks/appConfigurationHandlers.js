@@ -2459,7 +2459,7 @@ export const appConfigurationHandlers = [
 							},
 						],
 					},
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -2472,7 +2472,7 @@ export const appConfigurationHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);

@@ -9,9 +9,9 @@ import {
 	selectRerenderPage,
 	setAppPackagesManagementData,
 } from '../../slice';
-import ConfigurePackageModal from '../Models/ConfigurePackageModal';
-import InstallPackageModal from '../Models/InstallPackageModal';
-import Table from '../Table';
+import AppTable from '../AppTable';
+import ConfigurePackageModal from '../Modals/ConfigurePackageModal';
+import InstallPackageModal from '../Modals/InstallPackageModal';
 
 export default function AppPackagesManagement() {
 	let { appId } = useParams();
@@ -58,7 +58,11 @@ export default function AppPackagesManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appPackagesManagementTableData]);
+
+	if (!appPackagesManagementData) {
+		return null;
+	}
 
 	return (
 		<>
@@ -68,9 +72,7 @@ export default function AppPackagesManagement() {
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
 					<div className="flex grow flex-col overflow-x-auto">
-						{appPackagesManagementData ? (
-							<Table tableData={appPackagesManagementData?.packages} />
-						) : null}
+						{appPackagesManagementData ? <AppTable /> : null}
 					</div>
 				</div>
 			</div>

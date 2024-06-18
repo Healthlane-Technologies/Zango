@@ -1,12 +1,10 @@
-import React, { Fragment, useEffect, useState } from 'react';
-import { DateRangePicker } from 'react-dates';
 import { Menu, Transition } from '@headlessui/react';
+import moment from 'moment';
+import React, { Fragment, useState } from 'react';
+import { DateRangePicker } from 'react-dates';
 import { usePopper } from 'react-popper';
-import { useSelector } from 'react-redux';
 import { ReactComponent as CloseIcon } from '../../assets/images/svg/close-icon.svg';
 import { ReactComponent as TableColumnFilterIcon } from '../../assets/images/svg/table-column-filter-icon.svg';
-import moment from 'moment';
-import { tr } from '@faker-js/faker';
 
 const TableDateRangeFilter = ({
 	label,
@@ -59,7 +57,7 @@ const TableDateRangeFilter = ({
 					style={styles['popper']}
 					{...attributes['popper']}
 				>
-					<Menu.Items className="absolute top-[30px] right-0 origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+					<Menu.Items className="absolute right-0 top-[30px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 						<div className="table-date-range-filter">
 							<Menu.Item className="">
 								{({ active }) => (

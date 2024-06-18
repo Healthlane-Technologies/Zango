@@ -10,9 +10,9 @@ import {
 	selectRerenderPage,
 	setAppPermissionsManagementData,
 } from '../../slice';
-import AddCustomPermissionModal from '../Models/AddCustomPermissionModal';
-import DeleteCustomPermissionModal from '../Models/DeleteCustomPermissionModal';
-import EditCustomPermissionModal from '../Models/EditCustomPermissionModal';
+import AddCustomPermissionModal from '../Modals/AddCustomPermissionModal';
+import DeleteCustomPermissionModal from '../Modals/DeleteCustomPermissionModal';
+import EditCustomPermissionModal from '../Modals/EditCustomPermissionModal';
 import Table from '../Table';
 
 export default function AppPermissionsManagement() {
@@ -47,7 +47,7 @@ export default function AppPermissionsManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appId, triggerApi]);
 
 	return (
 		<>

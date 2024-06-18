@@ -18,7 +18,7 @@ export const appInitialHandlers = [
 							last_login: null,
 							created_at: '2023-10-16T06:47:37.847652Z',
 						},
-						is_codeassist_enabled: false,
+						is_codeassist_enabled: true,
 					},
 				},
 			})

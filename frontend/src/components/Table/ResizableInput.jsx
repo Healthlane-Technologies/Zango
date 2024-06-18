@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const ResizableInput = ({ table }) => {
 	const [text, setText] = useState('');
+	const pageIndex = table.getState().pagination.pageIndex;
 
 	useEffect(() => {
-		setText((table.getState().pagination.pageIndex + 1).toString());
-	}, [table.getState().pagination.pageIndex]);
+		setText((pageIndex + 1).toString());
+	}, [pageIndex]);
 
 	return (
 		<input

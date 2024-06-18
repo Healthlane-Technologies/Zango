@@ -6,6 +6,7 @@ export default function BreadCrumbs() {
 	let location = useLocation();
 	let uuid = location.pathname.split('/')[3];
 	const appConfigurationData = useSelector(selectAppConfigurationData);
+
 	return (
 		<div className="flex flex-wrap gap-[5px]">
 			{location.pathname

@@ -112,7 +112,7 @@ export const appUserRolesHandlers = [
 							{ id: 4, label: 'Policy 1' },
 						],
 					},
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -125,7 +125,7 @@ export const appUserRolesHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -138,7 +138,7 @@ export const appUserRolesHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);

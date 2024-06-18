@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TableSyncIcon } from '../../../assets/images/svg/sync-icon.svg';
 import useApi from '../../../hooks/useApi';
-import { transformToFormData } from '../../../utils/helper';
+import { transformToFormData } from '../../../utils/form';
 import { toggleRerenderPage } from '../slice';
 
 export default function SyncTask({ theme = 'light' }) {
@@ -61,9 +61,6 @@ export default function SyncTask({ theme = 'light' }) {
 					} ${isLoading ? 'animate-spin' : ''}`}
 				/>
 			</button>
-			{/* <span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-				last synced 2 min ago
-			</span> */}
 		</div>
 	);
 }

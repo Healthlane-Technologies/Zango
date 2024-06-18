@@ -9,7 +9,7 @@ const ListGeneralCell = ({ data, info }) => {
 	};
 
 	return (
-		<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 			<table class="table-auto">
 				<thead>
 					<tr>
@@ -102,7 +102,7 @@ const ListGeneralCell = ({ data, info }) => {
 															<span
 																className={`text-balance text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] ${
 																	arrayContext?.length - 1 !== index
-																		? 'text-balance min-w-[225px] max-w-[220px] break-all text-[#A3ABB1]'
+																		? 'min-w-[225px] max-w-[220px] text-balance break-all text-[#A3ABB1]'
 																		: 'break-all'
 																}`}
 															>
@@ -140,7 +140,7 @@ const ListGeneralCell = ({ data, info }) => {
 																<span
 																	className={`text-balance  text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] ${
 																		arrayContext?.length - 1 !== index
-																			? 'text-balance min-w-[225px] max-w-[220px] break-all text-[#A3ABB1]'
+																			? 'min-w-[225px] max-w-[220px] text-balance break-all text-[#A3ABB1]'
 																			: 'break-all'
 																	}`}
 																>

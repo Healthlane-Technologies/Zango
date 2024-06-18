@@ -8,16 +8,16 @@ import {
 	openIsAddNewUserModalOpen,
 	selectAppUserManagementData,
 	selectAppUserManagementTableData,
+	selectIsAppUserManagementDataEmpty,
 	selectRerenderPage,
 	setAppUserManagementData,
-	selectIsAppUserManagementDataEmpty,
 } from '../../slice';
-import ActivateUserModal from '../Models/ActivateUserModal';
-import AddNewUserModal from '../Models/AddNewUserModal';
-import DeactivateUserModal from '../Models/DeactivateUserModal';
-import EditUserDetailsModal from '../Models/EditUserDetailsModal';
-import ResetPasswordModal from '../Models/ResetPasswordModal';
-import Table from '../Table';
+import AppTable from '../AppTable';
+import ActivateUserModal from '../Modals/ActivateUserModal';
+import AddNewUserModal from '../Modals/AddNewUserModal';
+import DeactivateUserModal from '../Modals/DeactivateUserModal';
+import EditUserDetailsModal from '../Modals/EditUserDetailsModal';
+import ResetPasswordModal from '../Modals/ResetPasswordModal';
 
 export default function UserManagement() {
 	let { appId } = useParams();
@@ -69,7 +69,11 @@ export default function UserManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appUserManagementTableData]);
+
+	if (!appUserManagementData) {
+		return null;
+	}
 
 	return (
 		<>
@@ -96,9 +100,6 @@ export default function UserManagement() {
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
 									set-up user(s)
 								</h3>
-								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
-									description to be added
-								</p> */}
 							</div>
 							<button
 								type="button"
@@ -112,7 +113,7 @@ export default function UserManagement() {
 							</button>
 						</div>
 					) : appUserManagementData ? (
-						<Table tableData={appUserManagementData?.users} />
+						<AppTable />
 					) : null}
 				</div>
 			</div>

@@ -80,7 +80,7 @@ export const appPackagesManagementHandlers = [
 							{ id: 4, label: 'Policy 4' },
 						],
 					},
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -93,7 +93,7 @@ export const appPackagesManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -106,7 +106,7 @@ export const appPackagesManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Tasks synced successfully',
+					message: 'Success',
 				},
 			})
 		);
@@ -119,7 +119,7 @@ export const appPackagesManagementHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					message: 'Platform user fetched successfully',
+					message: 'Success',
 				},
 			})
 		);

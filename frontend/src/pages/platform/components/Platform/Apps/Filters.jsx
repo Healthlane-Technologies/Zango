@@ -1,34 +1,10 @@
-import { Formik, useFormikContext } from 'formik';
-import debounce from 'just-debounce-it';
+import { Formik } from 'formik';
 import { get } from 'lodash';
-import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import * as Yup from 'yup';
 import { selectSortBy, setSortBy } from '../../../slice';
+import AutoSave from './AutoSave';
 import SelectField from './SelectField';
-
-const AutoSave = ({ debounceMs }) => {
-	const formik = useFormikContext();
-	const [lastSaved, setLastSaved] = useState(null);
-	const debouncedSubmit = useCallback(
-		debounce(() => {
-			if (formik.touched && formik.isValid) {
-				formik.submitForm().then(() => setLastSaved(new Date().toISOString()));
-			}
-		}, debounceMs),
-		[debounceMs, formik.submitForm, formik.isValid]
-	);
-
-	useEffect(() => {
-		debouncedSubmit();
-	}, [debouncedSubmit, formik.values]);
-
-	return (
-		<>
-			{/* {!!formik.isSubmitting ? 'saving...' : lastSaved !== null ? `` : null} */}
-		</>
-	);
-};
 
 export default function Filters() {
 	const sortBy = useSelector(selectSortBy);
@@ -60,7 +36,7 @@ export default function Filters() {
 				return (
 					<form className="flex flex-col gap-4" onSubmit={formik.handleSubmit}>
 						<AutoSave debounceMs={300} />
-						<div className="flex gap-4 rounded-[4px]">
+						<div className="rounded-[4px] flex gap-4">
 							<SelectField
 								key="sort"
 								label="Sort:"
