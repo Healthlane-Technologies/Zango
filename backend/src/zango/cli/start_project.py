@@ -252,6 +252,7 @@ def start_project(
             break
         else:
             user_creation_result["message"]
+            click.echo(user_creation_result["message"])
             retry = click.prompt("Do you want to try again? (yes/no)", default="yes")
             if retry.lower() != "yes":
                 raise click.ClickException("User creation aborted by the user.")
