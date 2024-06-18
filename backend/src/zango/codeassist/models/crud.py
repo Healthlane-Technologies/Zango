@@ -60,10 +60,11 @@ class CrudView(BaseModel):
     name: str
     page_title: str
     add_btn_title: str
-    workflow: WorkFlow | None
-    table: CrudTable
-    form: Form | None
+    workflow: WorkFlow = None
+    table: CrudTable = None
+    form: Form = None
     model: str
+    roles: List[str] = Field(default_factory=list)
 
     def apply(self, tenant, module, models):
         resp = requests.post(

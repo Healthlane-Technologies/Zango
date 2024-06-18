@@ -51,13 +51,32 @@ class Frame(BaseModel):
             user_role = UserRoleModel.objects.get(name=self.role)
             config = json.loads(self.model_dump_json())
             del config["role"]
-            requests.post(
-                get_package_url(None, "configure/orm/", "frame"),
-                data={
-                    "user_role_id": user_role.pk,
-                    "config": config,
-                },
+
+            resp = requests.get(
+                get_package_url(
+                    None,
+                    f'configure/orm/?filters={{"user_role_id": {user_role.pk} }}&first=true',
+                    "frame",
+                ),
                 headers={"Content-Type": "application/json"},
-            )
+            ).json()
+            if not resp["success"] or len(resp["response"]) == 0:
+                requests.post(
+                    get_package_url(None, "configure/orm/", "frame"),
+                    data={
+                        "user_role_id": user_role.pk,
+                        "config": config,
+                    },
+                    headers={"Content-Type": "application/json"},
+                )
+            else:
+                requests.put(
+                    get_package_url(None, "configure/orm/", "frame"),
+                    data={
+                        "user_role_id": user_role.pk,
+                        "config": config,
+                    },
+                    headers={"Content-Type": "application/json"},
+                )
         except Exception as e:
             print(e)

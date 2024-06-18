@@ -31,13 +31,14 @@ class StatusTransition(BaseModel):
 
 class WorkFlow(BaseModel):
     name: str
-    status_transitions: List[StatusTransition]
-    meta: WorkFlowMeta
+    status_transitions: List[StatusTransition] = []
     user_stories: List[str] = []
 
     def apply(self, tenant, module, workflow_model, models):
+        with open("workflow.json", "w") as f:
+            f.write(self.model_dump_json())
         resp = requests.post(
-            f"{URL}/generate-workflow",
+            f"{URL}/generate-workflow-v2",
             json={
                 "workflow": self.model_dump(),
                 "workflow_model": workflow_model,

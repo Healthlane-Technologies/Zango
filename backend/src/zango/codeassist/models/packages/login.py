@@ -39,14 +39,24 @@ class LoginConfig(BaseModel):
             user_role = UserRoleModel.objects.get(name=self.role)
             config = json.loads(self.model_dump_json())
             del config["role"]
-            resp = requests.post(
-                get_package_url(None, "configure/orm/login_config/", "login"),
-                data={
-                    "user_role_id": user_role.pk,
-                    "config": config,
-                },
+            resp = requests.get(
+                get_package_url(
+                    None,
+                    f'configure/orm/login_config/?filters={{"user_role_id": {user_role.pk} }}&first=true',
+                    "login",
+                ),
                 headers={"Content-Type": "application/json"},
-            )
-            print("The response is ", resp.json())
+            ).json()
+            if not resp["success"] or len(resp["response"]) == 0:
+                resp = requests.post(
+                    get_package_url(None, "configure/orm/login_config/", "login"),
+                    data={
+                        "user_role_id": user_role.pk,
+                        "config": config,
+                    },
+                    headers={"Content-Type": "application/json"},
+                )
         except Exception as e:
-            print(e)
+            import traceback
+
+            traceback.print_exc()

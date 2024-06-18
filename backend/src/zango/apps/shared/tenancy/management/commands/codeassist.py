@@ -19,16 +19,9 @@ class Command(BaseCommand):
         parser.add_argument(
             "--jsonspec", help="The schema name to be used.", required=True
         )
-        parser.add_argument(
-            "workspace",
-            help="The workspace name to be used.",
-        )
 
     def handle(self, *args, **options):
         try:
-            wks_obj = TenantModel.objects.get(name=options["workspace"])
-            connection.set_tenant(wks_obj)
-            ws = Workspace(wks_obj, None, True)
             if options["action"] == "create":
                 try:
                     spec = open(options["jsonspec"], "r").read()

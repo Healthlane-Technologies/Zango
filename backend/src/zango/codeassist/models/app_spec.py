@@ -204,20 +204,21 @@ class ApplicationSpec(BaseModel):
             menu = []
             for module in self.modules:
                 for view in module.views:
-                    resp = json.loads(
-                        requests.post(
-                            f"{URL}/generate-frame-menu",
-                            json={
-                                "url": f"{module.name}/",
-                                "view_name": view.name,
-                            },
-                        ).json()["content"]
-                    )
-                    menu.append(
-                        MenuItem(
-                            url=resp["url"],
-                            name=resp["title"],
+                    if frame.role in view.roles:
+                        resp = json.loads(
+                            requests.post(
+                                f"{URL}/generate-frame-menu",
+                                json={
+                                    "url": f"{module.name}/",
+                                    "view_name": view.name,
+                                },
+                            ).json()["content"]
                         )
-                    )
+                        menu.append(
+                            MenuItem(
+                                url=resp["url"],
+                                name=resp["title"],
+                            )
+                        )
             frame.menu = menu
         self.package_configs.apply()

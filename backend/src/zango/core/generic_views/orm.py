@@ -23,22 +23,28 @@ class GenericORMView(APIView):
         pass
 
     def get(self, request, *args, **kwargs):
-        filters = json.loads(request.GET.get("filters", {}))
-        qargs = json.loads(request.GET.get("qargs", {}))
-        queryset = self.model.objects.filter(**filters)
-        queryset = queryset.filter(**qargs)
-        distinct = request.GET.get("distinct", None)
-        first = request.GET.get("first", None)
-        order_by = request.GET.get("order_by", None)
-        if order_by:
-            queryset = queryset.order_by(order_by)
-        if distinct:
-            queryset = queryset.distinct()
-        if first:
-            queryset = queryset.first()
-        queryset = self.postprocess_get(queryset)
-        serializer = self.serializer(queryset, many=True)
-        return get_api_response(True, serializer.data, 200)
+        try:
+            filters = json.loads(request.GET.get("filters", "{}"))
+            qargs = json.loads(request.GET.get("qargs", "{}"))
+            queryset = self.model.objects.filter(**filters)
+            queryset = queryset.filter(**qargs)
+            distinct = request.GET.get("distinct", None)
+            first = request.GET.get("first", None)
+            order_by = request.GET.get("order_by", None)
+            if order_by:
+                queryset = queryset.order_by(order_by)
+            if distinct:
+                queryset = queryset.distinct()
+            if first:
+                queryset = queryset.first()
+            queryset = self.postprocess_get(queryset)
+            serializer = self.serializer(queryset, many=True)
+            return get_api_response(True, serializer.data, 200)
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return get_api_response(False, str(e), 400)
 
     def post(self, request, *args, **kwargs):
         try:

@@ -33,7 +33,6 @@ class Policies(BaseModel):
             os.path.join("workspaces", tenant, module, "policies.json"), "w"
         ) as f:
             f.write(f"{self.model_dump_json()}")
-        print("The tenant is", connection.tenant)
         ws = Workspace(connection.tenant, request=None, as_systemuser=True)
         ws.ready()
         ws.sync_policies()
