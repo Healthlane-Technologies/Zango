@@ -126,6 +126,9 @@ class AuditlogModelRegistry:
             if not issubclass(cls, Model):
                 raise TypeError("Supplied model is not a valid model.")
 
+            if cls in self._registry.keys():
+                return cls
+
             self._registry[cls] = {
                 "include_fields": include_fields,
                 "exclude_fields": exclude_fields,
