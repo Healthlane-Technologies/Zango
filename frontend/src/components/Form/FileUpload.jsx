@@ -8,7 +8,7 @@ export default function FileUpload({ formik, label, id, fileValue }) {
 	const [previewUrl, setPreviewUrl] = useState();
 
 	return (
-		<div data-cy="upload_File" className="flex flex-col gap-[4px]">
+		<div data-cy="file_upload" className="flex flex-col gap-[4px]">
 			<div className="flex w-full flex-col gap-4">
 				<div className="flex w-full flex-col gap-1">
 					<label className="font-lato text-form-xs font-semibold text-[#A3ABB1]">

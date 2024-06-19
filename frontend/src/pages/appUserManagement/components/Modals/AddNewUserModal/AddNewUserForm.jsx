@@ -116,7 +116,7 @@ const AddNewUserForm = ({ closeModal }) => {
 								onChange={formik.handleChange}
 								formik={formik}
 							/>
-							<div className="flex flex-col gap-[4px]">
+							<div data-cy="numeric_field" className="flex flex-col gap-[4px]">
 								<label
 									htmlFor="mobile"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"

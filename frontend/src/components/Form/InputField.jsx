@@ -3,7 +3,7 @@ import { useField } from 'formik';
 function InputField({ label, content, type = 'text', id, ...props }) {
 	const [field, meta] = useField({ ...props });
 	return (
-		<div className="flex flex-col gap-[4px]">
+		<div data-cy="text_field" className="flex flex-col gap-[4px]">
 			<label
 				htmlFor={id}
 				className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
