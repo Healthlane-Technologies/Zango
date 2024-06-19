@@ -164,11 +164,18 @@ class Package(BaseModel):
 class ApplicationSpec(BaseModel):
     modules: List[Module]
     app_name: str
+    domain: str
     package_configs: PackageConfigs | None = PackageConfigs()
     roles: List[Role] = Field(default_factory=list)
     packages: List[Package] = Field(default_factory=list)
 
     def apply(self):
+        self.packages = [
+            Package(name="frame", version="0.5.1"),
+            Package(name="login", version="0.5.1"),
+            Package(name="workflow", version="0.3.0"),
+            Package(name="crud", version="0.3.0"),
+        ]
         for package in self.packages:
             package.apply(self.app_name)
         if not os.path.exists(

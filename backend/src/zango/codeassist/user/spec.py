@@ -17,9 +17,6 @@ from zango.codeassist.models.crud import (
 )
 from zango.codeassist.models.workflow import (
     WorkFlow as WorkFlowCodeSpec,
-    WorkFlowMeta,
-    WorkFlowStatus,
-    StatusTransition,
 )
 from zango.codeassist.models.forms import Form as FormCodeSpec, FormField, FormMeta
 from zango.codeassist.models.detail import (
@@ -29,25 +26,18 @@ from zango.codeassist.models.detail import (
 )
 from zango.codeassist.models.packages.frame import (
     Frame as FrameCodeSpec,
-    MenuItem,
 )
 from zango.codeassist.models.models import (
     Model as ModelCodeSpec,
     ModelField as ModelFieldCodeSpec,
 )
 from zango.codeassist.models.packages.login import LoginConfig
-from zango.apps.shared.tenancy.models import TenantModel
+from zango.apps.shared.tenancy.models import TenantModel, Domain
 
 
 class ModelField(BaseModel):
     name: str
     type: str
-
-
-# class Model(BaseModel):
-#     name: str
-#     fields: List[ModelField]
-#     user_stories: List[str] = []
 
 
 class WorkFlow(BaseModel):
@@ -216,26 +206,40 @@ class Package(BaseModel):
 class AppSpec(BaseModel):
     modules: List[Module]
     app_name: str
+    domain: str
     roles: List[str] = Field(default_factory=list)
 
     def apply(self):
-        # app, task_id = TenantModel.create(
-        #     name=self.app_name,
-        #     schema_name=self.app_name,
-        #     description="",
-        #     tenant_type="app",
-        #     status="staged",
-        # )
+        try:
+            TenantModel.objects.get(name=self.app_name)
+            print("App already exists, codeassist will not be applied")
+            return
+        except TenantModel.DoesNotExist:
+            pass
+        app, task_id = TenantModel.create(
+            name=self.app_name,
+            schema_name=self.app_name,
+            description="",
+            tenant_type="app",
+            status="staged",
+        )
 
-        # while app.status == "staged":
-        #     print("Waiting for app to start")
-        #     sleep(1)
-        #     if app.status == "deployed":
-        #         break
+        while app.status == "staged":
+            print("Waiting for app to start")
+            sleep(1)
+            app = TenantModel.objects.get(id=app.id)
+            if app.status == "deployed":
+                try:
+                    domain = Domain.objects.create(domain=self.domain, tenant=app)
+                except Exception as e:
+                    print(e)
+                print("App started successfully, proceeding with codeassist")
+                break
 
         application_spec = ApplicationSpec(
             modules=[module.apply() for module in self.modules],
             app_name=self.app_name,
+            domain=self.domain,
             roles=[
                 RoleCodeSpec(
                     name=role,
