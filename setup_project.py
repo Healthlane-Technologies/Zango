@@ -5,7 +5,6 @@ import traceback
 import shutil
 import signal
 import subprocess
-import pwd
 
 
 def load_necessary_files(project_dir, project_name, without_db):
@@ -28,14 +27,6 @@ def load_necessary_files(project_dir, project_name, without_db):
 
 
 def write_env_file(project_dir, args):
-    # Get the current process' real user id (UID)
-    current_uid = os.getuid()
-
-    # Get the current process' real group id (GID)
-    current_gid = os.getgid()
-
-    # Retrieve the username associated with the current UID
-    current_username = pwd.getpwuid(current_uid).pw_name
     with open(f"{project_dir}/.env", "w") as f:
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
