@@ -230,9 +230,6 @@ def start_project(
 
      # Prompting default platform user details
     while True:
-        platform_username = None
-        platform_user_password = None
-
         if not platform_username:
             click.echo("Please enter platform user email")
             platform_username = click.prompt("Email")
@@ -247,6 +244,8 @@ def start_project(
         if user_creation_result["success"]:
             break
         else:
+            platform_username = None
+            platform_user_password = None
             click.echo(user_creation_result["message"])
             retry = click.prompt("Do you want to try again? (yes/no)", default="yes")
             if retry.lower() != "yes":
