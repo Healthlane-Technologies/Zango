@@ -21,7 +21,15 @@ class Command(MigrateSchemasCommand):
         parser.add_argument("--package", help="Run the migrations for the package")
 
     def handle(self, *args, **options):
-        tenant_obj = TenantModel.objects.get(name=options["workspace"])
+        while True:
+            try:
+                tenant_obj = TenantModel.objects.get(name=workspace)
+                break  # Exit the loop if a valid workspace is found
+            except TenantModel.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f"The app name '{workspace}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."))
+                workspace = input('Please enter a valid workspace: ')
+                options['workspace'] = workspace
+        
         is_test_mode = options["test"]
         if is_test_mode:
             connection.settings_dict["NAME"] = (
