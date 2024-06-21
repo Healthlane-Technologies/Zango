@@ -10,8 +10,6 @@ from .forms import Form
 from .workflow import WorkFlow
 from .detail import Detail
 
-from zango.codeassist import URL
-
 
 class TableField(FieldBase):
     pass
@@ -43,7 +41,7 @@ class CrudTable(BaseModel):
 
     def apply(self, tenant, module, models):
         resp = requests.post(
-            f"{URL}/generate-crud-table",
+            f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-crud-table",
             json={
                 "table": json.loads(self.model_dump_json()),
                 "models": [json.loads(model.model_dump_json()) for model in models],
@@ -68,7 +66,7 @@ class CrudView(BaseModel):
 
     def apply(self, tenant, module, models):
         resp = requests.post(
-            f"{URL}/generate-crud-view",
+            f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-crud-view",
             json=self.model_dump(),
         )
         with open(os.path.join("workspaces", tenant, module, "views.py"), "a+") as f:

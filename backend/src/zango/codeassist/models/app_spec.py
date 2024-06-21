@@ -12,7 +12,6 @@ from .packages.frame import Frame
 from .packages.login import LoginConfig, GenericLoginConfig
 from .packages.frame import Frame
 
-from zango.codeassist import URL
 from zango.core.package_utils import install_package
 from zango.codeassist.models.packages.frame import MenuItem
 
@@ -111,7 +110,7 @@ class Module(BaseModule):
         )
         policies.apply(tenant, self.name)
         resp = requests.post(
-            f"{URL}/generate-urls",
+            f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-urls",
             json=json.dumps({"views": [v.name for v in self.views]}),
             headers={"Content-Type": "application/json"},
         )
@@ -214,7 +213,7 @@ class ApplicationSpec(BaseModel):
                     if frame.role in view.roles:
                         resp = json.loads(
                             requests.post(
-                                f"{URL}/generate-frame-menu",
+                                f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-frame-menu",
                                 json={
                                     "url": f"{module.name}/",
                                     "view_name": view.name,

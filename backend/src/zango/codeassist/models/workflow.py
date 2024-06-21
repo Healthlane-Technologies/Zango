@@ -1,12 +1,8 @@
 import os
-import json
 import requests
 
 from pydantic import BaseModel, Field
 from typing import List, Dict
-from .forms import Form
-
-from zango.codeassist import URL
 
 
 class WorkFlowStatus(BaseModel):
@@ -38,7 +34,7 @@ class WorkFlow(BaseModel):
         with open("workflow.json", "w") as f:
             f.write(self.model_dump_json())
         resp = requests.post(
-            f"{URL}/generate-workflow-v2",
+            f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-workflow-v2",
             json={
                 "workflow": self.model_dump(),
                 "workflow_model": workflow_model,

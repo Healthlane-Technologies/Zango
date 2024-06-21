@@ -3,7 +3,6 @@ import requests
 from typing import List
 from pydantic import BaseModel
 
-from zango.codeassist import URL
 from zango.core.utils import get_package_url
 
 

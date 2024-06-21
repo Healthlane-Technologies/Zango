@@ -6,8 +6,6 @@ from typing import List
 
 from .base_fields import FieldBase
 
-from zango.codeassist import URL
-
 
 class FormField(FieldBase):
     pass
@@ -27,7 +25,7 @@ class Form(BaseModel):
 
     def apply(self, tenant, module, models):
         resp = requests.post(
-            f"{URL}/generate-form",
+            f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-form",
             json={
                 "form": self.model_dump(),
                 "models": [model.model_dump() for model in models],
