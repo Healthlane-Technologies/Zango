@@ -23,7 +23,7 @@ class Command(MigrateSchemasCommand):
     def handle(self, *args, **options):
         while True:
             try:
-                tenant_obj = TenantModel.objects.get(name=workspace)
+                tenant_obj = TenantModel.objects.get(name=options["workspace"])
                 break  # Exit the loop if a valid workspace is found
             except TenantModel.DoesNotExist:
                 self.stdout.write(self.style.ERROR(f"The app name '{workspace}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."))
