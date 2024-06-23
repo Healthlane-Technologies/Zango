@@ -42,7 +42,7 @@ class Command(MakeMigrationsCommand):
             help="Run makemigration on package models",
         )
 
-    def handle(self, *app_labels, **options):
+    def handle(self, *args, **options):
         is_test_mode = options["test"]
         tenant = options["workspace"]
         while True:
@@ -52,6 +52,7 @@ class Command(MakeMigrationsCommand):
             except TenantModel.DoesNotExist:
                 self.stdout.write(self.style.ERROR(f"The app name '{tenant}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."))
                 tenant = input('Please enter a valid workspace: ')
+                options["workspace"]
 
 
         connection.set_tenant(tenant_obj)
