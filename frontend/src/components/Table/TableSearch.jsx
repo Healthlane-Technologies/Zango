@@ -33,6 +33,7 @@ function TableSearch({
 				<div className="flex grow items-center gap-[8px]">
 					<TableSearchIcon />
 					<input
+						data-cy="table_search_field"
 						ref={searchRef}
 						id="searchValue"
 						name="searchValue"

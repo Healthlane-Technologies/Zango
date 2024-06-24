@@ -41,6 +41,7 @@ export default function RowMenu({ rowData }) {
 	return (
 		<Menu as="div" className="relative flex">
 			<Menu.Button
+				data-cy="three_dots_menu"
 				className="flex w-full justify-center focus:outline-none"
 				ref={(ref) => setReferenceElement(ref)}
 			>
@@ -58,6 +59,7 @@ export default function RowMenu({ rowData }) {
 						<Menu.Item>
 							{({ active }) => (
 								<button
+									data-cy="edit_user_role_button"
 									type="button"
 									className="flex w-full"
 									onClick={handleEditUserDetails}
@@ -81,6 +83,7 @@ export default function RowMenu({ rowData }) {
 							<Menu.Item>
 								{({ active }) => (
 									<button
+										data-cy="deactivate_user_role_button"
 										type="button"
 										className="flex  w-full"
 										onClick={handleDeactivateUser}
@@ -104,6 +107,7 @@ export default function RowMenu({ rowData }) {
 							<Menu.Item>
 								{({ active }) => (
 									<button
+										data-cy="activate_user_role_button"
 										type="button"
 										className="flex  w-full"
 										onClick={handleActivateUser}

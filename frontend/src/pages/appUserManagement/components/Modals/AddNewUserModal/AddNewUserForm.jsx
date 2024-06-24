@@ -137,7 +137,7 @@ const AddNewUserForm = ({ closeModal }) => {
 									/>
 								</div>
 								{formik.touched.mobile && formik.errors.mobile ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
+									<div data-cy="error_message" className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}
 									</div>
 								) : null}

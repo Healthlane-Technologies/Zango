@@ -200,7 +200,7 @@ const MultiSelectField = ({
 			</div>
 
 			{meta.touched && meta.error ? (
-				<div className="font-lato text-[12px] text-[#cc3300]">{meta.error}</div>
+				<div data-cy="error_message" className="font-lato text-[12px] text-[#cc3300]">{meta.error}</div>
 			) : null}
 		</div>
 	);
