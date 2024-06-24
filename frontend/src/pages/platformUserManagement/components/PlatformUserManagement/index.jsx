@@ -58,8 +58,17 @@ export default function PlatformUserManagement() {
 	useEffect(() => {
 		let columnFilter = platformUserManagementTableData?.columns
 			? platformUserManagementTableData?.columns
+					?.filter(({ id, value }) => value)
 					?.map(({ id, value }) => {
-						return `&search_${id}=${value}`;
+						if (
+							typeof value === 'object' &&
+							!Array.isArray(value) &&
+							isNaN(parseInt(value))
+						) {
+							return `&search_${id}=${JSON.stringify(value)}`;
+						} else {
+							return `&search_${id}=${value}`;
+						}
 					})
 					.join('')
 			: '';

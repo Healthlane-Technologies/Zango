@@ -27,7 +27,11 @@ const EditUserDetailsForm = ({ closeModal }) => {
 	let initialValues = {
 		name: appUserManagementFormData?.name ?? '',
 		email: appUserManagementFormData?.email ?? '',
-		mobile: appUserManagementFormData?.mobile?.slice(4) ?? '',
+		mobile: appUserManagementFormData?.mobile
+			? appUserManagementFormData?.mobile.indexOf('+91') > -1
+				? appUserManagementFormData?.mobile?.slice(3) ?? ''
+				: appUserManagementFormData?.mobile
+			: '',
 		roles: appUserManagementFormData?.roles?.map((eachApp) => eachApp.id) ?? [],
 	};
 

@@ -135,7 +135,7 @@ const AddThemeForm = ({ closeModal }) => {
 								</h4>
 								<SelectField
 									key="config.typography.font_family"
-									label="Time Zone"
+									label="Font"
 									name="config.typography.font_family"
 									id="config.typography.font_family"
 									placeholder="Select font family"

@@ -6,7 +6,7 @@ function EachDescriptionRow({ label, content }) {
 					{label}
 				</span>
 			</td>
-			<td className="w-100 pl-[20px]">{content}</td>
+			<td className="w-full pl-[20px]">{content}</td>
 		</tr>
 	);
 }

@@ -68,10 +68,10 @@ const SelectField = ({
 						>
 							<span
 								className={`block w-[80%] truncate text-left ${
-									selected.id ? '' : 'text-[#9A9A9A]'
+									selected?.id ? '' : 'text-[#9A9A9A]'
 								}`}
 							>
-								{selected.label}
+								{selected?.label}
 							</span>
 							<span className="pointer-events-none absolute inset-y-0 right-[16px] flex items-center">
 								<FormSelectDropdownIcon aria-hidden="true" />

@@ -80,7 +80,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 						className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto"
 						onSubmit={formik.handleSubmit}
 					>
-						<div className="flex grow flex-col gap-[16px] pr-[64px]">
+						<div className="flex grow flex-col gap-[16px] pr-[32px]">
 							<InputField
 								key="name"
 								label="App Name"

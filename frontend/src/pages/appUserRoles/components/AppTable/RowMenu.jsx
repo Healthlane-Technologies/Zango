@@ -53,53 +53,55 @@ export default function RowMenu({ rowData }) {
 				style={styles['popper']}
 				{...attributes['popper']}
 			>
-				<Menu.Items className="absolute top-[30px] right-0 w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+				<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 					<div className="p-[4px]">
-						<Menu.Item>
-							{({ active }) => (
-								<button
-									type="button"
-									className="flex w-full"
-									onClick={handleEditUserDetails}
-								>
-									<div
-										className={`${
-											active ? 'bg-[#F0F3F4]' : ''
-										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
-									>
-										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											Edit User Role
-										</span>
-										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											user role name, policy
-										</span>
-									</div>
-								</button>
-							)}
-						</Menu.Item>
 						{rowData?.is_active ? (
-							<Menu.Item>
-								{({ active }) => (
-									<button
-										type="button"
-										className="flex  w-full"
-										onClick={handleDeactivateUser}
-									>
-										<div
-											className={`${
-												active ? 'bg-[#F0F3F4]' : ''
-											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+							<>
+								<Menu.Item>
+									{({ active }) => (
+										<button
+											type="button"
+											className="flex w-full"
+											onClick={handleEditUserDetails}
 										>
-											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
-												Deactivate User Role
-											</span>
-											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-												this will not delete the user role but only disable it
-											</span>
-										</div>
-									</button>
-								)}
-							</Menu.Item>
+											<div
+												className={`${
+													active ? 'bg-[#F0F3F4]' : ''
+												} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+											>
+												<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+													Edit User Role
+												</span>
+												<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+													user role name, policy
+												</span>
+											</div>
+										</button>
+									)}
+								</Menu.Item>
+								<Menu.Item>
+									{({ active }) => (
+										<button
+											type="button"
+											className="flex  w-full"
+											onClick={handleDeactivateUser}
+										>
+											<div
+												className={`${
+													active ? 'bg-[#F0F3F4]' : ''
+												} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+											>
+												<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
+													Deactivate User Role
+												</span>
+												<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+													this will not delete the user role but only disable it
+												</span>
+											</div>
+										</button>
+									)}
+								</Menu.Item>
+							</>
 						) : (
 							<Menu.Item>
 								{({ active }) => (
