@@ -1,20 +1,19 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
 	selectAppTaskManagementData,
-	selectRerenderPage,
-	setAppTaskManagementData,
 	selectAppTaskManagementTableData,
 	selectIsAppTaskManagementDataEmpty,
+	selectRerenderPage,
+	setAppTaskManagementData,
 } from '../../slice';
-import RemoveAllPoliciesModal from '../Models/RemoveAllPoliciesModal';
-import UpdatePolicyModal from '../Models/UpdatePolicyModal';
+import AppTable from '../AppTable';
+import RemoveAllPoliciesModal from '../Modals/RemoveAllPoliciesModal';
+import UpdateTaskModal from '../Modals/UpdateTaskModal';
 import SyncTask from '../SyncTask';
-import Table from '../Table';
 
 export default function AppTaskManagement() {
 	let { appId } = useParams();
@@ -38,8 +37,17 @@ export default function AppTaskManagement() {
 	useEffect(() => {
 		let columnFilter = taskManagementRolesTableData?.columns
 			? taskManagementRolesTableData?.columns
+					?.filter(({ id, value }) => value)
 					?.map(({ id, value }) => {
-						return `&search_${id}=${value}`;
+						if (
+							typeof value === 'object' &&
+							!Array.isArray(value) &&
+							isNaN(parseInt(value))
+						) {
+							return `&search_${id}=${JSON.stringify(value)}`;
+						} else {
+							return `&search_${id}=${value}`;
+						}
 					})
 					.join('')
 			: '';
@@ -62,7 +70,11 @@ export default function AppTaskManagement() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, taskManagementRolesTableData]);
+
+	if (!appTaskManagementData) {
+		return null;
+	}
 
 	return (
 		<>
@@ -77,20 +89,17 @@ export default function AppTaskManagement() {
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
 									set-up task management(s)
 								</h3>
-								{/* <p className="font-source-sans-pro text-[18px] font-semibold leading-[24px] text-[#212429]">
-									description to be added
-								</p> */}
 							</div>
 							<SyncTask theme="dark" />
 						</div>
 					) : appTaskManagementData ? (
 						<div className="flex grow flex-col overflow-x-auto">
-							<Table tableData={appTaskManagementData?.tasks} />
+							<AppTable tableData={appTaskManagementData?.tasks} />
 						</div>
 					) : null}
 				</div>
 			</div>
-			<UpdatePolicyModal />
+			<UpdateTaskModal />
 			<RemoveAllPoliciesModal />
 		</>
 	);

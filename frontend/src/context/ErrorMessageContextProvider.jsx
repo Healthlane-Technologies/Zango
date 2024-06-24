@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState } from 'react';
-import ErrorMessageModal from '../components/ErrorMessageModal';
+import ErrorMessageModal from '../components/Modal/ErrorMessageModal';
 
 export const ErrorMessageContext = createContext({});
 

@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as TableRowKebabIcon } from '../../../../assets/images/svg/table-row-kebab-icon.svg';
 import useApi from '../../../../hooks/useApi';
-import { transformToFormData } from '../../../../utils/helper';
+import { transformToFormData } from '../../../../utils/form';
 import { openIsEditThemeModalOpen, toggleRerenderPage } from '../../slice';
 
 export default function EachThemeMenu({ data }) {
@@ -70,7 +70,7 @@ export default function EachThemeMenu({ data }) {
 				style={styles['popper']}
 				{...attributes['popper']}
 			>
-				<Menu.Items className="absolute top-[30px] right-0 w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+				<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 					<div className="p-[4px]">
 						<Menu.Item>
 							{({ active }) => (
@@ -107,12 +107,12 @@ export default function EachThemeMenu({ data }) {
 										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
 									>
 										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											{data?.is_active ? 'Deactive Theme' : 'Active Theme'}
+											{data?.is_active ? 'Deactivate Theme' : 'Activate Theme'}
 										</span>
 										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
 											{data?.is_active
-												? 'deactive this theme'
-												: 'active this theme'}
+												? 'deactivate this theme'
+												: 'activate this theme'}
 										</span>
 									</div>
 								</button>

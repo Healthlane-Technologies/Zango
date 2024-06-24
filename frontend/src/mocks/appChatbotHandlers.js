@@ -175,7 +175,6 @@ export const appChatbotHandlers = [
 				);
 			} else if (postData['action'] === 'restart_conversation') {
 				let conversationId = postData['conversation_id'];
-				// sortAndTransformArray(mockData, conversationId);
 				return res(
 					ctx.delay(500),
 					ctx.status(500),

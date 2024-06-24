@@ -47,7 +47,7 @@ const SelectField = ({
 		if (optionsData && value) {
 			setSelected(optionsData.find((eachData) => eachData?.id === value));
 		}
-	}, [value]);
+	}, [value, optionsData]);
 
 	return (
 		<div className="flex w-full flex-col gap-[4px]">
@@ -68,10 +68,10 @@ const SelectField = ({
 						>
 							<span
 								className={`block w-[80%] truncate text-left ${
-									selected.id ? '' : 'text-[#9A9A9A]'
+									selected?.id ? '' : 'text-[#9A9A9A]'
 								}`}
 							>
-								{selected.label}
+								{selected?.label}
 							</span>
 							<span className="pointer-events-none absolute inset-y-0 right-[16px] flex items-center">
 								<FormSelectDropdownIcon aria-hidden="true" />
@@ -99,7 +99,7 @@ const SelectField = ({
 											className="block w-full border border-gray-300 bg-gray-50 px-2 py-2 pr-12 shadow-sm focus:outline-0 sm:text-sm"
 										/>
 										{searchTerm && (
-											<div className="absolute inset-y-0 right-[4px] flex items-center py-2 px-2 text-[#D4D4D4]">
+											<div className="absolute inset-y-0 right-[4px] flex items-center px-2 py-2 text-[#D4D4D4]">
 												<FormSelectSearchCloseIcon
 													className="h-[10px] w-[10px] cursor-pointer text-black"
 													onClick={() => setSearchTerm('')}

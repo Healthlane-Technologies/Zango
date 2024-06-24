@@ -4,9 +4,9 @@ module.exports = {
 	theme: {
 		extend: {
 			fontFamily: {
+				lato: ['"Lato"', 'sans-serif'],
 				'open-sans': ['"Open Sans"', 'sans-serif'],
 				'source-sans-pro': ['"Source Sans Pro"', 'sans-serif'],
-				lato: ['"Lato"', 'sans-serif'],
 			},
 			fontSize: {
 				'portal-sm': [
@@ -67,15 +67,15 @@ module.exports = {
 			},
 			colors: {
 				primary: '#5048ED',
-				'primary-light': '#bcb9f8',
 				secondary: '#E1D6AE',
+				error: '#FBE0DD',
+				'primary-light': '#bcb9f8',
 				'danger-red': '#AA2113',
 				'dark-gray': '#696969',
 				'medium-gray': '#9A9A9A',
 				'light-gray': '#D4D4D4',
 				'off-white': '#f7f7f7',
 				'on-hold': '#FFEFD4',
-				error: '#FBE0DD',
 				'error-text': '#55100A',
 			},
 			spacing: {
@@ -90,16 +90,16 @@ module.exports = {
 			boxShadow: {
 				dropdown: '0px 0px 12px rgba(0, 0, 0, 0.16)',
 				navbar: '0px 2px 8px rgba(84, 84, 84, 0.04)',
+				top: '0px -8px 20px rgba(40, 58, 70, 0.08);',
+				eachApp: '0px 4px 20px 0px rgba(0, 0, 0, 0.12)',
+				appSort: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
+				notification: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 				'portal-card': '0px 0px 12px rgba(0, 0, 0, 0.08)',
 				'primary-card': '0px 0px 12px rgba(0, 0, 0, 0.08)',
 				'infusion-card': '0px 0px 12px rgba(0, 0, 0, 0.08)',
 				'primary-menu': ' 0px 0px 12px rgba(0, 0, 0, 0.12)',
-				top: '0px -8px 20px rgba(40, 58, 70, 0.08);',
-				eachApp: '0px 4px 20px 0px rgba(0, 0, 0, 0.12)',
-				appSort: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 				'table-row': '0px 2px 8px 0px rgba(0, 0, 0, 0.16)',
 				'table-menu': '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
-				notification: '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 				'form-select': '0px 4px 24px 0px rgba(0, 0, 0, 0.16)',
 			},
 			height: {
@@ -107,8 +107,8 @@ module.exports = {
 			},
 			animation: {
 				enter: 'enter 200ms ease-out',
-				'slide-in': 'slide-in 1.2s cubic-bezier(.41,.73,.51,1.02)',
 				leave: 'leave 150ms ease-in forwards',
+				'slide-in': 'slide-in 1.2s cubic-bezier(.41,.73,.51,1.02)',
 			},
 			keyframes: {
 				enter: {

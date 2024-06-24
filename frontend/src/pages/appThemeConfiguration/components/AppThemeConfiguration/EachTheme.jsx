@@ -1,6 +1,6 @@
-import EachThemeMenu from './EachThemeMenu';
-import WebFont from 'webfontloader';
 import { useEffect } from 'react';
+import WebFont from 'webfontloader';
+import EachThemeMenu from './EachThemeMenu';
 
 export default function EachTheme({ data }) {
 	let { id, name, is_active, config } = data;
@@ -15,7 +15,7 @@ export default function EachTheme({ data }) {
 
 	return (
 		<div className="relative flex flex-col rounded-[8px] border border-[#DDE2E5] bg-[#FFFFFF]">
-			<div className="flex flex-col gap-[8px] px-[16px] pt-[24px] pb-[16px]">
+			<div className="flex flex-col gap-[8px] px-[16px] pb-[16px] pt-[24px]">
 				<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 					{name}
 				</h4>
@@ -79,7 +79,7 @@ export default function EachTheme({ data }) {
 					</button>
 				</div>
 			</div>
-			<div className="absolute top-[12px] right-[12px]">
+			<div className="absolute right-[12px] top-[12px]">
 				<EachThemeMenu data={data} />
 			</div>
 		</div>
