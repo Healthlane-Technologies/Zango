@@ -14,11 +14,11 @@ function TableBody({ table, RowMenu }) {
 						</td>
 					))}
 					<td key="extra-cell" className="w-full">
-						<div  className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
+						<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 							<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]"></span>
 						</div>
 					</td>
-					<td	 
+					<td
 						key="extra-cell2"
 						className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] px-[20px] py-[14px] group-hover:hidden"
 					></td>

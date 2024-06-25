@@ -107,12 +107,12 @@ export default function EachThemeMenu({ data }) {
 										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
 									>
 										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-											{data?.is_active ? 'Deactive Theme' : 'Active Theme'}
+											{data?.is_active ? 'Deactivate Theme' : 'Activate Theme'}
 										</span>
 										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
 											{data?.is_active
-												? 'deactive this theme'
-												: 'active this theme'}
+												? 'deactivate this theme'
+												: 'activate this theme'}
 										</span>
 									</div>
 								</button>

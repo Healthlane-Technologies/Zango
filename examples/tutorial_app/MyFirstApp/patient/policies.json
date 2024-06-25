@@ -1,0 +1,16 @@
+{
+    "policies": [
+          {
+                "name": "PatientCrudViewAccess",
+                "description": "Access to the Patient CRUD View",
+                "statement": {
+                   "permissions": [
+                      {
+                            "name": "patient.views.PatientCrudView",
+                            "type": "view"
+                      }
+                   ]
+                }
+          }
+    ]
+}

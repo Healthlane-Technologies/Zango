@@ -228,19 +228,27 @@ def start_project(
     # Creating Public Tenant
     create_public_tenant(platform_domain_url=platform_domain_url)
 
-    # Prompting default platform user details
-    if not platform_username:
-        click.echo("Please enter platform user email")
-        platform_username = click.prompt("Email")
-    if not platform_user_password:
-        platform_user_password = click.prompt(
-            "Password", hide_input=True, confirmation_prompt=True
-        )
+     # Prompting default platform user details
+    while True:
+        if not platform_username:
+            click.echo("Please enter platform user email")
+            platform_username = click.prompt("Email")
+        if not platform_user_password:
+            platform_user_password = click.prompt(
+                "Password", hide_input=True, confirmation_prompt=True
+            )
 
-    user_creation_result = create_platform_user(
-        platform_username, platform_user_password
-    )
-    if not user_creation_result["success"]:
-        click.echo("User Creation Failed!")
+        user_creation_result = create_platform_user(
+            platform_username, platform_user_password
+        )
+        if user_creation_result["success"]:
+            break
+        else:
+            platform_username = None
+            platform_user_password = None
+            click.echo(user_creation_result["message"])
+            retry = click.prompt("Do you want to try again? (yes/no)", default="yes")
+            if retry.lower() != "yes":
+                raise click.ClickException("User creation aborted by the user.")
 
     click.echo(user_creation_result["message"])

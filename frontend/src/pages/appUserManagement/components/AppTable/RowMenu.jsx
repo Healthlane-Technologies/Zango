@@ -98,7 +98,7 @@ export default function RowMenu({ rowData }) {
 											Edit User Details
 										</span>
 										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											name, role access, policies.
+											name, role access.
 										</span>
 									</div>
 								</button>

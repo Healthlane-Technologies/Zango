@@ -171,8 +171,8 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
                             app_user.is_active = True
 
                         if not force_password_reset:
-                            old_password_obj = OldPasswords.objects.create(user=user)
-                            old_password_obj.setPasswords(user.password)
+                            old_password_obj = OldPasswords.objects.create(user=app_user)
+                            old_password_obj.setPasswords(app_user.password)
                             old_password_obj.save()
 
                         if app_objects:

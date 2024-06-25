@@ -24,6 +24,7 @@ const EditThemeForm = ({ closeModal }) => {
 		selectAppThemeConfigurationFormData
 	);
 	const triggerApi = useApi();
+	console.log('appThemeConfigurationFormData', appThemeConfigurationFormData);
 	let initialValues = {
 		name: appThemeConfigurationFormData?.name ?? '',
 		config: {
@@ -36,7 +37,9 @@ const EditThemeForm = ({ closeModal }) => {
 					appThemeConfigurationFormData?.config?.color?.background ?? '#ffffff',
 			},
 			typography: {
-				font_family: 'Open Sans',
+				font_family:
+					appThemeConfigurationFormData?.config?.typography?.font_family ??
+					'Open Sans',
 			},
 			button: {
 				border_radius:
@@ -150,7 +153,7 @@ const EditThemeForm = ({ closeModal }) => {
 								</h4>
 								<SelectField
 									key="config.typography.font_family"
-									label="Time Zone"
+									label="Font"
 									name="config.typography.font_family"
 									id="config.typography.font_family"
 									placeholder="Select font family"
