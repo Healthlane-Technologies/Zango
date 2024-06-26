@@ -6,10 +6,8 @@
 
 <hr>
 
-### **✨ Build microservices as tenants on a Django monolith. Avoid the infra & operational overheads. Scale effortlessly. ✨**
-
-<a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a>
-
+### **✨ Django framework to build enterprise-ready business applications. Rapid development. Multiple applications as independently deployable units on a single monolith ✨** 
+<a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a> 
 <hr>  
 <p align="center">
   <a href="#">
@@ -25,45 +23,58 @@
   <a href="https://www.zango.dev/docs/category/getting-started" target="_blank">Getting Started </a>|
   <a href="https://zango.dev/docs" target="_blank">Docs</a> |
   <a href="https://discord.com/invite/WHvVjU23e7" target="_blank">Discord</a>
-</p>
+</p> 
 
-**Zango** is a web application development framework built upon Django, designed to host multiple apps or microservices as tenants on a single monolith under the hood.
 
-- Leverage the stengths of Django, an already proven and battle tested web framework
+
+**Zango** is a web application development framework built upon Django, designed to enable rapid development of enterprise-ready business applications. 
+
+
+- Leverage the strengths of Django, an already proven and battle-tested web framework
 - Make available the basics of business web apps/ microservices as part of the framework
 - Host multiple apps or microservices on a single monolith under the hood.
 - Security & Compliances are built in.
-- Suite of essential packages to serve as the building blocks of Apps
-- Use case packages to build the industry specific use cases
+- Suite of essential packages to serve as the building blocks of apps
+- Use case packages to build the industry-specific use cases
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/Zango/)
 
-#### App Panel - Central hub to manage all your apps/ microservices
 
-Perform tasks such as configuring permissions, managing user roles, and much more.
+#### App Panel - Central hub to manage all your apps/ microservices
+Perform tasks such as configuring permissions, managing user roles, and much more. 
 
 ![Zango App Panel](https://github.com/Healthlane-Technologies/Zango/assets/22682748/69f42dec-4ca1-4d19-974f-e83c2ddb7324)
 
-#### Drastically reduce your infrastructural and operational overheads, hosting multiple apps/ microservices on a single deployment:
+
+#### Drastically reduce your infrastructural and operational overheads by hosting multiple apps/ microservices on a single deployment:
 
 Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
 ![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
 
-#### 🚀 Getting Started:
 
+#### Staying ahead
+
+Star Zango on GitHub and be instantly notified of new releases.
+
+![star us](https://github.com/Healthlane-Technologies/Zango/assets/12683350/15b97240-c381-472b-a112-7c701a29ccda)
+
+
+
+
+####  🚀 Getting Started:
 - [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
-- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker)
+- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
 - [Manual](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual)
 
+
 #### 📦 Free Packages
-
-A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.
-
+A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
 - [Basic Auth](https://www.zango.dev/docs/basic-auth/introduction)
 - [Frames](https://www.zango.dev/docs/frame/introduction)
 - [CRUD](https://www.zango.dev/docs/crud/introduction) 
 - [Workflow](https://www.zango.dev/docs/workflow/overview)
+
 
 #### 🌟 Get Involved and Make a Difference
 
@@ -76,5 +87,7 @@ Join our community and help build **Zango**. Here's how you can get involved:
 - **Contribute Code:** Dive into open issues and send pull requests to help us squash bugs and implement exciting enhancements. 🛠️
 
 Together, let's build something incredible! ✨🚀
+
+
 
 #### Official Documentation: https://zango.dev/docs
