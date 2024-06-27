@@ -34,3 +34,4 @@ python3-saml==1.16.0
 django-ipware==7.0.1
 django-decorator-include==3.0
 setuptools==70.1.1
+django-axes==6.4.0
