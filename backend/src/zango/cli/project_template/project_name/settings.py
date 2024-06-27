@@ -1,6 +1,7 @@
 import os
-from pathlib import Path
 import environ
+from pathlib import Path
+from datetime import timedelta
 
 from zango.config.settings.base import *
 
@@ -138,3 +139,15 @@ if DEBUG or ENV == "dev":
 # INTERNAL_IPS can contain a list of IP addresses or CIDR blocks that are considered internal.
 # Both individual IP addresses and CIDR notation (e.g., '192.168.1.1' or '192.168.1.0/24') can be provided.
 INTERNAL_IPS = env("INTERNAL_IPS")
+
+# Axes Lockout
+env = environ.Env(
+    AXES_BEHIND_REVERSE_PROXY=(bool, False),
+    AXES_COOLOFF_TIME=(int, 900),
+    AXES_LOCK_OUT_AT_FAILURE=(bool, True),
+    AXES_FAILURE_LIMIT=(int, 6),
+)
+AXES_BEHIND_REVERSE_PROXY = env("AXES_BEHIND_REVERSE_PROXY")
+AXES_FAILURE_LIMIT = env("AXES_FAILURE_LIMIT")
+AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
+AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))
