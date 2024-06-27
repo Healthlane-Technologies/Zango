@@ -1,4 +1,6 @@
 from time import sleep
+import requests
+import os
 
 from pydantic import BaseModel, Field
 from typing import List, Dict
@@ -104,12 +106,25 @@ class Role(BaseModel):
 
 class Module(BaseModel):
     name: str
-    models: Dict[str, List[ModelField]] = Field(default_factory=dict)
+    models: Dict[str, str] = Field(default_factory=dict)
     # migrate_models: bool = False
     views: List[View] = []
 
     def apply(self):
         crud_views = []
+        models_spec = {
+            f"{model_name}": ModelCodeSpec.model_validate_json(
+                requests.post(
+                    f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-model-spec",
+                    json={
+                        "name": model_name,
+                        "prompt": prompt,
+                    },
+                    headers={"Content-Type": "application/json"},
+                ).text
+            )
+            for model_name, prompt in self.models.items()
+        }
         for view in self.views:
             if view.type == "crud":
                 crud_view = CrudViewCodeSpec(
@@ -131,7 +146,7 @@ class Module(BaseModel):
                             type="ModelCol",
                             constraints={},
                         )
-                        for field in self.models[view.model]
+                        for field in models_spec[view.model].fields
                     ],
                     row_actions=[],
                     table_actions=[],
@@ -145,14 +160,17 @@ class Module(BaseModel):
                                     type="ModelCol",
                                     constraints={},
                                 )
-                                for field in self.models[view.model]
+                                for field in models_spec[view.model].fields
                             ],
                             meta=DetailMeta(
-                                fields=[field.name for field in self.models[view.model]]
+                                fields=[
+                                    field.name
+                                    for field in models_spec[view.model].fields
+                                ]
                             ),
                             user_stories=view.user_stories.detail,
                         ),
-                        fields=[field.name for field in self.models[view.model]],
+                        fields=[field.name for field in models_spec[view.model].fields],
                     ),
                     user_stories=view.user_stories.table,
                 )
@@ -164,12 +182,12 @@ class Module(BaseModel):
                             type="ModelField",
                             constraints={},
                         )
-                        for field in self.models[view.model]
+                        for field in models_spec[view.model].fields
                     ],
                     meta=FormMeta(
                         model=view.model,
                         title="{{form_title}}",
-                        order=[field.name for field in self.models[view.model]],
+                        order=[field.name for field in models_spec[view.model].fields],
                     ),
                     user_stories=view.user_stories.form,
                 )
@@ -180,20 +198,7 @@ class Module(BaseModel):
             name=self.name,
             path=self.name,
             views=crud_views,
-            models=[
-                ModelCodeSpec(
-                    name=model,
-                    fields=[
-                        ModelFieldCodeSpec(
-                            name=field.name,
-                            type=field.type,
-                            constraints={},
-                        )
-                        for field in fields
-                    ],
-                )
-                for model, fields in self.models.items()
-            ],
+            models=models_spec.values(),
         )
         return module
 

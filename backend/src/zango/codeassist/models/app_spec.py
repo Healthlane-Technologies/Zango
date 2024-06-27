@@ -12,7 +12,7 @@ from .packages.frame import Frame
 from .packages.login import LoginConfig, GenericLoginConfig
 from .packages.frame import Frame
 
-from zango.core.package_utils import install_package
+from zango.core.package_utils import install_package, get_latest_version
 from zango.codeassist.models.packages.frame import MenuItem
 
 
@@ -135,9 +135,11 @@ class PackageConfigs(BaseModel):
 
 class Package(BaseModel):
     name: str
-    version: str
+    version: str = None
 
     def apply(self, tenant):
+        if self.version is None:
+            self.version = get_latest_version(self.name)
         resp = install_package(self.name, self.version, tenant)
         print(f"Installing package {self.name} {self.version}: {resp} ")
         if resp != "Package already installed":

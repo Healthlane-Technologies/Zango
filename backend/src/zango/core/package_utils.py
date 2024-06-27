@@ -6,6 +6,7 @@ import subprocess
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
+import semver
 
 from django.conf import settings
 from django.db import connection
@@ -36,11 +37,11 @@ def get_all_packages(tenant=None):
         config=Config(signature_version=UNSIGNED),
     )
     s3_package_data = s3.list_objects(
-        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/"
+        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="zel3/packages/"
     )
     for package in s3_package_data["Contents"]:
         name = package["Key"]
-        name = name[9:]
+        name = name[14:]
         version = name.split("/")[1]
         name = name.split("/")[0]
         if name not in packages:
@@ -119,6 +120,24 @@ def get_package_configuration_url(request, tenant, package_name):
             url = get_current_request_url(request, domain=domain)
             return f"{url}/{route['re_path'][1:]}configure/"
     return ""
+
+
+def get_latest_version(package_name):
+    s3 = boto3.client(
+        "s3",
+        config=Config(signature_version=UNSIGNED),
+    )
+    s3_package_data = s3.list_objects(
+        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix=f"packages/{package_name}/"
+    )
+    versions = []
+    for package in s3_package_data["Contents"]:
+        name = package["Key"]
+        name = name[14:]
+        version = name.split("/")[1]
+        versions.append(semver.VersionInfo.parse(version))
+
+    return str(max(versions))
 
 
 def install_package(package_name, version, tenant):

@@ -37,4 +37,7 @@ class Command(BaseCommand):
                 appspec = AppSpec.model_validate_json(spec)
                 appspec.apply()
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             print("Exception", e)
