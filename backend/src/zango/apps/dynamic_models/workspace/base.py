@@ -3,6 +3,11 @@ import inspect
 import json
 import os
 import re
+import sys
+import tracemalloc
+import weakref
+import gc
+
 
 from django.conf import settings
 from django.db import connection
@@ -43,26 +48,146 @@ class Workspace:
 
     _instances = {}
 
-    def __new__(
-        cls, wobj: object, request=None, as_systemuser=False, **kwargs
-    ) -> object:
-        # perform your permissions check here and tries to return the object from cache
-        if not cls.check_perms(request, as_systemuser):
-            raise ValueError("Permission denied.")
-        key = wobj.name
-        if key in cls._instances:
-            return cls._instances[key]
-        instance = super().__new__(cls)
-        instance.plugin_source = cls.get_plugin_source()
-        cls._instances[key] = instance
-        return instance
+    # def __new__(
+    #     cls, wobj: object, request=None, as_systemuser=False, **kwargs
+    # ) -> object:
+    #     # perform your permissions check here and tries to return the object from cache
+    #     if not cls.check_perms(request, as_systemuser):
+    #         raise ValueError("Permission denied.")
+    #     key = wobj.name
+    #     # TODO: Check if app codebase is updated
+    #     from django.utils import timezone
+    #     from datetime import datetime
+
+    #     load_new_workspace = False
+    #     if request:
+    #         load_new_workspace = request.GET.get("load_new_workspace", False)
+    #         print("##### load_new_workspace", load_new_workspace)
+    #     if not load_new_workspace and key in cls._instances:
+    #         # if key in cls._instances:
+    #         print("##### Existing workspace loaded dsds")
+    #         return cls._instances[key]
+
+    #     # existing_workspace = cls._instances.get(key, None)
+    #     # import gc
+    #     # import referrers
+
+    #     if cls._instances.get(key):
+    #         # print("### globals before cleanup: ", globals().keys())
+    #         # Start tracing memory allocations
+    #         tracemalloc.start()
+    #         # print(
+    #         #     "#### before ref count: ",
+    #         #     sys.getrefcount(cls._instances[key]),
+    #         # )
+    #         # snapshot1 = tracemalloc.take_snapshot()
+    #         # print(
+    #         #     "#### before ref list: ",
+    #         #     gc.get_referrers(existing_workspace),
+    #         #     referrers.get_referrer_graph(existing_workspace),
+    #         # )
+    #         existing_workspace = cls._instances[key]
+    #         existing_workspace.plugin_source.cleanup()
+    #         del cls._instances[key]
+    #         del existing_workspace.plugin_source
+
+    #         existing_workspace.plugin_source = None
+
+    #         del existing_workspace
+
+    #         # gc.collect()  # Force garbage collection
+
+    #         # cls._instances[key].plugin_source.cleanup()
+    #         # del existing_workspace.plugin_source
+    #         # existing_workspace.plugin_source = None
+    #         # print(
+    #         #     "#### after ref count: ",
+    #         #     sys.getrefcount(cls._instances[key].plugin_source),
+    #         # )
+    #         # del cls._instances[key]
+    #         # cls._instances[key].wobj = None
+    #         # cls._instances[key].path = None
+    #         # cls._instances[key].modules = None
+    #         # cls._instances[key].packages = None
+    #         # cls._instances[key].models = []
+
+    #         # print("#### after ref count: ", sys.getrefcount(cls._instances[key]))
+    #         # existing_workspace = cls._instances.pop(key, None)
+    #         # snapshot2 = tracemalloc.take_snapshot()
+
+    #         # Compare snapshots to see the memory difference
+    #         # stats = snapshot1.compare_to(snapshot2, "lineno")
+    #         # for stat in stats:  # print top 10 memory usage changes
+    #         # print("#### stat: ", stat)
+
+    #         # import gc
+
+    #         # num = gc.collect()
+    #         # print("####gc.collect(): ", num)
+
+    #         # existing_workspace.wobj = None
+    #         # existing_workspace.path = None
+    #         # existing_workspace.modules = None
+    #         # existing_workspace.packages = None
+    #         # existing_workspace.models = []
+
+    #         # existing_workspace = None
+
+    #         # print(
+    #         #     "#### after ref list: ",
+    #         #     gc.get_referrers(existing_workspace),
+    #         #     referrers.get_referrer_graph(existing_workspace),
+    #         # )
+
+    #     # del existing_workspace.plugin_source
+    #     # existing_workspace.plugin_source.cleanup()
+    #     # del existing_workspace
+
+    #     # import gc
+
+    #     # gc.collect()
+    #     # existing_workspace.plugin_source.cleanup()
+    #     # print("### globals after cleanup: ", globals().keys())
+
+    #     instance = super().__new__(cls)
+    #     instance.plugin_source = cls.get_plugin_source()
+
+    #     cls._instances[key] = instance
+    #     print(
+    #         "##### instance.plugin_source spaceid: ",
+    #         instance.plugin_source.__dict__["spaceid"],
+    #     )
+    #     return instance
 
     def __init__(self, wobj: object, request=None, as_systemuser=False) -> None:
+        print("### initial objects: ", len(gc.get_objects()))
+        print("initial stats: ", gc.get_stats())
+        gc.set_debug(gc.DEBUG_SAVEALL)
         self.wobj = wobj
         self.path = str(settings.BASE_DIR) + f"/workspaces/{wobj.name}/"
+        self.plugin_source = self.get_plugin_source()
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
         self.models = []  # sorted with bfs
+
+    def __del__(self):
+        import gc
+
+        print("### inside __del__ method for workspace")
+        print("### before gc.objects: ", len(gc.get_objects()))
+        print("before stats: ", gc.get_stats())
+        print("Is tracked: ", gc.is_tracked(self.plugin_source))
+        self.plugin_source.cleanup()
+        del self
+
+        gc.collect()
+        print("after stats: ", gc.get_stats())
+        print("### after gc.objects: ", len(gc.get_objects()))  # 6528 objects in memory
+
+        # from guppy import hpy
+
+        # h = hpy()
+        # print(h.heap())
 
     @classmethod
     def get_plugin_source(cls):

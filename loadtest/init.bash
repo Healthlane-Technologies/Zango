@@ -25,7 +25,7 @@ case "$SERVER" in
         gunicorn -k uvicorn.workers.UvicornWorker "$PROJECT_NAME".asgi
         ;;
     "gunicorn_sync")
-        gunicorn --workers=4 --bind 0.0.0.0:8000 "$PROJECT_NAME".wsgi
+        gunicorn -c /zango/gunicorn.conf.py --workers=4 --bind 0.0.0.0:8000 "$PROJECT_NAME".wsgi
         ;;
     "daphne")
         daphne "$PROJECT_NAME".asgi:application

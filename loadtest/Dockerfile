@@ -1,9 +1,10 @@
-FROM kczelthy/zango:latest
+FROM zango_test:latest
 
-RUN pip install channels memory-profiler gunicorn daphne
+# RUN pip install channels memory-profiler gunicorn daphne
 
 COPY generate_modules.py /zango/
 COPY django_project /zango/django_project
+COPY gunicorn.conf.py /zango/
 COPY init.bash /zango/
 
 WORKDIR /zango/

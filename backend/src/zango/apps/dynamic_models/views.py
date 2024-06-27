@@ -54,14 +54,17 @@ class DynamicView(View, PermMixin):
         ws.ready()
         return ws
 
-    def get_view(self, request):
-        view, resolve = self.workspace.match_view(request)
+    def get_view(self, request, workspace):
+        view, resolve = workspace.match_view(request)
         return view, resolve
 
+    from memory_profiler import profile
+
+    @profile
     def dispatch(self, request, *args, **kwargs):
         if self.has_user_access_perm(request, *args, **kwargs):
-            self.workspace = self.get_workspace(request)
-            view, resolve = self.get_view(request)
+            workspace = self.get_workspace(request)
+            view, resolve = self.get_view(request, workspace)
             view_name = (
                 ".".join(resolve.__dict__["_func_path"].split(".")[3:])
                 if resolve

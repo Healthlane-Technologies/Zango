@@ -11,6 +11,8 @@ services:
   server:
     build:
       context: .
+    environment:
+      - PYTHONUNBUFFERED=1
     env_file:
       - .env.loadtest
     depends_on:
