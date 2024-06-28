@@ -81,17 +81,13 @@ class Role(BaseModel):
 
 class Module(BaseModule):
     models: List[Model] = Field(default_factory=list)
-    migrate_models: bool = Field(default=True)
     views: List[CrudView] = Field(default_factory=list)
 
-    def apply(self, tenant):
+    def apply(self, tenant, model_map):
         if not os.path.exists(os.path.join("workspaces", tenant, self.name)):
             os.mkdir(os.path.join("workspaces", tenant, self.name))
         for model in self.models:
-            model.apply(tenant, self.name)
-        if self.migrate_models:
-            subprocess.run(f"python manage.py ws_makemigration {tenant}", shell=True)
-            # subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
+            model.apply(tenant, self.name, model_map)
         policies = Policies(
             policies=[
                 Policy(
@@ -169,8 +165,17 @@ class ApplicationSpec(BaseModel):
     package_configs: PackageConfigs | None = PackageConfigs()
     roles: List[Role] = Field(default_factory=list)
     packages: List[Package] = Field(default_factory=list)
+    migrate_models: bool = Field(default=True)
 
     def apply(self):
+        from django.db import connection
+        from zango.apps.dynamic_models.workspace.base import Workspace
+        from zango.apps.shared.tenancy.models import TenantModel
+
+        model_map = {
+            f"{module.name}": [model.name for model in module.models]
+            for module in self.modules
+        }
         self.packages = [
             Package(name="frame", version="0.5.1"),
             Package(name="login", version="0.5.1"),
@@ -204,10 +209,19 @@ class ApplicationSpec(BaseModel):
         )
         settings.apply(self.app_name)
         for module in self.modules:
-            module.apply(self.app_name)
+            module.apply(self.app_name, model_map)
+        connection.set_tenant(TenantModel.objects.get(name=self.app_name))
+        ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+        ws.ready()
+        ws.sync_policies()
         for role in self.roles:
             role.apply(self.app_name)
 
+        if self.migrate_models:
+            subprocess.run(
+                f"python manage.py ws_makemigration {self.app_name}", shell=True
+            )
+            # subprocess.run(f"python manage.py ws_migrate {tenant}", shell=True)
         for frame in self.package_configs.frame:
             menu = []
             for module in self.modules:

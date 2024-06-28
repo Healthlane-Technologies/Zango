@@ -15,10 +15,14 @@ class Model(BaseModel):
     name: str
     fields: List[ModelField]
 
-    def apply(self, tenant, module):
+    def apply(self, tenant, module, model_map):
         resp = requests.post(
             f"{os.getenv('ZANGO_CODEASSIST_URL')}/generate-model",
-            json=json.loads(self.model_dump_json()),
+            json={
+                "model": self.model_dump(),
+                "module_model_map": model_map,
+                "module": module,
+            },
         )
         with open(os.path.join("workspaces", tenant, module, "models.py"), "a+") as f:
             f.write(resp.json()["content"])

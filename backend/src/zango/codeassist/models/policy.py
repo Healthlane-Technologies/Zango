@@ -23,16 +23,7 @@ class Policies(BaseModel):
     policies: List[Policy]
 
     def apply(self, tenant, module):
-        from django.db import connection
-        from zango.apps.dynamic_models.workspace.base import Workspace
-        from zango.apps.shared.tenancy.models import TenantModel
-
-        connection.set_tenant(TenantModel.objects.get(name=tenant))
-
         with open(
             os.path.join("workspaces", tenant, module, "policies.json"), "w"
         ) as f:
             f.write(f"{self.model_dump_json()}")
-        ws = Workspace(connection.tenant, request=None, as_systemuser=True)
-        ws.ready()
-        ws.sync_policies()
