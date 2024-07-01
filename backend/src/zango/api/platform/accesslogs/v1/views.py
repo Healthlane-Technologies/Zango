@@ -44,7 +44,6 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             return None
 
     def get_queryset(self, search, tenant, columns={}):
-
         field_name_query_mapping = {
             "id": "id",
             "user": "user__name__icontains",
@@ -92,7 +91,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         return records
 
     def get_dropdown_options(self):
-        options = {}
+        options = {"role": []}
         options["attempt_type"] = [
             {
                 "id": "login",
@@ -145,7 +144,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             accesslogs = self.get_paginated_response_data(serializer.data)
             success = True
             response = {
-                "audit_logs": accesslogs,
+                "access_logs": accesslogs,
                 "message": "Access logs fetched successfully",
             }
             if include_dropdown_options:
