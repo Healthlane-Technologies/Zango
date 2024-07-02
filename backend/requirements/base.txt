@@ -34,3 +34,5 @@ python3-saml==1.16.0
 django-ipware==7.0.1
 django-decorator-include==3.0
 semver==3.0.2
+pydantic==2.7.1
+pydantic_core==2.18.2

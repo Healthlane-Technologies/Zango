@@ -227,6 +227,9 @@ class AppSpec(BaseModel):
             description="",
             tenant_type="app",
             status="staged",
+            timezone="Asia/Kolkata",
+            date_format="%d/%m/%Y",
+            datetime_format="%d %b %Y %I:%M %p",
         )
 
         while app.status == "staged":
