@@ -134,9 +134,13 @@ class Module(BaseModel):
                     page_title="{{page_title}}",
                     add_btn_title="{{add_btn_title}}",
                 )
-                crud_view.workflow = WorkFlowCodeSpec(
-                    name=f"{view.model}Workflow",
-                    user_stories=view.user_stories.workflow,
+                crud_view.workflow = (
+                    WorkFlowCodeSpec(
+                        name=f"{view.model}Workflow",
+                        user_stories=view.user_stories.workflow,
+                    )
+                    if view.user_stories.workflow
+                    else None
                 )
                 crud_view.table = CrudTableCodeSpec(
                     name=f"{view.model}CrudTable",
