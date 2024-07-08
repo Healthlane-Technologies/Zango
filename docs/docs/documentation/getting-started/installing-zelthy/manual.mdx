@@ -25,7 +25,7 @@ For Windows Users:
 python3 -m venv <virtual environment name>
 <virtual environment name >/Scripts/activate 
 ```
-Remove '<>' and give your environment name in the command.
+
 
 Install the Zango Open Source Platform by running the following command in your terminal or command prompt
 
@@ -97,8 +97,6 @@ With the PostgreSQL database set up and ready to go, you can proceed with settin
 
 Keep in mind that the exact steps for installing PostgreSQL may vary depending on your operating system. Be sure to consult the PostgreSQL documentation or installation guide for your specific platform if you encounter any issues during the installation process.
 
-For Windows User:After the postgres is successfully installed on your system, you need to set the environment variable path for it.Simply type environment variable in search and open environment variable settings , there you need to select and  open path settings and add a new path which will be path to bin folder of postgres installation in your C://program files.
-Once you set the path and save the settings, verify it by opening command prompt and running psql --version command there. 
 
 ## Setting Up the Project
 
@@ -223,9 +221,12 @@ Perform the below steps from the root directory of the project
 
 ```
 pip install gevent
+
+pip install eventlet
+
 celery -A <module> worker -l info -P eventlet
 ```
-If any issues comes for eventlet , install event let as well
+
 ### Starting Celery beat
 
 ```
