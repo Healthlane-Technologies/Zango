@@ -45,9 +45,9 @@ export default function Layout({
 			>
 				<div className="flex items-center justify-between gap-[48px]">
 					<Link to="/platform">
-						<BrandIcon className="h-[20px] w-fit" />
+						<BrandIcon className="h-[20px] w-auto max-w-[100px]" />
 					</Link>
-					<NavSearchForm />
+					<NavSearchForm className="flex-grow" />
 				</div>
 				<div className="flex items-center gap-[40px]">
 					<ProfileMenu />
