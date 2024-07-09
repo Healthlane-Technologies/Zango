@@ -81,9 +81,10 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             records = records.filter(attempt_type=columns.get("attempt_type"))
 
         if columns.get("is_login_successful") != None:
-            records = records.filter(
-                is_login_successful=columns.get("is_login_successful")
-            )
+            if columns.get("is_login_successful") == "successful":
+                records = records.filter(is_login_successful=True)
+            elif columns.get("is_login_successful") == "failed":
+                records = records.filter(is_login_successful=False)
 
         if columns.get("role"):
             records = records.filter(role=columns.get("role"))

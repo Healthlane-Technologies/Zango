@@ -17,6 +17,10 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["*"]),
     CORS_ORIGIN_WHITELIST=(list, ["http://localhost:1443", "http://localhost:8000"]),
     CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:1443", "http://localhost:8000"]),
+    AXES_BEHIND_REVERSE_PROXY = (bool, False),
+    AXES_FAILURE_LIMIT = (int, 6),
+    AXES_LOCK_OUT_AT_FAILURE = (bool, True),
+    AXES_COOLOFF_TIME = (int, 900),
 )
 environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -140,13 +144,7 @@ if DEBUG or ENV == "dev":
 # Both individual IP addresses and CIDR notation (e.g., '192.168.1.1' or '192.168.1.0/24') can be provided.
 INTERNAL_IPS = env("INTERNAL_IPS")
 
-# Axes Lockout
-env = environ.Env(
-    AXES_BEHIND_REVERSE_PROXY=(bool, False),
-    AXES_COOLOFF_TIME=(int, 900),
-    AXES_LOCK_OUT_AT_FAILURE=(bool, True),
-    AXES_FAILURE_LIMIT=(int, 6),
-)
+
 AXES_BEHIND_REVERSE_PROXY = env("AXES_BEHIND_REVERSE_PROXY")
 AXES_FAILURE_LIMIT = env("AXES_FAILURE_LIMIT")
 AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
