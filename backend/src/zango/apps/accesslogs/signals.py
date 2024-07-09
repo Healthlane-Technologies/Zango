@@ -37,7 +37,7 @@ def login_failure_handler(sender, **kwargs):
 @receiver(user_logged_in)
 def user_logged_in_handler(sender, request, user, **kwargs):
 
-    if connection.schema_name != "public":
+    if connection.schema_name != "shared":
         try:
             client_ip, is_routable = get_client_ip(request)
             username = request.POST.get("auth-username") or request.data.get("username")

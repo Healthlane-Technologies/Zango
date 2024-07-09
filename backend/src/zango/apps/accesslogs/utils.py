@@ -1,4 +1,5 @@
 from django.contrib.auth import signals
+from django.db import connection
 from axes.handlers.proxy import AxesProxyHandler
 from django.http import HttpResponseForbidden, HttpResponse
 

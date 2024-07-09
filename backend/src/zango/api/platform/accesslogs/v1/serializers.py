@@ -9,7 +9,6 @@ class AccessLogSerializerModel(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     attempt_time = serializers.SerializerMethodField()
     session_expired_at = serializers.SerializerMethodField()
-    is_login_successful = serializers.SerializerMethodField()
 
     def get_attempt_time(self, obj):
         if obj.attempt_time:
@@ -31,9 +30,6 @@ class AccessLogSerializerModel(serializers.ModelSerializer):
 
     def get_role(self, obj):
         return obj.role.name if obj.role else "NA"
-
-    def get_is_login_successful(self, obj):
-        return "Successful" if obj.is_login_successful else "Failed"
 
     class Meta:
         model = AppAccessLog
