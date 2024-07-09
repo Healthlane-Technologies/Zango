@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import useApi from '../../../hooks/useApi';
+import { AppAccessLogsRoutes } from '../../appAccessLogs/routes';
 import { AppApplicationObjectsLogsRoutes } from '../../appApplicationObjectsLogs/routes';
 import { AppConfigurationRoutes } from '../../appConfiguration/routes';
 import { setAppConfigurationData } from '../../appConfiguration/slice';
@@ -104,6 +105,7 @@ const PlatformAppRoutes = () => {
 					path="*"
 					element={<Navigate to="./app-settings/app-configuration//*" />}
 				/>
+				<Route path="/access-logs//*" element={<AppAccessLogsRoutes />} />
 			</Routes>
 		</Layout>
 	);
