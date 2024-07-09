@@ -3,6 +3,7 @@ import os
 import environ
 from datetime import timedelta
 import zango
+from zango.core.utils import generate_lockout_response
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -188,9 +189,10 @@ SESSION_SECURITY_PASSIVE_URL_NAMES = [
 ]
 
 AXES_ENABLED = True
-AXES_DISABLE_SUCCESS_ACCESS_LOG = True
-AXES_LOCKOUT_TEMPLATE = "core/error_pages/account_lockout.html"
-AXES_BEHIND_REVERSE_PROXY = False
-AXES_FAILURE_LIMIT = 6
+AXES_LOCKOUT_CALLABLE = generate_lockout_response
+AXES_BEHIND_REVERSE_PROXY = True
+AXES_FAILURE_LIMIT = 2
 AXES_LOCK_OUT_AT_FAILURE = True
-AXES_COOLOFF_TIME = timedelta(seconds=900)
+AXES_COOLOFF_TIME = timedelta(seconds=9)
+AXES_LOCKOUT_PARAMETERS = ["ip_address", ["username", "user_agent"]]
+AXES_ENABLE_ACCESS_FAILURE_LOG=True
