@@ -103,6 +103,19 @@ export default function SideMenu() {
 					},
 				]}
 			/>
+			<NavLink
+				to={`access-logs/`}
+				className={({ isActive, isPending }) =>
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
+					}`
+				}
+			>
+				<AppSettingsIcon />
+				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
+					Access Logs
+				</span>
+			</NavLink>
 		</div>
 	);
 }
