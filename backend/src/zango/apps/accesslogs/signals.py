@@ -18,7 +18,7 @@ from zango.core.utils import get_current_request
 
 @receiver(user_login_failed)
 def login_failure_handler(sender, **kwargs):
-    if connection.schema_name != "public":
+    if connection.tenant.tenant_type != "shared":
         creds = kwargs.get("credentials", {})
         request = kwargs.get("request", get_current_request())
         client_ip, is_routable = get_client_ip(request)
@@ -36,11 +36,10 @@ def login_failure_handler(sender, **kwargs):
 
 @receiver(user_logged_in)
 def user_logged_in_handler(sender, request, user, **kwargs):
-
-    if connection.schema_name != "shared":
+    if connection.tenant.tenant_type != "shared":
         try:
             client_ip, is_routable = get_client_ip(request)
-            username = request.POST.get("auth-username") or request.data.get("username")
+            username = request.user.email
             user_role = None
             access_log = AppAccessLog.objects.create(
                 ip_address=client_ip,
@@ -70,7 +69,7 @@ def user_logged_in_handler(sender, request, user, **kwargs):
 
 @receiver(user_logged_out)
 def user_logged_out_handler(sender, user, **kwargs):
-    if connection.schema_name != "public":
+    if connection.tenant.tenant_type != "shared":
         access_log = AppAccessLog.objects.filter(
             user=user, session_expired_at__isnull=True
         ).last()
