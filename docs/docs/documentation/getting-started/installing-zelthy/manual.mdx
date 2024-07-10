@@ -220,10 +220,14 @@ For Windows:
 Perform the below steps from the root directory of the project
 
 ```
-pip install gevent
+celery -A <module> worker -l info 
+```
 
-pip install eventlet
+or 
 
+Install gevent and run the following command
+
+```
 celery -A <module> worker -l info -P eventlet
 ```
 
