@@ -48,6 +48,7 @@ services:
     volumes:
       - ./${PROJECT_NAME}/static:/zango/${PROJECT_NAME}/static
       - ./${PROJECT_NAME}/media:/zango/${PROJECT_NAME}/media
+      - ./nginx_logs:/var/log/nginx
     depends_on:
       app:
         condition: service_healthy
