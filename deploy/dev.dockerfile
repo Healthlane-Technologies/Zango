@@ -1,6 +1,7 @@
 FROM kczelthy/zango:latest
 
-RUN apt-get install net-tools
+RUN apt update
+RUN apt-get install -y net-tools
 RUN apt install ffmpeg -y
 
 ARG UID
