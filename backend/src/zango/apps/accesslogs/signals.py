@@ -39,7 +39,7 @@ def user_logged_in_handler(sender, request, user, **kwargs):
     if connection.tenant.tenant_type != "shared":
         try:
             client_ip, is_routable = get_client_ip(request)
-            username = request.user.email
+            username = request.user.email if request.user.email else request.user.mobile
             user_role = None
             access_log = AppAccessLog.objects.create(
                 ip_address=client_ip,
