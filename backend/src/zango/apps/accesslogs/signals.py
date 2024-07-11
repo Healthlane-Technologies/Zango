@@ -72,7 +72,7 @@ def user_logged_out_handler(sender, user, **kwargs):
     if connection.tenant.tenant_type == "app":
         access_log = AppAccessLog.objects.filter(
             user=user, session_expired_at__isnull=True
-        ).last()
+        ).order_by("-id").first()
 
         if access_log:
             access_log.session_expired_at = datetime.now()
