@@ -102,6 +102,6 @@ def get_search_columns(request):
 
 def generate_lockout_response(request, credentials):
     cooloff_time = settings.AXES_COOLOFF_TIME
-    if connection.tenant.tenant_type != "shared":
+    if connection.tenant.tenant_type == "app":
         return render(request, "core/error_pages/account_lockout.html", {"logout_url": "/logout", "cooloff_time": cooloff_time}, status=403)
     return render(request, "core/error_pages/account_lockout.html", {"logout_url": "/auth/logout", "cooloff_time": cooloff_time}, status=403)

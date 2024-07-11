@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth import signals
 from django.db import connection
 from axes.handlers.proxy import AxesProxyHandler
@@ -19,10 +21,10 @@ def capture_failed_login_attempt(request, credentials):
     try:
 
         username_type, username = "", credentials.get("username", "")
-        if "@" in username and "." in username:
+        if re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", username):
             username_type = "email"
 
-        elif username.replace("+", "").isdigit():
+        elif re.match(r"^\+[1-9]\d{1,14}$", username):
             username_type = "mobile"
 
         if username_type:
