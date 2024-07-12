@@ -76,29 +76,14 @@
             maxlength="150" placeholder="Enter Username" class="textinput form-control" required="">
           <input type="password" name="password" autofocus="" autocapitalize="none" autocomplete="password"
             maxlength="150" placeholder="Email Password" class="textinput form-control" required="">
+          {% if error_message %}
+            <p style="color: red; text-align: center;">{{ error_message }}</p>
+          {% endif %}
           <button type="submit"
             style="width: 100%; background: rgb(80, 72, 237); border-radius: 4px; color: white; padding: 9px; margin: 12px 0px 0px; border: none; cursor: pointer; font-weight: 700; font-size: 16px; line-height: 24px;">
             Login
           </button>
-
-          {% comment %} <table>
-            {{ wizard.management_form }}
-            {% crispy wizard.form %}
-          </table> {% endcomment %}
-
         </form>
-        {% comment %} <div id="messageListContainer" class="messageList" style="display: none;">
-          <p style="font-weight: 700; font-size: 14px;">Error</p>
-          {% if messages %}
-          <div id="list_div" class="display-message" style='text-align: center;'>
-            <ul style='list-style: none;'>
-              {% for message in messages %}
-              <li><span style=" ">{{ message }}</span></li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endif %}
-        </div> {% endcomment %}
       </div>
     </div>
     <div class="footer"

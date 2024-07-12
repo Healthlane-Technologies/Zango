@@ -188,6 +188,11 @@ SESSION_SECURITY_PASSIVE_URL_NAMES = [
     "history_sidebar",
 ]
 
+AXES_BEHIND_REVERSE_PROXY = True
+AXES_FAILURE_LIMIT = 6
+AXES_LOCK_OUT_AT_FAILURE = True
+AXES_COOLOFF_TIME = timedelta(seconds=900)
+
 AXES_ENABLED = True
 AXES_LOCKOUT_CALLABLE = generate_lockout_response
 AXES_LOCKOUT_PARAMETERS = ["ip_address", ["username", "user_agent"]]
