@@ -13,6 +13,7 @@ const eachData = () => {
 	return {
 		id: faker.number.int({ min: 1000, max: 9999 }),
 		user: 'Test User',
+		username: 'ravi_at_zelthy',
 		ip_address: '127.0.0.1',
 		attempt_type: 'login',
 		attempt_time: '25 April 2024 01:16 PM',
@@ -86,11 +87,11 @@ export const appAccessLogsHandlers = [
 						],
 						is_login_successful: [
 							{
-								id: true,
+								id: 'successful',
 								label: 'Successful',
 							},
 							{
-								id: false,
+								id: 'failed',
 								label: 'Failed',
 							},
 						],
