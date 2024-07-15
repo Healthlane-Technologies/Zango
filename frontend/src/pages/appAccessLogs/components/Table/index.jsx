@@ -87,15 +87,32 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.user, {
 			id: 'user',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						User
 					</span>
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
+						{info.getValue()}
+					</span>
+				</div>
+			),
+		}),
+		columnHelper.accessor((row) => row.username, {
+			id: 'username',
+			header: () => (
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+						Username
+					</span>
+				</div>
+			),
+			cell: (info) => (
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
+					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
 				</div>
@@ -104,14 +121,14 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.ip_address, {
 			id: 'ip_address',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Ip Address
 					</span>
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -121,7 +138,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.attempt_type, {
 			id: 'attempt_type',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Attempt Type
 					</span>
@@ -158,7 +175,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -168,7 +185,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.attempt_time, {
 			id: 'attempt_time',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Attempt Time
 					</span>
@@ -201,7 +218,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -211,7 +228,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.role, {
 			id: 'role',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Role
 					</span>
@@ -248,7 +265,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -258,14 +275,14 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.user_agent, {
 			id: 'user_agent',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						user agent
 					</span>
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -275,7 +292,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.session_expired_at, {
 			id: 'session_expired_at',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Session Expired At
 					</span>
@@ -310,7 +327,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
 					</span>
@@ -320,9 +337,9 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.is_login_successful, {
 			id: 'is_login_successful',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Is Login Successful
+						Login Attempt
 					</span>
 					<div className="translate-y-[-2px]">
 						<TableDropdownFilter
@@ -349,7 +366,7 @@ export default function Table({ tableData }) {
 							onChange={(value) => {
 								handleColumnSearch({
 									id: 'is_login_successful',
-									value: value?.id ? 'successful' : 'failed',
+									value: value?.id,
 								});
 							}}
 						/>
@@ -357,7 +374,7 @@ export default function Table({ tableData }) {
 				</div>
 			),
 			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span
 						className={`w-fit min-w-[77px] rounded-[15px]  px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
 							info.getValue() ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
@@ -510,12 +527,12 @@ export default function Table({ tableData }) {
 									</th>
 								))}
 								<th key="extra-head" className="p-0 align-top">
-									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
 									</div>
 								</th>
 								<th key="extra-head2" className="p-0 align-top">
-									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] px-[20px] text-start">
+									<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 										<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]"></span>
 									</div>
 								</th>
@@ -534,15 +551,15 @@ export default function Table({ tableData }) {
 									</td>
 								))}
 								<td key="extra-cell" className="w-full">
-									<div className="flex h-full flex-col border-b border-[#F0F3F4] py-[14px] px-[20px]">
+									<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 										<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]"></span>
 									</div>
 								</td>
 								<td
 									key="extra-cell2"
-									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] py-[14px] px-[20px] group-hover:hidden"
+									className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] px-[20px] py-[14px] group-hover:hidden"
 								></td>
-								<td className="from-0% to-90% sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] px-[32px]  group-hover:flex"></td>
+								<td className="sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] from-0% to-90% px-[32px]  group-hover:flex"></td>
 							</tr>
 						))}
 					</tbody>
@@ -558,7 +575,7 @@ export default function Table({ tableData }) {
 			<div className="flex border-t border-[#DDE2E5] py-[4px]">
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-						Total count: {appAccessLogsData?.roles?.total_records}
+						Total count: {appAccessLogsData?.access_logs?.total_records}
 					</span>
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						<PageCountSelectField
