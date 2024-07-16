@@ -3,7 +3,8 @@ import pytz
 import json
 
 from django.conf import settings
-
+from django.db import connection
+from django.shortcuts import render
 
 def get_current_request():
     from ..middleware.request import _request_local
@@ -98,3 +99,9 @@ def get_search_columns(request):
         if key.startswith("search_"):
             search_columns[key.replace("search_", "")] = value
     return search_columns
+
+def generate_lockout_response(request, credentials):
+    cooloff_time = settings.AXES_COOLOFF_TIME
+    if connection.tenant.tenant_type == "app":
+        return render(request, "core/error_pages/account_lockout.html", {"logout_url": "/logout", "cooloff_time": cooloff_time}, status=403)
+    return render(request, "core/error_pages/account_lockout.html", {"logout_url": "/auth/logout", "cooloff_time": cooloff_time}, status=403)

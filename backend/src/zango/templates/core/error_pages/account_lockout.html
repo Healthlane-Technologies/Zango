@@ -1,0 +1,47 @@
+{% extends 'core/error_pages/base.html' %} 
+{% load i18n static %} 
+{% load zango_filters %} {% block head %}
+
+<link
+  rel="stylesheet"
+  href="{% static 'error_pages/css/LockedAccountStyle.css' %}"
+/>
+
+<title>{% block title %}Account Locked{% endblock %}</title>
+{% endblock %} {% block content %}
+
+<div class="container">
+  <div class="img-container">
+    <img
+      class="error-img"
+      src="{% static 'error_pages/images/ImgLocked.svg' %}"
+      alt=""
+    />
+  </div>
+  <div class="error-content">
+    <div class="not-found">Account Locked</div>
+    <div class="not-found-title">
+      Oops, your account/ IP address has been temporarily locked as there has
+      been too many incorrect password attempts. Don't worry, this will be
+      automatically reset after {{ cooloff_time|humanize_timedelta }}.
+    </div>
+    <div class="button-container">
+      <div class="each-button">
+        <button onclick="history.back()" class="back-button" type="submit">
+          Go Back
+        </button>
+      </div>
+      <div class="each-button">
+        <button
+          onclick="location.href='{{ logout_url }}'"
+          class="back-button"
+          type="submit"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
