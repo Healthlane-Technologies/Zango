@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import {
-	openIsAddNewUserRolesModalOpen,
 	selectAppAccessLogsData,
 	selectAppAccessLogsTableData,
 	selectIsAppAccessLogsDataEmpty,
@@ -19,10 +18,6 @@ export default function AppAccessLogs() {
 	const appAccessLogsTableData = useSelector(selectAppAccessLogsTableData);
 	const rerenderPage = useSelector(selectRerenderPage);
 	const isAppAccessLogsDataEmpty = useSelector(selectIsAppAccessLogsDataEmpty);
-
-	const [isEmpty, setisEmpty] = useState(
-		appAccessLogsData?.roles?.records?.length ? false : true
-	);
 	const dispatch = useDispatch();
 
 	function updateAppAccessLogsData(value) {
