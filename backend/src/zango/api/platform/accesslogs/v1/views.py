@@ -53,6 +53,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         search_filters = {
             "id": self.process_id,
             "attempt_time": self.process_timestamp,
+            "session_expired_at": self.process_timestamp,
         }
 
         records = AppAccessLog.objects.all().order_by("-id")
@@ -66,7 +67,18 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 if search_filters.get(field_name, None):
                     filters |= Q(**{query: search_filters[field_name](search)})
                 else:
-                    filters |= Q(**{query: search})
+                    if field_name == "user":
+                        if "(" in search:
+                            user, id = search.split("(")
+                            id = int(id.replace(")", "")) if id else None
+                            if user:
+                                filters |= Q(**{query: user})
+                            if id:
+                                filters |= Q(**{"user_id": id})
+                        else:
+                            filters |= Q(**{query: search})
+                    else:
+                        filters |= Q(**{query: search})
         records = records.filter(filters).distinct()
 
         if columns.get("attempt_time"):
@@ -77,6 +89,16 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 records = records.filter(
                     attempt_time__gte=processed["start"],
                     attempt_time__lte=processed["end"],
+                )
+
+        if columns.get("session_expired_at"):
+            processed = self.process_timestamp(
+                columns.get("session_expired_at"), tenant.timezone
+            )
+            if processed is not None:
+                records = records.filter(
+                    session_expired_at__gte=processed["start"],
+                    session_expired_at__lte=processed["end"],
                 )
         if columns.get("attempt_type"):
             records = records.filter(attempt_type=columns.get("attempt_type"))
@@ -106,11 +128,11 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         ]
         options["is_login_successful"] = [
             {
-                "id": True,
+                "id": "successful",
                 "label": "Successful",
             },
             {
-                "id": False,
+                "id": "failed",
                 "label": "Failed",
             },
         ]
