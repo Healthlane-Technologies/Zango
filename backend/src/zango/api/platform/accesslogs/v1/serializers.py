@@ -26,7 +26,7 @@ class AccessLogSerializerModel(serializers.ModelSerializer):
         return "NA"
 
     def get_user(self, obj):
-        return obj.user.name if obj.user else "NA"
+        return f"{obj.user.name} ({obj.user.id})" if obj.user else "NA"
 
     def get_role(self, obj):
         return obj.role.name if obj.role else "NA"
@@ -37,6 +37,7 @@ class AccessLogSerializerModel(serializers.ModelSerializer):
             "id",
             "ip_address",
             "user",
+            "username",
             "attempt_type",
             "attempt_time",
             "role",

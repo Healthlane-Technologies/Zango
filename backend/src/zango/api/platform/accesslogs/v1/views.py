@@ -47,6 +47,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         field_name_query_mapping = {
             "id": "id",
             "user": "user__name__icontains",
+            "username": "username__icontains",
             "user_agent": "user_agent__icontains",
         }
         search_filters = {
