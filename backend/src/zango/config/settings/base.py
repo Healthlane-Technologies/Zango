@@ -197,3 +197,8 @@ AXES_ENABLED = True
 AXES_LOCKOUT_CALLABLE = generate_lockout_response
 AXES_LOCKOUT_PARAMETERS = ["ip_address", ["username", "user_agent"]]
 AXES_ENABLE_ACCESS_FAILURE_LOG=True
+AXES_META_PRECEDENCE_ORDER = (
+    'REMOTE_ADDR',
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_X_REAL_IP',
+)
