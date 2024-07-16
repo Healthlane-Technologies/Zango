@@ -49,6 +49,9 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             "user": "user__name__icontains",
             "username": "username__icontains",
             "user_agent": "user_agent__icontains",
+            "ip_address": "ip_address__icontains",
+            "attempt_type": "attempt_type__icontains",
+            "role": "role__name__icontains", 
         }
         search_filters = {
             "id": self.process_id,
