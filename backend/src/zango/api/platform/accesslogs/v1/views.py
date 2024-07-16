@@ -51,7 +51,8 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             "user_agent": "user_agent__icontains",
             "ip_address": "ip_address__icontains",
             "attempt_type": "attempt_type__icontains",
-            "role": "role__name__icontains", 
+            "role": "role__name__icontains",
+            "user_id": "user_id",
         }
         search_filters = {
             "id": self.process_id,
@@ -70,16 +71,11 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 if search_filters.get(field_name, None):
                     filters |= Q(**{query: search_filters[field_name](search)})
                 else:
-                    if field_name == "user":
-                        if "(" in search:
-                            user, id = search.split("(")
-                            id = int(id.replace(")", "")) if id else None
-                            if user:
-                                filters |= Q(**{query: user})
-                            if id:
-                                filters |= Q(**{"user_id": id})
-                        else:
-                            filters |= Q(**{query: search})
+                    if field_name == "user_id":
+                        try:
+                            filters |= Q(**{query: int(search)})
+                        except ValueError:
+                            pass
                     else:
                         filters |= Q(**{query: search})
         records = records.filter(filters).distinct()
