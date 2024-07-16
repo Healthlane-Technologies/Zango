@@ -77,7 +77,12 @@
           <input type="password" name="password" autofocus="" autocapitalize="none" autocomplete="password"
             maxlength="150" placeholder="Email Password" class="textinput form-control" required="">
           {% if error_message %}
-            <p style="color: red; text-align: center;">{{ error_message }}</p>
+            <p style="color: red; text-align: left; font-size: 11px;
+            color: #d52918;
+            font-weight: 700;
+            line-height: 16px;
+            letter-spacing: 0.2px;
+            ">{{ error_message }}</p>
           {% endif %}
           <button type="submit"
             style="width: 100%; background: rgb(80, 72, 237); border-radius: 4px; color: white; padding: 9px; margin: 12px 0px 0px; border: none; cursor: pointer; font-weight: 700; font-size: 16px; line-height: 24px;">

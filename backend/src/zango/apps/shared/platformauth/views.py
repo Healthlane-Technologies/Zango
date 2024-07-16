@@ -20,7 +20,7 @@ class PlatformUserLoginView(LoginView):
             return redirect("/platform")
         else:
             context = self.get_context_data()
-            context["error_message"] = "Invalid credentials"
+            context["error_message"] = "Please enter a correct email address and password. Note that both fields may be case-sensitive."
             return TemplateResponse(request, self.template_name, context)
 
 from django.utils.decorators import method_decorator
