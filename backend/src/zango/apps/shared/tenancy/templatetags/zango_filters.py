@@ -47,7 +47,8 @@ def use_latest(build_path):
     filep = os.path.basename(build_path)
     for dir in settings.STATICFILES_DIRS:
         for dirpath, dirnames, filenames in os.walk(dir):
+            filenames = sorted(filenames, reverse=True)
             for filename in filenames:
                 if re.match(filep, filename):
                     return os.path.join(buildir, filename)
-    return  build_path
+    return build_path
