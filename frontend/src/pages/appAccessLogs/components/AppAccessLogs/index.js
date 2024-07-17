@@ -53,7 +53,11 @@ export default function AppAccessLogs() {
 		};
 
 		makeApiCall();
-	}, [rerenderPage]);
+	}, [rerenderPage, appAccessLogsTableData]);
+
+	if (!appAccessLogsTableData) {
+		return null;
+	}
 
 	return (
 		<>
