@@ -5,16 +5,16 @@ on:
     branches:
       - feat/fe-build-workflow
     paths:
-      - 'frontend/**'
+      - "frontend/**"
   pull_request:
     types:
       - opened
       - reopened
       - synchronize
     branches:
-     - feat/fe-build-workflow
+      - feat/fe-build-workflow
     paths:
-      - 'frontend/**'
+      - "frontend/**"
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: "16"
 
       - name: Install dependencies
         run: |
@@ -52,7 +52,7 @@ jobs:
 
       - name: push frontend build to branch
         uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub-main.yml@v0.2.0
-         with:
+        with:
           source-directory: "backend/src/zango/assets/app_panel/js"
           target-directory: "backend/src/zango/assets/app_panel/js"
           destination-github-username: ${{github.actor}}
