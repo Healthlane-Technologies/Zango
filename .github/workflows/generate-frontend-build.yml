@@ -11,7 +11,7 @@ on:
       - opened
       - reopened
       - synchronize
-   branches:
+    branches:
      - feat/fe-build-workflow
     paths:
       - 'frontend/**'
