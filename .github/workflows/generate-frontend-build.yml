@@ -49,14 +49,14 @@ jobs:
             echo "Error: Invalid branch name"
             exit 1
           fi
-
-      - name: push frontend build to branch
-        uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub-main.yml@v0.2.0
-        with:
-          source-directory: "backend/src/zango/assets/app_panel/js"
-          target-directory: "backend/src/zango/assets/app_panel/js"
-          destination-github-username: ${{github.actor}}
-          destination-repository-name: "Zango"
-          commit-message: "Push build to ${{ steps.extract_branch.outputs.branch }}"
-          target-branch: ${{ steps.extract_branch.outputs.branch }}
-        secrets: inherit
+  push:
+    needs: build
+    uses: Healthlane-Technologies/Zango/.github/workflows/sync-docs-to-docs-hub-main.yml@v0.2.0
+    with:
+      source-directory: "backend/src/zango/assets/app_panel/js"
+      target-directory: "backend/src/zango/assets/app_panel/js"
+      destination-github-username: ${{github.actor}}
+      destination-repository-name: "Zango"
+      commit-message: "Push build to ${{ steps.extract_branch.outputs.branch }}"
+      target-branch: ${{ steps.extract_branch.outputs.branch }}
+    secrets: inherit
