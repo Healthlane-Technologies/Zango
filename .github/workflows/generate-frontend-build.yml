@@ -41,16 +41,10 @@ jobs:
       - name: Extract branch name
         id: extract_branch
         run: |
-          if [[ ${{ github.ref }} == "refs/heads/development" ]]; then
-            echo "::set-output name=branch::dev"
-          elif [[ ${{ github.ref }} == "refs/heads/staging" ]]; then
-            echo "::set-output name=branch::staging"
-          elif [[ ${{ github.ref }} == "refs/heads/main" ]]; then
-            echo "::set-output name=branch::prod"
-          else
-            echo "Error: Invalid branch name"
-            exit 1
-          fi
+          echo "GITHUB_REF=$GITHUB_REF"
+          branch_name=${GITHUB_REF#refs/heads/}
+          echo "Branch name is $branch_name"
+          echo "::set-output name=branch::$branch_name"
 
       - name: Push to branch
         uses: cpina/github-action-push-to-another-repository@main
