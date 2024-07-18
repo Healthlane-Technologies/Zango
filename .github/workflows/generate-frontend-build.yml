@@ -49,23 +49,20 @@ jobs:
             echo "Error: Invalid branch name"
             exit 1
           fi
-  push:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-       - name: Push to branch
+
+      - name: Push to branch
         uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          source-directory: ${{ inputs.source-directory }}
-          target-directory: ${{ inputs.target-directory }}
-          destination-github-username: ${{ inputs.destination-github-username }}
-          destination-repository-name: ${{ inputs.destination-repository-name }}
-          commit-message: ${{ inputs.commit-message }}
+          source-directory: "backend/src/zango/assets/app_panel/js"
+          target-directory: "backend/src/zango/assets/app_panel/js"
+          destination-github-username: ${{github.actor}}
+          destination-repository-name: "Zango"
+          commit-message: "Push build to ${{ steps.extract_branch.outputs.branch }}"
           user-email: ${{ secrets.USER_EMAIL }}
-          target-branch: ${{ inputs.target-branch }}
+          target-branch: ${{ steps.extract_branch.outputs.branch }}
       
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
