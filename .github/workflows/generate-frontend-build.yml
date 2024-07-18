@@ -34,7 +34,9 @@ jobs:
           yarn install
 
       - name: Building app
-        run: yarn build
+        run: |
+          cd frontend
+          yarn build
 
       - name: Extract branch name
         id: extract_branch
