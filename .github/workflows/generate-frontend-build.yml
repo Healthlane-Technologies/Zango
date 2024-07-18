@@ -3,14 +3,16 @@ name: Continuous Integration for Frontend
 on:
   push:
    branches:
-     - main
+     - feat/fe-build-workflow
     paths:
       - 'frontend/**'
   pull_request:
     types:
-      - [opened, reopened]
+      - opened
+      - reopened
+      - synchronize
    branches:
-     - main
+     - feat/fe-build-workflow
     paths:
       - 'frontend/**'
 
