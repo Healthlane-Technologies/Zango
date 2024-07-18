@@ -36,7 +36,7 @@ jobs:
       - name: Building app
         run: |
           cd frontend
-          yarn build
+          CI=false yarn build
 
       - name: Extract branch name
         id: extract_branch
