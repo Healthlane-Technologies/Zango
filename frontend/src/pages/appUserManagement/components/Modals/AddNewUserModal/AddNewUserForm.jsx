@@ -125,7 +125,7 @@ const AddNewUserForm = ({ closeModal }) => {
 								</label>
 								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
 									<span className="font-lato text-[#6C747D]">+91</span>
-									<input
+									<input	
 										id="mobile"
 										name="mobile"
 										type="number"

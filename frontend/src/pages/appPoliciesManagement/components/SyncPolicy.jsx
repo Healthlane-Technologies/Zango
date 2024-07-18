@@ -40,6 +40,7 @@ export default function SyncPolicy() {
 	return (
 		<div className="flex items-center gap-[16px]">
 			<button
+				data-cy="sync_policy_button"
 				type="button"
 				className="flex items-center gap-[12px]"
 				onClick={handleSyncPolicyClick}
