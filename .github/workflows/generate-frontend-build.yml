@@ -3,7 +3,7 @@ name: Continuous Integration for Frontend
 on:
   push:
     branches:
-     - feat/fe-build-workflow
+      - feat/fe-build-workflow
     paths:
       - 'frontend/**'
   pull_request:
