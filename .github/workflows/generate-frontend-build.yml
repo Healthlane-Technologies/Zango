@@ -2,7 +2,7 @@ name: Continuous Integration for Frontend
 
 on:
   push:
-   branches:
+    branches:
      - feat/fe-build-workflow
     paths:
       - 'frontend/**'
