@@ -52,27 +52,19 @@ jobs:
           echo "Branch name is $branch_name"
           echo "::set-output name=branch::$branch_name"
 
-      - name: Post build artifact link to PR
+      - name: Comment on PR
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const pullRequest = context.payload.pull_request;
-            if (pullRequest) {
-              const issueNumber = pullRequest.number;
-              const repo = context.repo.repo;
-              const owner = context.repo.owner;
-              const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts`;
-              
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                body: `Build artifact is available [here](${artifactUrl}).`
-              });
-            } else {
-              console.log("Not a pull request, skipping comment.");
-            }
+            const pr = context.payload.pull_request;
+            const issue_number = pr.number;
+            const comment_body = "Thank you for raising a PR against the main branch. Please ensure all checks pass before requesting a review.";
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number,
+              body: comment_body,
+            });
 
       
       # - name: Notify on z-deployment_notifs slack channel
