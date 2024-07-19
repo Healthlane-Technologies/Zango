@@ -57,9 +57,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { getOctokit } = require('@actions/github');
-            var github = getOctokit('${{ secrets.GITHUB_TOKEN }}');
-            var pullRequest = context.payload.pull_request;
+            const pullRequest = context.payload.pull_request;
             if (pullRequest) {
               const issueNumber = pullRequest.number;
               const repo = context.repo.repo;
