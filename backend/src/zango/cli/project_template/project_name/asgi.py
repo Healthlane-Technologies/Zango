@@ -23,4 +23,5 @@ application = get_asgi_application()
 # Our custom loguru logging to should be setup after django has been setup as Django
 # will try to override with its own logging setup.
 from zango.core.monitoring import setup_logging
+
 setup_logging()
