@@ -65,6 +65,8 @@ jobs:
               issue_number,
               body: comment_body,
             });
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
       
       # - name: Notify on z-deployment_notifs slack channel
