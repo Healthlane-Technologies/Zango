@@ -1,4 +1,4 @@
-# Zango - App Panel
+## Zango - App Panel
 
 ### `yarn mock`
 
