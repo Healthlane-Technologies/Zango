@@ -51,7 +51,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { context } = require('@actions/github');
             const pullRequest = context.payload.pull_request;
             if (pullRequest) {
               const issueNumber = pullRequest.number;
@@ -68,6 +67,7 @@ jobs:
             } else {
               console.log("Not a pull request, skipping comment.");
             }
+
       
       # - name: Notify on z-deployment_notifs slack channel
       #   uses: rtCamp/action-slack-notify@v2
