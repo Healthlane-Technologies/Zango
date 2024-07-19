@@ -112,7 +112,7 @@ export default function UserManagement() {
 								</h3>
 							</div>
 							<button
-								data-cy="add_user_role"
+								data-cy="add_user_button"
 								type="button"
 								onClick={handleAddNewUser}
 								className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"
