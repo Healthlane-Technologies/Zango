@@ -46,23 +46,32 @@ jobs:
           echo "Branch name is $branch_name"
           echo "::set-output name=branch::$branch_name"
 
-      - name: Push to branch
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          source-directory: "backend/src/zango/assets/app_panel/js"
-          target-directory: "backend/src/zango/assets/app_panel/js"
-          destination-github-username: ${{github.actor}}
-          destination-repository-name: "Zango"
-          commit-message: "Push build to ${{ steps.extract_branch.outputs.branch }}"
-          user-email: ${{ secrets.USER_EMAIL }}
-          target-branch: ${{ steps.extract_branch.outputs.branch }}
+      - name: Post build artifact link to PR
+          uses: actions/github-script@v6
+          with:
+            github-token: ${{ secrets.GITHUB_TOKEN }}
+            script: |
+              const { context } = require('@actions/github');
+              const pullRequest = context.payload.pull_request;
+              if (pullRequest) {
+                const issueNumber = pullRequest.number;
+                const repo = context.repo.repo;
+                const owner = context.repo.owner;
+                const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts`;
+                
+                await github.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: `Build artifact is available [here](${artifactUrl}).`
+                });
+              } else {
+                console.log("Not a pull request, skipping comment.");
+              }
       
-      - name: Notify on z-deployment_notifs slack channel
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
-          SLACK_TITLE: New deployment in documentation environment of ${{ github.event.repository.name }}
-          SLACK_CHANNEL: "z-deployment-notifs"
+      # - name: Notify on z-deployment_notifs slack channel
+      #   uses: rtCamp/action-slack-notify@v2
+      #   env:
+      #     SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
+      #     SLACK_TITLE: New deployment in documentation environment of ${{ github.event.repository.name }}
+      #     SLACK_CHANNEL: "z-deployment-notifs"
