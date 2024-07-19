@@ -51,6 +51,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { context, getOctokit } = require('@actions/github');
+            const github = getOctokit(process.env.GITHUB_TOKEN);
             const pullRequest = context.payload.pull_request;
             if (pullRequest) {
               const issueNumber = pullRequest.number;
@@ -58,7 +60,7 @@ jobs:
               const owner = context.repo.owner;
               const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts`;
               
-              await github.issues.createComment({
+              await github.rest.issues.createComment({
                 owner,
                 repo,
                 issue_number: issueNumber,
