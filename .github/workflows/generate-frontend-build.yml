@@ -47,27 +47,27 @@ jobs:
           echo "::set-output name=branch::$branch_name"
 
       - name: Post build artifact link to PR
-          uses: actions/github-script@v6
-          with:
-            github-token: ${{ secrets.GITHUB_TOKEN }}
-            script: |
-              const { context } = require('@actions/github');
-              const pullRequest = context.payload.pull_request;
-              if (pullRequest) {
-                const issueNumber = pullRequest.number;
-                const repo = context.repo.repo;
-                const owner = context.repo.owner;
-                const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts`;
-                
-                await github.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  body: `Build artifact is available [here](${artifactUrl}).`
-                });
-              } else {
-                console.log("Not a pull request, skipping comment.");
-              }
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { context } = require('@actions/github');
+            const pullRequest = context.payload.pull_request;
+            if (pullRequest) {
+              const issueNumber = pullRequest.number;
+              const repo = context.repo.repo;
+              const owner = context.repo.owner;
+              const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts`;
+              
+              await github.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: `Build artifact is available [here](${artifactUrl}).`
+              });
+            } else {
+              console.log("Not a pull request, skipping comment.");
+            }
       
       # - name: Notify on z-deployment_notifs slack channel
       #   uses: rtCamp/action-slack-notify@v2
