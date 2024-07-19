@@ -149,3 +149,17 @@ AXES_BEHIND_REVERSE_PROXY = env("AXES_BEHIND_REVERSE_PROXY")
 AXES_FAILURE_LIMIT = env("AXES_FAILURE_LIMIT")
 AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
 AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))
+log_folder = os.path.join(BASE_DIR, 'log')
+log_file = os.path.join(log_folder, 'zango.log')
+
+# Check if the log folder exists, if not, create it
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
+
+# Check if the log file exists, if not, create it
+if not os.path.exists(log_file):
+    with open(log_file, 'a'):
+        pass  # Create an empty file
+
+
+LOGGING['handlers']['file']['filename'] =  log_file

@@ -91,8 +91,13 @@ MIDDLEWARE = [
     "zango.middleware.tenant.TimezoneMiddleware",
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
     "axes.middleware.AxesMiddleware",
+    "zango.middleware.telemetry.UpdateTenantSpanTelemetryMiddleware"
 ]
 
+if os.getenv("OTEL_IS_ENABLED", False):
+    MIDDLEWARE.append(
+        "zango.middleware.telemetry.OtelZangoContextMiddleware"
+    )
 
 AUTHENTICATION_BACKENDS = (
     "axes.backends.AxesStandaloneBackend",
@@ -202,3 +207,48 @@ AXES_META_PRECEDENCE_ORDER = (
     'HTTP_X_FORWARDED_FOR',
     'HTTP_X_REAL_IP',
 )
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,   
+    "formatters": {
+            "verbose": {
+                "format" : "[%(app_name)s:%(domain_url)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
+                "datefmt" : "%d/%b/%Y %H:%M:%S"
+            },
+            "console": {
+            "format": "%(levelname)s %(asctime)s %(name)s.%(funcName)s:%(lineno)s- %("
+            "message)s "
+        },            
+        },
+    "filters": {
+        "tenant_filter": {
+            "()": "zango.core.monitoring.log_filter.TenantContextFilter",
+        }
+    },
+    "handlers": {
+        "file": {
+            "level": "INFO", 
+            "class": "logging.handlers.RotatingFileHandler",
+            "maxBytes": 1024*1024*5, # 5 MB
+            "formatter": "verbose",  # Use the custom formatter
+            "filters": ["tenant_filter"],
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "console",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": True,
+        }
+    },
+}
