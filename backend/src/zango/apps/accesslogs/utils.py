@@ -36,6 +36,12 @@ def capture_failed_login_attempt(request, credentials):
                     request=request,
                     credentials=credentials,
                 )
+            else:
+                signals.user_login_failed.send(
+                    sender=None,
+                    request=request,
+                    credentials=credentials,
+                )
     except:
         import traceback
 
@@ -65,7 +71,7 @@ def user_authentication_failed(request, credentials):
     if not AxesProxyHandler.is_allowed(request):
         return {
             "is_locked": True,
-            "message": "Account locked",
+            "message": "Access locked",
             "status": HttpResponseForbidden.status_code,
         }
     else:
