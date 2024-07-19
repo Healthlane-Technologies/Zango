@@ -38,6 +38,12 @@ jobs:
           cd frontend
           CI=false yarn build
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-output
+          path: backend/src/zango/assets/app_panel/js
+
       - name: Extract branch name
         id: extract_branch
         run: |
@@ -52,7 +58,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { getOctokit } = require('@actions/github');
-            # const github = getOctokit(process.env.GITHUB_TOKEN);
+            # const github = getOctokit('${{ secrets.GITHUB_TOKEN }}');
             const pullRequest = context.payload.pull_request;
             if (pullRequest) {
               const issueNumber = pullRequest.number;
