@@ -91,7 +91,7 @@ MIDDLEWARE = [
     "zango.middleware.tenant.TimezoneMiddleware",
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
     "axes.middleware.AxesMiddleware",
-    "zango.middleware.telemetry.UpdateTenantSpanTelemetryMiddleware"
+    "zango.middleware.telemetry.OtelZangoContextMiddleware"
 ]
 
 if os.getenv("OTEL_IS_ENABLED", False):
