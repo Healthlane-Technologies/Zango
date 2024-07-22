@@ -4,11 +4,18 @@ import traceback
 from django.db import connection
 
 class TenantContextFilter(logging.Filter):
-    """Adds schema 
-
-    Args:
-        logging (_type_): _description_
+    
     """
+    A logging filter that enhances log records with tenant-specific context and 
+    formats exception tracebacks into a single line.
+
+    This filter adds the following attributes to the log records:
+    - `app_name`: the schema name of the current tenant.
+    - `domain_url`: the domain URL of the current tenant, if available.
+    - `exc_traceback_content`: the formatted exception traceback if an exception is present.
+    - `pathname`: the filtered pathname, shortened to start from the 'Zango' directory if present.
+    """
+    
     def filter(self, record):
         try:
             record_msg = str(record.msg)

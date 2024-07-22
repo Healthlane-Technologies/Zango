@@ -9,6 +9,12 @@ from opentelemetry.propagate import extract, inject
 
 class ZangoCeleryInstrumentor(CeleryInstrumentor):
     
+    """
+     A custom Celery instrumentor for the Zango framework that overrides the default operation name for the the tasks implemented in 
+     tenants. All tasks implemented in tenants are handled by 'zango.core.tasks.zango_task_executor' but 
+     we want to have the actual task name shown in the operation name in the traces.
+    """
+        
     def _trace_prerun(self, *args, **kwargs):
         task = utils.retrieve_task(kwargs)
         task_id = utils.retrieve_task_id(kwargs)

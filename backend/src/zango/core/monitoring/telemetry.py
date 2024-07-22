@@ -1,18 +1,22 @@
+import logging
 
 from opentelemetry import metrics, trace
-
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
-# from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs._internal.export import BatchLogRecordProcessor
 from opentelemetry import trace
+
 from loguru import logger
 
 from .celery_instrument import ZangoCeleryInstrumentor
@@ -43,8 +47,7 @@ def setup_telemetry(add_django_instrumentation: bool):
         resource = Resource.create(attributes={
                 "service.name": otel_resource_name()
             })
-        
-        # Add console exporter
+                
         if otel_export_to_otlp():            
             endpoint = otel_otlp_endpoint()
             if endpoint:
@@ -53,13 +56,14 @@ def setup_telemetry(add_django_instrumentation: bool):
                                 endpoint=endpoint,
                                 headers=headers
                                 )
-                logger.info(f"Exported set to {endpoint}")
+                logger.info(f"Exporter set to {endpoint}")
             else:
                 logger.info(f"OTLP endpoint not provided. Switching to console exporter")
                 exporter = ConsoleSpanExporter()
-        else:
+        else: # Add console exporter            
             exporter = ConsoleSpanExporter()
             logger.info(f"Otel exporting to console!")
+            
         span_processor = BatchSpanProcessor(exporter)
         # Initialize the TracerProvider
         tracer_provider = TracerProvider(resource=resource)
@@ -71,6 +75,7 @@ def setup_telemetry(add_django_instrumentation: bool):
         trace.set_tracer_provider(tracer_provider)
 
         logger.info("Configured default backend instrumentation")
+        
         if add_django_instrumentation:
             logger.info("Adding Django request instrumentation also.")
             _setup_django_process_instrumentation()
@@ -80,6 +85,35 @@ def setup_telemetry(add_django_instrumentation: bool):
         logger.info("Telemetry not enabled!")
 
 
+class LogGuruCompatibleLoggerHandler(LoggingHandler):
+    def emit(self, record: logging.LogRecord) -> None:
+        # The Otel exporter does not handle nested dictionaries. Loguru stores all of
+        # the extra log context developers can add on the extra dict. Here unnest
+        # them as attributes on the record itself so otel can export them properly.
+        for k, v in record.extra.items():
+            setattr(record, f"zango.{k}", v)
+        del record.extra
+
+        # by default otel doesn't send funcName, rename it so it does.
+        setattr(record, "python_function", record.funcName)
+        super().emit(record)
+
+
+def setup_log_exporting(logger):
+    from django.conf import settings
+
+    logger_provider = LoggerProvider()
+    set_logger_provider(logger_provider)
+    exporter = OTLPLogExporter()
+    handler = LogGuruCompatibleLoggerHandler(
+        level="DEBUG",
+        logger_provider=logger_provider,
+    )
+    logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+    logger.add(handler, format="{message}", level="DEBUG")
+    logger.info("Logger open telemetry exporting setup.")
+        
+        
 
 def _setup_standard_backend_instrumentation():
     BotocoreInstrumentor().instrument()

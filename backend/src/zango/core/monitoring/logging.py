@@ -1,5 +1,11 @@
 import sys
 import os
+import logging
+
+
+from .utils import otel_is_enabled
+from .telemetry import setup_log_exporting
+
 
 def _get_tenant_name():
     from django.db import connection
@@ -27,18 +33,33 @@ def _get_loguru_format(record):
         f"<cyan>{file_name}</cyan>:"
         "<cyan>{function}</cyan>:"
         "<cyan>{line}</cyan> - "
-        "<level>{message}</level>"
+        "<level>{message}</level>\n"
     )
     return loguru_format
+
 
 def setup_logging():
 
     from loguru import logger
+    from django.conf import settings
     
-    # A slightly customized default loguru format which includes the process id.
+    # Removes the default format 
     logger.remove()
-    # Replace it with our format, loguru recommends sending application logs to stderr.
-    logger.add(
-        sys.stderr, format=_get_loguru_format, level='INFO'
-    )
+    
+    # Add our customized format that adds the tenant context and removes unnecessary initial 
+    # path for the tenants
+    if settings.ENV == 'dev':        
+        logger.add(
+            sys.stderr, format=_get_loguru_format, level='INFO'
+        )
+    else:
+        logger.add(
+            'log/zango.log', 
+            format=_get_loguru_format, 
+            level='INFO', 
+            rotation="5 MB",
+            retention="1 month"
+        )
     logger.info("Logger setup.")
+    if otel_is_enabled():
+        setup_log_exporting(logger)

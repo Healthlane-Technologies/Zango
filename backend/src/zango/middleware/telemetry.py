@@ -1,7 +1,7 @@
 from opentelemetry import trace
 
 class OtelZangoContextMiddleware:
-    """Middleware to update the otel span name for requests
+    """ A middleware to update the otel span name for requests
     made to tenants. Adds the context of the tenant and replaces
     route with the path_info, as all tenant routes are wildcard
     route at Django level
