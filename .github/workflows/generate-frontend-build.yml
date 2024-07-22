@@ -52,19 +52,19 @@ jobs:
           echo "Branch name is $branch_name"
           echo "::set-output name=branch::$branch_name"
 
-     - name: Add a comment to the PR
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
-          script: |
-            const prNumber = context.payload.pull_request.number;
-            const comment = "Thanks for the PR, we'll merge it after review.";
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: comment,
-            });
+      - name: Add a comment to the PR
+          uses: actions/github-script@v6
+          with:
+            github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
+            script: |
+              const prNumber = context.payload.pull_request.number;
+              const comment = "Thanks for the PR, we'll merge it after review.";
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: comment,
+              });
 
 
       
