@@ -41,8 +41,12 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: build-output
+          name: build
           path: backend/src/zango/assets/app_panel/js
+
+      - name: Get run ID
+        id: get_run_id
+        run: echo "::set-output name=run_id::${GITHUB_RUN_ID}"
 
       - name: Extract branch name
         id: extract_branch
@@ -59,7 +63,7 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const comment = "Thanks for the PR, we'll merge it after review.";
-            const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts`;
+            const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/suites/${context.run_id}/artifacts`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
