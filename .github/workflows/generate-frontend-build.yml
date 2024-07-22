@@ -23,26 +23,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: Install Node.js
-      #   uses: actions/setup-node@v2
-      #   with:
-      #     node-version: "16"
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "16"
 
-      # - name: Install dependencies
-      #   run: |
-      #     cd frontend
-      #     yarn install
+      - name: Install dependencies
+        run: |
+          cd frontend
+          yarn install
 
-      # - name: Building app
-      #   run: |
-      #     cd frontend
-      #     CI=false yarn build
+      - name: Building app
+        run: |
+          cd frontend
+          CI=false yarn build
 
-      # - name: Upload build artifact
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: build-output
-      #     path: backend/src/zango/assets/app_panel/js
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-output
+          path: backend/src/zango/assets/app_panel/js
 
       - name: Extract branch name
         id: extract_branch
@@ -59,15 +59,14 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const comment = "Thanks for the PR, we'll merge it after review.";
+            const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}/artifacts`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
-              body: comment,
+              body: `The build artifact is available [here](${artifactUrl}). You can download and test it locally for verification.`,
             });
 
-
-      
       # - name: Notify on z-deployment_notifs slack channel
       #   uses: rtCamp/action-slack-notify@v2
       #   env:
