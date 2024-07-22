@@ -1,4 +1,4 @@
-# Zelthy 3.0 - App Panel
+# Zango 3.0 - App Panel
 
 ### `yarn mock`
 
