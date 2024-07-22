@@ -39,6 +39,7 @@ jobs:
           CI=false yarn build
 
       - name: Upload build artifact
+        id: artifact-upload-step
         uses: actions/upload-artifact@v3
         with:
           name: build
@@ -53,8 +54,11 @@ jobs:
         run: |
           echo "GITHUB_REF=$GITHUB_REF"
           branch_name=${GITHUB_REF#refs/heads/}
-          echo "Branch name is $branch_name"
+          echo "Branch name is $branch_name >>>  ${{ steps.artifact-upload-step.outputs.artifact-id }}"
           echo "::set-output name=branch::$branch_name"
+
+      - name: Output artifact ID
+        run: echo `Artifact ID is ${{ steps.artifact-upload-step.outputs.artifact-id }} >>> ${{ steps.artifact-upload-step.outputs }}`
 
       - name: Add a comment to the PR
         uses: actions/github-script@v6
@@ -63,7 +67,8 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const comment = "Thanks for the PR, we'll merge it after review.";
-            const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/suites/${context.runId}/artifacts`;
+            https://github.com/Healthlane-Technologies/Zango/actions/runs/10040010593/artifacts/1725538528
+            const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
