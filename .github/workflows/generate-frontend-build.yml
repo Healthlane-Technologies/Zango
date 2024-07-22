@@ -51,7 +51,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const runId = ${GITHUB_RUN_ID};
+            const runId = "${GITHUB_RUN_ID}";
             const { data: artifacts } = await github.rest.actions.listArtifactsForWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
