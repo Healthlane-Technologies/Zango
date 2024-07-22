@@ -23,26 +23,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "16"
+      # - name: Install Node.js
+      #   uses: actions/setup-node@v2
+      #   with:
+      #     node-version: "16"
 
-      - name: Install dependencies
-        run: |
-          cd frontend
-          yarn install
+      # - name: Install dependencies
+      #   run: |
+      #     cd frontend
+      #     yarn install
 
-      - name: Building app
-        run: |
-          cd frontend
-          CI=false yarn build
+      # - name: Building app
+      #   run: |
+      #     cd frontend
+      #     CI=false yarn build
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-output
-          path: backend/src/zango/assets/app_panel/js
+      # - name: Upload build artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: build-output
+      #     path: backend/src/zango/assets/app_panel/js
 
       - name: Extract branch name
         id: extract_branch
@@ -52,28 +52,20 @@ jobs:
           echo "Branch name is $branch_name"
           echo "::set-output name=branch::$branch_name"
 
-      - name: Comment PR
-        uses: thollander/actions-comment-pull-request@v2
-        env: 
-            GITHUB_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
+     - name: Add a comment to the PR
+        uses: actions/github-script@v6
         with:
-          message: |
-            Hello world ! :wave:
-      # - name: Comment on PR
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
-      #     script: |
-      #       const prNumber = context.payload.pull_request.number;
-      #       const commentBody = "Thank you for raising a PR against the main branch. Please ensure all checks pass before requesting a review.";
+          github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const comment = "Thanks for the PR, we'll merge it after review.";
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment,
+            });
 
-      #       github.rest.pulls.createReview({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         pull_number: prNumber,
-      #         body: commentBody,
-      #         event: 'COMMENT'
-      #       });
 
       
       # - name: Notify on z-deployment_notifs slack channel
