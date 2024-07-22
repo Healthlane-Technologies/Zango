@@ -45,6 +45,26 @@ jobs:
           name: build
           path: backend/src/zango/assets/app_panel/js
 
+      - name: Get artifact ID
+        id: get_artifact_id
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const runId = ${GITHUB_RUN_ID};
+            const { data: artifacts } = await github.rest.actions.listArtifactsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            const artifact = artifacts.artifacts.find(a => a.name === 'build');
+            if (artifact) {
+              console.log(`Artifact ID: ${artifact.id}`);
+              return artifact.id;
+            } else {
+              throw new Error('Artifact not found');
+            }
+
       - name: Get run ID
         id: get_run_id
         run: echo "::set-output name=run_id::${GITHUB_RUN_ID}"
@@ -67,7 +87,6 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const comment = "Thanks for the PR, we'll merge it after review.";
-            https://github.com/Healthlane-Technologies/Zango/actions/runs/10040010593/artifacts/1725538528
             const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
