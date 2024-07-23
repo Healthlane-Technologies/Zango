@@ -28,7 +28,6 @@ jobs:
         run: |
           cd frontend
           CI=false yarn build
-          backend/src/zango/assets/app_panel/js
 
       - name: Setup Git for commit
         run: |
