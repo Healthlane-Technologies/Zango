@@ -2,29 +2,45 @@ from django.db import models
 import sys
 from django.utils.translation import gettext_lazy as _
 
-class ZForeignKey(models.ForeignKey):
 
+class ZForeignKey(models.ForeignKey):
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigration')):
+        if all(
+            arg not in sys.argv
+            for arg in (
+                "ws_migrate",
+                "ws_makemigration",
+                "export_fixture",
+                "import_fixture",
+                "update-app",
+            )
+        ):
             cls._meta.apps.add_models(cls, self.related_model)
             try:
                 self.related_model._meta.apps.add_models(self.related_model, cls)
             except:
                 pass
 
-            apps = cls._meta.apps            
+            apps = cls._meta.apps
             apps.do_pending_operations(cls)
             apps.do_pending_operations(self.related_model)
             apps.clear_cache()
 
 
-
 class ZOneToOneField(models.OneToOneField):
-
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigration')):
+        if all(
+            arg not in sys.argv
+            for arg in (
+                "ws_migrate",
+                "ws_makemigration",
+                "export_fixture",
+                "import_fixture",
+                "update-app",
+            )
+        ):
             # dont need it if related model is of core
             # try:
             cls._meta.apps.add_models(cls, self.related_model)
@@ -104,18 +120,12 @@ class ZOneToOneField(models.OneToOneField):
 #     )
 
 
-
-
-
 class ZManyToManyField(models.ManyToManyField):
-       
-
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ('ws_migrate', 'ws_makemigration')):
-
+        if all(arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")):
             apps = cls._meta.apps
-            
+
             model_field = cls._meta.get_field(related)
             through_model = model_field.remote_field.through
             cls._meta.apps.add_models(cls, self.related_model)
@@ -124,4 +134,4 @@ class ZManyToManyField(models.ManyToManyField):
             apps.do_pending_operations(self.model)
             apps.do_pending_operations(self.related_model)
             apps.do_pending_operations(through_model)
-            apps.clear_cache()  
+            apps.clear_cache()
