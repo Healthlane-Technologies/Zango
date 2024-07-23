@@ -60,8 +60,12 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo
             });
-            console.log("Artifacts:",  JSON.stringify(artifacts.data, null, 2));
-            console.log("artifact id", artifacts.data.artifacts.find(item => item.workflow_run.id == runId))
+            console.log("Artifacts data:",  JSON.stringify(artifacts.data, null, 2));
+
+            console.log("Artifacts list:",  JSON.stringify(artifacts.data.artifacts, null, 2));
+
+            # console.log("artifact id", artifacts.data.artifacts.find(item => item.workflow_run.id == runId))
+
             const artifact = artifacts.data.artifacts.find(a => a.name === 'build' && a.workflow_run.id === runId);
             if (!artifact) {
               throw new Error('Artifact not found');
