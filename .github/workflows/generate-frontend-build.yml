@@ -58,6 +58,7 @@ jobs:
           echo "::set-output name=branch::$branch_name"
 
       - name: Output artifact ID
+        uses: actions/upload-artifact@v4
         script: |
           const findBy = {
             token: ${{ secrets.WORKFLOW_API_TOKEN }},
