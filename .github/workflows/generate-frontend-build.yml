@@ -52,7 +52,7 @@ jobs:
           github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
           script: |
             const runId = context.runId;
-            const artifacts = await github.rest.actions.listArtifacts({
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo
             });
