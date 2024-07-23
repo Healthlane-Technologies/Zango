@@ -3,7 +3,7 @@ name: Continuous Integration for Frontend
 on:
   push:
     branches:
-      - feat/fe-build-workflow
+      - main
     paths:
       - "frontend/**"
   pull_request:
@@ -12,7 +12,7 @@ on:
       - reopened
       - synchronize
     branches:
-      - feat/fe-build-workflow
+      - main
     paths:
       - "frontend/**"
 
@@ -71,10 +71,3 @@ jobs:
               issue_number: prNumber,
               body: `The build artifact is available in the artifact section [here](${artifactUrl}). You can download and test it locally for verification.`,
             });
-
-      # - name: Notify on z-deployment_notifs slack channel
-      #   uses: rtCamp/action-slack-notify@v2
-      #   env:
-      #     SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
-      #     SLACK_TITLE: New deployment in documentation environment of ${{ github.event.repository.name }}
-      #     SLACK_CHANNEL: "z-deployment-notifs"
