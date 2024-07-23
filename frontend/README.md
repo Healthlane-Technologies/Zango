@@ -2,7 +2,7 @@
 
 ### `yarn mock`
 
-Runs the app in the development mode with MSW mock data enabled.\\
+Runs the app in the development mode with MSW mock data enabled.\
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
 The page will reload when you make changes.\
