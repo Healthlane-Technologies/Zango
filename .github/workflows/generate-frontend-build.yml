@@ -82,7 +82,7 @@ jobs:
         with:
           github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
           script: |
-            console.log("artifact id", ${{ steps.artifact-upload-step.outputs }});
+            console.log("artifact id", JSON.stringify(${{ steps.artifact-upload-step.outputs }}, null, 2));
             const prNumber = context.payload.pull_request.number;
             const comment = "Thanks for the PR, we'll merge it after review.";
             const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts`;
