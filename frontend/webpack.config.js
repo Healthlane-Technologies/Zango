@@ -10,7 +10,7 @@ module.exports = {
 	},
 	output: {
 		path: path.resolve(__dirname, '../backend/src/zango/assets/app_panel/js'),
-		filename: `build.v${metadata.buildMajor}.${metadata.buildMinor}.${metadata.buildPatch}.min.js`,
+		filename: `build.${Date.now()}.min.js`,
 	},
 	module: {
 		rules: [
