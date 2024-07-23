@@ -41,11 +41,11 @@ jobs:
       - name: Upload build artifact
         id: artifact-upload-step
         uses: actions/upload-artifact@v3
-        # outputs:
-        #   artifact-id: ${{ steps.artifact-upload-step.outputs.artifact-id }}
         with:
           name: build
           path: backend/src/zango/assets/app_panel/js
+        outputs:
+          artifact-id: ${{ steps.artifact-upload-step.outputs.artifact-id }}
 
       - name: Get run ID
         id: get_run_id
