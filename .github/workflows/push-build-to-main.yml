@@ -1,0 +1,49 @@
+name: Push build to Main
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          yarn install
+
+      - name: Building app
+        run: |
+          cd frontend
+          CI=false yarn build
+          backend/src/zango/assets/app_panel/js
+
+      - name: Setup Git for commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@zango.com"
+
+      - name: Commit and push build
+        run: |
+          git add backend/src/zango/assets/app_panel/js
+          git commit -m "Deploy frontend build"
+          git push origin main
+
+      # - name: Notify on z-deployment_notifs slack channel
+      #   uses: rtCamp/action-slack-notify@v2
+      #   env:
+      #     SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
+      #     SLACK_TITLE: New deployment in documentation environment of ${{ github.event.repository.name }}
+      #     SLACK_CHANNEL: "z-deployment-notifs"
