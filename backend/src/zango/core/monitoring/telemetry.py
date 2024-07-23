@@ -1,5 +1,3 @@
-import logging
-
 from opentelemetry import metrics, trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
@@ -16,12 +14,13 @@ from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs._internal.export import BatchLogRecordProcessor
 from opentelemetry import trace
+from opentelemetry.trace import ProxyTracerProvider
 
 from loguru import logger
 
 from .celery_instrument import ZangoCeleryInstrumentor
 from .utils import otel_is_enabled, otel_export_to_otlp, otel_otlp_endpoint, \
-    otel_otlp_headers, otel_resource_name   
+    otel_otlp_headers, otel_resource_name, LogGuruCompatibleLoggerHandler
 
 tracer = trace.get_tracer(__name__)
 
@@ -42,67 +41,61 @@ def setup_telemetry(add_django_instrumentation: bool):
     """
 
     if otel_is_enabled():
-        _setup_standard_backend_instrumentation()
         
-        resource = Resource.create(attributes={
-                "service.name": otel_resource_name()
-            })
-                
-        if otel_export_to_otlp():            
-            endpoint = otel_otlp_endpoint()
-            if endpoint:
-                headers = otel_otlp_headers()
-                exporter = OTLPSpanExporter(
-                                endpoint=endpoint,
-                                headers=headers
-                                )
-                logger.info(f"Exporter set to {endpoint}")
-            else:
-                logger.info(f"OTLP endpoint not provided. Switching to console exporter")
+        existing_provider = trace.get_tracer_provider()
+        if not isinstance(existing_provider, ProxyTracerProvider):
+            print("Provider already configured not reconfiguring...")        
+        else:
+            resource = Resource.create(attributes={
+                    "service.name": otel_resource_name()
+                })
+                    
+            if otel_export_to_otlp():            
+                endpoint = otel_otlp_endpoint()
+                if endpoint:
+                    headers = otel_otlp_headers()
+                    exporter = OTLPSpanExporter(
+                                    endpoint=endpoint,
+                                    headers=headers
+                                    )
+                    print(f"Exporter set to {endpoint}")
+                else:
+                    print(f"OTLP endpoint not provided. Switching to console exporter")
+                    exporter = ConsoleSpanExporter()
+            else: # Add console exporter            
                 exporter = ConsoleSpanExporter()
-        else: # Add console exporter            
-            exporter = ConsoleSpanExporter()
-            logger.info(f"Otel exporting to console!")
+                print(f"Otel exporting to console!")
+                
+            span_processor = BatchSpanProcessor(exporter)
+            # Initialize the TracerProvider
+            tracer_provider = TracerProvider(resource=resource)
+
+            # Add the BatchSpanProcessor to the TracerProvider
+            tracer_provider.add_span_processor(span_processor)
+
+            # Configure the tracer provider
+            trace.set_tracer_provider(tracer_provider)
             
-        span_processor = BatchSpanProcessor(exporter)
-        # Initialize the TracerProvider
-        tracer_provider = TracerProvider(resource=resource)
+            _setup_standard_backend_instrumentation()
 
-        # Add the BatchSpanProcessor to the TracerProvider
-        tracer_provider.add_span_processor(span_processor)
+            print("Configured default backend instrumentation")
+            
+            if add_django_instrumentation:
+                print("Adding Django request instrumentation also.")
+                _setup_django_process_instrumentation()
 
-        # Configure the tracer provider
-        trace.set_tracer_provider(tracer_provider)
-
-        logger.info("Configured default backend instrumentation")
-        
-        if add_django_instrumentation:
-            logger.info("Adding Django request instrumentation also.")
-            _setup_django_process_instrumentation()
-
-        logger.info("Telemetry enabled!")
+            print("Telemetry enabled!")
     else:
-        logger.info("Telemetry not enabled!")
+        print("Telemetry not enabled!")
 
 
-class LogGuruCompatibleLoggerHandler(LoggingHandler):
-    def emit(self, record: logging.LogRecord) -> None:
-        # The Otel exporter does not handle nested dictionaries. Loguru stores all of
-        # the extra log context developers can add on the extra dict. Here unnest
-        # them as attributes on the record itself so otel can export them properly.
-        for k, v in record.extra.items():
-            setattr(record, f"zango.{k}", v)
-        del record.extra
 
-        # by default otel doesn't send funcName, rename it so it does.
-        setattr(record, "python_function", record.funcName)
-        super().emit(record)
+def setup_log_exporting(logger, format):    
+    resource = Resource.create(attributes={
+        "service.name": otel_resource_name()
+    })
 
-
-def setup_log_exporting(logger):
-    from django.conf import settings
-
-    logger_provider = LoggerProvider()
+    logger_provider = LoggerProvider(resource=resource)
     set_logger_provider(logger_provider)
     exporter = OTLPLogExporter()
     handler = LogGuruCompatibleLoggerHandler(
@@ -110,7 +103,7 @@ def setup_log_exporting(logger):
         logger_provider=logger_provider,
     )
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
-    logger.add(handler, format="{message}", level="DEBUG")
+    logger.add(handler, format=format, level="DEBUG")
     logger.info("Logger open telemetry exporting setup.")
         
         

@@ -65,3 +65,4 @@ opentelemetry-sdk==1.22.0
 opentelemetry-semantic-conventions==0.43b0
 opentelemetry-util-http==0.43b0
 loguru==0.7.2
+python-dotenv==1.0.1
