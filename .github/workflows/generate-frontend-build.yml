@@ -59,19 +59,21 @@ jobs:
 
       - name: Output artifact ID
         uses: actions/upload-artifact@v4
-        script: |
-          const findBy = {
-            token: ${{ secrets.WORKFLOW_API_TOKEN }},
-            workflowRunId: ${context.runId},
-            repositoryOwner: ${context.repo.owner},
-            repositoryName: ${context.repo.repo}
-          }
+        with:
+          github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
+          script: |
+            const findBy = {
+              token: ${{ secrets.WORKFLOW_API_TOKEN }},
+              workflowRunId: ${context.runId},
+              repositoryOwner: ${context.repo.owner},
+              repositoryName: ${context.repo.repo}
+            }
 
-          let data = await artifact.getArtifact('build', {
-            findBy
-          })
+            let data = await artifact.getArtifact('build', {
+              findBy
+            })
 
-          console.log("data", data)
+            console.log("data", data)
 
       - name: Add a comment to the PR
         uses: actions/github-script@v6
