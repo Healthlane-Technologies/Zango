@@ -1,6 +1,11 @@
 import click
-
-from zango.cli import install_package, package_info, start_project
+from zango.cli import (
+    package_info,
+    start_project,
+    install_package,
+    git_setup,
+    update_app,
+)
 
 
 @click.group()
@@ -12,6 +17,8 @@ def cli():
 cli.add_command(start_project.start_project)
 cli.add_command(package_info.list_packages)
 cli.add_command(install_package.install_package)
+cli.add_command(git_setup.git_setup)
+cli.add_command(update_app.update_app)
 
 if __name__ == "__main__":
     cli()

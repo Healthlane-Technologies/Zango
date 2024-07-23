@@ -6,10 +6,20 @@ from django.db import models
 # from django.utils.translation import gettext_lazy as _
 
 
+
 class ZForeignKey(models.ForeignKey):
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")):
+        if all(
+            arg not in sys.argv
+            for arg in (
+                "ws_migrate",
+                "ws_makemigration",
+                "export_fixture",
+                "import_fixture",
+                "update-app",
+            )
+        ):
             cls._meta.apps.add_models(cls, self.related_model)
             try:
                 self.related_model._meta.apps.add_models(self.related_model, cls)
@@ -25,7 +35,20 @@ class ZForeignKey(models.ForeignKey):
 class ZOneToOneField(models.OneToOneField):
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
+<<<<<<< HEAD
         if all(arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")):
+=======
+        if all(
+            arg not in sys.argv
+            for arg in (
+                "ws_migrate",
+                "ws_makemigration",
+                "export_fixture",
+                "import_fixture",
+                "update-app",
+            )
+        ):
+>>>>>>> bf7355f6 (wip: release workflow)
             # dont need it if related model is of core
             # try:
             cls._meta.apps.add_models(cls, self.related_model)

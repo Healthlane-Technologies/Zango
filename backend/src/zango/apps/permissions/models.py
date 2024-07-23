@@ -1,9 +1,10 @@
+from django.db.models import Q
 from django.db import models
-from django.db.models import JSONField, Q
+from django.db.models import JSONField
 from django.utils import timezone
 
-from zango.apps.auditlogs.registry import auditlog
 from zango.core.model_mixins import FullAuditMixin
+from zango.apps.auditlogs.registry import auditlog
 
 
 class PermissionsModel(FullAuditMixin):
@@ -63,6 +64,11 @@ class PermissionsModel(FullAuditMixin):
         return
 
 
+class PolicyModelManager(models.Manager):
+    def get_by_natural_key(self, name, path):
+        return self.get(name=name, path=path)
+
+
 class PolicyModel(FullAuditMixin):
     POLICY_TYPES = [
         ("system", "SYSTEM"),
@@ -79,6 +85,9 @@ class PolicyModel(FullAuditMixin):
     is_active = models.BooleanField(default=True)
     type = models.CharField(choices=POLICY_TYPES, max_length=10, default="user")
 
+    def natural_key(self):
+        return (self.name, self.path)
+
     def __str__(self):
         return self.name
 
@@ -94,6 +103,8 @@ class PolicyModel(FullAuditMixin):
         return valid_policies.filter(
             statement__permissions__contains=[{"type": "userAccess"}]
         )
+
+    objects = PolicyModelManager()
 
     class Meta:
         unique_together = ("name", "path")

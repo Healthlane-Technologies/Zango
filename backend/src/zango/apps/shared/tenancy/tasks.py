@@ -5,6 +5,8 @@ import cookiecutter.main
 from celery import shared_task
 
 from django.conf import settings
+from django.utils import timezone
+
 from django.core.management import call_command
 
 from .utils import DEFAULT_THEME_CONFIG, assign_policies_to_anonymous_user
@@ -49,7 +51,8 @@ def initialize_workspace(tenant_uuid):
         )
 
         tenant.status = "deployed"
-        tenant.save()
+        tenant.deployed_on = timezone.now()
+        tenant.save(update_fields=["status", "deployed_on"])
 
         assign_policies_to_anonymous_user(tenant.schema_name)
         theme = ThemesModel.objects.create(
