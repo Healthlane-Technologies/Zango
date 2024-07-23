@@ -45,6 +45,11 @@ jobs:
           name: build
           path: backend/src/zango/assets/app_panel/js
 
+       - name: Get run ID
+        id: get_run_id
+        run: echo "::set-output name=run_id::${GITHUB_RUN_ID}"
+
+
       - name: Retrieve Artifact ID
         id: retrieve-artifact-id
         uses: actions/github-script@v6
@@ -56,7 +61,8 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo
             });
-            console.log("Artifacts:", JSON.stringify(artifacts.data, null, 2));
+            console.log("Artifacts:",  JSON.stringify(artifacts.data, null, 2));
+            console.log("artifact id", data.artifacts.find(item => item.workflow_run.id == context.runId))
             const artifact = artifacts.data.artifacts.find(a => a.name === 'build' && a.workflow_run.id === runId);
             if (!artifact) {
               throw new Error('Artifact not found');
@@ -64,9 +70,7 @@ jobs:
             console.log("Artifact ID:", artifact.id);
             core.setOutput("artifact-id", artifact.id);
 
-      - name: Get run ID
-        id: get_run_id
-        run: echo "::set-output name=run_id::${GITHUB_RUN_ID}"
+     
 
       - name: Extract branch name
         id: extract_branch
