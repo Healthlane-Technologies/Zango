@@ -45,10 +45,9 @@ jobs:
           name: build
           path: backend/src/zango/assets/app_panel/js
 
-       - name: Get run ID
+      - name: Get run ID
         id: get_run_id
         run: echo "::set-output name=run_id::${GITHUB_RUN_ID}"
-
 
       - name: Retrieve Artifact ID
         id: retrieve-artifact-id
@@ -69,8 +68,6 @@ jobs:
             }
             console.log("Artifact ID:", artifact.id);
             core.setOutput("artifact-id", artifact.id);
-
-     
 
       - name: Extract branch name
         id: extract_branch
