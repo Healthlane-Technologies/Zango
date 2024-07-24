@@ -1,0 +1,158 @@
+name: Publish Zango
+
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - 'CHANGELOG.md'
+    branches:
+      - feat/pypi_dockerhub_release_workflow
+
+jobs:
+  publish-to-dockerhub:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Get version from file
+      id: get_version
+      run: |
+        set -e
+        VERSION=$(grep '__version__' backend/src/zango/__init__.py | sed 's/.*__version__ = "\(.*\)"/\1/'| tail -1)
+        echo "VERSION=$VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
+    
+    - name: Build and Push Docker image with tag
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:${{ env.VERSION }}
+
+  build-zango:
+    name: Build zango
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+    - name: Install pypa/build
+      run: >-
+        python3 -m
+        pip install
+        build
+        --user
+    - name: Build a binary wheel and a source tarball
+      run: |
+        python3 -m build backend --outdir dist
+    - name: Store the distribution packages
+      if: github.event.pull_request.merged == true
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-to-pypi:
+    if: github.event.pull_request.merged == true
+    name: Publish Zango to PyPI
+    needs:
+    - build-zango
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/zango
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish Zango to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+  github-release:
+    if: github.event.pull_request.merged == true
+    name: >-
+      Sign Zango with Sigstore
+      and upload it to GitHub Release
+    needs:
+      - publish-to-pypi
+      - build-zango
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v2.1.1
+      with:
+        inputs: >-
+          ./dist/*.tar.gz
+          ./dist/*.whl
+    - name: Get version from file
+      id: get_version
+      run: |
+          set -e
+          VERSION=$(grep '__version__' backend/src/zango/__init__.py | sed 's/.*__version__ = "\(.*\)"/\1/'| tail -1)
+          echo "VERSION=$VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+    - name: Extract release notes
+      id: extract-changelog
+      uses: sean0x42/markdown-extract@v2
+      with:
+        file: CHANGELOG.md
+        pattern: '${{ env.VERSION }}'
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      with:
+        tag_name: v${{ env.VERSION }}
+        release_name: v${{ env.VERSION }}
+        prerelease: false
+        draft: false
+        body: ${{ steps.extract-changelog.outputs.markdown }}
