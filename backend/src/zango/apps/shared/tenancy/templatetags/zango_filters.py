@@ -3,6 +3,9 @@ Module containing custom template filters
 """
 
 from django import template
+from django.conf import settings
+import os
+import re
 
 register = template.Library()
 
@@ -36,3 +39,16 @@ def humanize_timedelta(timedelta_obj):
     if seconds > 0:
         time_total += " {} seconds".format(int(seconds))
     return time_total
+
+
+@register.filter()
+def autoincrement(build_path):
+    buildir = os.path.dirname(build_path)
+    filep = os.path.basename(build_path)
+    for dir in settings.STATICFILES_DIRS:
+        for dirpath, dirnames, filenames in os.walk(dir):
+            print(filenames)
+            for filename in filenames:
+                if re.match(filep, filename):
+                    return f"/static/{buildir}/{filename}"
+    return  build_path
