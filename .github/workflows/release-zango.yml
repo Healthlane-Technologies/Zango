@@ -6,7 +6,7 @@ on:
     paths:
       - 'CHANGELOG.md'
     branches:
-      - feat/pypi_dockerhub_release_workflow
+      - main
 
 jobs:
   publish-to-dockerhub:
