@@ -29,6 +29,11 @@ jobs:
           cd frontend
           CI=false yarn build
 
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js" -type f -delete
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
+
       - name: Setup Git for commit
         run: |
           git config user.name "github-actions"
