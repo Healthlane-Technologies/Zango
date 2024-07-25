@@ -1,11 +1,6 @@
 name: Continuous Integration for Frontend
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "frontend/**"
   pull_request:
     types:
       - opened
@@ -38,24 +33,15 @@ jobs:
           cd frontend
           CI=false yarn build
 
+      - name: Get current timestamp in milliseconds
+        run: echo "TIMESTAMP=$(date +%s%3N)" >> $GITHUB_ENV
+
       - name: Upload build artifact
         id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: build.${{ env.TIMESTAMP }}.min.js
           path: backend/src/zango/assets/app_panel/js
-
-      - name: Get run ID
-        id: get_run_id
-        run: echo "run_id=${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
-
-      - name: Extract branch name
-        id: extract_branch
-        run: |
-          echo "GITHUB_REF=$GITHUB_REF"
-          branch_name=${GITHUB_REF#refs/heads/}
-          echo "Branch name is $branch_name"
-          echo "branch=$branch_name" >> $GITHUB_OUTPUT
 
       - name: Add a comment to the PR
         uses: actions/github-script@v6
@@ -63,7 +49,6 @@ jobs:
           github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
           script: |
             const prNumber = context.payload.pull_request.number;
-            const comment = "Thanks for the PR, we'll merge it after review.";
             const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
