@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import appChatbotReducer from '../pages/app/slice';
+import appAccessLogsReducer from '../pages/appAccessLogs/slice';
 import appApplicationObjectsLogsReducer from '../pages/appApplicationObjectsLogs/slice';
 import appConfigurationReducer from '../pages/appConfiguration/slice';
 import appFrameworkObjectsLogsReducer from '../pages/appFrameworkObjectsLogs/slice';
@@ -28,5 +29,6 @@ export default configureStore({
 		appChatbot: appChatbotReducer,
 		appApplicationObjectsLogs: appApplicationObjectsLogsReducer,
 		appFrameworkObjectsLogs: appFrameworkObjectsLogsReducer,
+		appAccessLogs: appAccessLogsReducer,
 	},
 });

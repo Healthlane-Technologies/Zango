@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2024-06-26
+
+### Fixed
+
+- ``CODEASSIST_ENABLED`` setting issue [(#189)](https://github.com/Healthlane-Technologies/Zango/pull/189)
+- memory leak issue in auditlogs [(#260)](https://github.com/Healthlane-Technologies/Zango/pull/260)
+- ``pwd`` library removed [(#269)](https://github.com/Healthlane-Technologies/Zango/pull/269)
+- Issue  [#252](https://github.com/Healthlane-Technologies/Zango/issues/252), [#173](https://github.com/Healthlane-Technologies/Zango/issues/173), [#170](https://github.com/Healthlane-Technologies/Zango/issues/170) fixed: [(#258)](https://github.com/Healthlane-Technologies/Zango/pull/258)
+- Refactor App Panel Frontend Codebase [(#245)](https://github.com/Healthlane-Technologies/Zango/pull/245)
+- ``setuptools`` added to fix breaking installation [(#273)](https://github.com/Healthlane-Technologies/Zango/pull/273)
+
 ## [0.2.0] - 2024-05-21
 
 ### Added

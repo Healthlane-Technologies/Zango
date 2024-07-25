@@ -1,7 +1,11 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect
 
+from django.utils.decorators import method_decorator
+from django.template.response import TemplateResponse
 
+from axes.decorators import axes_dispatch
+@method_decorator(axes_dispatch, name='dispatch')
 # Create your views here.
 class PlatformUserLoginView(LoginView):
     """
@@ -11,10 +15,18 @@ class PlatformUserLoginView(LoginView):
     template_name = "app_panel/app_panel_login.html"
 
     def post(self, request, *args, **kwargs):
-        super().post(request, *args, **kwargs)
-        return redirect("/platform")
+        resp = super().post(request, *args, **kwargs)
+        if resp.status_code == 302:
+            return redirect("/platform")
+        else:
+            context = self.get_context_data()
+            context["error_message"] = "Please enter a correct email address and password. Note that both fields may be case-sensitive."
+            return TemplateResponse(request, self.template_name, context)
 
+from django.utils.decorators import method_decorator
 
+from axes.decorators import axes_dispatch
+@method_decorator(axes_dispatch, name='dispatch')
 class PlatformUserLogoutView(LogoutView):
     """
     View to logout the user.

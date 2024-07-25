@@ -1,7 +1,8 @@
 FROM kczelthy/zango:latest
 
+RUN apt update
 RUN pip install gunicorn
-RUN apt-get install net-tools
+RUN apt-get install -y net-tools
 RUN apt install ffmpeg -y
 
 ARG UID

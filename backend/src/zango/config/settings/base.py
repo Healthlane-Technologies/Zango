@@ -1,7 +1,9 @@
 import sys
 import os
-
+import environ
+from datetime import timedelta
 import zango
+from zango.core.utils import generate_lockout_response
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -28,7 +30,7 @@ SHARED_APPS = [
     # 'django_otp',
     # 'django_otp.plugins.otp_static',
     # 'django_otp.plugins.otp_totp',
-    # 'axes',
+    "axes",
     "session_security",
     "django_celery_beat",
     "django_celery_results",
@@ -49,6 +51,7 @@ TENANT_APPS = [
     "zango.apps.dynamic_models",
     "zango.apps.tasks",
     "zango.apps.auditlogs",
+    "zango.apps.accesslogs",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -56,6 +59,7 @@ TENANT_APPS = [
     "crispy_forms",
     "django_celery_results",
     # "cachalot",
+    "axes",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -86,10 +90,12 @@ MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zango.middleware.tenant.TimezoneMiddleware",
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 
 AUTHENTICATION_BACKENDS = (
+    "axes.backends.AxesStandaloneBackend",
     "zango.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
     "zango.apps.appauth.auth_backend.AppUserModelBackend",
 )
@@ -111,7 +117,10 @@ TEMPLATES = [
             # ],
             "loaders": [
                 "zango.core.template_loader.AppTemplateLoader",
-                "django.template.loaders.filesystem.Loader",
+                (
+                    "django.template.loaders.filesystem.Loader",
+                    [os.path.join(os.path.dirname(zango.__file__), "templates")],
+                ),
                 "django.template.loaders.app_directories.Loader",
             ],
         },
@@ -178,3 +187,18 @@ SESSION_SECURITY_EXPIRE_AFTER = 1800
 SESSION_SECURITY_PASSIVE_URL_NAMES = [
     "history_sidebar",
 ]
+
+AXES_BEHIND_REVERSE_PROXY = True
+AXES_FAILURE_LIMIT = 6
+AXES_LOCK_OUT_AT_FAILURE = True
+AXES_COOLOFF_TIME = timedelta(seconds=900)
+
+AXES_ENABLED = True
+AXES_LOCKOUT_CALLABLE = generate_lockout_response
+AXES_LOCKOUT_PARAMETERS = ["ip_address", ["username", "user_agent"]]
+AXES_ENABLE_ACCESS_FAILURE_LOG=True
+AXES_META_PRECEDENCE_ORDER = (
+    'REMOTE_ADDR',
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_X_REAL_IP',
+)
