@@ -3,7 +3,7 @@ name: Continuous Integration for Frontend
 on:
   push:
     branches:
-      - main
+      - test-feat/fe-build-workflow
     paths:
       - "frontend/**"
   pull_request:
@@ -12,7 +12,7 @@ on:
       - reopened
       - synchronize
     branches:
-      - main
+      - test-feat/fe-build-workflow
     paths:
       - "frontend/**"
 
