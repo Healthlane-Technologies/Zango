@@ -42,13 +42,13 @@ def humanize_timedelta(timedelta_obj):
 
 
 @register.filter()
-def autoincrement(build_path):
+def update_latest(build_path):
     buildir = os.path.dirname(build_path)
     filep = os.path.basename(build_path)
     for dir in settings.STATICFILES_DIRS:
         for dirpath, dirnames, filenames in os.walk(dir):
-            print(filenames)
             for filename in filenames:
                 if re.match(filep, filename):
-                    return f"/static/{buildir}/{filename}"
+                    print(os.path.join(dirpath, filename))
+                    return os.path.join(buildir, filename)
     return  build_path
