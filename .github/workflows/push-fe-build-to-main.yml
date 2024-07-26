@@ -18,7 +18,6 @@ jobs:
         run: |
           find backend/src/zango/assets/app_panel/js -name "build.*.min.js" -type f -delete
           find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
-
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
@@ -28,25 +27,21 @@ jobs:
         run: |
           cd frontend
           yarn install
-
       - name: Building app
         run: |
           cd frontend
           CI=false yarn build
-
       - name: Setup Git for commit
         run: |
           git config user.name "github-actions"
           git config user.email "actions@zango.com"
-
       - name: Commit and push build
         env:
-          github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
         run: |
           git add backend/src/zango/assets/app_panel/js
           git commit -m "Deploy frontend build"
           git push https://x-access-token:${{ secrets.WORKFLOW_API_TOKEN }}@github.com/Healthlane-Technologies/Zango.git HEAD:fe-build-test
-
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
         env:
