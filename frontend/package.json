@@ -33,10 +33,10 @@
 		"react-redux": "^8.1.1",
 		"react-resizable": "^3.0.5",
 		"react-router-dom": "^6.6.1",
-		"react-scripts": "5.0.1",
+		"react-scripts": "^3.0.1",
 		"react-window": "^1.8.8",
 		"shortid": "^2.2.16",
-		"uglifyjs-webpack-plugin": "^2.2.0",
+		"uglifyjs-webpack-plugin": "^1.1.2",
 		"web-vitals": "^2.1.0",
 		"webfontloader": "^1.6.28",
 		"yup": "^0.32.11"
@@ -70,7 +70,9 @@
 	},
 	"devDependencies": {
 		"autoprefixer": "^10.4.13",
-		"cypress": "^13.10.0",
+		"cypress": "^13.13.1",
+		"cypress-cucumber-preprocessor": "^4.3.1",
+		"cypress-file-upload": "^5.0.8",
 		"form-data": "^4.0.0",
 		"postcss": "^8.4.20",
 		"prettier": "^2.8.1",
@@ -80,5 +82,15 @@
 	},
 	"msw": {
 		"workerDirectory": "public"
+	},
+	"cypress-cucumber-preprocessor": {
+		"nonGlobalStepDefinition": true,
+		"stepDefinitions": "cypress/e2e/stepDefinitions",
+		"cucumberJson": {
+			"generate": true,
+			"outputFolder": "cypress/cucumber-json",
+			"filePrefix": "",
+			"fileSuffix": ".cucumber"
+		}
 	}
 }
