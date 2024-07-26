@@ -33,8 +33,8 @@ jobs:
           CI=false yarn build
       - name: Setup Git for commit
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@zango.com"
+          git config user.name "kc-diabeat"
+          git config user.email "kaustubh@zelthy.com"
       - name: Commit and push build
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_API_TOKEN }}
