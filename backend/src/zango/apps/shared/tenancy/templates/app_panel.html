@@ -19,7 +19,7 @@
     var csrf_token = "{{ csrf_token }}";
     var platform_version = "{{ platform_version }}";
   </script>
-  <script src="{% static 'app_panel/js/build.*.min.js'|update_latest %}"></script>
+  <script src="{% static 'app_panel/js/build.*.min.js'|use_latest %}"></script>
   <script src="{% static 'js/jquery/3.7.1/jquery.min.js' %}"></script>
   {% include 'session_security/all.html' %}
 </body>
