@@ -27,26 +27,20 @@ jobs:
         run: |
           cd frontend
           yarn install
-          
       - name: Building app
         run: |
           cd frontend
           CI=false yarn build
+      - name: Setup Git for commit
+        run: |
+          git config user.name "kc-diabeat"
+          git config user.email "kaustubh@zelthy.com"
           
-
-      - name: Push to zelthy3-docs-hub repository
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          source-directory: "backend/src/zango/assets/app_panel/js"
-          target-directory: "backend/src/zango/assets/app_panel/js"
-          destination-github-username: "kc-diabeat"
-          destination-repository-name: "Zango"
-          commit-message: "Deploy frontend build"
-          user-email: "kaustubh@zelthy.com"
-          target-branch: "fe-build-test"
+      - name: Commit and push build
+        run: |
+          git add backend/src/zango/assets/app_panel/js
+          git commit -m "Deploy frontend build"
+          git push origin fe-build-test
       
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
