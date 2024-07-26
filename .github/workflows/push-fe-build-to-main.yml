@@ -40,10 +40,12 @@ jobs:
           git config user.email "actions@zango.com"
 
       - name: Commit and push build
+        env:
+          github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
         run: |
           git add backend/src/zango/assets/app_panel/js
           git commit -m "Deploy frontend build"
-          git push origin fe-build-test
+          git push https://x-access-token:${{ secrets.WORKFLOW_API_TOKEN }}@github.com/Healthlane-Technologies/Zango.git HEAD:fe-build-test
 
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
