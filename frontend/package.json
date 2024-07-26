@@ -70,9 +70,6 @@
 	},
 	"devDependencies": {
 		"autoprefixer": "^10.4.13",
-		"cypress": "^13.13.1",
-		"cypress-cucumber-preprocessor": "^4.3.1",
-		"cypress-file-upload": "^5.0.8",
 		"form-data": "^4.0.0",
 		"postcss": "^8.4.20",
 		"prettier": "^2.8.1",
@@ -82,15 +79,5 @@
 	},
 	"msw": {
 		"workerDirectory": "public"
-	},
-	"cypress-cucumber-preprocessor": {
-		"nonGlobalStepDefinition": true,
-		"stepDefinitions": "cypress/e2e/stepDefinitions",
-		"cucumberJson": {
-			"generate": true,
-			"outputFolder": "cypress/cucumber-json",
-			"filePrefix": "",
-			"fileSuffix": ".cucumber"
-		}
 	}
 }

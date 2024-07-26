@@ -1,0 +1,125 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "Policy Management",
+    "line": 1,
+    "id": "policy-management",
+    "tags": [],
+    "uri": "policies.feature",
+    "elements": [
+      {
+        "id": "policy-management;admin-wants-to-verify-that-all-the-policies-are-loaded",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Admin wants to verify that all the policies are loaded",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "User navigates to policies tab",
+            "result": {
+              "status": "passed",
+              "duration": 12873000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 5,
+            "name": "Validate the policies tab URL",
+            "result": {
+              "status": "passed",
+              "duration": 4000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "Column_1",
+                      "Column_2",
+                      "Column_3",
+                      "Column_4",
+                      "Column_5"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Policy Id",
+                      "Policy Name",
+                      "Configuration",
+                      "Description",
+                      "Roles"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 6,
+            "name": "Policy table should contain the following columns",
+            "result": {
+              "status": "passed",
+              "duration": 352000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 9,
+            "name": "Api response post landing on policies tab should have message \"All policies fetched successfully\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 5000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "policy-management;admin-wants-to-sync-the-policies",
+        "keyword": "Scenario",
+        "line": 11,
+        "name": "Admin wants to sync the policies",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "User navigates to policies tab",
+            "result": {
+              "status": "passed",
+              "duration": 11411000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 12,
+            "name": "Admin clicks on the sync policy button",
+            "result": {
+              "status": "passed",
+              "duration": 2100000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 13,
+            "name": "Api response post syncing policies should have message \"Policies synced successfully\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 9000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

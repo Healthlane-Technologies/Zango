@@ -1,0 +1,360 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "User Role Creation and Validation",
+    "line": 1,
+    "id": "user-role-creation-and-validation",
+    "tags": [],
+    "uri": "userRole.feature",
+    "elements": [
+      {
+        "id": "user-role-creation-and-validation;user-role-creation-with-valid-data",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "User role creation with valid data",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user role tab and gets the user role data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 18763000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Admin clicks on the new user role button on the user role page",
+            "result": {
+              "status": "passed",
+              "duration": 376000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 7,
+            "name": "Admin creates dynamic data for user role creation",
+            "result": {
+              "status": "passed",
+              "duration": 39000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "field_name_1",
+                      "field_name_2"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Role Name",
+                      "Policy"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 8,
+            "name": "Add user role form is displayed with the following fields",
+            "result": {
+              "status": "passed",
+              "duration": 21000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "Admin fills up the user role form with the valid data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 1007000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 12,
+            "name": "User role should be successfully added and admin should be redirected to the table view",
+            "result": {
+              "status": "passed",
+              "duration": 4000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "Admin also wants to assert the Api response post user role addition",
+            "result": {
+              "status": "passed",
+              "duration": 2000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 14,
+            "name": "Api response post user role creation should have message \"User Role Created Successfully\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 148000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-role-creation-and-validation;required-fields-validation-for-user-role-form",
+        "keyword": "Scenario",
+        "line": 16,
+        "name": "Required fields validation for user role form",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user role tab and gets the user role data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 11862000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Admin clicks on the new user role button on the user role page",
+            "result": {
+              "status": "passed",
+              "duration": 329000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "Admin skips the mandatory fields",
+            "result": {
+              "status": "passed",
+              "duration": 678000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 19,
+            "name": "Required field error message for user role form should be displayed",
+            "result": {
+              "status": "passed",
+              "duration": 12000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-role-creation-and-validation;user-role-creation-with-existing-role-name",
+        "keyword": "Scenario",
+        "line": 21,
+        "name": "User role creation with existing role name",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user role tab and gets the user role data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 10950000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 22,
+            "name": "Admin clicks on the new user role button on the user role page",
+            "result": {
+              "status": "passed",
+              "duration": 137000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 23,
+            "name": "Admin fills up the user role form with the valid data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 1021000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 24,
+            "name": "Error message for duplication of user role should be displayed",
+            "result": {
+              "status": "passed",
+              "duration": 255000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-role-creation-and-validation;user-role-update-with-existing-role-name",
+        "keyword": "Scenario",
+        "line": 26,
+        "name": "User role update with existing role name",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user role tab and gets the user role data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 11009000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 27,
+            "name": "Admin clicks on the user role table search button and Enters the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 5339000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "Admin clicks on the edit user role button under the three dots menu",
+            "result": {
+              "status": "passed",
+              "duration": 5335000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "Admin fills up the edit user role form with the existing data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 886000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 30,
+            "name": "Error message for duplication of user role should be displayed",
+            "result": {
+              "status": "passed",
+              "duration": 222000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-role-creation-and-validation;table-data-validation-post-user-role-creation",
+        "keyword": "Scenario",
+        "line": 32,
+        "name": "Table data validation post user role creation",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user role tab and gets the user role data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 11479000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 33,
+            "name": "Validate the user role tab URL",
+            "result": {
+              "status": "passed",
+              "duration": 3000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "Column_1",
+                      "Column_2",
+                      "Column_3",
+                      "Column_4"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Role",
+                      "Policy(s)",
+                      "Active/Inactive",
+                      "No. of Users"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 34,
+            "name": "User role table should contain the following columns",
+            "result": {
+              "status": "passed",
+              "duration": 32000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 37,
+            "name": "Admin clicks on the user role table search button and Enters the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 5248000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 38,
+            "name": "User role table row should contain the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 52000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

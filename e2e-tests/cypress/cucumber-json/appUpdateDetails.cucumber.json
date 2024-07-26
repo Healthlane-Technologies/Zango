@@ -1,0 +1,161 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "App update and Validation",
+    "line": 1,
+    "id": "app-update-and-validation",
+    "tags": [],
+    "uri": "appUpdateDetails.feature",
+    "elements": [
+      {
+        "id": "app-update-and-validation;api-assertion-post-landing-on-app-details-view",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "Api assertion post landing on app details view",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin logins successfully and lands on the details view of App",
+            "result": {
+              "status": "passed",
+              "duration": 13632000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Validate the app configuration URL",
+            "result": {
+              "status": "passed",
+              "duration": 4000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 7,
+            "name": "Api response post landing on the app configuration should have same app name and app uuid",
+            "result": {
+              "status": "passed",
+              "duration": 5000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "app-update-and-validation;update-app-details-with-valid-data",
+        "keyword": "Scenario",
+        "line": 9,
+        "name": "Update app details with valid data",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin logins successfully and lands on the details view of App",
+            "result": {
+              "status": "passed",
+              "duration": 11558000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 10,
+            "name": "Admin clicks on the update details button in the app details view",
+            "result": {
+              "status": "passed",
+              "duration": 2087000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "field_name_1",
+                      "field_name_2",
+                      "field_name_3",
+                      "field_name_4",
+                      "field_name_5",
+                      "field_name_6",
+                      "field_name_7",
+                      "field_name_8"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "App Name",
+                      "Description",
+                      "Upload Logo",
+                      "Upload Fav Icon",
+                      "Domain",
+                      "Time Zone",
+                      "Date Format",
+                      "Date Time Format"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 11,
+            "name": "App update form should be displayed with the following fields",
+            "result": {
+              "status": "passed",
+              "duration": 41000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 14,
+            "name": "Admin fills the app details form with the valid data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 91736000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 15,
+            "name": "App details should be successfully updated and also the Api response should have message \"App Settings Updated Successfully\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 164000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "Admin lands back on the details view",
+            "result": {
+              "status": "passed",
+              "duration": 2000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 17,
+            "name": "App details should be updated as expected",
+            "result": {
+              "status": "passed",
+              "duration": 94000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
