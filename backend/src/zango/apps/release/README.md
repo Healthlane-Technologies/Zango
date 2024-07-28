@@ -63,7 +63,27 @@ This will save the fixture under the `release/<version>/fixtures/` folder inside
 To update and release a particular app, use the following command:
 
 ```shell
-zango update-app --tenant <tenant_name>
+zango update-apps
+```
+
+Options:
+- `--app_name TEXT`    : App Name(s) (optional)
+
+Note: If no app names are specified, the command will update and release all apps by default.
+
+You can specify multiple app names by repeating the ```--app_name``` option.
+
+Examples
+To update and release a single app named my_app:
+
+```shell
+zango update-apps --app_name my_app
+```
+
+To update and release multiple apps named app1 and app2:
+
+```shell
+zango update-apps --app_name app1 --app_name app2
 ```
 
 This command will perform following operations if an app has newer version available:

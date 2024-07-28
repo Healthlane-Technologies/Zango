@@ -4,7 +4,7 @@ from zango.cli import (
     start_project,
     install_package,
     git_setup,
-    update_app,
+    update_apps,
 )
 
 
@@ -18,7 +18,7 @@ cli.add_command(start_project.start_project)
 cli.add_command(package_info.list_packages)
 cli.add_command(install_package.install_package)
 cli.add_command(git_setup.git_setup)
-cli.add_command(update_app.update_app)
+cli.add_command(update_apps.update_apps)
 
 if __name__ == "__main__":
     cli()
