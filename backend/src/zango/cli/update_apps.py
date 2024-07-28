@@ -406,32 +406,36 @@ def is_update_allowed(tenant, app_settings, repo_url, branch):
     return True, "Update allowed"
 
 
-@click.command("update-app")
-@click.option("--tenant", required=False, help="Tenant Name")
-def update_app(tenant):
+@click.command("update-apps")
+@click.option(
+    "--app_name",
+    multiple=True,
+    required=False,
+    help="App Name(s)",
+    default=[],
+)
+def update_apps(app_name):
     project_name = find_project_name()
     project_root = os.getcwd()
-    print("initializing project setup")
+    click.echo("Initializing project setup")
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
     sys.path.insert(0, project_root)
     django.setup()
 
-    print("project setup done")
+    click.echo("Project setup initialized")
 
     from django.conf import settings
     from django.db import connection
-    from zango.apps.release.utils import is_version_greater
-
     from zango.apps.shared.tenancy.models import TenantModel
 
     tenants = TenantModel.objects.filter(status="deployed").exclude(
         tenant_type="public"
     )
-    if tenant:
-        tenants = tenants.filter(name=tenant)
+    if app_name:
+        tenants = tenants.filter(name__in=app_name)
         if not tenants.exists():
             error_message = click.style(
-                f"No tenant found with name {tenant}", fg="red", bold=True
+                f"No app found with names {', '.join(app_name)}", fg="red", bold=True
             )
             click.echo(error_message, err=True)
             sys.exit(1)
@@ -440,12 +444,12 @@ def update_app(tenant):
         tenant = tenant_obj.name
         connection.set_tenant(tenant_obj)
 
-        app_directory = os.path.join(project_root, "workspaces", tenant)
-        app_settings = json.loads(
-            open(os.path.join(app_directory, "settings.json")).read()
-        )
-
         try:
+            app_directory = os.path.join(project_root, "workspaces", tenant)
+            app_settings = json.loads(
+                open(os.path.join(app_directory, "settings.json")).read()
+            )
+
             if not app_settings.get("git_config"):
                 click.echo(f"No git_config found in settings.json for {tenant}")
                 continue

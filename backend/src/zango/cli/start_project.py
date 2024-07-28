@@ -104,6 +104,7 @@ def create_project(
         "REDIS_HOST": redis_host,
         "REDIS_PORT": redis_port,
         "PROJECT_NAME": project_name,
+        "UPDATE_APPS_ON_START": "True",
     }
     if not os.path.exists(".env"):
         open(".env", "w").close()
@@ -228,7 +229,7 @@ def start_project(
     # Creating Public Tenant
     create_public_tenant(platform_domain_url=platform_domain_url)
 
-     # Prompting default platform user details
+    # Prompting default platform user details
     while True:
         if not platform_username:
             click.echo("Please enter platform user email")
