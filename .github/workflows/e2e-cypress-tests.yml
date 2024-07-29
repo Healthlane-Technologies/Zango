@@ -28,6 +28,8 @@ jobs:
         uses: cypress-io/github-action@v6.5.0
         with:
           working-directory: e2e-tests
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
 
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
