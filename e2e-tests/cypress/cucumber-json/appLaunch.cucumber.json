@@ -21,9 +21,8 @@
             "line": 3,
             "name": "Admin logins successfully and lands on the home page of App panel",
             "result": {
-              "status": "failed",
-              "duration": 30106000000,
-              "error_message": "CypressError: `cy.visit()` failed trying to load:\n\nhttp://10.18.1.105:8006/auth/login/?next=/platform/\n\nWe attempted to make an http request to this URL but the request failed without a response.\n\nWe received this error at the network level:\n\n  > Error: ETIMEDOUT\n\nCommon situations why this would fail:\n  - you don't have internet access\n  - you forgot to run / boot your web server\n  - your web server isn't accessible\n  - you have weird network configuration settings on your computer\n    at <unknown> (http://localhost:64852/__cypress/runner/cypress_runner.js:131916:74)\n    at visitFailedByErr (http://localhost:64852/__cypress/runner/cypress_runner.js:131315:12)\n    at <unknown> (http://localhost:64852/__cypress/runner/cypress_runner.js:131915:11)\n    at tryCatcher (http://localhost:64852/__cypress/runner/cypress_runner.js:1807:23)\n    at Promise._settlePromiseFromHandler (http://localhost:64852/__cypress/runner/cypress_runner.js:1519:31)\n    at Promise._settlePromise (http://localhost:64852/__cypress/runner/cypress_runner.js:1576:18)\n    at Promise._settlePromise0 (http://localhost:64852/__cypress/runner/cypress_runner.js:1621:10)\n    at Promise._settlePromises (http://localhost:64852/__cypress/runner/cypress_runner.js:1697:18)\n    at <unknown> (http://localhost:64852/__cypress/runner/cypress_runner.js:2392:25)\nFrom previous event:\n    at Promise.longStackTracesCaptureStackTrace [as _captureStackTrace] (http://localhost:64852/__cypress/runner/cypress_runner.js:3486:19)\n    at Promise._then (http://localhost:64852/__cypress/runner/cypress_runner.js:1239:17)\n    at Promise._passThrough (http://localhost:64852/__cypress/runner/cypress_runner.js:4110:17)\n    at Promise.lastly.Promise.finally (http://localhost:64852/__cypress/runner/cypress_runner.js:4119:17)\n    at Object.onRunnableRun (http://localhost:64852/__cypress/runner/cypress_runner.js:163180:53)\n    at $Cypress.action (http://localhost:64852/__cypress/runner/cypress_runner.js:41458:28)\n    at Runnable.run (http://localhost:64852/__cypress/runner/cypress_runner.js:145768:13)\n    at next (http://localhost:64852/__cypress/runner/cypress_runner.js:155553:10)\n    at <unknown> (http://localhost:64852/__cypress/runner/cypress_runner.js:155597:5)\n    at timeslice (http://localhost:64852/__cypress/runner/cypress_runner.js:146108:27)\nFrom Your Spec Code:\n    at Context.eval (cypress/e2e/stepDefinitions/appLaunch.cy.js:20:4)\n    at Context.resolveAndRunStepDefinition (node_modules/cypress-cucumber-preprocessor/lib/resolveStepDefinition.js:193:0)\n    at Context.eval (node_modules/cypress-cucumber-preprocessor/lib/createTestFromScenario.js:27:0)\n\nFrom Node.js Internals:\n  Error: ETIMEDOUT\n      at Timeout.<anonymous> (<embedded>:420:106404)\n      at listOnTimeout (node:internal/timers:569:17)\n      at process.processTimers (node:internal/timers:512:7)"
+              "status": "passed",
+              "duration": 11793000000
             }
           },
           {
@@ -32,7 +31,8 @@
             "line": 6,
             "name": "Admin clicks on the app launch button on homepage",
             "result": {
-              "status": "skipped"
+              "status": "passed",
+              "duration": 571000000
             }
           },
           {
@@ -41,7 +41,8 @@
             "line": 7,
             "name": "Admin fills the app launch form with the valid data and submits the form",
             "result": {
-              "status": "skipped"
+              "status": "passed",
+              "duration": 5995000000
             }
           },
           {
@@ -50,7 +51,8 @@
             "line": 8,
             "name": "App should be successfully Launched and also the Api response should have message \"App Launch Initiated Successfully\" and status code 200",
             "result": {
-              "status": "skipped"
+              "status": "passed",
+              "duration": 49000000
             }
           }
         ]

@@ -24,24 +24,24 @@
 //
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
-import 'cypress-file-upload';
+import "cypress-file-upload";
 
-Cypress.Commands.add('login', (username, password) => {
-	// cy.visit("http://cypress.serveo.net/auth/login/?next=/platform/");
-	cy.visit('http://10.18.1.105:8006/auth/login/?next=/platform/');
-	cy.get('[type="text"]').type(username);
-	cy.get('[type="password"]').type(password);
-	cy.get('button').click();
+Cypress.Commands.add("login", (username, password) => {
+  cy.visit("http://cypress.serveo.net/auth/login/?next=/platform/");
+  // cy.visit('http://10.18.1.105:8006/auth/login/?next=/platform/');
+  cy.get('[type="text"]').type(username);
+  cy.get('[type="password"]').type(password);
+  cy.get("button").click();
 });
 
-Cypress.Commands.add('multipleLocator', (locator1, locator2) => {
-	cy.get('#root').then((body) => {
-		if (body.find(locator1).length > 0) {
-			cy.get(locator1).click();
-		} else if (body.find(locator2).length > 0) {
-			cy.get(locator2).click();
-		} else {
-			throw new Error(`Neither locator found: ${locator1}, ${locator2}`);
-		}
-	});
+Cypress.Commands.add("multipleLocator", (locator1, locator2) => {
+  cy.get("#root").then((body) => {
+    if (body.find(locator1).length > 0) {
+      cy.get(locator1).click();
+    } else if (body.find(locator2).length > 0) {
+      cy.get(locator2).click();
+    } else {
+      throw new Error(`Neither locator found: ${locator1}, ${locator2}`);
+    }
+  });
 });
