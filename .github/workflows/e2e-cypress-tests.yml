@@ -12,25 +12,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout
         uses: actions/checkout@v3
 
+      # Step 2: Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
 
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: npm install
         working-directory: e2e-tests
 
+      # Step 4: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6.5.0
         with:
           working-directory: e2e-tests
+          record: true
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
 
+      # Step 5: Upload Cypress screenshots on failure
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         if: failure()
@@ -39,6 +45,7 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
+      # Step 6: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
