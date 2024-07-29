@@ -31,5 +31,5 @@ class Command(LoadDataCommand):
                 options["workspace"] = tenant
 
         w = Workspace(tenant_obj, None, True)
-        w.load_models()
+        w.ready()
         super().handle(*args, **options)

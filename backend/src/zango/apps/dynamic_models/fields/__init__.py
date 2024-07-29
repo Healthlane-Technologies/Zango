@@ -17,7 +17,7 @@ class ZForeignKey(models.ForeignKey):
                 "ws_makemigration",
                 "export_fixture",
                 "import_fixture",
-                "update-app",
+                "update-apps",
             )
         ):
             cls._meta.apps.add_models(cls, self.related_model)
@@ -45,7 +45,7 @@ class ZOneToOneField(models.OneToOneField):
                 "ws_makemigration",
                 "export_fixture",
                 "import_fixture",
-                "update-app",
+                "update-apps",
             )
         ):
 >>>>>>> bf7355f6 (wip: release workflow)
