@@ -1,6 +1,6 @@
 import { Given, When, Then, And } from "cypress-cucumber-preprocessor/steps";
 import appPanelPageObjects from "../../support/pageObjectModel/appPanelPageObjects";
-import { error_message } from "../Utils/helper";
+import { error_message } from "../../e2e/utils/helper";
 let userData;
 let appData;
 let userRole;
