@@ -94,7 +94,7 @@ MIDDLEWARE = [
     "zango.middleware.telemetry.OtelZangoContextMiddleware"
 ]
 
-if os.getenv("OTEL_IS_ENABLED", False):
+if os.getenv("OTEL_IS_ENABLED", "false").strip() == "true":
     MIDDLEWARE.append(
         "zango.middleware.telemetry.OtelZangoContextMiddleware"
     )

@@ -7,7 +7,9 @@ def otel_is_enabled():
     """Returns True if env var OTEL_IS_ENABLED is set to any non 
     blank string
     """
-    return bool(os.getenv("OTEL_IS_ENABLED", "").strip())
+    if os.getenv("OTEL_IS_ENABLED", "false").strip() == "true":
+        return True
+    return False
     
 def otel_export_to_otlp():
     """Returns True if env var OTEL_EXPORT_TO_OTLP is set to any non 
