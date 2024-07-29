@@ -36,7 +36,12 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
 
-      # Step 5: Upload Cypress screenshots on failure
+      # Step 5: Generate Cucumber HTML Report
+      - name: Generate Cucumber HTML Report
+        run: node cucumber-html-report.js
+        working-directory: e2e-tests
+
+      # Step 6: Upload Cypress screenshots on failure
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         if: failure()
@@ -45,10 +50,18 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
-      # Step 6: Upload Cypress videos
+      # Step 7: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
           name: cypress-videos
           path: e2e-tests/cypress/videos
+          if-no-files-found: ignore
+
+      # Step 8: Upload Cucumber HTML Report
+      - name: Upload Cucumber HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: cucumber-html-report
+          path: e2e-tests/cucumber-html-report.html
           if-no-files-found: ignore
