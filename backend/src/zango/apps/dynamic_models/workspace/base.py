@@ -427,6 +427,7 @@ class Workspace:
         existing_policies = list(
             PolicyModel.objects.filter(type="user").values_list("id", flat=True)
         )
+        role_with_policies = {}
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
@@ -444,6 +445,10 @@ class Workspace:
                         policy = json.load(f)
                     except json.decoder.JSONDecodeError as e:
                         raise Exception(f"Error parsing {policy_file}: {e}")
+                    for policy_dict in policy["policies"]:
+                        roles = policy_dict.get("roles", [])
+                        for role in roles:
+                            role_with_policies[role] = []
                     for policy_details in policy["policies"]:
                         if type(policy_details["statement"]) is not dict:
                             raise Exception(
@@ -465,6 +470,9 @@ class Workspace:
                                 if policy.id not in existing_policies:
                                     raise Exception(f"Policy name already exists")
                                 existing_policies.remove(policy.id)
+                            roles = policy_details.get("roles", [])
+                            for role in roles:
+                                role_with_policies[role].append(policy.id)
                         except Exception as e:
                             raise Exception(
                                 f"Error creating policy {policy_details['name']} in {policy_path}: {e}"
@@ -472,3 +480,17 @@ class Workspace:
 
         for policy_id in existing_policies:
             PolicyModel.objects.get(id=policy_id).delete()
+        self.sync_policies_with_roles(role_with_policies)
+
+    def sync_policies_with_roles(self, role_with_policies):
+        existing_roles = list(UserRoleModel.objects.filter(is_default=False).values_list("id", flat=True))
+        for role, policies in role_with_policies.items():
+            user_role, created = UserRoleModel.objects.update_or_create(
+                name=role,
+            )
+            user_role.policies.set(policies)
+            if not created:
+                existing_roles.remove(user_role.id)
+        
+        for role_id in existing_roles:
+            UserRoleModel.objects.get(id=role_id).delete()
