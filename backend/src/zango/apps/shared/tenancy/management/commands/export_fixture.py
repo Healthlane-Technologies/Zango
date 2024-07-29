@@ -96,7 +96,7 @@ class Command(DumpDataCommand):
 
         if self.package_fixtures or self.app_fixtures:
             w = Workspace(tenant_obj, None, True)
-            w.load_models()
+            w.ready()
             models_list = self.get_dynamic_config_models(w)
         elif self.framework_fixtures:
             models_list = ["appauth.UserRoleModel"]
