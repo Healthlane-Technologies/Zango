@@ -80,6 +80,9 @@ class Command(DumpDataCommand):
         options["use_natural_foreign_keys"] = True
         options["use_natural_primary_keys"] = True
 
+        if not options.get("indent"):
+            options["indent"] = 4
+
         while True:
             try:
                 tenant_obj = TenantModel.objects.get(name=tenant)
