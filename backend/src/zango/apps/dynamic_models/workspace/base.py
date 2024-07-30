@@ -7,6 +7,8 @@ import re
 
 from django.conf import settings
 from django.db import connection
+from django.db.models import OuterRef, Subquery
+from django.contrib.postgres.aggregates import ArrayAgg
 
 from zango.apps.appauth.models import UserRoleModel
 from zango.apps.dynamic_models.models import DynamicModelBase
@@ -488,14 +490,44 @@ class Workspace:
         self.sync_policies_with_roles(role_with_policies)
 
     def sync_policies_with_roles(self, role_with_policies):
+        """
+        mapping roles from policies.json to UserRoleModel
+        """
         existing_roles = list(UserRoleModel.objects.filter(is_default=False).values_list("id", flat=True))
         for role, policies in role_with_policies.items():
             user_role, created = UserRoleModel.objects.update_or_create(
                 name=role,
+                defaults={
+                    "name": role
+                }
             )
             user_role.policies.set(policies)
             if not created:
                 existing_roles.remove(user_role.id)
         
-        for role_id in existing_roles:
-            UserRoleModel.objects.get(id=role_id).delete()
+        UserRoleModel.objects.filter(id__in=existing_roles).delete()
+    
+    def sync_role_with_policies(self):
+        """
+        mapping roles from UserRoleModel to policies.json
+        """
+        all_policies={}
+        all_policies["policies"] = list(
+            PolicyModel.objects.filter(type="user")
+            .values("name", "description", "statement")
+            .annotate(
+                roles=ArrayAgg(
+                    'role_policies__name', distinct=True
+                )
+            )
+        )
+        modules = self.get_all_module_paths()
+        for module in modules:
+            policy_file = f"{module}/policies.json"
+            if os.path.isfile(policy_file):
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/policies"
+                )
+                model_module = model_module.lstrip("/").replace("/", ".")
+                with open(policy_file, 'w') as f:
+                    f.write(json.dumps(all_policies,indent=4))

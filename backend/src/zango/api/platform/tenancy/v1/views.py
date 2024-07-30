@@ -5,6 +5,7 @@ from django_celery_results.models import TaskResult
 
 from django.db.models import Q
 from django.utils.decorators import method_decorator
+from django.db import connection
 
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel
@@ -23,6 +24,7 @@ from zango.core.utils import (
     get_search_columns,
     validate_phone,
 )
+from zango.apps.dynamic_models.workspace.base import Workspace
 
 from .serializers import (
     AppUserModelSerializerModel,
@@ -316,6 +318,12 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             role.is_active = True
             role.save()
             result = {"message": "User Role Created Successfully", "role_id": role.id}
+            if role_serializer.data.get("policies", False):
+                tenant = TenantModel.objects.get(uuid=kwargs.get("app_uuid"))
+                connection.set_tenant(tenant)
+                with connection.cursor() as c:
+                    ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                    ws.sync_role_with_policies()
         else:
             success = False
             status_code = 400
@@ -371,6 +379,11 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     "message": "User Role Updated Successfully",
                     "role_id": obj.id,
                 }
+                tenant = TenantModel.objects.get(uuid=kwargs.get("app_uuid"))
+                connection.set_tenant(tenant)
+                with connection.cursor() as c:
+                    ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                    ws.sync_role_with_policies()
             else:
                 success = False
                 status_code = 400
