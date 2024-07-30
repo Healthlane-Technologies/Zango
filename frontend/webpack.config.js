@@ -1,6 +1,6 @@
 const metadata = require('./src/metadata.json');
 const path = require('path');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 const glob = require('glob');
 module.exports = {
 	entry: {
@@ -20,5 +20,14 @@ module.exports = {
 			},
 		],
 	},
-	plugins: [new UglifyJsPlugin()],
+	optimization: {
+		minimize: true,
+		minimizer: [new TerserPlugin()],
+	},
+	resolve: {
+		alias: {
+			react: path.resolve('./node_modules/react'),
+			'react-dom': path.resolve('./node_modules/react-dom'),
+		},
+	},
 };
