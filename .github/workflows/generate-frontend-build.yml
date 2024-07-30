@@ -18,6 +18,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js" -type f -delete
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
+
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
@@ -40,7 +45,7 @@ jobs:
         id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
-          name: build.${{ env.TIMESTAMP }}.min.js
+          name: build
           path: backend/src/zango/assets/app_panel/js
 
       - name: Add a comment to the PR
