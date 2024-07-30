@@ -507,8 +507,12 @@ class Workspace:
         mapping roles from UserRoleModel to policies.json
         """
         all_policies={}
-        all_policies["policies"] = list(
-            PolicyModel.objects.filter(type="user")
+        policies_without_roles = list(
+            PolicyModel.objects.filter(type="user", role_policies__isnull=True)
+            .values("name", "description", "statement")
+        )
+        policies_with_roles = list(
+            PolicyModel.objects.filter(type="user", role_policies__isnull=False)
             .values("name", "description", "statement")
             .annotate(
                 roles=ArrayAgg(
@@ -516,6 +520,7 @@ class Workspace:
                 )
             )
         )
+        all_policies["policies"]=policies_without_roles+policies_with_roles
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
