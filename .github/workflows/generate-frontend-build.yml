@@ -7,7 +7,7 @@ on:
       - reopened
       - synchronize
     branches:
-      - main
+      - test_fe_build
     paths:
       - "frontend/**"
 
