@@ -64,5 +64,5 @@ jobs:
         if: failure()
         with:
           name: cucumber-html-report
-          path: e2e-tests/cypress
+          path: e2e-tests/cypress/reports
           if-no-files-found: ignore
