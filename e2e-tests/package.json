@@ -10,6 +10,7 @@
   "license": "ISC",
   "devDependencies": {
     "cucumber-html-reporter": "^6.0.0",
+    "cypress": "^13.13.2",
     "cypress-cucumber-preprocessor": "^4.3.1",
     "cypress-file-upload": "^5.0.8",
     "multiple-cucumber-html-reporter": "^3.7.0"
@@ -19,7 +20,7 @@
     "stepDefinitions": "cypress/e2e/stepDefinitions",
     "cucumberJson": {
       "generate": true,
-      "outputFolder": "e2e-tests/cypress/cucumber-json",
+      "outputFolder": "cypress/cucumber-json",
       "filePrefix": "",
       "fileSuffix": ".cucumber"
     }

@@ -1,8 +1,8 @@
 const report = require("multiple-cucumber-html-reporter");
 
 report.generate({
-  jsonDir: "e2e-tests/cypress/cucumber-json",
-  reportPath: "e2e-tests/reports",
+  jsonDir: "./cypress/cucumber-json",
+  reportPath: "./reports/cucumber-html-report.html",
   metadata: {
     browser: {
       name: "chrome",
@@ -17,7 +17,7 @@ report.generate({
   customData: {
     title: "Run info",
     data: [
-      { label: "Project", value: "Zango" },
+      { label: "Project", value: "Zango e2e Tests" },
       { label: "Release", value: "Phase 1" },
       { label: "Cycle", value: "A1" },
       { label: "Execution Start Time", value: new Date().getTime() },
