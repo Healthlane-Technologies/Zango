@@ -1,0 +1,65 @@
+name: Continuous Integration for Frontend
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js" -type f -delete
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          yarn install
+
+      - name: Building app
+        run: |
+          cd frontend
+          CI=false yarn build
+
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
+
+      - name: Upload build artifact
+        id: artifact-upload-step
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: backend/src/zango/assets/app_panel/js
+
+      - name: Add a comment to the PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.WORKFLOW_API_TOKEN }}
+          script: |
+            console.log("artifact id", ${{ steps.artifact-upload-step.outputs.artifact-id }});
+            const prNumber = context.payload.pull_request.number;
+            const artifactUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `The build artifact is available in the artifact section [here](${artifactUrl}). You can download it and place the build file under backend/src/zango/assets/app_panel/js for local testing and verification.`,
+            });
