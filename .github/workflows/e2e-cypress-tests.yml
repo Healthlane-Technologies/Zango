@@ -44,9 +44,9 @@ jobs:
       # Step 6: Verify zango project is up and running
       - name: Verify zango project is up and running
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -L http://test.zango.local:8000/platform)
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform)
           if [ "$RESPONSE" -eq 200 ]; then
-            echo "Backend is up and running at http://test.zango.local:8000"
+            echo "Backend is up and running at http://localhost:8000"
           else
             echo "Backend is not responding as expected. HTTP response code: $RESPONSE" >&2
             exit 1
