@@ -91,7 +91,7 @@ export default function SideMenu() {
 			</NavLink>
 			<SideMenuDropdown
 				Icon={AppSettingsIcon}
-				label="Audit Logs"
+				label="Audit Logs (Updated)"
 				sublinks={[
 					{
 						url: `audit-logs/application-objects-logs`,
