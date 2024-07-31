@@ -22,20 +22,29 @@ jobs:
         with:
           python-version: '3.9'
 
-      # Step 3: Start up zango project
-      - name: Set up Zango project
+      # Step 3: Start up environment variables
+      - name: Set up environment variables
         run: |
-          python3 setup_project.py
+          echo "
+            PLATFORM_USERNAME=platform_admin@zango.dev
+            PLATFORM_USER_PASSWORD=Zango@123
+            PROJECT_NAME=zango_project
+            POSTGRES_USER=zango_admin
+            POSTGRES_PASSWORD=zangopass
+            POSTGRES_DB=zango
+            POSTGRES_HOST=postgres
+            POSTGRES_PORT=5432
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            PLATFORM_DOMAIN_URL=localhost
+          ">>.env
       
       # Step 4: Start zango project server
       - name: Start Zango project server
         run: |
-          cd zproject
           export HOST_UID=$(id -u)
           export HOST_GID=$(id -g)
-          DOCKER_BUILDKIT=0 docker-compose build
-          docker-compose up -d
-          cd ..
+          DOCKER_BUILDKIT=0 docker-compose -f deploy/docker_compose.test.yml up --build -d
 
       # Step 5: Map localhost to domain
       - name: Setup local domain
