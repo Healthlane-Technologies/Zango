@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.9'
       
-      -name: Build latest Zango image
+      - name: Build latest Zango image
         run: docker build -t local/zango-base:latest .
 
       # Step 3: Start up environment variables
