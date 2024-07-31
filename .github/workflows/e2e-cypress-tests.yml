@@ -47,7 +47,8 @@ jobs:
         run: |
           export HOST_UID=$(id -u)
           export HOST_GID=$(id -g)
-          DOCKER_BUILDKIT=0 docker-compose -f deploy/docker_compose.test.yml up --build -d
+          DOCKER_BUILDKIT=0 docker-compose -f deploy/docker_compose.test.yml build
+          docker-compose -f deploy/docker_compose.test.yml up -d
 
       # Step 5: Map localhost to domain
       - name: Setup local domain
