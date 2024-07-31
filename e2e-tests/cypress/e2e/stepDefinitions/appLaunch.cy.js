@@ -4,7 +4,9 @@ let appData = "";
 Given(
   "Admin logins successfully and lands on the home page of App panel",
   () => {
-    cy.login("zelthy@zelthy.com", "Zelthy@123");
+    // cy.login("zelthy@zelthy.com", "Zelthy@123");
+    cy.login("platform_admin@zelthy.com", "Zelthy@123");
+
     const dynamicData = {
       app_name: `app_${Math.floor(Math.random() * 10000)}`, //To create random text
       app_description: `app_${Math.floor(Math.random() * 10000)}`, //To create random text
