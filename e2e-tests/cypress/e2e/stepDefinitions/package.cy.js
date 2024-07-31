@@ -3,7 +3,7 @@ import appPanelPageObjects from "../../support/pageObjectModel/appPanelPageObjec
 let appData = "";
 
 Given("User navigates to Package tab", () => {
-  cy.login("zelthy@zelthy.com", "Zelthy@123");
+  cy.login("platform_admin@zango.dev", "Zango@123");
   cy.fixture("appData").then(function (data) {
     appData = data;
     cy.log(appData);
