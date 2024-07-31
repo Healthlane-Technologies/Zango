@@ -40,7 +40,7 @@ jobs:
             REDIS_HOST=redis
             REDIS_PORT=6379
             PLATFORM_DOMAIN_URL=localhost
-          ">>.env
+          " >> deploy/.env
       
       # Step 4: Build and start zango project server
       - name: Build and start Zango project

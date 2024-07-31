@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres
     env_file:
-      - ../.env
+      - .env
     ports:
       - "5432:5432"
     healthcheck:
@@ -32,7 +32,7 @@ services:
       postgres:
         condition: service_healthy
     env_file:
-      - ../.env
+      - .env
     environment:
       ENV: dev
     volumes:
@@ -53,7 +53,7 @@ services:
     volumes:
       - .:/zango/
     env_file:
-      - ../.env
+      - .env
     depends_on:
       app:
         condition: service_healthy
@@ -71,17 +71,12 @@ services:
       retries: 3
 
   celery_beat:
-    build:
-      context: .
-      dockerfile: test.dockerfile
-      args:
-        - UID=${HOST_UID}
-        - GID=${HOST_GID}
+    image: local/zango-base:latest
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/zango/
     env_file:
-      - ../.env
+      - .env
     depends_on:
       app:
         condition: service_healthy
