@@ -38,8 +38,9 @@ jobs:
           cd frontend
           CI=false yarn build
 
-      - name: Get current timestamp in milliseconds
-        run: echo "TIMESTAMP=$(date +%s%3N)" >> $GITHUB_ENV
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
 
       - name: Upload build artifact
         id: artifact-upload-step

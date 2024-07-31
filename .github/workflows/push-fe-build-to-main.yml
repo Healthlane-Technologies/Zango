@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.WORKFLOW_API_TOKEN }}
 
       - name: Remove old build files
         run: |
@@ -35,6 +38,10 @@ jobs:
         run: |
           cd frontend
           CI=false yarn build
+
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
 
       - name: Setup Git for commit
         run: |
