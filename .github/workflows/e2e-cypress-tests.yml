@@ -61,6 +61,7 @@ jobs:
       # Step 8: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
+        if: failure()
         with:
           name: cucumber-html-report
           path: e2e-tests/reports
