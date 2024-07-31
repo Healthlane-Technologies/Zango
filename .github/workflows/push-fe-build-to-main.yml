@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     permissions:
-        contents: write
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,7 +39,7 @@ jobs:
       - name: Setup Git for commit
         run: |
           git config user.name "github-actions"
-          git config user.email "actions@zango.com"
+          git config user.email ${{ secrets.USER_EMAIL }}
 
       - name: Commit and push build
         run: |
