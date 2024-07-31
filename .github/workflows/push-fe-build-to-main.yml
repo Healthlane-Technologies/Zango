@@ -3,7 +3,7 @@ name: Push build to Main
 on:
   push:
     branches:
-      - main
+      - final_test_fe_build
     paths:
       - "frontend/**"
 
@@ -52,7 +52,7 @@ jobs:
         run: |
           git add backend/src/zango/assets/app_panel/js
           git commit -m "Deploy frontend build"
-          git push origin main
+          git push origin final_test_fe_build
 
       - name: Notify on z-deployment_notifs slack channel
         uses: rtCamp/action-slack-notify@v2
