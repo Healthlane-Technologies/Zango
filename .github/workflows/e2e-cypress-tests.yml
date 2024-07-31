@@ -21,6 +21,9 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+      
+      -name: Build latest Zango image
+        run: docker build -t local/zango-base:latest .
 
       # Step 3: Start up environment variables
       - name: Set up environment variables
@@ -39,8 +42,8 @@ jobs:
             PLATFORM_DOMAIN_URL=localhost
           ">>.env
       
-      # Step 4: Start zango project server
-      - name: Start Zango project server
+      # Step 4: Build and start zango project server
+      - name: Build and start Zango project
         run: |
           export HOST_UID=$(id -u)
           export HOST_GID=$(id -g)

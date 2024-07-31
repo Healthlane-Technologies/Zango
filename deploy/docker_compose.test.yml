@@ -21,8 +21,8 @@ services:
 
   app:
     build:
-      context: ../
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: test.dockerfile
       args:
         - UID=${HOST_UID}
         - GID=${HOST_GID}
@@ -44,8 +44,8 @@ services:
 
   celery:
     build:
-      context: ../
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: test.dockerfile
       args:
         - UID=${HOST_UID}
         - GID=${HOST_GID}
@@ -72,8 +72,8 @@ services:
 
   celery_beat:
     build:
-      context: ../
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: test.dockerfile
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/zango/
