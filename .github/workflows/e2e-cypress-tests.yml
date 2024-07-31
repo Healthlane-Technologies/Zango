@@ -63,5 +63,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: cucumber-html-report
-          path: e2e-tests/cucumber-html-report.html
+          path: e2e-tests/reports
           if-no-files-found: ignore
