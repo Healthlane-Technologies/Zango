@@ -3,9 +3,9 @@ name: End to End Cypress Test
 on:
   push:
     branches:
-      - test/cypress
-    paths:
-      - "frontend/**"
+      - zango_setup_for_cypress
+    # paths:
+    #   - "frontend/**"
 
 jobs:
   cypress-run:
@@ -16,18 +16,54 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js environment
+      # Step 2: Set up python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # Step 3: Start up zango project
+      - name: Set up Zango project
+        run: |
+          python3 setup_project.py
+      
+      # Step 4: Start zango project server
+      - name: Start Zango project server
+        run: |
+          cd zproject
+          export HOST_UID=$(id -u)
+          export HOST_GID=$(id -g)
+          DOCKER_BUILDKIT=0 docker-compose build
+          docker-compose up -d
+          cd ..
+
+      # Step 5: Map localhost to domain
+      - name: Setup local domain
+        run: echo '0.0.0.0  test.zango.local' | sudo tee -a /etc/hosts
+      
+      # Step 6: Verify zango project is up and running
+      - name: Verify zango project is up and running
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -L http://test.zango.local:8000/platform)
+          if [ "$RESPONSE" -eq 200 ]; then
+            echo "Backend is up and running at http://test.zango.local:8000"
+          else
+            echo "Backend is not responding as expected. HTTP response code: $RESPONSE" >&2
+            exit 1
+          fi
+        
+      # Step 6: Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
 
-      # Step 3: Install dependencies
-      - name: Install dependencies
+      # Step 7: Install dependencies
+      - name: Install cypress dependencies
         run: npm install
         working-directory: e2e-tests
-
-      # Step 4: Run Cypress tests and record results
+      
+      # Step 8: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6.5.0
         with:
@@ -36,12 +72,12 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
 
-      # Step 5: Generate Cucumber HTML Report
+      # Step 9: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
         run: node cucumber-html-report.js
         working-directory: e2e-tests
 
-      # Step 6: Upload Cypress screenshots on failure
+      # Step 10: Upload Cypress screenshots on failure
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         if: failure()
@@ -50,7 +86,7 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
-      # Step 7: Upload Cypress videos
+      # Step 11: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
@@ -58,7 +94,7 @@ jobs:
           path: e2e-tests/cypress/videos
           if-no-files-found: ignore
 
-      # Step 8: Upload Cucumber HTML Report
+      # Step 12: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
         with:
