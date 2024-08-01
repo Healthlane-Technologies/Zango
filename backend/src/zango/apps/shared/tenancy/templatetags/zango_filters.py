@@ -43,11 +43,28 @@ def humanize_timedelta(timedelta_obj):
 
 @register.filter()
 def use_latest(build_path):
+    """
+    Returns the latest version of a static file based on a given file path pattern.
+
+    Args:
+        build_path (str): the original file path pattern
+
+    Returns:
+        str: The path to the latest version of the file, or the original path if no match is found.
+
+    Example:
+        Usage in a Django template to reference the latest static file:
+
+        <script src="{% static 'app_panel/js/build.*.min.js'|use_latest %}"></script>
+
+        Make sure to load the zango filters with {% load zango_filters %}.
+    """
     buildir = os.path.dirname(build_path)
     filep = os.path.basename(build_path)
     for dir in settings.STATICFILES_DIRS:
         for dirpath, dirnames, filenames in os.walk(dir):
+            filenames = sorted(filenames, reverse=True)
             for filename in filenames:
                 if re.match(filep, filename):
                     return os.path.join(buildir, filename)
-    return  build_path
+    return build_path
