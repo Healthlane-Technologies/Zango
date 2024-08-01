@@ -1,8 +1,8 @@
 const report = require("multiple-cucumber-html-reporter");
 
 report.generate({
-  jsonDir: "e2e-tests/cypress/cucumber-json",
-  reportPath: "e2e-tests/reports/cucumber-html-report.html",
+  jsonDir: "./cypress/cucumber-json",
+  reportPath: "./reports/cucumber-html-report.html",
   metadata: {
     browser: {
       name: "chrome",
