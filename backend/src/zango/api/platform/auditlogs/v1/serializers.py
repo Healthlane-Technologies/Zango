@@ -27,18 +27,14 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         return (
             obj.tenant_actor.name
             if obj.tenant_actor
-            else obj.platform_actor.name
-            if obj.platform_actor
-            else None
+            else obj.platform_actor.name if obj.platform_actor else None
         )
 
     def get_actor_type(self, obj):
         return (
             "tenant_actor"
             if obj.tenant_actor
-            else "platform_actor"
-            if obj.platform_actor
-            else None
+            else "platform_actor" if obj.platform_actor else None
         )
 
     def get_object_uuid(self, obj):
