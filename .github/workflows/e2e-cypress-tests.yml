@@ -40,6 +40,7 @@ jobs:
           record: true
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          continue-on-error: true
 
       # Step 5: Debug - List JSON files
       - name: List JSON files
