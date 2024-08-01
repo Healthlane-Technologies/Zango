@@ -3,7 +3,7 @@ name: End to End Cypress Test
 on:
   push:
     branches:
-      - zango_setup_for_cypress
+      - refactor_tests_workflow
     # paths:
     #   - "frontend/**"
 
@@ -12,71 +12,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout repo
       - name: Checkout
         uses: actions/checkout@v3
-
-      # Step 2: Set up python
-      - name: Set up Python
-        uses: actions/setup-python@v4
+  
+      # Step 2: Set up zango project with latest zango build
+      - name: Setup latest zango project
+        uses: ./.github/actions/zango-project-setup-action
         with:
-          python-version: '3.9'
-      
-      - name: Build latest Zango image
-        run: docker build -t local/zango-base:latest .
+          platform_username: platform_admin@zango.dev
+          platform_user_password: Zango@123
+          project_name: zango_project
+          postgres_user: zango_admin
+          postgres_password: zangopass
+          postgres_db: zango
+          platform_domain_url: localhost
+          domain_config_path: ./e2e-tests/local_domains.txt
 
-      # Step 3: Start up environment variables
-      - name: Set up environment variables
-        run: |
-          echo "
-            PLATFORM_USERNAME=platform_admin@zango.dev
-            PLATFORM_USER_PASSWORD=Zango@123
-            PROJECT_NAME=zango_project
-            POSTGRES_USER=zango_admin
-            POSTGRES_PASSWORD=zangopass
-            POSTGRES_DB=zango
-            POSTGRES_HOST=postgres
-            POSTGRES_PORT=5432
-            REDIS_HOST=redis
-            REDIS_PORT=6379
-            PLATFORM_DOMAIN_URL=localhost
-          " >> deploy/.env
-      
-      # Step 4: Build and start zango project server
-      - name: Build and start Zango project
-        run: |
-          export HOST_UID=$(id -u)
-          export HOST_GID=$(id -g)
-          DOCKER_BUILDKIT=0 docker-compose -f deploy/docker_compose.test.yml build
-          docker-compose -f deploy/docker_compose.test.yml up -d
-
-      # Step 5: Map localhost to domain
-      - name: Setup local domain
-        run: echo '0.0.0.0  test.zango.local' | sudo tee -a /etc/hosts
-      
-      # Step 6: Verify zango project is up and running
-      - name: Verify zango project is up and running
-        run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform)
-          if [ "$RESPONSE" -eq 200 ]; then
-            echo "Backend is up and running at http://localhost:8000"
-          else
-            echo "Backend is not responding as expected. HTTP response code: $RESPONSE" >&2
-            exit 1
-          fi
-        
-      # Step 6: Set up Node.js environment
+      # Step 3: Setup Node
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
 
-      # Step 7: Install dependencies
+      # Step 4: Install dependencies
       - name: Install cypress dependencies
         run: npm install
         working-directory: e2e-tests
       
-      # Step 8: Run Cypress tests and record results
+      # Step 5: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6.5.0
         with:
@@ -85,12 +49,12 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
 
-      # Step 9: Generate Cucumber HTML Report
+      # Step 6: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
         run: node cucumber-html-report.js
         working-directory: e2e-tests
 
-      # Step 10: Upload Cypress screenshots on failure
+      # Step 7: Upload Cypress screenshots on failure
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         if: failure()
@@ -99,7 +63,7 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
-      # Step 11: Upload Cypress videos
+      # Step 8: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
@@ -107,7 +71,7 @@ jobs:
           path: e2e-tests/cypress/videos
           if-no-files-found: ignore
 
-      # Step 12: Upload Cucumber HTML Report
+      # Step 9: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
         with:
