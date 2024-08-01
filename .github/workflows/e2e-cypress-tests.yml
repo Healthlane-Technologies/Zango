@@ -36,7 +36,12 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
 
-      # Step 5: Generate Cucumber HTML Report
+      # Step 5: Debug - List JSON files
+      - name: List JSON files
+        run: ls -la e2e-tests/cypress/cucumber-json
+        working-directory: e2e-tests
+
+      # Step 6: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
         run: |
           echo "Running cucumber-html-report.js"
@@ -44,7 +49,7 @@ jobs:
           node cucumber-html-report.js
         working-directory: e2e-tests
 
-      # Step 6: Upload Cypress screenshots on failure
+      # Step 7: Upload Cypress screenshots on failure
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         if: failure()
@@ -53,7 +58,7 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
-      # Step 7: Upload Cypress videos
+      # Step 8: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
@@ -61,7 +66,7 @@ jobs:
           path: e2e-tests/cypress/videos
           if-no-files-found: ignore
 
-      # Step 8: Upload Cucumber HTML Report
+      # Step 9: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
         if: failure()
