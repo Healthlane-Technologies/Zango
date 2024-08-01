@@ -90,15 +90,14 @@ runs:
       - name: Setup local domains
         shell: bash
         run: |
-          if ["${{ inputs.domain_config_path }}"]; then
-            while IFS= read -r line
-            do
+          if [ -f "${{ inputs.domain_config_path }}" ]; then
+            while IFS= read -r line; do
               echo "$line" | sudo tee -a /etc/hosts
-            done < ${{ inputs.domain_config_path }}
-          else:
+            done < "${{ inputs.domain_config_path }}"
+          else
             echo "No local domain configuration file found"
           fi
-      
+
       # Step 5: Verify zango project is up and running
       - name: Verify zango project is up and running
         shell: bash
