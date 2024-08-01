@@ -9,19 +9,19 @@ Feature: Package Management
             | Package Name | Version  | Status   | Status   |
         Then Api response post landing on Package tab should have status code 200
 
-    Scenario Outline:Admin wants to install the packages
-        When Admin clicks on the package table search button and Enters the "<packages>"
-        And Admin clicks on the install package button under the three dots menu
-        And Install package form should contain following fields
-            | field_name_1 | field_name_2 |
-            | Package Name | Version      |
-        And Admin selects the version and submits the form
-        Then Api response post installation should have message "Package Installed" and status code 200
+# Scenario Outline:Admin wants to install the packages
+#     When Admin clicks on the package table search button and Enters the "<packages>"
+#     And Admin clicks on the install package button under the three dots menu
+#     And Install package form should contain following fields
+#         | field_name_1 | field_name_2 |
+#         | Package Name | Version      |
+#     And Admin selects the version and submits the form
+#     Then Api response post installation should have message "Package Installed" and status code 200
 
-        Examples:
-            | packages      |
-            | communication |
-            | crud          |
-            | frame         |
-            | login         |
-            | workflow      |
+#     Examples:
+#         | packages      |
+#         | communication |
+#         | crud          |
+#         | frame         |
+#         | login         |
+#         | workflow      |

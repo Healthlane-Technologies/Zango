@@ -17,7 +17,7 @@ report.generate({
   customData: {
     title: "Run info",
     data: [
-      { label: "Project", value: "Zango" },
+      { label: "Project", value: "Zango e2e-Tests Report" },
       { label: "Release", value: "Phase 1" },
       { label: "Cycle", value: "A1" },
       { label: "Execution Start Time", value: new Date().getTime() },
