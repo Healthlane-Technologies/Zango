@@ -1,7 +1,6 @@
 from importlib import import_module
 import pytz
 import json
-import os
 
 from django.conf import settings
 from django.db import connection
