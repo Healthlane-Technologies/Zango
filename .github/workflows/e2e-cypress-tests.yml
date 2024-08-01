@@ -32,7 +32,7 @@ jobs:
         run: ls -la
         working-directory: e2e-tests
 
-      # Step 4: Run Cypress tests and record results
+      # Step 5: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6.5.0
         with:
@@ -41,11 +41,6 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
         continue-on-error: true
-
-      # Step 5: Debug - List JSON files
-      - name: List JSON files
-        run: ls -la e2e-tests/cypress/cucumber-json
-        working-directory: e2e-tests
 
       # Step 6: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
