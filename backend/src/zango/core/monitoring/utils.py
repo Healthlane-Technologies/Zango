@@ -1,40 +1,51 @@
 import os
 import logging
+
+from django.conf import settings
+
 from opentelemetry.sdk._logs import LoggingHandler
 
 
 def otel_is_enabled():
-    """Returns True if env var OTEL_IS_ENABLED is set to any non
-    blank string
     """
-    if os.getenv("OTEL_IS_ENABLED", "false").strip() == "true":
-        return True
-    return False
+    Returns the value of the `OTEL_IS_ENABLED` setting from the Django settings.
+    """
+    return settings.OTEL_IS_ENABLED
 
 
 def otel_export_to_otlp():
-    """Returns True if env var OTEL_EXPORT_TO_OTLP is set to any non
-    blank string
     """
-    if os.getenv("OTEL_EXPORT_TO_OTLP", "false").strip() == "true":
-        return True
-    return False
+    Returns the value of the `OTEL_EXPORT_TO_OTLP` setting from the Django settings.
+    """
+    return settings.OTEL_EXPORT_TO_OTLP
 
 
 def otel_otlp_endpoint():
-    return str(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"))
+    """
+    Returns the value of the `OTEL_EXPORTER_OTLP_ENDPOINT` setting from the Django settings.
+    """
+    return settings.OTEL_EXPORTER_OTLP_ENDPOINT
 
 
 def otel_otlp_headers():
-    return str(os.getenv("OTEL_EXPORTER_OTLP_HEADERS", ""))
+    """
+    Returns the value of the `OTEL_EXPORTER_OTLP_HEADERS` setting from the Django settings.
+    """
+    return settings.OTEL_EXPORTER_OTLP_HEADERS
 
 
 def otel_otlp_protocol():
-    return str(os.getenv("OTEL_EXPORTER_PROTOCOL", ""))
+    """
+    Returns the value of the `OTEL_EXPORTER_PROTOCOL` setting from the Django settings.
+    """
+    return settings.OTEL_EXPORTER_PROTOCOL
 
 
 def otel_resource_name():
-    return str(os.getenv("OTEL_RESOURCE_NAME", "Zango"))
+    """
+    Returns the value of the `OTEL_RESOURCE_NAME` setting from the Django settings.
+    """
+    return settings.OTEL_RESOURCE_NAME
 
 
 def _get_tenant_name():
@@ -73,7 +84,6 @@ def get_loguru_format(record):
 
 
 class LogGuruCompatibleLoggerHandler(LoggingHandler):
-
     def emit(self, record: logging.LogRecord) -> None:
         # The Otel exporter does not handle nested dictionaries. Loguru stores all of
         # the extra log context developers can add on the extra dict. Here unnest
