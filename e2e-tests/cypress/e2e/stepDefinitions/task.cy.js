@@ -3,7 +3,8 @@ import appPanelPageObjects from "../../support/pageObjectModel/appPanelPageObjec
 let appData = "";
 
 Given("User navigates to task tab", () => {
-  cy.login("platform_admin@zango.dev", "Zango@123");
+  // cy.login("platform_admin@zango.dev", "Zango@123");
+  cy.login("platform_admin@zelthy.com", "Zelthy@123");
   cy.fixture("appData").then(function (data) {
     appData = data;
     cy.log(appData);

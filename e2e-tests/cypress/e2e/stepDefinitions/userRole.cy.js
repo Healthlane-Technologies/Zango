@@ -6,7 +6,8 @@ let appData = "";
 Given(
   "Admin navigates to the user role tab and gets the user role data from fixture data",
   () => {
-    cy.login("platform_admin@zango.dev", "Zango@123");
+    // cy.login("platform_admin@zango.dev", "Zango@123");
+    cy.login("platform_admin@zelthy.com", "Zelthy@123");
     // cy.visit("http://localhost:3000/platform/apps/");
     cy.fixture("appData").then(function (data) {
       appData = data;
