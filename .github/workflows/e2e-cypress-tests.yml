@@ -64,5 +64,5 @@ jobs:
         if: failure()
         with:
           name: cucumber-html-report
-          path: e2e-tests/reports
+          path: e2e-tests/cucumber-html-report.html
           if-no-files-found: ignore

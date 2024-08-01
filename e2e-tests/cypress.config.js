@@ -6,7 +6,7 @@ module.exports = defineConfig({
   projectId: "49hfyd",
   chromeWebSecurity: false,
   reporterOptions: {
-    reportDir: "./reports",
+    reportDir: "cypress/reports",
     charts: true,
     reportPageTitle: "Zango",
     embeddedScreenshots: true,
