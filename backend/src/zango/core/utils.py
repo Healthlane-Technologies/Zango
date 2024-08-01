@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db import connection
 from django.shortcuts import render
 
+
 def get_current_request():
     from ..middleware.request import _request_local
 
@@ -53,6 +54,7 @@ def get_mock_request(**kwargs):
 
     return request
 
+
 def get_current_request_url(request, domain=None):
     # Determine the protocol (HTTP or HTTPS) based on the request's is_secure() method.
     secure = (
@@ -84,7 +86,10 @@ def get_current_request_url(request, domain=None):
 
 
 def get_datetime_in_tenant_timezone(datetime_val, tenant):
-    tz = pytz.timezone(tenant.timezone)
+    timezone = tenant.timezone
+    if not tenant.timezone:
+        timezone = settings.TIME_ZONE
+    tz = pytz.timezone(timezone)
     return datetime_val.astimezone(tz)
 
 
@@ -100,8 +105,19 @@ def get_search_columns(request):
             search_columns[key.replace("search_", "")] = value
     return search_columns
 
+
 def generate_lockout_response(request, credentials):
     cooloff_time = settings.AXES_COOLOFF_TIME
     if connection.tenant.tenant_type == "app":
-        return render(request, "core/error_pages/account_lockout.html", {"logout_url": "/logout", "cooloff_time": cooloff_time}, status=403)
-    return render(request, "core/error_pages/account_lockout.html", {"logout_url": "/auth/logout", "cooloff_time": cooloff_time}, status=403)
+        return render(
+            request,
+            "core/error_pages/account_lockout.html",
+            {"logout_url": "/logout", "cooloff_time": cooloff_time},
+            status=403,
+        )
+    return render(
+        request,
+        "core/error_pages/account_lockout.html",
+        {"logout_url": "/auth/logout", "cooloff_time": cooloff_time},
+        status=403,
+    )
