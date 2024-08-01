@@ -38,7 +38,10 @@ jobs:
 
       # Step 5: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
-        run: node cucumber-html-report.js
+        run: |
+          echo "Running cucumber-html-report.js"
+          ls -la
+          node cucumber-html-report.js
         working-directory: e2e-tests
 
       # Step 6: Upload Cypress screenshots on failure
@@ -64,5 +67,5 @@ jobs:
         if: failure()
         with:
           name: cucumber-html-report
-          path: e2e-tests/cucumber-html-report.html
+          path: e2e-tests/reports/cucumber-html-report.html
           if-no-files-found: ignore
