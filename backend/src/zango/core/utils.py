@@ -1,7 +1,7 @@
 from importlib import import_module
 import pytz
 import json
-import tzlocal
+import os
 
 from django.conf import settings
 from django.db import connection
@@ -89,7 +89,7 @@ def get_current_request_url(request, domain=None):
 def get_datetime_in_tenant_timezone(datetime_val, tenant):
     timezone = tenant.timezone
     if not tenant.timezone:
-        timezone = tzlocal.get_localzone_name()
+        timezone = settings.TIME_ZONE
     tz = pytz.timezone(timezone)
     return datetime_val.astimezone(tz)
 
