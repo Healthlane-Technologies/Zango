@@ -57,7 +57,6 @@ jobs:
       # Step 7: Upload Cypress screenshots on failure
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
-        if: failure()
         with:
           name: cypress-screenshots
           path: e2e-tests/cypress/screenshots
@@ -74,8 +73,7 @@ jobs:
       # Step 9: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
-        if: failure()
         with:
           name: cucumber-html-report
-          path: e2e-tests/reports
+          path: e2e-tests/reports/cucumber-html-report.html
           if-no-files-found: ignore
