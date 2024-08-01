@@ -27,6 +27,11 @@ jobs:
         run: npm install
         working-directory: e2e-tests
 
+      # Step 4: List files in the working directory
+      - name: List files
+        run: ls -la
+        working-directory: e2e-tests
+
       # Step 4: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6.5.0
