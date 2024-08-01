@@ -20,7 +20,7 @@
     "stepDefinitions": "cypress/e2e/stepDefinitions",
     "cucumberJson": {
       "generate": true,
-      "outputFolder": "cypress/cucumber-json",
+      "outputFolder": "e2e-tests/cypress/cucumber-json",
       "filePrefix": "",
       "fileSuffix": ".cucumber"
     }
