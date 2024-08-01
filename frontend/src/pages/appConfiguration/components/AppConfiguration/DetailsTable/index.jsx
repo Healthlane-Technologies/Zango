@@ -7,16 +7,9 @@ function DetailsTable() {
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 
 	return (
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 		<table data-cy="app_details" className="w-100 border-spacing-x-4">
-=======
-		<table data-cy="appDetails" className="w-100 border-spacing-x-4">
->>>>>>> f9ef4ffb (cypress locator addition)
-=======
-		<table data-cy="app_details" className="w-100 border-spacing-x-4">
->>>>>>> c893349c (locators)
-			<tbody>
+				<tbody>
 				<EachDescriptionRow
 					label="App Description:"
 					content={
