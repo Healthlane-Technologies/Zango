@@ -43,6 +43,21 @@ def humanize_timedelta(timedelta_obj):
 
 @register.filter()
 def use_latest(build_path):
+    """
+    Given a `build_path`, this filter tries to find the latest file in the `STATICFILES_DIRS`
+    directory that matches the pattern of the `build_path`. It does this by walking through
+    each directory in `STATICFILES_DIRS` and checking if any of the files in those directories
+    match the pattern of the file at `build_path`. If a match is found, the function returns the
+    full path of the latest file. If no match is found, the function returns the original `build_path`.
+
+    This filter can be used to automatically select the latest version of the specified static file.
+
+    Parameters:
+    build_path (str): The path of the file to search for the latest version.
+
+    Returns:
+    str: The full path of the latest file that matches the pattern of the file at `build_path`, or the original `build_path` if no match is found.
+    """
     buildir = os.path.dirname(build_path)
     filep = os.path.basename(build_path)
     for dir in settings.STATICFILES_DIRS:
@@ -50,4 +65,4 @@ def use_latest(build_path):
             for filename in filenames:
                 if re.match(filep, filename):
                     return os.path.join(buildir, filename)
-    return  build_path
+    return build_path
