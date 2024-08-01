@@ -81,7 +81,7 @@ export default function AppUserRoles() {
 
 	return (
 		<>
-			<div className="flex grow flex-col gap-[20px]">
+			<div data-cy="add_user_button" className="flex grow flex-col gap-[20px]">
 				<div className="flex items-center justify-between py-[12px] pl-[40px] pr-[48px]">
 					<BreadCrumbs />
 					{isAppUserRolesDataEmpty ? null : (
