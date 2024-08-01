@@ -63,7 +63,7 @@ export default function ErrorMessageModal({
 									Error
 								</Dialog.Title>
 								<div className="mb-[32px] w-full px-6">
-									<div data-cy="error_message"  className="w-full text-center text-[#808187]">
+									<div data-cy="error_message" className="w-full text-center text-[#808187]">
 										{errorMessage}
 									</div>
 								</div>
