@@ -1,4 +1,4 @@
-FROM kczelthy/zango:0.3.0rc1
+FROM kczelthy/zango:0.3.0rc2
 
 RUN apt update
 RUN pip install gunicorn
