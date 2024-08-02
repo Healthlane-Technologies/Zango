@@ -1,20 +1,22 @@
 from loguru import logger
 from opentelemetry.instrumentation.celery import CeleryInstrumentor, celery_getter
 from opentelemetry.instrumentation.celery import utils
-from opentelemetry.instrumentation.celery import _TASK_NAME_KEY, _TASK_TAG_KEY, _TASK_RUN
+from opentelemetry.instrumentation.celery import (
+    _TASK_NAME_KEY,
+    _TASK_TAG_KEY,
+    _TASK_RUN,
+)
 from opentelemetry import trace
 from opentelemetry.propagate import extract, inject
 
 
-
 class ZangoCeleryInstrumentor(CeleryInstrumentor):
-    
     """
-     A custom Celery instrumentor for the Zango framework that overrides the default operation name for the the tasks implemented in 
-     tenants. All tasks implemented in tenants are handled by 'zango.core.tasks.zango_task_executor' but 
-     we want to have the actual task name shown in the operation name in the traces.
+    A custom Celery instrumentor for the Zango framework that overrides the default operation name for the the tasks implemented in
+    tenants. All tasks implemented in tenants are handled by 'zango.core.tasks.zango_task_executor' but
+    we want to have the actual task name shown in the operation name in the traces.
     """
-        
+
     def _trace_prerun(self, *args, **kwargs):
         task = utils.retrieve_task(kwargs)
         task_id = utils.retrieve_task_id(kwargs)

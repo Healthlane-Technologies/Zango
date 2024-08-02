@@ -1,4 +1,3 @@
-import sys
 import os
 import environ
 from datetime import timedelta
@@ -91,13 +90,8 @@ MIDDLEWARE = [
     "zango.middleware.tenant.TimezoneMiddleware",
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
     "axes.middleware.AxesMiddleware",
-    "zango.middleware.telemetry.OtelZangoContextMiddleware"
+    "zango.middleware.telemetry.OtelZangoContextMiddleware",
 ]
-
-if os.getenv("OTEL_IS_ENABLED", False):
-    MIDDLEWARE.append(
-        "zango.middleware.telemetry.OtelZangoContextMiddleware"
-    )
 
 AUTHENTICATION_BACKENDS = (
     "axes.backends.AxesStandaloneBackend",
@@ -135,6 +129,12 @@ TEMPLATES = [
 
 DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
+
 MIGRATION_MODULES = {}
 RUNNING_ZMAKEMIGRATIONS = False
 
@@ -170,8 +170,7 @@ PASSWORD_MIN_LENGTH = 8
 PASSWORD_NO_REPEAT_DAYS = 180
 PASSWORD_RESET_DAYS = 90
 
-PACKAGE_REPO_AWS_ACCESS_KEY_ID = os.getenv("PACKAGE_REPO_AWS_ACCESS_KEY_ID")
-PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = os.getenv("PACKAGE_REPO_AWS_SECRET_ACCESS_KEY")
+
 MEDIA_URL = "/media/"
 
 # Celery
@@ -201,26 +200,26 @@ AXES_COOLOFF_TIME = timedelta(seconds=900)
 AXES_ENABLED = True
 AXES_LOCKOUT_CALLABLE = generate_lockout_response
 AXES_LOCKOUT_PARAMETERS = ["ip_address", ["username", "user_agent"]]
-AXES_ENABLE_ACCESS_FAILURE_LOG=True
+AXES_ENABLE_ACCESS_FAILURE_LOG = True
 AXES_META_PRECEDENCE_ORDER = (
-    'REMOTE_ADDR',
-    'HTTP_X_FORWARDED_FOR',
-    'HTTP_X_REAL_IP',
+    "REMOTE_ADDR",
+    "HTTP_X_FORWARDED_FOR",
+    "HTTP_X_REAL_IP",
 )
 
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,   
+    "disable_existing_loggers": False,
     "formatters": {
-            "verbose": {
-                "format" : "[%(app_name)s:%(domain_url)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
-                "datefmt" : "%d/%b/%Y %H:%M:%S"
-            },
-            "console": {
+        "verbose": {
+            "format": "[%(app_name)s:%(domain_url)s][%(asctime)s] %(levelname)s [%(pathname)s:%(funcName)s:%(lineno)s] %(message)s %(exc_traceback_content)s",
+            "datefmt": "%d/%b/%Y %H:%M:%S",
+        },
+        "console": {
             "format": "%(levelname)s %(asctime)s %(name)s.%(funcName)s:%(lineno)s- %("
             "message)s "
-        },            
         },
+    },
     "filters": {
         "tenant_filter": {
             "()": "zango.core.monitoring.log_filter.TenantContextFilter",
@@ -228,9 +227,9 @@ LOGGING = {
     },
     "handlers": {
         "file": {
-            "level": "INFO", 
+            "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
-            "maxBytes": 1024*1024*5, # 5 MB
+            "maxBytes": 1024 * 1024 * 5,  # 5 MB
             "formatter": "verbose",  # Use the custom formatter
             "filters": ["tenant_filter"],
         },
@@ -249,6 +248,186 @@ LOGGING = {
             "handlers": ["console"],
             "level": "ERROR",
             "propagate": True,
-        }
+        },
     },
 }
+
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = False
+PUBLIC_SCHEMA_URLCONF = "zango.config.urls_public"
+
+
+AWS_MEDIA_STORAGE_LOCATION = "media"  # Prefix added to all the files uploaded
+AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
+
+
+def setup_settings(settings, BASE_DIR):
+    env = environ.Env(
+        DEBUG=(bool, True),
+        ENV=(str, "dev"),
+        SECRET_KEY=(str, ""),
+        LANGUAGE_CODE=(str, "en-us"),
+        TIME_ZONE=(str, "UTC"),
+        USE_I18N=(bool, True),
+        USE_TZ=(bool, True),
+        REDIS_HOST=(str, "127.0.0.1"),
+        REDIS_PORT=(str, "6379"),
+        SESSION_SECURITY_WARN_AFTER=(int, 1700),
+        SESSION_SECURITY_EXPIRE_AFTER=(int, 1800),
+        INTERNAL_IPS=(list, []),
+        ALLOWED_HOSTS=(list, ["*"]),
+        CORS_ORIGIN_WHITELIST=(
+            list,
+            ["http://localhost:1443", "http://localhost:8000"],
+        ),
+        CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:1443", "http://localhost:8000"]),
+        AXES_BEHIND_REVERSE_PROXY=(bool, False),
+        AXES_FAILURE_LIMIT=(int, 6),
+        AXES_LOCK_OUT_AT_FAILURE=(bool, True),
+        AXES_COOLOFF_TIME=(int, 900),
+        PHONENUMBER_DEFAULT_REGION=(str, "IN"),
+        AWS_MEDIA_STORAGE_BUCKET_NAME=(str, ""),
+        AWS_STATIC_STORAGE_BUCKET_NAME=(str, ""),
+        AWS_ACCESS_KEY_ID=(str, ""),
+        AWS_SECRET_ACCESS_KEY=(str, ""),
+        AWS_S3_REGION_NAME=(str, ""),
+        PACKAGE_REPO_AWS_ACCESS_KEY_ID=(str, ""),
+        PACKAGE_REPO_AWS_SECRET_ACCESS_KEY=(str, ""),
+        OTEL_IS_ENABLED=(bool, False),
+        OTEL_EXPORT_TO_OTLP=(bool, False),
+        OTEL_EXPORTER_OTLP_ENDPOINT=(str, "http://localhost:4317"),
+        OTEL_EXPORTER_OTLP_HEADERS=(str, ""),
+        OTEL_EXPORTER_PROTOCOL=(str, ""),
+        OTEL_RESOURCE_NAME=(str, "Zango"),
+    )
+    environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
+
+    settings.ENV = env("ENV")
+
+    settings.SECRET_KEY = env("SECRET_KEY")
+    settings.DEBUG = env("DEBUG")
+
+    settings.ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+    project_name = env("PROJECT_NAME")
+    settings.PROJECT_NAME = project_name
+
+    settings.WSGI_APPLICATION = f"{project_name}.wsgi.application"
+
+    settings.DATABASES = {
+        "default": {
+            "ENGINE": "django_tenants.postgresql_backend",
+            "NAME": env("POSTGRES_DB"),
+            "USER": env("POSTGRES_USER"),
+            "PASSWORD": env("POSTGRES_PASSWORD"),
+            "HOST": env("POSTGRES_HOST"),
+            "PORT": env("POSTGRES_PORT"),
+            "ATOMIC_REQUESTS": True,
+        }
+    }
+
+    settings.REDIS_HOST = env("REDIS_HOST")
+    settings.REDIS_PORT = env("REDIS_PORT")
+    settings.REDIS_PROTOCOL = "redis"
+
+    redis_url = (
+        f"{settings.REDIS_PROTOCOL}://{settings.REDIS_HOST}:{settings.REDIS_PORT}/1"
+    )
+
+    settings.REDIS_URL = redis_url
+    settings.CELERY_BROKER_URL = redis_url
+
+    settings.CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": redis_url,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "TIMEOUT": 300,  # Default timeout is 5 minutes, but adjust as needed
+        }
+    }
+
+    settings.CORS_ORIGIN_ALLOW_ALL = True
+    settings.CORS_ALLOW_ALL_ORIGINS = True
+    settings.CORS_ALLOW_CREDENTIALS = True
+    settings.CORS_ORIGIN_WHITELIST = env(
+        "CORS_ORIGIN_WHITELIST"
+    )  # Change according to domain configured
+    settings.CSRF_TRUSTED_ORIGINS = env(
+        "CSRF_TRUSTED_ORIGINS"
+    )  # Change according to domain configured
+
+    settings.LANGUAGE_CODE = env("LANGUAGE_CODE")
+    settings.TIME_ZONE = env("TIME_ZONE")
+    settings.USE_I18N = env("USE_I18N")
+    settings.USE_TZ = env("USE_TZ")
+
+    settings.TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
+
+    settings.ROOT_URLCONF = f"{project_name}.urls_tenants"
+
+    settings.PHONENUMBER_DEFAULT_REGION = env("PHONENUMBER_DEFAULT_REGION")
+
+    settings.MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+    settings.AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+    settings.AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+    settings.AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME")
+
+    settings.AWS_MEDIA_STORAGE_BUCKET_NAME = env("AWS_MEDIA_STORAGE_BUCKET_NAME")
+    settings.AWS_STATIC_STORAGE_BUCKET_NAME = env("AWS_STATIC_STORAGE_BUCKET_NAME")
+
+    settings.STATIC_ROOT = os.path.join(BASE_DIR, "static")
+    settings.STATICFILES_DIRS += [os.path.join(BASE_DIR, "assets")]
+
+    settings.PACKAGE_REPO_AWS_ACCESS_KEY_ID = env("PACKAGE_REPO_AWS_ACCESS_KEY_ID")
+    settings.PACKAGE_REPO_AWS_SECRET_ACCESS_KEY = env(
+        "PACKAGE_REPO_AWS_SECRET_ACCESS_KEY"
+    )
+
+    # Session Security
+    settings.SESSION_SECURITY_WARN_AFTER = env("SESSION_SECURITY_WARN_AFTER")
+    settings.SESSION_SECURITY_EXPIRE_AFTER = env("SESSION_SECURITY_EXPIRE_AFTER")
+
+    if settings.DEBUG or settings.ENV == "dev":
+        # Disable secure cookies in development or debugging environments
+        # to simplify troubleshooting and testing.
+        settings.SESSION_COOKIE_SECURE = False
+        settings.CSRF_COOKIE_SECURE = False
+
+    # INTERNAL_IPS can contain a list of IP addresses or CIDR blocks that are considered internal.
+    # Both individual IP addresses and CIDR notation (e.g., '192.168.1.1' or '192.168.1.0/24') can be provided.
+    settings.INTERNAL_IPS = env("INTERNAL_IPS")
+
+    settings.AXES_BEHIND_REVERSE_PROXY = env("AXES_BEHIND_REVERSE_PROXY")
+    settings.AXES_FAILURE_LIMIT = env("AXES_FAILURE_LIMIT")
+    settings.AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
+    settings.AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))
+
+    log_folder = os.path.join(BASE_DIR, "log")
+    log_file = os.path.join(log_folder, "zango.log")
+
+    # Check if the log folder exists, if not, create it
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+
+    # Check if the log file exists, if not, create it
+    if not os.path.exists(log_file):
+        with open(log_file, "a"):
+            pass  # Create an empty file
+
+    LOGGING["handlers"]["file"]["filename"] = log_file
+
+    # OTEL Settings
+    settings.OTEL_IS_ENABLED = env("OTEL_IS_ENABLED")
+    settings.OTEL_EXPORT_TO_OTLP = env("OTEL_EXPORT_TO_OTLP")
+    settings.OTEL_EXPORTER_OTLP_ENDPOINT = env("OTEL_EXPORTER_OTLP_ENDPOINT")
+    settings.OTEL_EXPORTER_OTLP_HEADERS = env("OTEL_EXPORTER_OTLP_HEADERS")
+    settings.OTEL_EXPORTER_PROTOCOL = env("OTEL_EXPORTER_PROTOCOL")
+    settings.OTEL_RESOURCE_NAME = env("OTEL_RESOURCE_NAME")
+
+    if settings.OTEL_IS_ENABLED:
+        MIDDLEWARE.append("zango.middleware.telemetry.OtelZangoContextMiddleware")
+
+    settings_result = {"env": env}
+
+    return settings_result

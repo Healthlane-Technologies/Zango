@@ -1,6 +1,6 @@
 const metadata = require('./src/metadata.json');
 const path = require('path');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 const glob = require('glob');
 module.exports = {
 	entry: {
@@ -10,7 +10,7 @@ module.exports = {
 	},
 	output: {
 		path: path.resolve(__dirname, '../backend/src/zango/assets/app_panel/js'),
-		filename: `build.v${metadata.buildMajor}.${metadata.buildMinor}.${metadata.buildPatch}.min.js`,
+		filename: `build.${Date.now()}.min.js`,
 	},
 	module: {
 		rules: [
@@ -20,5 +20,14 @@ module.exports = {
 			},
 		],
 	},
-	plugins: [new UglifyJsPlugin()],
+	optimization: {
+		minimize: true,
+		minimizer: [new TerserPlugin()],
+	},
+	resolve: {
+		alias: {
+			react: path.resolve('./node_modules/react'),
+			'react-dom': path.resolve('./node_modules/react-dom'),
+		},
+	},
 };

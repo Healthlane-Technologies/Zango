@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.utils.decorators import method_decorator
+from django.conf import settings
 
 from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
 from zango.core.api.utils import ZangoAPIPagination
@@ -27,6 +28,8 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def process_timestamp(self, timestamp, timezone):
         try:
             ts = json.loads(timestamp)
+            if not timezone:
+                timezone = settings.TIME_ZONE
             tz = pytz.timezone(timezone)
             ts["start"] = tz.localize(
                 datetime.strptime(ts["start"] + "-" + "00:00", "%Y-%m-%d-%H:%M"),
