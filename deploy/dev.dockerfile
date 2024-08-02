@@ -1,4 +1,4 @@
-FROM kczelthy/zango:latest
+FROM kczelthy/zango:0.3.0rc1
 
 RUN apt update
 RUN apt-get install -y net-tools
