@@ -1,3 +1,3 @@
 from zango.core import internal_requests
 
-__version__ = "0.3.0-rc.1"
+__version__ = "0.3.0rc1"
