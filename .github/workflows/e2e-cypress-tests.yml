@@ -45,9 +45,6 @@ jobs:
         uses: cypress-io/github-action@v6.5.0
         with:
           working-directory: e2e-tests
-          record: true
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
         continue-on-error: true
 
       # Step 6: Generate Cucumber HTML Report
