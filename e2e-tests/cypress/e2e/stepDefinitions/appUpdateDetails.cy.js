@@ -6,9 +6,7 @@ const time_zone = "Africa/Accra";
 const date_format = "04 October 2017";
 const date_time_format = "04 October 2017 01:48 PM";
 Given("Admin logins successfully and lands on the details view of App", () => {
-  // cy.login("platform_admin@zango.dev", "Zango@123");
-  cy.login("platform_admin@zelthy.com", "Zelthy@123");
-  // cy.visit("http://localhost:3000/platform/apps/");
+  cy.login("platform_admin@zango.dev", "Zango@123");
   cy.fixture("appData").then(function (data) {
     appData = data;
     cy.log(appData);
