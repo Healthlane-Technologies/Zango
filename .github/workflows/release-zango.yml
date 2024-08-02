@@ -1,0 +1,177 @@
+name: Publish Zango
+
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - 'CHANGELOG.md'
+    branches:
+      - main
+
+jobs:
+  check-publish:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check_publish.outputs.version }}
+      publish: ${{ steps.check_publish.outputs.publish }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Extract Latest Tag
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release ls -L 1 --json "tagName" >> info.json
+        LATEST_TAG=$(cat info.json | jq -r '.[0].tagName')
+        echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+    - name: Check Publish
+      id: check_publish
+      env:
+        LATEST_TAG: ${{ env.LATEST_TAG }}
+      run: |
+        echo "latest_tag=$LATEST_TAG"
+        CHANGELOG_VERSION=$(grep -m 1 '## \[' CHANGELOG.md | sed 's/.*\[\(.*\)\]/\1/' | grep -oE '([0-9]+\.[0-9]+\.[0-9]+\.?\w*)')
+        INIT_VERSION=$(grep '__version__' backend/src/zango/__init__.py | sed 's/.*__version__ = "\(.*\)"/\1/'| tail -1)
+        SETUP_VERSION=$(grep 'PLATFORM_VERSION' backend/setup.py | sed 's/.*PLATFORM_VERSION = "\(.*\)"/\1/'| head -n 1)
+        if [[ "$CHANGELOG_VERSION" != "$INIT_VERSION" ]] || [[ "$CHANGELOG_VERSION" != "$SETUP_VERSION" ]] || [[ "$LATEST_TAG" == "v$CHANGELOG_VERSION" ]]; then
+          echo "publish=false" >> $GITHUB_OUTPUT
+        else
+          echo "publish=true" >> $GITHUB_OUTPUT
+          echo "version=$INIT_VERSION" >> $GITHUB_OUTPUT
+        fi
+
+  publish-to-dockerhub:
+    runs-on: ubuntu-latest
+    needs: check-publish
+    if: needs.check-publish.outputs.publish == 'true' && github.event.pull_request.merged == true
+    steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
+    
+    - name: Build and Push Docker image with tag
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:${{ needs.check-publish.outputs.version }}
+
+  build-zango:
+    name: Build zango
+    runs-on: ubuntu-latest
+    if: needs.check-publish.outputs.publish == 'true' && github.event.pull_request.merged == true
+    needs: check-publish
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+    - name: Install pypa/build
+      run: >-
+        python3 -m
+        pip install
+        build
+        --user
+    - name: Build a binary wheel and a source tarball
+      run: |
+        python3 -m build backend --outdir dist
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-to-pypi:
+    if: needs.check-publish.outputs.publish == 'true' && github.event.pull_request.merged == true
+    name: Publish Zango to PyPI
+    needs:
+    - build-zango
+    - check-publish
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/zango
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish Zango to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+  github-release:
+    if: needs.check-publish.outputs.publish == 'true' && github.event.pull_request.merged == true
+    name: >-
+      Sign Zango with Sigstore
+      and upload it to GitHub Release
+    needs:
+      - publish-to-pypi
+      - build-zango
+      - check-publish
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v2.1.1
+      with:
+        inputs: >-
+          ./dist/*.tar.gz
+          ./dist/*.whl
+    - name: Extract release notes
+      id: extract-changelog
+      uses: sean0x42/markdown-extract@v2
+      with:
+        file: CHANGELOG.md
+        pattern: '${{ needs.check-publish.outputs.version }}'
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      with:
+        tag_name: v${{ needs.check-publish.outputs.version }}
+        release_name: v${{ needs.check-publish.outputs.version }}
+        prerelease: false
+        draft: false
+        body: ${{ steps.extract-changelog.outputs.markdown }}
