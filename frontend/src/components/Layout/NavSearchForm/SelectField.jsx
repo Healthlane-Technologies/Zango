@@ -27,6 +27,7 @@ export default function SelectField() {
 		<div className="relative">
 			<Menu as="div" className="relative flex w-[198px]">
 				<Menu.Button
+					data-cy="top_menu_button"
 					className="flex w-full items-center gap-[12px] rounded-r-[4px] border-l border-l-[#DDE2E5] bg-[#F0F3F4] px-[16px] py-[6px] hover:outline-0 focus:outline-0"
 					ref={(ref) => setReferenceElement(ref)}
 				>
@@ -62,7 +63,7 @@ export default function SelectField() {
 								</span>
 							</div>
 						</div>
-						<div className="flex flex-col pb-[12px] pt-[6px]">
+						<div data-cy="top_menu_items" className="flex flex-col pb-[12px] pt-[6px]">
 							<Menu.Item>
 								{({ active }) => (
 									<NavLink

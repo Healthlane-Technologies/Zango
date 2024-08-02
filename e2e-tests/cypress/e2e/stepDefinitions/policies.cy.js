@@ -4,6 +4,7 @@ let appData = "";
 
 Given("User navigates to policies tab", () => {
   cy.login("platform_admin@zango.dev", "Zango@123");
+  // cy.login("platform_admin@zelthy.com", "Zelthy@123");
   cy.fixture("appData").then(function (data) {
     appData = data;
     cy.log(appData);
@@ -12,6 +13,9 @@ Given("User navigates to policies tab", () => {
     );
     appPanelPageObjects.getAppName().contains(appData.app_name).click();
     appPanelPageObjects.getPoliciesTab().click();
+    cy.intercept("POST", `/api/v1/apps/${appData.app_uuid}/policies/*`).as(
+      "getSyncPolicies"
+    );
   });
 });
 
@@ -49,9 +53,6 @@ Then(
 );
 
 When("Admin clicks on the sync policy button", () => {
-  cy.intercept("POST", `/api/v1/apps/${appData.app_uuid}/policies/*`).as(
-    "getSyncPolicies"
-  );
   appPanelPageObjects.getSyncPolicyButton().click();
   cy.wait(2000);
 });
