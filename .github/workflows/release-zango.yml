@@ -6,7 +6,7 @@ on:
     paths:
       - 'CHANGELOG.md'
     branches:
-      - main
+      - v0-3-0-test
 
 jobs:
   check-publish:
