@@ -226,24 +226,12 @@ LOGGING = {
         }
     },
     "handlers": {
-        "file": {
-            "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "maxBytes": 1024 * 1024 * 5,  # 5 MB
-            "formatter": "verbose",  # Use the custom formatter
-            "filters": ["tenant_filter"],
-        },
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "console",
         },
     },
     "loggers": {
-        "django": {
-            "handlers": ["file"],
-            "level": "DEBUG",
-            "propagate": True,
-        },
         "django.db.backends": {
             "handlers": ["console"],
             "level": "ERROR",
@@ -415,8 +403,19 @@ def setup_settings(settings, BASE_DIR):
         with open(log_file, "a"):
             pass  # Create an empty file
 
-    LOGGING["handlers"]["file"]["filename"] = log_file
-
+    settings.LOGGING["handlers"]["file"] = {
+        "level": "INFO",
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": log_file,
+        "maxBytes": 1024 * 1024 * 5,  # 5 MB
+        "formatter": "verbose",  # Use the custom formatter
+        "filters": ["tenant_filter"],
+    }
+    settings.LOGGING["loggers"]["django"] = {
+        "handlers": ["file"],
+        "level": "DEBUG",
+        "propagate": True,
+    }
     # OTEL Settings
     settings.OTEL_IS_ENABLED = env("OTEL_IS_ENABLED")
     settings.OTEL_EXPORT_TO_OTLP = env("OTEL_EXPORT_TO_OTLP")
