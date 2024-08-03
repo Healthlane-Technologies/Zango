@@ -8,19 +8,20 @@ let userRole;
 Given(
   "Admin navigates to the user tab and gets the user data from fixture data",
   () => {
-    cy.login("platform_admin@zango.dev", "Zango@123");
+    // cy.login("platform_admin@zango.dev", "Zango@123");
+    cy.login("platform_admin@zelthy.com", "Zelthy@123");
     cy.fixture("userRoleData").then(function (data) {
       userRole = data;
-      cy.fixture("appData").then(function (data) {
-        appData = data;
-        cy.log(appData);
-        cy.intercept("GET", `/api/v1/apps/${appData.app_uuid}/users/*`).as(
-          "getUserTab"
-        );
-        appPanelPageObjects.getAppName().contains(appData.app_name).click();
-        appPanelPageObjects.getuserTab().click();
-        cy.wait(4000);
-      });
+    });
+    cy.fixture("appData").then(function (data) {
+      appData = data;
+      cy.log(appData);
+      cy.intercept("GET", `/api/v1/apps/${appData.app_uuid}/users/*`).as(
+        "getUserTab"
+      );
+      appPanelPageObjects.getAppName().contains(appData.app_name).click();
+      appPanelPageObjects.getuserTab().click();
+      cy.wait(2000);
     });
   }
 );
@@ -106,7 +107,7 @@ Then(
     cy.url().should("contain", "/user-management");
   }
 );
-When("Validate the user tab URL", () => {
+And("Validate the user tab URL", () => {
   cy.url().should("contain", "/user-management");
 });
 And("User table should contain the following columns", (datatables) => {
@@ -131,11 +132,14 @@ And("User table should contain the following columns", (datatables) => {
 And(
   "Admin clicks on the user table search button and Enters the valid data",
   () => {
-    appPanelPageObjects.getUserSearchBar().type(userData.user_name);
+    cy.fixture("userData").then(function (data) {
+      userData = data;
+      appPanelPageObjects.getUserSearchBar().type(userData.user_name);
+    });
     cy.intercept("GET", `/api/v1/apps/${appData.app_uuid}/users/*`).as(
       "getUser"
     );
-    cy.wait(5000);
+    cy.wait(2000);
   }
 );
 Then("User table row should contain the valid data", () => {
@@ -223,7 +227,7 @@ Then(
       );
       expect(intercept.response.statusCode).to.eq(status_code);
       expect(
-        JSON.parse(intercept.response.body).response.users.records.total_records
+        JSON.parse(intercept.response.body).response.users.total_records
       ).to.equal(total_records);
 
       const responseBody = JSON.parse(intercept.response.body);
@@ -232,3 +236,115 @@ Then(
     });
   }
 );
+
+And(
+  "Admin clicks on the deactivate user button under the three dots menu",
+  () => {
+    cy.wait("@getUser").then((intercept) => {
+      const responseBody = JSON.parse(intercept.response.body);
+      let userID_fetched = responseBody.response.users.records[0].id;
+      cy.log("userID_fetched=" + userID_fetched);
+      cy.intercept("PUT", `/api/v1/apps/${appData.app_uuid}/users/*`).as(
+        "userUpdate"
+      );
+      cy.wait(3000);
+      cy.get("table > tbody > tr").trigger("mouseover");
+      appPanelPageObjects.getThreeDotsMenu().click({
+        force: true,
+        multiple: true,
+      });
+      appPanelPageObjects.getDeactivateUserButton().click({
+        force: true,
+        multiple: true,
+      });
+      appPanelPageObjects.getSubmitButton().click({ force: true });
+    });
+  }
+);
+And(
+  "Admin clicks on the activate user button under the three dots menu",
+  () => {
+    cy.wait("@getUser").then((intercept) => {
+      const responseBody = JSON.parse(intercept.response.body);
+      let userID_fetched = responseBody.response.users.records[0].id;
+      cy.log("userID_fetched=" + userID_fetched);
+      cy.intercept("PUT", `/api/v1/apps/${appData.app_uuid}/users/*`).as(
+        "userUpdate"
+      );
+      cy.wait(3000);
+      cy.get("table > tbody > tr").trigger("mouseover");
+      appPanelPageObjects.getThreeDotsMenu().click({
+        force: true,
+        multiple: true,
+      });
+      appPanelPageObjects.getActivateUserButton().click({
+        force: true,
+        multiple: true,
+      });
+      appPanelPageObjects.getSubmitButton().click({ force: true });
+    });
+  }
+);
+And(
+  "Api response post update should have message {string} and status code {int}",
+  (message, status_code) => {
+    cy.wait("@userUpdate").then((intercept) => {
+      expect(JSON.parse(intercept.response.body).response.message).to.equal(
+        message
+      );
+      expect(intercept.response.statusCode).to.equal(status_code);
+    });
+  }
+);
+And("Post deactivation user should get deactivated", () => {
+  cy.wait("@getUser").then((intercept) => {
+    expect(
+      JSON.parse(intercept.response.body).response.users.records[0].is_active
+    ).to.equal(false);
+  });
+});
+And("Post activation user should get activated", () => {
+  cy.wait("@getUser").then((intercept) => {
+    expect(
+      JSON.parse(intercept.response.body).response.users.records[0].is_active
+    ).to.equal(true);
+  });
+});
+And("Admin clicks on the edit user button under the three dots menu", () => {
+  cy.wait("@getUser").then((intercept) => {
+    const responseBody = JSON.parse(intercept.response.body);
+    let userID_fetched = responseBody.response.users.records[0].id;
+    cy.log("userID_fetched=" + userID_fetched);
+    cy.intercept("PUT", `/api/v1/apps/${appData.app_uuid}/users/*`).as(
+      "userUpdate"
+    );
+    cy.wait(3000);
+    appPanelPageObjects.getThreeDotsMenu().click({
+      force: true,
+      multiple: true,
+    });
+    cy.get('[data-cy="edit_user_details_button"]').click({
+      force: true,
+      multiple: true,
+    });
+    cy.wait(2000);
+  });
+});
+And("Admin updates the user form with the valid data", () => {
+  cy.wait("@getUser").then((intercept) => {
+    // Assert on the API response
+    const responseBody = JSON.parse(intercept.response.body);
+    let user_id = responseBody.response.roles.records[0].id;
+    cy.log("user_id=" + user_id);
+    cy.intercept("PUT", `/api/v1/apps/${appData.app_uuid}/roles/${user_id}`).as(
+      "userRoleUpdate"
+    );
+    appPanelPageObjects
+      .getUserFullName()
+      .clear()
+      .type(userData.user_name)
+      .then(($button) => {
+        expect($button).to.not.have.attr("disabled");
+      });
+  });
+});

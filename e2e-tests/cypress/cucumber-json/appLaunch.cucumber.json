@@ -1,0 +1,62 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "App Launch and Validation",
+    "line": 1,
+    "id": "app-launch-and-validation",
+    "tags": [],
+    "uri": "appLaunch.feature",
+    "elements": [
+      {
+        "id": "app-launch-and-validation;app-launch-with-valid-data",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "App Launch with valid data",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin logins successfully and lands on the home page of App panel",
+            "result": {
+              "status": "passed",
+              "duration": 18472000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Admin clicks on the app launch button on homepage",
+            "result": {
+              "status": "passed",
+              "duration": 1008000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 7,
+            "name": "Admin fills the app launch form with the valid data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 6013000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 8,
+            "name": "App should be successfully Launched and also the Api response should have message \"App Launch Initiated Successfully\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 73000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -27,8 +27,8 @@
 import "cypress-file-upload";
 
 Cypress.Commands.add("login", (username, password) => {
-  cy.visit("http://localhost:8000/auth/login/?next=/platform/");
-  // cy.visit("https://zel3-platform.zelthy.in/platform/");
+  // cy.visit("http://localhost:8000/auth/login/?next=/platform/");
+  cy.visit("https://zel3-platform.zelthy.in/platform/");
   cy.get('[type="text"]').type(username);
   cy.get('[type="password"]').type(password);
   cy.get("button").click();

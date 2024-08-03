@@ -6,7 +6,9 @@ let appData = "";
 Given(
   "Admin navigates to the user role tab and gets the user role data from fixture data",
   () => {
-    cy.login("platform_admin@zango.dev", "Zango@123");
+    // cy.login("platform_admin@zango.dev", "Zango@123");
+    cy.login("platform_admin@zelthy.com", "Zelthy@123");
+
     cy.fixture("appData").then(function (data) {
       appData = data;
       cy.log(appData);
@@ -242,11 +244,11 @@ And(
   () => {
     cy.wait(5000);
     cy.get("table > tbody > tr").trigger("mouseover");
-    cy.get('[data-cy="three_dots_menu"]').click({
+    appPanelPageObjects.getThreeDotsMenu().click({
       force: true,
       multiple: true,
     });
-    cy.get('[data-cy="edit_user_role_button"]').click({
+    appPanelPageObjects.getEditUserRoleButton().click({
       force: true,
       multiple: true,
     });
@@ -267,11 +269,11 @@ And(
       ).as("userRoleUpdate");
       cy.wait(5000);
       cy.get("table > tbody > tr").trigger("mouseover");
-      cy.get('[data-cy="three_dots_menu"]').click({
+      appPanelPageObjects.getThreeDotsMenu().click({
         force: true,
         multiple: true,
       });
-      cy.get('[data-cy="deactivate_user_role_button"]').click({
+      appPanelPageObjects.getDeactivateUserRoleButton().click({
         force: true,
         multiple: true,
       });
@@ -294,11 +296,11 @@ And(
       ).as("userRoleUpdate");
       cy.wait(5000);
       cy.get("table > tbody > tr").trigger("mouseover");
-      cy.get('[data-cy="three_dots_menu"]').click({
+      appPanelPageObjects.getThreeDotsMenu().click({
         force: true,
         multiple: true,
       });
-      cy.get('[data-cy="activate_user_role_button"]').click({
+      appPanelPageObjects.getActivateUserRoleButton().click({
         force: true,
         multiple: true,
       });

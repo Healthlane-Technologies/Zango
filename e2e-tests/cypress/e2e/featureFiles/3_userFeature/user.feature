@@ -16,13 +16,13 @@ Feature: User Creation and Validation
         When Admin clicks on the new user button on the user page
         And Admin skips the mandatory fields on user form
         Then Required field error message for user from should be displayed
-    Scenario: User creation with existing role name
+    Scenario: User creation with existing user name
         When Admin clicks on the new user button on the user page
         And Admin fills up the user form with valid data and submits the form
         Then Error message for duplication of user should be displayed
 
-    Scenario: Table data validation post user role creation
-        When Validate the user tab URL
+    Scenario: Table data validation post user creation
+        And Validate the user tab URL
         And User table should contain the following columns
             | Column_1 | Column_2                  | Column_3 | Column_4 | Column_5          | Column_6                 | Column_7             |
             | User Id  | User Name Active/inactive | Mobile   | Email    | Management Access | Last Login / Date Joined | Password Change date |

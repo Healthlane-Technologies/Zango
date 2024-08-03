@@ -1,0 +1,212 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "User api assertions",
+    "line": 1,
+    "id": "user-api-assertions",
+    "tags": [],
+    "uri": "userApiAssertions.feature",
+    "elements": [
+      {
+        "id": "user-api-assertions;api-assertion-post-landing-on-user-tab",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "Api assertion post landing on user tab",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13444000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 6,
+            "name": "Validate the user tab URL",
+            "result": {
+              "status": "passed",
+              "duration": 19000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 7,
+            "name": "Api response post landing on user tab should have message \"Users fetched successfully\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 17000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-api-assertions;api-assertion-post-search",
+        "keyword": "Scenario",
+        "line": 8,
+        "name": "Api assertion post search",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13459000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "Admin clicks on the user table search button and Enters the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 2281000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 10,
+            "name": "Api response post search should have message \"Users fetched successfully\" total records should be 1 and status code 200 in user table",
+            "result": {
+              "status": "passed",
+              "duration": 32000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-api-assertions;api-assertion-for-deactivating-the-user",
+        "keyword": "Scenario",
+        "line": 11,
+        "name": "Api assertion for deactivating the user",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13618000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 12,
+            "name": "Admin clicks on the user table search button and Enters the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 2300000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "Admin clicks on the deactivate user button under the three dots menu",
+            "result": {
+              "status": "passed",
+              "duration": 3399000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 14,
+            "name": "Api response post update should have message \"App User updated successfully.\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 81000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 15,
+            "name": "Post deactivation user should get deactivated",
+            "result": {
+              "status": "passed",
+              "duration": 97000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-api-assertions;api-assertion-for-activating-the-user",
+        "keyword": "Scenario",
+        "line": 16,
+        "name": "Api assertion for activating the user",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13550000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Admin clicks on the user table search button and Enters the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 2284000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "Admin clicks on the activate user button under the three dots menu",
+            "result": {
+              "status": "passed",
+              "duration": 3363000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "Api response post update should have message \"App User updated successfully.\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 114000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 20,
+            "name": "Post activation user should get activated",
+            "result": {
+              "status": "passed",
+              "duration": 148000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

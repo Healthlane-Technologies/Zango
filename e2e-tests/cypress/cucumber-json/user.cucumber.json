@@ -1,0 +1,312 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "User Creation and Validation",
+    "line": 1,
+    "id": "user-creation-and-validation",
+    "tags": [],
+    "uri": "user.feature",
+    "elements": [
+      {
+        "id": "user-creation-and-validation;user-creation-with-valid-data",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "user creation with valid data",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 14021000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Admin clicks on the new user button on the user page",
+            "result": {
+              "status": "passed",
+              "duration": 114000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 7,
+            "name": "Admin creates the dynamic data of the user creation",
+            "result": {
+              "status": "passed",
+              "duration": 64000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "field_name_1",
+                      "field_name_2",
+                      "field_name_3",
+                      "field_name_4",
+                      "field_name_5"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Full Name",
+                      "Email",
+                      "Mobile",
+                      "Password",
+                      "User Role"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 8,
+            "name": "Add user form is dispalyed with the following fields",
+            "result": {
+              "status": "passed",
+              "duration": 100000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "Admin fills up the user form with valid data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 1676000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 12,
+            "name": "User should be successfully addded and admin should be redirected to the table view",
+            "result": {
+              "status": "passed",
+              "duration": 12000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "Admin also wants to assert the Api response post user addition",
+            "result": {
+              "status": "passed",
+              "duration": 11000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 14,
+            "name": "Api response post user creation should have message \"App User created successfully.\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 680000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-creation-and-validation;required-fields-validation-for-user-form",
+        "keyword": "Scenario",
+        "line": 15,
+        "name": "Required fields validation for user form",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13464000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "Admin clicks on the new user button on the user page",
+            "result": {
+              "status": "passed",
+              "duration": 104000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 17,
+            "name": "Admin skips the mandatory fields on user form",
+            "result": {
+              "status": "passed",
+              "duration": 940000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 18,
+            "name": "Required field error message for user from should be displayed",
+            "result": {
+              "status": "passed",
+              "duration": 102000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-creation-and-validation;user-creation-with-existing-user-name",
+        "keyword": "Scenario",
+        "line": 19,
+        "name": "User creation with existing user name",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13502000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 20,
+            "name": "Admin clicks on the new user button on the user page",
+            "result": {
+              "status": "passed",
+              "duration": 97000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "Admin fills up the user form with valid data and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 1859000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "Error message for duplication of user should be displayed",
+            "result": {
+              "status": "passed",
+              "duration": 155000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "user-creation-and-validation;table-data-validation-post-user-creation",
+        "keyword": "Scenario",
+        "line": 24,
+        "name": "Table data validation post user creation",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "Admin navigates to the user tab and gets the user data from fixture data",
+            "result": {
+              "status": "passed",
+              "duration": 13443000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 25,
+            "name": "Validate the user tab URL",
+            "result": {
+              "status": "passed",
+              "duration": 19000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "Column_1",
+                      "Column_2",
+                      "Column_3",
+                      "Column_4",
+                      "Column_5",
+                      "Column_6",
+                      "Column_7"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "User Id",
+                      "User Name Active/inactive",
+                      "Mobile",
+                      "Email",
+                      "Management Access",
+                      "Last Login / Date Joined",
+                      "Password Change date"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 26,
+            "name": "User table should contain the following columns",
+            "result": {
+              "status": "passed",
+              "duration": 66000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "Admin clicks on the user table search button and Enters the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 2260000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 30,
+            "name": "User table row should contain the valid data",
+            "result": {
+              "status": "passed",
+              "duration": 68000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
