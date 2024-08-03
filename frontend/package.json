@@ -36,7 +36,7 @@
 		"react-scripts": "5.0.1",
 		"react-window": "^1.8.8",
 		"shortid": "^2.2.16",
-		"uglifyjs-webpack-plugin": "^1.1.2",
+		"uglifyjs-webpack-plugin": "^2.2.0",
 		"web-vitals": "^2.1.0",
 		"webfontloader": "^1.6.28",
 		"yup": "^0.32.11"

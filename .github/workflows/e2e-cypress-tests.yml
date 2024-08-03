@@ -4,8 +4,13 @@ on:
   push:
     branches:
       - cypress/e2e-tests
-    # paths:
-    #   - "frontend/**"
+    paths:
+      - "frontend/**"
+      - "e2e-tests/**"
+  workflow_run:
+    workflows: ["Push build to Main"]
+    types:
+      - completed
 
 jobs:
   cypress-run:
