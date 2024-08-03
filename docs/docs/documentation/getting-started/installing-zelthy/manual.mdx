@@ -2,7 +2,7 @@
 sidebar_label: Manual
 ---
 
-# Installing Zango: Manual Process
+# Installing Zango: Manual
 
 To get started with Zango, you will need to install it using the Python package manager, pip.
 
@@ -12,12 +12,22 @@ Once Python and pip are installed, you can will need to install virtualenv to cr
 
 Now you are ready to create and activate the virtual environment by running the following command in your terminal or command prompt
 
+For Linux or Mac users:
+
 ```shell
 python3 -m venv <virtual_environment_name>
 source <virtual_environment_name>/bin/activate
 ```
 
-install the Zango Open Source Platform by running the following command in your terminal or command prompt
+For Windows Users:
+
+```shell
+python3 -m venv <virtual environment name>
+<virtual environment name >/Scripts/activate 
+```
+
+
+Install the Zango Open Source Platform by running the following command in your terminal or command prompt
 
 ```shell
 pip install zango
@@ -73,6 +83,7 @@ To get started, follow these steps to set up a PostgreSQL database:
 
 - If you haven't already, you'll need to install PostgreSQL on your system. You can download the PostgreSQL installer for your platform from the official website: [PostgreSQL Downloads](https://www.postgresql.org/download/)
 
+
 #### 2. **Create a Fresh Database:**
 
 - Once PostgreSQL is installed, open your terminal or a PostgreSQL client.
@@ -85,6 +96,7 @@ To get started, follow these steps to set up a PostgreSQL database:
 With the PostgreSQL database set up and ready to go, you can proceed with setting up your Zango project, confident that you have the necessary infrastructure in place.
 
 Keep in mind that the exact steps for installing PostgreSQL may vary depending on your operating system. Be sure to consult the PostgreSQL documentation or installation guide for your specific platform if you encounter any issues during the installation process.
+
 
 ## Setting Up the Project
 
@@ -196,10 +208,27 @@ docker run --name zango_redis -d -p 6379:6379 redis
 
 ### Starting the celery worker
 
+For linux or MacOs:
+
 Perform the below steps from the root directory of the project
 
 ```
 celery -A <project_name> worker -l INFO
+```
+For Windows:
+
+Perform the below steps from the root directory of the project
+
+```
+celery -A <module> worker -l info 
+```
+
+or 
+
+Install eventlet and run the following command
+
+```
+celery -A <module> worker -l info -P eventlet
 ```
 
 ### Starting Celery beat
