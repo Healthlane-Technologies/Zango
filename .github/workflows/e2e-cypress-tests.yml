@@ -43,20 +43,40 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18"
+      
+      # Step 5: Capturing start time
+      - name: Capture Start Time
+        id: start-time
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
 
-      # Step 5: Install dependencies
+      # Step 6: Install dependencies
       - name: Install cypress dependencies
         run: npm install
         working-directory: e2e-tests
 
-      # Step 6: Run Cypress tests and record results
+      # Step 7: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           working-directory: e2e-tests
         continue-on-error: true
 
-      # Step 7: Generate Cucumber HTML Report
+      #Step 8: Capturing end time
+      - name: Capture End Time
+        id: end-time
+        run: echo "END_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      #Step 9: Calculating total duration of cypress tests
+      - name: Calculate Duration
+        id: duration
+        run: |
+          DURATION_SECONDS=$((END_TIME - START_TIME))
+          DURATION_MINUTES=$((DURATION_SECONDS / 60))
+          DURATION_REMAINDER_SECONDS=$((DURATION_SECONDS % 60))
+          DURATION="${DURATION_MINUTES}m ${DURATION_REMAINDER_SECONDS}s"
+          echo "DURATION=${DURATION}" >> $GITHUB_ENV
+
+      # Step 10: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
         run: |
           echo "Running cucumber-html-report.js"
@@ -71,7 +91,7 @@ jobs:
           PLATFORM_VERSION: "Sonoma 14.2"
           CI_ENVIRONMENT: "GitHub Actions"
 
-      # Step 8: Upload Cypress screenshots
+      # Step 11: Upload Cypress screenshots
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         with:
@@ -79,7 +99,7 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
-      # Step 9: Upload Cypress videos
+      # Step 12: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
@@ -87,7 +107,7 @@ jobs:
           path: e2e-tests/cypress/videos
           if-no-files-found: ignore
 
-      # Step 10: Upload Cucumber HTML Report
+      # Step 13: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
         with:

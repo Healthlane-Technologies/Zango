@@ -1,6 +1,7 @@
 const report = require("multiple-cucumber-html-reporter");
 
 const executionDateTime = new Date().toLocaleString("en-US", {
+  timeZone: "Asia/Kolkata",
   year: "numeric",
   month: "long",
   day: "numeric",
@@ -32,6 +33,7 @@ report.generate({
       { label: "Cycle", value: "1" },
       { label: "Execution Date Time", value: executionDateTime },
       { label: "Execution Environment", value: process.env.CI_ENVIRONMENT },
+      { label: "Execution Duration", value: process.env.DURATION },
     ],
   },
 });
