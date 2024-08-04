@@ -1,5 +1,15 @@
 const report = require("multiple-cucumber-html-reporter");
 
+const executionDateTime = new Date().toLocaleString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
 report.generate({
   jsonDir: "./cypress/cucumber-json",
   reportPath: "./reports/cucumber-html-report.html",
@@ -20,7 +30,8 @@ report.generate({
       { label: "Project", value: "Zango e2e-Tests Report" },
       { label: "Release", value: "Version 1" },
       { label: "Cycle", value: "1" },
-      { label: "Execution Date Time", value: new Date().toISOString() },
+      { label: "Execution Date Time", value: executionDateTime },
+      { label: "Execution Environment", value: process.env.CI_ENVIRONMENT },
     ],
   },
 });

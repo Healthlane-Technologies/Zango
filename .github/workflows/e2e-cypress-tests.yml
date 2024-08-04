@@ -51,7 +51,7 @@ jobs:
 
       # Step 6: Run Cypress tests and record results
       - name: Run Cypress tests
-        uses: cypress-io/github-action@v6.5.0
+        uses: cypress-io/github-action@v6
         with:
           working-directory: e2e-tests
         continue-on-error: true
@@ -65,10 +65,11 @@ jobs:
         working-directory: e2e-tests
         env:
           BROWSER_NAME: chrome
-          BROWSER_VERSION: '126'
-          DEVICE_NAME: 'MacBook Air'
-          PLATFORM_NAME: 'Mac OS'
-          PLATFORM_VERSION: 'Sonoma 14.2'
+          BROWSER_VERSION: "126"
+          DEVICE_NAME: "MacBook Air"
+          PLATFORM_NAME: "Mac OS"
+          PLATFORM_VERSION: "Sonoma 14.2"
+          CI_ENVIRONMENT: "GitHub Actions"
 
       # Step 8: Upload Cypress screenshots
       - name: Upload Cypress screenshots
