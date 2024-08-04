@@ -21,7 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Step 2: Set up zango project with latest zango build
+      # Step 2: Confirm build completion
+      - name: Confirm build completion
+        run: echo "First workflow (Push build to Main) completed"
+
+      # Step 3: Set up zango project with latest zango build
       - name: Setup latest zango project
         uses: ./.github/actions/zango-project-setup-action
         with:
@@ -34,33 +38,39 @@ jobs:
           platform_domain_url: localhost
           domain_config_path: ./e2e-tests/local_domains.txt
 
-      # Step 3: Setup Node
+      # Step 4: Setup Node
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
 
-      # Step 4: Install dependencies
+      # Step 5: Install dependencies
       - name: Install cypress dependencies
         run: npm install
         working-directory: e2e-tests
 
-      # Step 5: Run Cypress tests and record results
+      # Step 6: Run Cypress tests and record results
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6.5.0
         with:
           working-directory: e2e-tests
         continue-on-error: true
 
-      # Step 6: Generate Cucumber HTML Report
+      # Step 7: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
         run: |
           echo "Running cucumber-html-report.js"
           ls -la
           node cucumber-html-report.js
         working-directory: e2e-tests
+        env:
+          BROWSER_NAME: chrome
+          BROWSER_VERSION: '126'
+          DEVICE_NAME: 'MacBook Air'
+          PLATFORM_NAME: 'Mac OS'
+          PLATFORM_VERSION: 'Sonoma 14.2'
 
-      # Step 7: Upload Cypress screenshots on failure
+      # Step 8: Upload Cypress screenshots
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         with:
@@ -68,7 +78,7 @@ jobs:
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
-      # Step 8: Upload Cypress videos
+      # Step 9: Upload Cypress videos
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
@@ -76,7 +86,7 @@ jobs:
           path: e2e-tests/cypress/videos
           if-no-files-found: ignore
 
-      # Step 9: Upload Cucumber HTML Report
+      # Step 10: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
         with:

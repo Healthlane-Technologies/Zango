@@ -1,4 +1,4 @@
-Feature: User role api assertions
+Feature: User Role Api Assertions
 
     Background: Navigates to the user role tab
         Given Admin navigates to the user role tab and gets the user role data from fixture data

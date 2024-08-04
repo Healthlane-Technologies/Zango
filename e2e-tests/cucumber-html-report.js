@@ -5,13 +5,13 @@ report.generate({
   reportPath: "./reports/cucumber-html-report.html",
   metadata: {
     browser: {
-      name: "chrome",
-      version: "126",
+      name: process.env.BROWSER_NAME,
+      version: process.env.BROWSER_VERSION,
     },
-    device: "MacBook Air",
+    device: process.env.DEVICE_NAME,
     platform: {
-      name: "Mac OS",
-      version: "Sonoma 14.2",
+      name: process.env.PLATFORM_NAME,
+      version: process.env.PLATFORM_VERSION,
     },
   },
   customData: {
@@ -20,8 +20,7 @@ report.generate({
       { label: "Project", value: "Zango e2e-Tests Report" },
       { label: "Release", value: "Phase 1" },
       { label: "Cycle", value: "A1" },
-      { label: "Execution Start Time", value: new Date().getTime() },
-      { label: "Execution End Time", value: new Date().getTime() },
+      { label: "Execution Date Time", value: new Date().toISOString() },
     ],
   },
 });

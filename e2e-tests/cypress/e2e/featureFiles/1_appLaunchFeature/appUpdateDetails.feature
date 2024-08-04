@@ -1,4 +1,4 @@
-Feature: App update and Validation
+Feature: App Update and Validation
     Background: Navigate to the details view of App
         Given Admin logins successfully and lands on the details view of App
 

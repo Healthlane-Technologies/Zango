@@ -1,4 +1,4 @@
-Feature: User api assertions
+Feature: User Api Assertions
     Background: Navigates to the user tab
         Given Admin navigates to the user tab and gets the user data from fixture data
     # Scenario: Api assertion post landing on apps tab
