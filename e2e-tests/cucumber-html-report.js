@@ -18,8 +18,8 @@ report.generate({
     title: "Run info",
     data: [
       { label: "Project", value: "Zango e2e-Tests Report" },
-      { label: "Release", value: "Phase 1" },
-      { label: "Cycle", value: "A1" },
+      { label: "Release", value: "Version 1" },
+      { label: "Cycle", value: "1" },
       { label: "Execution Date Time", value: new Date().toISOString() },
     ],
   },
