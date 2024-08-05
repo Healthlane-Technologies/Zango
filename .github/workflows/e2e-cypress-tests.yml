@@ -1,20 +1,26 @@
 name: End to End Cypress Test
 
 on:
-  push:
+  # push:
+  # branches:
+  #   - cypress/e2e-tests
+  # paths:
+  #   - "frontend/**"
+  #   - "e2e-tests/**"
+  workflow_run:
+    workflows: ["Push build to Main"]
     branches:
       - cypress/e2e-tests
     paths:
       - "frontend/**"
       - "e2e-tests/**"
-  workflow_run:
-    workflows: ["Push build to Main"]
     types:
       - completed
 
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
+    name: E2E on Chrome
 
     steps:
       # Step 1: Checkout repo
@@ -43,7 +49,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18"
-      
+
       # Step 5: Capturing start time
       - name: Capture Start Time
         id: start-time
@@ -58,6 +64,7 @@ jobs:
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
+          browser: chrome
           working-directory: e2e-tests
         continue-on-error: true
 
