@@ -13,6 +13,7 @@ class DynamicModelsConfig(AppConfig):
 
     def ready(self):
         # thanks to Baserow for this hack
+        import zango.apps.dynamic_models.signals  # noqa: F401
 
         original_register_model = self.apps.register_model
 
