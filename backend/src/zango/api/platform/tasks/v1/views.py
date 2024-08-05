@@ -32,7 +32,7 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             columns["is_enabled"] = True
         if columns.get("is_enabled") == "false":
             columns["is_enabled"] = False
-        records = AppTask.objects.all().order_by("-id")
+        records = AppTask.objects.filter(is_deleted=False).order_by("-id")
         if search == "" and columns == {}:
             return records
         filters = Q()
@@ -50,7 +50,15 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             columns = get_search_columns(request)
             app_tasks = self.get_queryset(search, columns)
             paginated_tasks = self.paginate_queryset(app_tasks, request, view=self)
-            serializer = TaskSerializer(paginated_tasks, many=True)
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+            connection.set_tenant(tenant)
+            with connection.cursor() as c:
+                ws = Workspace.get_plugin_source()
+                serializer = TaskSerializer(
+                    paginated_tasks,
+                    many=True,
+                    context={"plugin_source": ws},
+                )
             paginated_app_tasks = self.get_paginated_response_data(serializer.data)
             success = True
             response = {
@@ -70,6 +78,7 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
             with connection.cursor() as c:
+                ws = Workspace.get_plugin_source()
                 ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                 ws.ready()
                 ws.sync_tasks(tenant.name)
@@ -85,10 +94,16 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class AppTaskDetailView(ZangoGenericPlatformAPIView):
-    def get(self, request, app_uuid, task_uuid, *args, **kwargs):
+    def get(self, request, app_uuid, task_id, *args, **kwargs):
         try:
-            app_task = AppTask.objects.get(id=task_uuid)
-            serializer = TaskSerializer(instance=app_task)
+            app_task = AppTask.objects.get(id=task_id)
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+            connection.set_tenant(tenant)
+            with connection.cursor() as c:
+                serializer = TaskSerializer(
+                    instance=app_task,
+                    context={"history": True},
+                )
             response = {"task": serializer.data}
             status = 200
             success = True
@@ -98,11 +113,11 @@ class AppTaskDetailView(ZangoGenericPlatformAPIView):
             success = False
         return get_api_response(success, response, status)
 
-    def post(self, request, app_uuid, task_uuid, *args, **kwargs):
+    def post(self, request, app_uuid, task_id, *args, **kwargs):
         data = request.data
         crontab_exp = data.get("crontab_exp")
         try:
-            app_task = AppTask.objects.get(id=task_uuid)
+            app_task = AppTask.objects.get(id=task_id)
             serializer = TaskSerializer(
                 instance=app_task,
                 data=request.data,
