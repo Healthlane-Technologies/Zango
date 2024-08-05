@@ -1,4 +1,4 @@
-from opentelemetry import metrics, trace
+from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -9,14 +9,12 @@ from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs._internal.export import BatchLogRecordProcessor
-from opentelemetry import trace
 from opentelemetry.trace import ProxyTracerProvider
 
-from loguru import logger
 
 from .celery_instrument import ZangoCeleryInstrumentor
 from .utils import (
@@ -46,14 +44,11 @@ def setup_telemetry(add_django_instrumentation: bool):
     """
 
     if otel_is_enabled():
-
         existing_provider = trace.get_tracer_provider()
         if not isinstance(existing_provider, ProxyTracerProvider):
             print("Provider already configured not reconfiguring...")
         else:
-            resource = Resource.create(
-                attributes={"service.name": otel_resource_name()}
-            )
+            resource = Resource.create(attributes={"service.name": otel_resource_name()})
 
             if otel_export_to_otlp():
                 endpoint = otel_otlp_endpoint()
@@ -62,11 +57,11 @@ def setup_telemetry(add_django_instrumentation: bool):
                     exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
                     print(f"Exporter set to {endpoint}")
                 else:
-                    print(f"OTLP endpoint not provided. Switching to console exporter")
+                    print("OTLP endpoint not provided. Switching to console exporter")
                     exporter = ConsoleSpanExporter()
             else:  # Add console exporter
                 exporter = ConsoleSpanExporter()
-                print(f"Otel exporting to console!")
+                print("Otel exporting to console!")
 
             span_processor = BatchSpanProcessor(exporter)
             # Initialize the TracerProvider

@@ -19,8 +19,6 @@ def create_object_store_entry(sender, instance, created, **kwargs):
         from zango.apps.object_store.models import ObjectStore
         from django.contrib.contenttypes.models import ContentType
 
-        from zango.apps.dynamic_models.models import ObjectStore
-
         content_type = ContentType.objects.get_for_model(sender)
         ObjectStore.objects.create(
             object_uuid=instance.object_uuid,

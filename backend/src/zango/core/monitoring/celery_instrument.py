@@ -2,12 +2,10 @@ from loguru import logger
 from opentelemetry.instrumentation.celery import CeleryInstrumentor, celery_getter
 from opentelemetry.instrumentation.celery import utils
 from opentelemetry.instrumentation.celery import (
-    _TASK_NAME_KEY,
-    _TASK_TAG_KEY,
     _TASK_RUN,
 )
 from opentelemetry import trace
-from opentelemetry.propagate import extract, inject
+from opentelemetry.propagate import extract
 
 
 class ZangoCeleryInstrumentor(CeleryInstrumentor):
@@ -33,9 +31,7 @@ class ZangoCeleryInstrumentor(CeleryInstrumentor):
             operation_name = f"{_TASK_RUN}/{kwargs['args'][0]}-{kwargs['args'][1]}"
         else:
             operation_name = f"{_TASK_RUN}/{task.name}"
-        span = self._tracer.start_span(
-            operation_name, context=tracectx, kind=trace.SpanKind.CONSUMER
-        )
+        span = self._tracer.start_span(operation_name, context=tracectx, kind=trace.SpanKind.CONSUMER)
 
         activation = trace.use_span(span, end_on_exit=True)
         activation.__enter__()  # pylint: disable=E1101
