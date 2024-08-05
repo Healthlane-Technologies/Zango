@@ -1,10 +1,10 @@
 import json
 
 from rest_framework import serializers
-from zango.apps.shared.tenancy.models import TenantModel, Domain, ThemesModel
-from zango.apps.appauth.models import UserRoleModel, AppUserModel
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
+from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -16,9 +16,7 @@ class DomainSerializerModel(serializers.ModelSerializer):
 class TenantSerializerModel(serializers.ModelSerializer):
     domains = DomainSerializerModel(many=True, required=False)
     domain_url = serializers.SerializerMethodField("get_domain_url")
-    datetime_format_display = serializers.SerializerMethodField(
-        "get_datetime_format_display"
-    )
+    datetime_format_display = serializers.SerializerMethodField("get_datetime_format_display")
     date_format_display = serializers.SerializerMethodField("get_date_format_display")
 
     class Meta:
@@ -49,9 +47,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
         # Creating new domains
         for domain in domains:
-            domain_obj, created = Domain.objects.get_or_create(
-                domain=domain, tenant=instance
-            )
+            domain_obj, created = Domain.objects.get_or_create(domain=domain, tenant=instance)
             if created:
                 domain_obj.is_primary = False
                 domain_obj.save()
@@ -123,19 +119,11 @@ class ThemeModelSerializer(serializers.ModelSerializer):
             if instance is None:
                 # For create operation
                 if ThemesModel.objects.filter(name=name, tenant=tenant).exists():
-                    raise serializers.ValidationError(
-                        "Theme with this name already exists."
-                    )
+                    raise serializers.ValidationError("Theme with this name already exists.")
             else:
                 # For update operation
-                if (
-                    ThemesModel.objects.exclude(pk=instance.pk)
-                    .filter(name=name, tenant=tenant)
-                    .exists()
-                ):
-                    raise serializers.ValidationError(
-                        "Theme with this name already exists."
-                    )
+                if ThemesModel.objects.exclude(pk=instance.pk).filter(name=name, tenant=tenant).exists():
+                    raise serializers.ValidationError("Theme with this name already exists.")
 
         return data
 

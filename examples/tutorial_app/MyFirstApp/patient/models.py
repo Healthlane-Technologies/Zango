@@ -1,13 +1,12 @@
 from django.db import models
-
 from zango.apps.dynamic_models.models import DynamicModelBase
-from zango.apps.dynamic_models.fields import ZForeignKey
+
 
 class Patient(DynamicModelBase):
     GENDER_CHOICES = [
-        ('male', 'Male'),
-        ('female', 'Female'),
-        ('other', 'Other'),
+        ("male", "Male"),
+        ("female", "Female"),
+        ("other", "Other"),
     ]
 
     name = models.CharField(max_length=255)

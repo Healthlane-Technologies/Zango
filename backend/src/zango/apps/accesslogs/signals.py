@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 from datetime import datetime
 
-from django.db import connection
-from ipware import get_client_ip
-from django.dispatch import receiver
 from axes.helpers import get_client_user_agent
 from django.contrib.auth.signals import (
+    user_logged_in,
     user_logged_out,
     user_login_failed,
-    user_logged_in,
 )
+from django.db import connection
+from django.dispatch import receiver
+from ipware import get_client_ip
 
 from zango.apps.accesslogs.models import AppAccessLog
 from zango.apps.appauth.models import UserRoleModel
@@ -54,14 +53,12 @@ def user_logged_in_handler(sender, request, user, **kwargs):
             )
 
             if getattr(request, "selected_role_id", ""):
-                user_role = UserRoleModel.objects.filter(
-                    id=getattr(request, "selected_role_id")
-                ).last()
+                user_role = UserRoleModel.objects.filter(id=request.selected_role_id).last()
 
             if user_role:
                 access_log.role = user_role
                 access_log.save()
-        except:
+        except Exception:
             import traceback
 
             print(traceback.format_exc())
@@ -70,9 +67,9 @@ def user_logged_in_handler(sender, request, user, **kwargs):
 @receiver(user_logged_out)
 def user_logged_out_handler(sender, user, **kwargs):
     if connection.tenant.tenant_type == "app":
-        access_log = AppAccessLog.objects.filter(
-            user=user, session_expired_at__isnull=True
-        ).order_by("-id").first()
+        access_log = (
+            AppAccessLog.objects.filter(user=user, session_expired_at__isnull=True).order_by("-id").first()
+        )
 
         if access_log:
             access_log.session_expired_at = datetime.now()

@@ -1,13 +1,13 @@
 import os
 
 from django.conf import settings
-from django.db import connection
-
 from django.core.management.commands.makemigrations import (
     Command as MakeMigrationsCommand,
 )
-from zango.apps.shared.tenancy.models import TenantModel
+from django.db import connection
+
 from zango.apps.dynamic_models.workspace.base import Workspace
+from zango.apps.shared.tenancy.models import TenantModel
 
 
 class Command(MakeMigrationsCommand):
@@ -33,9 +33,7 @@ class Command(MakeMigrationsCommand):
             "workspace",
             help="The workspace name to be used.",
         )
-        parser.add_argument(
-            "--test", action="store_true", help="Run the migration for test database"
-        )
+        parser.add_argument("--test", action="store_true", help="Run the migration for test database")
         parser.add_argument(
             "--is_package_migration",
             action="store_true",
@@ -50,19 +48,18 @@ class Command(MakeMigrationsCommand):
                 tenant_obj = TenantModel.objects.get(name=tenant)
                 break  # Exit the loop if a valid workspace is found
             except TenantModel.DoesNotExist:
-                self.stdout.write(self.style.ERROR(f"The app name '{tenant}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."))
-                tenant = input('Please enter a valid workspace: ')
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"The app name '{tenant}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."
+                    )
+                )
+                tenant = input("Please enter a valid workspace: ")
                 options["workspace"] = tenant
-
 
         connection.set_tenant(tenant_obj)
         if is_test_mode:
-            connection.settings_dict["NAME"] = (
-                "test_" + connection.settings_dict["NAME"]
-            )
-        migrations_dir = (
-            f"{settings.BASE_DIR}/workspaces/{options['workspace']}/migrations/"
-        )
+            connection.settings_dict["NAME"] = "test_" + connection.settings_dict["NAME"]
+        migrations_dir = f"{settings.BASE_DIR}/workspaces/{options['workspace']}/migrations/"
         # Create the migration directory if it doesn't exist
         os.makedirs(migrations_dir, exist_ok=True)
 
@@ -72,9 +69,7 @@ class Command(MakeMigrationsCommand):
             with open(init_file, "w"):
                 pass  # Creates an empty __init__.py file
 
-        settings.MIGRATION_MODULES = {
-            f"dynamic_models": f"workspaces.{options['workspace']}.migrations"
-        }
+        settings.MIGRATION_MODULES = {"dynamic_models": f"workspaces.{options['workspace']}.migrations"}
         w = Workspace(tenant_obj, None, True)
         if options["is_package_migration"]:
             w.load_models()

@@ -1,30 +1,28 @@
 import json
 import traceback
 
+from django.db.models import Q
+from django.utils.decorators import method_decorator
 from django_celery_results.models import TaskResult
 
-from django.conf import settings
-from django.utils.decorators import method_decorator
-from django.db.models import Q
-
-from zango.core.api import (
-    get_api_response,
-    ZangoGenericPlatformAPIView,
-)
-from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
-from zango.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT, DATEFORMAT
-from zango.apps.appauth.models import UserRoleModel, AppUserModel
+from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel
-from zango.core.common_utils import set_app_schema_path
+from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
+from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
+from zango.core.api import (
+    ZangoGenericPlatformAPIView,
+    get_api_response,
+)
 from zango.core.api.utils import ZangoAPIPagination
+from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
 from zango.core.utils import get_search_columns
 
 from .serializers import (
-    TenantSerializerModel,
-    UserRoleSerializerModel,
     AppUserModelSerializerModel,
+    TenantSerializerModel,
     ThemeModelSerializer,
+    UserRoleSerializerModel,
 )
 
 
@@ -126,9 +124,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
     def get_dropdown_options(self):
         options = {}
         options["timezones"] = [{"id": t[0], "label": t[1]} for t in TIMEZONES]
-        options["datetime_formats"] = [
-            {"id": d[0], "label": d[1]} for d in DATETIMEFORMAT
-        ]
+        options["datetime_formats"] = [{"id": d[0], "label": d[1]} for d in DATETIMEFORMAT]
         options["date_formats"] = [{"id": d[0], "label": d[1]} for d in DATEFORMAT]
         return options
 
@@ -172,9 +168,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
+                    error_messages = [error[0] for field_name, error in serializer.errors.items()]
                     error_message = ", ".join(error_messages)
                 else:
                     error_message = "Invalid data"
@@ -196,8 +190,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def get_dropdown_options(self):
         options = {}
         options["policies"] = [
-            {"id": t.id, "label": t.name}
-            for t in PolicyModel.objects.all().order_by("-modified_at")
+            {"id": t.id, "label": t.name} for t in PolicyModel.objects.all().order_by("-modified_at")
         ]
         return options
 
@@ -265,9 +258,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             success = False
             status_code = 400
             if role_serializer.errors:
-                error_messages = [
-                    error[0] for field_name, error in role_serializer.errors.items()
-                ]
+                error_messages = [error[0] for field_name, error in role_serializer.errors.items()]
                 error_message = ", ".join(error_messages)
             else:
                 error_message = "Invalid data"
@@ -320,9 +311,7 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
+                    error_messages = [error[0] for field_name, error in serializer.errors.items()]
                     error_message = ", ".join(error_messages)
                 else:
                     error_message = "Invalid data"
@@ -345,9 +334,7 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         options = {}
         options["roles"] = [
             {"id": t.id, "label": t.name}
-            for t in UserRoleModel.objects.all().exclude(
-                name__in=["AnonymousUsers", "SystemUsers"]
-            )
+            for t in UserRoleModel.objects.all().exclude(name__in=["AnonymousUsers", "SystemUsers"])
         ]
         return options
 
@@ -476,9 +463,7 @@ class ThemeViewAPIV1(ZangoGenericPlatformAPIView):
     def get(self, request, *args, **kwargs):
         try:
             app_tenant = self.get_app_tenant()
-            themes = ThemesModel.objects.filter(tenant=app_tenant).order_by(
-                "-modified_at"
-            )
+            themes = ThemesModel.objects.filter(tenant=app_tenant).order_by("-modified_at")
 
             serializer = ThemeModelSerializer(themes, many=True)
 
@@ -501,9 +486,7 @@ class ThemeViewAPIV1(ZangoGenericPlatformAPIView):
         app_tenant = self.get_app_tenant()
         data["tenant"] = app_tenant.id
         data._mutable = False
-        theme_serializer = ThemeModelSerializer(
-            data=data, context={"app_tenant": app_tenant}
-        )
+        theme_serializer = ThemeModelSerializer(data=data, context={"app_tenant": app_tenant})
         if theme_serializer.is_valid():
             success = True
             status_code = 200
@@ -514,9 +497,7 @@ class ThemeViewAPIV1(ZangoGenericPlatformAPIView):
             status_code = 400
             print(theme_serializer.errors)
             if theme_serializer.errors:
-                error_messages = [
-                    error[0] for field_name, error in theme_serializer.errors.items()
-                ]
+                error_messages = [error[0] for field_name, error in theme_serializer.errors.items()]
                 error_message = ", ".join(error_messages)
             else:
                 error_message = "Invalid data"
@@ -530,9 +511,7 @@ class ThemeDetailViewAPIV1(ZangoGenericPlatformAPIView):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
-        obj = ThemesModel.objects.get(
-            tenant__uuid=kwargs.get("app_uuid"), id=kwargs.get("theme_id")
-        )
+        obj = ThemesModel.objects.get(tenant__uuid=kwargs.get("app_uuid"), id=kwargs.get("theme_id"))
         return obj
 
     def get_app_tenant(self):
@@ -575,9 +554,7 @@ class ThemeDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
+                    error_messages = [error[0] for field_name, error in serializer.errors.items()]
                     error_message = ", ".join(error_messages)
                 else:
                     error_message = "Invalid data"

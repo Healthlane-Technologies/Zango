@@ -1,6 +1,7 @@
-from django.views.generic import View, TemplateView
 from django.contrib.auth.decorators import login_required
-from ..permissions import IsAuthenticatedPlatformUser, IsAuthenticatedAppUser
+from django.views.generic import TemplateView, View
+
+from ..permissions import IsAuthenticatedAppUser, IsAuthenticatedPlatformUser
 
 
 class ZangoSessionPlatformView(IsAuthenticatedPlatformUser, View):
@@ -11,9 +12,7 @@ class ZangoSessionPlatformView(IsAuthenticatedPlatformUser, View):
     @classmethod
     def as_view(cls):
         login_url = None
-        return login_required(
-            super(ZangoSessionPlatformView, cls).as_view(), login_url=login_url
-        )
+        return login_required(super(ZangoSessionPlatformView, cls).as_view(), login_url=login_url)
 
 
 class ZangoSessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateView):
@@ -24,9 +23,7 @@ class ZangoSessionPlatformTemplateView(IsAuthenticatedPlatformUser, TemplateView
     @classmethod
     def as_view(cls):
         login_url = "/auth/login/"
-        return login_required(
-            super(ZangoSessionPlatformTemplateView, cls).as_view(), login_url=login_url
-        )
+        return login_required(super(ZangoSessionPlatformTemplateView, cls).as_view(), login_url=login_url)
 
 
 class ZangoSessionAppView(IsAuthenticatedAppUser, View):
@@ -37,9 +34,7 @@ class ZangoSessionAppView(IsAuthenticatedAppUser, View):
     @classmethod
     def as_view(cls):
         login_url = None
-        return login_required(
-            super(ZangoSessionAppView, cls).as_view(), login_url=login_url
-        )
+        return login_required(super(ZangoSessionAppView, cls).as_view(), login_url=login_url)
 
 
 class ZangoSessionAppTemplateView(IsAuthenticatedAppUser, TemplateView):
@@ -50,6 +45,4 @@ class ZangoSessionAppTemplateView(IsAuthenticatedAppUser, TemplateView):
     @classmethod
     def as_view(cls):
         login_url = None
-        return login_required(
-            super(ZangoSessionAppTemplateView, cls).as_view(), login_url=login_url
-        )
+        return login_required(super(ZangoSessionAppTemplateView, cls).as_view(), login_url=login_url)

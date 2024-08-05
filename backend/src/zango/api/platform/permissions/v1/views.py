@@ -1,23 +1,19 @@
-import traceback
-
-from django.utils.decorators import method_decorator
-from django.db.models import Q
 from django.db import connection
+from django.db.models import Q
+from django.utils.decorators import method_decorator
 
-from zango.core.api import (
-    get_api_response,
-    ZangoGenericPlatformAPIView,
-)
-from zango.core.utils import get_search_columns
-from zango.apps.shared.tenancy.models import TenantModel
-from zango.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT
-from zango.apps.permissions.models import PolicyModel, PermissionsModel
-from zango.core.common_utils import set_app_schema_path
-from zango.core.api.utils import ZangoAPIPagination
-from zango.core.permissions import IsPlatformUserAllowedApp
 from zango.apps.appauth.models import UserRoleModel
 from zango.apps.dynamic_models.workspace.base import Workspace
-
+from zango.apps.permissions.models import PolicyModel
+from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api import (
+    ZangoGenericPlatformAPIView,
+    get_api_response,
+)
+from zango.core.api.utils import ZangoAPIPagination
+from zango.core.common_utils import set_app_schema_path
+from zango.core.permissions import IsPlatformUserAllowedApp
+from zango.core.utils import get_search_columns
 
 from .serializers import PolicySerializer
 
@@ -47,9 +43,7 @@ class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
     def get_dropdown_options(self):
         options = {}
-        options["roles"] = [
-            {"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()
-        ]
+        options["roles"] = [{"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()]
         return options
 
     def get(self, request, *args, **kwargs):
@@ -99,17 +93,13 @@ class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         if policy_serializer.is_valid():
             success = True
             status_code = 200
-            policy = policy_serializer.save(
-                **{"roles": request.data.getlist("roles", [])}
-            )
+            policy = policy_serializer.save(**{"roles": request.data.getlist("roles", [])})
             result = {"message": "Policy Created Successfully", "policy_id": policy.id}
         else:
             success = False
             status_code = 400
             if policy_serializer.errors:
-                error_messages = [
-                    error[0] for field_name, error in policy_serializer.errors.items()
-                ]
+                error_messages = [error[0] for field_name, error in policy_serializer.errors.items()]
                 error_message = ", ".join(error_messages)
             else:
                 error_message = "Invalid data"
@@ -157,9 +147,7 @@ class PolicyDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
+                    error_messages = [error[0] for field_name, error in serializer.errors.items()]
                     error_message = ", ".join(error_messages)
                 else:
                     error_message = "Invalid data"

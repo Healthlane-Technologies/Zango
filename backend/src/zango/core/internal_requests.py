@@ -1,10 +1,9 @@
-import requests
 import json
 from importlib import import_module
 
+import requests
 from django.db import connection
 from django.test import RequestFactory
-
 
 original_post = requests.post
 original_get = requests.get
@@ -31,7 +30,7 @@ def process_internal_request(fake_request, tenant, **kwargs):
     fake_request.internal_routing = True
     connection.set_tenant(tenant)
     ws_module = import_module("zango.apps.dynamic_models.workspace.base")
-    ws_klass = getattr(ws_module, "Workspace")
+    ws_klass = ws_module.Workspace
     ws = ws_klass(tenant, fake_request)
     ws.ready()
     view, resolve = ws.match_view(fake_request)

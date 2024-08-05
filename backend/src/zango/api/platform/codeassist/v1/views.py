@@ -1,16 +1,15 @@
+import importlib
 import json
 import os
-import importlib
 
-from django.utils.decorators import method_decorator
 from django.conf import settings
+from django.utils.decorators import method_decorator
 
-from zango.core.common_utils import set_app_schema_path
-from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
-
-from zango.apps.permissions.models import PolicyModel
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.common_utils import set_app_schema_path
 
 from .utils import lambda_invocation
 
@@ -103,17 +102,11 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
             execute = self.setupFrame(execution_data, **kwargs)
 
         # assist_msg = 'Executed Successfully!'
-        return get_api_response(
-            success=execute[0], response_content={"message": execute[1]}, status=200
-        )
+        return get_api_response(success=execute[0], response_content={"message": execute[1]}, status=200)
 
     def createModule(self, execution_data, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
-        module_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/"
-            + execution_data["dir"]
-        )
+        module_path = str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/" + execution_data["dir"]
         try:
             try:
                 os.mkdir(module_path)
@@ -132,8 +125,7 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
     def createModel(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
         model_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/models.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/models.py"
         )
         with open(model_path, "a") as f:
             f.write(execution_json["models.py"])
@@ -142,8 +134,7 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
     def updateModel(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
         model_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/models.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/models.py"
         )
         with open(model_path, "w") as f:
             f.write(execution_json["models.py"])
@@ -152,20 +143,16 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
     def createCrud(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
         views_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/views.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/views.py"
         )
         forms_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/forms.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/forms.py"
         )
         tables_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/tables.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/tables.py"
         )
         urls_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/urls.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/urls.py"
         )
         with open(views_path, "a") as f:
             f.write(execution_json["views.py"])
@@ -184,8 +171,7 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
     def updateCrudTable(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
         tables_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/tables.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/tables.py"
         )
 
         with open(tables_path, "w") as f:
@@ -196,7 +182,7 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
     def createUser(self, execution_json, **kwargs):
         try:
             if AppUserModel.objects.filter(email=execution_json["email"]).exists():
-                return (False, f"This email ID is already taken")
+                return (False, "This email ID is already taken")
             user = AppUserModel.objects.create(
                 email=execution_json["email"],
                 name=execution_json["name"],
@@ -209,27 +195,19 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
             return (False, f"Error encountered while creating user: {str(e)}")
 
     def createRole(self, execution_json, **kwargs):
-        if UserRoleModel.objects.filter(
-            name__icontains=execution_json["role_name"]
-        ).exists():
-            return (False, f"User Role with this name already exists!")
-        role = UserRoleModel.objects.create(
-            name=execution_json["role_name"], is_active=True
-        )
+        if UserRoleModel.objects.filter(name__icontains=execution_json["role_name"]).exists():
+            return (False, "User Role with this name already exists!")
+        role = UserRoleModel.objects.create(name=execution_json["role_name"], is_active=True)
         return (True, "Succesfully executed")
 
     def mapRole(self, execution_json, **kwargs):
-        user = AppUserModel.objects.filter(
-            email__icontains=execution_json["email"]
-        ).first()
+        user = AppUserModel.objects.filter(email__icontains=execution_json["email"]).first()
         if not user:
             return (
                 False,
                 f"There is no user with the provided email ID {execution_json['email']}",
             )
-        role = UserRoleModel.objects.filter(
-            name__icontains=execution_json["role_name"]
-        ).first()
+        role = UserRoleModel.objects.filter(name__icontains=execution_json["role_name"]).first()
         if not role:
             return (
                 False,
@@ -240,17 +218,13 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
         return (True, "Succesfully executed")
 
     def mapPolicy(self, execution_json, **kwargs):
-        role = UserRoleModel.objects.filter(
-            name__icontains=execution_json["role_name"]
-        ).first()
+        role = UserRoleModel.objects.filter(name__icontains=execution_json["role_name"]).first()
         if not role:
             return (
                 False,
                 f"There is no role with the provided name {execution_json['role_name']}",
             )
-        policy = PolicyModel.objects.filter(
-            name__icontains=execution_json["policy"]
-        ).first()
+        policy = PolicyModel.objects.filter(name__icontains=execution_json["policy"]).first()
         if not policy:
             return (
                 False,
@@ -266,30 +240,24 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
         frame_mod = importlib.import_module(frame_mod_path)
 
         frame_model_class = frame_mod.FramesModel
-        user_role = UserRoleModel.objects.filter(
-            name__iexact=execution_json["role_name"]
-        ).first()
+        user_role = UserRoleModel.objects.filter(name__iexact=execution_json["role_name"]).first()
         if not user_role:
             return (False, "There is no role with the provided role name")
 
         if frame_model_class.objects.filter(user_role=user_role).exists():
             return (False, f"Frames already exists for {user_role.name}")
 
-        frame_model_class.objects.create(
-            user_role=user_role, config=execution_json["frame_config"]
-        )
+        frame_model_class.objects.create(user_role=user_role, config=execution_json["frame_config"])
 
         return (True, "Succesfully executed")
 
     def createCustomCode(self, execution_json, **kwargs):
         app_obj = self.get_app_obj(**kwargs)
         views_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/views.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/views.py"
         )
         urls_path = (
-            str(settings.BASE_DIR)
-            + f"/workspaces/{app_obj.name}/{execution_json['module']}/urls.py"
+            str(settings.BASE_DIR) + f"/workspaces/{app_obj.name}/{execution_json['module']}/urls.py"
         )
         template_path = (
             str(settings.BASE_DIR)

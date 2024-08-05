@@ -1,10 +1,9 @@
 import re
 
 from django.conf import settings
-from django.shortcuts import redirect
 
 
-class PasswordValidationMixin(object):
+class PasswordValidationMixin:
     MIN_LENGTH = settings.PASSWORD_MIN_LENGTH
     oldpassword_model = None
     num_specialChar_regex = re.compile(r"[!@#$%^&*()_+-/=~]")
@@ -27,9 +26,7 @@ class PasswordValidationMixin(object):
     def check_password_length(self, password):
         if len(password) < self.MIN_LENGTH:
             validation = False
-            msg = (
-                f"The new password must be at least {self.MIN_LENGTH} characters long."
-            )
+            msg = f"The new password must be at least {self.MIN_LENGTH} characters long."
 
         else:
             validation = True
@@ -111,13 +108,9 @@ class PasswordValidationMixin(object):
             msg = "Your password must be different from your username."
         return {"msg": msg, "validation": validation}
 
-    def run_all_validations(
-        self, user, password, repeat_password=None, old_password=None
-    ):
+    def run_all_validations(self, user, password, repeat_password=None, old_password=None):
         if repeat_password:
-            if not self.is_password_matching(password, repeat_password).get(
-                "validation"
-            ):
+            if not self.is_password_matching(password, repeat_password).get("validation"):
                 return self.is_password_matching(password, repeat_password)
 
         if old_password:

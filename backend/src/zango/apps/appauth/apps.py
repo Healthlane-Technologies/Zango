@@ -6,4 +6,4 @@ class AppauthConfig(AppConfig):
     name = "zango.apps.appauth"
 
     def ready(self):
-        import zango.apps.appauth.signals
+        pass

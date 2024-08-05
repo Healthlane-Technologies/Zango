@@ -1,12 +1,11 @@
 import json
 
 from django.db import models
-from django_celery_beat.models import CrontabSchedule, IntervalSchedule
-from django_celery_beat.models import PeriodicTask
+from django_celery_beat.models import CrontabSchedule, IntervalSchedule, PeriodicTask
 
-from zango.core.model_mixins import FullAuditMixin
-from zango.apps.permissions.models import PolicyModel
 from zango.apps.auditlogs.registry import auditlog
+from zango.apps.permissions.models import PolicyModel
+from zango.core.model_mixins import FullAuditMixin
 
 
 class AppTask(FullAuditMixin):
@@ -31,9 +30,7 @@ class AppTask(FullAuditMixin):
     )
     args = models.JSONField(null=True, blank=True)
     kwargs = models.JSONField(null=True, blank=True)
-    master_task = models.ForeignKey(
-        PeriodicTask, null=True, blank=True, on_delete=models.CASCADE
-    )
+    master_task = models.ForeignKey(PeriodicTask, null=True, blank=True, on_delete=models.CASCADE)
     attached_policies = models.ManyToManyField(PolicyModel, blank=True, null=True)
 
     def schedule(self):
@@ -79,6 +76,7 @@ class AppTask(FullAuditMixin):
             obj.save()
 
         super(AppTask, self).save(*args, **kwargs)
+
 
 auditlog.register(
     AppTask,

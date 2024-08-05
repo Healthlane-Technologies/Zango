@@ -1,6 +1,7 @@
-import os
-import click
 import json
+import os
+
+import click
 
 from zango.core.package_utils import get_all_packages
 
@@ -19,7 +20,7 @@ def list_packages(tenant):
                 tenants.append(tenant)
             for tenant in os.listdir("workspaces"):
                 click.echo(f"List of Packages in Tenant {tenant}")
-                with open(f"workspaces/{tenant}/manifest.json", "r") as f:
+                with open(f"workspaces/{tenant}/manifest.json") as f:
                     data = json.loads(f.read())
                     packages = data["packages"]
                 for package in packages:
@@ -27,6 +28,6 @@ def list_packages(tenant):
         else:
             click.echo("No Workspaces Found, execute command from the project root")
     else:
-        click.echo(f"List of available Packages")
+        click.echo("List of available Packages")
         for package in available_packages:
             click.echo(f"{package['name']} : {package['versions']}")

@@ -4,60 +4,146 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='PermissionsModel',
+            name="PermissionsModel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('created_by', models.CharField(blank=True, editable=False, max_length=255)),
-                ('modified_at', models.DateTimeField(auto_now=True)),
-                ('modified_by', models.CharField(blank=True, editable=False, max_length=255)),
-                ('name', models.CharField(max_length=100, unique=True, verbose_name='Name of the permission')),
-                ('type', models.CharField(choices=[('view', 'View'), ('datamodel', 'DataModel'), ('user_access', 'User Access'), ('custom', 'Custom')], max_length=50, verbose_name='Type of the permission')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "created_by",
+                    models.CharField(blank=True, editable=False, max_length=255),
+                ),
+                ("modified_at", models.DateTimeField(auto_now=True)),
+                (
+                    "modified_by",
+                    models.CharField(blank=True, editable=False, max_length=255),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        max_length=100,
+                        unique=True,
+                        verbose_name="Name of the permission",
+                    ),
+                ),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("view", "View"),
+                            ("datamodel", "DataModel"),
+                            ("user_access", "User Access"),
+                            ("custom", "Custom"),
+                        ],
+                        max_length=50,
+                        verbose_name="Type of the permission",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='PolicyModel',
+            name="PolicyModel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('created_by', models.CharField(blank=True, editable=False, max_length=255)),
-                ('modified_at', models.DateTimeField(auto_now=True)),
-                ('modified_by', models.CharField(blank=True, editable=False, max_length=255)),
-                ('name', models.CharField(max_length=50, unique=True, verbose_name='Name of the policy')),
-                ('description', models.CharField(blank=True, max_length=300, verbose_name='Description of the policy')),
-                ('statement', models.JSONField(null=True)),
-                ('expiry', models.DateTimeField(null=True)),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "created_by",
+                    models.CharField(blank=True, editable=False, max_length=255),
+                ),
+                ("modified_at", models.DateTimeField(auto_now=True)),
+                (
+                    "modified_by",
+                    models.CharField(blank=True, editable=False, max_length=255),
+                ),
+                (
+                    "name",
+                    models.CharField(max_length=50, unique=True, verbose_name="Name of the policy"),
+                ),
+                (
+                    "description",
+                    models.CharField(
+                        blank=True,
+                        max_length=300,
+                        verbose_name="Description of the policy",
+                    ),
+                ),
+                ("statement", models.JSONField(null=True)),
+                ("expiry", models.DateTimeField(null=True)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='PolicyGroupModel',
+            name="PolicyGroupModel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('created_by', models.CharField(blank=True, editable=False, max_length=255)),
-                ('modified_at', models.DateTimeField(auto_now=True)),
-                ('modified_by', models.CharField(blank=True, editable=False, max_length=255)),
-                ('name', models.CharField(max_length=50, unique=True, verbose_name='Name of the policy group')),
-                ('description', models.CharField(blank=True, max_length=300, verbose_name='Description of the policy group')),
-                ('policies', models.ManyToManyField(related_name='policy_groups', to='permissions.policymodel')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "created_by",
+                    models.CharField(blank=True, editable=False, max_length=255),
+                ),
+                ("modified_at", models.DateTimeField(auto_now=True)),
+                (
+                    "modified_by",
+                    models.CharField(blank=True, editable=False, max_length=255),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        max_length=50,
+                        unique=True,
+                        verbose_name="Name of the policy group",
+                    ),
+                ),
+                (
+                    "description",
+                    models.CharField(
+                        blank=True,
+                        max_length=300,
+                        verbose_name="Description of the policy group",
+                    ),
+                ),
+                (
+                    "policies",
+                    models.ManyToManyField(related_name="policy_groups", to="permissions.policymodel"),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
     ]

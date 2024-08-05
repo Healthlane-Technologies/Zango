@@ -1,11 +1,11 @@
+from axes.decorators import axes_dispatch
+from django.contrib.auth import logout
 from django.shortcuts import redirect
+from django.utils.decorators import method_decorator
 from django.views.generic import View
 
-from django.contrib.auth import logout
-from django.utils.decorators import method_decorator
 
-from axes.decorators import axes_dispatch
-@method_decorator(axes_dispatch, name='dispatch')
+@method_decorator(axes_dispatch, name="dispatch")
 class AppLogoutView(View):
     def add_protocol(self, request, url):
         if request.is_secure():

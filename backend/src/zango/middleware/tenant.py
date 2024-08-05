@@ -1,22 +1,20 @@
 import pytz
-
 from django.conf import settings
 from django.core.exceptions import DisallowedHost
 from django.db import connection
 from django.http import Http404
 from django.urls import set_urlconf
+from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
+from django_tenants.middleware.main import TenantMainMiddleware
 from django_tenants.utils import (
-    remove_www,
     get_public_schema_name,
+    get_public_schema_urlconf,
+    get_tenant_domain_model,
     get_tenant_types,
     has_multi_type_tenants,
-    get_tenant_domain_model,
-    get_public_schema_urlconf,
+    remove_www,
 )
-from django_tenants.middleware.main import TenantMainMiddleware
-from django.conf import settings
-from django.utils import timezone
 
 
 class ZangoTenantMainMiddleware(TenantMainMiddleware):
@@ -92,15 +90,10 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         Returns:
             None
         """
-        if (
-            hasattr(settings, "SHOW_PUBLIC_IF_NO_TENANT_FOUND")
-            and settings.SHOW_PUBLIC_IF_NO_TENANT_FOUND
-        ):
+        if hasattr(settings, "SHOW_PUBLIC_IF_NO_TENANT_FOUND") and settings.SHOW_PUBLIC_IF_NO_TENANT_FOUND:
             self.setup_url_routing(request=request, force_public=True)
         else:
-            raise self.TENANT_NOT_FOUND_EXCEPTION(
-                'No tenant for hostname "%s"' % hostname
-            )
+            raise self.TENANT_NOT_FOUND_EXCEPTION('No tenant for hostname "%s"' % hostname)
 
     @staticmethod
     def setup_url_routing(request, force_public=False):
@@ -152,6 +145,6 @@ class TimezoneMiddleware(MiddlewareMixin):
                 for tz in timezones:
                     timezone_country[tz] = countrycode
             settings.PHONENUMBER_DEFAULT_REGION = timezone_country[tzname]
-        except Exception as e:
+        except Exception:
             timezone.deactivate()
         return self.get_response(request)

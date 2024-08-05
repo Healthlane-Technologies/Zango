@@ -1,6 +1,7 @@
 import ipaddress
-from django.utils import timezone
+
 from django.db.models import Q
+from django.utils import timezone
 
 
 class PermissionMixin:
@@ -29,13 +30,11 @@ class PermissionMixin:
     def is_ip_valid(self, request, permission):
         if permission.get("type") == "userAccess":
             try:
-                allowed_ips = [
-                    ipaddress.ip_network(ip) for ip in permission.get("accessIP", [])
-                ]
+                allowed_ips = [ipaddress.ip_network(ip) for ip in permission.get("accessIP", [])]
                 for ip in allowed_ips:
                     if ipaddress.ip_address(request.META["REMOTE_ADDR"]) in ip:
                         return True
-            except:
+            except Exception:
                 pass
         return False
 
@@ -51,28 +50,21 @@ class PermissionMixin:
 
         :return: QuerySet of anonymous userrole policies
         """
-        anonymous_userrole_policies = self.__class__.objects.get(
-            name="AnonymousUsers"
-        ).policies.filter(
-            Q(is_active=True, expiry__gte=timezone.now())
-            | Q(is_active=True, expiry__isnull=True)
+        anonymous_userrole_policies = self.__class__.objects.get(name="AnonymousUsers").policies.filter(
+            Q(is_active=True, expiry__gte=timezone.now()) | Q(is_active=True, expiry__isnull=True)
         )
         return anonymous_userrole_policies
 
     def get_policies(self, perm_type, view=None, model=None):
-        from .models import PermissionsModel, PolicyModel
+        from .models import PolicyModel
+
         policy_groups = self.policy_groups.all()
-        policies_qs = self.policies.all() | PolicyModel.objects.filter(
-            policy_groups__in=policy_groups
-        )
+        policies_qs = self.policies.all() | PolicyModel.objects.filter(policy_groups__in=policy_groups)
         valid_policies_qs = policies_qs.filter(
-            Q(is_active=True, expiry__gte=timezone.now())
-            | Q(is_active=True, expiry__isnull=True)
+            Q(is_active=True, expiry__gte=timezone.now()) | Q(is_active=True, expiry__isnull=True)
         )
         if perm_type == "userAccess":
-            qs = valid_policies_qs.filter(
-                statement__permissions__contains=[{"type": perm_type}]
-            )
+            qs = valid_policies_qs.filter(statement__permissions__contains=[{"type": perm_type}])
         elif perm_type == "view":
             # If current user role is not anonymous, include anonymous user role policies
             # as non-anonymous user role can access views available to anonymous user role.
@@ -112,17 +104,12 @@ class PermissionMixin:
         return False
 
     def get_model_perms(self, model):
-        from .models import PermissionsModel, PolicyModel
+        from .models import PolicyModel
 
         policy_groups = self.policy_groups.all()
-        policies_qs = self.policies.all() | PolicyModel.objects.filter(
-            policy_groups__in=policy_groups
-        )
+        policies_qs = self.policies.all() | PolicyModel.objects.filter(policy_groups__in=policy_groups)
         valid_policies_qs = policies_qs.filter(
-            Q(is_active=True, expiry__gte=timezone.now())
-            | Q(is_active=True, expiry__isnull=True)
+            Q(is_active=True, expiry__gte=timezone.now()) | Q(is_active=True, expiry__isnull=True)
         )
-        qs = valid_policies_qs.filter(
-            statement__permissions__contains=[{"name": model}]
-        )
+        qs = valid_policies_qs.filter(statement__permissions__contains=[{"name": model}])
         return qs

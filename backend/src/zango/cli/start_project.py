@@ -1,14 +1,13 @@
 import os
-import sys
 import subprocess
-import psycopg2
-import click
+import sys
 
+import click
 import django
+import psycopg2
 from django.core.management import call_command
 
 import zango
-from .utils import replace_placeholders_in_file
 
 
 def test_db_conection(db_name, db_user, db_password, db_host, db_port):
@@ -89,9 +88,7 @@ def create_project(
     if os.path.exists(project_root):
         return False, f"Folder already exists: {project_root}"
 
-    project_template_path = os.path.join(
-        os.path.dirname(zango.cli.__file__), "project_template"
-    )
+    project_template_path = os.path.join(os.path.dirname(zango.cli.__file__), "project_template")
     command = f"{command} --template {str(project_template_path)}"
 
     subprocess.run(command, shell=True, check=True)
@@ -107,8 +104,8 @@ def create_project(
     }
     if not os.path.exists(".env"):
         open(".env", "w").close()
-    fcontent = open(".env", "r").read()
-    with open(f".env", "a+") as f:
+    fcontent = open(".env").read()
+    with open(".env", "a+") as f:
         for key, value in env_keys.items():
             if key not in fcontent:
                 f.write(f"{key}={value}\n")
@@ -120,7 +117,7 @@ def create_project(
 
 
 def create_public_tenant(platform_domain_url="localhost"):
-    from zango.apps.shared.tenancy.models import TenantModel, Domain
+    from zango.apps.shared.tenancy.models import Domain, TenantModel
 
     # Creating public tenant
     if not TenantModel.objects.filter(schema_name="public").exists():
@@ -132,9 +129,7 @@ def create_public_tenant(platform_domain_url="localhost"):
         )
 
         # Creating domain
-        Domain.objects.create(
-            tenant=public_tenant, domain=platform_domain_url, is_primary=True
-        )
+        Domain.objects.create(tenant=public_tenant, domain=platform_domain_url, is_primary=True)
 
 
 def create_platform_user(platform_username, platform_username_password):
@@ -194,9 +189,7 @@ def start_project(
     if directory:
         click.echo(f"Creating Project under: {directory}")
 
-    db_connection_status = test_db_conection(
-        db_name, db_user, db_password, db_host, db_port
-    )
+    db_connection_status = test_db_conection(db_name, db_user, db_password, db_host, db_port)
     click.echo(f"db_connection_status: {db_connection_status}")
     if not db_connection_status:
         raise click.ClickException("DB Connection Failed!")
@@ -228,19 +221,15 @@ def start_project(
     # Creating Public Tenant
     create_public_tenant(platform_domain_url=platform_domain_url)
 
-     # Prompting default platform user details
+    # Prompting default platform user details
     while True:
         if not platform_username:
             click.echo("Please enter platform user email")
             platform_username = click.prompt("Email")
         if not platform_user_password:
-            platform_user_password = click.prompt(
-                "Password", hide_input=True, confirmation_prompt=True
-            )
+            platform_user_password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
 
-        user_creation_result = create_platform_user(
-            platform_username, platform_user_password
-        )
+        user_creation_result = create_platform_user(platform_username, platform_user_password)
         if user_creation_result["success"]:
             break
         else:

@@ -1,8 +1,8 @@
 from ..packages.crud.base import BaseCrudView
-from .tables import PatientTable
 from .forms import PatientForm
+from .tables import PatientTable
 from .workflow import PatientWorkflow
-from .models import Patient
+
 
 class PatientCrudView(BaseCrudView):
     page_title = "Patient Records"

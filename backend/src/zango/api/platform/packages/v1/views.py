@@ -1,14 +1,13 @@
-from django.utils.decorators import method_decorator
 from django.core import signing
 
-from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
+from zango.apps.shared.tenancy.models import Domain, TenantModel
+from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.api.utils import ZangoAPIPagination
 from zango.core.package_utils import (
     get_all_packages,
-    install_package,
     get_package_configuration_url,
+    install_package,
 )
-from zango.core.api.utils import ZangoAPIPagination
-from zango.apps.shared.tenancy.models import TenantModel, Domain
 
 
 class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
@@ -33,9 +32,7 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 token = signing.dumps(
                     request.user.id,
                 )
-                url = get_package_configuration_url(
-                    request, tenant, request.GET.get("package_name")
-                )
+                url = get_package_configuration_url(request, tenant, request.GET.get("package_name"))
                 resp = {"url": f"{url}?token={token}"}
                 status = 200
             except Exception as e:

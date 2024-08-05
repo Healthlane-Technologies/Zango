@@ -1,5 +1,4 @@
 from ..packages.workflow.base.engine import WorkflowBase
-
 from .forms import PatientDeactivateForm
 from .models import Patient
 

@@ -1,9 +1,9 @@
 import json
 
 from rest_framework import serializers
-from zango.apps.shared.tenancy.models import TenantModel, Domain
-from zango.apps.permissions.models import PolicyModel
+
 from zango.apps.appauth.models import UserRoleModel
+from zango.apps.permissions.models import PolicyModel
 
 
 class PolicySerializer(serializers.ModelSerializer):
@@ -35,9 +35,7 @@ class PolicySerializer(serializers.ModelSerializer):
         if validated_data.get("statement"):
             statement = json.loads(validated_data["statement"])
             validated_data["statement"] = statement
-        existing_roles = list(
-            UserRoleModel.objects.filter(policies=instance).values_list("id", flat=True)
-        )
+        existing_roles = list(UserRoleModel.objects.filter(policies=instance).values_list("id", flat=True))
         roles = validated_data.pop("roles", [])
         for role in existing_roles:
             if role not in roles:

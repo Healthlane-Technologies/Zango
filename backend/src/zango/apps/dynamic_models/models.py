@@ -2,10 +2,11 @@ import uuid
 from functools import reduce
 from operator import and_
 
-from django.db import models, connection
-from django.db.models import Q
 from django.apps import apps
 from django.core.exceptions import PermissionDenied
+
+from django.db import connection, models
+from django.db.models import Q
 
 from zango.apps.appauth.models import AppUserModel
 from zango.core.utils import get_current_request, get_current_role
@@ -68,9 +69,7 @@ class ORMPemissions:
             actions += perm["actions"]
             records.append(perm["records"])
         self.permissions[self.request.tenant.name] = {
-            self.user_role.id: {
-                model_name: {"actions": list(set(actions)), "records": records}
-            }
+            self.user_role.id: {model_name: {"actions": list(set(actions)), "records": records}}
         }
 
     def get_permissions(self, model_name):
@@ -141,9 +140,7 @@ def replace_special_context(data):
                 data[key] = replace_special_context(value)
             elif isinstance(value, str) and "{{" in value and "}}" in value:
                 if value == "{{user}}":
-                    data[
-                        key
-                    ] = AppUserModel.objects.all().first()  # get_current_request().user
+                    data[key] = AppUserModel.objects.all().first()  # get_current_request().user
                 elif value == "{{user_role}}":
                     data[key] = get_current_role()
                 elif value == "{{user_role_id}}":
@@ -170,15 +167,11 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
     def has_perm(self, perm_type):
         return (
             perm_type
-            in self.permissions[self.tenant_name][self.user_role_id][
-                self.model.__name__
-            ]["actions"]
+            in self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["actions"]
         )
 
     def prefilter(self):
-        specs = self.permissions[self.tenant_name][self.user_role_id][
-            self.model.__name__
-        ]["records"]
+        specs = self.permissions[self.tenant_name][self.user_role_id][self.model.__name__]["records"]
         filter_qs = [build_q_from_spec(replace_special_context(spec)) for spec in specs]
         combined_q = reduce(and_, filter_qs)
         return super().filter(combined_q)
@@ -190,9 +183,7 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             obj = super(RestrictedQuerySet, prefiltered_qs).get(*args, **kwargs)
             return obj
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def all(self):
         if self.platform_user:
@@ -201,9 +192,7 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).all()
             return qs
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def exclude(self, *args, **kwargs):
         if self.platform_user:
@@ -212,9 +201,7 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).exclude(*args, **kwargs)
             return qs
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def filter(self, *args, **kwargs):
         if self.platform_user:
@@ -223,9 +210,7 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).filter(*args, **kwargs)
             return qs
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def annotate(self, *args, **kwargs):
         if self.platform_user:
@@ -234,9 +219,7 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).annotate(*args, **kwargs)
             return qs
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def aggregate(self, *args, **kwargs):
         if self.platform_user:
@@ -245,67 +228,51 @@ class RestrictedQuerySet(models.QuerySet, ORMPemissions):
             prefiltered_qs = self.prefilter()
             qs = super(RestrictedQuerySet, prefiltered_qs).aggregate(*args, **kwargs)
             return qs
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def select_related(self, *args, **kwargs):
         if self.platform_user:
             return super(RestrictedQuerySet, self).select_related(*args, **kwargs)
         if self.has_perm("view"):
             prefiltered_qs = self.prefilter()
-            qs = super(RestrictedQuerySet, prefiltered_qs).select_related(
-                *args, **kwargs
-            )
+            qs = super(RestrictedQuerySet, prefiltered_qs).select_related(*args, **kwargs)
             return qs
-        raise PermissionDenied(
-            "View permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied("View permission not available for {self.model.__name__}")
 
     def create(self, *args, **kwargs):
         if self.platform_user:
             return super().create(*args, **kwargs)
         if self.has_perm("create"):
             return super().create(*args, **kwargs)
-        raise PermissionDenied(
-            f"Create permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied(f"Create permission not available for {self.model.__name__}")
 
     def bulk_create(self, *args, **kwargs):
         if self.platform_user:
             return super().bulk_create(*args, **kwargs)
         if self.has_perm("create"):
             return super().bulk_create(*args, **kwargs)
-        raise PermissionDenied(
-            f"Create permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied(f"Create permission not available for {self.model.__name__}")
 
     def update(self, *args, **kwargs):
         if self.platform_user:
             return super().update(*args, **kwargs)
         if self.has_perm("edit"):
             return super().update(*args, **kwargs)
-        raise PermissionDenied(
-            f"Edit permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied(f"Edit permission not available for {self.model.__name__}")
 
     def bulk_update(self, *args, **kwargs):
         if self.platform_user:
             return super().bulk_update(*args, **kwargs)
         if self.has_perm("edit"):
             return super().bulk_update(*args, **kwargs)
-        raise PermissionDenied(
-            f"Edit permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied(f"Edit permission not available for {self.model.__name__}")
 
     def delete(self):
         if self.platform_user:
             return super().delete()
         if self.has_perm("delete"):
             return super().delete()
-        raise PermissionDenied(
-            f"Delete permission not available for {self.model.__name__}"
-        )
+        raise PermissionDenied(f"Delete permission not available for {self.model.__name__}")
 
     def values(self, *fields, **expressions):
         return super().values(*fields, **expressions)
@@ -323,13 +290,9 @@ class RestrictedManager(models.Manager):
 
 class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceModeMeta):
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(
-        AppUserModel, null=True, editable=False, on_delete=models.PROTECT
-    )
+    created_by = models.ForeignKey(AppUserModel, null=True, editable=False, on_delete=models.PROTECT)
     modified_at = models.DateTimeField(auto_now=True)
-    modified_by = models.ForeignKey(
-        AppUserModel, null=True, editable=False, on_delete=models.PROTECT
-    )
+    modified_by = models.ForeignKey(AppUserModel, null=True, editable=False, on_delete=models.PROTECT)
     object_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     # objects = RestrictedManager()
@@ -348,10 +311,7 @@ class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceMo
         permissions = perm_obj.permissions
         current_role_id = get_current_role().id
         tenant_name = connection.tenant.name
-        if (
-            perm_type
-            in permissions[tenant_name][current_role_id][type(self).__name__]["actions"]
-        ):
+        if perm_type in permissions[tenant_name][current_role_id][type(self).__name__]["actions"]:
             return True
         return False
 
@@ -389,9 +349,7 @@ class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceMo
             return resp
         if self.pk and self.has_perm("edit"):
             return super().save(*args, **kwargs)
-        raise PermissionDenied(
-            f"Create/Edit Permission not available for {self.__class__.__name__}"
-        )
+        raise PermissionDenied(f"Create/Edit Permission not available for {self.__class__.__name__}")
 
     def delete(self, *args, **kwargs):
         request = get_current_request()
@@ -399,6 +357,4 @@ class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceMo
             return super().delete(*args, **kwargs)
         if self.has_perm("delete"):
             return super().delete(*args, **kwargs)
-        raise PermissionDenied(
-            f"Delete Permission not available for {self.__class__.__name__}"
-        )
+        raise PermissionDenied(f"Delete Permission not available for {self.__class__.__name__}")

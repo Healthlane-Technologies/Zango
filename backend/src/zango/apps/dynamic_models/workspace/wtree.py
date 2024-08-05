@@ -1,5 +1,6 @@
 from collections import deque
 
+
 class WorkspaceTreeNode:
     def __init__(self, value):
         self.value = value
@@ -31,4 +32,4 @@ class WorkspaceTreeNode:
         return ret
 
     def __repr__(self):
-        return '<TreeNode: {}>'.format(self.value)
+        return f"<TreeNode: {self.value}>"

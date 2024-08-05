@@ -1,15 +1,8 @@
 import copy
 from collections import defaultdict
+from collections.abc import Callable, Collection, Iterable
 from typing import (
     Any,
-    Callable,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
 )
 
 from django.apps import apps
@@ -26,7 +19,7 @@ from django.db.models.signals import (
 from zango.apps.auditlogs.conf import settings
 from zango.apps.auditlogs.signals import accessed
 
-DispatchUID = Tuple[int, int, int]
+DispatchUID = tuple[int, int, int]
 
 
 class AuditLogRegistrationError(Exception):
@@ -47,7 +40,7 @@ class AuditlogModelRegistry:
         delete: bool = True,
         access: bool = True,
         m2m: bool = True,
-        custom: Optional[Dict[ModelSignal, Callable]] = None,
+        custom: dict[ModelSignal, Callable] | None = None,
     ):
         from zango.apps.auditlogs.receivers import (
             log_access,
@@ -76,13 +69,13 @@ class AuditlogModelRegistry:
     def register(
         self,
         model: ModelBase = None,
-        include_fields: Optional[List[str]] = None,
-        exclude_fields: Optional[List[str]] = None,
-        mapping_fields: Optional[Dict[str, str]] = None,
-        mask_fields: Optional[List[str]] = None,
-        m2m_fields: Optional[Collection[str]] = None,
+        include_fields: list[str] | None = None,
+        exclude_fields: list[str] | None = None,
+        mapping_fields: dict[str, str] | None = None,
+        mask_fields: list[str] | None = None,
+        m2m_fields: Collection[str] | None = None,
         serialize_data: bool = False,
-        serialize_kwargs: Optional[Dict[str, Any]] = None,
+        serialize_kwargs: dict[str, Any] | None = None,
         serialize_auditlog_fields_only: bool = False,
     ):
         """
@@ -177,7 +170,7 @@ class AuditlogModelRegistry:
         else:
             self._disconnect_signals(model)
 
-    def get_models(self) -> List[ModelBase]:
+    def get_models(self) -> list[ModelBase]:
         return list(self._registry.keys())
 
     def get_model_fields(self, model: ModelBase):
@@ -192,9 +185,7 @@ class AuditlogModelRegistry:
         return {
             "serialize_data": bool(self._registry[model]["serialize_data"]),
             "serialize_kwargs": dict(self._registry[model]["serialize_kwargs"]),
-            "serialize_auditlog_fields_only": bool(
-                self._registry[model]["serialize_auditlog_fields_only"]
-            ),
+            "serialize_auditlog_fields_only": bool(self._registry[model]["serialize_auditlog_fields_only"]),
         }
 
     def _connect_signals(self, model):
@@ -214,7 +205,7 @@ class AuditlogModelRegistry:
                 receiver = make_log_m2m_changes(field_name)
                 self._m2m_signals[model][field_name] = receiver
                 field = getattr(model, field_name)
-                m2m_model = getattr(field, "through")
+                m2m_model = field.through
 
                 m2m_changed.connect(
                     receiver,
@@ -227,12 +218,10 @@ class AuditlogModelRegistry:
         Disconnect signals for the model.
         """
         for signal, receiver in self._signals.items():
-            signal.disconnect(
-                sender=model, dispatch_uid=self._dispatch_uid(signal, receiver)
-            )
+            signal.disconnect(sender=model, dispatch_uid=self._dispatch_uid(signal, receiver))
         for field_name, receiver in self._m2m_signals[model].items():
             field = getattr(model, field_name)
-            m2m_model = getattr(field, "through")
+            m2m_model = field.through
             m2m_changed.disconnect(
                 sender=m2m_model,
                 dispatch_uid=self._dispatch_uid(m2m_changed, receiver),
@@ -243,7 +232,7 @@ class AuditlogModelRegistry:
         """Generate a dispatch_uid which is unique for a combination of self, signal, and receiver."""
         return id(self), id(signal), id(receiver)
 
-    def _get_model_classes(self, app_model: str) -> List[ModelBase]:
+    def _get_model_classes(self, app_model: str) -> list[ModelBase]:
         try:
             try:
                 app_label, model_name = app_model.split(".")
@@ -253,18 +242,15 @@ class AuditlogModelRegistry:
         except LookupError:
             return []
 
-    def _get_exclude_models(
-        self, exclude_tracking_models: Iterable[str]
-    ) -> List[ModelBase]:
+    def _get_exclude_models(self, exclude_tracking_models: Iterable[str]) -> list[ModelBase]:
         exclude_models = [
             model
-            for app_model in tuple(exclude_tracking_models)
-            + self.DEFAULT_EXCLUDE_MODELS
+            for app_model in tuple(exclude_tracking_models) + self.DEFAULT_EXCLUDE_MODELS
             for model in self._get_model_classes(app_model)
         ]
         return exclude_models
 
-    def _register_models(self, models: Iterable[Union[str, Dict[str, Any]]]) -> None:
+    def _register_models(self, models: Iterable[str | dict[str, Any]]) -> None:
         models = copy.deepcopy(models)
         for model in models:
             if isinstance(model, str):
@@ -291,43 +277,29 @@ class AuditlogModelRegistry:
         if not isinstance(settings.AUDITLOG_DISABLE_ON_RAW_SAVE, bool):
             raise TypeError("Setting 'AUDITLOG_DISABLE_ON_RAW_SAVE' must be a boolean")
         if not isinstance(settings.AUDITLOG_EXCLUDE_TRACKING_MODELS, (list, tuple)):
-            raise TypeError(
-                "Setting 'AUDITLOG_EXCLUDE_TRACKING_MODELS' must be a list or tuple"
-            )
+            raise TypeError("Setting 'AUDITLOG_EXCLUDE_TRACKING_MODELS' must be a list or tuple")
 
-        if (
-            not settings.AUDITLOG_INCLUDE_ALL_MODELS
-            and settings.AUDITLOG_EXCLUDE_TRACKING_MODELS
-        ):
+        if not settings.AUDITLOG_INCLUDE_ALL_MODELS and settings.AUDITLOG_EXCLUDE_TRACKING_MODELS:
             raise ValueError(
                 "In order to use setting 'AUDITLOG_EXCLUDE_TRACKING_MODELS', "
                 "setting 'AUDITLOG_INCLUDE_ALL_MODELS' must set to 'True'"
             )
 
-        if (
-            settings.AUDITLOG_EXCLUDE_TRACKING_FIELDS
-            and not settings.AUDITLOG_INCLUDE_ALL_MODELS
-        ):
+        if settings.AUDITLOG_EXCLUDE_TRACKING_FIELDS and not settings.AUDITLOG_INCLUDE_ALL_MODELS:
             raise ValueError(
                 "In order to use 'AUDITLOG_EXCLUDE_TRACKING_FIELDS', "
                 "setting 'AUDITLOG_INCLUDE_ALL_MODELS' must be set to 'True'"
             )
 
         if not isinstance(settings.AUDITLOG_INCLUDE_TRACKING_MODELS, (list, tuple)):
-            raise TypeError(
-                "Setting 'AUDITLOG_INCLUDE_TRACKING_MODELS' must be a list or tuple"
-            )
+            raise TypeError("Setting 'AUDITLOG_INCLUDE_TRACKING_MODELS' must be a list or tuple")
 
         if not isinstance(settings.AUDITLOG_EXCLUDE_TRACKING_FIELDS, (list, tuple)):
-            raise TypeError(
-                "Setting 'AUDITLOG_EXCLUDE_TRACKING_FIELDS' must be a list or tuple"
-            )
+            raise TypeError("Setting 'AUDITLOG_EXCLUDE_TRACKING_FIELDS' must be a list or tuple")
 
         for item in settings.AUDITLOG_INCLUDE_TRACKING_MODELS:
             if not isinstance(item, (str, dict)):
-                raise TypeError(
-                    "Setting 'AUDITLOG_INCLUDE_TRACKING_MODELS' items must be str or dict"
-                )
+                raise TypeError("Setting 'AUDITLOG_INCLUDE_TRACKING_MODELS' items must be str or dict")
 
             if isinstance(item, dict):
                 if "model" not in item:
@@ -341,9 +313,7 @@ class AuditlogModelRegistry:
                     )
 
         if settings.AUDITLOG_INCLUDE_ALL_MODELS:
-            exclude_models = self._get_exclude_models(
-                settings.AUDITLOG_EXCLUDE_TRACKING_MODELS
-            )
+            exclude_models = self._get_exclude_models(settings.AUDITLOG_EXCLUDE_TRACKING_MODELS)
 
             for model in apps.get_models(include_auto_created=True):
                 if model in exclude_models:
@@ -353,9 +323,7 @@ class AuditlogModelRegistry:
                 if not meta.managed:
                     continue
 
-                m2m_fields = [
-                    m.name for m in meta.get_fields() if isinstance(m, ManyToManyField)
-                ]
+                m2m_fields = [m.name for m in meta.get_fields() if isinstance(m, ManyToManyField)]
 
                 exclude_fields = [
                     i.related_name
@@ -363,9 +331,7 @@ class AuditlogModelRegistry:
                     if i.related_name and not i.related_model._meta.managed
                 ]
 
-                self.register(
-                    model=model, m2m_fields=m2m_fields, exclude_fields=exclude_fields
-                )
+                self.register(model=model, m2m_fields=m2m_fields, exclude_fields=exclude_fields)
 
         self._register_models(settings.AUDITLOG_INCLUDE_TRACKING_MODELS)
 

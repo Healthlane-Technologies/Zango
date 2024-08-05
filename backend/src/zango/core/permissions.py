@@ -1,6 +1,6 @@
 from rest_framework.permissions import IsAuthenticated
+
 from .common_utils import get_client_ip
-from django.core import exceptions
 
 
 class CheckIPWhitelisting:
@@ -25,12 +25,9 @@ class IsAuthenticatedPlatformUser(IsAuthenticated, CheckIPWhitelisting):
         if super(IsAuthenticatedPlatformUser, self).has_permission(request, view):
             try:
                 platform_user = request.user.platform_user
-                if (
-                    platform_user.__class__.__name__ == "PlatformUserModel"
-                    and platform_user.is_active
-                ):
+                if platform_user.__class__.__name__ == "PlatformUserModel" and platform_user.is_active:
                     return True
-            except:
+            except Exception:
                 return False
         return False
 
@@ -42,7 +39,7 @@ class IsAuthenticatedAppUser(IsAuthenticated, CheckIPWhitelisting):
                 app_user = request.user
                 if app_user.__class__.__name__ == "AppUserModel" and app_user.is_active:
                     return True
-            except:
+            except Exception:
                 return False
         return False
 

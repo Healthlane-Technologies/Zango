@@ -46,9 +46,10 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
 
     This function becomes a valid signal receiver when it is curried with the actor and a dispatch id.
     """
+    from django.contrib.auth.models import User
+
     from zango.apps.appauth.models import AppUserModel
     from zango.apps.shared.platformauth.models import PlatformUserModel
-    from django.contrib.auth.models import User
 
     try:
         auditlog = auditlog_value.get()
@@ -57,23 +58,11 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
     else:
         if signal_duid != auditlog["signal_duid"]:
             return
-        if (
-            sender == LogEntry
-            and isinstance(user, AppUserModel)
-            and instance.tenant_actor is None
-        ):
+        if sender == LogEntry and isinstance(user, AppUserModel) and instance.tenant_actor is None:
             instance.tenant_actor = user
-        elif (
-            sender == LogEntry
-            and isinstance(user, PlatformUserModel)
-            and instance.platform_actor is None
-        ):
+        elif sender == LogEntry and isinstance(user, PlatformUserModel) and instance.platform_actor is None:
             instance.platform_actor = user
-        elif (
-            sender == LogEntry
-            and isinstance(user, User)
-            and instance.platform_actor is None
-        ):
+        elif sender == LogEntry and isinstance(user, User) and instance.platform_actor is None:
             try:
                 platform_user = PlatformUserModel.objects.get(user=user)
                 instance.platform_actor = platform_user
