@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - feat/pre_commit_and_linting
     paths-ignore:
       - 'docs/**'
 
