@@ -22,13 +22,11 @@ class UserRoleAndAppObjectAssignmentMiddleware:
         obj_store_model = apps.get_model("object_store", "ObjectStore")
         try:
             _request_local.user_role = model.objects.get(id=request.session["role_id"])
-        except:
+        except Exception:
             if request.tenant.tenant_type == "app":
                 _request_local.user_role = model.objects.get(name="AnonymousUsers")
             else:
-                _request_local.user_role = (
-                    None  # user role is not applicable at platform level
-                )
+                _request_local.user_role = None  # user role is not applicable at platform level
 
         try:
             user = request.user
