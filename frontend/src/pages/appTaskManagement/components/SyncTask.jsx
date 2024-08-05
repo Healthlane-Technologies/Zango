@@ -40,6 +40,7 @@ export default function SyncTask({ theme = 'light' }) {
 	return (
 		<div className="flex items-center gap-[16px]">
 			<button
+				data-cy="sync_task_button"
 				type="button"
 				className={`flex items-center gap-[12px] ${
 					theme === 'light'

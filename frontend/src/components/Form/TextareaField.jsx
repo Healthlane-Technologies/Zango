@@ -3,7 +3,7 @@ import { useField } from 'formik';
 function TextareaField({ label, content, type = 'text', key, id, ...props }) {
 	const [field, meta] = useField({ ...props });
 	return (
-		<div key={key} className="flex flex-col gap-[4px]">
+		<div data-cy="text_area"key={key} className="flex flex-col gap-[4px]">
 			<label
 				htmlFor={id}
 				className="font-lato text-form-xs font-semibold text-[#A3ABB1]"

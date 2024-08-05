@@ -44,22 +44,49 @@ export default function EachApp({ data }) {
 					) : null}
 				</div>
 			</div>
-			<div className="flex grow flex-col gap-[28px] px-[16px] pb-[16px] pt-[22px]">
+<<<<<<< HEAD
+<<<<<<< HEAD
+			<div data-cy="app_list" className="flex grow flex-col gap-[28px] px-[16px] pb-[16px] pt-[22px]">
+=======
+			<div data-cy="appList" className="flex grow flex-col gap-[28px] px-[16px] pb-[16px] pt-[22px]">
+>>>>>>> f9ef4ffb (cypress locator addition)
+=======
+			<div data-cy="app_list" className="flex grow flex-col gap-[28px] px-[16px] pb-[16px] pt-[22px]">
+>>>>>>> c893349c (locators)
 				<div className="flex grow flex-col gap-[8px]">
-					<span className="font-lato text-[12px] font-bold uppercase leading-[20px] tracking-[0.6px] text-[#A3ABB1]">
+					<span data-cy="app_id" className="font-lato text-[12px] font-bold uppercase leading-[20px] tracking-[0.6px] text-[#A3ABB1]">
 						App ID: {uuid?.slice(0, 7)}
 					</span>
-					<span className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+<<<<<<< HEAD
+<<<<<<< HEAD
+					<span data-cy="app_name" className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 						{name}
 					</span>
-					<span className="truncate font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
+					<span data-cy="app_description "className="truncate font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						{description}
 					</span>
 				</div>
-				<div className="flex flex-col gap-[8px]">
+				<div data-cy="domain_url" className="flex flex-col gap-[8px]">
+=======
+					<span data-cy="appName" className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+=======
+					<span data-cy="app_name" className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+>>>>>>> c893349c (locators)
+						{name}
+					</span>
+					<span data-cy="app_description "className="truncate font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
+						{description}
+					</span>
+				</div>
+<<<<<<< HEAD
+				<div data-cy="domainURL" className="flex flex-col gap-[8px]">
+>>>>>>> f9ef4ffb (cypress locator addition)
+=======
+				<div data-cy="domain_url" className="flex flex-col gap-[8px]">
+>>>>>>> c893349c (locators)
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#000000]">
 						Modified {getTimeFromNow(modified_at)}
-					</span>
+					</span> 
 					{domain_url ? <AppLinkButton domain_url={domain_url} /> : null}
 				</div>
 			</div>

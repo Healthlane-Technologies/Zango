@@ -163,6 +163,7 @@ export default function Table({ tableData }) {
 					<div className="flex grow items-center gap-[8px]">
 						<TableSearchIcon />
 						<input
+							data-cy="table_search_field"
 							id="searchValue"
 							name="searchValue"
 							type="text"

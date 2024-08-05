@@ -9,7 +9,7 @@ import SideMenuDropdown from './SideMenuDropdown';
 
 export default function SideMenu() {
 	return (
-		<div className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]">
+		<div data-cy="menu_section"className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]">
 			<SideMenuDropdown
 				Icon={AppSettingsIcon}
 				label="App Settings"
@@ -17,14 +17,17 @@ export default function SideMenu() {
 					{
 						url: `app-settings/app-configuration/`,
 						label: 'App Configuration',
+						dataCy: 'app_configuration',
 					},
 					{
 						url: `app-settings/app-theme-configuration/`,
 						label: 'App Theme Configuration',
+						dataCy: 'app_theme_configuration',
 					},
 				]}
 			/>
 			<NavLink
+				data-cy="user_roles"
 				to={`user-roles/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -38,6 +41,7 @@ export default function SideMenu() {
 				</span>
 			</NavLink>
 			<NavLink
+				data-cy="user_management"
 				to={`user-management/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -51,6 +55,7 @@ export default function SideMenu() {
 				</span>
 			</NavLink>
 			<NavLink
+				data-cy="policies"
 				to={`permission-management/policies/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -64,6 +69,7 @@ export default function SideMenu() {
 				</span>
 			</NavLink>
 			<NavLink
+				data-cy="task_management"
 				to={`tasks-management/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -77,6 +83,7 @@ export default function SideMenu() {
 				</span>
 			</NavLink>
 			<NavLink
+				data-cy="packages"
 				to={`packages-management/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
@@ -96,10 +103,12 @@ export default function SideMenu() {
 					{
 						url: `audit-logs/application-objects-logs`,
 						label: 'Application Objects',
+						dataCy: 'application_objects',
 					},
 					{
 						url: `audit-logs/framework-objects-logs`,
 						label: 'Framework Objects',
+						dataCy: 'framework_objects',
 					},
 				]}
 			/>

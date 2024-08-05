@@ -7,8 +7,9 @@ function DetailsTable() {
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 
 	return (
-		<table className="w-100 border-spacing-x-4">
-			<tbody>
+
+		<table data-cy="app_details" className="w-100 border-spacing-x-4">
+				<tbody>
 				<EachDescriptionRow
 					label="App Description:"
 					content={

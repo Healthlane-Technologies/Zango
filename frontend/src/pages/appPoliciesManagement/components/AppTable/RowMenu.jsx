@@ -53,6 +53,7 @@ export default function RowMenu({ rowData }) {
 						<Menu.Item>
 							{({ active }) => (
 								<button
+									data-cy="edit_policy_button"
 									type="button"
 									className="flex w-full disabled:opacity-50"
 									onClick={handleEditPolicy}

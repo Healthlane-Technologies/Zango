@@ -1,0 +1,75 @@
+name: End to End Cypress Test
+
+on:
+  push:
+    branches:
+      - test/cypress
+    paths:
+      - "frontend/**"
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: e2e-tests
+
+      # Step 4: List files in the working directory
+      - name: List files
+        run: ls -la
+        working-directory: e2e-tests
+
+      # Step 5: Run Cypress tests and record results
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6.5.0
+        with:
+          working-directory: e2e-tests
+          record: true
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+        continue-on-error: true
+
+      # Step 6: Generate Cucumber HTML Report
+      - name: Generate Cucumber HTML Report
+        run: |
+          echo "Running cucumber-html-report.js"
+          ls -la
+          node cucumber-html-report.js
+        working-directory: e2e-tests
+
+      # Step 7: Upload Cypress screenshots on failure
+      - name: Upload Cypress screenshots
+        uses: actions/upload-artifact@v3
+        with:
+          name: cypress-screenshots
+          path: e2e-tests/cypress/screenshots
+          if-no-files-found: ignore
+
+      # Step 8: Upload Cypress videos
+      - name: Upload Cypress videos
+        uses: actions/upload-artifact@v3
+        with:
+          name: cypress-videos
+          path: e2e-tests/cypress/videos
+          if-no-files-found: ignore
+
+      # Step 9: Upload Cucumber HTML Report
+      - name: Upload Cucumber HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: cucumber-html-report
+          path: e2e-tests/reports/cucumber-html-report.html
+          if-no-files-found: ignore
