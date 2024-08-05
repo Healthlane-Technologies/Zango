@@ -2,16 +2,27 @@ name: End to End Cypress Test
 
 on:
   push:
-   branches:
-    - cypress/e2e-tests
-   paths:
-    - "e2e-tests/**"
-  workflow_run:
-    workflows: ["Push build to Main"]
     branches:
       - cypress/e2e-tests
+    paths:
+      - "e2e-tests/**"
+      - "frontend/**"
+  pull_request:
     types:
-      - completed
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - "e2e-tests/**"
+  # workflow_run:
+  #   workflows: ["Push build to Main"]
+  #   branches:
+  #     - cypress/e2e-tests
+  #   types:
+  #     - completed
 
 jobs:
   cypress-run:
@@ -22,6 +33,35 @@ jobs:
       # Step 1: Checkout repo
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js" -type f -delete
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          yarn install
+
+      - name: Building app
+        run: |
+          cd frontend
+          CI=false yarn build
+
+      - name: Remove old build files
+        run: |
+          find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
 
       # Step 2: Confirm build completion
       - name: Confirm build completion
@@ -41,10 +81,10 @@ jobs:
           domain_config_path: ./e2e-tests/local_domains.txt
 
       # Step 4: Setup Node
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
+      # - name: Set up Node.js
+      #   uses: actions/setup-node@v3
+      #   with:
+      #     node-version: "18"
 
       # Step 5: Capturing start time
       - name: Capture Start Time

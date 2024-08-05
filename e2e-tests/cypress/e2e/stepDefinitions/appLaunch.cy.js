@@ -40,6 +40,7 @@ And(
     appPanelPageObjects.getTextArea().type(appData.app_description);
     appPanelPageObjects.getSubmitButton().click();
     cy.wait(5000);
+    cy.log("App Launched");
   }
 );
 
