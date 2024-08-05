@@ -131,5 +131,3 @@ package-lock.json
 **/plugins/
 
 .docusaurus
-
-yarn.lock
