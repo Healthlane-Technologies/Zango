@@ -1,5 +1,5 @@
 import json
-from datetime import UTC
+from datetime import timezone
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -92,7 +92,7 @@ def get_field_value(obj, field):
             except TypeError:
                 return value
             if value is not None and settings.USE_TZ and not django_timezone.is_naive(value):
-                value = django_timezone.make_naive(value, timezone=UTC)
+                value = django_timezone.make_naive(value, timezone=timezone.UTC)
         elif isinstance(field, JSONField):
             value = field.to_python(getattr(obj, field.name, None))
             value = json.dumps(value, sort_keys=True, cls=field.encoder)

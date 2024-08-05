@@ -3,7 +3,7 @@ import contextlib
 import json
 from collections.abc import Callable
 from copy import deepcopy
-from datetime import UTC
+from datetime import timezone
 from typing import Any
 
 from dateutil import parser
@@ -464,7 +464,7 @@ class LogEntry(models.Model):
                             elif field_type == "TimeField":
                                 value = value.time()
                             elif field_type == "DateTimeField":
-                                value = value.replace(tzinfo=UTC)
+                                value = value.replace(tzinfo=timezone.UTC)
                                 value = value.astimezone(gettz(settings.TIME_ZONE))
                             value = formats.localize(value)
                         except ValueError:
