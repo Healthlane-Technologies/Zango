@@ -1,19 +1,15 @@
 name: End to End Cypress Test
 
 on:
-  # push:
-  # branches:
-  #   - cypress/e2e-tests
-  # paths:
-  #   - "frontend/**"
-  #   - "e2e-tests/**"
+  push:
+   branches:
+    - cypress/e2e-tests
+   paths:
+    - "e2e-tests/**"
   workflow_run:
     workflows: ["Push build to Main"]
     branches:
       - cypress/e2e-tests
-    paths:
-      - "frontend/**"
-      - "e2e-tests/**"
     types:
       - completed
 
