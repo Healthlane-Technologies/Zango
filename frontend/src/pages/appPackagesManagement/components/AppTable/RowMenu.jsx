@@ -36,6 +36,7 @@ export default function RowMenu({ rowData }) {
 	return (
 		<Menu as="div" className="relative flex">
 			<Menu.Button
+				data-cy="three_dots_menu"
 				className="flex w-full justify-center focus:outline-none"
 				ref={(ref) => setReferenceElement(ref)}
 			>
@@ -54,6 +55,7 @@ export default function RowMenu({ rowData }) {
 							<Menu.Item>
 								{({ active }) => (
 									<button
+										data-cy="install_package"
 										type="button"
 										className="flex w-full"
 										onClick={handleInstallPackage}
@@ -79,6 +81,7 @@ export default function RowMenu({ rowData }) {
 							<Menu.Item>
 								{({ active }) => (
 									<button
+										data-cy="configure_package_button"
 										type="button"
 										className="flex w-full"
 										onClick={handleConfiurePackage}

@@ -22,7 +22,7 @@ export default function Apps() {
 				<div className="flex items-center justify-end gap-[8px] pr-[18px]">
 					<Filters />
 				</div>
-				<div className="complete-hidden-scroll-style grid grid-cols-1 items-stretch justify-start gap-[26px] overflow-y-auto pb-[29px] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+				<div data-cy= "app_list" className="complete-hidden-scroll-style grid grid-cols-1 items-stretch justify-start gap-[26px] overflow-y-auto pb-[29px] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
 					{appsData?.map(
 						(eachApp) =>
 							({

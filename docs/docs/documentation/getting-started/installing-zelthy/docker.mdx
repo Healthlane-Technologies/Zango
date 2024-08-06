@@ -39,13 +39,13 @@ To begin using Zango through Docker installation, ensure that Docker and Docker 
    - `--platform_username`: The user email of the platform user (Default: `platform_admin@zango.dev`).
    - `--platform_user_password`: The password for the platform user (Default: `Zango@123`).
 
-5. Navigate to ``project_dir`` to start the project.
+5. Navigate to `project_dir` to start the project.
 
-6. Docker is started as a non root user, run the below commands to export the host UID and GID
+6. Docker is started as a non root user, run the below commands to export the host HOST_UID and HOST_GID
 
 ```bash
-export UID=$(id -u)
-export GID=$(id -g)
+export HOST_UID=$(id -u)
+export HOST_GID=$(id -g)
 ```
 
 7. Run `docker compose up` in the project directory to start the project

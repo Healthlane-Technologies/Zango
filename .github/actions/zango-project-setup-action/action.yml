@@ -1,0 +1,111 @@
+name: Zango project setup with latest zango build
+
+on:
+  workflow_call:
+    inputs:
+      platform_username:
+        description: 'Platform username'
+        default: 'platform_admin@zango.dev'
+        required: false
+        type: string
+        
+      platform_user_password:
+        description: 'Platform user password'
+        default: 'Zango@123'
+        required: false
+        type: string
+        
+      project_name:
+        description: 'Project name'
+        default: 'zango_project'
+        required: false
+        type: string
+        
+      postgres_user:
+        description: 'Postgres user'
+        default: 'zango_admin'
+        required: false
+        type: string
+        
+      postgres_password:
+        description: 'Postgres password'
+        default: 'zangopass'
+        required: false
+        type: string
+        
+      postgres_db:
+        description: 'Postgres database'
+        default: 'zango'
+        required: false
+        type: string
+        
+      platform_domain_url:
+        description: 'Platform domain URL'
+        default: 'localhost'
+        required: false
+        type: string
+        
+      domain_config_path:
+        description: 'Path to domain configuration file'
+        required: false
+        type: string
+        default: None
+
+runs:
+    using: "composite"
+    steps:
+      # Step 1: Build the latest zango image
+      - name: Build Zango
+        shell: bash
+        run: docker build -t local/zango-base:latest .
+
+      # Step 2: Setup up environment variables
+      - name: Set up environment variables
+        shell: bash
+        run: |
+          echo "
+            PLATFORM_USERNAME=${{ inputs.platform_username }}
+            PLATFORM_USER_PASSWORD=${{ inputs.platform_user_password }}
+            PROJECT_NAME=${{ inputs.project_name }}
+            POSTGRES_USER=${{ inputs.postgres_user }}
+            POSTGRES_PASSWORD=${{ inputs.postgres_password }}
+            POSTGRES_DB=${{ inputs.postgres_db }}
+            POSTGRES_HOST=postgres
+            POSTGRES_PORT=5432
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            PLATFORM_DOMAIN_URL=${{ inputs.platform_domain_url }}
+          " >> deploy/.env
+      
+      # Step 3: Build and start zango project
+      - name: Build and start Zango project
+        shell: bash
+        run: |
+          export HOST_UID=$(id -u)
+          export HOST_GID=$(id -g)
+          DOCKER_BUILDKIT=0 docker compose -f deploy/docker_compose.test.yml build
+          docker compose -f deploy/docker_compose.test.yml up -d
+
+      # Step 4: Map app domains from file to localhost
+      - name: Setup local domains
+        shell: bash
+        run: |
+          if [ -f "${{ inputs.domain_config_path }}" ]; then
+            while IFS= read -r line; do
+              echo "$line" | sudo tee -a /etc/hosts
+            done < "${{ inputs.domain_config_path }}"
+          else
+            echo "No local domain configuration file found"
+          fi
+
+      # Step 5: Verify zango project is up and running
+      - name: Verify zango project is up and running
+        shell: bash
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform)
+          if [ "$RESPONSE" -eq 200 ]; then
+            echo "Backend is up and running at http://localhost:8000"
+          else
+            echo "Backend is not responding as expected. HTTP response code: $RESPONSE" >&2
+            exit 1
+          fi

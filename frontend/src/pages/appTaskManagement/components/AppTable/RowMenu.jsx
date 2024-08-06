@@ -53,6 +53,7 @@ export default function RowMenu({ rowData }) {
 						<Menu.Item>
 							{({ active }) => (
 								<button
+									data-cy="update_task_button"
 									type="button"
 									className="flex w-full"
 									onClick={handleEditUserDetails}
@@ -75,6 +76,7 @@ export default function RowMenu({ rowData }) {
 						<Menu.Item>
 							{({ active }) => (
 								<button
+									data-cy="remove_all_policies_button"
 									type="button"
 									className="flex w-full disabled:opacity-[0.38]"
 									onClick={handleDeactivateUser}
