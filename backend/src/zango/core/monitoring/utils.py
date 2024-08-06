@@ -10,7 +10,7 @@ def otel_is_enabled():
     """
     Returns the value of the `OTEL_IS_ENABLED` setting from the Django settings.
     """
-    return settings.OTEL_IS_ENABLED if hasattr(settings, "OTEL_IS_ENABLED") else False
+    return settings.OTEL_IS_ENABLED if getattr(settings, "OTEL_IS_ENABLED") else False
 
 
 def otel_export_to_otlp():
@@ -19,7 +19,7 @@ def otel_export_to_otlp():
     """
     return (
         settings.OTEL_EXPORT_TO_OTLP
-        if hasattr(settings, "OTEL_EXPORT_TO_OTLP")
+        if getattr(settings, "OTEL_EXPORT_TO_OTLP")
         else False
     )
 
@@ -30,7 +30,7 @@ def otel_otlp_endpoint():
     """
     return (
         settings.OTEL_EXPORTER_OTLP_ENDPOINT
-        if hasattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT")
+        if getattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT")
         else "http://localhost:4317"
     )
 
@@ -41,7 +41,7 @@ def otel_otlp_headers():
     """
     return (
         settings.OTEL_EXPORTER_OTLP_HEADERS
-        if hasattr(settings, "OTEL_EXPORTER_OTLP_HEADERS")
+        if getattr(settings, "OTEL_EXPORTER_OTLP_HEADERS")
         else ""
     )
 
@@ -52,7 +52,7 @@ def otel_otlp_protocol():
     """
     return (
         settings.OTEL_EXPORTER_PROTOCOL
-        if hasattr(settings, "OTEL_EXPORTER_PROTOCOL")
+        if getattr(settings, "OTEL_EXPORTER_PROTOCOL")
         else ""
     )
 
@@ -63,7 +63,7 @@ def otel_resource_name():
     """
     return (
         settings.OTEL_RESOURCE_NAME
-        if hasattr(settings, "OTEL_RESOURCE_NAME")
+        if getattr(settings, "OTEL_RESOURCE_NAME")
         else "Zango"
     )
 
