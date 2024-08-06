@@ -17,6 +17,8 @@ on:
     paths:
       - "frontend/**"
       - "e2e-tests/**"
+  release:
+    types: [released]
 
 jobs:
   cypress-run:
