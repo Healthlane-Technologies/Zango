@@ -8,7 +8,7 @@ on:
       - "e2e-tests/**"
       - "frontend/**"
     paths-ignore:
-      - backend/src/zango/assets/app_panel/js/**
+      - "backend/src/zango/assets/app_panel/js/**"
   pull_request:
     types:
       - opened
@@ -20,7 +20,7 @@ on:
       - "frontend/**"
       - "e2e-tests/**"
     paths-ignore:
-      - backend/src/zango/assets/app_panel/js/**
+      - "backend/src/zango/assets/app_panel/js/**"
   # workflow_run:
   #   workflows: ["Push build to Main"]
   #   branches:
