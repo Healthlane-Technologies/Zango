@@ -7,6 +7,7 @@ on:
     paths:
       - "e2e-tests/**"
       - "frontend/**"
+      - "!backend/src/zango/assets/app_panel/js/**"
   pull_request:
     types:
       - opened
@@ -111,8 +112,8 @@ jobs:
       - name: Extract Version
         id: extract_version
         run: |
-          INIT_VERSION=$(grep '__version__' backend/src/zango/__init__.py | sed 's/.*__version__ = "\(.*\)"/\1/' | tail -1)
-          echo "INIT_VERSION=${INIT_VERSION}" >> $GITHUB_ENV
+          ZANGO_VERSION=$(grep '__version__' backend/src/zango/__init__.py | sed 's/.*__version__ = "\(.*\)"/\1/' | tail -1)
+          echo "ZANGO_VERSION=${ZANGO_VERSION}" >> $GITHUB_ENV
 
       # Step 10: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
