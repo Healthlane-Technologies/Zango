@@ -86,6 +86,7 @@ export default function AppUserRoles() {
 					<BreadCrumbs />
 					{isAppUserRolesDataEmpty ? null : (
 						<button
+							data-cy="add_user_role_button"	
 							type="button"
 							onClick={handleAddNewUser}
 							className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"

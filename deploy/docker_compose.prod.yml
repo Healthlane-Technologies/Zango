@@ -20,8 +20,8 @@ services:
       context: .
       dockerfile: prod.dockerfile
       args:
-        - UID=${UID}
-        - GID=${GID}
+        - HOST_UID=${HOST_UID}
+        - HOST_GID=${HOST_GID}
     ports:
       - "8000:8000"
     depends_on:
@@ -58,8 +58,8 @@ services:
       context: .
       dockerfile: prod.dockerfile
       args:
-        - UID=${UID}
-        - GID=${GID}
+        - HOST_UID=${HOST_UID}
+        - HOST_GID=${HOST_GID}
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
     volumes:
       - .:/zango/

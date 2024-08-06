@@ -76,7 +76,7 @@ const MultiSelectField = ({
 			>
 				{label}
 			</label>
-			<div className="flex flex-col gap-[12px]">
+			<div data-cy="dropdown_field" className="flex flex-col gap-[12px]">
 				<Listbox value={selected} onChange={handleChange} multiple>
 					<div className="relative">
 						<Listbox.Button
@@ -108,7 +108,7 @@ const MultiSelectField = ({
 							style={styles['popper']}
 							{...attributes['popper']}
 						>
-							<Listbox.Options className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto border bg-white px-[8px] py-[12px] font-lato text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+							<Listbox.Options data-cy="multi_select_values" className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto border bg-white px-[8px] py-[12px] font-lato text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
 								{optionsData?.length > 10 ? (
 									<div className="relative mb-4">
 										<input
@@ -200,7 +200,7 @@ const MultiSelectField = ({
 			</div>
 
 			{meta.touched && meta.error ? (
-				<div className="font-lato text-[12px] text-[#cc3300]">{meta.error}</div>
+				<div data-cy="error_message" className="font-lato text-[12px] text-[#cc3300]">{meta.error}</div>
 			) : null}
 		</div>
 	);

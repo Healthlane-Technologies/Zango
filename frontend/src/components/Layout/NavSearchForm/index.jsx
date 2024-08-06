@@ -61,6 +61,7 @@ export default function NavSearchForm() {
 								<div className="flex items-center gap-[12px] rounded-[4px] bg-[#F0F3F4] px-[12px] py-[6px]">
 									<SearchIcon />
 									<input
+										data-cy="table_search_field"
 										id="searchValue"
 										name="searchValue"
 										type="text"

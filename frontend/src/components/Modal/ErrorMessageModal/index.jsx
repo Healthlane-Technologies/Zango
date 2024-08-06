@@ -63,12 +63,13 @@ export default function ErrorMessageModal({
 									Error
 								</Dialog.Title>
 								<div className="mb-[32px] w-full px-6">
-									<div className="w-full text-center text-[#808187]">
+									<div data-cy="error_message" className="w-full text-center text-[#808187]">
 										{errorMessage}
 									</div>
 								</div>
 								<footer className="flex w-full flex-row items-center justify-end border-t border-[#3F4151] px-4 py-3">
 									<button
+										data-cy="go_back_button"
 										className="form-primary-cta"
 										onClick={() => setVisible(false)}
 									>
