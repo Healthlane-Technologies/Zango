@@ -14,8 +14,6 @@ Given(
         "getUserRoleTab"
       );
       appPanelPageObjects.getAppName().contains(appData.app_name).click();
-      // appPanelPageObjects.getAppName().contains("zprj1app4").click();
-
       appPanelPageObjects.getuserRolesTab().click();
     });
   }
@@ -317,19 +315,6 @@ And("Admin updates the user role form with the valid data", () => {
       "userRoleUpdate"
     );
     appPanelPageObjects.getRoleName().clear().type(userRole.updated_user_role);
-    // appPanelPageObjects.getDropDownButton().click();
-    // appPanelPageObjects
-    //   .getDropDownValues()
-    //   .contains(element.policy_type)
-    //   .click({ force: true })
-    //   .then(() => {
-    //     appPanelPageObjects
-    //       .getDropDownButton()
-    //       .should(
-    //         "have.text",
-    //         "1 selectedAllowFromAnywhereAllowFromAnywhere"
-    //       );
-    //   });
     appPanelPageObjects.getSubmitButton().click({ force: true });
   });
 });
