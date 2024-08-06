@@ -51,8 +51,8 @@ tasks:
   - name: Setup and start the project
     command: |
       cd /workspace/zango-sandbox/zango
-      export UID=$(id -u)
-      export GID=$(id -g)
+      export HOST_UID=$(id -u)
+      export HOST_GID=$(id -g)
       # Run the gp info --json containing workspace info like workspace_id, url
       info=$(gp info --json)
 

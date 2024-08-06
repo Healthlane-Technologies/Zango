@@ -55,12 +55,13 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 				>
 					<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
 						<div className="flex flex-col gap-[6px] px-[20px] py-[12px]">
-							{sublinks?.map(({ url, label }) => {
+							{sublinks?.map(({ url, label, dataCy }) => {
 								return (
 									<Menu.Item key={label}>
 										{({ active }) => (
 											<NavLink
 												to={url}
+												data-cy={dataCy}
 												className="flex flex-col items-center justify-center bg-transparent"
 												children={({ isActive }) => {
 													return (

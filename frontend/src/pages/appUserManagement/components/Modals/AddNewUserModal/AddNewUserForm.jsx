@@ -116,7 +116,7 @@ const AddNewUserForm = ({ closeModal }) => {
 								onChange={formik.handleChange}
 								formik={formik}
 							/>
-							<div className="flex flex-col gap-[4px]">
+							<div data-cy="numeric_field" className="flex flex-col gap-[4px]">
 								<label
 									htmlFor="mobile"
 									className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
@@ -125,7 +125,7 @@ const AddNewUserForm = ({ closeModal }) => {
 								</label>
 								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
 									<span className="font-lato text-[#6C747D]">+91</span>
-									<input
+									<input	
 										id="mobile"
 										name="mobile"
 										type="number"
@@ -137,7 +137,7 @@ const AddNewUserForm = ({ closeModal }) => {
 									/>
 								</div>
 								{formik.touched.mobile && formik.errors.mobile ? (
-									<div className="font-lato text-form-xs text-[#cc3300]">
+									<div data-cy="error_message" className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}
 									</div>
 								) : null}

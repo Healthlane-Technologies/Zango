@@ -79,6 +79,7 @@ export default function AppThemeConfiguration() {
 				<div className="flex items-center justify-between py-[12px] pl-[40px] pr-[48px]">
 					<BreadCrumbs />{' '}
 					<button
+						data-cy="add_theme_button"
 						type="button"
 						onClick={handleAddTheme}
 						className="flex gap-[8px] rounded-[4px] bg-primary px-[16px] py-[7px]"

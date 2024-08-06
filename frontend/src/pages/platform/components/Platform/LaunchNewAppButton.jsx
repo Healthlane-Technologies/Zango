@@ -10,6 +10,7 @@ function LaunchNewAppButton() {
 	};
 	return (
 		<button
+			data-cy="launch_app_button"
 			type="button"
 			onClick={handleLaunchNewApp}
 			className="gap-[8px] rounded-[4px] px-[16px] py-[7px] flex grow bg-primary"
