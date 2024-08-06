@@ -10,62 +10,42 @@ def otel_is_enabled():
     """
     Returns the value of the `OTEL_IS_ENABLED` setting from the Django settings.
     """
-    return settings.OTEL_IS_ENABLED if getattr(settings, "OTEL_IS_ENABLED") else False
+    return getattr(settings, "OTEL_IS_ENABLED", False)
 
 
 def otel_export_to_otlp():
     """
     Returns the value of the `OTEL_EXPORT_TO_OTLP` setting from the Django settings.
     """
-    return (
-        settings.OTEL_EXPORT_TO_OTLP
-        if getattr(settings, "OTEL_EXPORT_TO_OTLP")
-        else False
-    )
+    return getattr(settings, "OTEL_EXPORT_TO_OTLP", False)
 
 
 def otel_otlp_endpoint():
     """
     Returns the value of the `OTEL_EXPORTER_OTLP_ENDPOINT` setting from the Django settings.
     """
-    return (
-        settings.OTEL_EXPORTER_OTLP_ENDPOINT
-        if getattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT")
-        else "http://localhost:4317"
-    )
+    return getattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
 
 
 def otel_otlp_headers():
     """
     Returns the value of the `OTEL_EXPORTER_OTLP_HEADERS` setting from the Django settings.
     """
-    return (
-        settings.OTEL_EXPORTER_OTLP_HEADERS
-        if getattr(settings, "OTEL_EXPORTER_OTLP_HEADERS")
-        else ""
-    )
+    return getattr(settings, "OTEL_EXPORTER_OTLP_HEADERS", "")
 
 
 def otel_otlp_protocol():
     """
     Returns the value of the `OTEL_EXPORTER_PROTOCOL` setting from the Django settings.
     """
-    return (
-        settings.OTEL_EXPORTER_PROTOCOL
-        if getattr(settings, "OTEL_EXPORTER_PROTOCOL")
-        else ""
-    )
+    return getattr(settings, "OTEL_EXPORTER_PROTOCOL", "")
 
 
 def otel_resource_name():
     """
     Returns the value of the `OTEL_RESOURCE_NAME` setting from the Django settings.
     """
-    return (
-        settings.OTEL_RESOURCE_NAME
-        if getattr(settings, "OTEL_RESOURCE_NAME")
-        else "Zango"
-    )
+    return getattr(settings, "OTEL_RESOURCE_NAME", "Zango")
 
 
 def _get_tenant_name():
