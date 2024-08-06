@@ -88,7 +88,9 @@ class Migration(migrations.Migration):
                 ("password", models.CharField(max_length=128, verbose_name="password")),
                 (
                     "last_login",
-                    models.DateTimeField(blank=True, null=True, verbose_name="last login"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="last login"
+                    ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
@@ -123,19 +125,27 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "date_joined",
-                    models.DateTimeField(default=django.utils.timezone.now, verbose_name="date joined"),
+                    models.DateTimeField(
+                        default=django.utils.timezone.now, verbose_name="date joined"
+                    ),
                 ),
                 (
                     "address_line_1",
-                    models.CharField(blank=True, max_length=255, verbose_name="address line 1"),
+                    models.CharField(
+                        blank=True, max_length=255, verbose_name="address line 1"
+                    ),
                 ),
                 (
                     "address_line_2",
-                    models.CharField(blank=True, max_length=255, verbose_name="address line 2"),
+                    models.CharField(
+                        blank=True, max_length=255, verbose_name="address line 2"
+                    ),
                 ),
                 (
                     "address_line_3",
-                    models.CharField(blank=True, max_length=255, verbose_name="address line 3"),
+                    models.CharField(
+                        blank=True, max_length=255, verbose_name="address line 3"
+                    ),
                 ),
                 (
                     "city",
@@ -147,7 +157,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "pincode",
-                    models.CharField(blank=True, max_length=20, verbose_name="pincode/zipcode"),
+                    models.CharField(
+                        blank=True, max_length=20, verbose_name="pincode/zipcode"
+                    ),
                 ),
                 (
                     "country",
@@ -165,7 +177,9 @@ class Migration(migrations.Migration):
                 ("extra_data", models.JSONField(null=True)),
                 (
                     "policies",
-                    models.ManyToManyField(related_name="user_policies", to="permissions.policymodel"),
+                    models.ManyToManyField(
+                        related_name="user_policies", to="permissions.policymodel"
+                    ),
                 ),
                 (
                     "policy_groups",

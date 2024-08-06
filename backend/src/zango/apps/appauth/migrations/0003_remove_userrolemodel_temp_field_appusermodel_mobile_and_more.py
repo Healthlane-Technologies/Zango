@@ -33,6 +33,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="appusermodel",
             name="roles",
-            field=models.ManyToManyField(related_name="users", to="appauth.userrolemodel"),
+            field=models.ManyToManyField(
+                related_name="users", to="appauth.userrolemodel"
+            ),
         ),
     ]

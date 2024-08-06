@@ -58,11 +58,23 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
     else:
         if signal_duid != auditlog["signal_duid"]:
             return
-        if sender == LogEntry and isinstance(user, AppUserModel) and instance.tenant_actor is None:
+        if (
+            sender == LogEntry
+            and isinstance(user, AppUserModel)
+            and instance.tenant_actor is None
+        ):
             instance.tenant_actor = user
-        elif sender == LogEntry and isinstance(user, PlatformUserModel) and instance.platform_actor is None:
+        elif (
+            sender == LogEntry
+            and isinstance(user, PlatformUserModel)
+            and instance.platform_actor is None
+        ):
             instance.platform_actor = user
-        elif sender == LogEntry and isinstance(user, User) and instance.platform_actor is None:
+        elif (
+            sender == LogEntry
+            and isinstance(user, User)
+            and instance.platform_actor is None
+        ):
             try:
                 platform_user = PlatformUserModel.objects.get(user=user)
                 instance.platform_actor = platform_user

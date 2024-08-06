@@ -12,7 +12,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="policymodel",
             name="path",
-            field=models.CharField(blank=True, max_length=300, null=True, verbose_name="Policy path"),
+            field=models.CharField(
+                blank=True, max_length=300, null=True, verbose_name="Policy path"
+            ),
         ),
         migrations.AlterField(
             model_name="policymodel",

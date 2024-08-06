@@ -17,7 +17,9 @@ class WorkspaceTreeNode:
         result = []
         while queue:
             node = queue.popleft()
-            result.append(node.value)  # use append(node) to store nodes instead of values
+            result.append(
+                node.value
+            )  # use append(node) to store nodes instead of values
             queue.extend(node.children)
         return result
 

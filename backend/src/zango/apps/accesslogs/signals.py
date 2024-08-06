@@ -53,7 +53,9 @@ def user_logged_in_handler(sender, request, user, **kwargs):
             )
 
             if getattr(request, "selected_role_id", ""):
-                user_role = UserRoleModel.objects.filter(id=request.selected_role_id).last()
+                user_role = UserRoleModel.objects.filter(
+                    id=request.selected_role_id
+                ).last()
 
             if user_role:
                 access_log.role = user_role
@@ -68,7 +70,9 @@ def user_logged_in_handler(sender, request, user, **kwargs):
 def user_logged_out_handler(sender, user, **kwargs):
     if connection.tenant.tenant_type == "app":
         access_log = (
-            AppAccessLog.objects.filter(user=user, session_expired_at__isnull=True).order_by("-id").first()
+            AppAccessLog.objects.filter(user=user, session_expired_at__isnull=True)
+            .order_by("-id")
+            .first()
         )
 
         if access_log:

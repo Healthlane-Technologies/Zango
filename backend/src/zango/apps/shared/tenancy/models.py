@@ -75,7 +75,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
         unique=True,
         help_text="Unique name of the Tenant",
     )
-    description = models.TextField(max_length=200, blank=True, help_text="Short description of the Tenant")
+    description = models.TextField(
+        max_length=200, blank=True, help_text="Short description of the Tenant"
+    )
     tenant_type = models.CharField(
         "Tenant Type",
         max_length=20,
@@ -91,7 +93,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
     deployed_on = models.DateTimeField(null=True, blank=True)
     suspended_on = models.DateTimeField(null=True, blank=True)
     deleted_on = models.DateTimeField(null=True, blank=True)
-    timezone = models.CharField("Timezone", max_length=255, null=True, blank=True, choices=TIMEZONES)
+    timezone = models.CharField(
+        "Timezone", max_length=255, null=True, blank=True, choices=TIMEZONES
+    )
     language = models.CharField(
         "Langauge", max_length=50, null=True, blank=True, choices=settings.LANGUAGES
     )
@@ -156,7 +160,9 @@ class ThemesModel(FullAuditMixin):
 
     def save(self, *args, **kwargs):
         # Get all other active themes with the same tenant
-        themes_list = self.__class__.objects.filter(tenant=self.tenant, is_active=True).exclude(pk=self.pk)
+        themes_list = self.__class__.objects.filter(
+            tenant=self.tenant, is_active=True
+        ).exclude(pk=self.pk)
         # If we have no active theme yet, set as active theme by default
         self.is_active = self.is_active or (not themes_list.exists())
         if self.is_active:

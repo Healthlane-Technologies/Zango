@@ -43,7 +43,9 @@ class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
     def get_dropdown_options(self):
         options = {}
-        options["roles"] = [{"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()]
+        options["roles"] = [
+            {"id": t.id, "label": t.name} for t in UserRoleModel.objects.all()
+        ]
         return options
 
     def get(self, request, *args, **kwargs):
@@ -93,13 +95,17 @@ class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         if policy_serializer.is_valid():
             success = True
             status_code = 200
-            policy = policy_serializer.save(**{"roles": request.data.getlist("roles", [])})
+            policy = policy_serializer.save(
+                **{"roles": request.data.getlist("roles", [])}
+            )
             result = {"message": "Policy Created Successfully", "policy_id": policy.id}
         else:
             success = False
             status_code = 400
             if policy_serializer.errors:
-                error_messages = [error[0] for field_name, error in policy_serializer.errors.items()]
+                error_messages = [
+                    error[0] for field_name, error in policy_serializer.errors.items()
+                ]
                 error_message = ", ".join(error_messages)
             else:
                 error_message = "Invalid data"
@@ -147,7 +153,9 @@ class PolicyDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [error[0] for field_name, error in serializer.errors.items()]
+                    error_messages = [
+                        error[0] for field_name, error in serializer.errors.items()
+                    ]
                     error_message = ", ".join(error_messages)
                 else:
                     error_message = "Invalid data"

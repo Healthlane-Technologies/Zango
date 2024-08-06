@@ -62,7 +62,9 @@ TENANT_APPS = [
     "axes",
 ]
 
-INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
+INSTALLED_APPS = list(SHARED_APPS) + [
+    app for app in TENANT_APPS if app not in SHARED_APPS
+]
 
 TENANT_MODEL = "tenancy.TenantModel"
 TENANT_DOMAIN_MODEL = "tenancy.Domain"

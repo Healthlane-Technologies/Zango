@@ -35,7 +35,9 @@ class PolicySerializer(serializers.ModelSerializer):
         if validated_data.get("statement"):
             statement = json.loads(validated_data["statement"])
             validated_data["statement"] = statement
-        existing_roles = list(UserRoleModel.objects.filter(policies=instance).values_list("id", flat=True))
+        existing_roles = list(
+            UserRoleModel.objects.filter(policies=instance).values_list("id", flat=True)
+        )
         roles = validated_data.pop("roles", [])
         for role in existing_roles:
             if role not in roles:

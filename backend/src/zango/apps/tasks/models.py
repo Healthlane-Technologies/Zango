@@ -30,7 +30,9 @@ class AppTask(FullAuditMixin):
     )
     args = models.JSONField(null=True, blank=True)
     kwargs = models.JSONField(null=True, blank=True)
-    master_task = models.ForeignKey(PeriodicTask, null=True, blank=True, on_delete=models.CASCADE)
+    master_task = models.ForeignKey(
+        PeriodicTask, null=True, blank=True, on_delete=models.CASCADE
+    )
     attached_policies = models.ManyToManyField(PolicyModel, blank=True, null=True)
 
     def schedule(self):

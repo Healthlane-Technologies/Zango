@@ -34,7 +34,9 @@ def initialize_workspace(tenant_uuid):
             os.makedirs(workspace_dir)
 
         # Creating app folder with the initial files
-        template_directory = os.path.join(os.path.dirname(__file__), "workspace_folder_template")
+        template_directory = os.path.join(
+            os.path.dirname(__file__), "workspace_folder_template"
+        )
         cookiecutter_context = {"app_name": tenant.name}
 
         cookiecutter.main.cookiecutter(
@@ -48,7 +50,9 @@ def initialize_workspace(tenant_uuid):
         tenant.save()
 
         assign_policies_to_anonymous_user(tenant.schema_name)
-        theme = ThemesModel.objects.create(name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG)
+        theme = ThemesModel.objects.create(
+            name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
+        )
         if tenant.status == "deployed":
             return {"result": "success"}
         else:

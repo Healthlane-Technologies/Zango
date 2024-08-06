@@ -54,7 +54,9 @@ class PermissionsModel(FullAuditMixin):
                 else:
                     view_name = pattern.callback.__name__
                 # perms.append(route["module"]+"/"+view_name)
-                cls.objects.get_or_create(name=route["module"] + "/" + view_name, type="view")
+                cls.objects.get_or_create(
+                    name=route["module"] + "/" + view_name, type="view"
+                )
 
         # iterate through all datamodels and add datamodel perms
 
@@ -69,7 +71,9 @@ class PolicyModel(FullAuditMixin):
 
     name = models.CharField("Name of the policy", max_length=50)
     path = models.CharField("Policy path", max_length=300, blank=True, null=True)
-    description = models.CharField("Description of the policy", max_length=300, blank=True)
+    description = models.CharField(
+        "Description of the policy", max_length=300, blank=True
+    )
     statement = JSONField(null=True)
     expiry = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -80,12 +84,16 @@ class PolicyModel(FullAuditMixin):
 
     @classmethod
     def get_valid_policies(cls):
-        return cls.objects.filter(Q(expiry__gte=timezone.now()) | Q(expiry__isnull=True))
+        return cls.objects.filter(
+            Q(expiry__gte=timezone.now()) | Q(expiry__isnull=True)
+        )
 
     @classmethod
     def get_userAccess_policies(cls):
         valid_policies = cls.get_valid_policies()
-        return valid_policies.filter(statement__permissions__contains=[{"type": "userAccess"}])
+        return valid_policies.filter(
+            statement__permissions__contains=[{"type": "userAccess"}]
+        )
 
     class Meta:
         unique_together = ("name", "path")
@@ -93,7 +101,9 @@ class PolicyModel(FullAuditMixin):
 
 class PolicyGroupModel(FullAuditMixin):
     name = models.CharField("Name of the policy group", max_length=50, unique=True)
-    description = models.CharField("Description of the policy group", max_length=300, blank=True)
+    description = models.CharField(
+        "Description of the policy group", max_length=300, blank=True
+    )
     policies = models.ManyToManyField(PolicyModel, related_name="policy_groups")
 
     def __str__(self):

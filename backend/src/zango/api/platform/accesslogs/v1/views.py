@@ -79,7 +79,9 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         records = records.filter(filters).distinct()
 
         if columns.get("attempt_time"):
-            processed = self.process_timestamp(columns.get("attempt_time"), tenant.timezone)
+            processed = self.process_timestamp(
+                columns.get("attempt_time"), tenant.timezone
+            )
             if processed is not None:
                 records = records.filter(
                     attempt_time__gte=processed["start"],
@@ -87,7 +89,9 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 )
 
         if columns.get("session_expired_at"):
-            processed = self.process_timestamp(columns.get("session_expired_at"), tenant.timezone)
+            processed = self.process_timestamp(
+                columns.get("session_expired_at"), tenant.timezone
+            )
             if processed is not None:
                 records = records.filter(
                     session_expired_at__gte=processed["start"],
@@ -152,7 +156,9 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             access_logs = self.get_queryset(search, tenant, columns)
-            paginated_access_logs = self.paginate_queryset(access_logs, request, view=self)
+            paginated_access_logs = self.paginate_queryset(
+                access_logs, request, view=self
+            )
             serializer = AccessLogSerializerModel(
                 paginated_access_logs, many=True, context={"tenant": tenant}
             )

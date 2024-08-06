@@ -38,12 +38,16 @@ class PasswordChangeViewAPIV1(ZangoSessionAppAPIView, PasswordValidationMixin):
         try:
             user = authenticate(username=email, password=password)
         except Exception:
-            raise ValidationError("The current password you have entered is wrong. Please try again!")
+            raise ValidationError(
+                "The current password you have entered is wrong. Please try again!"
+            )
 
     def clean_password2(self, user, current_password, new_password):
         """method to validate password"""
         password2 = new_password
-        validation = self.run_all_validations(user, new_password, password2, current_password)
+        validation = self.run_all_validations(
+            user, new_password, password2, current_password
+        )
         if not validation.get("validation"):
             raise ValidationError(validation.get("msg"))
         return True

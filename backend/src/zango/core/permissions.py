@@ -25,7 +25,10 @@ class IsAuthenticatedPlatformUser(IsAuthenticated, CheckIPWhitelisting):
         if super(IsAuthenticatedPlatformUser, self).has_permission(request, view):
             try:
                 platform_user = request.user.platform_user
-                if platform_user.__class__.__name__ == "PlatformUserModel" and platform_user.is_active:
+                if (
+                    platform_user.__class__.__name__ == "PlatformUserModel"
+                    and platform_user.is_active
+                ):
                     return True
             except Exception:
                 return False

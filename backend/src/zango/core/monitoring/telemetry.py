@@ -48,7 +48,9 @@ def setup_telemetry(add_django_instrumentation: bool):
         if not isinstance(existing_provider, ProxyTracerProvider):
             print("Provider already configured not reconfiguring...")
         else:
-            resource = Resource.create(attributes={"service.name": otel_resource_name()})
+            resource = Resource.create(
+                attributes={"service.name": otel_resource_name()}
+            )
 
             if otel_export_to_otlp():
                 endpoint = otel_otlp_endpoint()

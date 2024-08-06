@@ -12,11 +12,15 @@ def load_necessary_files(project_dir, project_name, without_db):
         os.mkdir(project_dir)
 
     shutil.copytree("deploy/config", f"{project_dir}/config")
-    shutil.copy("deploy/docker_compose.prod.yml", f"{project_dir}/docker-compose.prod.yml")
+    shutil.copy(
+        "deploy/docker_compose.prod.yml", f"{project_dir}/docker-compose.prod.yml"
+    )
     if without_db:
         shutil.copy("zelthy3_without_db.yml", f"{project_dir}/docker-compose.yml")
     else:
-        shutil.copy("deploy/docker_compose.dev.yml", f"{project_dir}/docker-compose.yml")
+        shutil.copy(
+            "deploy/docker_compose.dev.yml", f"{project_dir}/docker-compose.yml"
+        )
     shutil.copy("deploy/dev.dockerfile", f"{project_dir}/dev.dockerfile")
     shutil.copy("deploy/prod.dockerfile", f"{project_dir}/prod.dockerfile")
     shutil.copy("deploy/init.sh", f"{project_dir}/init.sh")
@@ -72,8 +76,12 @@ def setup_project(project_dir, project_name, without_db, start=False):
     # substitute_env(project_dir)
     if start:
         try:
-            proc = subprocess.Popen(f"docker compose -f {project_dir}/docker-compose.yml up", shell=True)
-            signal.signal(signal.SIGINT, lambda sig, frame: print("\nStopping zango environment"))
+            proc = subprocess.Popen(
+                f"docker compose -f {project_dir}/docker-compose.yml up", shell=True
+            )
+            signal.signal(
+                signal.SIGINT, lambda sig, frame: print("\nStopping zango environment")
+            )
             proc.wait()
         except subprocess.CalledProcessError as e:
             traceback.print_exc()
@@ -97,7 +105,9 @@ def rebuild_core(project_dir):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    parser = argparse.ArgumentParser(prog="zango_setup", description="Helps you develop with zango locally")
+    parser = argparse.ArgumentParser(
+        prog="zango_setup", description="Helps you develop with zango locally"
+    )
     parser.add_argument("--project_name", default="", help="The name of the project")
     parser.add_argument(
         "--without_db",
@@ -105,7 +115,9 @@ if __name__ == "__main__":
         default=False,
         help="Whether to set up without a database",
     )
-    parser.add_argument("--project_dir", default="zproject", help="The project directory")
+    parser.add_argument(
+        "--project_dir", default="zproject", help="The project directory"
+    )
     parser.add_argument(
         "--build_core",
         action="store_true",

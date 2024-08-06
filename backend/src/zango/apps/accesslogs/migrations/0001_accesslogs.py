@@ -26,11 +26,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "user_agent",
-                    models.CharField(db_index=True, max_length=255, verbose_name="User Agent"),
+                    models.CharField(
+                        db_index=True, max_length=255, verbose_name="User Agent"
+                    ),
                 ),
                 (
                     "ip_address",
-                    models.GenericIPAddressField(db_index=True, null=True, verbose_name="IP Address"),
+                    models.GenericIPAddressField(
+                        db_index=True, null=True, verbose_name="IP Address"
+                    ),
                 ),
                 (
                     "username",
@@ -48,7 +52,9 @@ class Migration(migrations.Migration):
                 ("path_info", models.CharField(max_length=255, verbose_name="Path")),
                 (
                     "attempt_time",
-                    models.DateTimeField(auto_now_add=True, verbose_name="Attempt Time"),
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Attempt Time"
+                    ),
                 ),
                 ("attempt_type", models.CharField(max_length=20, null=True)),
                 ("is_login_successful", models.BooleanField(default=False)),

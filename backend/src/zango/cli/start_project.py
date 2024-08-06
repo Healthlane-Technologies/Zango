@@ -88,7 +88,9 @@ def create_project(
     if os.path.exists(project_root):
         return False, f"Folder already exists: {project_root}"
 
-    project_template_path = os.path.join(os.path.dirname(zango.cli.__file__), "project_template")
+    project_template_path = os.path.join(
+        os.path.dirname(zango.cli.__file__), "project_template"
+    )
     command = f"{command} --template {str(project_template_path)}"
 
     subprocess.run(command, shell=True, check=True)
@@ -129,7 +131,9 @@ def create_public_tenant(platform_domain_url="localhost"):
         )
 
         # Creating domain
-        Domain.objects.create(tenant=public_tenant, domain=platform_domain_url, is_primary=True)
+        Domain.objects.create(
+            tenant=public_tenant, domain=platform_domain_url, is_primary=True
+        )
 
 
 def create_platform_user(platform_username, platform_username_password):
@@ -189,7 +193,9 @@ def start_project(
     if directory:
         click.echo(f"Creating Project under: {directory}")
 
-    db_connection_status = test_db_conection(db_name, db_user, db_password, db_host, db_port)
+    db_connection_status = test_db_conection(
+        db_name, db_user, db_password, db_host, db_port
+    )
     click.echo(f"db_connection_status: {db_connection_status}")
     if not db_connection_status:
         raise click.ClickException("DB Connection Failed!")
@@ -227,9 +233,13 @@ def start_project(
             click.echo("Please enter platform user email")
             platform_username = click.prompt("Email")
         if not platform_user_password:
-            platform_user_password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
+            platform_user_password = click.prompt(
+                "Password", hide_input=True, confirmation_prompt=True
+            )
 
-        user_creation_result = create_platform_user(platform_username, platform_user_password)
+        user_creation_result = create_platform_user(
+            platform_username, platform_user_password
+        )
         if user_creation_result["success"]:
             break
         else:

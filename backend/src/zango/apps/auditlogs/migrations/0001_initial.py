@@ -30,11 +30,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "object_pk",
-                    models.CharField(db_index=True, max_length=255, verbose_name="object pk"),
+                    models.CharField(
+                        db_index=True, max_length=255, verbose_name="object pk"
+                    ),
                 ),
                 (
                     "object_id",
-                    models.BigIntegerField(blank=True, db_index=True, null=True, verbose_name="object id"),
+                    models.BigIntegerField(
+                        blank=True, db_index=True, null=True, verbose_name="object id"
+                    ),
                 ),
                 ("object_repr", models.TextField(verbose_name="object representation")),
                 ("serialized_data", models.JSONField(null=True)),
@@ -68,7 +72,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "remote_addr",
-                    models.GenericIPAddressField(blank=True, null=True, verbose_name="remote address"),
+                    models.GenericIPAddressField(
+                        blank=True, null=True, verbose_name="remote address"
+                    ),
                 ),
                 (
                     "timestamp",
@@ -80,7 +86,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "additional_data",
-                    models.JSONField(blank=True, null=True, verbose_name="additional data"),
+                    models.JSONField(
+                        blank=True, null=True, verbose_name="additional data"
+                    ),
                 ),
                 (
                     "content_type",

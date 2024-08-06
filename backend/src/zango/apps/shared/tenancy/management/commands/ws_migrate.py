@@ -14,7 +14,9 @@ class Command(MigrateSchemasCommand):
             "workspace",
             help="The workspace name to be used.",
         )
-        parser.add_argument("--test", action="store_true", help="Run the migration for test database")
+        parser.add_argument(
+            "--test", action="store_true", help="Run the migration for test database"
+        )
         parser.add_argument("--package", help="Run the migrations for the package")
 
     def handle(self, *args, **options):
@@ -34,7 +36,9 @@ class Command(MigrateSchemasCommand):
                 options["workspace"] = tenant
 
         if is_test_mode:
-            connection.settings_dict["NAME"] = "test_" + connection.settings_dict["NAME"]
+            connection.settings_dict["NAME"] = (
+                "test_" + connection.settings_dict["NAME"]
+            )
         if options["package"] is None:
             settings.MIGRATION_MODULES = {
                 "dynamic_models": f"workspaces.{ options['workspace']}.migrations"

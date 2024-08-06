@@ -26,7 +26,9 @@ class PasswordValidationMixin:
     def check_password_length(self, password):
         if len(password) < self.MIN_LENGTH:
             validation = False
-            msg = f"The new password must be at least {self.MIN_LENGTH} characters long."
+            msg = (
+                f"The new password must be at least {self.MIN_LENGTH} characters long."
+            )
 
         else:
             validation = True
@@ -108,9 +110,13 @@ class PasswordValidationMixin:
             msg = "Your password must be different from your username."
         return {"msg": msg, "validation": validation}
 
-    def run_all_validations(self, user, password, repeat_password=None, old_password=None):
+    def run_all_validations(
+        self, user, password, repeat_password=None, old_password=None
+    ):
         if repeat_password:
-            if not self.is_password_matching(password, repeat_password).get("validation"):
+            if not self.is_password_matching(password, repeat_password).get(
+                "validation"
+            ):
                 return self.is_password_matching(password, repeat_password)
 
         if old_password:

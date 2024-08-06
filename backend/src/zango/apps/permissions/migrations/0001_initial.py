@@ -81,7 +81,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(max_length=50, unique=True, verbose_name="Name of the policy"),
+                    models.CharField(
+                        max_length=50, unique=True, verbose_name="Name of the policy"
+                    ),
                 ),
                 (
                     "description",
@@ -139,7 +141,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "policies",
-                    models.ManyToManyField(related_name="policy_groups", to="permissions.policymodel"),
+                    models.ManyToManyField(
+                        related_name="policy_groups", to="permissions.policymodel"
+                    ),
                 ),
             ],
             options={

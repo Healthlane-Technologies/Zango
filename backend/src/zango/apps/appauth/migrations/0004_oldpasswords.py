@@ -28,7 +28,9 @@ class Migration(migrations.Migration):
                 ("password", models.CharField(max_length=300)),
                 (
                     "password_date",
-                    models.DateField(auto_now_add=True, verbose_name="Password Change Date"),
+                    models.DateField(
+                        auto_now_add=True, verbose_name="Password Change Date"
+                    ),
                 ),
                 (
                     "password_datetime",

@@ -37,7 +37,9 @@ def get_all_packages(tenant=None):
         "s3",
         config=Config(signature_version=UNSIGNED),
     )
-    s3_package_data = s3.list_objects(Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/")
+    s3_package_data = s3.list_objects(
+        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/"
+    )
     for package in s3_package_data["Contents"]:
         name = package["Key"]
         name = name[9:]
@@ -144,7 +146,9 @@ def install_package(package_name, version, tenant):
             f"packages/{package_name}/{version}/{package_name}.zip",
             f"workspaces/{tenant}/packages/{package_name}.zip",
         )
-        with zipfile.ZipFile(f"workspaces/{tenant}/packages/{package_name}.zip", "r") as zip_ref:
+        with zipfile.ZipFile(
+            f"workspaces/{tenant}/packages/{package_name}.zip", "r"
+        ) as zip_ref:
             zip_ref.extractall(f"workspaces/{tenant}/packages")
         os.remove(f"workspaces/{tenant}/packages/{package_name}.zip")
         # cache_package(

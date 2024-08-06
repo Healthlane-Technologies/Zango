@@ -50,7 +50,9 @@ def validate_file_extension(value):
         ".ico",
     ]
     if ext.lower() not in valid_extensions:
-        raise ValidationError("The file type you are trying to upload is not supported.")
+        raise ValidationError(
+            "The file type you are trying to upload is not supported."
+        )
 
 
 class ZFileField(models.FileField):

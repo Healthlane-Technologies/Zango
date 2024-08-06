@@ -16,7 +16,9 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         return obj.get_action_display().capitalize()
 
     def get_timestamp(self, obj):
-        return get_datetime_str_in_tenant_timezone(obj.timestamp, self.context["tenant"])
+        return get_datetime_str_in_tenant_timezone(
+            obj.timestamp, self.context["tenant"]
+        )
 
     def get_actor(self, obj):
         return (
@@ -28,7 +30,13 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         )
 
     def get_actor_type(self, obj):
-        return "tenant_actor" if obj.tenant_actor else "platform_actor" if obj.platform_actor else None
+        return (
+            "tenant_actor"
+            if obj.tenant_actor
+            else "platform_actor"
+            if obj.platform_actor
+            else None
+        )
 
     def get_object_uuid(self, obj):
         if obj.object_ref is not None:

@@ -69,13 +69,19 @@ def validate_cron_input(crontab):
         if crontab["hour"] != "*" and not validate_hour(crontab["hour"]):
             return False
     if crontab.get("day_of_week"):
-        if crontab["day_of_week"] != "*" and not validate_day_of_week(crontab["day_of_week"]):
+        if crontab["day_of_week"] != "*" and not validate_day_of_week(
+            crontab["day_of_week"]
+        ):
             return False
     if crontab.get("day_of_month"):
-        if crontab["day_of_month"] != "*" and not validate_day_of_month(crontab["day_of_month"]):
+        if crontab["day_of_month"] != "*" and not validate_day_of_month(
+            crontab["day_of_month"]
+        ):
             return False
     if crontab.get("month_of_year"):
-        if crontab["month_of_year"] != "*" and not validate_month_of_year(crontab["month_of_year"]):
+        if crontab["month_of_year"] != "*" and not validate_month_of_year(
+            crontab["month_of_year"]
+        ):
             return False
     return True
 

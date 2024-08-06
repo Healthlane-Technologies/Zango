@@ -44,7 +44,9 @@ class Workspace:
 
     _instances = {}
 
-    def __new__(cls, wobj: object, request=None, as_systemuser=False, **kwargs) -> object:
+    def __new__(
+        cls, wobj: object, request=None, as_systemuser=False, **kwargs
+    ) -> object:
         # perform your permissions check here and tries to return the object from cache
         if not cls.check_perms(request, as_systemuser):
             raise ValueError("Permission denied.")
@@ -135,7 +137,9 @@ class Workspace:
         modules = self.get_all_module_paths()
         for module in modules:
             if os.path.isfile(module + "/models.py"):
-                model_module = module.replace(str(settings.BASE_DIR) + "/", "") + "/models"
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/models"
+                )
                 model_module = model_module.lstrip("/").replace("/", ".")
                 result.append(model_module)
         return result
@@ -148,7 +152,9 @@ class Workspace:
         modules = self.get_all_module_paths()
         for module in modules:
             if os.path.isfile(module + "/tasks.py"):
-                model_module = module.replace(str(settings.BASE_DIR) + "/", "") + "/tasks"
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/tasks"
+                )
                 model_module = model_module.lstrip("/").replace("/", ".")
                 result.append(model_module)
         return result
@@ -188,7 +194,9 @@ class Workspace:
                 return True
             else:
                 for dep in self.get_package_dependencies(package_name):
-                    if not os.path.isfile(self.get_package_path(dep["name"]) + "settings.json"):
+                    if not os.path.isfile(
+                        self.get_package_path(dep["name"]) + "settings.json"
+                    ):
                         return False
                 return True
         return False
@@ -253,13 +261,19 @@ class Workspace:
             from zango.apps.auditlogs.registry import auditlog
 
             for name, obj in inspect.getmembers(module):
-                if isinstance(obj, type) and issubclass(obj, DynamicModelBase) and obj != DynamicModelBase:
+                if (
+                    isinstance(obj, type)
+                    and issubclass(obj, DynamicModelBase)
+                    and obj != DynamicModelBase
+                ):
                     dynamic_meta = getattr(obj, "DynamicModelMeta", None)
                     if dynamic_meta:
                         if getattr(dynamic_meta, "exclude_audit_log", False):
                             continue
 
-                        excluded_fields = getattr(dynamic_meta, "exclude_audit_log_fields", None)
+                        excluded_fields = getattr(
+                            dynamic_meta, "exclude_audit_log_fields", None
+                        )
                         if excluded_fields:
                             auditlog.register(obj, exclude_fields=excluded_fields)
                         else:
@@ -308,7 +322,9 @@ class Workspace:
                             task_obj.args = json.dumps([tenant_name, task_obj.name])
                             task_obj.save()
                         task_ids_synced.append(task_obj.id)
-        AppTask.objects.all().exclude(id__in=task_ids_synced).update(is_deleted=True, is_enabled=False)
+        AppTask.objects.all().exclude(id__in=task_ids_synced).update(
+            is_deleted=True, is_enabled=False
+        )
 
         return
 
@@ -333,7 +349,10 @@ class Workspace:
                 routes.append(
                     {
                         "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": "packages." + route["package"] + "." + pkg_route["module"],
+                        "module": "packages."
+                        + route["package"]
+                        + "."
+                        + pkg_route["module"],
                         "url": pkg_route["url"],
                     }
                 )
@@ -407,12 +426,16 @@ class Workspace:
             - Policies with the same name and path are updated if they already exist.
             - Existing policies not found in the modules or packages are deleted.
         """
-        existing_policies = list(PolicyModel.objects.filter(type="user").values_list("id", flat=True))
+        existing_policies = list(
+            PolicyModel.objects.filter(type="user").values_list("id", flat=True)
+        )
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
             if os.path.isfile(policy_file):
-                model_module = module.replace(str(settings.BASE_DIR) + "/", "") + "/policies"
+                model_module = (
+                    module.replace(str(settings.BASE_DIR) + "/", "") + "/policies"
+                )
                 model_module = model_module.lstrip("/").replace("/", ".")
                 if "packages" in model_module:
                     policy_path = ".".join(model_module.split(".")[2:5])
@@ -425,13 +448,17 @@ class Workspace:
                         raise Exception(f"Error parsing {policy_file}: {e}")
                     for policy_details in policy["policies"]:
                         if not isinstance(policy_details["statement"], dict):
-                            raise Exception(f"Policy {policy_details['name']} has an invalid statement")
+                            raise Exception(
+                                f"Policy {policy_details['name']} has an invalid statement"
+                            )
                         try:
                             policy, created = PolicyModel.objects.update_or_create(
                                 name=policy_details["name"],
                                 path=policy_path,
                                 defaults={
-                                    "description": policy_details.get("description", ""),
+                                    "description": policy_details.get(
+                                        "description", ""
+                                    ),
                                     "type": "user",
                                     "statement": policy_details["statement"],
                                 },

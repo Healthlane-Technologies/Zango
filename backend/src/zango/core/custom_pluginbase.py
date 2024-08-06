@@ -5,7 +5,9 @@ from pluginbase import PluginBase, PluginSource
 class CustomPluginSource(PluginSource):
     def load_plugin(self, name):
         with self:
-            return __import__(self.base.package + "." + name, globals(), {}, ["__name__"])
+            return __import__(
+                self.base.package + "." + name, globals(), {}, ["__name__"]
+            )
 
 
 class CustomPluginBase(PluginBase):

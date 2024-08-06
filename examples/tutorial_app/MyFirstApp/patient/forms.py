@@ -6,7 +6,9 @@ from .models import Patient
 
 
 class PatientForm(BaseForm):
-    name = ModelField(placeholder="Enter Name", required=True, required_msg="This field is required.")
+    name = ModelField(
+        placeholder="Enter Name", required=True, required_msg="This field is required."
+    )
     dob = ModelField(
         placeholder="Enter Date of Birth",
         required=True,

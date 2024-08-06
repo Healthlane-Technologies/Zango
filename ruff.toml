@@ -30,7 +30,7 @@ exclude = [
 ]
 
 target-version = "py311"
-line-length = 108
+line-length = 88
 
 [lint]
 ignore = [

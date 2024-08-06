@@ -21,8 +21,12 @@ from ..permissions.models import PolicyGroupModel, PolicyModel
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
     name = models.CharField("Unique Name of the User Role", max_length=50, unique=True)
-    policies = models.ManyToManyField(PolicyModel, related_name="role_policies", blank=True)
-    policy_groups = models.ManyToManyField(PolicyGroupModel, related_name="role_policy_groups", blank=True)
+    policies = models.ManyToManyField(
+        PolicyModel, related_name="role_policies", blank=True
+    )
+    policy_groups = models.ManyToManyField(
+        PolicyGroupModel, related_name="role_policy_groups", blank=True
+    )
     config = models.JSONField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
@@ -51,7 +55,9 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 class AppUserModel(AbstractZangoUserModel, PermissionMixin):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
-    policy_groups = models.ManyToManyField(PolicyGroupModel, related_name="user_policy_groups")
+    policy_groups = models.ManyToManyField(
+        PolicyGroupModel, related_name="user_policy_groups"
+    )
     app_objects = models.JSONField(null=True)
 
     def __str__(self):
@@ -82,7 +88,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         """
         import re
 
-        reg = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,18}$"
+        reg = (
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,18}$"
+        )
         match_re = re.compile(reg)
         res = re.search(match_re, password)
         if res:
@@ -134,7 +142,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
 
                 user = cls.objects.filter(user_query)
                 if user.exists():
-                    message = "Another user already exists matching the provided credentials"
+                    message = (
+                        "Another user already exists matching the provided credentials"
+                    )
                 else:
                     if not cls.validate_password(password):
                         message = """
@@ -159,7 +169,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
                             app_user.is_active = True
 
                         if not force_password_reset:
-                            old_password_obj = OldPasswords.objects.create(user=app_user)
+                            old_password_obj = OldPasswords.objects.create(
+                                user=app_user
+                            )
                             old_password_obj.setPasswords(app_user.password)
                             old_password_obj.save()
 
@@ -241,7 +253,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         """
         if days == -1:
             return False
-        old_passwords = self.oldpasswords_set.all().filter(password_date__gt=date.today() - timedelta(days))
+        old_passwords = self.oldpasswords_set.all().filter(
+            password_date__gt=date.today() - timedelta(days)
+        )
         print(old_passwords)
         if old_passwords.count() > 0:
             return False

@@ -37,7 +37,9 @@ class Command(BaseCommand):
         wks_obj = TenantModel.objects.get(name=options["workspace"])
         connection.set_tenant(wks_obj)
         ws = Workspace(wks_obj, None, True)
-        destination_path = settings.STATICFILES_DIRS[1] + "/workspaces/%s" % (options["workspace"])
+        destination_path = (
+            settings.STATICFILES_DIRS[1] + "/workspaces/%s" % (options["workspace"])
+        )
         if not os.path.exists(f"workspaces/{options['workspace']}/static"):
             os.makedirs(f"workspaces/{options['workspace']}/static")
         if not os.path.exists("./assets"):
@@ -49,6 +51,10 @@ class Command(BaseCommand):
             package_name = package["name"]
             package_source_dir = ws.path + "packages/%s/static" % (package_name)
             if os.path.exists(package_source_dir):
-                package_destination_dir = destination_path + "/packages/%s" % package_name
-                self.copy_source_to_destination(package_source_dir, package_destination_dir)
+                package_destination_dir = (
+                    destination_path + "/packages/%s" % package_name
+                )
+                self.copy_source_to_destination(
+                    package_source_dir, package_destination_dir
+                )
         return

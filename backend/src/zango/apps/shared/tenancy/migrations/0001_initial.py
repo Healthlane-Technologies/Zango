@@ -33,7 +33,9 @@ class Migration(migrations.Migration):
                         db_index=True,
                         max_length=63,
                         unique=True,
-                        validators=[django_tenants.postgresql_backend.base._check_schema_name],
+                        validators=[
+                            django_tenants.postgresql_backend.base._check_schema_name
+                        ],
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),

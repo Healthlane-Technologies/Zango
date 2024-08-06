@@ -90,10 +90,15 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         Returns:
             None
         """
-        if hasattr(settings, "SHOW_PUBLIC_IF_NO_TENANT_FOUND") and settings.SHOW_PUBLIC_IF_NO_TENANT_FOUND:
+        if (
+            hasattr(settings, "SHOW_PUBLIC_IF_NO_TENANT_FOUND")
+            and settings.SHOW_PUBLIC_IF_NO_TENANT_FOUND
+        ):
             self.setup_url_routing(request=request, force_public=True)
         else:
-            raise self.TENANT_NOT_FOUND_EXCEPTION('No tenant for hostname "%s"' % hostname)
+            raise self.TENANT_NOT_FOUND_EXCEPTION(
+                'No tenant for hostname "%s"' % hostname
+            )
 
     @staticmethod
     def setup_url_routing(request, force_public=False):

@@ -18,7 +18,9 @@ class DynamicModelsConfig(AppConfig):
         original_register_model = self.apps.register_model
 
         def register_model(app_label, model):
-            if "ws_makemigration" in sys.argv or getattr(settings, "TEST_MIGRATION_RUNNING", False):
+            if "ws_makemigration" in sys.argv or getattr(
+                settings, "TEST_MIGRATION_RUNNING", False
+            ):
                 original_register_model(app_label, model)
             else:
                 pre_save.connect(set_created_modified_by, sender=model)

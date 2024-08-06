@@ -41,7 +41,9 @@ class Migration(migrations.Migration):
                 ("kwargs", models.JSONField(blank=True, null=True)),
                 (
                     "attached_policies",
-                    models.ManyToManyField(blank=True, null=True, to="permissions.policymodel"),
+                    models.ManyToManyField(
+                        blank=True, null=True, to="permissions.policymodel"
+                    ),
                 ),
                 (
                     "crontab",

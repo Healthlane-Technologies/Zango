@@ -58,8 +58,12 @@ class PlatformUserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             platform_users = self.get_queryset(search, columns)
-            paginated_platform_users = self.paginate_queryset(platform_users, request, view=self)
-            serializer = PlatformUserSerializerModel(paginated_platform_users, many=True)
+            paginated_platform_users = self.paginate_queryset(
+                platform_users, request, view=self
+            )
+            serializer = PlatformUserSerializerModel(
+                paginated_platform_users, many=True
+            )
             platform_users_data = self.get_paginated_response_data(serializer.data)
             success = True
             response = {
@@ -153,7 +157,9 @@ class AppPanelDetailsView(ZangoGenericPlatformAPIView):
             response = {
                 "app_data": {
                     "user_logged_in": serializer.data,
-                    "is_codeassist_enabled": getattr(settings, "CODEASSIST_ENABLED", False),
+                    "is_codeassist_enabled": getattr(
+                        settings, "CODEASSIST_ENABLED", False
+                    ),
                 },
             }
             status = 200

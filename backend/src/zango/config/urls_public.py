@@ -10,7 +10,9 @@ urlpatterns = [
         r"^auth/",
         decorator_include(internal_access_only, "zango.apps.shared.platformauth.urls"),
     ),
-    re_path(r"^api/", decorator_include(internal_access_only, "zango.api.platform.urls")),
+    re_path(
+        r"^api/", decorator_include(internal_access_only, "zango.api.platform.urls")
+    ),
     re_path(r"api/auth/", include("knox.urls")),
     re_path(r"session_security/", include("session_security.urls")),
     re_path(

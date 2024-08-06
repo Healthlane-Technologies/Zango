@@ -21,7 +21,9 @@ class PatientTable(ModelTable):
             "description": "Edit Patient",
             "type": "form",
             "form": PatientForm,  # Specify the form to use for editing
-            "roles": ["PatientSupportManager"],  # Specify roles that can perform the action
+            "roles": [
+                "PatientSupportManager"
+            ],  # Specify roles that can perform the action
         }
     ]
 

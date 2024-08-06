@@ -26,12 +26,14 @@ class UserRoleAndAppObjectAssignmentMiddleware:
             if request.tenant.tenant_type == "app":
                 _request_local.user_role = model.objects.get(name="AnonymousUsers")
             else:
-                _request_local.user_role = None  # user role is not applicable at platform level
+                _request_local.user_role = (
+                    None  # user role is not applicable at platform level
+                )
 
         try:
             user = request.user
             user_role = _request_local.user_role
-            if user_role and not user_role.name == 'AnonymousUsers':
+            if user_role and not user_role.name == "AnonymousUsers":
                 _request_local.app_object = user.get_app_object(
                     _request_local.user_role.id
                 )

@@ -32,7 +32,9 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 token = signing.dumps(
                     request.user.id,
                 )
-                url = get_package_configuration_url(request, tenant, request.GET.get("package_name"))
+                url = get_package_configuration_url(
+                    request, tenant, request.GET.get("package_name")
+                )
                 resp = {"url": f"{url}?token={token}"}
                 status = 200
             except Exception as e:

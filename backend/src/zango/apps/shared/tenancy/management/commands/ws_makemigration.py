@@ -33,7 +33,9 @@ class Command(MakeMigrationsCommand):
             "workspace",
             help="The workspace name to be used.",
         )
-        parser.add_argument("--test", action="store_true", help="Run the migration for test database")
+        parser.add_argument(
+            "--test", action="store_true", help="Run the migration for test database"
+        )
         parser.add_argument(
             "--is_package_migration",
             action="store_true",
@@ -58,8 +60,12 @@ class Command(MakeMigrationsCommand):
 
         connection.set_tenant(tenant_obj)
         if is_test_mode:
-            connection.settings_dict["NAME"] = "test_" + connection.settings_dict["NAME"]
-        migrations_dir = f"{settings.BASE_DIR}/workspaces/{options['workspace']}/migrations/"
+            connection.settings_dict["NAME"] = (
+                "test_" + connection.settings_dict["NAME"]
+            )
+        migrations_dir = (
+            f"{settings.BASE_DIR}/workspaces/{options['workspace']}/migrations/"
+        )
         # Create the migration directory if it doesn't exist
         os.makedirs(migrations_dir, exist_ok=True)
 
@@ -69,7 +75,9 @@ class Command(MakeMigrationsCommand):
             with open(init_file, "w"):
                 pass  # Creates an empty __init__.py file
 
-        settings.MIGRATION_MODULES = {"dynamic_models": f"workspaces.{options['workspace']}.migrations"}
+        settings.MIGRATION_MODULES = {
+            "dynamic_models": f"workspaces.{options['workspace']}.migrations"
+        }
         w = Workspace(tenant_obj, None, True)
         if options["is_package_migration"]:
             w.load_models()

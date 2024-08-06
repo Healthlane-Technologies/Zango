@@ -69,7 +69,9 @@ def get_current_request_url(request, domain=None):
         domain = request.get_host()
     if not secure:
         port = request.META.get("SERVER_PORT", "")
-        if (protocol == "http" and port == "80") or (protocol == "https" and port == "443"):
+        if (protocol == "http" and port == "80") or (
+            protocol == "https" and port == "443"
+        ):
             port_string = ""
         else:
             port_string = f":{port}"

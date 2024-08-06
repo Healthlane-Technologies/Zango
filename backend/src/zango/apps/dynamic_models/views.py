@@ -62,17 +62,25 @@ class DynamicView(View, PermMixin):
         if self.has_user_access_perm(request, *args, **kwargs):
             self.workspace = self.get_workspace(request)
             view, resolve = self.get_view(request)
-            view_name = ".".join(resolve.__dict__["_func_path"].split(".")[3:]) if resolve else None
+            view_name = (
+                ".".join(resolve.__dict__["_func_path"].split(".")[3:])
+                if resolve
+                else None
+            )
             if view and view_name:
                 kwargs = resolve.__dict__["kwargs"]
-                if request.internal_routing or self.has_view_perm(request, view_name, *args, **kwargs):
+                if request.internal_routing or self.has_view_perm(
+                    request, view_name, *args, **kwargs
+                ):
                     response = csrf_protect(view)(request, *args, **kwargs)
                     return response
                 else:
                     user_role = get_current_role()
                     if user_role.name == "AnonymousUsers":
                         return redirect("/login/")
-                    return HttpResponseForbidden("You don't have permission to view this page")
+                    return HttpResponseForbidden(
+                        "You don't have permission to view this page"
+                    )
 
             # View Not Found
             if request.path == "/" and not self.workspace.is_dev_started():
