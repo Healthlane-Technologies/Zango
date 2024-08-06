@@ -34,11 +34,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-
       - name: Remove old build files
         run: |
           find backend/src/zango/assets/app_panel/js -name "build.*.min.js" -type f -delete
@@ -80,12 +75,6 @@ jobs:
           platform_domain_url: localhost
           domain_config_path: ./e2e-tests/local_domains.txt
 
-      # Step 4: Setup Node
-      # - name: Set up Node.js
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: "18"
-
       # Step 5: Capturing start time
       - name: Capture Start Time
         id: start-time
@@ -119,6 +108,12 @@ jobs:
           DURATION="${DURATION_MINUTES}m ${DURATION_REMAINDER_SECONDS}s"
           echo "DURATION=${DURATION}" >> $GITHUB_ENV
 
+      - name: Extract Version
+        id: extract_version
+        run: |
+          INIT_VERSION=$(grep '__version__' backend/src/zango/__init__.py | sed 's/.*__version__ = "\(.*\)"/\1/' | tail -1)
+          echo "INIT_VERSION=${INIT_VERSION}" >> $GITHUB_ENV
+
       # Step 10: Generate Cucumber HTML Report
       - name: Generate Cucumber HTML Report
         run: |
@@ -128,10 +123,10 @@ jobs:
         working-directory: e2e-tests
         env:
           BROWSER_NAME: chrome
-          BROWSER_VERSION: "126"
-          DEVICE_NAME: "MacBook Air"
-          PLATFORM_NAME: "Mac OS"
-          PLATFORM_VERSION: "Sonoma 14.2"
+          BROWSER_VERSION: "127"
+          DEVICE_NAME: "Remote Device"
+          PLATFORM_NAME: "Ubuntu"
+          PLATFORM_VERSION: "22.04.4"
           CI_ENVIRONMENT: "GitHub Actions"
 
       # Step 11: Upload Cypress screenshots

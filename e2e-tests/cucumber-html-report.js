@@ -29,8 +29,7 @@ report.generate({
     title: "Run info",
     data: [
       { label: "Project", value: "Zango e2e-Tests Report" },
-      { label: "Release", value: "Version 1" },
-      { label: "Cycle", value: "1" },
+      { label: "Zango Version", value: process.env.INIT_VERSION },
       { label: "Execution Date Time", value: executionDateTime },
       { label: "Execution Environment", value: process.env.CI_ENVIRONMENT },
       { label: "Execution Duration", value: process.env.DURATION },

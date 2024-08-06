@@ -21,6 +21,7 @@ Given("Admin logins successfully and lands on the details view of App", () => {
 
 When("Validate the app configuration URL", () => {
   cy.url().should("contain", "/app-settings/app-configuration/");
+  cy.log("Validated URL");
 });
 
 And("Policy table should contain the following columns", (datatables) => {
