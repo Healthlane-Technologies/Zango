@@ -1,6 +1,7 @@
 name: End to End Cypress Test
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -18,7 +19,9 @@ on:
       - "frontend/**"
       - "e2e-tests/**"
   release:
-    types: [released]
+    types: 
+      - published
+      - released
 
 jobs:
   cypress-run:
