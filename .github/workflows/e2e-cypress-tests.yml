@@ -3,11 +3,10 @@ name: End to End Cypress Test
 on:
   push:
     branches:
-      - cypress/e2e-tests
+      - main
     paths:
       - "e2e-tests/**"
       - "frontend/**"
-      - "!backend/src/zango/assets/app_panel/js/**"
   pull_request:
     types:
       - opened
@@ -18,13 +17,6 @@ on:
     paths:
       - "frontend/**"
       - "e2e-tests/**"
-      - "!backend/src/zango/assets/app_panel/js/**"
-  # workflow_run:
-  #   workflows: ["Push build to Main"]
-  #   branches:
-  #     - cypress/e2e-tests
-  #   types:
-  #     - completed
 
 jobs:
   cypress-run:
@@ -154,3 +146,10 @@ jobs:
           name: cucumber-html-report
           path: e2e-tests/reports/cucumber-html-report.html
           if-no-files-found: ignore
+
+      - name: Notify on z-deployment_notifs slack channel
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: E2E-Tests Run on ${{ github.event.repository.name }}
+          SLACK_CHANNEL: "z-deployment-notifs"

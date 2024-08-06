@@ -3,7 +3,7 @@ name: Push build to Main
 on:
   push:
     branches:
-      - cypress/e2e-tests
+      - main
     paths:
       - "frontend/**"
 
@@ -52,11 +52,11 @@ jobs:
         run: |
           git add backend/src/zango/assets/app_panel/js
           git commit -m "Deploy frontend build"
-          git push origin cypress/e2e-tests
+          git push origin main
 
-      # - name: Notify on z-deployment_notifs slack channel
-      #   uses: rtCamp/action-slack-notify@v2
-      #   env:
-      #     SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
-      #     SLACK_TITLE: New push of frontend build in ${{ github.event.repository.name }}
-      #     SLACK_CHANNEL: "z-deployment-notifs"
+      - name: Notify on z-deployment_notifs slack channel
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.Z_DEPOY_NOTIFS_SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: New push of frontend build in ${{ github.event.repository.name }}
+          SLACK_CHANNEL: "z-deployment-notifs"
