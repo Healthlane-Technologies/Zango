@@ -1,15 +1,8 @@
 import copy
 from collections import defaultdict
+from collections.abc import Callable, Collection, Iterable
 from typing import (
     Any,
-    Callable,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
 )
 
 from django.apps import apps
@@ -26,7 +19,7 @@ from django.db.models.signals import (
 from zango.apps.auditlogs.conf import settings
 from zango.apps.auditlogs.signals import accessed
 
-DispatchUID = Tuple[int, int, int]
+DispatchUID = tuple[int, int, int]
 
 
 class AuditLogRegistrationError(Exception):
@@ -47,7 +40,7 @@ class AuditlogModelRegistry:
         delete: bool = True,
         access: bool = True,
         m2m: bool = True,
-        custom: Optional[Dict[ModelSignal, Callable]] = None,
+        custom: dict[ModelSignal, Callable] | None = None,
     ):
         from zango.apps.auditlogs.receivers import (
             log_access,
@@ -76,13 +69,13 @@ class AuditlogModelRegistry:
     def register(
         self,
         model: ModelBase = None,
-        include_fields: Optional[List[str]] = None,
-        exclude_fields: Optional[List[str]] = None,
-        mapping_fields: Optional[Dict[str, str]] = None,
-        mask_fields: Optional[List[str]] = None,
-        m2m_fields: Optional[Collection[str]] = None,
+        include_fields: list[str] | None = None,
+        exclude_fields: list[str] | None = None,
+        mapping_fields: dict[str, str] | None = None,
+        mask_fields: list[str] | None = None,
+        m2m_fields: Collection[str] | None = None,
         serialize_data: bool = False,
-        serialize_kwargs: Optional[Dict[str, Any]] = None,
+        serialize_kwargs: dict[str, Any] | None = None,
         serialize_auditlog_fields_only: bool = False,
     ):
         """
@@ -177,7 +170,7 @@ class AuditlogModelRegistry:
         else:
             self._disconnect_signals(model)
 
-    def get_models(self) -> List[ModelBase]:
+    def get_models(self) -> list[ModelBase]:
         return list(self._registry.keys())
 
     def get_model_fields(self, model: ModelBase):
@@ -214,7 +207,7 @@ class AuditlogModelRegistry:
                 receiver = make_log_m2m_changes(field_name)
                 self._m2m_signals[model][field_name] = receiver
                 field = getattr(model, field_name)
-                m2m_model = getattr(field, "through")
+                m2m_model = field.through
 
                 m2m_changed.connect(
                     receiver,
@@ -232,7 +225,7 @@ class AuditlogModelRegistry:
             )
         for field_name, receiver in self._m2m_signals[model].items():
             field = getattr(model, field_name)
-            m2m_model = getattr(field, "through")
+            m2m_model = field.through
             m2m_changed.disconnect(
                 sender=m2m_model,
                 dispatch_uid=self._dispatch_uid(m2m_changed, receiver),
@@ -243,7 +236,7 @@ class AuditlogModelRegistry:
         """Generate a dispatch_uid which is unique for a combination of self, signal, and receiver."""
         return id(self), id(signal), id(receiver)
 
-    def _get_model_classes(self, app_model: str) -> List[ModelBase]:
+    def _get_model_classes(self, app_model: str) -> list[ModelBase]:
         try:
             try:
                 app_label, model_name = app_model.split(".")
@@ -255,7 +248,7 @@ class AuditlogModelRegistry:
 
     def _get_exclude_models(
         self, exclude_tracking_models: Iterable[str]
-    ) -> List[ModelBase]:
+    ) -> list[ModelBase]:
         exclude_models = [
             model
             for app_model in tuple(exclude_tracking_models)
@@ -264,7 +257,7 @@ class AuditlogModelRegistry:
         ]
         return exclude_models
 
-    def _register_models(self, models: Iterable[Union[str, Dict[str, Any]]]) -> None:
+    def _register_models(self, models: Iterable[str | dict[str, Any]]) -> None:
         models = copy.deepcopy(models)
         for model in models:
             if isinstance(model, str):

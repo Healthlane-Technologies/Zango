@@ -1,10 +1,12 @@
-from django.core.management.base import BaseCommand, CommandError
 import os
 import shutil
+
 from django.conf import settings
+from django.core.management.base import BaseCommand
 from django.db import connection
-from zango.apps.shared.tenancy.models import TenantModel
+
 from zango.apps.dynamic_models.workspace.base import Workspace
+from zango.apps.shared.tenancy.models import TenantModel
 
 
 class Command(BaseCommand):
@@ -35,8 +37,8 @@ class Command(BaseCommand):
         wks_obj = TenantModel.objects.get(name=options["workspace"])
         connection.set_tenant(wks_obj)
         ws = Workspace(wks_obj, None, True)
-        destination_path = settings.STATICFILES_DIRS[1] + "/workspaces/%s" % (
-            options["workspace"]
+        destination_path = (
+            settings.STATICFILES_DIRS[1] + "/workspaces/%s" % (options["workspace"])
         )
         if not os.path.exists(f"workspaces/{options['workspace']}/static"):
             os.makedirs(f"workspaces/{options['workspace']}/static")

@@ -1,5 +1,6 @@
 import click
-from zango.cli import package_info, start_project, install_package
+
+from zango.cli import install_package, package_info, start_project
 
 
 @click.group()

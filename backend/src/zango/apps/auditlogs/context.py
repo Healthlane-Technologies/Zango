@@ -46,9 +46,10 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
 
     This function becomes a valid signal receiver when it is curried with the actor and a dispatch id.
     """
+    from django.contrib.auth.models import User
+
     from zango.apps.appauth.models import AppUserModel
     from zango.apps.shared.platformauth.models import PlatformUserModel
-    from django.contrib.auth.models import User
 
     try:
         auditlog = auditlog_value.get()

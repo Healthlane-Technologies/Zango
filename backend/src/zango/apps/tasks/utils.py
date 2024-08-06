@@ -8,7 +8,7 @@ def validate_minute(cron_minute):
         for m in _minutes:
             if int(m) < 0 or int(m) >= 60:
                 validated = False
-    except:
+    except Exception:
         validated = False
     return validated
 
@@ -20,7 +20,7 @@ def validate_hour(cron_hours):
         for h in _hours:
             if int(h) < 0 or int(h) > 24:
                 validated = False
-    except:
+    except Exception:
         validated = False
     return validated
 
@@ -32,7 +32,7 @@ def validate_day_of_week(dow):
         for d in _dow:
             if int(d) < 1 or int(d) > 7:
                 validated = False
-    except:
+    except Exception:
         validated = False
     return validated
 
@@ -44,7 +44,7 @@ def validate_day_of_month(dom):
         for d in _dom:
             if int(d) < 1 or int(d) > 31:
                 validated = False
-    except:
+    except Exception:
         validated = False
     return validated
 
@@ -56,7 +56,7 @@ def validate_month_of_year(moy):
         for m in _moy:
             if int(m) < 1 or int(m) > 12:
                 validated = False
-    except:
+    except Exception:
         validated = False
     return validated
 
@@ -89,14 +89,14 @@ def validate_cron_input(crontab):
 def get_crontab_obj(crontab={}):
     if not validate_cron_input(crontab):
         raise ValueError("Invalid cron expression")
-    
+
     if not crontab:
         crontab = {
-          "minute": "*",
-          "hour": "*",
-          "day_of_week": "*",
-          "day_of_month": "*",
-          "month_of_year": "*"
+            "minute": "*",
+            "hour": "*",
+            "day_of_week": "*",
+            "day_of_month": "*",
+            "month_of_year": "*",
         }
 
     schedule, created = CrontabSchedule.objects.get_or_create(**crontab)

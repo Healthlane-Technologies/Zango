@@ -1,9 +1,9 @@
 import json
 
 from rest_framework import serializers
-from zango.apps.shared.tenancy.models import TenantModel, Domain
-from zango.apps.permissions.models import PolicyModel
+
 from zango.apps.appauth.models import UserRoleModel
+from zango.apps.permissions.models import PolicyModel
 
 
 class PolicySerializer(serializers.ModelSerializer):

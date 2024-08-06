@@ -1,7 +1,6 @@
-from django.urls import include
-from django.urls import re_path, path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import include, path, re_path
 
 urlpatterns = [
     re_path(r"^", include("zango.apps.appauth.urls")),

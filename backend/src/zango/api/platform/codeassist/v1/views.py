@@ -1,16 +1,15 @@
+import importlib
 import json
 import os
-import importlib
 
-from django.utils.decorators import method_decorator
 from django.conf import settings
+from django.utils.decorators import method_decorator
 
-from zango.core.common_utils import set_app_schema_path
-from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
-
-from zango.apps.permissions.models import PolicyModel
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.common_utils import set_app_schema_path
 
 from .utils import lambda_invocation
 
@@ -196,7 +195,7 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
     def createUser(self, execution_json, **kwargs):
         try:
             if AppUserModel.objects.filter(email=execution_json["email"]).exists():
-                return (False, f"This email ID is already taken")
+                return (False, "This email ID is already taken")
             user = AppUserModel.objects.create(
                 email=execution_json["email"],
                 name=execution_json["name"],
@@ -212,7 +211,7 @@ class ExecutionViewAPIV1(ZangoGenericPlatformAPIView):
         if UserRoleModel.objects.filter(
             name__icontains=execution_json["role_name"]
         ).exists():
-            return (False, f"User Role with this name already exists!")
+            return (False, "User Role with this name already exists!")
         role = UserRoleModel.objects.create(
             name=execution_json["role_name"], is_active=True
         )

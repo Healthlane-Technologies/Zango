@@ -1,6 +1,5 @@
 import json
 from datetime import timezone
-from typing import Optional
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,9 +13,8 @@ from django.db.models import (
 )
 from django.utils import timezone as django_timezone
 from django.utils.encoding import smart_str
-from django.conf import settings
 
-from zango.apps.dynamic_models.fields import ZOneToOneField, ZForeignKey
+from zango.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
 
 
 def track_field(field):
@@ -140,9 +138,7 @@ def mask_str(value: str) -> str:
     return "*" * mask_limit + value[mask_limit:]
 
 
-def model_instance_diff(
-    old: Optional[Model], new: Optional[Model], fields_to_check=None
-):
+def model_instance_diff(old: Model | None, new: Model | None, fields_to_check=None):
     """
     Calculates the differences between two model instances. One of the instances may be ``None``
     (i.e., a newly created model or deleted model). This will cause all fields with a value to have

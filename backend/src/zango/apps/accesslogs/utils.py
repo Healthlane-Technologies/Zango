@@ -1,9 +1,8 @@
 import re
 
-from django.contrib.auth import signals
-from django.db import connection
 from axes.handlers.proxy import AxesProxyHandler
-from django.http import HttpResponseForbidden, HttpResponse
+from django.contrib.auth import signals
+from django.http import HttpResponse, HttpResponseForbidden
 
 from zango.apps.appauth.models import AppUserModel
 
@@ -19,7 +18,6 @@ def capture_failed_login_attempt(request, credentials):
     """
 
     try:
-
         username_type, username = "", credentials.get("username", "")
         if re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", username):
             username_type = "email"
@@ -36,7 +34,7 @@ def capture_failed_login_attempt(request, credentials):
                     request=request,
                     credentials=credentials,
                 )
-    except:
+    except Exception:
         import traceback
 
         print(traceback.format_exc())

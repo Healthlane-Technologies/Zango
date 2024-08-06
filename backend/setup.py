@@ -1,7 +1,6 @@
 import os
-from setuptools import setup, find_packages
-from pathlib import Path
 
+from setuptools import find_packages, setup
 
 PROJECT_DIR = os.path.dirname(__file__)
 REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
@@ -44,7 +43,7 @@ setup(
         "Framework :: Django",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Development Status :: 5 - Production/Stable"
+        "Development Status :: 5 - Production/Stable",
     ],
     entry_points={
         "console_scripts": [

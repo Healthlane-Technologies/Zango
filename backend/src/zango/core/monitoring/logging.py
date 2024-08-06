@@ -1,10 +1,8 @@
 import sys
-import os
 from .utils import otel_is_enabled, get_loguru_format
 
 
 def setup_logging():
-
     from loguru import logger
     from django.conf import settings
 

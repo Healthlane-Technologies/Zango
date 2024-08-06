@@ -1,12 +1,12 @@
-import os
-import zipfile
 import json
+import os
 import shutil
 import subprocess
+import zipfile
+
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
-
 from django.conf import settings
 from django.db import connection
 
@@ -20,7 +20,7 @@ def create_directories(dirs):
 
 
 def get_installed_packages(tenant):
-    with open(f"workspaces/{tenant}/manifest.json", "r") as f:
+    with open(f"workspaces/{tenant}/manifest.json") as f:
         data = json.loads(f.read())
         packages = data["packages"]
     return {package["name"]: package["version"] for package in packages}
@@ -70,7 +70,7 @@ def get_all_packages(tenant=None):
 
 
 def update_settings_json(tenant, package_name, version):
-    with open(f"workspaces/{tenant}/settings.json", "r") as f:
+    with open(f"workspaces/{tenant}/settings.json") as f:
         data = json.loads(f.read())
 
     data["package_routes"].append(
@@ -82,7 +82,7 @@ def update_settings_json(tenant, package_name, version):
 
 
 def update_manifest_json(tenant, package_name, version):
-    with open(f"workspaces/{tenant}/manifest.json", "r") as f:
+    with open(f"workspaces/{tenant}/manifest.json") as f:
         data = json.loads(f.read())
 
     data["packages"].append({"name": package_name, "version": version})
@@ -111,7 +111,7 @@ def package_installed(package_name, tenant):
 
 
 def get_package_configuration_url(request, tenant, package_name):
-    with open(f"workspaces/{tenant.name}/settings.json", "r") as f:
+    with open(f"workspaces/{tenant.name}/settings.json") as f:
         data = json.loads(f.read())
     for route in data["package_routes"]:
         if route["package"] == package_name:
@@ -174,7 +174,7 @@ def install_package(package_name, version, tenant):
             ws.sync_policies()
 
         return "Package Installed"
-    except Exception as e:
+    except Exception:
         import traceback
 
         return f"Package could not be installed\n Error: {traceback.format_exc()}"

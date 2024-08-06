@@ -1,5 +1,4 @@
 import uuid
-from django.db import connection
 
 
 def get_client_ip(request):

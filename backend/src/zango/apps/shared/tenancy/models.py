@@ -2,26 +2,20 @@ import re
 import uuid
 from collections import namedtuple
 
-
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django.conf import settings
-from django_tenants.models import TenantMixin, DomainMixin
-from django.core.exceptions import ValidationError
+from django_tenants.models import DomainMixin, TenantMixin
 
 from zango.core.model_mixins import FullAuditMixin
-from zango.core.storage_utils import RandomUniqueFileName, ZFileField
-
+from zango.core.storage_utils import ZFileField
 
 from .tasks import initialize_workspace
-
-
 from .utils import (
-    TIMEZONES,
     DATEFORMAT,
     DATETIMEFORMAT,
-    DEFAULT_THEME_CONFIG,
-    assign_policies_to_anonymous_user,
+    TIMEZONES,
 )
 
 Choice = namedtuple("Choice", ["value", "display"])

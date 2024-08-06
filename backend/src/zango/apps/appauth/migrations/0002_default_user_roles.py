@@ -5,18 +5,16 @@ from django.db import migrations
 
 def create_default_userroles(apps, schema_editor):
     """
-    creates AnonymousUsers & SystemUsers roles 
+    creates AnonymousUsers & SystemUsers roles
     """
-    user_role_model = apps.get_model('appauth', 'UserRoleModel')
-    user_role_model.objects.create(name='AnonymousUsers', is_default=True)
-    user_role_model.objects.create(name='SystemUsers', is_default=True)
-
+    user_role_model = apps.get_model("appauth", "UserRoleModel")
+    user_role_model.objects.create(name="AnonymousUsers", is_default=True)
+    user_role_model.objects.create(name="SystemUsers", is_default=True)
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('appauth', '0001_initial'),
+        ("appauth", "0001_initial"),
     ]
 
     operations = [

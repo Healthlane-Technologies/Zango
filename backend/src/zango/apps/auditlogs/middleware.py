@@ -1,5 +1,5 @@
-from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 
 from zango.apps.auditlogs.cid import set_cid
 from zango.apps.auditlogs.context import set_actor

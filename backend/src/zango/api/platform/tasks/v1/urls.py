@@ -1,5 +1,6 @@
 from django.urls import path, re_path
-from .views import AppTaskView, AppTaskDetailView
+
+from .views import AppTaskDetailView, AppTaskView
 
 urlpatterns = [
     path("", AppTaskView.as_view()),

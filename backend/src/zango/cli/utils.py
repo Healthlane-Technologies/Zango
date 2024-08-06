@@ -1,6 +1,3 @@
-import re
-
-
 def replace_placeholders_in_file(filename, replacements):
     """
     Replaces placeholders in a file with specified values.
@@ -14,7 +11,7 @@ def replace_placeholders_in_file(filename, replacements):
             "{{age}}": "30"
         }
     """
-    with open(filename, "r") as file:
+    with open(filename) as file:
         content = file.read()
 
     for placeholder, value in replacements.items():

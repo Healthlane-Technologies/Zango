@@ -2,7 +2,6 @@ from django.db import models
 
 
 class FullAuditMixin(models.Model):
-
     """
     An abstract base class model that provides audit fields
     to keep track of creation and modification timestamps
@@ -16,18 +15,13 @@ class FullAuditMixin(models.Model):
     - `modified_by`: The user who last modified the object.
                     This is non-editable and can be left blank.
     """
+
     # TODO: make created_by and modified_by as fk to Users
 
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-    created_by = models.CharField(
-        max_length=255, blank=True, editable=False
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.CharField(max_length=255, blank=True, editable=False)
     modified_at = models.DateTimeField(auto_now=True)
-    modified_by = models.CharField(
-        max_length=255, blank=True, editable=False
-    )
+    modified_by = models.CharField(max_length=255, blank=True, editable=False)
 
     class Meta:
         abstract = True

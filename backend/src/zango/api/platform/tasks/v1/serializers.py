@@ -3,8 +3,8 @@ import json
 from django_celery_beat.models import CrontabSchedule
 from rest_framework import serializers
 
-from zango.apps.tasks.models import AppTask
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
+from zango.apps.tasks.models import AppTask
 from zango.apps.tasks.utils import get_crontab_obj
 
 

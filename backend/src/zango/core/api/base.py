@@ -1,8 +1,8 @@
-from rest_framework.views import APIView
-from rest_framework.authentication import SessionAuthentication
 from knox.auth import TokenAuthentication
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.views import APIView
 
-from ..permissions import IsAuthenticatedPlatformUser, IsAuthenticatedAppUser
+from ..permissions import IsAuthenticatedAppUser, IsAuthenticatedPlatformUser
 
 
 class ZangoSessionPlatformAPIView(APIView):

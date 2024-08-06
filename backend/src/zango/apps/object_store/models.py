@@ -1,8 +1,8 @@
-from django.db import models
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
-
 import importlib
+
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.db import models
 
 
 class ObjectStore(models.Model):
@@ -29,8 +29,9 @@ class ObjectStore(models.Model):
 
             # Check if the object belongs to "dynamic_models" app
             if obj_store_instance.content_type.app_label == "dynamic_models":
-                from zango.apps.dynamic_models.workspace.base import Workspace
                 from django.db import connection
+
+                from zango.apps.dynamic_models.workspace.base import Workspace
 
                 model_name = obj_store_instance.content_type.model
                 wobj = Workspace(connection.tenant, as_systemuser=True)
@@ -48,7 +49,7 @@ class ObjectStore(models.Model):
                                 content_model = [obj]
                                 break
 
-                    except:
+                    except Exception:
                         pass
 
                 # If content model found, retrieve the object by primary key

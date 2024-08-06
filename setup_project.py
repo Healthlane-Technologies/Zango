@@ -1,10 +1,10 @@
-import os
-import sys
 import argparse
-import traceback
+import os
 import shutil
 import signal
 import subprocess
+import sys
+import traceback
 
 
 def load_necessary_files(project_dir, project_name, without_db):
@@ -31,20 +31,20 @@ def write_env_file(project_dir, args):
         f.write(f"PLATFORM_USERNAME={args.platform_username}\n")
         f.write(f"PLATFORM_USER_PASSWORD={args.platform_user_password}\n")
         f.write(f"PROJECT_NAME={args.project_name}\n")
-        f.write(f"POSTGRES_USER=zango_admin\n")
-        f.write(f"POSTGRES_PASSWORD=zangopass\n")
-        f.write(f"POSTGRES_DB=zango\n")
-        f.write(f"POSTGRES_HOST=postgres\n")
-        f.write(f"POSTGRES_PORT=5432\n")
-        f.write(f"REDIS_HOST=redis\n")
-        f.write(f"REDIS_PORT=6379\n")
-        f.write(f"OTEL_IS_ENABLED=false\n")
-        f.write(f"OTEL_EXPORT_TO_OTLP=false\n")
-        f.write(f"OTEL_EXPORTER_OTLP_ENDPOINT=''\n")
-        f.write(f"OTEL_EXPORTER_OTLP_HEADERS=''\n")
-        f.write(f"OTEL_EXPORTER_PROTOCOL=''\n")
+        f.write("POSTGRES_USER=zango_admin\n")
+        f.write("POSTGRES_PASSWORD=zangopass\n")
+        f.write("POSTGRES_DB=zango\n")
+        f.write("POSTGRES_HOST=postgres\n")
+        f.write("POSTGRES_PORT=5432\n")
+        f.write("REDIS_HOST=redis\n")
+        f.write("REDIS_PORT=6379\n")
+        f.write("OTEL_IS_ENABLED=false\n")
+        f.write("OTEL_EXPORT_TO_OTLP=false\n")
+        f.write("OTEL_EXPORTER_OTLP_ENDPOINT=''\n")
+        f.write("OTEL_EXPORTER_OTLP_HEADERS=''\n")
+        f.write("OTEL_EXPORTER_PROTOCOL=''\n")
         f.write(f"OTEL_RESROUCE_NAME={args.project_name}\n")
-        
+
         if args.platform_domain_url:
             f.write(f"PLATFORM_DOMAIN_URL={args.platform_domain_url}\n")
 
@@ -92,7 +92,7 @@ def setup_project(project_dir, project_name, without_db, start=False):
 
 def rebuild_core(project_dir):
     try:
-        subprocess.run(f"docker build -t zango .", shell=True, check=True)
+        subprocess.run("docker build -t zango .", shell=True, check=True)
         subprocess.run(
             f"docker compose -f {project_dir}/docker-compose.yml build",
             shell=True,
