@@ -38,6 +38,13 @@ def write_env_file(project_dir, args):
         f.write(f"POSTGRES_PORT=5432\n")
         f.write(f"REDIS_HOST=redis\n")
         f.write(f"REDIS_PORT=6379\n")
+        f.write(f"OTEL_IS_ENABLED=false\n")
+        f.write(f"OTEL_EXPORT_TO_OTLP=false\n")
+        f.write(f"OTEL_EXPORTER_OTLP_ENDPOINT=''\n")
+        f.write(f"OTEL_EXPORTER_OTLP_HEADERS=''\n")
+        f.write(f"OTEL_EXPORTER_PROTOCOL=''\n")
+        f.write(f"OTEL_RESROUCE_NAME={args.project_name}\n")
+        
         if args.platform_domain_url:
             f.write(f"PLATFORM_DOMAIN_URL={args.platform_domain_url}\n")
 
