@@ -6,6 +6,7 @@ import subprocess
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
+from packaging.version import Version
 
 from django.conf import settings
 from django.db import connection
@@ -44,9 +45,9 @@ def get_all_packages(tenant=None):
         version = name.split("/")[1]
         name = name.split("/")[0]
         if name not in packages:
-            packages[name] = {"versions": [version]}
+            packages[name] = {"versions": [Version(version)]}
         else:
-            packages[name]["versions"].append(version)
+            packages[name]["versions"].append(Version(version))
         if tenant is not None:
             if installed_packages.get(name):
                 packages[name]["status"] = "Installed"
@@ -55,6 +56,14 @@ def get_all_packages(tenant=None):
                 name = name.split("/")[0]
                 packages[name]["status"] = "Not Installed"
     resp_data = []
+    for package in packages.keys():
+        if packages[package].get("versions"):
+            packages[package]["versions"] = sorted(
+                packages[package]["versions"], reverse=True
+            )
+            packages[package]["versions"] = [
+                str(version) for version in packages[package]["versions"]
+            ]
     for package, data in packages.items():
         resp_data.append({"name": package, **data})
     for local_package in installed_packages.keys():

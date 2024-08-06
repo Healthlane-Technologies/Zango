@@ -35,6 +35,7 @@ django-ipware==7.0.1
 django-decorator-include==3.0
 setuptools==70.1.1
 django-axes==6.4.0
+packaging==24.1
 opentelemetry-api==1.22.0
 opentelemetry-distro==0.43b0
 opentelemetry-exporter-otlp==1.22.0
