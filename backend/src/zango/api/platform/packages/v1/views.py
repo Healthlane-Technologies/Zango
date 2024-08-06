@@ -21,6 +21,7 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def get(self, request, app_uuid, *args, **kwargs):
         action = request.GET.get("action", None)
         tenant = self.get_app_obj(app_uuid)
+        search = request.GET.get("search", None)
         if action == "config_url":
             domains = Domain.objects.filter(tenant=tenant)
             if len(domains) == 0:
@@ -43,6 +44,10 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             return get_api_response(True, resp, status)
         try:
             packages = get_all_packages(tenant.name)
+            if search:
+                packages = [
+                    obj for obj in packages if search.lower() in obj["name"].lower()
+                ]
             paginated_packages = self.paginate_queryset(packages, request, view=self)
             packages = self.get_paginated_response_data(paginated_packages)
             success = True

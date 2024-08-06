@@ -6,14 +6,12 @@ from django.db import models, connection
 from django.db.models import Q
 from django.apps import apps
 from django.core.exceptions import PermissionDenied
-from django.contrib.contenttypes.models import ContentType
 
 from zango.apps.appauth.models import AppUserModel
 from zango.core.utils import get_current_request, get_current_role
-from zango.apps.shared.platformauth.models import PlatformUserModel
 from zango.apps.dynamic_models.permissions import is_platform_user
 
-from zango.apps.object_store.models import ObjectStore
+from .mixin import DynamicModelMixin
 
 
 class RegisterOnceModeMeta(type(models.Model)):
@@ -323,7 +321,7 @@ class RestrictedManager(models.Manager):
         return qs.all()
 
 
-class DynamicModelBase(models.Model, metaclass=RegisterOnceModeMeta):
+class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceModeMeta):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         AppUserModel, null=True, editable=False, on_delete=models.PROTECT
