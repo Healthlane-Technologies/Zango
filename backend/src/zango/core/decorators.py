@@ -16,7 +16,7 @@ def internal_access_only(f):
         callable: Decorated view function.
 
     Raises:
-        Http404: If the client's IP is not in the list of allowed IPs and the environment is 'staging' or 'prod'.
+        HttpResponseForbidden: If the client's IP is not in the list of allowed IPs and the environment is 'staging' or 'prod'.
 
     """
 
