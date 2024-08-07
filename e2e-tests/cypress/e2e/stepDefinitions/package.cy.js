@@ -15,7 +15,7 @@ Given("User navigates to Package tab", () => {
   });
 });
 
-When("Validate the Package tab URL", () => {
+And("Validate the Package tab URL", () => {
   cy.url().should("contain", "/packages-management");
 });
 
@@ -43,41 +43,17 @@ Then(
   }
 );
 
-When("Admin clicks on the sync policy button", () => {
-  cy.intercept("POST", `/api/v1/apps/${appData.app_uuid}/policies/*`).as(
-    "getSyncPolicies"
-  );
-  appPanelPageObjects.getSyncPolicyButton().click();
-  cy.wait(2000);
-});
-
-Then(
-  "Api response post syncing policies should have message {string} and status code {int}",
-  (message, statusCode) => {
-    cy.wait("@getSyncPolicies").then((intercept) => {
-      expect(intercept.response.statusCode).to.eq(statusCode);
-      expect(JSON.parse(intercept.response.body).response.message).to.equal(
-        message
-      );
-    });
-  }
-);
-
 And(
   "Admin clicks on the package table search button and Enters the {string}",
   (package_name) => {
     appPanelPageObjects.getPackageSearchBar().type(package_name);
-    cy.intercept("GET", `/api/v1/apps/${appData.app_uuid}/packages/*`).as(
-      "getPackage"
-    );
-    cy.wait(5000);
+    cy.wait(3000);
   }
 );
 
 And(
   "Admin clicks on the install package button under the three dots menu",
   () => {
-    cy.wait(5000);
     cy.get("table > tbody > tr:nth-child(1)").trigger("mouseover");
     cy.get('[data-cy="three_dots_menu"]').click({
       force: true,
@@ -104,7 +80,34 @@ And("Install package form should contain following fields", (datatables) => {
 });
 
 And("Admin selects the version and submits the form", () => {
+  cy.intercept("POST", `/api/v1/apps/${appData.app_uuid}/packages/*`).as(
+    "getPackageInstalled"
+  );
+  cy.intercept("GET", `/api/v1/apps/${appData.app_uuid}/packages/*`).as(
+    "getPackage"
+  );
   appPanelPageObjects.getDropDownButton().click();
   appPanelPageObjects.getVersion().click();
-  // appPanelPageObjects.getSubmitButton().click();
+  appPanelPageObjects.getSubmitButton().click();
+});
+
+Then(
+  "Api response post package installation should have message {string} and status code {int}",
+  (message, statusCode) => {
+    cy.wait("@getPackageInstalled").then((intercept) => {
+      expect(intercept.response.statusCode).to.eq(statusCode);
+      expect(JSON.parse(intercept.response.body).response.message).to.equal(
+        message
+      );
+    });
+  }
+);
+
+Then("Verify if the package is installed successfully", () => {
+  cy.wait("@getPackage").then((intercept) => {
+    // Assert on the API response
+    expect(
+      JSON.parse(intercept.response.body).response.packages.records[0].status
+    ).to.equal("Installed");
+  });
 });
