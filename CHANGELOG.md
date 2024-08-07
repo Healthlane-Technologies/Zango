@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Zango App Release workflow
+- Zango  App Release workflow
 
 ## [0.3.0] - 2024-08-06
 
