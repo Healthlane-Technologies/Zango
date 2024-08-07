@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2024-08-06
+
+### Added
+
+- enabled nginx logs [(#281)](https://github.com/Healthlane-Technologies/Zango/pull/281)
+- Access Logs [(#285)](https://github.com/Healthlane-Technologies/Zango/pull/285)
+- github actions: zango release workflow [(#301)](https://github.com/Healthlane-Technologies/Zango/pull/301)
+- github actions: frontend build generation workflow [(#316)](https://github.com/Healthlane-Technologies/Zango/pull/316)
+- contribution doc and fix use_latest template tag [(#293)](https://github.com/Healthlane-Technologies/Zango/pull/293)
+- Support for telemetry, loguru, refactored settings [(#296)](https://github.com/Healthlane-Technologies/Zango/pull/296)
+- create_app_user util for objects [(#338)](https://github.com/Healthlane-Technologies/Zango/pull/338)
+- 403 returned instead of 404 in internal_use_only decorator [(#339)](https://github.com/Healthlane-Technologies/Zango/pull/339)
+- utils modified to take otel defaults if not defined in settings [(#341)](https://github.com/Healthlane-Technologies/Zango/pull/341)
+- package name search added in app panel [(#333)](https://github.com/Healthlane-Technologies/Zango/pull/333)
+- cypress e2e tests [(#342)](https://github.com/Healthlane-Technologies/Zango/pull/342)
+
+### Fixed
+- gitpod fix [(#286)](https://github.com/Healthlane-Technologies/Zango/pull/286)
+- missing version for dependencies [(#320)](https://github.com/Healthlane-Technologies/Zango/pull/320)
+- auditlogs now gets default timezone of host if timezone is not specified [(#322)](https://github.com/Healthlane-Technologies/Zango/pull/322)
+- fix: installing requirements and postgres issue in project setup with docker [(#326)](https://github.com/Healthlane-Technologies/Zango/pull/326)
+
 ## [0.2.1] - 2024-06-26
 
 ### Fixed

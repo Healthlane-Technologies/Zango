@@ -8,7 +8,7 @@ REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
 
 README = os.path.join(PROJECT_DIR, "README.md")
 
-PLATFORM_VERSION = "0.2.1"
+PLATFORM_VERSION = "0.3.0"
 
 
 def get_requirements(env):
@@ -44,7 +44,7 @@ setup(
         "Framework :: Django",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Development Status :: 5 - Production/Stable"
+        "Development Status :: 5 - Production/Stable",
     ],
     entry_points={
         "console_scripts": [
