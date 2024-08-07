@@ -295,6 +295,8 @@ def setup_settings(settings, BASE_DIR):
         OTEL_EXPORTER_OTLP_HEADERS=(str, ""),
         OTEL_EXPORTER_PROTOCOL=(str, ""),
         OTEL_RESOURCE_NAME=(str, "Zango"),
+        GIT_USERNAME=(str, ""),
+        GIT_PASSWORD=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -435,6 +437,10 @@ def setup_settings(settings, BASE_DIR):
 
     if settings.OTEL_IS_ENABLED:
         MIDDLEWARE.append("zango.middleware.telemetry.OtelZangoContextMiddleware")
+
+    # Git Settings
+    settings.GIT_USERNAME = env("GIT_USERNAME")
+    settings.GIT_PASSWORD = env("GIT_PASSWORD")
 
     settings_result = {"env": env}
 
