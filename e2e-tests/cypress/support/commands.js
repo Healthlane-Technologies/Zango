@@ -27,11 +27,11 @@
 import "cypress-file-upload";
 
 Cypress.Commands.add("login", (username, password) => {
-  // cy.visit("http://localhost:8000/auth/login/?next=/platform/");
+  cy.visit("http://localhost:8000/auth/login/?next=/platform/");
   // cy.visit("https://zel3-platform.zelthy.in/auth/login/?next=/platform/");
-  cy.visit(
-    "https://8000-healthlanetechno-zango-w2ugr0bfr7e.ws-us115.gitpod.io/platform"
-  );
+  // cy.visit(
+  //   "https://8000-healthlanetechno-zango-w2ugr0bfr7e.ws-us115.gitpod.io/platform"
+  // );
   cy.get('[type="text"]').type(username);
   cy.get('[type="password"]').type(password);
   cy.get("button").click();
