@@ -389,7 +389,7 @@ def is_update_allowed(tenant, app_settings, repo_url, branch):
     installed_zango_version = version.parse(zango.__version__)
     # Compare the installed version with the required version
     try:
-        specifier = specifiers.SpecifierSet(zango_version)
+        specifier = specifiers.SpecifierSet(zango_version, prereleases=True)
         if installed_zango_version not in specifier:
             return (
                 False,
