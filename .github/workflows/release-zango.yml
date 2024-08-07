@@ -6,7 +6,7 @@ on:
     paths:
       - 'CHANGELOG.md'
     branches:
-      - main
+      - 0-4-0-alpha
 
 jobs:
   check-publish:
@@ -60,12 +60,12 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and Push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
+    # - name: Build and Push Docker image
+    #   uses: docker/build-push-action@v4
+    #   with:
+    #     context: .
+    #     push: true
+    #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
     
     - name: Build and Push Docker image with tag
       uses: docker/build-push-action@v4
@@ -163,15 +163,15 @@ jobs:
       with:
         file: CHANGELOG.md
         pattern: '${{ needs.check-publish.outputs.version }}'
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # - name: Create Release
+    #   id: create_release
+    #   uses: actions/create-release@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      with:
-        tag_name: v${{ needs.check-publish.outputs.version }}
-        release_name: v${{ needs.check-publish.outputs.version }}
-        prerelease: false
-        draft: false
-        body: ${{ steps.extract-changelog.outputs.markdown }}
+    #   with:
+    #     tag_name: v${{ needs.check-publish.outputs.version }}
+    #     release_name: v${{ needs.check-publish.outputs.version }}
+    #     prerelease: false
+    #     draft: false
+    #     body: ${{ steps.extract-changelog.outputs.markdown }}
