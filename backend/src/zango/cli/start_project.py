@@ -52,7 +52,9 @@ def get_project_root(project_name, directory=None):
     Returns:
         str: The root directory of the project.
     """
-    current_dir = directory or os.getcwd()
+    if directory:
+        return directory
+    current_dir = os.getcwd()
     project_root = os.path.join(current_dir, project_name)
     return project_root
 
@@ -86,7 +88,7 @@ def create_project(
 
     project_root = get_project_root(project_name, directory=directory)
 
-    if os.path.exists(project_root):
+    if not directory and os.path.exists(project_root):
         return False, f"Folder already exists: {project_root}"
 
     project_template_path = os.path.join(
