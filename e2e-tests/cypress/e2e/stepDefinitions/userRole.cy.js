@@ -317,19 +317,6 @@ And("Admin updates the user role form with the valid data", () => {
       "userRoleUpdate"
     );
     appPanelPageObjects.getRoleName().clear().type(userRole.updated_user_role);
-    // appPanelPageObjects.getDropDownButton().click();
-    // appPanelPageObjects
-    //   .getDropDownValues()
-    //   .contains(element.policy_type)
-    //   .click({ force: true })
-    //   .then(() => {
-    //     appPanelPageObjects
-    //       .getDropDownButton()
-    //       .should(
-    //         "have.text",
-    //         "1 selectedAllowFromAnywhereAllowFromAnywhere"
-    //       );
-    //   });
     appPanelPageObjects.getSubmitButton().click({ force: true });
   });
 });

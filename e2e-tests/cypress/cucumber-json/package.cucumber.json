@@ -1,0 +1,190 @@
+[
+  {
+    "keyword": "Feature",
+    "name": "Package Management",
+    "line": 1,
+    "id": "package-management",
+    "tags": [],
+    "uri": "package.feature",
+    "elements": [
+      {
+        "id": "package-management;admin-wants-to-verify-the-contents-of-package-tab",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "Admin wants to verify the contents of package tab",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "User navigates to Package tab",
+            "result": {
+              "status": "passed",
+              "duration": 13315000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 6,
+            "name": "Validate the Package tab URL",
+            "result": {
+              "status": "passed",
+              "duration": 13000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "Column_1",
+                      "Column_2",
+                      "Column_3",
+                      "Column_4"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Package Name",
+                      "Version",
+                      "Status",
+                      "Status"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 7,
+            "name": "Package table should contain the following columns",
+            "result": {
+              "status": "passed",
+              "duration": 1006000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 10,
+            "name": "Api response post landing on Package tab should have status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 15000000
+            }
+          }
+        ]
+      },
+      {
+        "id": "package-management;admin-wants-to-install-the-packages",
+        "keyword": "Scenario",
+        "line": 27,
+        "name": "Admin wants to install the packages",
+        "tags": [],
+        "type": "scenario",
+        "steps": [
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 3,
+            "name": "User navigates to Package tab",
+            "result": {
+              "status": "passed",
+              "duration": 12394000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 13,
+            "name": "Admin clicks on the package table search button and Enters the \"login\"",
+            "result": {
+              "status": "passed",
+              "duration": 4158000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 14,
+            "name": "Admin clicks on the install package button under the three dots menu",
+            "result": {
+              "status": "passed",
+              "duration": 253000000
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "field_name_1",
+                      "field_name_2"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Package Name",
+                      "Version"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 15,
+            "name": "Install package form should contain following fields",
+            "result": {
+              "status": "passed",
+              "duration": 50000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "Admin selects the version and submits the form",
+            "result": {
+              "status": "passed",
+              "duration": 630000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 19,
+            "name": "Api response post package installation should have message \"Package Installed\" and status code 200",
+            "result": {
+              "status": "passed",
+              "duration": 10367000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 20,
+            "name": "Validate the Package tab URL",
+            "result": {
+              "status": "passed",
+              "duration": 14000000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 21,
+            "name": "Verify if the package is installed successfully",
+            "result": {
+              "status": "passed",
+              "duration": 1000000000
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
