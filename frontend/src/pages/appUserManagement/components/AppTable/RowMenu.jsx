@@ -107,7 +107,7 @@ export default function RowMenu({ rowData }) {
 						<Menu.Item>
 							{({ active }) => (
 								<button
-									data-cy="reset_password_button"
+									data-cy="reset_user_password_button"
 									type="button"
 									onClick={handleResetUserPassword}
 									className="flex  w-full"

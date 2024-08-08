@@ -12,10 +12,12 @@ Feature: User Creation and Validation
         Then User should be successfully addded and admin should be redirected to the table view
         And Admin also wants to assert the Api response post user addition
         Then Api response post user creation should have message "App User created successfully." and status code 200
+
     Scenario: Required fields validation for user form
         When Admin clicks on the new user button on the user page
         And Admin skips the mandatory fields on user form
         Then Required field error message for user from should be displayed
+        
     Scenario: User creation with existing user name
         When Admin clicks on the new user button on the user page
         And Admin fills up the user form with valid data and submits the form

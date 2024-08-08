@@ -23,7 +23,7 @@ function TableBody({ table, RowMenu }) {
 						className="flex h-full w-[188px] flex-col border-b border-[#F0F3F4] px-[20px] py-[14px] group-hover:hidden"
 					></td>
 
-					<td data-cy="three_dots_menu" className="sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] from-0% to-90% px-[32px]  group-hover:flex">
+					<td className="sticky inset-y-0 right-0 z-[1] hidden h-full w-[188px] items-center justify-end border-b border-[#F0F3F4] bg-gradient-to-l from-[#F5F7F8] from-0% to-90% px-[32px]  group-hover:flex">
 						{RowMenu ? <RowMenu rowData={row.original} /> : null}
 					</td>
 				</tr>
