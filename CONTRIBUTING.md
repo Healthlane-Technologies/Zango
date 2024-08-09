@@ -2,20 +2,13 @@
 
 ## Table of Contents
 
-- [Contribution Guide for Zango](#contribution-guide-for-zango)
-  - [Table of Contents](#table-of-contents)
-  - [How to Contribute](#how-to-contribute)
-    - [Reporting Issues](#reporting-issues)
-  - [Contributing to Zango](#contributing-to-zango)
-    - [Getting Started](#getting-started)
-    - [Development Workflow](#development-workflow)
-    - [Submitting Changes](#submitting-changes)
-    - [Code Review](#code-review)
-  - [Contributing to Zango backend](#contributing-to-zango-backend)
-    - [Steps to contribute to Zango backend](#steps-to-contribute-to-zango-backend)
-  - [Contributing to Zango frontend](#contributing-to-zango-frontend)
-  - [Contributing to Documentation](#contributing-to-documentation)
-  - [Community](#community)
+1. [How to Contribute](#how-to-contribute)
+   - [Reporting Issues](#reporting-issues)
+   - [Contributing to Zango](#contributing-to-zango)
+2. [Contributing to Zango backend](#contributing-to-zango-backend)
+3. [Contributing to Zango frontend](#contributing-to-zango-frontend)
+4. [Contributing to documentation](#contributing-to-documentation)
+5. [Community](#community)
 
 ## How to Contribute
 
