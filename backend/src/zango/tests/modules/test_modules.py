@@ -4,8 +4,12 @@ import shutil
 from zango.test.cases import ZangoAppBaseTestCase
 from zango.apps.shared.tenancy.tasks import initialize_workspace
 from django.conf import settings
+from zango.test.client import ZangoClient
+from django.test import override_settings
+from django.http import HttpResponseForbidden
 
 
+@override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class ZangoModulesTest(ZangoAppBaseTestCase):
     @classmethod
     def setUpTestModule(self, module_name):
@@ -25,8 +29,6 @@ class ZangoModulesTest(ZangoAppBaseTestCase):
         os.makedirs(base_dir, exist_ok=True)
         os.makedirs(app_dir, exist_ok=True)
         os.makedirs(app_module_dir, exist_ok=True)
-
-        
 
         # Copy settings.json and manifest.json to BASE_DIR (workspaces)
         for filename in ["settings.json", "manifest.json"]:
@@ -51,3 +53,10 @@ class ZangoModulesTest(ZangoAppBaseTestCase):
     def test_app_module_exist(self):
         self.setUpAppAndModule("customers")
         self.assertModuleExists("customers", True)
+    
+    def test_module_urls(self):
+        self.setUpAppAndModule("customers")
+        self.client = ZangoClient(self.tenant)
+        res = self.client.get("/customers/customer/")
+        #forbidden: permission denied
+        self.assertIsInstance(res, HttpResponseForbidden)
