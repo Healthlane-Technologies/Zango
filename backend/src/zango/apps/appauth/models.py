@@ -22,7 +22,7 @@ from zango.apps.auditlogs.registry import auditlog
 from ..permissions.models import PolicyModel, PolicyGroupModel
 from ..permissions.mixin import PermissionMixin
 
-
+import uuid
 class UserRoleModel(FullAuditMixin, PermissionMixin):
     name = models.CharField("Unique Name of the User Role", max_length=50, unique=True)
     policies = models.ManyToManyField(
@@ -57,6 +57,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 
 class AppUserModel(AbstractZangoUserModel, PermissionMixin):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
