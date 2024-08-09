@@ -14,9 +14,7 @@ Once Python and pip are installed, you can create virtual environment in which y
     pip install -e path/to/your/zango_repo/backend
 ```
 
-4. Perform the steps to setup a new project as described in the docs [here.](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual#zango-the-zango-cli)
-5. Start your project and launch a new app.
-6. Now whatever changes you will do to your local zango it will be reflected in your project.
+This command will download and install the latest version of Zango Framework along with its dependencies.
 
 
 ## zango: The Zango CLI
