@@ -4,7 +4,7 @@ To get started with Zango, you will need to install it using the Python package 
 
 Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions [here](https://www.python.org/downloads/) and pip installation instructions [here](https://pip.pypa.io/en/stable/installation/).
 
-Once Python and pip are installed, you can create virtual environment in which your cloned zango will be installed. Follow the below setups for complete setup:
+Once Python and pip are installed, you can create virtual environment in which your cloned zango will be installed. Follow the below setps for complete setup:
 
 1. Clone the zango repository
 2. Create a new virtual environment inside a fresh directory (this virtual env will be used to setup a zango project using local copy of zango [similar to django.](https://docs.djangoproject.com/en/dev/intro/contributing/#getting-a-copy-of-django-s-development-version))
