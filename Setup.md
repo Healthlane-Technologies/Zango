@@ -4,24 +4,18 @@ To get started with Zango, you will need to install it using the Python package 
 
 Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions [here](https://www.python.org/downloads/) and pip installation instructions [here](https://pip.pypa.io/en/stable/installation/).
 
-Once Python and pip are installed, you can create virtual environment in which zango will be installed.
+Once Python and pip are installed, you can create virtual environment in which your cloned zango will be installed. Follow the below steps for complete setup:
 
-Now you are ready to create and activate the virtual environment by running the following command in your terminal or command prompt
+1. Clone the zango repository
+2. Create a new virtual environment inside a fresh directory (this virtual env will be used to setup a zango project using local copy of zango [similar to django.](https://docs.djangoproject.com/en/dev/intro/contributing/#getting-a-copy-of-django-s-development-version))
+3. Activate your virtual env and run the below command to install local copy of zango:
 
-```shell
-python3 -m venv <virtual_environment_name>
-source <virtual_environment_name>/bin/activate
-```
-
-install the Zango Open Source Platform by running the following command in your terminal or command prompt
-
-```shell
-git clone https://github.com/Healthlane-Technologies/zango.git
-cd backend
-pip install -e .
+```bash
+    pip install -e path/to/your/zango_repo/backend
 ```
 
 This command will download and install the latest version of Zango Framework along with its dependencies.
+
 
 ## zango: The Zango CLI
 

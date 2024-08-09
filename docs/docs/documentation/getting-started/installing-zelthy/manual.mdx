@@ -86,6 +86,38 @@ With the PostgreSQL database set up and ready to go, you can proceed with settin
 
 Keep in mind that the exact steps for installing PostgreSQL may vary depending on your operating system. Be sure to consult the PostgreSQL documentation or installation guide for your specific platform if you encounter any issues during the installation process.
 
+Installing and setting up postgresql database manually can be overwhelming sometimes, if you have docker installed, you can set it up in just 3 commands as follows:
+
+#### 1. **Pull the Postgres Docker Image**
+
+- The first step is to pull the Postgres Docker image from the Docker Hub repository. This is done by running the following command:
+```
+docker pull postgres
+```
+
+#### 2. **Create a Docker Volume**
+
+- Next, we need to create a Docker volume to persist our Postgres data. This is done by running the following command:
+```
+docker volume create postgres_data
+```
+
+#### 3. **Run the Postgres Docker Container**
+
+- Now we can run the Postgres Docker container using the following command:
+```
+docker run --name postgres_container -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 -v postgres_data:/var/lib/postgresql/data postgres
+```
+
+After the setup is complete, the values of DB configuration for .env would look something like:
+```
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+```
+
 ## Setting Up the Project
 
 Setting up your project with Zango is a straightforward process. Follow these steps to create your project's root folder, initialize the project, and configure the necessary settings:

@@ -22,13 +22,13 @@ This section describes the general practices for contributing to zango, you can 
 
 ### Getting Started
 
-1. **Fork the Repository**: Fork the [Zango repository](https://github.com/Healthlane-Technologies/Zango) to your GitHub account.
-2. **Clone the Repository**: Clone your forked repository to your local machine.
-3. Set Up Environment: Follow the setup instructions in Setup.md to configure your development environment.
+1. [Fork the Repository](https://help.github.com/en/github/getting-started-with-github/fork-a-repo): Fork the [Zango repository](https://github.com/Healthlane-Technologies/Zango) to your GitHub account.
+2. [Clone the Repository](https://help.github.com/en/desktop/contributing-to-projects/creating-a-pull-request): Clone your forked repository to your local machine.
+3. Set Up Environment: Follow the setup instructions in [Setup.md](https://github.com/Healthlane-Technologies/Zango/blob/main/Setup.md) to configure your development environment.
 
 ### Development Workflow
 
-1. Create a Branch: Create a new branch for your feature or bugfix
+1. Create a Branch: Create a new branch for your changes.
 
 ```bash
     git checkout -b feature/your-feature-name
@@ -50,7 +50,7 @@ This section describes the general practices for contributing to zango, you can 
     git push origin feature/your-feature-name
 ```
 
-2. Create a Pull Request: Open a pull request from your branch to the main branch of the original repository. Provide a clear description of your changes and link any related issues.
+2. [Create a Pull Request](https://opensource.com/article/19/7/create-pull-request-github): Open a pull request from your branch to the main branch of the original repository. Provide a clear description of your changes and link any related issues.
 
 ### Code Review
 
@@ -62,21 +62,21 @@ This section describes the general practices for contributing to zango, you can 
 ### Steps to contribute to Zango backend
 
 1. Clone the zango repository
-2. Create a new virtual environment
-3. From the `zango/backend` directory run the following command
+2. Create a new virtual environment inside a fresh directory (this virtual env will be used to setup a zango project using local copy of zango [similar to django.](https://docs.djangoproject.com/en/dev/intro/contributing/#getting-a-copy-of-django-s-development-version))
+3. Activate your virtual env and run the below command to install local copy of zango:
 
 ```bash
-    pip install -e .
+    pip install -e path/to/your/zango_repo/backend
 ```
 
-4. Perform the steps to setup a new project as described in the docs [here](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual#zango-the-zango-cli)
-5. Start your project
-6. Lanuch a new app
-7. Make changes to Zango and view the changes through your project.
+4. Perform the steps to setup a new project as described in the docs [here.](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual#zango-the-zango-cli)
+5. Start your project and launch a new app.
+6. Now whatever changes you will do to your local zango it will be reflected in your project.
 
 **Running Migrations:** You can run all the Zango migrations using the command `python manage.py migrate_schemas`, this is for the zango
-core migrations only, you can create and run app specific migrations as described [here](https://www.zango.dev/docs/core/ddms/migrating-ddms)
-**Static Files:** To add static files that you have added to Zango, you can use the command `python manage.py collectstatic`
+core migrations only, you can create and run app specific migrations as described [here](https://www.zango.dev/docs/core/ddms/migrating-ddms).
+
+**Static Files:** To add static files that you have added to Zango, you can use the command `python manage.py collectstatic`.
 
 ## Contributing to Zango frontend
 
