@@ -26,8 +26,5 @@ echo "postgres connection established"
 
 pushd backend/test_project
 
-EXECUTORS=( standard multiprocessing )
 
-for executor in "${EXECUTORS[@]}"; do
-    EXECUTOR=$executor PYTHONWARNINGS=d coverage run manage.py test -v2 zango
-done
+PYTHONWARNINGS=d coverage run manage.py test -v2 zango

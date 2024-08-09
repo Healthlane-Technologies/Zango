@@ -6,12 +6,12 @@ from django.test import override_settings
 from django.conf import settings
 from zango.cli.start_project import create_platform_user
 
+
 @override_settings(ROOT_URLCONF="zango.tests.test_client.urls")
 class AppPanelLoginTests(ZangoTestCase):
     """
     This test class is configured to use public tenant.
     """
-    login_credentials=None
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -22,7 +22,7 @@ class AppPanelLoginTests(ZangoTestCase):
         :return:
         """
         tenant.name = "testserver"
-        tenant.tenant_type = "public" # set this to app for app level tenants
+        tenant.tenant_type = "public"  # set this to app for app level tenants
         return tenant
 
     @classmethod
@@ -31,39 +31,40 @@ class AppPanelLoginTests(ZangoTestCase):
 
     @classmethod
     def get_test_schema_name(cls):
-        return 'public'
-    
+        return "public"
+
     @classmethod
     def setUpClass(cls):
-        if 'test.testserver.com' not in settings.ALLOWED_HOSTS:
-            settings.ALLOWED_HOSTS += ['test.testserver.com']
+        if "test.testserver.com" not in settings.ALLOWED_HOSTS:
+            settings.ALLOWED_HOSTS += ["test.testserver.com"]
 
         create_platform_user("test_user@gmail.com", "Testpassword@123")
-    
-        super().setUpClass()
-    
-    def test_app_panel_direct_response(self):
 
+        super().setUpClass()
+
+    def test_app_panel_direct_response(self):
         self.client = ZangoClient(self.tenant)
 
-        response = self.client.get('/auth/login/')
+        response = self.client.get("/auth/login/")
         self.assertEqual(response.status_code, 200)
 
-        self.assertTemplateUsed(response, 'app_panel/app_panel_login.html')
+        self.assertTemplateUsed(response, "app_panel/app_panel_login.html")
 
     def test_app_panel_redirect_response(self):
         self.client = ZangoClient(self.tenant)
 
-        response = self.client.get('/platform/')
+        response = self.client.get("/platform/")
         self.assertIsInstance(response, HttpResponseRedirect)
 
-        self.assertEqual(response.url, '/auth/login/?next=/platform/')
+        self.assertEqual(response.url, "/auth/login/?next=/platform/")
         response = self.client.get(response.url)
         self.assertEqual(response.status_code, 200)
 
-        self.assertTemplateUsed(response, 'app_panel/app_panel_login.html')
+        self.assertTemplateUsed(response, "app_panel/app_panel_login.html")
 
     def test_app_panel_login(self):
         self.client = ZangoClient(self.tenant)
-        res = self.client.login(username="test_user@gmail.com",password="Testpassword@123")
+        res = self.client.login(
+            username="test_user@gmail.com", password="Testpassword@123"
+        )
         self.assertTrue(res)
