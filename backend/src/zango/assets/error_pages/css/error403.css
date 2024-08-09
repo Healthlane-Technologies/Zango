@@ -1,0 +1,90 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+body {
+  color: white;
+  background: #161622;
+}
+.container {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.error-content {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+
+  margin-top: 22px;
+}
+.img-container {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+.not-found {
+  font-family: Source Sans Pro;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 48px;
+  line-height: 120%;
+
+  text-align: center;
+  letter-spacing: 0.25px;
+
+  color: rgba(255, 255, 255, 0.9);
+}
+.error-status {
+  width: 854.47px;
+  height: 322.89px;
+  position: absolute;
+  top: 167px;
+}
+.error-img {
+  width: 387px;
+  height: 357.46px;
+  margin-top: 126px;
+  z-index: 1;
+}
+.not-found-title {
+  font-family: Source Sans Pro;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 22.4px;
+  line-height: 140%;
+  width: 374.99px;
+
+  display: flex;
+  align-items: center;
+  text-align: center;
+  border: none;
+
+  color: rgba(255, 255, 255, 0.75);
+}
+
+button[type='submit'] {
+  background: #5048ed;
+  border-radius: 4px;
+  color: white;
+  margin: 24px 0 0 0;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  font-family: Source Sans Pro;
+  padding: 14.5px 32px;
+  outline: none;
+}
+.button-container {
+  display: flex;
+}
+.each-button {
+  margin: 10px;
+}
