@@ -17,6 +17,7 @@ class BaseZangoRequestFactory:
         # Assign the tenant to the request object
         request.tenant = self.tenant
         return request
+    
 class ZangoRequestFactory(BaseZangoRequestFactory, RequestFactory):
     pass
 
