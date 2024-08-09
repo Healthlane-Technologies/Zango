@@ -22,9 +22,9 @@ This section describes the general practices for contributing to zango, you can 
 
 ### Getting Started
 
-1. [**Fork the Repository**]((https://help.github.com/en/github/getting-started-with-github/fork-a-repo)): Fork the [Zango repository](https://github.com/Healthlane-Technologies/Zango) to your GitHub account.
-2. [**Clone the Repository**](https://help.github.com/en/desktop/contributing-to-projects/creating-a-pull-request): Clone your forked repository to your local machine.
-3. [**Set Up Environment**]: Follow the setup instructions in [Setup.md](https://github.com/Healthlane-Technologies/Zango/blob/main/Setup.md) to configure your development environment.
+1. [Fork the Repository](https://help.github.com/en/github/getting-started-with-github/fork-a-repo): Fork the [Zango repository](https://github.com/Healthlane-Technologies/Zango) to your GitHub account.
+2. [Clone the Repository](https://help.github.com/en/desktop/contributing-to-projects/creating-a-pull-request): Clone your forked repository to your local machine.
+3. [Set Up Environment]: Follow the setup instructions in [Setup.md](https://github.com/Healthlane-Technologies/Zango/blob/main/Setup.md) to configure your development environment.
 
 ### Development Workflow
 
