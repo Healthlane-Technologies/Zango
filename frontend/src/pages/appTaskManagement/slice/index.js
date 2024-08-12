@@ -5,8 +5,11 @@ export const appTaskManagementSlice = createSlice({
 	initialState: {
 		isUpdateTaskModalOpen: false,
 		isRemoveAllPoliciesModalOpen: false,
+		isTaskHistoryModalOpen : false,
+
 		rerenderPage: false,
 		appTaskManagementData: null,
+		appTaskHistoryData : null,
 		appTaskManagementFormData: null,
 		appTaskManagementTableData: {
 			searchValue: '',
@@ -35,10 +38,27 @@ export const appTaskManagementSlice = createSlice({
 			state.isRemoveAllPoliciesModalOpen = true;
 			state.appTaskManagementFormData = action.payload;
 		},
+
+		openIsTaskHistoryModalOpen :(state, action) => {
+			state.isTaskHistoryModalOpen = action.payload;
+			// state.appTaskManagementFormData = action.payload;
+		},
+
+
 		closeIsRemoveAllPoliciesModalOpen: (state) => {
 			state.isRemoveAllPoliciesModalOpen = false;
 			state.appTaskManagementFormData = null;
 		},
+		setAppTaskHistoryData: (state, action) => {
+			state.appTaskHistoryData = action.payload;
+			// state.isAppTaskManagementDataEmpty =
+			// 	action.payload?.tasks?.records?.length ||
+			// 	state?.appTaskManagementTableData?.searchValue ||
+			// 	state?.appTaskManagementTableData?.columns?.length
+			// 		? false
+			// 		: true;
+		},
+
 		setAppTaskManagementData: (state, action) => {
 			state.appTaskManagementData = action.payload;
 			state.isAppTaskManagementDataEmpty =
@@ -65,7 +85,9 @@ export const {
 	openIsRemoveAllPoliciesModalOpen,
 	closeIsRemoveAllPoliciesModalOpen,
 	setAppTaskManagementData,
+	setAppTaskHistoryData,
 	setAppTaskManagementTableData,
+	openIsTaskHistoryModalOpen,
 
 	toggleRerenderPage,
 } = appTaskManagementSlice.actions;
@@ -82,6 +104,8 @@ export const selectRerenderPage = (state) =>
 export const selectAppTaskManagementData = (state) =>
 	state.appTaskManagement.appTaskManagementData;
 
+export const selectAppTaskHistoryData = (state) =>
+	state.appTaskManagement.appTaskHistoryData;
 export const selectAppTaskManagementTableData = (state) =>
 	state.appTaskManagement.appTaskManagementTableData;
 
@@ -90,5 +114,8 @@ export const selectAppTaskManagementFormData = (state) =>
 
 export const selectIsAppTaskManagementDataEmpty = (state) =>
 	state.appTaskManagement.isAppTaskManagementDataEmpty;
+
+export const selectIsTaskHistoryModalOpen = (state) =>
+	state.appTaskManagement.isTaskHistoryModalOpen;
 
 export default appTaskManagementSlice.reducer;
