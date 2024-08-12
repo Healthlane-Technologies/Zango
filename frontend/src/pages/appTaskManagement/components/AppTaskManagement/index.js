@@ -14,6 +14,7 @@ import AppTable from '../AppTable';
 import RemoveAllPoliciesModal from '../Modals/RemoveAllPoliciesModal';
 import UpdateTaskModal from '../Modals/UpdateTaskModal';
 import SyncTask from '../SyncTask';
+import TaskHistoryModal from '../AppTable/TaskHistoryModal/Index';
 
 export default function AppTaskManagement() {
 	let { appId } = useParams();
@@ -101,6 +102,7 @@ export default function AppTaskManagement() {
 			</div>
 			<UpdateTaskModal />
 			<RemoveAllPoliciesModal />
+			<TaskHistoryModal/>
 		</>
 	);
 }
