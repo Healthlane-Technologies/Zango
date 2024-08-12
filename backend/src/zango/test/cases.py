@@ -88,6 +88,34 @@ class ZangoAppBaseTestCase(ZangoTestCase):
             print("workspaces have been deleted.")
         else:
             print("workspaces does not exist.")
+    
+    @classmethod
+    def setUpTestModule(self, module_name):
+        # Paths to the test module directory and the files folder within it
+        test_module_dir = os.path.join(
+            Path(__file__).resolve().parent.parent, module_name
+        )
+        if not os.path.exists(test_module_dir):
+            raise FileNotFoundError(f"Test app module '{test_module_dir}' does not exist.")
+
+        # Define the source directory for copying
+        workspace_src_dir = os.path.join(test_module_dir, "workspace")
+        
+        # Define the destination directory
+        base_dir = os.path.join(settings.BASE_DIR, "workspaces")
+
+        # Ensure the destination directory exists
+        os.makedirs(base_dir, exist_ok=True)
+
+        # Copy the entire 'workspace' directory to BASE_DIR/workspaces
+        if os.path.exists(workspace_src_dir) and os.path.isdir(workspace_src_dir):
+            for item in os.listdir(workspace_src_dir):
+                src = os.path.join(workspace_src_dir, item)
+                dst = os.path.join(base_dir, "testapp", item)
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(src, dst)
 
     @classmethod
     def assertModuleExists(cls, module_name, expected):

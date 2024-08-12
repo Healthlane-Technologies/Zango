@@ -1,0 +1,16 @@
+{
+    "policies": [
+          {
+                "name": "CustomerGetViewAccess",
+                "description": "Access to the Customer GET View",
+                "statement": {
+                   "permissions": [
+                      {
+                            "name": "customers.views.TestDynamicView",
+                            "type": "view"
+                      }
+                   ]
+                }
+          }
+    ]
+}
