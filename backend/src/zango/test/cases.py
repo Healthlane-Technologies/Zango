@@ -85,15 +85,15 @@ class ZangoAppBaseTestCase(ZangoTestCase):
 
         if os.path.exists(workspaces_dir) and os.path.isdir(workspaces_dir):
             shutil.rmtree(workspaces_dir)
-            print("workspaces have been deleted.")
+            print("test workspaces have been deleted.")
         else:
-            print("workspaces does not exist.")
+            print("test workspaces does not exist.")
     
     @classmethod
     def setUpTestModule(self, module_name):
         # Paths to the test module directory and the files folder within it
         test_module_dir = os.path.join(
-            Path(__file__).resolve().parent.parent, module_name
+            Path(__file__).resolve().parent.parent,"tests", module_name
         )
         if not os.path.exists(test_module_dir):
             raise FileNotFoundError(f"Test app module '{test_module_dir}' does not exist.")
