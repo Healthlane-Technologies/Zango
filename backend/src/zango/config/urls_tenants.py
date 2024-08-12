@@ -20,7 +20,3 @@ if settings.DEBUG:
 urlpatterns += [
     re_path(r"^((?:[\w\-:.,]+/)*)$", include("zango.apps.dynamic_models.urls")),
 ]
-
-# handler404 = "zango.core.generic_views.error.handler_404"
-# handler500 = "zango.core.generic_views.error.handler_500"
-# handler403 = "zango.core.generic_views.error.handler_403"
