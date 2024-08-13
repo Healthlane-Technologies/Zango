@@ -48,7 +48,7 @@ function TaskHistoryContainer() {
 					)}
 
 					{visibleCodeIndex === index && (
-						<p className="mt-4 rounded-md bg-gray-100 p-2 font-mono text-sm break-words whitespace-pre-wrap">
+						<p className="mt-4 rounded-md bg-gray-100 p-2 font-mono text-sm overflow-x-scroll">
 						{eachHistory?.traceback}
 					</p>
 					
