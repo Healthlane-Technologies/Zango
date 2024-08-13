@@ -15,7 +15,6 @@ import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
 
 export default function RowMenu({ rowData }) {
-
 	let { appId } = useParams();
 	const triggerApi = useApi();
 	const [referenceElement, setReferenceElement] = useState(null);
@@ -33,7 +32,7 @@ export default function RowMenu({ rowData }) {
 	});
 
 	const dispatch = useDispatch();
-const isTaskHistoryModalOpen = useSelector(selectIsTaskHistoryModalOpen)
+	const isTaskHistoryModalOpen = useSelector(selectIsTaskHistoryModalOpen);
 	const handleEditUserDetails = () => {
 		dispatch(openIsUpdateTaskModalOpen(rowData));
 	};
@@ -43,10 +42,9 @@ const isTaskHistoryModalOpen = useSelector(selectIsTaskHistoryModalOpen)
 	};
 	const appTaskManagementData = useSelector(selectAppTaskManagementData);
 
-	const updateAppTaskHistorydata = (response)=>{
-		dispatch(setAppTaskHistoryData(response))
-	// const setData = useSele	setAppTaskHistoryData()
-	}
+	const updateAppTaskHistorydata = (response) => {
+		dispatch(setAppTaskHistoryData(response));
+	};
 	const handleTaskHistory = (selectedTaskId) => {
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
@@ -54,60 +52,19 @@ const isTaskHistoryModalOpen = useSelector(selectIsTaskHistoryModalOpen)
 				type: 'GET',
 				loader: true,
 			});
-	
-			if (success && response) {
-				console.log("my response ..... ", response);
-				updateAppTaskHistorydata(response);
 
+			if (success && response) {
+				console.log('my response ..... ', response);
+				updateAppTaskHistorydata(response);
 			}
 		};
-	
+
 		makeApiCall();
-	
+
 		console.log('appTaskManagementData....', rowData.id);
 		dispatch(openIsTaskHistoryModalOpen(true));
-		console.log("isTaskHistoryModalOpen...", isTaskHistoryModalOpen);
-	}
-	// 
-
-	// const makeApiCall = async () => {
-	// 	const { response, success } = await triggerApi({
-	// 		url: `/api/v1/apps/${appId}/tasks/?action=sync_tasks`,
-	// 		type: 'POST',
-	// 		loader: false,
-	// 		notify: true,
-	// 		payload: dynamicFormData,
-	// 	});
-
-	// 	if (success && response) {
-	// 		dispatch(toggleRerenderPage());
-	// 		setIsLoading(false);
-	// 	} else {
-	// 		setIsLoading(false);
-	// 	}
-	// };
-
-	// makeApiCall();
-
-	// useEffect(() => {
-		
-		// const makeApiCall = async () => {
-		// 	const { response, success } = await triggerApi({
-		// 		url: `/api/v1/apps/${appId}/tasks/history`,
-		// 		type: 'GET',
-		// 		loader: true,
-		// 	});
-		// 	if (success && response) {
-
-		// 		console.log(" my response ..... " ,response);
-		// 		// updateAppTaskManagementData(response);
-		// 	}
-		// };
-
-		// makeApiCall();
-	// }, [handleTaskHistory]);
-
-
+		console.log('isTaskHistoryModalOpen...', isTaskHistoryModalOpen);
+	};
 
 	return (
 		<Menu as="div" className="relative flex">
@@ -150,29 +107,25 @@ const isTaskHistoryModalOpen = useSelector(selectIsTaskHistoryModalOpen)
 							)}
 						</Menu.Item>
 						<Menu.Item>
-	{({ active }) => (
-		<button
-			data-cy="remove_all_policies_button"
-			type="button"
-			className="flex w-full disabled:opacity-[0.38]"
-			onClick={() => handleTaskHistory(rowData?.id)}
-		>
-			<div
-				className={`${
-					active ? 'bg-[#F0F3F4]' : ''
-				} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
-			>
-				<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
-					Task History
-				</span>
-				{/* <span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-					this will not delete the task but only remove all
-					associated policies
-				</span> */}
-			</div>
-		</button>
-	)}
-</Menu.Item>
+							{({ active }) => (
+								<button
+									data-cy="remove_all_policies_button"
+									type="button"
+									className="flex w-full disabled:opacity-[0.38]"
+									onClick={() => handleTaskHistory(rowData?.id)}
+								>
+									<div
+										className={`${
+											active ? 'bg-[#F0F3F4]' : ''
+										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+									>
+										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+											Task History
+										</span>
+									</div>
+								</button>
+							)}
+						</Menu.Item>
 
 						<Menu.Item>
 							{({ active }) => (
@@ -199,8 +152,6 @@ const isTaskHistoryModalOpen = useSelector(selectIsTaskHistoryModalOpen)
 								</button>
 							)}
 						</Menu.Item>
-
-						
 					</div>
 				</Menu.Items>
 			</Transition>
