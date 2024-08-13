@@ -8,7 +8,7 @@ from zango.cli.start_project import create_platform_user
 
 
 @override_settings(ROOT_URLCONF="zango.tests.test_client.urls")
-class AppPanelLoginTests(ZangoTestCase):
+class ZangoPlatformLoginTests(ZangoTestCase):
     """
     This test class is configured to use public tenant.
     """
@@ -42,7 +42,7 @@ class AppPanelLoginTests(ZangoTestCase):
 
         super().setUpClass()
 
-    def test_app_panel_direct_response(self):
+    def test_platform_direct_response(self):
         self.client = ZangoClient(self.tenant)
 
         response = self.client.get("/auth/login/")
@@ -50,7 +50,7 @@ class AppPanelLoginTests(ZangoTestCase):
 
         self.assertTemplateUsed(response, "app_panel/app_panel_login.html")
 
-    def test_app_panel_redirect_response(self):
+    def test_platform_redirect_response(self):
         self.client = ZangoClient(self.tenant)
 
         response = self.client.get("/platform/")
@@ -62,7 +62,7 @@ class AppPanelLoginTests(ZangoTestCase):
 
         self.assertTemplateUsed(response, "app_panel/app_panel_login.html")
 
-    def test_app_panel_login(self):
+    def test_platform_login(self):
         self.client = ZangoClient(self.tenant)
         res = self.client.login(
             username="test_user@gmail.com", password="Testpassword@123"
