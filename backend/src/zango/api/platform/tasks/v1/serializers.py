@@ -30,7 +30,6 @@ class TaskSerializer(serializers.ModelSerializer):
     attached_policies = PolicySerializer(many=True)
     crontab = CronTabSerializer()
     schedule = serializers.SerializerMethodField()
-    docstring = serializers.SerializerMethodField()
     code = serializers.SerializerMethodField()
     run_history = serializers.SerializerMethodField()
 
@@ -51,17 +50,6 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def get_schedule(self, obj):
         return str(obj.crontab)[:-18]
-
-    def get_docstring(self, obj):
-        try:
-            md = self.context.get("plugin_source").load_plugin(
-                obj.name[: obj.name.rfind(".")]
-            )
-            task = getattr(md, obj.name[obj.name.rfind(".") + 1 :])
-            docstring = task.__doc__
-            return docstring
-        except Exception:
-            return ""
 
     def get_code(self, obj):
         try:
@@ -88,6 +76,15 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class TaskResultSerializer(serializers.ModelSerializer):
+    date_started = serializers.SerializerMethodField()
+    date_done = serializers.SerializerMethodField()
+
     class Meta:
         model = TaskResult
-        fields = ["date_created", "date_done", "result", "traceback"]
+        fields = ["date_started", "date_done", "result", "traceback"]
+
+    def get_date_started(self, obj):
+        return obj.date_done.strftime("%Y-%m-%d %H:%M:%S")
+
+    def get_date_done(self, obj):
+        return obj.date_done.strftime("%Y-%m-%d %H:%M:%S")
