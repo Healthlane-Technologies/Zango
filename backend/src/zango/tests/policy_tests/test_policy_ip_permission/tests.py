@@ -1,11 +1,8 @@
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from django.db import connection
-from zango.apps.appauth.models import UserRoleModel
+from zango.apps.permissions.models import PolicyModel
 from zango.apps.dynamic_models.workspace.base import Workspace
-from zango.core.utils import get_current_request
-from django.http import HttpRequest
-import ipaddress
 from zango.test.client import ZangoClient
 
 
@@ -20,8 +17,10 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
             ws.sync_policies()
     
     def test_role_ip_permissions(self):
-        self.setUpAppAndModule("policy_tests", "test_policy_ip_permission")
+
         self.sync_policies()
+        # delete the all ip view policy as we have to check for specific IPs.
+        PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
 
         self.client = ZangoClient(self.tenant)
         res = self.client.get("/customers/customer/",**{
@@ -37,8 +36,9 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
 
     def test_cidr_ip_permissions(self):
 
-        self.setUpAppAndModule("policy_tests", "test_policy_ip_permission")
         self.sync_policies()
+        # delete the all ip view policy as we have to check for specific IPs.
+        PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
 
         self.client = ZangoClient(self.tenant)
         res = self.client.get("/customers/cidr/",**{
@@ -48,6 +48,29 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
 
         # Permission denied for IP outside the range of "10.0.0.0/24" as listed in policies.json.
         res = self.client.get("/customers/cidr/",**{
-            'REMOTE_ADDR': '10.0.0.256'
+            'REMOTE_ADDR': '10.0.1.252'
         })
         self.assertEqual(res.status_code, 403)
+    
+    def test_all_ip_permissions(self):
+
+        self.setUpAppAndModule("policy_tests", "test_policy_ip_permission")
+        self.sync_policies()
+
+        self.client = ZangoClient(self.tenant)
+
+        # returns a response to all IPs.
+        res = self.client.get("/customers/all-ip/",**{
+            'REMOTE_ADDR': '1.2.3.9'
+        })
+        self.assertHTMLEqual(res.content.decode(), "<h1>Hey! This view can be viewed from all IPs.</h1>")
+
+        res = self.client.get("/customers/all-ip/",**{
+            'REMOTE_ADDR': '10.0.4.2'
+        })
+        self.assertHTMLEqual(res.content.decode(), "<h1>Hey! This view can be viewed from all IPs.</h1>")
+
+        res = self.client.get("/customers/all-ip/",**{
+            'REMOTE_ADDR': '10.0.3.1'
+        })
+        self.assertHTMLEqual(res.content.decode(), "<h1>Hey! This view can be viewed from all IPs.</h1>")

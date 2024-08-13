@@ -37,6 +37,25 @@
                   "roles": [
                         "AnonymousUsers"
                   ]
+            },
+            {
+                  "name": "AllIPGetViewAccess",
+                  "description": "Access to the All IP GET View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "type": "userAccess",
+                                    "accessIP": ["0.0.0.0/0"]
+                              },
+                              {
+                                    "name": "customers.views.AllIPDynamicView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "AnonymousUsers"
+                  ]
             }
       ]
 }
