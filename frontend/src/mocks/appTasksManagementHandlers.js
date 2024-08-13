@@ -244,13 +244,13 @@ export const appTasksManagementHandlers = [
 							  "date_created": "2024-08-12T07:29:00.039694Z",
 							  "date_done": "2024-08-12T07:29:00.039726Z",
 							  "result": "\"Data processed\"",
-							  "traceback": "Traceback (most recent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_data()\nKeyError: 'id'"
+							  "traceback": "Traceback(mostrecentalllast):Filetask.py,line4,inprocess_datadatafetch_dTraceback(mostrecent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_dTraceback (most recent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_dTraceback (most recent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_dTraceback (most recent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_dTraceback (most recent call last):Filetask.py\", line 34, in process_data\n    data = fetch_dTraceback (most recent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_dTraceback (most recent call last):\n  File \"task.py\", line 34, in process_data\n    data = fetch_data()\nKeyError: 'id'"
 							},
 							{
 							  "date_created": "2024-08-12T07:28:00.141579Z",
 							  "date_done": "2024-08-12T07:28:00.141628Z",
 							  "result": "\"Export failed\"",
-							  "traceback": "Traceback (most recent call last):\n  File \"task.py\", line 22, in export_data\n    export_to_csv(data)\nFileNotFoundError: [Errno 2] No such file or directory: 'output.csv'"
+							  "traceback": "TraceThisisaplaceholderparagraphdesignedtoshowwhattextwithoutspaceslookslikewhenitisrenderedinawebpagewithnocsspropertiesappliedtowraporbreakwordsappropriatelysuchtextcanoverfloworbreaklayoutsinunexpectedsituationsback (most recent call last):\n  File \"task.py\", line 22, in export_data\n    export_to_csv(data)\nFileNotFoundError: [Errno 2] No such file or directory: 'output.csv'"
 							},
 							{
 							  "date_created": "2024-08-12T07:27:00.141579Z",
@@ -262,7 +262,7 @@ export const appTasksManagementHandlers = [
 							  "date_created": "2024-08-12T07:26:00.141579Z",
 							  "date_done": "2024-08-12T07:26:00.141628Z",
 							  "result": "\"Database update failed\"",
-							  "traceback": "Traceback (most recent call last):\n  File \"task.py\", line 45, in update_database\n    cursor.execute(query)\npsycopg2.IntegrityError: duplicate key value violates unique constraint \"users_pkey\""
+							  "traceback": "TracThisisaplaceholderparagraphdesignedtoshowwhattextwithoutspaceslookslikewhenitisrenderedinawebpagewithnocsspropertiesappliedtowraporbreakwordsappropriatelysuchtextcanoverfloworbreaklayoutsinunexpectedsituationseback (most recent call last):\n  File \"task.py\", line 45, in update_database\n    cursor.execute(query)\npsycopg2.IntegrityError: duplicate key value violates unique constraint \"users_pkey\""
 							},
 							{
 							  "date_created": "2024-08-12T07:25:00.141579Z",
@@ -274,7 +274,7 @@ export const appTasksManagementHandlers = [
 							  "date_created": "2024-08-12T07:24:00.141579Z",
 							  "date_done": "2024-08-12T07:24:00.141628Z",
 							  "result": "\"Report generation failed\"",
-							  "traceback": "Traceback (most recent call last):\n  File \"report.py\", line 59, in generate_report\n    report = create_report(data)\nValueError: Missing required field 'report_name'"
+							  "traceback": "Traceback (most recent call last):\n  FiThisisaplaceholderparagraphdesignedtoshowwhattextwithoutspaceslookslikewhenitisrenderedinawebpagewithnocsspropertiesappliedtowraporbreakwordsappropriatelysuchtextcanoverfloworbreaklayoutsinunexpectedsituationsle \"report.py\", line 59, in generate_report\n    report = create_report(data)\nValueError: Missing required field 'report_name'"
 							},
 							{
 							  "date_created": "2024-08-12T07:23:00.141579Z",
