@@ -34,7 +34,7 @@ function columns({ debounceSearch, localTableData }) {
 			id: 'name',
 			header: () => (
 				<div className="flex h-full min-w-max items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-					<span className="font-lato text-[11px] font-normal uppercase leading-[16px] tracking-[0.6px]  ">
+					<span className="font-lato text-[11px] font-normal uppercase text-[#6C747D] leading-[16px] tracking-[0.6px]  ">
 						Task Name
 					</span>
 				</div>
