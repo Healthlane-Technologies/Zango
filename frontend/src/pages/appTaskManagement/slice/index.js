@@ -5,11 +5,11 @@ export const appTaskManagementSlice = createSlice({
 	initialState: {
 		isUpdateTaskModalOpen: false,
 		isRemoveAllPoliciesModalOpen: false,
-		isTaskHistoryModalOpen : false,
+		isTaskHistoryModalOpen: false,
 
 		rerenderPage: false,
 		appTaskManagementData: null,
-		appTaskHistoryData : null,
+		appTaskHistoryData: null,
 		appTaskManagementFormData: null,
 		appTaskManagementTableData: {
 			searchValue: '',
@@ -39,11 +39,9 @@ export const appTaskManagementSlice = createSlice({
 			state.appTaskManagementFormData = action.payload;
 		},
 
-		openIsTaskHistoryModalOpen :(state, action) => {
+		openIsTaskHistoryModalOpen: (state, action) => {
 			state.isTaskHistoryModalOpen = action.payload;
-			// state.appTaskManagementFormData = action.payload;
 		},
-
 
 		closeIsRemoveAllPoliciesModalOpen: (state) => {
 			state.isRemoveAllPoliciesModalOpen = false;
@@ -51,12 +49,6 @@ export const appTaskManagementSlice = createSlice({
 		},
 		setAppTaskHistoryData: (state, action) => {
 			state.appTaskHistoryData = action.payload;
-			// state.isAppTaskManagementDataEmpty =
-			// 	action.payload?.tasks?.records?.length ||
-			// 	state?.appTaskManagementTableData?.searchValue ||
-			// 	state?.appTaskManagementTableData?.columns?.length
-			// 		? false
-			// 		: true;
 		},
 
 		setAppTaskManagementData: (state, action) => {
