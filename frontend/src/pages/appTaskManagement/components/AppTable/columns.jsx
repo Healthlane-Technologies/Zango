@@ -43,7 +43,7 @@ function columns({ debounceSearch, localTableData }) {
 			cell: (info) => {
 				let TaskInfo = () => <div className='flex flex-col gap-2'>
 					<div>{info.row.original?.docstring}</div>
-					<Editor height="150px" width="450px" defaultLanguage="python" defaultValue={info.row.original?.code} />
+					<Editor height="150px" width="450px" theme="vs-dark" defaultLanguage="python" defaultValue={info.row.original?.code} />
 				</div>
 				return(
 				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px] ">
