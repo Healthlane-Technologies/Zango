@@ -4,12 +4,11 @@ import { selectAppTaskHistoryData } from '../../../slice';
 import moment from 'moment';
 
 function TaskHistoryContainer() {
-	const [visibleCodeIndex, setVisibleCodeIndex] = useState(null); // State to track the visible code
+	const [visibleCodeIndex, setVisibleCodeIndex] = useState(null);
 
 	const TaskHistoryData = useSelector(selectAppTaskHistoryData);
 
 	const handleToggleCode = (index) => {
-		// Toggle the visibility of the code for the selected index
 		setVisibleCodeIndex(visibleCodeIndex === index ? null : index);
 	};
 
@@ -48,10 +47,9 @@ function TaskHistoryContainer() {
 					)}
 
 					{visibleCodeIndex === index && (
-						<p className="mt-4 rounded-md bg-gray-100 p-2 font-mono text-sm overflow-x-scroll">
-						{eachHistory?.traceback}
-					</p>
-					
+						<p className="mt-4 overflow-x-scroll rounded-md bg-gray-100 p-2 font-mono text-sm">
+							{eachHistory?.traceback}
+						</p>
 					)}
 				</div>
 			))}
