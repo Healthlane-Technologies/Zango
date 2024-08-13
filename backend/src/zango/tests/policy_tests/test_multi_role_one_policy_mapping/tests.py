@@ -9,9 +9,9 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class ZangoModulesTest(ZangoAppBaseTestCase):
 
-    def test_role_policy_mapping(self):
+    def test_multi_role_with_one_policy_mapping(self):
         # passing same module name in this class again will throw error.
-        self.setUpAppAndModule("policy_tests", "test_role_policy_mapping")
+        self.setUpAppAndModule("policy_tests", "test_multi_role_one_policy_mapping")
         with connection.cursor() as c:
             ws = Workspace(self.tenant, as_systemuser=True)
             ws.ready()

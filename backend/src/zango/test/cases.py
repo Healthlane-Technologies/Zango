@@ -113,12 +113,12 @@ class ZangoAppBaseTestCase(ZangoTestCase):
         instance.assertEqual(module_path.exists(), expected)
 
     @classmethod
-    def setUpAppAndModule(self,parent, module):
-        res = initialize_workspace(self.tenant.uuid)
+    def setUpAppAndModule(cls, parent, module):
+        res = initialize_workspace(cls.tenant.uuid)
         if not res["result"]=="success":
-            raise RuntimeError("Failed to initialize workspace.")
-        self.setUpTestModule(parent, module)
-        connection.set_tenant(self.tenant)
+            raise RuntimeError(res["error"])
+        cls.setUpTestModule(parent, module)
+        connection.set_tenant(cls.tenant)
 
     @classmethod
     def tearDownClass(cls):
