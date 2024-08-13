@@ -493,7 +493,7 @@ class Workspace:
         """
         mapping roles from policies.json to UserRoleModel
         """
-        existing_roles = list(UserRoleModel.objects.filter(is_default=False).values_list("id", flat=True))
+        existing_roles = list(UserRoleModel.objects.values_list("id", flat=True))
         for role, policies in role_with_policies.items():
             user_role, created = UserRoleModel.objects.update_or_create(
                 name=role,
