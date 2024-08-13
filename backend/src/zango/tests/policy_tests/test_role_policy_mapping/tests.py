@@ -7,16 +7,20 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
-class ZangoModulesTest(ZangoAppBaseTestCase):
+class RolePolicyMappingTest(ZangoAppBaseTestCase):
 
-    def test_multi_role_with_one_policy_mapping(self):
-        # passing same module name in this class again will throw error.
-        self.setUpAppAndModule("policy_tests", "test_multi_role_one_policy_mapping")
+    @classmethod
+    def sync_policies(self):
         with connection.cursor() as c:
             ws = Workspace(self.tenant, as_systemuser=True)
             ws.ready()
             ws.sync_policies()
-        
+
+    def test_multi_role_with_one_policy_mapping(self):
+        # passing same module name in this class again will throw error.
+        self.setUpAppAndModule("policy_tests", "test_role_policy_mapping")
+        self.sync_policies()
+    
         expected_role_names = ["test_role_1", "test_role_2"]
         expected_policy_name = "CustomerGetViewAccess"
 
@@ -41,4 +45,31 @@ class ZangoModulesTest(ZangoAppBaseTestCase):
             self.assertTrue(
                 roles.filter(name=role_name).exists(),
                 f"Policy '{expected_policy_name}' is not associated with role '{role_name}'"
+            )
+    
+    def test_one_role_with_multi_policy_mapping(self):
+        self.sync_policies()
+        
+        expected_role_name = "dummy_role_1"
+        expected_policy_names = ["RetailersGetViewAccess", "DummyGetViewAccess"]
+
+        role = UserRoleModel.objects.filter(name=expected_role_name).first()
+        self.assertIsNotNone(role, f"Role '{expected_role_name}' does not exist")
+        
+        policies = role.policies.all()
+
+        for policy_name in expected_policy_names:
+            self.assertTrue(
+                policies.filter(name=policy_name).exists(),
+                f"Role '{expected_role_name}' does not have expected policy '{policy_name}'"
+            )
+
+        for policy_name in expected_policy_names:
+            policy = PolicyModel.objects.filter(name=policy_name).first()
+            self.assertIsNotNone(policy, f"Policy '{policy_name}' does not exist")
+            roles = policy.role_policies.all()
+
+            self.assertTrue(
+                roles.filter(name=expected_role_name).exists(),
+                f"Policy '{policy_name}' is not associated with role '{expected_role_name}'"
             )
