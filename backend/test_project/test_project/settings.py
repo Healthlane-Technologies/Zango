@@ -93,7 +93,7 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-    "axes.backends.AxesStandaloneBackend",
+    # "axes.backends.AxesStandaloneBackend",
     "zango.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
     "zango.apps.appauth.auth_backend.AppUserModelBackend",
 )
