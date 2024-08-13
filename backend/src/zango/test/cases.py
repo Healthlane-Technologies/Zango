@@ -10,6 +10,9 @@ from zango.test.client import ZangoClient
 from django.contrib.auth import SESSION_KEY
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.cli.start_project import create_platform_user
+from django.db import connection
+from zango.apps.shared.tenancy.tasks import initialize_workspace
+
 
 
 class ZangoTestCase(TenantTestCase):
@@ -34,13 +37,6 @@ class FastZangoTestCase(ZangoTestCase):
     pass
 
 
-# class TestDataMixin:
-#     user = None
-#     @classmethod
-#     def setUpTestData(cls):
-#         pass
-
-
 class ZangoAppBaseTestCase(ZangoTestCase):
     @classmethod
     def setup_tenant(cls, tenant):
@@ -63,21 +59,11 @@ class ZangoAppBaseTestCase(ZangoTestCase):
         return "testapp"
 
     @classmethod
-    def login_platform_user(cls):
-        cls.client = ZangoClient(cls.tenant)
-        res = cls.client.post(
-            "auth/login/",
-            {"username": "test_user@gmail.com", "password": "Testpassword@123"},
-        )
-        print(res.__dict__)
-
-    @classmethod
     def setUpClass(cls):
         if ".testserver.com" not in settings.ALLOWED_HOSTS:
             settings.ALLOWED_HOSTS += [".testserver.com"]
 
         super().setUpClass()
-        # cls.login_platform_user()
 
     @classmethod
     def clean_workspaces(cls):
@@ -90,10 +76,10 @@ class ZangoAppBaseTestCase(ZangoTestCase):
             print("test workspaces does not exist.")
     
     @classmethod
-    def setUpTestModule(self, module_name):
+    def setUpTestModule(self, parent, module_name):
         # Paths to the test module directory and the files folder within it
         test_module_dir = os.path.join(
-            Path(__file__).resolve().parent.parent,"tests", module_name
+            Path(__file__).resolve().parent.parent, "tests", parent, module_name
         )
         if not os.path.exists(test_module_dir):
             raise FileNotFoundError(f"Test app module '{test_module_dir}' does not exist.")
@@ -125,6 +111,14 @@ class ZangoAppBaseTestCase(ZangoTestCase):
         instance = cls()
         module_path = Path(settings.BASE_DIR) / "workspaces" / "testapp" / module_name
         instance.assertEqual(module_path.exists(), expected)
+
+    @classmethod
+    def setUpAppAndModule(self,parent, module):
+        res = initialize_workspace(self.tenant.uuid)
+        if not res["result"]=="success":
+            raise RuntimeError("Failed to initialize workspace.")
+        self.setUpTestModule(parent, module)
+        connection.set_tenant(self.tenant)
 
     @classmethod
     def tearDownClass(cls):

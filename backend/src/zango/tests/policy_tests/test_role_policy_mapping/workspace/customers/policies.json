@@ -10,7 +10,11 @@
                             "type": "view"
                       }
                    ]
-                }
+                },
+                "roles":[
+                  "test_role_1",
+                  "test_role_2"
+                ]
           }
     ]
 }
