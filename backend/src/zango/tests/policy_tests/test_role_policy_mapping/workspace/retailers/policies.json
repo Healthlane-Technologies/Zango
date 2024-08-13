@@ -1,0 +1,34 @@
+{
+      "policies": [
+            {
+                  "name": "RetailersGetViewAccess",
+                  "description": "Access to the Retailer GET View",
+                  "statement": {
+                     "permissions": [
+                        {
+                              "name": "retailers.views.DynamicRetailerView",
+                              "type": "view"
+                        }
+                     ]
+                  },
+                  "roles":[
+                        "dummy_role_1"
+                  ]
+            },
+            {
+                  "name": "DummyGetViewAccess",
+                  "description": "Access to the Dummy GET View",
+                  "statement": {
+                  "permissions": [
+                        {
+                              "name": "retailers.views.DummyTestView",
+                              "type": "view"
+                        }
+                  ]
+                  },
+                  "roles":[
+                        "dummy_role_1"
+                  ]
+            }
+      ]
+  }

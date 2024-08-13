@@ -1,17 +1,12 @@
 import os
 import shutil
 from pathlib import Path
-from django.core.management import call_command
 from django.db import connection
 from django_tenants.test.cases import TenantTestCase
-from django.test import TransactionTestCase
 from django.conf import settings
-from zango.test.client import ZangoClient
-from django.contrib.auth import SESSION_KEY
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
-from zango.cli.start_project import create_platform_user
 from django.db import connection
 from zango.apps.shared.tenancy.tasks import initialize_workspace
+from zango.apps.shared.tenancy.models import ThemesModel
 
 
 
@@ -64,6 +59,10 @@ class ZangoAppBaseTestCase(ZangoTestCase):
             settings.ALLOWED_HOSTS += [".testserver.com"]
 
         super().setUpClass()
+        res = initialize_workspace(cls.tenant.uuid)
+        if not res["result"]=="success":
+            raise RuntimeError(res["error"])
+        connection.set_tenant(cls.tenant)
 
     @classmethod
     def clean_workspaces(cls):
@@ -106,7 +105,7 @@ class ZangoAppBaseTestCase(ZangoTestCase):
     @classmethod
     def assertModuleExists(cls, module_name, expected):
         """
-        tests if the module exists insidev test_project/workspaces/testapp/
+        tests if the module exists inside test_project/workspaces/testapp/
         """
         instance = cls()
         module_path = Path(settings.BASE_DIR) / "workspaces" / "testapp" / module_name
@@ -114,16 +113,13 @@ class ZangoAppBaseTestCase(ZangoTestCase):
 
     @classmethod
     def setUpAppAndModule(cls, parent, module):
-        res = initialize_workspace(cls.tenant.uuid)
-        if not res["result"]=="success":
-            raise RuntimeError(res["error"])
         cls.setUpTestModule(parent, module)
-        connection.set_tenant(cls.tenant)
 
     @classmethod
     def tearDownClass(cls):
         cls.clean_workspaces()
         connection.set_schema_to_public()
+        ThemesModel.objects.filter(tenant=cls.tenant).delete()
         cls.domain.delete()
         cls.tenant.delete(force_drop=False)
         cls.remove_allowed_test_domain()
