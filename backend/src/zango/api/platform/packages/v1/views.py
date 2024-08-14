@@ -1,3 +1,5 @@
+import requests
+
 from django.utils.decorators import method_decorator
 from django.core import signing
 
@@ -36,12 +38,16 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 url = get_package_configuration_url(
                     request, tenant, request.GET.get("package_name")
                 )
+                response = requests.get(url)
                 resp = {"url": f"{url}?token={token}"}
                 status = 200
+            except TypeError:
+                resp = {"message": "Package does not have configuration page"}
+                status = 404
             except Exception as e:
                 resp = {"message": str(e)}
                 status = 500
-            return get_api_response(True, resp, status)
+            return get_api_response(True if status == 200 else False, resp, status)
         try:
             packages = get_all_packages(tenant.name)
             if search:
