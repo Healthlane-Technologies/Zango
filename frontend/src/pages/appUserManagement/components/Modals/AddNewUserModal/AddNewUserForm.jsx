@@ -50,12 +50,7 @@ const AddNewUserForm = ({ closeModal }) => {
 					if (!email) return true;
 				},
 				then: Yup.string()
-					// .min(10, 'Must be 10 digits')
-					// .max(10, 'Must be 10 digits')
 					.required('Required'),
-				// otherwise: Yup.string()
-				// 	.min(10, 'Must be 10 digits')
-				// 	.max(10, 'Must be 10 digits'),
 			}),
 			password: Yup.string().required('Required'),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
@@ -70,9 +65,7 @@ const AddNewUserForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		// let tempValues = values;
 		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
-		console.log(tempValues)
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
