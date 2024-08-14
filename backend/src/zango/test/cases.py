@@ -32,7 +32,7 @@ class FastZangoTestCase(ZangoTestCase):
     pass
 
 
-class ZangoAppBaseTestCase(ZangoTestCase):
+class ZangoAppBaseTestCase(TenantTestCase):
     @classmethod
     def setup_tenant(cls, tenant):
         """
@@ -61,7 +61,7 @@ class ZangoAppBaseTestCase(ZangoTestCase):
         super().setUpClass()
         res = initialize_workspace(cls.tenant.uuid)
         if not res["result"]=="success":
-            raise RuntimeError(res["error"])
+            raise Exception(res["error"])
         connection.set_tenant(cls.tenant)
 
     @classmethod
