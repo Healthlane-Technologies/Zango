@@ -47,7 +47,7 @@ function columns({ debounceSearch, localTableData }) {
 							width="450px"
 							theme="vs-dark"
 							defaultLanguage="python"
-							defaultValue={info.row.original?.code}
+							defaultValue={ info?.row?.original?.code}
 						/>
 					</div>
 				);
