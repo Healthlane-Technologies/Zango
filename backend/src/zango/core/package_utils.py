@@ -10,11 +10,14 @@ import requests
 from botocore import UNSIGNED
 from botocore.config import Config
 from packaging.version import Version
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
 
 from django.conf import settings
 from django.core import signing
 from django.db import connection
 
+import zango
 from zango.core.utils import get_current_request_url
 
 
@@ -31,6 +34,32 @@ def get_installed_packages(tenant):
     return {package["name"]: package["version"] for package in packages}
 
 
+def get_package_manifest(package, version):
+    s3 = boto3.client(
+        "s3",
+        config=Config(signature_version=UNSIGNED),
+    )
+    resp = s3.get_object(
+        Bucket=settings.PACKAGE_BUCKET_NAME,
+        Key=f"packages/{package}/{version}/manifest.json",
+    )
+    return json.loads(resp["Body"].read().decode("utf-8"))
+
+
+def dep_check(package, version, manifest, installed_packages):
+    zango_version_specifier_set = SpecifierSet(manifest["zango"], prereleases=True)
+    if not zango_version_specifier_set.contains(Version(zango.__version__)):
+        return False
+    for dependency, version in manifest["dependencies"].items():
+        if not installed_packages.get(dependency):
+            continue
+        if not SpecifierSet(version, prereleases=True).contains(
+            Version(installed_packages[dependency])
+        ):
+            return False
+    return True
+
+
 def get_all_packages(request, tenant=None):
     installed_packages = {}
     if tenant is not None:
@@ -45,13 +74,19 @@ def get_all_packages(request, tenant=None):
     )
     for package in s3_package_data["Contents"]:
         name = package["Key"]
+        if name == "packages/" or name == "packages/frame/" or "manifest" in name:
+            continue
         name = name[9:]
         version = name.split("/")[1]
         name = name.split("/")[0]
-        if name not in packages:
-            packages[name] = {"versions": [Version(version)]}
-        else:
-            packages[name]["versions"].append(Version(version))
+        package_manifest = get_package_manifest(name, version)
+        if name not in packages.keys():
+            packages[name] = {"versions": []}
+        if dep_check(name, version, package_manifest, installed_packages):
+            if name not in packages:
+                packages[name] = {"versions": [Version(version)]}
+            else:
+                packages[name]["versions"].append(Version(version))
         if tenant is not None:
             if installed_packages.get(name):
                 packages[name]["status"] = "Installed"
