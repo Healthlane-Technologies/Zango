@@ -17,7 +17,7 @@ from zango.core.api import (
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
-from zango.core.utils import get_search_columns
+from zango.core.utils import get_search_columns, validate_phone
 
 from .serializers import (
     AppUserModelSerializerModel,
@@ -406,6 +406,9 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         data = request.data
         try:
             role_ids = data.getlist("roles")
+            if data.get("mobile"):
+                if not validate_phone(data["mobile"]):
+                    return get_api_response(False, "Invalid mobile number", 400)
             creation_result = AppUserModel.create_user(
                 name=data["name"],
                 email=data["email"],

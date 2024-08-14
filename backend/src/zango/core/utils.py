@@ -1,4 +1,5 @@
 import json
+import phonenumbers
 
 import pytz
 
@@ -120,3 +121,15 @@ def generate_lockout_response(request, credentials):
         {"logout_url": "/auth/logout", "cooloff_time": cooloff_time},
         status=403,
     )
+
+
+def validate_phone(phone_number):
+    """
+    Function to validate the phone number if it is from same region as app and if it is valid.
+    """
+    try:
+        phone_number = phonenumbers.parse(phone_number)
+        if phonenumbers.is_valid_number(phone_number):
+            return True
+    except:
+        return False
