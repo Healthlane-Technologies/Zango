@@ -12,8 +12,16 @@ import {
 	selectAppUserManagementData,
 	toggleRerenderPage,
 } from '../../../slice';
+import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
+import { useState } from 'react';
 
 const AddNewUserForm = ({ closeModal }) => {
+	const [countryCode,setCountryCode] = useState({
+		       name: 'India',
+		         dial_code: '+91',
+		         code: 'IN',
+	     })
+	const [mobileValid,setMobileValid] = useState(true)
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
@@ -42,12 +50,12 @@ const AddNewUserForm = ({ closeModal }) => {
 					if (!email) return true;
 				},
 				then: Yup.string()
-					.min(10, 'Must be 10 digits')
-					.max(10, 'Must be 10 digits')
+					// .min(10, 'Must be 10 digits')
+					// .max(10, 'Must be 10 digits')
 					.required('Required'),
-				otherwise: Yup.string()
-					.min(10, 'Must be 10 digits')
-					.max(10, 'Must be 10 digits'),
+				// otherwise: Yup.string()
+				// 	.min(10, 'Must be 10 digits')
+				// 	.max(10, 'Must be 10 digits'),
 			}),
 			password: Yup.string().required('Required'),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
@@ -62,8 +70,9 @@ const AddNewUserForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		let tempValues = values;
-
+		// let tempValues = values;
+		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
+		console.log(tempValues)
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -77,6 +86,9 @@ const AddNewUserForm = ({ closeModal }) => {
 			if (success && response) {
 				closeModal();
 				dispatch(toggleRerenderPage());
+			}
+			else{
+				setMobileValid(false)
 			}
 		};
 
@@ -123,8 +135,10 @@ const AddNewUserForm = ({ closeModal }) => {
 								>
 									Mobile
 								</label>
-								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
-									<span className="font-lato text-[#6C747D]">+91</span>
+								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px]">
+									<span className="font-lato text-[#6C747D]">
+										<CountryCodeSelector countryCode={countryCode} setCountryCode={setCountryCode} />
+									</span>
 									<input	
 										id="mobile"
 										name="mobile"
@@ -136,6 +150,7 @@ const AddNewUserForm = ({ closeModal }) => {
 										placeholder="00000 00000"
 									/>
 								</div>
+								<p className='text-red-600 text-[11px]'>{!mobileValid && 'Not a valid mobile number'}</p>
 								{formik.touched.mobile && formik.errors.mobile ? (
 									<div data-cy="error_message" className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}
