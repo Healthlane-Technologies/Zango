@@ -17,8 +17,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
             ws.sync_policies()
     
     def test_role_ip_permissions(self):
-        
-        self.setUpAppAndModule("policy_tests", "test_policy_ip_permission")
+
         self.sync_policies()
         # delete the all ip view policy as we have to check for specific IPs.
         PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
@@ -55,6 +54,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     
     def test_all_ip_permissions(self):
 
+        self.setUpAppAndModule("policy_tests", "test_policy_ip_permission")
         self.sync_policies()
 
         self.client = ZangoClient(self.tenant)

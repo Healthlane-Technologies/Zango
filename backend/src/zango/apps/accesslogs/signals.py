@@ -39,24 +39,25 @@ def user_logged_in_handler(sender, request, user, **kwargs):
     if connection.tenant.tenant_type == "app":
         try:
             client_ip, is_routable = get_client_ip(request)
-            username = request.user.email if request.user.email else request.user.mobile
-            user_role = None
-            access_log = AppAccessLog.objects.create(
-                ip_address=client_ip,
-                http_accept=request.META.get("HTTP_ACCEPT", "<unknown>"),
-                path_info=request.META.get("PATH_INFO", "<unknown>"),
-                username=username,
-                user_agent=get_client_user_agent(request),
-                attempt_time=datetime.now(),
-                attempt_type="login",
-                is_login_successful=True,
-                user=user,
-            )
+            if getattr(request,"user", None):
+                username = request.user.email if request.user.email else request.user.mobile
+                user_role = None
+                access_log = AppAccessLog.objects.create(
+                    ip_address=client_ip,
+                    http_accept=request.META.get("HTTP_ACCEPT", "<unknown>"),
+                    path_info=request.META.get("PATH_INFO", "<unknown>"),
+                    username=username,
+                    user_agent=get_client_user_agent(request),
+                    attempt_time=datetime.now(),
+                    attempt_type="login",
+                    is_login_successful=True,
+                    user=user,
+                )
 
-            if getattr(request, "selected_role_id", ""):
-                user_role = UserRoleModel.objects.filter(
-                    id=getattr(request, "selected_role_id")
-                ).last()
+                if getattr(request, "selected_role_id", ""):
+                    user_role = UserRoleModel.objects.filter(
+                        id=getattr(request, "selected_role_id")
+                    ).last()
 
             if user_role:
                 access_log.role = user_role
