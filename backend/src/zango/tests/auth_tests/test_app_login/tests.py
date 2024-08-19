@@ -20,9 +20,9 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
     @classmethod
     def create_app_user(self):
-
+        UserRoleModel.objects.create(name="app_login_user")
+        UserRoleModel.objects.create(name="different_view_user")
         app_user_role = UserRoleModel.objects.filter(name="app_login_user").first()
-        app_user_role.policies.add(PolicyModel.objects.get(name="AllowFromAnywhere"))
         role_ids = [app_user_role.id]
         result = AppUserModel.create_user(
             name="John Doe",
@@ -39,16 +39,15 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
     def test_app_login(self):
         self.setUpAppAndModule("auth_tests", "test_app_login")
-        self.sync_policies()
         app_user = self.create_app_user()
+        self.sync_policies()
         self.client = ZangoClient(self.tenant)
         self.client.user = app_user
         session = self.client.session
         
-        if len(app_user.roles.all()) == 1:
-            session["role_id"] = app_user.roles.all().values_list("id", flat=True)[0]
-            session.save()
-
+        session["role_id"] = app_user.roles.filter(name="app_login_user").values_list("id", flat=True)[0]
+        session.save()
+        
         logged_in = self.client.login(username="test_login_user@gmail.com", password="#Testpass123")
         
         if not logged_in:
@@ -60,4 +59,43 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         self.client.logout()
         # View forbidden after logout
         res = self.client.get("/login_app/customer/")
-        self.assertIsInstance(res, HttpResponseForbidden)
+        self.assertIsInstance(res, HttpResponseRedirect)
+        self.assertEqual(res.url, "/login/")
+
+    def test_logged_in_user_policy_map(self):
+        app_user = self.create_app_user()
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+        self.client.user = app_user
+
+        # add app_login_user role to app user.
+        session = self.client.session
+        session["role_id"] = app_user.roles.filter(name="app_login_user").values_list("id", flat=True)[0]
+        session.save()
+
+        # login app user.
+        logged_in = self.client.login(username="test_login_user@gmail.com", password="#Testpass123")
+        
+        if not logged_in:
+            raise Exception("Unable to login user.")
+        
+        # app user does not have permission as different_view_user role is not assigned to app user.
+        res = self.client.get("/login_app/dummy/")
+        self.assertEqual(res.status_code, 403)
+
+        # app_login_user has permission app_login_user is assigned to user.
+        res = self.client.get("/login_app/customer/")
+        self.assertEqual(res.status_code, 200)
+
+        # assign app_login_user role and different_view_user role to user.
+        new_role_ids = UserRoleModel.objects.filter(name__in=["app_login_user", "different_view_user"]).values_list("id", flat=True)
+        app_user.add_roles(new_role_ids)
+
+        # set role_id as per the view permissions.
+        session = self.client.session
+        session["role_id"] = app_user.roles.filter(name="different_view_user").values_list("id", flat=True)[0]  
+        session.save()
+
+        # now user has permission to this view.
+        res = self.client.get("/login_app/dummy/")
+        self.assertEqual(res.status_code, 200)
