@@ -493,19 +493,12 @@ class Workspace:
         """
         mapping roles from policies.json to UserRoleModel
         """
-        existing_roles = list(UserRoleModel.objects.values_list("id", flat=True))
         for role, policies in role_with_policies.items():
-            user_role, created = UserRoleModel.objects.update_or_create(
+            user_role = UserRoleModel.objects.filter(
                 name=role,
-                defaults={
-                    "name": role
-                }
-            )
-            user_role.policies.set(policies)
-            if not created:
-                existing_roles.remove(user_role.id)
-        
-        UserRoleModel.objects.filter(id__in=existing_roles).delete()
+            ).first()
+            if user_role:
+                user_role.policies.set(policies)
     
     def sync_role_with_policies(self):
         """

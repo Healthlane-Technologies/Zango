@@ -19,10 +19,14 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     def test_multi_role_with_one_policy_mapping(self):
         # passing same module name in this class again will throw error.
         self.setUpAppAndModule("policy_tests", "test_role_policy_mapping")
-        self.sync_policies()
+        
     
         expected_role_names = ["test_role_1", "test_role_2"]
         expected_policy_name = "CustomerGetViewAccess"
+        UserRoleModel.objects.create(name="test_role_1")
+        UserRoleModel.objects.create(name="test_role_2")
+        
+        self.sync_policies()
 
         for role_name in expected_role_names:
             role = UserRoleModel.objects.filter(name=role_name).first()
@@ -48,11 +52,12 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
             )
     
     def test_one_role_with_multi_policy_mapping(self):
-        self.sync_policies()
-        
         expected_role_name = "dummy_role_1"
         expected_policy_names = ["RetailersGetViewAccess", "DummyGetViewAccess"]
+        UserRoleModel.objects.create(name=expected_role_name)
 
+        self.sync_policies()
+        
         role = UserRoleModel.objects.filter(name=expected_role_name).first()
         self.assertIsNotNone(role, f"Role '{expected_role_name}' does not exist")
         
