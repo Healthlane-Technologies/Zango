@@ -123,12 +123,24 @@ def generate_lockout_response(request, credentials):
     )
 
 
-def validate_phone(phone_number):
+def validate_phone(phone_number, region=None):
     """
-    Function to validate the phone number if it is from same region as app and if it is valid.
+    Validates a phone number by parsing it and checking if it is a valid phone number for the given region.
+
+    Args:
+        phone_number (str): The phone number to be validated.
+        region (str, optional): The region in which the phone number is valid. Defaults to None.
+
+    Returns:
+        bool: True if the phone number is valid, False otherwise.
+
+    Raises:
+        None
+
     """
     try:
-        phone_number = phonenumbers.parse(phone_number)
+        region = region or settings.PHONENUMBER_DEFAULT_REGION
+        phone_number = phonenumbers.parse(phone_number, region=region)
         if phonenumbers.is_valid_number(phone_number):
             return True
     except:
