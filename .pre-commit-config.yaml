@@ -19,3 +19,8 @@ repos:
     - id: ruff
       args: [ --fix ]
     - id: ruff-format
+- repo: https://github.com/pycqa/pydocstyle
+  rev: 6.3.0
+  hooks:
+  - id: pydocstyle
+    exclude: migrations/|tests/|test/|test_project/|docs/|examples/|frontend/|e2e-tests/
