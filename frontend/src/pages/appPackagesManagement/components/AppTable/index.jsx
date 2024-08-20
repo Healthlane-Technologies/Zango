@@ -38,6 +38,7 @@ export default function AppTable() {
 				debounceSearch,
 				localTableData: appPackagesManagementTableData,
 				dispatch: dispatch,
+
 			})}
 			updateLocalTableData={updateLocalTableData}
 			RowMenu={RowMenu}

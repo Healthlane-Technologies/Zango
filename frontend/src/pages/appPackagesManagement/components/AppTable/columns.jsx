@@ -1,10 +1,11 @@
 import { createColumnHelper } from '@tanstack/react-table';
 import { ReactComponent as DetailEyeIcon } from '../../../../assets/images/svg/detail-eye-icon.svg';
 import { openIsConfigurePackageModalOpen } from '../../slice';
+import useApi from '../../../../hooks/useApi';
+import {useState,useEffect} from 'react'
 
 function columns({ dispatch }) {
 	const columnHelper = createColumnHelper();
-
 	const columnsData = [
 		columnHelper.accessor((row) => row.name, {
 			id: 'name',
@@ -73,24 +74,7 @@ function columns({ dispatch }) {
 					</span>
 				</div>
 			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-					<button
-						className="flex items-center gap-[12px] disabled:opacity-25"
-						onClick={() => {
-							dispatch(openIsConfigurePackageModalOpen(info.row.original));
-						}}
-						disabled={info.getValue() !== 'Installed'}
-					>
-						<span
-							className={`w-fit min-w-max rounded-[15px] text-center font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px] text-[#5048ED]`}
-						>
-							View Details
-						</span>
-						<DetailEyeIcon />
-					</button>
-				</div>
-			),
+			cell: (info) =>  <StatusColumn dispatch={dispatch} info={info} />
 		}),
 	];
 
@@ -98,3 +82,39 @@ function columns({ dispatch }) {
 }
 
 export default columns;
+
+
+const StatusColumn = ({info,dispatch})=>{
+	const [disable,setDisable] = useState(true)
+	const triggerApi = useApi();
+	useEffect(() => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/:appId/packages/?action=config_url&package_name=${info.row.original.name}`,
+				type: 'GET',
+				loader: true,
+			});
+			setDisable(success)
+		};
+		makeApiCall()
+	}, [])
+
+	return <div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
+		<button
+				className="flex items-center gap-[12px] disabled:opacity-25"
+				onClick={() => {
+					dispatch(openIsConfigurePackageModalOpen(info.row.original));
+				}}
+				disabled={!disable}
+			>
+				<span
+					className={`w-fit min-w-max rounded-[15px] text-center font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px] text-[#5048ED]`}
+				>
+					View Details
+				</span>
+				<DetailEyeIcon />
+			</button>
+		</div>
+	
+}
+
