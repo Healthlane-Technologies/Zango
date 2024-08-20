@@ -3,32 +3,32 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
-import {
-	selectAppAccessLogsData,
-	selectAppAccessLogsTableData,
-	selectIsAppAccessLogsDataEmpty,
-	selectRerenderPage,
-	setAppAccessLogsData,
-} from '../../slice';
-import Table from '../Table';
 
-export default function AppAccessLogs() {
+import Table from '../table/Index';
+import { 
+	
+	selectRerenderPage,
+} from '../../../appAccessLogs/slice';
+import { selectAppReleasesData, selectAppReleasesTableData, selectIsAppReleasesDataEmpty, setAppReleasesData } from '../../slice/Index';
+
+export default function  Releases() {
 	let { appId } = useParams();
-	const appAccessLogsData = useSelector(selectAppAccessLogsData);
-	const appAccessLogsTableData = useSelector(selectAppAccessLogsTableData);
+	const appReleasesData = useSelector(selectAppReleasesData);
+	const appReleasesTableData = useSelector(selectAppReleasesTableData);
 	const rerenderPage = useSelector(selectRerenderPage);
-	const isAppAccessLogsDataEmpty = useSelector(selectIsAppAccessLogsDataEmpty);
+	const isAppReleasesDataEmpty= useSelector(selectIsAppReleasesDataEmpty);
 	const dispatch = useDispatch();
 
-	function updateAppAccessLogsData(value) {
-		dispatch(setAppAccessLogsData(value));
+	function updateAppReleasesData(value) {
+		dispatch(setAppReleasesData(value));
+		
 	}
 
 	const triggerApi = useApi();
 
 	useEffect(() => {
-		let columnFilter = appAccessLogsTableData?.columns
-			? appAccessLogsTableData?.columns
+		let columnFilter = appReleasesTableData?.columns
+			? appReleasesTableData?.columns
 					?.map(({ id, value }) => {
 						return `&search_${id}=${value}`;
 					})
@@ -37,21 +37,20 @@ export default function AppAccessLogs() {
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/access-logs/?page=${
-					appAccessLogsTableData?.pageIndex + 1
+				url: `/api/v1/apps/${appId}/releases/?page=${
+					appReleasesTableData?.pageIndex + 1
 				}&page_size=${
-					appAccessLogsTableData?.pageSize
+					appReleasesTableData?.pageSize
 				}&include_dropdown_options=true&search=${
-					appAccessLogsTableData?.searchValue
+					appReleasesTableData?.searchValue
 				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
 			if (success && response) {
 
-				console.log("responseeeee..." , response);
-				console.log("appAccessLogsTableData...." , appAccessLogsTableData);
-				updateAppAccessLogsData(response);
+				console.log('appReleases data !!!!' ,appReleasesTableData);
+				updateAppReleasesData(response);
 			}
 		};
 
@@ -65,16 +64,16 @@ export default function AppAccessLogs() {
 					<BreadCrumbs />
 				</div>
 				<div className="flex grow flex-col overflow-x-auto">
-					{isAppAccessLogsDataEmpty ? (
+					{isAppReleasesDataEmpty ? (
 						<div className="flex grow flex-col items-center justify-center gap-[56px]">
 							<div className="flex flex-col items-center justify-center gap-[8px]">
-								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px]">
+								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px] ">
 									access log(s)
 								</h3>
 							</div>
 						</div>
-					) : appAccessLogsData ? (
-						<Table tableData={appAccessLogsData?.users} />
+					) : appReleasesData ? (
+						<Table tableData={appReleasesData?.users} />
 					) : null}
 				</div>
 			</div>
