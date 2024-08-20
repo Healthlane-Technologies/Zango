@@ -19,5 +19,6 @@ USER zango_user
 
 
 COPY init.sh /zango/
+COPY start_flower.sh /zango/
 WORKDIR /zango/
 CMD ["/bin/sh", "init.sh"]
