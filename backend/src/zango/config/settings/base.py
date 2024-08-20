@@ -252,6 +252,8 @@ PUBLIC_SCHEMA_URLCONF = "zango.config.urls_public"
 AWS_MEDIA_STORAGE_LOCATION = "media"  # Prefix added to all the files uploaded
 AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
+TENANT_LIMIT_SET_CALLS = True
+
 
 def setup_settings(settings, BASE_DIR):
     env = environ.Env(
