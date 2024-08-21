@@ -5,11 +5,7 @@ import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
 
 import Table from '../table/Index';
-import { 
-	
-	selectRerenderPage,
-} from '../../../appAccessLogs/slice';
-import { selectAppReleasesData, selectAppReleasesTableData, selectIsAppReleasesDataEmpty, setAppReleasesData } from '../../slice/Index';
+import {selectRerenderPage, selectAppReleasesData, selectAppReleasesTableData, selectIsAppReleasesDataEmpty, setAppReleasesData } from '../../slice/Index';
 
 export default function  Releases() {
 	let { appId } = useParams();
@@ -68,7 +64,7 @@ export default function  Releases() {
 						<div className="flex grow flex-col items-center justify-center gap-[56px]">
 							<div className="flex flex-col items-center justify-center gap-[8px]">
 								<h3 className="first-app-text font-source-sans-pro text-[64px] font-[700] leading-[72px] ">
-									access log(s)
+									Release(s)
 								</h3>
 							</div>
 						</div>

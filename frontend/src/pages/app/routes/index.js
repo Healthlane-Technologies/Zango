@@ -20,7 +20,6 @@ import Chatbot from '../components/Chatbot';
 import DragablePopover from '../components/Chatbot/DragablePopover';
 import SideMenu from '../components/SideMenu';
 import { AppLogsRoutes, AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
-// import { AppLogsRoutes } from '../../appReleasesRoutes/components/appLogs/Index'
 
 const PlatformAppRoutes = () => {
 	let { appId } = useParams();

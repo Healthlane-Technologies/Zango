@@ -48,9 +48,6 @@ export default function AppAccessLogs() {
 				loader: true,
 			});
 			if (success && response) {
-
-				console.log("responseeeee..." , response);
-				console.log("appAccessLogsTableData...." , appAccessLogsTableData);
 				updateAppAccessLogsData(response);
 			}
 		};

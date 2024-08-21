@@ -19,11 +19,18 @@ import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFil
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
 
-import { setAppAccessLogsData,selectAppAccessLogsData,
+import {
+	setAppAccessLogsData,
+	selectAppAccessLogsData,
 	selectAppAccessLogsTableData,
-	
-	setAppAccessLogsTableData, } from '../../../appAccessLogs/slice';
-import { selectAppReleasesData, selectAppReleasesTableData, setAppReleasesData, setAppReleasesTableData } from '../../slice/Index';
+	setAppAccessLogsTableData,
+} from '../../../appAccessLogs/slice';
+import {
+	selectAppReleasesData,
+	selectAppReleasesTableData,
+	setAppReleasesData,
+	setAppReleasesTableData,
+} from '../../slice/Index';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
@@ -44,8 +51,6 @@ export default function Table({ tableData }) {
 	const handleColumnSearch = (data) => {
 		let tempTableData = JSON.parse(JSON.stringify(appReleasesTableData));
 		let index = findIndex(tempTableData?.columns, { id: data?.id });
-
-		
 
 		if (index !== -1) {
 			set(tempTableData?.columns[index], 'value', data?.value);
@@ -70,7 +75,7 @@ export default function Table({ tableData }) {
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-					Release ID
+						Release ID
 					</span>
 				</div>
 			),
@@ -85,18 +90,12 @@ export default function Table({ tableData }) {
 			},
 		}),
 
-	// 	id: faker.number.int({ min: 1000, max: 9999 }),
-	// 	version:"1.0.0",
-	// 	description: "description",
-	// status : 'released',
-	// 	last_git_hash: 'n238jekwdmoos',
-    // created_at : '2024-08-15T18:54:10.413014Z'
 		columnHelper.accessor((row) => row.version, {
 			id: 'user',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-					Version
+						Version
 					</span>
 					<div className="translate-y-[-2px] ps-2">
 						<TableDropdownFilter
@@ -143,7 +142,7 @@ export default function Table({ tableData }) {
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-					Release Date
+						Release Date
 					</span>
 					<div className="ps-2">
 						<TableDateRangeFilter
@@ -188,7 +187,7 @@ export default function Table({ tableData }) {
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-					Description
+						Description
 					</span>
 				</div>
 			),
@@ -203,11 +202,11 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.status, {
 			id: 'status',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full items-start justify-start gap-[8px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-					Status
+						Status
 					</span>
-					<div className="translate-y-[-2px]">
+					<div className="translate-y-[-2px] ">
 						<TableDropdownFilter
 							key="status"
 							label="Status"
@@ -247,39 +246,13 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.	last_git_hash, {
+		columnHelper.accessor((row) => row.last_git_hash, {
 			id: 'attempt_time',
 			header: () => (
 				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-					Last Git Hash
+						Last Git Hash
 					</span>
-					{/* <div className="">
-						<TableDateRangeFilter
-							key="attempt_time"
-							label="Stockist"
-							name="attempt_time"
-							id="attempt_time"
-							placeholder="Select"
-							value={
-								find(appReleasesTableData?.columns, {
-									id: 'attempt_time',
-								})?.value
-									? find(appReleasesTableData?.columns, {
-											id: 'attempt_time',
-									  })?.value
-									: ''
-							}
-							optionsDataName="attempt_time"
-							optionsData={appReleasesData?.dropdown_options?.attempt_time}
-							onChange={(value) => {
-								handleColumnSearch({
-									id: 'attempt_time',
-									value: value,
-								});
-							}}
-						/>
-					</div> */}
 				</div>
 			),
 			cell: (info) => (
@@ -290,166 +263,6 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		// columnHelper.accessor((row) => row.role, {
-		// 	id: 'role',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-		// 			<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				Role
-		// 			</span>
-		// 			<div className="translate-y-[-2px]">
-		// 				<TableDropdownFilter
-		// 					key="role"
-		// 					label="Role"
-		// 					name="role"
-		// 					id="role"
-		// 					placeholder="Select"
-		// 					value={
-		// 						find(appReleasesTableData?.columns, {
-		// 							id: 'role',
-		// 						})?.value
-		// 							? find(appReleasesTableData?.columns, {
-		// 									id: 'role',
-		// 							  })?.value
-		// 							: ''
-		// 					}
-		// 					optionsDataName="role"
-		// 					optionsData={
-		// 						appReleasesData?.dropdown_options?.role
-		// 							? appReleasesData?.dropdown_options?.role
-		// 							: []
-		// 					}
-		// 					onChange={(value) => {
-		// 						handleColumnSearch({
-		// 							id: 'role',
-		// 							value: value?.id,
-		// 						});
-		// 					}}
-		// 				/>
-		// 			</div>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => (
-		// 		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-		// 			<span className="text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-		// 				{info.getValue()}
-		// 			</span>
-		// 		</div>
-		// 	),
-		// }),
-		// columnHelper.accessor((row) => row.user_agent, {
-		// 	id: 'user_agent',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-		// 			<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				user agent
-		// 			</span>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => (
-		// 		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-		// 			<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-		// 				{info.getValue()}
-		// 			</span>
-		// 		</div>
-		// 	),
-		// }),
-		// columnHelper.accessor((row) => row.session_expired_at, {
-		// 	id: 'session_expired_at',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-		// 			<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				Session Expired At
-		// 			</span>
-		// 			<div className="">
-		// 				<TableDateRangeFilter
-		// 					key="session_expired_at"
-		// 					label="Session Expired At"
-		// 					name="session_expired_at"
-		// 					id="session_expired_at"
-		// 					placeholder="Select"
-		// 					value={
-		// 						find(appReleasesTableData?.columns, {
-		// 							id: 'session_expired_at',
-		// 						})?.value
-		// 							? find(appReleasesTableData?.columns, {
-		// 									id: 'session_expired_at',
-		// 							  })?.value
-		// 							: ''
-		// 					}
-		// 					optionsDataName="session_expired_at"
-		// 					optionsData={
-		// 						appReleasesData?.dropdown_options?.session_expired_at
-		// 					}
-		// 					onChange={(value) => {
-		// 						handleColumnSearch({
-		// 							id: 'session_expired_at',
-		// 							value: value,
-		// 						});
-		// 					}}
-		// 				/>
-		// 			</div>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => (
-		// 		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-		// 			<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-		// 				{info.getValue()}
-		// 			</span>
-		// 		</div>
-		// 	),
-		// }),
-		// columnHelper.accessor((row) => row.is_login_successful, {
-		// 	id: 'is_login_successful',
-		// 	header: () => (
-		// 		<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-		// 			<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-		// 				Login Attempt
-		// 			</span>
-		// 			<div className="translate-y-[-2px]">
-		// 				<TableDropdownFilter
-		// 					key="is_login_successful"
-		// 					label="Is Login Successful"
-		// 					name="is_login_successful"
-		// 					id="is_login_successful"
-		// 					placeholder="Select"
-		// 					value={
-		// 						find(appReleasesTableData?.columns, {
-		// 							id: 'is_login_successful',
-		// 						})?.value
-		// 							? find(appReleasesTableData?.columns, {
-		// 									id: 'is_login_successful',
-		// 							  })?.value
-		// 							: ''
-		// 					}
-		// 					optionsDataName="is_login_successful"
-		// 					optionsData={
-		// 						appReleasesData?.dropdown_options?.is_login_successful
-		// 							? appReleasesData?.dropdown_options?.is_login_successful
-		// 							: []
-		// 					}
-		// 					onChange={(value) => {
-		// 						handleColumnSearch({
-		// 							id: 'is_login_successful',
-		// 							value: value?.id,
-		// 						});
-		// 					}}
-		// 				/>
-		// 			</div>
-		// 		</div>
-		// 	),
-		// 	cell: (info) => (
-		// 		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-		// 			<span
-		// 				className={`w-fit min-w-[77px] rounded-[15px]  px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
-		// 					info.getValue() ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
-		// 				}`}
-		// 			>
-		// 				{info.getValue() ? 'Successful' : 'Failed'}
-		// 			</span>
-		// 		</div>
-		// 	),
-		// }),
 	];
 
 	const defaultData = useMemo(() => [], []);
@@ -463,7 +276,7 @@ export default function Table({ tableData }) {
 	);
 
 	const appReleasesData = useSelector(selectAppReleasesData);
-console.log('appReleasesData....,appReleasesData' , appReleasesData);
+	console.log('appReleasesData....,appReleasesData', appReleasesData);
 	const table = useReactTable({
 		data: appReleasesData?.access_logs?.records ?? defaultData,
 		columns,
@@ -534,7 +347,7 @@ console.log('appReleasesData....,appReleasesData' , appReleasesData);
 					.join('')
 			: '';
 
-			console.log('columnFilter', columnFilter, appReleasesTableData);
+		console.log('columnFilter', columnFilter, appReleasesTableData);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
@@ -641,9 +454,9 @@ console.log('appReleasesData....,appReleasesData' , appReleasesData);
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						Total count: {appReleasesData?.access_logs?.total_records}
-						{console.log("appReleasesData........" , appReleasesData)}
+						{console.log('appReleasesData........', appReleasesData)}
 					</span>
-					{console.log('appReleasesData,,,,' , appReleasesData)}
+					{console.log('appReleasesData,,,,', appReleasesData)}
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						<PageCountSelectField
 							key="page_count"
@@ -652,7 +465,6 @@ console.log('appReleasesData....,appReleasesData' , appReleasesData);
 							id="page_count"
 							placeholder="Select"
 							value={table.getState().pagination.pageSize}
-						
 							optionsDataName="page_count"
 							optionsData={[
 								{ id: 10, label: 10 },
@@ -660,7 +472,7 @@ console.log('appReleasesData....,appReleasesData' , appReleasesData);
 								{ id: 50, label: 50 },
 								{ id: 100, label: 100 },
 							]}
-							table = {table}
+							table={table}
 						/>
 					</span>
 				</div>
@@ -677,7 +489,7 @@ console.log('appReleasesData....,appReleasesData' , appReleasesData);
 					<div className="flex items-center gap-[8px]">
 						<ResizableInput table={table} />
 						<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-							 {table.getPageCount()}
+							{table.getPageCount()}
 						</span>
 					</div>
 					<button
