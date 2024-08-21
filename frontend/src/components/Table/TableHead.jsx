@@ -2,7 +2,7 @@ import { flexRender } from '@tanstack/react-table';
 
 function TableHead({ table }) {
 	return (
-		<thead className="sticky top-0 z-[2] bg-[#ffffff]">
+		<thead className="sticky top-0 z-30 bg-[#ffffff] ">
 			{table.getHeaderGroups().map((headerGroup) => (
 				<tr key={headerGroup.id}>
 					{headerGroup.headers.map((header) => (

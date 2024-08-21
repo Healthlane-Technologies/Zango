@@ -33,7 +33,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.name, {
 			id: 'name',
 			header: () => (
-				<div className="flex h-full min-w-max items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className=" flex h-full min-w-max items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-normal uppercase text-[#6C747D] leading-[16px] tracking-[0.6px]  ">
 						Task Name
 					</span>
@@ -41,7 +41,7 @@ function columns({ debounceSearch, localTableData }) {
 			),
 			cell: (info) => {
 				let TaskInfo = () => (
-					<div className="flex flex-col gap-2">
+					<div className="flex flex-col gap-2 z-20">
 						<Editor
 							height="150px"
 							width="450px"
@@ -52,12 +52,12 @@ function columns({ debounceSearch, localTableData }) {
 					</div>
 				);
 				return (
-					<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px] ">
+					<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]  ">
 						<div className=" flex min-w-max flex-row  items-center  justify-start gap-2">
 							<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] ">
 								{info.getValue()}
 							</span>
-							<span className="">
+							<span className=" ">
 								<HeaderInfoHover message={<TaskInfo />} />
 							</span>
 						</div>

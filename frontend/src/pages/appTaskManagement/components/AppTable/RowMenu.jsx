@@ -67,7 +67,7 @@ export default function RowMenu({ rowData }) {
 	};
 
 	return (
-		<Menu as="div" className="relative flex">
+		<Menu as="div" className="relative flex ">
 			<Menu.Button
 				className="flex w-full justify-center focus:outline-none"
 				ref={(ref) => setReferenceElement(ref)}
