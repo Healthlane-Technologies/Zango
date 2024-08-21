@@ -56,7 +56,7 @@ export default function HeaderInfoHover({ message }) {
 					className="relative z-10 flex w-full justify-center focus:outline-none"
 					ref={(ref) => setReferenceElement(ref)}
 				>
-					<InfoIcon className="h-[16px] min-h-[16px] w-[16px] min-w-[16px] z-0  " />
+					<InfoIcon className="h-[16px] min-h-[16px] w-[16px] min-w-[16px] z-10  " />
 				</Menu.Button>
 			</Menu>
 		</div>

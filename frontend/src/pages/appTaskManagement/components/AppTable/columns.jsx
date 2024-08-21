@@ -41,7 +41,7 @@ function columns({ debounceSearch, localTableData }) {
 			),
 			cell: (info) => {
 				let TaskInfo = () => (
-					<div className="flex flex-col gap-2 z-20">
+					<div className="flex flex-col gap-2 bg-black">
 						<Editor
 							height="150px"
 							width="450px"
@@ -57,7 +57,7 @@ function columns({ debounceSearch, localTableData }) {
 							<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] ">
 								{info.getValue()}
 							</span>
-							<span className=" ">
+							<span className="  ">
 								<HeaderInfoHover message={<TaskInfo />} />
 							</span>
 						</div>
