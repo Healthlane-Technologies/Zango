@@ -1,11 +1,10 @@
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from django.db import connection
-from zango.apps.permissions.models import PolicyModel
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.test.client import ZangoClient
-from django.http import HttpResponseRedirect,HttpResponseForbidden
+from django.http import HttpResponseRedirect
 
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
