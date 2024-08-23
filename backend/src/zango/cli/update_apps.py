@@ -289,6 +289,7 @@ def extract_release_notes(file_path, version):
     return None
 
 
+
 def create_release(tenant_name, app_settings, app_directory, git_mode):
     from zango.apps.release.models import AppRelease
     from zango.apps.shared.tenancy.models import TenantModel
