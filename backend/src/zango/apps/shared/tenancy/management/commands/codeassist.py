@@ -3,6 +3,8 @@ import os
 import requests
 import tarfile
 from time import sleep
+import subprocess
+import shutil
 
 from django.core.management.base import BaseCommand
 
@@ -13,10 +15,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
-        parser.add_argument(
-            "action",
-            help="Action to be performed.",
-        )
         parser.add_argument(
             "--codeassist_endpoint",
             help="The endpoint URL for codeassist.",
@@ -59,12 +57,12 @@ class Command(BaseCommand):
                     print("App started successfully, proceeding with codeassist")
                     break
             resp = requests.post(
-                options["codeassist_endpoint"],
-                json=json.dumps(spec),
+                f"{options['codeassist_endpoint']}/generate-app",
+                json=spec,
                 headers={"Content-Type": "application/json"},
             )
             if resp.status_code == 200:
-                os.removedirs(f"workspaces/{app_name}/")
+                shutil.rmtree(f"workspaces/{app_name}")
 
                 file_path = f"{app_name}.tar"
                 with open(file_path, "wb") as f:
@@ -73,8 +71,15 @@ class Command(BaseCommand):
                             f.write(chunk)
 
                 with tarfile.open(file_path) as tar:
-                    tar.extractall(path=f"workspaces/{app_name}/")
+                    tar.extractall(path=f"workspaces/")
                     os.remove(file_path)
+            else:
+                print(resp.text)
+            try:
+                subprocess.run(["python", "manage.py", "ws_makemigration", app_name])
+                subprocess.run(["zango", "update-apps", "--app_name", app_name])
+            except Exception as e:
+                print(e)
         except json.JSONDecodeError as e:
             print(f"Error while parsing jsonspec: {e}")
             return
