@@ -18,7 +18,7 @@ class AppRelease(FullAuditMixin):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="initiated"
     )
-    last_git_hash = models.CharField(max_length=40)
+    last_git_hash = models.CharField(max_length=40, null=True, blank=True)
     release_result = models.JSONField(null=True, blank=True)
 
     def __str__(self):

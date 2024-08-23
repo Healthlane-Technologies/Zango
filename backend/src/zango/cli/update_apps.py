@@ -56,7 +56,7 @@ def get_remote_settings(repo_url, branch):
         return None
 
 
-def setup_and_pull(path, repo_url=None, remote=True, branch="main"):
+def setup_and_pull(path, repo_url, branch="main"):
     try:
         # Try to open an existing repository
         repo = git.Repo(path)
@@ -74,38 +74,31 @@ def setup_and_pull(path, repo_url=None, remote=True, branch="main"):
             print(f"Checked out branch {branch}")
 
         # Pull the latest changes from the specified branch
-        if remote:
-            origin = repo.remote(name="origin")
-            origin.pull(branch)
+        origin = repo.remote(name="origin")
+        origin.pull(branch)
 
-            success = True
-            message = f"Successfully pulled from origin/{branch}"
-        else:
-            success = True
-            message = "Repository up to date"
+        success = True
+        message = f"Successfully pulled from origin/{branch}"
+
     except git.InvalidGitRepositoryError:
         # If not a repository, initialize a new repository and set up the remote
         print(f"No repository found at {path}, initializing a new one.")
 
-        repo = git.Repo.init(path)
-        if remote:
-            # Remove manifest.json and settings.json if they exist
-            files_to_remove = ["manifest.json", "settings.json"]
-            for filename in files_to_remove:
-                file_path = os.path.join(path, filename)
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            origin = repo.create_remote("origin", repo_url)
+        # Remove manifest.json and settings.json if they exist
+        files_to_remove = ["manifest.json", "settings.json"]
+        for filename in files_to_remove:
+            file_path = os.path.join(path, filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
-            # Fetch and check out the specified branch
-            origin.fetch()
-            repo.create_head(branch, origin.refs[branch]).set_tracking_branch(
-                origin.refs[branch]
-            ).checkout()
-        else:
-            repo.git.add(A=True)
-            repo.git.commit(m="Initial commit")
-            repo.create_head(branch).checkout()
+        repo = git.Repo.init(path)
+        origin = repo.create_remote("origin", repo_url)
+
+        # Fetch and check out the specified branch
+        origin.fetch()
+        repo.create_head(branch, origin.refs[branch]).set_tracking_branch(
+            origin.refs[branch]
+        ).checkout()
 
         success = True
         message = "Repository initialized and checked out branch {branch}"
@@ -296,7 +289,7 @@ def extract_release_notes(file_path, version):
     return None
 
 
-def create_release(tenant_name, app_settings, app_directory):
+def create_release(tenant_name, app_settings, app_directory, git_mode):
     from zango.apps.release.models import AppRelease
     from zango.apps.shared.tenancy.models import TenantModel
     from zango.apps.release.utils import is_version_greater
@@ -310,8 +303,10 @@ def create_release(tenant_name, app_settings, app_directory):
             if not current_version:
                 raise ValueError("Version key not found in settings.json")
 
-            repo = git.Repo(app_directory)
-            latest_commit_hash = repo.head.commit.hexsha
+            latest_commit_hash = None
+            if git_mode:
+                repo = git.Repo(app_directory)
+                latest_commit_hash = repo.head.commit.hexsha
 
             last_release = get_last_release()
             if not last_release or is_version_greater(
@@ -489,24 +484,23 @@ def update_apps(app_name):
                 continue
 
             # Pull latest code
-            pull_status, message = setup_and_pull(
-                app_directory, git_mode, repo_url, branch
-            )
-            if not pull_status:
-                error_message = click.style(
-                    f"An error occurred while pulling code: {message}",
-                    fg="red",
-                    bold=True,
-                )
-                click.echo(error_message, err=True)
-                continue
+            if git_mode:
+                pull_status, message = setup_and_pull(app_directory, repo_url, branch)
+                if not pull_status:
+                    error_message = click.style(
+                        f"An error occurred while pulling code: {message}",
+                        fg="red",
+                        bold=True,
+                    )
+                    click.echo(error_message, err=True)
+                    continue
 
             app_settings = json.loads(
                 open(os.path.join(app_directory, "settings.json")).read()
             )
 
             # Create entry in release model
-            release = create_release(tenant, app_settings, app_directory)
+            release = create_release(tenant, app_settings, app_directory, git_mode)
 
             if release:
                 success_message = click.style(
