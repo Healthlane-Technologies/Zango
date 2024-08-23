@@ -74,12 +74,16 @@ class Command(BaseCommand):
                     tar.extractall(path=f"workspaces/")
                     os.remove(file_path)
             else:
-                print(resp.text)
+                raise Exception("Codeassist failed")
             try:
                 subprocess.run(["python", "manage.py", "ws_makemigration", app_name])
-                subprocess.run(["zango", "update-apps", "--app_name", app_name])
+                # subprocess.run(["zango", "update-apps", "--app_name", app_name])
             except Exception as e:
                 print(e)
         except json.JSONDecodeError as e:
             print(f"Error while parsing jsonspec: {e}")
             return
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
