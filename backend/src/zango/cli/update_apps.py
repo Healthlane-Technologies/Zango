@@ -56,7 +56,7 @@ def get_remote_settings(repo_url, branch):
         return None
 
 
-def setup_and_pull(path, repo_url, branch="main"):
+def setup_and_pull(path, repo_url=None, remote=True, branch="main"):
     try:
         # Try to open an existing repository
         repo = git.Repo(path)
@@ -74,31 +74,38 @@ def setup_and_pull(path, repo_url, branch="main"):
             print(f"Checked out branch {branch}")
 
         # Pull the latest changes from the specified branch
-        origin = repo.remote(name="origin")
-        origin.pull(branch)
+        if remote:
+            origin = repo.remote(name="origin")
+            origin.pull(branch)
 
-        success = True
-        message = f"Successfully pulled from origin/{branch}"
-
+            success = True
+            message = f"Successfully pulled from origin/{branch}"
+        else:
+            success = True
+            message = "Repository up to date"
     except git.InvalidGitRepositoryError:
         # If not a repository, initialize a new repository and set up the remote
         print(f"No repository found at {path}, initializing a new one.")
 
-        # Remove manifest.json and settings.json if they exist
-        files_to_remove = ["manifest.json", "settings.json"]
-        for filename in files_to_remove:
-            file_path = os.path.join(path, filename)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
         repo = git.Repo.init(path)
-        origin = repo.create_remote("origin", repo_url)
+        if remote:
+            # Remove manifest.json and settings.json if they exist
+            files_to_remove = ["manifest.json", "settings.json"]
+            for filename in files_to_remove:
+                file_path = os.path.join(path, filename)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            origin = repo.create_remote("origin", repo_url)
 
-        # Fetch and check out the specified branch
-        origin.fetch()
-        repo.create_head(branch, origin.refs[branch]).set_tracking_branch(
-            origin.refs[branch]
-        ).checkout()
+            # Fetch and check out the specified branch
+            origin.fetch()
+            repo.create_head(branch, origin.refs[branch]).set_tracking_branch(
+                origin.refs[branch]
+            ).checkout()
+        else:
+            repo.git.add(A=True)
+            repo.git.commit(m="Initial commit")
+            repo.create_head(branch).checkout()
 
         success = True
         message = "Repository initialized and checked out branch {branch}"
@@ -315,9 +322,9 @@ def create_release(tenant_name, app_settings, app_directory):
                 )
                 release = AppRelease.objects.create(
                     version=current_version,
-                    description=release_notes.get("changes", "NA")
-                    if release_notes
-                    else "NA",
+                    description=(
+                        release_notes.get("changes", "NA") if release_notes else "NA"
+                    ),
                     status="initiated",
                     last_git_hash=latest_commit_hash,
                 )
@@ -364,44 +371,47 @@ def create_release(tenant_name, app_settings, app_directory):
             print(f"An error occurred while creating/updating release: {e}")
 
 
-def is_update_allowed(tenant, app_settings, repo_url, branch):
+def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branch=None):
     from zango.apps.release.utils import is_version_greater
     import zango
 
-    remote_settings = get_remote_settings(repo_url, branch)
-    remote_version = remote_settings["version"]
     local_version = app_settings["version"]
+    if git_mode:
+        remote_settings = get_remote_settings(repo_url, branch)
+        remote_version = remote_settings["version"]
 
     last_release = get_last_release()
 
-    if not (
-        is_version_greater(remote_version, local_version)
-        or (last_release and is_version_greater(remote_version, last_release.version))
-        or (not last_release)
-    ):
+    if git_mode:
+        if not is_version_greater(remote_version, local_version) or (
+            last_release and is_version_greater(remote_version, last_release.version)
+        ):
+            return False, "No version change detected"
+
+        # Check platform version
+        zango_version = remote_settings.get("zango_version")
+        if not zango_version:
+            return False, "Zango version not found in remote settings"
+
+        installed_zango_version = version.parse(zango.__version__)
+        # Compare the installed version with the required version
+        try:
+            specifier = specifiers.SpecifierSet(zango_version)
+            if installed_zango_version not in specifier:
+                return (
+                    False,
+                    f"Zango version mismatch: Required version: {zango_version}, Installed version: {installed_zango_version}",
+                )
+        except specifiers.InvalidSpecifier:
+            return False, "Invalid Zango version specifier in settings.json"
+
+        # App name validation
+        app_name = remote_settings.get("app_name")
+        if app_name != tenant:
+            return False, "App name mismatch"
+
+    if last_release and not is_version_greater(local_version, last_release.version):
         return False, "No version change detected"
-
-    # Check platform version
-    zango_version = remote_settings.get("zango_version")
-    if not zango_version:
-        return False, "Zango version not found in remote settings"
-
-    installed_zango_version = version.parse(zango.__version__)
-    # Compare the installed version with the required version
-    try:
-        specifier = specifiers.SpecifierSet(zango_version)
-        if installed_zango_version not in specifier:
-            return (
-                False,
-                f"Zango version mismatch: Required version: {zango_version}, Installed version: {installed_zango_version}",
-            )
-    except specifiers.InvalidSpecifier:
-        return False, "Invalid Zango version specifier in settings.json"
-
-    # App name validation
-    app_name = remote_settings.get("app_name")
-    if app_name != tenant:
-        return False, "App name mismatch"
 
     return True, "Update allowed"
 
@@ -450,23 +460,24 @@ def update_apps(app_name):
                 open(os.path.join(app_directory, "settings.json")).read()
             )
 
-            if not app_settings.get("git_config"):
-                click.echo(f"No git_config found in settings.json for {tenant}")
-                continue
+            repo_url = None
+            branch = None
+            git_mode = False
+            if app_settings.get("git_config"):
+                git_mode = True
+                # Initialize git repository
+                repo_url = app_settings["git_config"]["repo_url"]
 
-            # Initialize git repository
-            repo_url = app_settings["git_config"]["repo_url"]
+                # Split the repo URL into parts
+                parts = repo_url.split("://")
 
-            # Split the repo URL into parts
-            parts = repo_url.split("://")
+                # Add username and password to the URL
+                repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
 
-            # Add username and password to the URL
-            repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
-
-            branch = app_settings["git_config"]["branch"].get(settings.ENV, "main")
+                branch = app_settings["git_config"]["branch"].get(settings.ENV, "main")
 
             update_allowed, message = is_update_allowed(
-                tenant, app_settings, repo_url, branch
+                tenant, app_settings, git_mode, repo_url, branch
             )
             if not update_allowed:
                 error_message = click.style(
@@ -478,7 +489,9 @@ def update_apps(app_name):
                 continue
 
             # Pull latest code
-            pull_status, message = setup_and_pull(app_directory, repo_url, branch)
+            pull_status, message = setup_and_pull(
+                app_directory, git_mode, repo_url, branch
+            )
             if not pull_status:
                 error_message = click.style(
                     f"An error occurred while pulling code: {message}",
