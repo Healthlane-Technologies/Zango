@@ -6,5 +6,3 @@ Feature: App Launch and Validation
         When Admin clicks on the app launch button on homepage
         And Admin fills the app launch form with the valid data and submits the form
         Then App should be successfully Launched and also the Api response should have message "App Launch Initiated Successfully" and status code 200
-
-

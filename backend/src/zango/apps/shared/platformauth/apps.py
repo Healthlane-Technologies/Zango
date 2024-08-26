@@ -7,4 +7,6 @@ class AuthConfig(AppConfig):
 
     def ready(self):
         # Import the models here
+        from .models import PlatformUserModel  # noqa: F401
+
         pass

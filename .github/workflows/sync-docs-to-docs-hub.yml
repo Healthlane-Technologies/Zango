@@ -17,4 +17,4 @@ jobs:
       destination-repository-name: "zango-docs-hub"
       commit-message: "Sync zango package docs"
       target-branch: staging
-    secrets: inherit
+    secrets: inherit # pragma: allowlist secret

@@ -19,4 +19,13 @@ repos:
     - id: ruff
       args: [ --fix ]
     - id: ruff-format
+- repo: https://github.com/Yelp/detect-secrets
+  rev: v1.5.0
+  hooks:
+  - id: detect-secrets
+    exclude: |
+        (?x)^(
+          package.lock.json|
+          .*\.js
+        )$
     
