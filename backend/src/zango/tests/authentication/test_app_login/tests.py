@@ -9,6 +9,9 @@ from django.http import HttpResponseRedirect
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class ZangoAppLoginTest(ZangoAppBaseTestCase):
+    initialize_workspace = True
+    parent = "authentication"
+    module = "test_app_login"
     
     @classmethod
     def sync_policies(self):
@@ -37,7 +40,6 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         return result["app_user"]
 
     def test_app_login(self):
-        self.setUpAppAndModule("auth_tests", "test_app_login")
         app_user = self.create_app_user()
         self.sync_policies()
         self.client = ZangoClient(self.tenant)

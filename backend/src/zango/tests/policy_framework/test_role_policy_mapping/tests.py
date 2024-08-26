@@ -8,7 +8,10 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class RolePolicyMappingTest(ZangoAppBaseTestCase):
-
+    initialize_workspace = True
+    parent = "policy_framework"
+    module = "test_role_policy_mapping"
+    
     @classmethod
     def sync_policies(self):
         with connection.cursor() as c:
@@ -16,10 +19,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
             ws.ready()
             ws.sync_policies()
 
-    def test_multi_role_with_one_policy_mapping(self):
-        # passing same module name in this class again will throw error.
-        self.setUpAppAndModule("policy_tests", "test_role_policy_mapping")
-        
+    def test_multi_role_with_one_policy_mapping(self):        
     
         expected_role_names = ["test_role_1", "test_role_2"]
         expected_policy_name = "CustomerGetViewAccess"

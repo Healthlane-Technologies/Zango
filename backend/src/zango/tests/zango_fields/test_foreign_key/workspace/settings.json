@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+        "name":"zforeignkey",
+        "path":"zforeignkey"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^zforeignkey/",
+            "module": "zforeignkey",
+            "url": "urls"
+        }
+    ],
+    "package_routes": []
+}
