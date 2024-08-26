@@ -1,11 +1,10 @@
-beautifulsoup4==4.12.3
 boto3==1.28.52
 botocore==1.31.52
 celery==5.3.1
 click==8.1.7
 cookiecutter==2.3.0
 crispy-bootstrap5==0.7
-django==4.2.11
+django==4.2.15
 django-axes==6.4.0
 django-cachalot==2.6.1
 django-celery-beat==2.5.0
