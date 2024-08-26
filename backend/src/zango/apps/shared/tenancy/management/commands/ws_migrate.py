@@ -25,6 +25,10 @@ class Command(MigrateSchemasCommand):
     def handle(self, *args, **options):
         is_test_mode = options["test"]
         tenant = options["workspace"]
+        if is_test_mode:
+            connection.settings_dict["NAME"] = (
+                connection.settings_dict["NAME"]
+            )
         while True:
             try:
                 tenant_obj = TenantModel.objects.get(name=tenant)
@@ -38,10 +42,6 @@ class Command(MigrateSchemasCommand):
                 tenant = input("Please enter a valid workspace: ")
                 options["workspace"] = tenant
 
-        if is_test_mode:
-            connection.settings_dict["NAME"] = (
-                "test_" + connection.settings_dict["NAME"]
-            )
         if options["package"] is None:
             settings.MIGRATION_MODULES = {
                 "dynamic_models": f"workspaces.{ options['workspace']}.migrations"

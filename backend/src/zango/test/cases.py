@@ -33,6 +33,10 @@ class FastZangoTestCase(ZangoTestCase):
 
 
 class ZangoAppBaseTestCase(TenantTestCase):
+    initialize_workspace = False
+    parent = None
+    module = None
+
     @classmethod
     def setup_tenant(cls, tenant):
         """
@@ -59,9 +63,11 @@ class ZangoAppBaseTestCase(TenantTestCase):
             settings.ALLOWED_HOSTS += [".testserver.com"]
 
         super().setUpClass()
-        res = initialize_workspace(cls.tenant.uuid)
-        if not res["result"]=="success":
-            raise Exception(res["error"])
+        if cls.initialize_workspace:
+            res = initialize_workspace(cls.tenant.uuid)
+            if not res["result"]=="success":
+                raise Exception(res["error"])
+            cls.setUpAppAndModule(cls.parent, cls.module)
         connection.set_tenant(cls.tenant)
 
     @classmethod
@@ -85,6 +91,7 @@ class ZangoAppBaseTestCase(TenantTestCase):
 
         # Define the source directory for copying
         workspace_src_dir = os.path.join(test_module_dir, "workspace")
+        migrations_dir = os.path.join(test_module_dir, "migrations")
         
         # Define the destination directory
         base_dir = os.path.join(settings.BASE_DIR, "workspaces")
@@ -101,6 +108,11 @@ class ZangoAppBaseTestCase(TenantTestCase):
                     shutil.copytree(src, dst, dirs_exist_ok=True)
                 else:
                     shutil.copy2(src, dst)
+        
+        if os.path.exists(migrations_dir) and os.path.isdir(migrations_dir):
+            src = migrations_dir
+            dst = os.path.join(base_dir, "testapp", "migrations")
+            shutil.copytree(src, dst, dirs_exist_ok=True)
 
     @classmethod
     def assertModuleExists(cls, module_name, expected):
@@ -113,11 +125,13 @@ class ZangoAppBaseTestCase(TenantTestCase):
 
     @classmethod
     def setUpAppAndModule(cls, parent, module):
-        cls.setUpTestModule(parent, module)
+        if cls.initialize_workspace:
+            cls.setUpTestModule(parent, module)
 
     @classmethod
     def tearDownClass(cls):
-        cls.clean_workspaces()
+        if cls.initialize_workspace:
+            cls.clean_workspaces()
         connection.set_schema_to_public()
         ThemesModel.objects.filter(tenant=cls.tenant).delete()
         cls.domain.delete()

@@ -8,6 +8,9 @@ from zango.test.client import ZangoClient
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class RolePolicyMappingTest(ZangoAppBaseTestCase):
+    initialize_workspace = True
+    parent = "policy_framework"
+    module = "test_policy_ip_permission"
 
     @classmethod
     def sync_policies(self):
@@ -54,7 +57,6 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     
     def test_all_ip_permissions(self):
 
-        self.setUpAppAndModule("policy_tests", "test_policy_ip_permission")
         self.sync_policies()
 
         self.client = ZangoClient(self.tenant)
