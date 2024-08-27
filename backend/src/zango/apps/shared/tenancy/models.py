@@ -133,7 +133,7 @@ class TenantModel(TenantMixin, FullAuditMixin):
             name=name, schema_name=schema_name, description=description, **other_params
         )
         # initialize tenant's workspace
-        init_task = initialize_workspace.apply_async((str(obj.uuid),), countdown=5)
+        init_task = initialize_workspace.apply_async((str(obj.uuid),), countdown=1)
         return obj, init_task.id
 
 
