@@ -11,6 +11,7 @@ repos:
   - id: check-symlinks
   - id: check-toml
   - id: end-of-file-fixer
+    exclude: frontend/
   - id: requirements-txt-fixer
   - id: detect-private-key
 - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -22,7 +23,6 @@ repos:
         --select=I, # only run imports sorting
         --exit-non-zero-on-fix,
       ]
-      exclude: migrations/
     - id: ruff
       args: [
         --fix,

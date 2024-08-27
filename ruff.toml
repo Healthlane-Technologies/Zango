@@ -28,6 +28,7 @@ exclude = [
     "docs",
     "tests",
     "migrations",
+    "frontend",
 ]
 
 target-version = "py311"
