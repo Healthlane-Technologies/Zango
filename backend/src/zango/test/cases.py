@@ -2,12 +2,11 @@ import os
 import shutil
 from pathlib import Path
 from django.db import connection
-from django_tenants.test.cases import TenantTestCase
+from django_tenants.test.cases import TenantTestCase, FastTenantTestCase
 from django.conf import settings
 from django.db import connection
 from zango.apps.shared.tenancy.tasks import initialize_workspace
 from zango.apps.shared.tenancy.models import ThemesModel
-
 
 
 class ZangoTestCase(TenantTestCase):
@@ -18,21 +17,7 @@ class ZangoTestCase(TenantTestCase):
         cls.tenant.delete(force_drop=False)
         cls.remove_allowed_test_domain()
 
-
-class FastZangoTestCase(ZangoTestCase):
-    """
-    A faster variant of `ZangoTestCase`: the test schema and its migrations will only be created and ran once.
-
-    WARNING: although this does produce significant improvements in speed it also means that these type of tests
-             are not fully encapsulated and that some state will be shared between tests.
-
-    See: https://github.com/tomturner/django-tenants/issues/100
-    """
-
-    pass
-
-
-class ZangoAppBaseTestCase(TenantTestCase):
+class ZangoAppBaseTestCase(FastTenantTestCase):
     initialize_workspace = False
     parent = None
     module = None
