@@ -1,7 +1,7 @@
 from pathlib import Path
 
-
 from zango.config.settings.base import *  # noqa: F403
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

@@ -1,6 +1,7 @@
 from django import template
 from django.templatetags.static import static as original_static
 
+
 register = template.Library()
 
 

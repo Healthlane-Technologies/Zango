@@ -10,8 +10,8 @@ def initialize_otel(**kwargs):
     when a worker process starts. It sets up the telemetry and logging
     configurations.
     """
-    from .telemetry import setup_telemetry
     from .logging import setup_logging
+    from .telemetry import setup_telemetry
 
     setup_telemetry(add_django_instrumentation=False)
     setup_logging()

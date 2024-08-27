@@ -1,11 +1,5 @@
 import pytz
-from django.conf import settings
-from django.core.exceptions import DisallowedHost
-from django.db import connection
-from django.http import Http404
-from django.urls import set_urlconf
-from django.utils import timezone
-from django.utils.deprecation import MiddlewareMixin
+
 from django_tenants.middleware.main import TenantMainMiddleware
 from django_tenants.utils import (
     get_public_schema_name,
@@ -15,6 +9,14 @@ from django_tenants.utils import (
     has_multi_type_tenants,
     remove_www,
 )
+
+from django.conf import settings
+from django.core.exceptions import DisallowedHost
+from django.db import connection
+from django.http import Http404
+from django.urls import set_urlconf
+from django.utils import timezone
+from django.utils.deprecation import MiddlewareMixin
 
 
 class ZangoTenantMainMiddleware(TenantMainMiddleware):

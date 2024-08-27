@@ -1,16 +1,16 @@
 import uuid
+
 from functools import reduce
 from operator import and_
 
 from django.apps import apps
 from django.core.exceptions import PermissionDenied
-
 from django.db import connection, models
 from django.db.models import Q
 
 from zango.apps.appauth.models import AppUserModel
-from zango.core.utils import get_current_request, get_current_role
 from zango.apps.dynamic_models.permissions import is_platform_user
+from zango.core.utils import get_current_request, get_current_role
 
 from .mixin import DynamicModelMixin
 

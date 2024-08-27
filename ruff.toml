@@ -27,13 +27,19 @@ exclude = [
     "venv",
     "docs",
     "tests",
+    "migrations",
 ]
 
 target-version = "py311"
 line-length = 88
 
-[lint]
-ignore = [
-    "F405", # name may be undefined
-    "F841", # Local variable `x` is assigned to but never used
-]
+lint.ignore = ["F405", "F841"]
+
+[lint.isort.sections]
+"django" = ["django"]
+"zango" = ["zango"]
+
+[lint.isort]
+lines-after-imports = 2
+lines-between-types = 1
+section-order = ["future", "standard-library", "third-party", "django", "zango", "local-folder", ]

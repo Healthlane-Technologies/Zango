@@ -1,6 +1,7 @@
+from django_tenants.management.commands.migrate_schemas import MigrateSchemasCommand
+
 from django.conf import settings
 from django.db import connection
-from django_tenants.management.commands.migrate_schemas import MigrateSchemasCommand
 
 from zango.apps.shared.tenancy.models import TenantModel
 

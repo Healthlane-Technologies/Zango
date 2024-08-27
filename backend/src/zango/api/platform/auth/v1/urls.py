@@ -6,6 +6,7 @@ from .views import (
     PlatformUserViewAPIV1,
 )
 
+
 urlpatterns = [
     re_path(
         r"^platform-users/$",

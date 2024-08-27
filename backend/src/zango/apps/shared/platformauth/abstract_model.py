@@ -1,12 +1,13 @@
 import json
 
+from phonenumber_field.modelfields import PhoneNumberField
+
 from django.contrib.auth.models import AbstractBaseUser
 from django.db import models
 
 # from django.xcontrib.postgres.fields import JSONField
 from django.db.models import JSONField
 from django.utils import timezone
-from phonenumber_field.modelfields import PhoneNumberField
 
 from zango.core.model_mixins import FullAuditMixin
 

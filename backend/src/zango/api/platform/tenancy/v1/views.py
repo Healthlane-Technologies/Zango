@@ -1,9 +1,10 @@
 import json
 import traceback
 
+from django_celery_results.models import TaskResult
+
 from django.db.models import Q
 from django.utils.decorators import method_decorator
-from django_celery_results.models import TaskResult
 
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel

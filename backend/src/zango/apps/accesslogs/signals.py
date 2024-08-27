@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from axes.helpers import get_client_user_agent
+from ipware import get_client_ip
+
 from django.contrib.auth.signals import (
     user_logged_in,
     user_logged_out,
@@ -8,7 +10,6 @@ from django.contrib.auth.signals import (
 )
 from django.db import connection
 from django.dispatch import receiver
-from ipware import get_client_ip
 
 from zango.apps.accesslogs.models import AppAccessLog
 from zango.apps.appauth.models import UserRoleModel

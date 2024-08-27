@@ -1,10 +1,11 @@
 import os
 import uuid
 
+from storages.backends.s3boto3 import S3Boto3Storage
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection, models
-from storages.backends.s3boto3 import S3Boto3Storage
 
 
 class S3StaticStorage(S3Boto3Storage):

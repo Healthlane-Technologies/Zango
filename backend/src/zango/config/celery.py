@@ -2,6 +2,7 @@ import os
 
 from celery import Celery
 
+
 # Fetching project name
 current_project_dir = os.getcwd()
 project_name = os.path.basename(current_project_dir)

@@ -2,6 +2,7 @@ from django.urls import re_path
 
 from .views import PackagesViewAPIV1
 
+
 urlpatterns = [
     re_path(
         r"",

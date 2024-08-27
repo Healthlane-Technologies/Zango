@@ -18,6 +18,7 @@ from .views import (
     UserViewAPIV1,
 )
 
+
 urlpatterns = [
     re_path(r"$", AppViewAPIV1.as_view(), name="apps-apiv1-appview"),
     re_path(

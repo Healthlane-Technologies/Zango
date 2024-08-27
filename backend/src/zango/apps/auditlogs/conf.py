@@ -1,5 +1,6 @@
 from django.conf import settings
 
+
 # Register all models when set to True
 settings.AUDITLOG_INCLUDE_ALL_MODELS = getattr(
     settings, "AUDITLOG_INCLUDE_ALL_MODELS", False

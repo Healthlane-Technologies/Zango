@@ -1,5 +1,6 @@
-from django.conf import settings
 from pluginbase import PluginBase, PluginSource
+
+from django.conf import settings
 
 
 class CustomPluginSource(PluginSource):

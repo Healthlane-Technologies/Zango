@@ -6,6 +6,7 @@ from .views import (
     AppLogoutView,
 )
 
+
 urlpatterns = [
     re_path(r"^logout/", view=AppLogoutView.as_view(), name="app-logout-view")
 ]

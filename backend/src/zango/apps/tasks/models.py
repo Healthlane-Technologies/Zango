@@ -1,7 +1,8 @@
 import json
 
-from django.db import models
 from django_celery_beat.models import CrontabSchedule, IntervalSchedule, PeriodicTask
+
+from django.db import models
 
 from zango.apps.auditlogs.registry import auditlog
 from zango.apps.permissions.models import PolicyModel

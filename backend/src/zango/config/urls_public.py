@@ -1,9 +1,11 @@
 from decorator_include import decorator_include
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path, re_path
 
 from zango.core.decorators import internal_access_only
+
 
 urlpatterns = [
     re_path(

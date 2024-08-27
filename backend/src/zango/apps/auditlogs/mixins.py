@@ -14,6 +14,7 @@ from zango.apps.auditlogs.models import LogEntry
 from zango.apps.auditlogs.registry import auditlog
 from zango.apps.auditlogs.signals import accessed
 
+
 MAX = 75
 
 

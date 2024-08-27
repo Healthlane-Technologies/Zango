@@ -1,12 +1,14 @@
 import re
 import uuid
+
 from collections import namedtuple
+
+from django_tenants.models import DomainMixin, TenantMixin
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django_tenants.models import DomainMixin, TenantMixin
 
 from zango.core.model_mixins import FullAuditMixin
 from zango.core.storage_utils import ZFileField
@@ -17,6 +19,7 @@ from .utils import (
     DATETIMEFORMAT,
     TIMEZONES,
 )
+
 
 Choice = namedtuple("Choice", ["value", "display"])
 

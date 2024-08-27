@@ -4,6 +4,7 @@ from django.conf import settings
 from django.http import HttpRequest
 from django.utils.module_loading import import_string
 
+
 correlation_id = ContextVar("auditlog_correlation_id", default=None)
 
 

@@ -13,6 +13,7 @@ from django.core.asgi import get_asgi_application
 
 from zango.core.monitoring import setup_telemetry
 
+
 # The telemetry instrumentation library setup needs to run prior to django's setup.
 setup_telemetry(add_django_instrumentation=True)
 
@@ -23,5 +24,6 @@ application = get_asgi_application()
 # Our custom loguru logging to should be setup after django has been setup as Django
 # will try to override with its own logging setup.
 from zango.core.monitoring import setup_logging  # noqa: E402
+
 
 setup_logging()

@@ -2,6 +2,7 @@ from django.urls import re_path
 
 from .views import PolicyDetailViewAPIV1, PolicyViewAPIV1
 
+
 urlpatterns = [
     re_path(
         r"^(?P<app_uuid>[\w-]+)/policies/$",

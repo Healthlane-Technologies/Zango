@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path, re_path
 
+
 urlpatterns = [
     re_path(r"^", include("zango.apps.appauth.urls")),
     re_path(r"api/auth/", include("knox.urls")),

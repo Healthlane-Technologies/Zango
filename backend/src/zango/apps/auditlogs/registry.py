@@ -1,4 +1,5 @@
 import copy
+
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
 from typing import (
@@ -18,6 +19,7 @@ from django.db.models.signals import (
 
 from zango.apps.auditlogs.conf import settings
 from zango.apps.auditlogs.signals import accessed
+
 
 DispatchUID = tuple[int, int, int]
 

@@ -1,10 +1,11 @@
 from loguru import logger
-from opentelemetry.instrumentation.celery import CeleryInstrumentor, celery_getter
-from opentelemetry.instrumentation.celery import utils
+from opentelemetry import trace
 from opentelemetry.instrumentation.celery import (
     _TASK_RUN,
+    CeleryInstrumentor,
+    celery_getter,
+    utils,
 )
-from opentelemetry import trace
 from opentelemetry.propagate import extract
 
 

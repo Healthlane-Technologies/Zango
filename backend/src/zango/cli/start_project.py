@@ -3,8 +3,10 @@ import subprocess
 import sys
 
 import click
-import django
 import psycopg2
+
+import django
+
 from django.core.management import call_command
 
 import zango

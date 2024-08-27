@@ -2,6 +2,7 @@ from django.urls import path
 
 from zango.api.platform.accesslogs.v1.views import AccessLogViewAPIV1
 
+
 urlpatterns = [
     path(
         "",

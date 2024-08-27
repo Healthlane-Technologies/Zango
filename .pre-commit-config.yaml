@@ -17,7 +17,17 @@ repos:
   rev: v0.3.5
   hooks:
     - id: ruff
-      args: [ --fix ]
+      args: [
+        --fix,
+        --select=I, # only run imports sorting
+        --exit-non-zero-on-fix,
+      ]
+      exclude: migrations/
+    - id: ruff
+      args: [
+        --fix,
+        --exit-non-zero-on-fix,
+      ]
     - id: ruff-format
 - repo: https://github.com/Yelp/detect-secrets
   rev: v1.5.0
@@ -28,4 +38,3 @@ repos:
           package.lock.json|
           .*\.js
         )$
-    

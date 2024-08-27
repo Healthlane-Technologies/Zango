@@ -1,11 +1,13 @@
 import contextlib
 import time
+
 from contextvars import ContextVar
 from functools import partial
 
 from django.db.models.signals import pre_save
 
 from zango.apps.auditlogs.models import LogEntry
+
 
 auditlog_value = ContextVar("auditlog_value")
 auditlog_disabled = ContextVar("auditlog_disabled", default=False)

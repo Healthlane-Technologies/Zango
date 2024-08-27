@@ -1,4 +1,5 @@
 from axes.models import AccessBase
+
 from django.db import models
 
 from zango.apps.appauth.models import AppUserModel, UserRoleModel

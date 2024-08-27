@@ -1,5 +1,7 @@
 import pytz
+
 from django_tenants.utils import schema_context
+
 
 __all__ = [
     "TIMEZONES",

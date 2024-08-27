@@ -1,4 +1,5 @@
 from django.db import models
+
 from zango.apps.dynamic_models.models import DynamicModelBase
 
 

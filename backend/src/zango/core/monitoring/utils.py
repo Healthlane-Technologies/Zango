@@ -1,9 +1,9 @@
-import os
 import logging
-
-from django.conf import settings
+import os
 
 from opentelemetry.sdk._logs import LoggingHandler
+
+from django.conf import settings
 
 
 def otel_is_enabled():
