@@ -2,9 +2,7 @@ import copy
 
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
-from typing import (
-    Any,
-)
+from typing import Any, Dict, List, Optional
 
 from django.apps import apps
 from django.db.models import ManyToManyField, Model
@@ -42,7 +40,7 @@ class AuditlogModelRegistry:
         delete: bool = True,
         access: bool = True,
         m2m: bool = True,
-        custom: dict[ModelSignal, Callable] | None = None,
+        custom: Optional[Dict[ModelSignal, Callable]] = None,
     ):
         from zango.apps.auditlogs.receivers import (
             log_access,
@@ -71,13 +69,13 @@ class AuditlogModelRegistry:
     def register(
         self,
         model: ModelBase = None,
-        include_fields: list[str] | None = None,
-        exclude_fields: list[str] | None = None,
-        mapping_fields: dict[str, str] | None = None,
-        mask_fields: list[str] | None = None,
-        m2m_fields: Collection[str] | None = None,
+        include_fields: Optional[List[str]] = None,
+        exclude_fields: Optional[List[str]] = None,
+        mapping_fields: Optional[Dict[str, str]] = None,
+        mask_fields: Optional[List[str]] = None,
+        m2m_fields: Optional[Collection[str]] = None,
         serialize_data: bool = False,
-        serialize_kwargs: dict[str, Any] | None = None,
+        serialize_kwargs: Optional[Dict[str, Any]] = None,
         serialize_auditlog_fields_only: bool = False,
     ):
         """
