@@ -51,6 +51,7 @@ jobs:
           POSTGRES_HOST=127.0.0.1
           POSTGRES_PORT=5432
           PLATFORM_DOMAIN_URL=localhost
+          PROJECT_NAME=test_project
           EOF
       
       # Step 5: Run tests
