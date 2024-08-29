@@ -17,8 +17,9 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
     parent = "zango_fields"
     module = "test_foreign_key"
 
-    def setUp(self) -> None:
-        super().setUp()
+    @classmethod
+    def setUpClass(self):
+        super().setUpClass()
         self.syn_db()
         self.ws = Workspace(self.tenant, request=None, as_systemuser=True)
         self.ws.ready()
@@ -37,6 +38,7 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
                 question="What's the second question?", creator=jim
             )
 
+    @classmethod
     @override_settings(TEST_MIGRATION_RUNNING=True)
     def syn_db(self):
         call_command(
