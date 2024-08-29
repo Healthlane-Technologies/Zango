@@ -58,3 +58,8 @@ jobs:
         run: |
           chmod +x ./runtests.sh
           ./runtests.sh
+      
+      - name: Show coverage
+      run: |
+        mv backend/test_project/.coverage* .
+        coverage report -m
