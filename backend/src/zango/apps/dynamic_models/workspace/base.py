@@ -366,7 +366,7 @@ class Workspace:
             if r_regex.search(path):  # match module
                 module = r["module"] + "." + r["url"]
                 md = self.plugin_source.load_plugin(module)
-                urlpatterns = md.urlpatterns
+                urlpatterns = getattr(md, "urlpatterns")
                 mod_url_path = path[len(r["re_path"].strip("^")) :] or "/"
                 for pattern in urlpatterns:
                     resolve = pattern.resolve(mod_url_path)  # find view

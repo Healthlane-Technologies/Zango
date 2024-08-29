@@ -2,7 +2,7 @@ import copy
 
 from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from django.apps import apps
 from django.db.models import ManyToManyField, Model
@@ -207,7 +207,7 @@ class AuditlogModelRegistry:
                 receiver = make_log_m2m_changes(field_name)
                 self._m2m_signals[model][field_name] = receiver
                 field = getattr(model, field_name)
-                m2m_model = field.through
+                m2m_model = getattr(field, "through")
 
                 m2m_changed.connect(
                     receiver,
@@ -225,7 +225,7 @@ class AuditlogModelRegistry:
             )
         for field_name, receiver in self._m2m_signals[model].items():
             field = getattr(model, field_name)
-            m2m_model = field.through
+            m2m_model = getattr(field, "through")
             m2m_changed.disconnect(
                 sender=m2m_model,
                 dispatch_uid=self._dispatch_uid(m2m_changed, receiver),
@@ -257,7 +257,7 @@ class AuditlogModelRegistry:
         ]
         return exclude_models
 
-    def _register_models(self, models: Iterable[str | dict[str, Any]]) -> None:
+    def _register_models(self, models: Iterable[Union[str, Dict[str, Any]]]) -> None:
         models = copy.deepcopy(models)
         for model in models:
             if isinstance(model, str):

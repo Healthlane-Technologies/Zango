@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable
 from copy import deepcopy
 from datetime import timezone
-from typing import Any
+from typing import Any, Union
 
 from dateutil import parser
 from dateutil.tz import gettz
@@ -531,7 +531,7 @@ class LogEntry(models.Model):
         return changes_display_dict
 
     def _get_changes_display_for_fk_field(
-        self, field: models.ForeignKey | models.OneToOneField, value: Any
+        self, field: Union[models.ForeignKey, models.OneToOneField], value: Any
     ) -> str:
         """
         :return: A string representing a given FK value and the field to which it belongs

@@ -55,7 +55,7 @@ def user_logged_in_handler(sender, request, user, **kwargs):
 
             if getattr(request, "selected_role_id", ""):
                 user_role = UserRoleModel.objects.filter(
-                    id=request.selected_role_id
+                    id=getattr(request, "selected_role_id")
                 ).last()
 
             if user_role:
