@@ -61,5 +61,6 @@ urlpatterns = [
     re_path(r"^(?P<app_uuid>[\w-]+)/code-assist/", include(codeassist_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/auditlog/", include(auditlog_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/access-logs/", include(accesslog_v1_urls)),
+    re_path(r"^(?P<app_uuid>[\w-]+)/releases/", include(releases_v1_urls)),
     path("", include(permissions_v1_urls)),
 ]
