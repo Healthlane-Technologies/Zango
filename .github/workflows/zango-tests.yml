@@ -60,6 +60,6 @@ jobs:
           ./runtests.sh
       
       - name: Show coverage
-      run: |
-        mv backend/test_project/.coverage* .
-        coverage report -m
+        run: |
+          mv backend/test_project/.coverage* .
+          coverage report -m
