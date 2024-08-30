@@ -8,7 +8,6 @@ import boto3
 
 from botocore import UNSIGNED
 from botocore.config import Config
-from packaging.version import Version
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
@@ -16,6 +15,7 @@ from django.conf import settings
 from django.db import connection
 
 import zango
+
 from zango.core.utils import get_current_request_url
 
 
