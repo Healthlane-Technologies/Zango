@@ -1,17 +1,13 @@
-import json
 import inspect
+import json
 
-from django_celery_beat.models import CrontabSchedule
-from django.db import connection
-from rest_framework import serializers
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 from django_celery_results.models import TaskResult
-from django_celery_beat.models import PeriodicTask
-
+from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.tasks.models import AppTask
 from zango.apps.tasks.utils import get_crontab_obj
-from zango.apps.dynamic_models.workspace.base import Workspace
 
 
 class CronTabSerializer(serializers.ModelSerializer):
