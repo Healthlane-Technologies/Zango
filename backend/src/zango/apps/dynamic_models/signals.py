@@ -16,8 +16,9 @@ def set_created_modified_by(sender, instance, **kwargs):
 
 def create_object_store_entry(sender, instance, created, **kwargs):
     if created:
-        from zango.apps.object_store.models import ObjectStore
         from django.contrib.contenttypes.models import ContentType
+
+        from zango.apps.object_store.models import ObjectStore
 
         content_type = ContentType.objects.get_for_model(sender)
         ObjectStore.objects.create(

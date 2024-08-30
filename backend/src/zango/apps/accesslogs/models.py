@@ -1,11 +1,11 @@
-from django.db import models
 from axes.models import AccessBase
+
+from django.db import models
 
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 
 
 class AppAccessLog(AccessBase):
-
     user = models.ForeignKey(AppUserModel, null=True, on_delete=models.CASCADE)
     role = models.ForeignKey(
         UserRoleModel, null=True, blank=True, on_delete=models.CASCADE

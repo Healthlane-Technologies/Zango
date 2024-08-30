@@ -1,20 +1,15 @@
 import uuid
+
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
 
-from django.contrib.auth.models import AbstractBaseUser
-
 # from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
-
-from django.contrib.auth.models import User
 
 from zango.apps.shared.tenancy.models import TenantModel
 
 from .abstract_model import AbstractZangoUserModel
-
-from zango.core.model_mixins import FullAuditMixin
 
 
 class PlatformUserModel(AbstractZangoUserModel):
@@ -64,7 +59,9 @@ class PlatformUserModel(AbstractZangoUserModel):
         """
         import re
 
-        reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,18}$"
+        reg = (
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,18}$"
+        )
         match_re = re.compile(reg)
         res = re.search(match_re, password)
         if res:

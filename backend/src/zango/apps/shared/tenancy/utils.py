@@ -2,6 +2,7 @@ import pytz
 
 from django_tenants.utils import schema_context
 
+
 __all__ = [
     "TIMEZONES",
     "DATEFORMAT",
@@ -43,8 +44,8 @@ DEFAULT_THEME_CONFIG = {
 
 
 def assign_policies_to_anonymous_user(schema_name):
-    from zango.apps.permissions.models import PolicyModel
     from zango.apps.appauth.models import UserRoleModel
+    from zango.apps.permissions.models import PolicyModel
 
     with schema_context(schema_name):
         anonymous_users_role = UserRoleModel.objects.get(name="AnonymousUsers")

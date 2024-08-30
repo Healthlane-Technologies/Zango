@@ -36,4 +36,3 @@ Feature: User Role Creation and Validation
             | Role     | Policy(s) | Active/Inactive | No. of Users |
         And Admin clicks on the user role table search button and Enters the valid data
         Then User role table row should contain the valid data
-

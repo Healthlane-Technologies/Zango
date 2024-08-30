@@ -1,10 +1,10 @@
-import uuid
-from django.db.models import Q
+from django.utils import timezone
+
 from django.db import models
-from django.db.models import JSONField
-from django.db.models.query import QuerySet
-from zango.core.model_mixins import FullAuditMixin
+from django.db.models import JSONField, Q
+
 from zango.apps.auditlogs.registry import auditlog
+from zango.core.model_mixins import FullAuditMixin
 
 
 class PermissionsModel(FullAuditMixin):
@@ -30,13 +30,13 @@ class PermissionsModel(FullAuditMixin):
         """
         from django.db import connection
 
-        app_dir = get_app_base_dir(connection.tenant)
+        app_dir = get_app_base_dir(connection.tenant)  # noqa: F821
         # iterate through all views and add view perms
-        app_settings = get_app_settings(connection.tenant)
+        app_settings = get_app_settings(connection.tenant)  # noqa: F821
         # routes = get_app_settings(connection.tenant)['routes']
-        routes = get_root_routes(connection.tenant)
+        routes = get_root_routes(connection.tenant)  # noqa: F821
         for route in routes:
-            url_file = get_mod_url_filepath(connection.tenant, route["module"])
+            url_file = get_mod_url_filepath(connection.tenant, route["module"])  # noqa: F821
             with url_file.open() as f:
                 _url_file = f.read()
             # zcode = ZPreprocessor(
@@ -49,7 +49,7 @@ class PermissionsModel(FullAuditMixin):
             # c = ZimportStack(zcode, tenant=connection.tenant)
             # c.process_import_and_execute()
             # urlpatterns = c._globals['urlpatterns']
-            for pattern in urlpatterns:
+            for pattern in urlpatterns:  # noqa: F821
                 if pattern.callback.__name__ == "view":
                     view_name = pattern.callback.view_class.__name__
                 else:

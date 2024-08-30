@@ -1,11 +1,11 @@
 import sys
-import os
-from .utils import otel_is_enabled, get_loguru_format
+
+from .utils import get_loguru_format, otel_is_enabled
 
 
 def setup_logging():
-
     from loguru import logger
+
     from django.conf import settings
 
     # Removes the default format

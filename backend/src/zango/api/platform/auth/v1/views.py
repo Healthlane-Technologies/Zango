@@ -1,13 +1,13 @@
-from django.db.models import Q
 from django.conf import settings
+from django.db.models import Q
 
-from zango.core.api import (
-    get_api_response,
-    ZangoGenericPlatformAPIView,
-)
-from zango.core.api.utils import ZangoAPIPagination
 from zango.apps.shared.platformauth.models import PlatformUserModel
 from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api import (
+    ZangoGenericPlatformAPIView,
+    get_api_response,
+)
+from zango.core.api.utils import ZangoAPIPagination
 from zango.core.permissions import IsSuperAdminPlatformUser
 from zango.core.utils import get_search_columns
 
@@ -157,7 +157,9 @@ class AppPanelDetailsView(ZangoGenericPlatformAPIView):
             response = {
                 "app_data": {
                     "user_logged_in": serializer.data,
-                    "is_codeassist_enabled": getattr(settings, "CODEASSIST_ENABLED", False)
+                    "is_codeassist_enabled": getattr(
+                        settings, "CODEASSIST_ENABLED", False
+                    ),
                 },
             }
             status = 200

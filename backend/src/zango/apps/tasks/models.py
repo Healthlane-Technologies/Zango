@@ -1,12 +1,12 @@
 import json
 
-from django.db import models
-from django_celery_beat.models import CrontabSchedule, IntervalSchedule
-from django_celery_beat.models import PeriodicTask
+from django_celery_beat.models import CrontabSchedule, IntervalSchedule, PeriodicTask
 
-from zango.core.model_mixins import FullAuditMixin
-from zango.apps.permissions.models import PolicyModel
+from django.db import models
+
 from zango.apps.auditlogs.registry import auditlog
+from zango.apps.permissions.models import PolicyModel
+from zango.core.model_mixins import FullAuditMixin
 
 
 class AppTask(FullAuditMixin):
@@ -79,6 +79,7 @@ class AppTask(FullAuditMixin):
             obj.save()
 
         super(AppTask, self).save(*args, **kwargs)
+
 
 auditlog.register(
     AppTask,

@@ -1,14 +1,15 @@
 import os
-import sys
 import subprocess
-import psycopg2
+import sys
+
 import click
+import psycopg2
 
 import django
+
 from django.core.management import call_command
 
 import zango
-from .utils import replace_placeholders_in_file
 
 
 def test_db_conection(db_name, db_user, db_password, db_host, db_port):
@@ -107,8 +108,8 @@ def create_project(
     }
     if not os.path.exists(".env"):
         open(".env", "w").close()
-    fcontent = open(".env", "r").read()
-    with open(f".env", "a+") as f:
+    fcontent = open(".env").read()
+    with open(".env", "a+") as f:
         for key, value in env_keys.items():
             if key not in fcontent:
                 f.write(f"{key}={value}\n")
@@ -120,7 +121,7 @@ def create_project(
 
 
 def create_public_tenant(platform_domain_url="localhost"):
-    from zango.apps.shared.tenancy.models import TenantModel, Domain
+    from zango.apps.shared.tenancy.models import Domain, TenantModel
 
     # Creating public tenant
     if not TenantModel.objects.filter(schema_name="public").exists():
@@ -228,7 +229,7 @@ def start_project(
     # Creating Public Tenant
     create_public_tenant(platform_domain_url=platform_domain_url)
 
-     # Prompting default platform user details
+    # Prompting default platform user details
     while True:
         if not platform_username:
             click.echo("Please enter platform user email")

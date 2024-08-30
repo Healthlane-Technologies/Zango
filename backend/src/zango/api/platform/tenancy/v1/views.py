@@ -3,28 +3,27 @@ import traceback
 
 from django_celery_results.models import TaskResult
 
-from django.conf import settings
-from django.utils.decorators import method_decorator
 from django.db.models import Q
+from django.utils.decorators import method_decorator
 
-from zango.core.api import (
-    get_api_response,
-    ZangoGenericPlatformAPIView,
-)
-from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
-from zango.apps.shared.tenancy.utils import TIMEZONES, DATETIMEFORMAT, DATEFORMAT
-from zango.apps.appauth.models import UserRoleModel, AppUserModel
+from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel
-from zango.core.common_utils import set_app_schema_path
+from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
+from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
+from zango.core.api import (
+    ZangoGenericPlatformAPIView,
+    get_api_response,
+)
 from zango.core.api.utils import ZangoAPIPagination
+from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
 from zango.core.utils import get_search_columns
 
 from .serializers import (
-    TenantSerializerModel,
-    UserRoleSerializerModel,
     AppUserModelSerializerModel,
+    TenantSerializerModel,
     ThemeModelSerializer,
+    UserRoleSerializerModel,
 )
 
 

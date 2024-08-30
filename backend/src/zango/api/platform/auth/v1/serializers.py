@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from zango.apps.shared.platformauth.models import PlatformUserModel
+
 from zango.api.platform.tenancy.v1.serializers import TenantSerializerModel
+from zango.apps.shared.platformauth.models import PlatformUserModel
 
 
 class PlatformUserSerializerModel(serializers.ModelSerializer):

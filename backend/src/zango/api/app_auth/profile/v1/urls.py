@@ -1,6 +1,7 @@
 from django.urls import re_path
 
-from .views import ProfileViewAPIV1, PasswordChangeViewAPIV1
+from .views import PasswordChangeViewAPIV1, ProfileViewAPIV1
+
 
 urlpatterns = [
     re_path(

@@ -1,20 +1,20 @@
-import csv
 import json
-import pytz
 import traceback
+
 from datetime import datetime
+
+import pytz
 
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 
-from zango.core.utils import get_search_columns
-from zango.core.api.utils import ZangoAPIPagination
-from zango.apps.accesslogs.models import AppAccessLog
-from zango.core.common_utils import set_app_schema_path
-from zango.apps.shared.tenancy.models import TenantModel
-from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
-
 from zango.api.platform.accesslogs.v1.serializers import AccessLogSerializerModel
+from zango.apps.accesslogs.models import AppAccessLog
+from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.api.utils import ZangoAPIPagination
+from zango.core.common_utils import set_app_schema_path
+from zango.core.utils import get_search_columns
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
@@ -102,7 +102,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         if columns.get("attempt_type"):
             records = records.filter(attempt_type=columns.get("attempt_type"))
 
-        if columns.get("is_login_successful") != None:
+        if columns.get("is_login_successful") is not None:
             if columns.get("is_login_successful") == "successful":
                 records = records.filter(is_login_successful=True)
             elif columns.get("is_login_successful") == "failed":

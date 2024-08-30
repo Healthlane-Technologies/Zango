@@ -1,13 +1,13 @@
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 
-from zango.core.api import (
-    get_api_response,
-    ZangoGenericAppAPIView,
-    ZangoSessionAppAPIView,
-)
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
 from zango.apps.appauth.models import OldPasswords
+from zango.core.api import (
+    ZangoGenericAppAPIView,
+    ZangoSessionAppAPIView,
+    get_api_response,
+)
 
 from .serializers import ProfileSerializer
 
@@ -37,7 +37,7 @@ class PasswordChangeViewAPIV1(ZangoSessionAppAPIView, PasswordValidationMixin):
         """
         try:
             user = authenticate(username=email, password=password)
-        except:
+        except Exception:
             raise ValidationError(
                 "The current password you have entered is wrong. Please try again!"
             )

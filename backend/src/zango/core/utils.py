@@ -1,6 +1,6 @@
-from importlib import import_module
-import pytz
 import json
+
+import pytz
 
 from django.conf import settings
 from django.db import connection
@@ -15,7 +15,6 @@ def get_current_request():
 
 def get_current_role():
     from ..middleware.request import _request_local
-    from django.apps import apps
 
     # model = apps.get_model('appauth', 'UserRoleModel')
     return getattr(_request_local, "user_role", None)
@@ -31,7 +30,7 @@ def get_app_object():
 def get_package_url(request, path, package_name):
     if not request:
         request = get_mock_request()
-    with open(f"workspaces/{request.tenant.name}/settings.json", "r") as f:
+    with open(f"workspaces/{request.tenant.name}/settings.json") as f:
         data = json.loads(f.read())
     for route in data["package_routes"]:
         if route["package"] == package_name:

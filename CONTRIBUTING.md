@@ -35,7 +35,8 @@ This section describes the general practices for contributing to zango, you can 
 ```
 
 2. Implement Changes: Make your changes, ensuring to follow the coding standards and best practices.
-3. Commit Changes: Commit your changes with a meaningful commit message.
+3. Install pre-commit: In the root directory of this repo run `pre-commit install`.This will ensure that pre-commit automatically runs the configured hooks (such as code formatters, linters, and other checks) on your files before each commit, helping to maintain code quality and consistency.
+4. Commit Changes: Commit your changes with a meaningful commit message.
 
 ```bash
     git add .

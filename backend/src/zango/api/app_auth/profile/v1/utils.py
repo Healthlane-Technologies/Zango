@@ -1,10 +1,9 @@
 import re
 
 from django.conf import settings
-from django.shortcuts import redirect
 
 
-class PasswordValidationMixin(object):
+class PasswordValidationMixin:
     MIN_LENGTH = settings.PASSWORD_MIN_LENGTH
     oldpassword_model = None
     num_specialChar_regex = re.compile(r"[!@#$%^&*()_+-/=~]")

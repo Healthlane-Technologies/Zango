@@ -1,17 +1,16 @@
 import os
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponseForbidden
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.utils.decorators import method_decorator
-from django.conf import settings
-
-from django.views.generic import View
-from django.http import Http404
 from axes.decorators import axes_dispatch
 
-from zango.core.utils import get_current_role
+from django.conf import settings
+from django.http import Http404, HttpResponseForbidden
+from django.shortcuts import redirect, render
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.views.generic import View
+
 from zango.apps.dynamic_models.permissions import is_platform_user
+from zango.core.utils import get_current_role
 
 from .workspace.base import Workspace
 

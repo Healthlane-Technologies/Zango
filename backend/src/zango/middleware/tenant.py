@@ -1,22 +1,22 @@
 import pytz
 
+from django_tenants.middleware.main import TenantMainMiddleware
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_public_schema_urlconf,
+    get_tenant_domain_model,
+    get_tenant_types,
+    has_multi_type_tenants,
+    remove_www,
+)
+
 from django.conf import settings
 from django.core.exceptions import DisallowedHost
 from django.db import connection
 from django.http import Http404
 from django.urls import set_urlconf
-from django.utils.deprecation import MiddlewareMixin
-from django_tenants.utils import (
-    remove_www,
-    get_public_schema_name,
-    get_tenant_types,
-    has_multi_type_tenants,
-    get_tenant_domain_model,
-    get_public_schema_urlconf,
-)
-from django_tenants.middleware.main import TenantMainMiddleware
-from django.conf import settings
 from django.utils import timezone
+from django.utils.deprecation import MiddlewareMixin
 
 
 class ZangoTenantMainMiddleware(TenantMainMiddleware):
@@ -152,6 +152,6 @@ class TimezoneMiddleware(MiddlewareMixin):
                 for tz in timezones:
                     timezone_country[tz] = countrycode
             settings.PHONENUMBER_DEFAULT_REGION = timezone_country[tzname]
-        except Exception as e:
+        except Exception:
             timezone.deactivate()
         return self.get_response(request)

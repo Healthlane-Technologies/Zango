@@ -1,14 +1,13 @@
-from django.utils.decorators import method_decorator
 from django.core import signing
 
-from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
+from zango.apps.shared.tenancy.models import Domain, TenantModel
+from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.api.utils import ZangoAPIPagination
 from zango.core.package_utils import (
     get_all_packages,
-    install_package,
     get_package_configuration_url,
+    install_package,
 )
-from zango.core.api.utils import ZangoAPIPagination
-from zango.apps.shared.tenancy.models import TenantModel, Domain
 
 
 class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):

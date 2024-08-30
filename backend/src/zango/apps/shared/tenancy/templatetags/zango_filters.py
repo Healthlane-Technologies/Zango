@@ -2,10 +2,12 @@
 Module containing custom template filters
 """
 
-from django import template
-from django.conf import settings
 import os
 import re
+
+from django import template
+from django.conf import settings
+
 
 register = template.Library()
 
@@ -23,21 +25,21 @@ def humanize_timedelta(timedelta_obj):
     time_total = ""
     if seconds > 86400:  # 60sec * 60min * 24hrs
         days = seconds // 86400
-        time_total += "{} days".format(int(days))
+        time_total += f"{int(days)} days"
         seconds = seconds - days * 86400
 
     if seconds > 3600:
         hrs = seconds // 3600
-        time_total += " {} hours".format(int(hrs))
+        time_total += f" {int(hrs)} hours"
         seconds = seconds - hrs * 3600
 
     if seconds > 60:
         mins = seconds // 60
-        time_total += " {} minutess".format(int(mins))
+        time_total += f" {int(mins)} minutess"
         seconds = seconds - mins * 60
 
     if seconds > 0:
-        time_total += " {} seconds".format(int(seconds))
+        time_total += f" {int(seconds)} seconds"
     return time_total
 
 

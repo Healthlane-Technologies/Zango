@@ -1,23 +1,25 @@
 import ast
 import contextlib
 import json
+
+from collections.abc import Callable
 from copy import deepcopy
 from datetime import timezone
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Union
 
 from dateutil import parser
 from dateutil.tz import gettz
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core import serializers
 from django.core.exceptions import (
     FieldDoesNotExist,
+    FieldError,
     ObjectDoesNotExist,
     ValidationError,
-    FieldError,
 )
-from django import apps
 from django.db import DEFAULT_DB_ALIAS, models
 from django.db.models import Q, QuerySet
 from django.utils import formats
@@ -27,6 +29,7 @@ from django.utils.translation import gettext_lazy as _
 
 from zango.apps.auditlogs.diff import mask_str
 from zango.apps.object_store.models import ObjectStore
+
 
 DEFAULT_OBJECT_REPR = "<error forming object repr>"
 
@@ -282,8 +285,8 @@ class LogEntryManager(models.Manager):
         return instance_copy
 
     def _get_applicable_model_fields(
-        self, instance, model_fields: Dict[str, List[str]]
-    ) -> List[str]:
+        self, instance, model_fields: dict[str, list[str]]
+    ) -> list[str]:
         include_fields = model_fields["include_fields"]
         exclude_fields = model_fields["exclude_fields"]
         all_field_names = [field.name for field in instance._meta.fields]
@@ -294,8 +297,8 @@ class LogEntryManager(models.Manager):
         return list(set(include_fields or all_field_names).difference(exclude_fields))
 
     def _mask_serialized_fields(
-        self, data: Dict[str, Any], mask_fields: List[str]
-    ) -> Dict[str, Any]:
+        self, data: dict[str, Any], mask_fields: list[str]
+    ) -> dict[str, Any]:
         all_field_data = data.pop("fields")
 
         masked_field_data = {}
@@ -442,13 +445,7 @@ class LogEntry(models.Model):
         substrings = []
 
         for field, values in self.changes_dict.items():
-            substring = "{field_name:s}{colon:s}{old:s}{arrow:s}{new:s}".format(
-                field_name=field,
-                colon=colon,
-                old=values[0],
-                arrow=arrow,
-                new=values[1],
-            )
+            substring = f"{field:s}{colon:s}{values[0]:s}{arrow:s}{values[1]:s}"
             substrings.append(substring)
 
         return separator.join(substrings)
@@ -607,8 +604,8 @@ class AuditlogHistoryField(GenericRelation):
 changes_func = None
 
 
-def _changes_func() -> Callable[[LogEntry], Dict]:
-    def json_then_text(instance: LogEntry) -> Dict:
+def _changes_func() -> Callable[[LogEntry], dict]:
+    def json_then_text(instance: LogEntry) -> dict:
         if instance.changes:
             return instance.changes
         elif instance.changes_text:
@@ -616,7 +613,7 @@ def _changes_func() -> Callable[[LogEntry], Dict]:
                 return json.loads(instance.changes_text)
         return {}
 
-    def default(instance: LogEntry) -> Dict:
+    def default(instance: LogEntry) -> dict:
         return instance.changes or {}
 
     if settings.AUDITLOG_USE_TEXT_CHANGES_IF_JSON_IS_NOT_PRESENT:

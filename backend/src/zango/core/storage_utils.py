@@ -1,9 +1,11 @@
 import os
 import uuid
-from django.db import models, connection
+
+from storages.backends.s3boto3 import S3Boto3Storage
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from storages.backends.s3boto3 import S3Boto3Storage
+from django.db import connection, models
 
 
 class S3StaticStorage(S3Boto3Storage):
@@ -25,7 +27,7 @@ def RandomUniqueFileName(instance, filename):
         extension = filename.split(".")[-1]
         file_ = "%s.%s" % (uuid.uuid4(), extension)
         return os.path.join(path, file_)
-    except:
+    except Exception:
         return
 
 
@@ -48,7 +50,7 @@ def validate_file_extension(value):
         ".zip",
         ".ico",
     ]
-    if not ext.lower() in valid_extensions:
+    if ext.lower() not in valid_extensions:
         raise ValidationError(
             "The file type you are trying to upload is not supported."
         )

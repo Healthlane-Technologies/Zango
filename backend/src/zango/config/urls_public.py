@@ -1,14 +1,11 @@
-from django.urls import path, include
-from django.urls import re_path
-from django.contrib import admin
-from django.conf import settings
-from django.conf.urls.static import static
 from decorator_include import decorator_include
 
-from zango.apps.shared.platformauth.views import (
-    PlatformUserLoginView,
-)
+from django.conf import settings
+from django.conf.urls.static import static
+from django.urls import include, path, re_path
+
 from zango.core.decorators import internal_access_only
+
 
 urlpatterns = [
     re_path(

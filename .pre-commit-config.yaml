@@ -1,0 +1,40 @@
+exclude: ^docs/
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.5.0
+  hooks:
+  - id: check-yaml
+  - id: check-case-conflict
+  - id: check-json
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: check-toml
+  - id: end-of-file-fixer
+    exclude: frontend/
+  - id: requirements-txt-fixer
+  - id: detect-private-key
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.3.5
+  hooks:
+    - id: ruff
+      args: [
+        --fix,
+        --select=I, # only run imports sorting
+        --exit-non-zero-on-fix,
+      ]
+    - id: ruff
+      args: [
+        --fix,
+        --exit-non-zero-on-fix,
+      ]
+    - id: ruff-format
+- repo: https://github.com/Yelp/detect-secrets
+  rev: v1.5.0
+  hooks:
+  - id: detect-secrets
+    exclude: |
+        (?x)^(
+          package.lock.json|
+          .*\.js
+        )$

@@ -1,8 +1,9 @@
 import ipaddress
 
+from ipware.ip import get_client_ip
+
 from django.conf import settings
 from django.http import HttpResponseForbidden
-from ipware.ip import get_client_ip
 
 
 def internal_access_only(f):

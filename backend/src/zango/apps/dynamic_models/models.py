@@ -1,15 +1,16 @@
 import uuid
+
 from functools import reduce
 from operator import and_
 
-from django.db import models, connection
-from django.db.models import Q
 from django.apps import apps
 from django.core.exceptions import PermissionDenied
+from django.db import connection, models
+from django.db.models import Q
 
 from zango.apps.appauth.models import AppUserModel
-from zango.core.utils import get_current_request, get_current_role
 from zango.apps.dynamic_models.permissions import is_platform_user
+from zango.core.utils import get_current_request, get_current_role
 
 from .mixin import DynamicModelMixin
 
@@ -141,9 +142,9 @@ def replace_special_context(data):
                 data[key] = replace_special_context(value)
             elif isinstance(value, str) and "{{" in value and "}}" in value:
                 if value == "{{user}}":
-                    data[
-                        key
-                    ] = AppUserModel.objects.all().first()  # get_current_request().user
+                    data[key] = (
+                        AppUserModel.objects.all().first()
+                    )  # get_current_request().user
                 elif value == "{{user_role}}":
                     data[key] = get_current_role()
                 elif value == "{{user_role_id}}":

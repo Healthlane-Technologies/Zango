@@ -1,5 +1,4 @@
 import uuid
-from django.db import connection
 
 
 def get_client_ip(request):
@@ -25,8 +24,9 @@ def set_app_schema_path(f):
     """
 
     def wrapper(*args, **kwargs):
-        from django.apps import apps
         from django_tenants.utils import schema_context
+
+        from django.apps import apps
 
         model = apps.get_model("tenancy", "TenantModel")
         app = model.objects.get(uuid=kwargs.get("app_uuid"))

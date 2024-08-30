@@ -1,22 +1,21 @@
-import traceback
-import csv
-from datetime import datetime
 import json
+import traceback
+
+from datetime import datetime
+
 import pytz
 
-from django.db.models import Q
-from django.contrib.contenttypes.models import ContentType
-from django.db import connection
-from django.utils.decorators import method_decorator
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
+from django.utils.decorators import method_decorator
 
-from zango.core.api import get_api_response, ZangoGenericPlatformAPIView
-from zango.core.api.utils import ZangoAPIPagination
-from zango.core.permissions import IsSuperAdminPlatformUser
-from zango.core.utils import get_search_columns
-from zango.apps.shared.tenancy.models import TenantModel
 from zango.apps.auditlogs.models import LogEntry
+from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
+from zango.core.utils import get_search_columns
 
 from .serializers import AuditLogSerializerModel
 

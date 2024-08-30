@@ -1,13 +1,12 @@
 from loguru import logger
-from opentelemetry.instrumentation.celery import CeleryInstrumentor, celery_getter
-from opentelemetry.instrumentation.celery import utils
-from opentelemetry.instrumentation.celery import (
-    _TASK_NAME_KEY,
-    _TASK_TAG_KEY,
-    _TASK_RUN,
-)
 from opentelemetry import trace
-from opentelemetry.propagate import extract, inject
+from opentelemetry.instrumentation.celery import (
+    _TASK_RUN,
+    CeleryInstrumentor,
+    celery_getter,
+    utils,
+)
+from opentelemetry.propagate import extract
 
 
 class ZangoCeleryInstrumentor(CeleryInstrumentor):

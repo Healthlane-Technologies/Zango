@@ -1,32 +1,29 @@
-from opentelemetry import metrics, trace
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry import trace
+from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs._internal.export import BatchLogRecordProcessor
-from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import ProxyTracerProvider
-
-from loguru import logger
 
 from .celery_instrument import ZangoCeleryInstrumentor
 from .utils import (
-    otel_is_enabled,
+    LogGuruCompatibleLoggerHandler,
     otel_export_to_otlp,
+    otel_is_enabled,
     otel_otlp_endpoint,
     otel_otlp_headers,
     otel_resource_name,
-    LogGuruCompatibleLoggerHandler,
 )
+
 
 tracer = trace.get_tracer(__name__)
 
@@ -46,7 +43,6 @@ def setup_telemetry(add_django_instrumentation: bool):
     """
 
     if otel_is_enabled():
-
         existing_provider = trace.get_tracer_provider()
         if not isinstance(existing_provider, ProxyTracerProvider):
             print("Provider already configured not reconfiguring...")
@@ -62,11 +58,11 @@ def setup_telemetry(add_django_instrumentation: bool):
                     exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
                     print(f"Exporter set to {endpoint}")
                 else:
-                    print(f"OTLP endpoint not provided. Switching to console exporter")
+                    print("OTLP endpoint not provided. Switching to console exporter")
                     exporter = ConsoleSpanExporter()
             else:  # Add console exporter
                 exporter = ConsoleSpanExporter()
-                print(f"Otel exporting to console!")
+                print("Otel exporting to console!")
 
             span_processor = BatchSpanProcessor(exporter)
             # Initialize the TracerProvider

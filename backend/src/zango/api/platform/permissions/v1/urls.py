@@ -1,6 +1,6 @@
 from django.urls import re_path
 
-from .views import PolicyViewAPIV1, PolicyDetailViewAPIV1
+from .views import PolicyDetailViewAPIV1, PolicyViewAPIV1
 
 
 urlpatterns = [

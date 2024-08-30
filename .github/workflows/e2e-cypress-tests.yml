@@ -67,10 +67,10 @@ jobs:
         uses: ./.github/actions/zango-project-setup-action
         with:
           platform_username: platform_admin@zango.dev
-          platform_user_password: Zango@123
+          platform_user_password: Zango@123 #pragma: allowlist secret
           project_name: zango_project
           postgres_user: zango_admin
-          postgres_password: zangopass
+          postgres_password: zangopass #pragma: allowlist secret
           postgres_db: zango
           platform_domain_url: localhost
           domain_config_path: ./e2e-tests/local_domains.txt

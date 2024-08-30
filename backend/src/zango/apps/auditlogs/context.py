@@ -1,11 +1,13 @@
 import contextlib
 import time
+
 from contextvars import ContextVar
 from functools import partial
 
 from django.db.models.signals import pre_save
 
 from zango.apps.auditlogs.models import LogEntry
+
 
 auditlog_value = ContextVar("auditlog_value")
 auditlog_disabled = ContextVar("auditlog_disabled", default=False)
@@ -46,9 +48,10 @@ def _set_actor(user, sender, instance, signal_duid, **kwargs):
 
     This function becomes a valid signal receiver when it is curried with the actor and a dispatch id.
     """
+    from django.contrib.auth.models import User
+
     from zango.apps.appauth.models import AppUserModel
     from zango.apps.shared.platformauth.models import PlatformUserModel
-    from django.contrib.auth.models import User
 
     try:
         auditlog = auditlog_value.get()

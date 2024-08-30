@@ -1,26 +1,22 @@
 from datetime import date, timedelta
 
-from django.db import models
-from django.db.models import Q
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
+from django.db import models
+from django.db.models import Q
 
-from zango.core.model_mixins import FullAuditMixin
-
-from zango.apps.object_store.models import ObjectStore
-from zango.apps.shared.platformauth.abstract_model import AbstractZangoUserModel
-
-
-from zango.core.model_mixins import FullAuditMixin
-from zango.apps.shared.platformauth.abstract_model import (
-    AbstractZangoUserModel,
-    AbstractOldPasswords,
-)
 from zango.apps.auditlogs.registry import auditlog
+from zango.apps.object_store.models import ObjectStore
+from zango.apps.shared.platformauth.abstract_model import (
+    AbstractOldPasswords,
+    AbstractZangoUserModel,
+)
+from zango.core.model_mixins import FullAuditMixin
+
+from ..permissions.mixin import PermissionMixin
 
 # from .perm_mixin import PolicyQsMixin
-from ..permissions.models import PolicyModel, PolicyGroupModel
-from ..permissions.mixin import PermissionMixin
+from ..permissions.models import PolicyGroupModel, PolicyModel
 
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
@@ -92,7 +88,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         """
         import re
 
-        reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,18}$"
+        reg = (
+            r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{8,18}$"
+        )
         match_re = re.compile(reg)
         res = re.search(match_re, password)
         if res:
@@ -171,7 +169,9 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
                             app_user.is_active = True
 
                         if not force_password_reset:
-                            old_password_obj = OldPasswords.objects.create(user=app_user)
+                            old_password_obj = OldPasswords.objects.create(
+                                user=app_user
+                            )
                             old_password_obj.setPasswords(app_user.password)
                             old_password_obj.save()
 
@@ -269,4 +269,3 @@ class OldPasswords(AbstractOldPasswords):
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
-

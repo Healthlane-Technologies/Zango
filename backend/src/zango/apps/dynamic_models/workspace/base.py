@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import inspect
 import json
 import os
@@ -7,10 +8,10 @@ import re
 from django.conf import settings
 from django.db import connection
 
-from zango.apps.permissions.models import PolicyModel
 from zango.apps.appauth.models import UserRoleModel
-from zango.core.custom_pluginbase import get_plugin_source
 from zango.apps.dynamic_models.models import DynamicModelBase
+from zango.apps.permissions.models import PolicyModel
+from zango.core.custom_pluginbase import get_plugin_source
 
 from .lifecycle import Lifecycle
 from .wtree import WorkspaceTreeNode
@@ -78,7 +79,7 @@ class Workspace:
         try:
             if request.internal_routing:
                 return True
-        except:
+        except Exception:
             pass
         if request:
             user = request.user
@@ -286,9 +287,10 @@ class Workspace:
         get topologically sorted list of tasks from packages and modules and
         import tasks.py files in that order
         """
-        from zango.config.celery import app
-        from celery import Task
         import inspect
+
+        from celery import Task
+
         from zango.apps.tasks.models import AppTask
         from zango.apps.tasks.utils import get_crontab_obj
 
@@ -445,7 +447,7 @@ class Workspace:
                     except json.decoder.JSONDecodeError as e:
                         raise Exception(f"Error parsing {policy_file}: {e}")
                     for policy_details in policy["policies"]:
-                        if type(policy_details["statement"]) is not dict:
+                        if not isinstance(policy_details["statement"], dict):
                             raise Exception(
                                 f"Policy {policy_details['name']} has an invalid statement"
                             )
@@ -463,7 +465,7 @@ class Workspace:
                             )
                             if not created:
                                 if policy.id not in existing_policies:
-                                    raise Exception(f"Policy name already exists")
+                                    raise Exception("Policy name already exists")
                                 existing_policies.remove(policy.id)
                         except Exception as e:
                             raise Exception(

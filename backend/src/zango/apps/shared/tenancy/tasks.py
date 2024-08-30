@@ -1,12 +1,13 @@
 import os
 
 import cookiecutter.main
+
 from celery import shared_task
 
 from django.conf import settings
 from django.core.management import call_command
 
-from .utils import assign_policies_to_anonymous_user, DEFAULT_THEME_CONFIG
+from .utils import DEFAULT_THEME_CONFIG, assign_policies_to_anonymous_user
 
 
 @shared_task

@@ -1,4 +1,5 @@
 import json
+
 from datetime import timezone
 from typing import Optional
 
@@ -14,9 +15,8 @@ from django.db.models import (
 )
 from django.utils import timezone as django_timezone
 from django.utils.encoding import smart_str
-from django.conf import settings
 
-from zango.apps.dynamic_models.fields import ZOneToOneField, ZForeignKey
+from zango.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
 
 
 def track_field(field):

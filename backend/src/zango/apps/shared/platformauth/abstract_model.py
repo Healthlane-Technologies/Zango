@@ -1,20 +1,18 @@
 import json
 
-from django.db import models
+from phonenumber_field.modelfields import PhoneNumberField
+
 from django.contrib.auth.models import AbstractBaseUser
+from django.db import models
 
 # from django.xcontrib.postgres.fields import JSONField
 from django.db.models import JSONField
 from django.utils import timezone
-from django.contrib.auth.models import User
 
-from phonenumber_field.modelfields import PhoneNumberField
-
+from zango.core.model_mixins import FullAuditMixin
 
 # from backend.core.storage_utils import S3PrivateFileField, RandomUniqueFileName
 from zango.core.storage_utils import RandomUniqueFileName
-from zango.core.model_mixins import FullAuditMixin
-from phonenumber_field.modelfields import PhoneNumberField
 
 
 class AbstractZangoUserModel(AbstractBaseUser, FullAuditMixin):

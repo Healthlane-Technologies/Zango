@@ -1,6 +1,8 @@
 import logging
-from loguru import logger
 import traceback
+
+from loguru import logger
+
 from django.db import connection
 
 

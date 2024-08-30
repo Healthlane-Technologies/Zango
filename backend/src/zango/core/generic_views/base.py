@@ -1,6 +1,7 @@
-from django.views.generic import View, TemplateView
 from django.contrib.auth.decorators import login_required
-from ..permissions import IsAuthenticatedPlatformUser, IsAuthenticatedAppUser
+from django.views.generic import TemplateView, View
+
+from ..permissions import IsAuthenticatedAppUser, IsAuthenticatedPlatformUser
 
 
 class ZangoSessionPlatformView(IsAuthenticatedPlatformUser, View):

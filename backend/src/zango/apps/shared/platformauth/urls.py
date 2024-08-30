@@ -1,5 +1,4 @@
 from django.urls import re_path
-from django.views.decorators.csrf import csrf_exempt
 
 from zango.apps.shared.platformauth.views import (
     PlatformUserLoginView,

@@ -1,16 +1,13 @@
-
-
 class Lifecycle:
-
     """
-        workspace lifecycle
+    workspace lifecycle
     """
 
     def __init__(self, workspace: object) -> None:
         self.workspace = workspace
 
     @classmethod
-    def launch(cls, params : dict) -> bool:
+    def launch(cls, params: dict) -> bool:
         pass
 
     def suspend(self) -> bool:
@@ -18,8 +15,3 @@ class Lifecycle:
 
     def activate(self) -> bool:
         pass
-
-
-
-    
-

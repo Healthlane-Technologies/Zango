@@ -1,16 +1,8 @@
 import copy
+
 from collections import defaultdict
-from typing import (
-    Any,
-    Callable,
-    Collection,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from collections.abc import Callable, Collection, Iterable
+from typing import Any, Dict, List, Optional, Union
 
 from django.apps import apps
 from django.db.models import ManyToManyField, Model
@@ -26,7 +18,8 @@ from django.db.models.signals import (
 from zango.apps.auditlogs.conf import settings
 from zango.apps.auditlogs.signals import accessed
 
-DispatchUID = Tuple[int, int, int]
+
+DispatchUID = tuple[int, int, int]
 
 
 class AuditLogRegistrationError(Exception):
@@ -177,7 +170,7 @@ class AuditlogModelRegistry:
         else:
             self._disconnect_signals(model)
 
-    def get_models(self) -> List[ModelBase]:
+    def get_models(self) -> list[ModelBase]:
         return list(self._registry.keys())
 
     def get_model_fields(self, model: ModelBase):
@@ -243,7 +236,7 @@ class AuditlogModelRegistry:
         """Generate a dispatch_uid which is unique for a combination of self, signal, and receiver."""
         return id(self), id(signal), id(receiver)
 
-    def _get_model_classes(self, app_model: str) -> List[ModelBase]:
+    def _get_model_classes(self, app_model: str) -> list[ModelBase]:
         try:
             try:
                 app_label, model_name = app_model.split(".")
@@ -255,7 +248,7 @@ class AuditlogModelRegistry:
 
     def _get_exclude_models(
         self, exclude_tracking_models: Iterable[str]
-    ) -> List[ModelBase]:
+    ) -> list[ModelBase]:
         exclude_models = [
             model
             for app_model in tuple(exclude_tracking_models)

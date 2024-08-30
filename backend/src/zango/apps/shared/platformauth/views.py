@@ -1,11 +1,12 @@
+from axes.decorators import axes_dispatch
+
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect
-
-from django.utils.decorators import method_decorator
 from django.template.response import TemplateResponse
+from django.utils.decorators import method_decorator
 
-from axes.decorators import axes_dispatch
-@method_decorator(axes_dispatch, name='dispatch')
+
+@method_decorator(axes_dispatch, name="dispatch")
 # Create your views here.
 class PlatformUserLoginView(LoginView):
     """
@@ -20,13 +21,13 @@ class PlatformUserLoginView(LoginView):
             return redirect("/platform")
         else:
             context = self.get_context_data()
-            context["error_message"] = "Please enter a correct email address and password. Note that both fields may be case-sensitive."
+            context["error_message"] = (
+                "Please enter a correct email address and password. Note that both fields may be case-sensitive."
+            )
             return TemplateResponse(request, self.template_name, context)
 
-from django.utils.decorators import method_decorator
 
-from axes.decorators import axes_dispatch
-@method_decorator(axes_dispatch, name='dispatch')
+@method_decorator(axes_dispatch, name="dispatch")
 class PlatformUserLogoutView(LogoutView):
     """
     View to logout the user.

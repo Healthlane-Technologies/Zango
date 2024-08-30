@@ -1,9 +1,9 @@
 from django.urls import re_path
 
 from .views import (
-    PlatformUserViewAPIV1,
-    PlatformUserDetailViewAPIV1,
     AppPanelDetailsView,
+    PlatformUserDetailViewAPIV1,
+    PlatformUserViewAPIV1,
 )
 
 

@@ -1,10 +1,10 @@
 import json
 
 from rest_framework import serializers
-from zango.apps.shared.tenancy.models import TenantModel, Domain, ThemesModel
-from zango.apps.appauth.models import UserRoleModel, AppUserModel
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
+from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 
 
 class DomainSerializerModel(serializers.ModelSerializer):

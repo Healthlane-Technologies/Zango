@@ -1,5 +1,5 @@
-from functools import partial
-from celery import shared_task, current_task
+from celery import shared_task
+
 from django.db import connection
 
 
