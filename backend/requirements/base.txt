@@ -26,6 +26,8 @@ django-storages==1.14
 django-tenants==3.6.1
 djangorestframework==3.15.2
 flake8==6.1.0
+
+flower==2.0.1
 loguru==0.7.2
 opentelemetry-api==1.22.0
 opentelemetry-distro==0.43b0
@@ -67,4 +69,3 @@ python3-saml==1.16.0
 pytz==2024.1
 setuptools==70.1.1
 XlsxWriter==3.1.9
-flower==2.0.1
