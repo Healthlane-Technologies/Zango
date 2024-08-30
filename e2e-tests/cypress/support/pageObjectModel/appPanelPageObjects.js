@@ -189,6 +189,36 @@ const appPanelPageObjects = {
   getSyncTaskButton: () => cy.get('[data-cy = "sync_task_button"]'),
   //for packages tab
   getPackageSearchBar: () => cy.get('[placeholder="Search Packages by name"]'),
+  //Platform-user
+  getTopMenuButton: () => cy.get('[data-cy = "top_menu_button"]'),
+  getTopMenuItems: () => cy.get('[data-cy = "top_menu_items"]'),
+  getAddUserManagement: () => cy.get("#root > main > div > div> button"),
+  getUserManagementFullName: () => cy.get('[name="name"]'),
+  getUserManagementEmail: () => cy.get('[name="email"]'),
+  getUserManagementPassword: () => cy.get('[name="password"]'),
+  getUserManagementAppsAccess: () => cy.get('[data-cy="dropdown_field"]'),
+  getUserManagementDropdownValues: () =>
+    cy.get('[data-cy="multi_select_values"]'),
+  getUserManagementColumnHeader: () =>
+    cy.get("table > thead > tr >th:nth-child(1)"),
+  getUserManagementSearchBar: () =>
+    cy.get('[placeholder="Search Users by name / ID / role(s)"]'),
+  getUserManagementTableValue: () =>
+    cy.get("table > tbody > tr:nth-child(1) > td:nth-child(2)"),
+  getDeactivatePlatformUserRoleButton: () =>
+    cy.get('[data-cy="deactivate_platform_user_button"]'),
+  getActivatePlatformUserRoleButton: () =>
+    cy.get('[data-cy="activate_platform_user_button"]'),
+  getEditPlatformUserRoleButton: () =>
+    cy.get('[data-cy="edit_platform_user_button"]'),
+  getPlatformUserResetPwdButton: () =>
+    cy.get('[data-cy="platform_user_reset_pwd_button"]'),
+  getPlatformUserResetPwdField: () => cy.get('[data-cy="text_field"]'),
+
+  //PlatformUserLogin
+  getPlatformUsername: () => cy.get('[type="text"]'),
+  getPlatformUserPassword: () => cy.get('[type="password"]'),
+  getPlatformLoginButton: () => cy.get('[type="submit"]'),
 };
 
 export default appPanelPageObjects;

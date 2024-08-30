@@ -25,8 +25,13 @@ on:
 
 jobs:
   cypress-run:
-    runs-on: ubuntu-latest
-    name: E2E on Chrome
+    runs-on: ${{ matrix.os }}
+    name: E2E on ${{ matrix.os }} with ${{ matrix.browser }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        browser: [chrome, firefox, edge]
 
     steps:
       # Step 1: Checkout repo
@@ -58,7 +63,7 @@ jobs:
           CI=false yarn build
 
       # Step 6: Removing license file for the new build
-      - name: Remove old build files
+      - name: Remove new license file
         run: |
           find backend/src/zango/assets/app_panel/js -name "build.*.min.js.LICENSE.txt" -type f -delete
 
@@ -80,7 +85,7 @@ jobs:
         id: start-time
         run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
 
-      # Step 9: Install  cypress dependencies
+      # Step 9: Install cypress dependencies
       - name: Install cypress dependencies
         run: npm install
         working-directory: e2e-tests
@@ -89,7 +94,7 @@ jobs:
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
-          browser: chrome
+          browser: ${{ matrix.browser }}
           working-directory: e2e-tests
         continue-on-error: true
 
@@ -108,7 +113,7 @@ jobs:
           DURATION="${DURATION_MINUTES}m ${DURATION_REMAINDER_SECONDS}s"
           echo "DURATION=${DURATION}" >> $GITHUB_ENV
 
-      #Step 13: Extracting zango version
+      # Step 13: Extracting zango version
       - name: Extract Version
         id: extract_version
         run: |
@@ -123,18 +128,18 @@ jobs:
           node cucumber-html-report.js
         working-directory: e2e-tests
         env:
-          BROWSER_NAME: chrome
-          BROWSER_VERSION: "127"
+          BROWSER_NAME: ${{ matrix.browser }}
+          BROWSER_VERSION: "127" # Adjust this if needed
           DEVICE_NAME: "Remote Device"
-          PLATFORM_NAME: "Ubuntu"
-          PLATFORM_VERSION: "22.04.4"
+          PLATFORM_NAME: ${{ matrix.os }}
+          PLATFORM_VERSION: ${{ matrix.os == 'ubuntu-latest' && '22.04.4'}}
           CI_ENVIRONMENT: "GitHub Actions"
 
       # Step 15: Upload Cypress screenshots
       - name: Upload Cypress screenshots
         uses: actions/upload-artifact@v3
         with:
-          name: cypress-screenshots
+          name: cypress-${{ matrix.os }}-${{ matrix.browser }}-screenshots
           path: e2e-tests/cypress/screenshots
           if-no-files-found: ignore
 
@@ -142,7 +147,7 @@ jobs:
       - name: Upload Cypress videos
         uses: actions/upload-artifact@v3
         with:
-          name: cypress-videos
+          name: cypress-${{ matrix.os }}-${{ matrix.browser }}-videos
           path: e2e-tests/cypress/videos
           if-no-files-found: ignore
 
@@ -150,6 +155,6 @@ jobs:
       - name: Upload Cucumber HTML Report
         uses: actions/upload-artifact@v3
         with:
-          name: cucumber-html-report
+          name: cucumber-html-report on ${{ matrix.os }}-${{ matrix.browser }}
           path: e2e-tests/reports/cucumber-html-report.html
           if-no-files-found: ignore

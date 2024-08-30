@@ -1,6 +1,7 @@
 Feature: Policy Management
     Background: Navigate to the Policies Tab
         Given  User navigates to policies tab
+
     Scenario: Admin wants to verify that all the policies are loaded
         When Validate the policies tab URL
         And Policy table should contain the following columns

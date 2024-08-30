@@ -4,9 +4,9 @@ let appData = "";
 Given(
   "Admin logins successfully and lands on the home page of App panel",
   () => {
-    cy.login("platform_admin@zango.dev", "Zango@123");
     const dynamicData = {
       app_name: `app_${Math.floor(Math.random() * 10000)}`, //To create random text
+      invalid_app_name: `app ${Math.floor(Math.random() * 10000)}`,
       app_description: `app_${Math.floor(Math.random() * 10000)}`, //To create random text
       domain_url: `https://test${Math.floor(Math.random() * 10000)}.com`,
       // Add more fields as needed
@@ -26,6 +26,7 @@ Given(
 );
 
 When("Admin clicks on the app launch button on homepage", () => {
+  cy.login("platform_admin@zango.dev", "Zango@123");
   appPanelPageObjects
     .getAppLaunchButton()
     .should("contain", "Launch New App")
@@ -39,8 +40,18 @@ And(
     appPanelPageObjects.getTextField().type(appData.app_name);
     appPanelPageObjects.getTextArea().type(appData.app_description);
     appPanelPageObjects.getSubmitButton().click();
-    cy.wait(5000);
+    cy.wait(3000);
     cy.log("App Launched");
+  }
+);
+
+And(
+  "Admin fills the app launch form with the invalid data and submits the form",
+  () => {
+    cy.intercept("POST", "/api/v1/apps/").as("getAppData");
+    appPanelPageObjects.getTextField().type(appData.invalid_app_name);
+    appPanelPageObjects.getTextArea().type(appData.app_description);
+    appPanelPageObjects.getSubmitButton().click();
   }
 );
 
@@ -63,5 +74,28 @@ Then(
         });
       });
     });
+  }
+);
+
+Then(
+  "Error message for duplication app name should be displayed and status code of api response should be {int}",
+  (statusCode) => {
+    cy.wait("@getAppData").then((intercept) => {
+      expect(intercept.response.statusCode).to.eq(statusCode);
+    });
+    appPanelPageObjects.getErrorMessage().should("contain", "already exists");
+    appPanelPageObjects.getGoBackButton().click();
+  }
+);
+Then(
+  "Error message for invalid app name should be displayed and status code of api response should be {int}",
+  (statusCode) => {
+    cy.wait("@getAppData").then((intercept) => {
+      expect(intercept.response.statusCode).to.eq(statusCode);
+    });
+    appPanelPageObjects
+      .getErrorMessage()
+      .should("contain", "['Invalid string used for the Tenant Name']");
+    appPanelPageObjects.getGoBackButton().click();
   }
 );
