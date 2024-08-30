@@ -1,6 +1,6 @@
 import json
-import phonenumbers
 
+import phonenumbers
 import pytz
 
 from django.conf import settings
@@ -143,5 +143,5 @@ def validate_phone(phone_number, region=None):
         phone_number = phonenumbers.parse(phone_number, region=region)
         if phonenumbers.is_valid_number(phone_number):
             return True
-    except:
+    except Exception:
         return False
