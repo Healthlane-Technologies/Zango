@@ -53,6 +53,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 
 class AppUserModel(AbstractZangoUserModel, PermissionMixin):
+    slug = models.SlugField(unique=True, blank=True, null=True)
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
