@@ -29,7 +29,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.name, {
 			id: 'name',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full w-[220px] items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						User Name Active/inactive
 					</span>
@@ -121,7 +121,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.roles, {
 			id: 'roles',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full w-[200px] items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Management Access
 					</span>
@@ -132,7 +132,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.created_at, {
 			id: 'created_at',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full w-[200px] items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Last Login / Date Joined
 					</span>

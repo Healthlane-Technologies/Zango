@@ -2,18 +2,18 @@ import { flexRender } from '@tanstack/react-table';
 
 function TableBody({ table, RowMenu }) {
 	return (
-		<tbody>
+		<tbody className='h-full'>
 			{table.getRowModel().rows.map((row) => (
 				<tr
 					key={row.id}
-					className="group relative hover:bg-[#f5f7f8] hover:shadow-table-row"
+					className="group relative hover:bg-[#f5f7f8] hover:shadow-table-row h-full"
 				>
 					{row.getVisibleCells().map((cell) => (
-						<td key={cell.id}>
+						<td key={cell.id} className='h-full'>
 							{flexRender(cell.column.columnDef.cell, cell.getContext())}
 						</td>
 					))}
-					<td key="extra-cell" className="w-full">
+					<td key="extra-cell" className="w-full h-full">
 						<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 							<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]"></span>
 						</div>

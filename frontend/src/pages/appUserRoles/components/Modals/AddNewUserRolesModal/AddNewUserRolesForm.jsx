@@ -25,6 +25,7 @@ const AddNewUserRolesForm = ({ closeModal }) => {
 	});
 
 	let onSubmit = (values) => {
+		console.log(values)
 		let tempValues = values;
 
 		let dynamicFormData = transformToFormData(tempValues);

@@ -42,7 +42,7 @@
 		"yup": "^0.32.11"
 	},
 	"scripts": {
-		"start": "react-scripts start",
+		"start": "PORT=1443 react-scripts start",
 		"mock": "REACT_APP_MSW_MOCK_API=true react-scripts start",
 		"build": "node generate-build.js && npm run build:react && npm run build:bundle",
 		"build:react": "react-scripts build",
@@ -84,5 +84,6 @@
 	"resolutions": {
 		"react": "18.2.0",
 		"react-dom": "18.2.0"
-	}
+	},
+	"proxy":"http://localhost:8000"
 }

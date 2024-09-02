@@ -11,7 +11,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.name, {
 			id: 'name',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
+				<div className="flex h-full w-30 items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Role
 					</span>
@@ -30,7 +30,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.attached_policies, {
 			id: 'attached_policies',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full w-30 items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Policy(s)
 					</span>
@@ -41,7 +41,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.is_active, {
 			id: 'is_active',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full w-52 items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Active/Inactive
 					</span>
@@ -92,7 +92,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.no_of_users, {
 			id: 'no_of_users',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full w-30 items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						No. of Users
 					</span>
