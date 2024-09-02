@@ -80,11 +80,13 @@ class DynamicView(View, PermMixin):
                     user_role = get_current_role()
                     if user_role.name == "AnonymousUsers":
                         return redirect("/login/")
-                    raise PermissionDenied()
+                    raise PermissionDenied(
+                        "You don't have permission to view this page"
+                    )
 
             # View Not Found
             if request.path == "/" and not self.workspace.is_dev_started():
                 return default_landing_view(request)
 
             raise Http404()
-        raise PermissionDenied()
+        raise PermissionDenied("You don't have permission to view this page")

@@ -27,7 +27,7 @@ def internal_access_only(f):
         if settings.ENV in ["staging", "prod"]:
             # Check if the client's IP is not in the allowed IPs
             if not any(ipaddress.ip_address(client_ip) in ip for ip in allowed_ips):
-                raise PermissionDenied()
+                raise PermissionDenied("You don't have permission to view this page")
         return f(request, *args, **kwargs)
 
     return decorate_view
