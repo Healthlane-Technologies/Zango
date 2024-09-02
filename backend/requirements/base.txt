@@ -4,6 +4,7 @@ botocore==1.31.52
 celery==5.3.1
 click==8.1.7
 cookiecutter==2.3.0
+coverage==7.6.1
 crispy-bootstrap5==0.7
 django==4.2.15
 django-axes==6.4.0
