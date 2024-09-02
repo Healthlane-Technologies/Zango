@@ -275,12 +275,14 @@ export default function Table({ tableData }) {
 		[appReleasesTableData]
 	);
 
+
+
 	const appReleasesData = useSelector(selectAppReleasesData);
-	console.log('appReleasesData....,appReleasesData', appReleasesData);
+	console.log('hi'  );
 	const table = useReactTable({
-		data: appReleasesData?.access_logs?.records ?? defaultData,
+		data: appReleasesData?.releases?.records ?? defaultData,
 		columns,
-		pageCount: appReleasesData?.access_logs?.total_pages ?? -1,
+		pageCount: appReleasesData?.releases?.total_pages ?? -1,
 		state: {
 			pagination,
 		},
@@ -347,7 +349,7 @@ export default function Table({ tableData }) {
 					.join('')
 			: '';
 
-		console.log('columnFilter', columnFilter, appReleasesTableData);
+		
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
@@ -361,11 +363,12 @@ export default function Table({ tableData }) {
 			});
 			if (success && response) {
 				updateAppReleasesData(response);
+				console.log('data....' , response);
 			}
 		};
-
+	
 		makeApiCall();
-	}, [appReleasesTableData]);
+	}, []);
 
 	useEffect(() => {
 		searchRef.current.value = appReleasesTableData?.searchValue || '';
@@ -453,10 +456,11 @@ export default function Table({ tableData }) {
 			<div className="flex border-t border-[#DDE2E5] py-[4px]">
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-						Total count: {appReleasesData?.access_logs?.total_records}
-						{console.log('appReleasesData........', appReleasesData)}
+						Total count: {appReleasesData?.releases?.total_records}
+						{/* 
+						{console.log('appReleasesData........', appReleasesData)} */}
 					</span>
-					{console.log('appReleasesData,,,,', appReleasesData)}
+					{/* {console.log('appReleasesData,,,,', appReleasesData)} */}
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						<PageCountSelectField
 							key="page_count"

@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Releases from '../components/appLogs/Index';
+import Releases from '../components/Releases/Index';
 
 export const AppReleasesRoutes = () => {
 	return (

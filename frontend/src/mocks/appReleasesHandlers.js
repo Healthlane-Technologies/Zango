@@ -53,7 +53,7 @@ export const appReleasesHandlers = [
 			ctx.json({
 				success: true,
 				response: {
-					access_logs: {
+					releases: {
 						total_records: totalData,
 						total_pages: Math.ceil(data.length / pageSize),
 						next: '.',

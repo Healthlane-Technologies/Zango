@@ -18,7 +18,7 @@ export const appReleasesSlice = createSlice({
 		setAppReleasesData: (state, action) => {
 			state.appReleasesData = action.payload;
 			state.isAppReleasesDataEmpty =
-				action.payload?.access_logs?.records?.length ||
+				action.payload?.releases?.records?.length ||
 				state?.appReleasesTableData?.searchValue ||
 				state?.appReleasesTableData?.columns?.length
 					? false

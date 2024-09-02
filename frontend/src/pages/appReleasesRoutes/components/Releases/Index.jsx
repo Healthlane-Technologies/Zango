@@ -10,6 +10,7 @@ import {selectRerenderPage, selectAppReleasesData, selectAppReleasesTableData, s
 export default function  Releases() {
 	let { appId } = useParams();
 	const appReleasesData = useSelector(selectAppReleasesData);
+	console.log(appReleasesData,'appReleasesData');
 	const appReleasesTableData = useSelector(selectAppReleasesTableData);
 	const rerenderPage = useSelector(selectRerenderPage);
 	const isAppReleasesDataEmpty= useSelector(selectIsAppReleasesDataEmpty);
@@ -45,7 +46,7 @@ export default function  Releases() {
 			});
 			if (success && response) {
 
-				console.log('appReleases data !!!!' ,appReleasesTableData);
+				console.log('appReleases data !!!!' ,response);
 				updateAppReleasesData(response);
 			}
 		};
