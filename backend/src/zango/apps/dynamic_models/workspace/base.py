@@ -6,9 +6,8 @@ import os
 import re
 
 from django.conf import settings
-from django.db import connection
-from django.db.models import OuterRef, Subquery
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.db import connection
 
 from zango.apps.appauth.models import UserRoleModel
 from zango.apps.dynamic_models.models import DynamicModelBase
@@ -499,26 +498,23 @@ class Workspace:
             ).first()
             if user_role:
                 user_role.policies.set(policies)
-    
+
     def sync_role_with_policies(self):
         """
         mapping roles from UserRoleModel to policies.json
         """
-        all_policies={}
+        all_policies = {}
         policies_without_roles = list(
-            PolicyModel.objects.filter(type="user", role_policies__isnull=True)
-            .values("name", "description", "statement")
+            PolicyModel.objects.filter(type="user", role_policies__isnull=True).values(
+                "name", "description", "statement"
+            )
         )
         policies_with_roles = list(
             PolicyModel.objects.filter(type="user", role_policies__isnull=False)
             .values("name", "description", "statement")
-            .annotate(
-                roles=ArrayAgg(
-                    'role_policies__name', distinct=True
-                )
-            )
+            .annotate(roles=ArrayAgg("role_policies__name", distinct=True))
         )
-        all_policies["policies"]=policies_without_roles+policies_with_roles
+        all_policies["policies"] = policies_without_roles + policies_with_roles
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
@@ -527,5 +523,5 @@ class Workspace:
                     module.replace(str(settings.BASE_DIR) + "/", "") + "/policies"
                 )
                 model_module = model_module.lstrip("/").replace("/", ".")
-                with open(policy_file, 'w') as f:
-                    f.write(json.dumps(all_policies,indent=4))
+                with open(policy_file, "w") as f:
+                    f.write(json.dumps(all_policies, indent=4))

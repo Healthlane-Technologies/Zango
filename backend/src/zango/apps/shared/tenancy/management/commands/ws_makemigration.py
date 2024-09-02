@@ -46,9 +46,7 @@ class Command(MakeMigrationsCommand):
         is_test_mode = options["test"]
         tenant = options["workspace"]
         if is_test_mode:
-            connection.settings_dict["NAME"] = (
-                 connection.settings_dict["NAME"]
-            )
+            connection.settings_dict["NAME"] = connection.settings_dict["NAME"]
         while True:
             try:
                 tenant_obj = TenantModel.objects.get(name=tenant)

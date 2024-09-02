@@ -39,8 +39,10 @@ def user_logged_in_handler(sender, request, user, **kwargs):
     if connection.tenant.tenant_type == "app":
         try:
             client_ip, is_routable = get_client_ip(request)
-            if getattr(request,"user", None):
-                username = request.user.email if request.user.email else request.user.mobile
+            if getattr(request, "user", None):
+                username = (
+                    request.user.email if request.user.email else request.user.mobile
+                )
                 user_role = None
                 access_log = AppAccessLog.objects.create(
                     ip_address=client_ip,
@@ -59,9 +61,9 @@ def user_logged_in_handler(sender, request, user, **kwargs):
                         id=getattr(request, "selected_role_id")
                     ).last()
 
-            if user_role:
-                access_log.role = user_role
-                access_log.save()
+                if user_role:
+                    access_log.role = user_role
+                    access_log.save()
         except Exception:
             import traceback
 
