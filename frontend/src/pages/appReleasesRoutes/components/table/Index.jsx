@@ -278,7 +278,6 @@ export default function Table({ tableData }) {
 
 
 	const appReleasesData = useSelector(selectAppReleasesData);
-	console.log('hi'  );
 	const table = useReactTable({
 		data: appReleasesData?.releases?.records ?? defaultData,
 		columns,
@@ -363,12 +362,11 @@ export default function Table({ tableData }) {
 			});
 			if (success && response) {
 				updateAppReleasesData(response);
-				console.log('data....' , response);
 			}
 		};
 	
 		makeApiCall();
-	}, []);
+	}, [appReleasesTableData]);
 
 	useEffect(() => {
 		searchRef.current.value = appReleasesTableData?.searchValue || '';
@@ -457,10 +455,7 @@ export default function Table({ tableData }) {
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						Total count: {appReleasesData?.releases?.total_records}
-						{/* 
-						{console.log('appReleasesData........', appReleasesData)} */}
 					</span>
-					{/* {console.log('appReleasesData,,,,', appReleasesData)} */}
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						<PageCountSelectField
 							key="page_count"
