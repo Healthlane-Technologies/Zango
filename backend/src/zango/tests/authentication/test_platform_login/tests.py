@@ -66,6 +66,6 @@ class ZangoPlatformLoginTests(ZangoTestCase):
     def test_client_login(self):
         self.client = ZangoClient(self.tenant)
         res = self.client.login(
-            username="test_user@gmail.com", password="Testpassword@123"
+            username="test_user@gmail.com", password="Testpassword@123" #pragma: allowlist secret
         )
         self.assertTrue(res)

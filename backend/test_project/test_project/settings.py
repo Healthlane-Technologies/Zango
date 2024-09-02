@@ -1,10 +1,13 @@
 from pathlib import Path
 
-from zango.config.settings.base import *
+from zango.config.settings.base import *  # noqa: F403
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+
+
 class AttrDict(dict):
     """
     A dictionary subclass for managing global settings with attribute-style access.
@@ -30,7 +33,7 @@ settings_result = setup_settings(AttrDict(vars()), BASE_DIR)
 # Any settings that need to be overridden or added should be done below this line
 # to ensure they take effect after the initial setup
 
-SECRET_KEY = "django-insecure-3uvu-m1-#a7sm8f#nr@p@&e6t70^q67uzfz^rmn7nyd*8)jc*4"  # Shift this to .env
+SECRET_KEY = "django-insecure-3uvu-m1-#a7sm8f#nr@p@&e6t70^q67uzfz^rmn7nyd*8)jc*4"  # pragma: allowlist secret
 TEST_MIGRATION_RUNNING = True
 PROJECT_NAME = "test_project"
 

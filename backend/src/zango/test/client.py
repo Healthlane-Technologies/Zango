@@ -1,11 +1,12 @@
-from django.test import RequestFactory, Client
-from zango.middleware.tenant import ZangoTenantMainMiddleware
-from django.contrib.auth import authenticate
-from zango.core.utils import get_current_request
-from django.http import HttpRequest, SimpleCookie
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
-from django.conf import settings
 from importlib import import_module
+
+from django.conf import settings
+from django.contrib.auth import authenticate
+from django.http import HttpRequest, SimpleCookie
+from django.test import Client, RequestFactory
+
+from zango.middleware.tenant import ZangoTenantMainMiddleware
+
 
 class BaseZangoRequestFactory:
     tm = ZangoTenantMainMiddleware(lambda r: r)
@@ -21,17 +22,17 @@ class BaseZangoRequestFactory:
         request = super().generic(*args, **kwargs)
         # Assign the tenant to the request object
         request.tenant = self.tenant
-        if request.tenant.tenant_type=="app":
+        if request.tenant.tenant_type == "app":
             request.user = self.user
         return request
+
 
 class ZangoRequestFactory(BaseZangoRequestFactory, RequestFactory):
     pass
 
+
 class ZangoClient(BaseZangoRequestFactory, Client):
-
     def _create_mock_request(self):
-
         request = HttpRequest()
         request.tenant = self.tenant
 
@@ -45,7 +46,7 @@ class ZangoClient(BaseZangoRequestFactory, Client):
 
     def logout(self):
         """Log out the user by removing the cookies and session object."""
-        from django.contrib.auth import get_user, logout
+        from django.contrib.auth import logout
 
         request = HttpRequest()
         request.user = None
@@ -68,16 +69,17 @@ class ZangoClient(BaseZangoRequestFactory, Client):
         # Set the session cookie in the client.
         session_cookie = settings.SESSION_COOKIE_NAME
         self.cookies[session_cookie] = request.session.session_key
-        self.cookies[session_cookie].update({
-            "max-age": None,
-            "path": "/",
-            "domain": settings.SESSION_COOKIE_DOMAIN,
-            "secure": settings.SESSION_COOKIE_SECURE or None,
-            "expires": None,
-        })
+        self.cookies[session_cookie].update(
+            {
+                "max-age": None,
+                "path": "/",
+                "domain": settings.SESSION_COOKIE_DOMAIN,
+                "secure": settings.SESSION_COOKIE_SECURE or None,
+                "expires": None,
+            }
+        )
 
     def login(self, **credentials):
-
         request = self._create_mock_request()
         user = authenticate(request, **credentials)
 

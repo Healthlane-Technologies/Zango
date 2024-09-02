@@ -14,7 +14,7 @@ jobs:
         image: postgres:latest
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_PASSWORD: mysecretpassword #pragma: allowlist secret
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
@@ -46,7 +46,7 @@ jobs:
         run: |
           cat <<EOF > backend/test_project/.env
           POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=mysecretpassword
+          POSTGRES_PASSWORD=mysecretpassword #pragma: allowlist secret
           POSTGRES_DB=postgres
           POSTGRES_HOST=127.0.0.1
           POSTGRES_PORT=5432

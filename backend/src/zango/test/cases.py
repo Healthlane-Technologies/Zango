@@ -1,12 +1,15 @@
 import os
 import shutil
+
 from pathlib import Path
-from django.db import connection
-from django_tenants.test.cases import TenantTestCase, FastTenantTestCase
+
+from django_tenants.test.cases import FastTenantTestCase, TenantTestCase
+
 from django.conf import settings
 from django.db import connection
-from zango.apps.shared.tenancy.tasks import initialize_workspace
+
 from zango.apps.shared.tenancy.models import ThemesModel
+from zango.apps.shared.tenancy.tasks import initialize_workspace
 
 
 class ZangoTestCase(TenantTestCase):
@@ -16,6 +19,7 @@ class ZangoTestCase(TenantTestCase):
         cls.domain.delete()
         cls.tenant.delete(force_drop=False)
         cls.remove_allowed_test_domain()
+
 
 class ZangoAppBaseTestCase(FastTenantTestCase):
     initialize_workspace = False
@@ -50,7 +54,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
         super().setUpClass()
         if cls.initialize_workspace:
             res = initialize_workspace(cls.tenant.uuid)
-            if not res["result"]=="success":
+            if not res["result"] == "success":
                 raise Exception(res["error"])
             cls.setUpAppAndModule(cls.parent, cls.module)
         connection.set_tenant(cls.tenant)
@@ -64,7 +68,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
             print("test workspaces have been deleted.")
         else:
             print("test workspaces does not exist.")
-    
+
     @classmethod
     def setUpTestModule(self, parent, module_name):
         # Paths to the test module directory and the files folder within it
@@ -72,12 +76,14 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
             Path(__file__).resolve().parent.parent, "tests", parent, module_name
         )
         if not os.path.exists(test_module_dir):
-            raise FileNotFoundError(f"Test app module '{test_module_dir}' does not exist.")
+            raise FileNotFoundError(
+                f"Test app module '{test_module_dir}' does not exist."
+            )
 
         # Define the source directory for copying
         workspace_src_dir = os.path.join(test_module_dir, "workspace")
         migrations_dir = os.path.join(test_module_dir, "migrations")
-        
+
         # Define the destination directory
         base_dir = os.path.join(settings.BASE_DIR, "workspaces")
 
@@ -93,7 +99,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
                     shutil.copytree(src, dst, dirs_exist_ok=True)
                 else:
                     shutil.copy2(src, dst)
-        
+
         if os.path.exists(migrations_dir) and os.path.isdir(migrations_dir):
             src = migrations_dir
             dst = os.path.join(base_dir, "testapp", "migrations")
