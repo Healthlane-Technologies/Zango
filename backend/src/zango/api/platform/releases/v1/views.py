@@ -1,3 +1,8 @@
+import json
+import pytz
+from datetime import datetime
+from django.conf import settings
+
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 
@@ -15,26 +20,72 @@ from .serializers import AppReleaseSerializer
 class AppReleaseView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     pagination_class = ZangoAPIPagination
 
-    def get_queryset(self, search, columns={}):
-        name_field_query_mappping = {
+    def process_timestamp(self, timestamp, timezone):
+        try:
+            ts = json.loads(timestamp)
+            if not timezone:
+                timezone = settings.TIME_ZONE
+            tz = pytz.timezone(timezone)
+            ts["start"] = tz.localize(
+                datetime.strptime(ts["start"] + "-" + "00:00", "%Y-%m-%d-%H:%M"),
+                is_dst=None,
+            )
+            ts["end"] = tz.localize(
+                datetime.strptime(ts["end"] + "-" + "23:59", "%Y-%m-%d-%H:%M"),
+                is_dst=None,
+            )
+            return ts
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+            return None
+
+    def process_id(self, id):
+        try:
+            return int(id)
+        except ValueError:
+            return None
+
+    def get_queryset(self, search, tenant, columns={}):
+        field_name_query_mapping = {
             "version": "version__icontains",
             "description": "description__icontains",
             "status": "status",
             "id": "id__icontains",
         }
+        search_filters = {
+            "id": self.process_id,
+            "Release_date": self.process_timestamp,
+        }
         if columns.get("status") == "" or columns.get("status") is None:
-            name_field_query_mappping.pop("status")
+            field_name_query_mapping.pop("status")
         records = AppRelease.objects.all().order_by("-id")
         if search == "" and columns == {}:
             return records
         filters = Q()
-        for field_name, query in name_field_query_mappping.items():
-            if field_name in columns:
-                filters &= Q(**{query: columns[field_name]})
-            else:
-                if search:
+        for field_name, query in field_name_query_mapping.items():
+            if search:
+                if search_filters.get(field_name, None):
+                    value = search_filters[field_name](search)
+                    if value is not None:
+                        filters |= Q(**{query: value})
+                else:
                     filters |= Q(**{query: search})
-        return records.filter(filters).distinct()
+        records = records.filter(filters).distinct()
+        if columns.get("Release_date"):
+            processed = self.process_timestamp(
+                columns.get("Release_date"), tenant.timezone
+            )
+            if processed is not None:
+                records = records.filter(
+                    created_at__gte=processed["start"], created_at__lte=processed["end"]
+                )
+        if columns.get("status"):
+            records = records.filter(status=columns["status"])
+        if columns.get("version"):
+            records = records.filter(version=columns["version"])
+        return records
 
     def get_dropdown_options(self):
         options = {}
@@ -77,7 +128,7 @@ class AppReleaseView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             include_dropdown_options = request.GET.get("include_dropdown_options")
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
-            app_releases = self.get_queryset(search, columns)
+            app_releases = self.get_queryset(search, tenant, columns)
             paginated_releases = self.paginate_queryset(
                 app_releases, request, view=self
             )
