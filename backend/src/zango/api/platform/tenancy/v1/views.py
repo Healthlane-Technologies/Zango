@@ -2,7 +2,10 @@ import json
 import traceback
 
 from django_celery_results.models import TaskResult
+from phonenumbers import parse
+from phonenumbers.phonenumberutil import country_code_for_region
 
+from django.conf import settings
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 
@@ -390,6 +393,7 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             response = {
                 "users": app_users_data,
                 "message": "Users fetched successfully",
+                "pn_country_code": f"+{country_code_for_region(settings.PHONENUMBER_DEFAULT_REGION)}",
             }
             if include_dropdown_options:
                 response["dropdown_options"] = self.get_dropdown_options()
@@ -440,7 +444,10 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
             obj = self.get_obj(**kwargs)
             serializer = AppUserModelSerializerModel(obj)
             success = True
-            response = {"user": serializer.data}
+            response = {
+                "user": serializer.data,
+                "pn_country_code": f"{parse(obj.mobile).country_code}",
+            }
             status = 200
         except Exception as e:
             success = False
@@ -450,7 +457,11 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
         return get_api_response(success, response, status)
 
     def put(self, request, *args, **kwargs):
+        data = request.data
         try:
+            if data.get("mobile"):
+                if not validate_phone(data["mobile"]):
+                    return get_api_response(False, "Invalid mobile number", 400)
             obj = self.get_obj(**kwargs)
             update_result = AppUserModel.update_user(obj, request.data)
             success = update_result["success"]

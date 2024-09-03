@@ -145,3 +145,12 @@ def validate_phone(phone_number, region=None):
             return True
     except Exception:
         return False
+
+
+def get_region_from_timezone(tzname):
+    timezone_country = {}
+    for countrycode in pytz.country_timezones:
+        timezones = pytz.country_timezones[countrycode]
+        for tz in timezones:
+            timezone_country[tz] = countrycode
+    return timezone_country[tzname]
