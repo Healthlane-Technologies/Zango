@@ -1,20 +1,19 @@
 import json
 import os
-import requests
 import shutil
 import subprocess
 import zipfile
 
 import boto3
+import requests
 
 from botocore import UNSIGNED
 from botocore.config import Config
 from packaging.version import Version
 
 from django.conf import settings
-from django.db import connection
 from django.core import signing
-from django.template.response import ContentNotRenderedError
+from django.db import connection
 
 from zango.core.utils import get_current_request_url
 
@@ -69,6 +68,7 @@ def get_all_packages(request, tenant=None):
             packages[package]["versions"] = [
                 str(version) for version in packages[package]["versions"]
             ]
+            packages[package]["config_url"] = None
     for package, data in packages.items():
         resp_data.append({"name": package, **data})
     for local_package in installed_packages.keys():
@@ -81,16 +81,12 @@ def get_all_packages(request, tenant=None):
                 }
             )
     for package in resp_data:
-        try:
-            url = get_package_configuration_url(
-                request, tenant, package["name"]
-            )
-            resp = requests.get(url)
+        url = get_package_configuration_url(request, tenant, package["name"])
+        resp = requests.get(url)
+        if resp.status_code == 200:
             package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
-        except TypeError:
+        else:
             package["config_url"] = None
-        except ContentNotRenderedError:
-            package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
     return resp_data
 
 

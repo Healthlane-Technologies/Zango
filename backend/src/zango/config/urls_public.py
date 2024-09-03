@@ -6,6 +6,7 @@ from django.urls import include, path, re_path
 
 from zango.core.decorators import internal_access_only
 
+
 urlpatterns = [
     re_path(
         r"^auth/",
