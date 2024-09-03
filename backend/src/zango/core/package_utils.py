@@ -1,5 +1,6 @@
 import json
 import os
+import requests
 import shutil
 import subprocess
 import zipfile
@@ -12,6 +13,8 @@ from packaging.version import Version
 
 from django.conf import settings
 from django.db import connection
+from django.core import signing
+from django.template.response import ContentNotRenderedError
 
 from zango.core.utils import get_current_request_url
 
@@ -29,10 +32,10 @@ def get_installed_packages(tenant):
     return {package["name"]: package["version"] for package in packages}
 
 
-def get_all_packages(tenant=None):
+def get_all_packages(request, tenant=None):
     installed_packages = {}
     if tenant is not None:
-        installed_packages = get_installed_packages(tenant)
+        installed_packages = get_installed_packages(tenant.name)
     packages = {}
     s3 = boto3.client(
         "s3",
@@ -77,6 +80,17 @@ def get_all_packages(tenant=None):
                     "installed_version": installed_packages[local_package],
                 }
             )
+    for package in resp_data:
+        try:
+            url = get_package_configuration_url(
+                request, tenant, package["name"]
+            )
+            resp = requests.get(url)
+            package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
+        except TypeError:
+            package["config_url"] = None
+        except ContentNotRenderedError:
+            package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
     return resp_data
 
 

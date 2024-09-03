@@ -48,7 +48,7 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 status = 500
             return get_api_response(True if status == 200 else False, resp, status)
         try:
-            packages = get_all_packages(tenant.name)
+            packages = get_all_packages(request, tenant)
             if search:
                 packages = [
                     obj for obj in packages if search.lower() in obj["name"].lower()
