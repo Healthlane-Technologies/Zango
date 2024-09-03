@@ -1,3 +1,4 @@
+import os
 from django.http import HttpResponseRedirect
 
 from zango.test.cases import ZangoTestCase
@@ -12,6 +13,11 @@ class ZangoPlatformLoginTests(ZangoTestCase):
     """
     This test class is configured to use public tenant.
     """
+    @classmethod
+    def get_test_module_path(self):
+        return os.path.join(
+            "apps/appauth/test_platform_login"
+        )
 
     @classmethod
     def setup_tenant(cls, tenant):

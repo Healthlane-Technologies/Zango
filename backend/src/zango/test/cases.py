@@ -70,11 +70,19 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
             print("test workspaces does not exist.")
 
     @classmethod
-    def setUpTestModule(self, parent, module_name):
+    def get_test_module_path(self):
+        """
+        If the module is not present at path tests/parent/module, override this method.
+        """
+        return os.path.join(self.parent, self.module)
+
+    @classmethod
+    def setUpTestModule(self):
         # Paths to the test module directory and the files folder within it
         test_module_dir = os.path.join(
-            Path(__file__).resolve().parent.parent, "tests", parent, module_name
+            Path(__file__).resolve().parent.parent, "tests", self.get_test_module_path()
         )
+
         if not os.path.exists(test_module_dir):
             raise FileNotFoundError(
                 f"Test app module '{test_module_dir}' does not exist."
@@ -117,7 +125,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
     @classmethod
     def setUpAppAndModule(cls, parent, module):
         if cls.initialize_workspace:
-            cls.setUpTestModule(parent, module)
+            cls.setUpTestModule()
 
     @classmethod
     def tearDownClass(cls):
