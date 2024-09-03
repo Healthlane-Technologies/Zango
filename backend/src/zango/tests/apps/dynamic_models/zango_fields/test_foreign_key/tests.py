@@ -1,4 +1,4 @@
-import io
+import os
 from django.core.management import call_command
 from django.test import override_settings
 from zango.apps.dynamic_models.workspace.base import Workspace
@@ -14,8 +14,12 @@ from zango.test.cases import ZangoAppBaseTestCase
 
 class ZangoForeignKeyTest(ZangoAppBaseTestCase):
     initialize_workspace = True
-    parent = "zango_fields"
-    module = "test_foreign_key"
+    
+    @classmethod
+    def get_test_module_path(self):
+        return os.path.join(
+            "apps/dynamic_models/zango_fields/test_foreign_key"
+        )
 
     @classmethod
     def setUpClass(self):

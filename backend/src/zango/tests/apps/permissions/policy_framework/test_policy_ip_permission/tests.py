@@ -1,3 +1,5 @@
+import os
+
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from django.db import connection
@@ -9,8 +11,12 @@ from zango.test.client import ZangoClient
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class RolePolicyMappingTest(ZangoAppBaseTestCase):
     initialize_workspace = True
-    parent = "policy_framework"
-    module = "test_policy_ip_permission"
+
+    @classmethod
+    def get_test_module_path(self):
+        return os.path.join(
+            "apps/permissions/policy_framework/test_policy_ip_permission"
+        )
 
     @classmethod
     def sync_policies(self):

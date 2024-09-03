@@ -1,3 +1,4 @@
+import os
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from django.db import connection
@@ -10,8 +11,12 @@ from django.http import HttpResponseRedirect
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
 class ZangoAppLoginTest(ZangoAppBaseTestCase):
     initialize_workspace = True
-    parent = "authentication"
-    module = "test_app_login"
+
+    @classmethod
+    def get_test_module_path(self):
+        return os.path.join(
+            "apps/appauth/test_app_login"
+        )
     
     @classmethod
     def sync_policies(self):
