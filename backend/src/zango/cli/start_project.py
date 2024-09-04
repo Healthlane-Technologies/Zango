@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 
+from pathlib import Path
+
 import click
 import psycopg2
 
@@ -54,6 +56,7 @@ def get_project_root(project_name, directory=None):
         str: The root directory of the project.
     """
     if directory:
+        os.makedirs(directory, exist_ok=True)
         return directory
     current_dir = os.getcwd()
     project_root = os.path.join(current_dir, project_name)
@@ -108,10 +111,11 @@ def create_project(
         "REDIS_PORT": redis_port,
         "PROJECT_NAME": project_name,
     }
-    if not os.path.exists(".env"):
-        open(".env", "w").close()
-    fcontent = open(".env").read()
-    with open(".env", "a+") as f:
+    env_path = os.path.join(Path(project_root).parent, ".env")
+    if not os.path.exists(env_path):
+        open(env_path, "w").close()
+    fcontent = open(env_path).read()
+    with open(env_path, "a+") as f:
         for key, value in env_keys.items():
             if key not in fcontent:
                 f.write(f"{key}={value}\n")
@@ -195,7 +199,8 @@ def start_project(
 ):
     """Create Project"""
     if directory:
-        click.echo(f"Creating Project under: {directory}")
+        click.echo(f"Creating Project under: {os.path.join(directory, project_name)}")
+        directory = os.path.join(directory, project_name)
 
     db_connection_status = test_db_conection(
         db_name, db_user, db_password, db_host, db_port
