@@ -9,12 +9,13 @@ const range = (len) => {
 	return arr;
 };
 
-const newPackage = () => {
+const newPackage = () => {	
 	return {
 		name: 'Package' + faker.number.int({ min: 1, max: 10 }),
 		versions: ['0.1.0', '0.2.0'],
 		status: faker.helpers.shuffle(['Installed', 'Not Installed'])[0],
 		installed_version: faker.number.int({ min: 1, max: 10 }),
+		config_url: null
 	};
 };
 

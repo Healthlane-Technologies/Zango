@@ -33,6 +33,10 @@ export default function RowMenu({ rowData }) {
 		dispatch(openIsInstallPackageModalOpen(rowData));
 	};
 
+	if(rowData.config_url==null && rowData.status?.toLowerCase()=='installed'){
+		return null;
+	}
+
 	return (
 		<Menu as="div" className="relative flex">
 			<Menu.Button
@@ -94,9 +98,6 @@ export default function RowMenu({ rowData }) {
 											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 												Configure Package
 											</span>
-											{/* <span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-												configure
-											</span> */}
 										</div>
 									</button>
 								)}
