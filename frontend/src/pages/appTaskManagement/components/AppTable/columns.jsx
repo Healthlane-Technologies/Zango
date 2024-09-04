@@ -48,6 +48,9 @@ function columns({ debounceSearch, localTableData }) {
 							theme="vs-dark"
 							defaultLanguage="python"
 							defaultValue={ info?.row?.original?.code}
+							options={{
+								readOnly: true,
+							}}
 						/>
 					</div>
 				);
