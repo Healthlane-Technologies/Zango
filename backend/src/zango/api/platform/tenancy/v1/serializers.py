@@ -92,6 +92,7 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
 
 class AppUserModelSerializerModel(serializers.ModelSerializer):
     roles = UserRoleSerializerModel(many=True)
+    pn_country_code = serializers.SerializerMethodField()
 
     class Meta:
         model = AppUserModel
@@ -104,7 +105,13 @@ class AppUserModelSerializerModel(serializers.ModelSerializer):
             "is_active",
             "last_login",
             "created_at",
+            "pn_country_code",
         ]
+
+    def get_pn_country_code(self, obj):
+        if obj.mobile:
+            return f"+{obj.mobile.country_code}"
+        return None
 
 
 class ThemeModelSerializer(serializers.ModelSerializer):

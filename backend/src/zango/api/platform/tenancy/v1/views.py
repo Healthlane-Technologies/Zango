@@ -2,7 +2,6 @@ import json
 import traceback
 
 from django_celery_results.models import TaskResult
-from phonenumbers import parse
 from phonenumbers.phonenumberutil import country_code_for_region
 
 from django.conf import settings
@@ -446,7 +445,7 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
             success = True
             response = {
                 "user": serializer.data,
-                "pn_country_code": f"{parse(obj.mobile).country_code}",
+                "pn_country_code": f"+{obj.mobile.country_code}",
             }
             status = 200
         except Exception as e:
