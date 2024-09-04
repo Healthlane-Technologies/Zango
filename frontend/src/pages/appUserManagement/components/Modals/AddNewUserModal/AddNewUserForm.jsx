@@ -13,20 +13,26 @@ import {
 	toggleRerenderPage,
 } from '../../../slice';
 import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
-import { useState } from 'react';
+import { useState , useLayoutEffect} from 'react';
+import { countryCodeList } from '../../../../../utils/countryCodes';
 
 const AddNewUserForm = ({ closeModal }) => {
 	const [countryCode,setCountryCode] = useState({
-		       name: 'India',
-		         dial_code: '+91',
-		         code: 'IN',
-	     })
+		name: 'India',
+		dial_code: '+91',
+		code: 'IN',
+	})
 	const [mobileValid,setMobileValid] = useState(true)
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const triggerApi = useApi();
+	let pn_country_code = appUserManagementData?.pn_country_code ?? '+91'
+	useLayoutEffect(()=>{
+		let countryCodeObj = countryCodeList.find((c)=>c.dial_code===pn_country_code)
+		setCountryCode(countryCodeObj)
+	},[])
 	let initialValues = {
 		name: '',
 		email: '',
@@ -65,6 +71,7 @@ const AddNewUserForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
+		setMobileValid(true)
 		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
 		let dynamicFormData = transformToFormData(tempValues);
 
@@ -143,7 +150,7 @@ const AddNewUserForm = ({ closeModal }) => {
 										placeholder="00000 00000"
 									/>
 								</div>
-								<p className='text-red-600 text-[11px]'>{!mobileValid && 'Not a valid mobile number'}</p>
+								<p className='text-red-600 text-[11px]'>{!mobileValid && 'Invalid phone number'}</p>
 								{formik.touched.mobile && formik.errors.mobile ? (
 									<div data-cy="error_message" className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}

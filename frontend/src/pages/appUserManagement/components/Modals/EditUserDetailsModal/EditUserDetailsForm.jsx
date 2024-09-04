@@ -1,10 +1,12 @@
 import { Formik } from 'formik';
 import { get } from 'lodash';
+import { useLayoutEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import MultiSelectField from '../../../../../components/Form/MultiSelectField';
+import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
@@ -13,25 +15,35 @@ import {
 	selectAppUserManagementFormData,
 	toggleRerenderPage,
 } from '../../../slice';
+import { countryCodeList } from '../../../../../utils/countryCodes';
 
 const EditUserDetailsForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
+	const [mobileValid,setMobileValid] = useState(true)
+	const [countryCode,setCountryCode] = useState({
+		name: 'India',
+		  dial_code: '+91',
+		  code: 'IN',
+  })
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
-	const appUserManagementFormData = useSelector(
+	let appUserManagementFormData = useSelector(
 		selectAppUserManagementFormData
 	);
 
 	const triggerApi = useApi();
+	let pn_country_code = appUserManagementFormData?.pn_country_code ?? '+91'
+	useLayoutEffect(()=>{
+		let countryCodeObj = countryCodeList.find((c)=>c.dial_code===pn_country_code)
+		setCountryCode(countryCodeObj)
+	},[])
+
+	
 	let initialValues = {
 		name: appUserManagementFormData?.name ?? '',
 		email: appUserManagementFormData?.email ?? '',
-		mobile: appUserManagementFormData?.mobile
-			? appUserManagementFormData?.mobile.indexOf('+91') > -1
-				? appUserManagementFormData?.mobile?.slice(3) ?? ''
-				: appUserManagementFormData?.mobile
-			: '',
+		mobile: pn_country_code.length>0?appUserManagementFormData?.mobile.slice(pn_country_code.length):appUserManagementFormData?.mobile,
 		roles: appUserManagementFormData?.roles?.map((eachApp) => eachApp.id) ?? [],
 	};
 
@@ -49,13 +61,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 				is: (email) => {
 					if (!email) return true;
 				},
-				then: Yup.string()
-					.min(10, 'Must be 10 digits')
-					.max(10, 'Must be 10 digits')
-					.required('Required'),
-				otherwise: Yup.string()
-					.min(10, 'Must be 10 digits')
-					.max(10, 'Must be 10 digits'),
+				then: Yup.string().required('Required')
 			}),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
 		},
@@ -63,8 +69,8 @@ const EditUserDetailsForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		let tempValues = values;
-
+		setMobileValid(true)
+		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -78,6 +84,8 @@ const EditUserDetailsForm = ({ closeModal }) => {
 			if (success && response) {
 				closeModal();
 				dispatch(toggleRerenderPage());
+			}else{
+				setMobileValid(false)
 			}
 		};
 
@@ -124,9 +132,11 @@ const EditUserDetailsForm = ({ closeModal }) => {
 								>
 									Mobile
 								</label>
-								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
-									<span className="font-lato text-[#6C747D]">+91</span>
-									<input
+								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px]">
+									<span className="font-lato text-[#6C747D]">
+										<CountryCodeSelector countryCode={countryCode} setCountryCode={setCountryCode} />
+									</span>
+									<input	
 										id="mobile"
 										name="mobile"
 										type="number"
@@ -137,6 +147,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 										placeholder="00000 00000"
 									/>
 								</div>
+								<p className='text-red-600 text-[11px]'>{!mobileValid && 'Invalid phone number'}</p>
 								{formik.touched.mobile && formik.errors.mobile ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}
