@@ -14,7 +14,22 @@ function TaskHistoryContainer() {
 
     return (
         <div className="overflow-y-auto">
-           
+           {console.log('TaskHistoryData',TaskHistoryData)}
+           <div className = 'py-2'>
+           <p className="py-1 font-open-sans text-base font-normal  text-[#5c6167]">
+                            Task Name :{' '}
+                            <span className=" font-semibold">
+                                {TaskHistoryData?.task?.name}
+                         
+                            </span>
+                        </p>
+                        <p className="py-1 font-open-sans text-base font-normal  text-[#5c6167]">
+                           Task ID :{' '}
+                            <span className=" font-semibold">
+                            {TaskHistoryData?.task?.id}
+                            </span>
+                        </p>
+           </div>
 
             {TaskHistoryData?.task?.run_history.length === 0 ? (
                 <div className=' w-full    h-[750px] flex justify-center items-center'>
