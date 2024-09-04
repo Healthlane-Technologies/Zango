@@ -199,7 +199,7 @@ def start_project(
 ):
     """Create Project"""
     if directory:
-        click.echo(f"Creating Project under: {os.path.join(directory, project_name)}")
+        click.echo(f"Creating Project under: {directory}")
         directory = os.path.join(directory, project_name)
 
     db_connection_status = test_db_conection(
