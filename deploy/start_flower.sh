@@ -6,4 +6,4 @@ until timeout 5s celery -A ${PROJECT_NAME} inspect ping; do
 done
 
 echo 'Starting flower'
-celery -A ${PROJECT_NAME} flower --port=5555 --broker=redis://redis:6379/0
+celery -A ${PROJECT_NAME} flower --port=5555
