@@ -45,7 +45,7 @@ function TaskHistoryContainer() {
                         <p className="py-1 font-open-sans text-base font-semibold text-[#5c6167]">
                             Start Date & Time:{' '}
                             <span className="text-sm font-normal">
-                                {eachHistory?.date_created}
+                                {eachHistory?.date_started}
                             </span>
                         </p>
                         <p className="py-1 font-open-sans text-base font-semibold text-[#495057]">
