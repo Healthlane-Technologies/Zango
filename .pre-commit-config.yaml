@@ -11,11 +11,7 @@ repos:
   - id: check-symlinks
   - id: check-toml
   - id: end-of-file-fixer
-    exclude: |
-        (?x)^(
-          frontend/|
-          js/
-        )$
+    exclude: js/
   - id: requirements-txt-fixer
   - id: detect-private-key
 - repo: https://github.com/astral-sh/ruff-pre-commit
