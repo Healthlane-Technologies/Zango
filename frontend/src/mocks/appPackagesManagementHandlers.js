@@ -9,12 +9,13 @@ const range = (len) => {
 	return arr;
 };
 
-const newPackage = () => {
+const newPackage = () => {	
 	return {
-		name: 'Package ' + faker.number.int({ min: 1, max: 10 }),
+		name: 'Package' + faker.number.int({ min: 1, max: 10 }),
 		versions: ['0.1.0', '0.2.0'],
 		status: faker.helpers.shuffle(['Installed', 'Not Installed'])[0],
 		installed_version: faker.number.int({ min: 1, max: 10 }),
+		config_url: null
 	};
 };
 
@@ -46,7 +47,7 @@ export const appPackagesManagementHandlers = [
 			(pageIndex + 1) * pageSize
 		);
 
-		if (action === 'config_url') {
+		if (action === 'config_url' && !req.url.searchParams.get('package_name')) {
 			return res(
 				ctx.delay(500),
 				ctx.status(200),
@@ -57,33 +58,58 @@ export const appPackagesManagementHandlers = [
 					},
 				})
 			);
+		}else if(action === 'config_url' && req.url.searchParams.get('package_name')){
+			if (req.url.searchParams.get('package_name') === 'Package1') {
+				return res(
+				  ctx.delay(500), 
+				  ctx.status(200),
+				  ctx.json({
+					success: true,
+					response: {
+					  message: 'Package do have a configuration page',
+					},
+				  })
+				);
+			}else{
+				return res(
+					ctx.delay(500),
+					ctx.status(200),
+					ctx.json({
+					  success: false,
+					  response: {
+						message: 'Package does not have configuration page',
+					  },
+					})
+				  );
+			}
 		}
-
-		return res(
-			ctx.delay(500),
-			ctx.status(200),
-			ctx.json({
-				success: true,
-				response: {
-					packages: {
-						total_records: totalData,
-						total_pages: Math.ceil(data.length / pageSize),
-						next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
-						previous: null,
-						records: searchValue ? [] : slicedData,
+		else{
+			return res(
+				ctx.delay(500),
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					response: {
+						packages: {
+							total_records: totalData,
+							total_pages: Math.ceil(data.length / pageSize),
+							next: 'http://localhost:8000/api/v1/auth/platform-users/?page=2',
+							previous: null,
+							records: searchValue ? [] : slicedData,
+						},
+						dropdown_options: {
+							policies: [
+								{ id: 1, label: 'Policy 1' },
+								{ id: 2, label: 'Policy 2' },
+								{ id: 3, label: 'Policy 3' },
+								{ id: 4, label: 'Policy 4' },
+							],
+						},
+						message: 'Success',
 					},
-					dropdown_options: {
-						policies: [
-							{ id: 1, label: 'Policy 1' },
-							{ id: 2, label: 'Policy 2' },
-							{ id: 3, label: 'Policy 3' },
-							{ id: 4, label: 'Policy 4' },
-						],
-					},
-					message: 'Success',
-				},
-			})
-		);
+				})
+			);
+		}
 	}),
 
 	rest.post('/api/v1/apps/:appId/packages/', (req, res, ctx) => {
