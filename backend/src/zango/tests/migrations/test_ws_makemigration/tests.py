@@ -23,7 +23,6 @@ class ZangoMigrationsTest(ZangoAppBaseTestCase):
         call_command(
             'ws_makemigration',
             'testapp',
-            '--test',
             stdout=out
         )
         self.assertIn("0001_initial", out.getvalue())

@@ -47,8 +47,7 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
     def syn_db(self):
         call_command(
             'ws_migrate',
-            'testapp',
-            '--test'
+            'testapp'
         )
 
     def test_callable_default(self):

@@ -3,7 +3,6 @@ import os
 from django_tenants.management.commands.migrate_schemas import MigrateSchemasCommand
 
 from django.conf import settings
-from django.db import connection
 
 from zango.apps.shared.tenancy.models import TenantModel
 
@@ -17,16 +16,10 @@ class Command(MigrateSchemasCommand):
             "workspace",
             help="The workspace name to be used.",
         )
-        parser.add_argument(
-            "--test", action="store_true", help="Run the migration for test database"
-        )
         parser.add_argument("--package", help="Run the migrations for the package")
 
     def handle(self, *args, **options):
-        is_test_mode = options["test"]
         tenant = options["workspace"]
-        if is_test_mode:
-            connection.settings_dict["NAME"] = connection.settings_dict["NAME"]
         while True:
             try:
                 tenant_obj = TenantModel.objects.get(name=tenant)

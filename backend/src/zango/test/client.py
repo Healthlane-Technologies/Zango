@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate
 from django.http import HttpRequest, SimpleCookie
 from django.test import Client, RequestFactory
 
+from zango.core.utils import get_mock_request
 from zango.middleware.tenant import ZangoTenantMainMiddleware
 
 
@@ -31,19 +32,7 @@ class ZangoRequestFactory(BaseZangoRequestFactory, RequestFactory):
     pass
 
 
-class ZangoClient(BaseZangoRequestFactory, Client):
-    def _create_mock_request(self):
-        request = HttpRequest()
-        request.tenant = self.tenant
-
-        if self.session:
-            request.session = self.session
-        else:
-            engine = import_module(settings.SESSION_ENGINE)
-            request.session = engine.SessionStore()
-
-        return request
-
+class ZangoClient(ZangoRequestFactory, Client):
     def logout(self):
         """Log out the user by removing the cookies and session object."""
         from django.contrib.auth import logout
@@ -62,7 +51,7 @@ class ZangoClient(BaseZangoRequestFactory, Client):
     def _login(self, user, backend=None):
         from django.contrib.auth import login
 
-        request = self._create_mock_request()
+        request = get_mock_request(session=self.session)
         login(request, user, backend)
         request.session.save()
 
@@ -80,7 +69,7 @@ class ZangoClient(BaseZangoRequestFactory, Client):
         )
 
     def login(self, **credentials):
-        request = self._create_mock_request()
+        request = get_mock_request(session=self.session)
         user = authenticate(request, **credentials)
 
         if user:
