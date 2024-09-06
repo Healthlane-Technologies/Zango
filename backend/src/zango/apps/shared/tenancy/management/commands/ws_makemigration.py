@@ -34,19 +34,13 @@ class Command(MakeMigrationsCommand):
             help="The workspace name to be used.",
         )
         parser.add_argument(
-            "--test", action="store_true", help="Run the migration for test database"
-        )
-        parser.add_argument(
             "--is_package_migration",
             action="store_true",
             help="Run makemigration on package models",
         )
 
     def handle(self, *args, **options):
-        is_test_mode = options["test"]
         tenant = options["workspace"]
-        if is_test_mode:
-            connection.settings_dict["NAME"] = connection.settings_dict["NAME"]
         while True:
             try:
                 tenant_obj = TenantModel.objects.get(name=tenant)
