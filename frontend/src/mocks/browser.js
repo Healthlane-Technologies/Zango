@@ -14,6 +14,7 @@ import { appUsersManagementHandlers } from './appUsersManagementHandlers';
 import { platformAppHandlers } from './platformAppHandlers';
 import { platformUsersMangementHandlers } from './platformUsersMangementHandlers';
 import { appAccessLogsHandlers } from './appAccessLogsHandlers';
+import { appReleasesHandlers } from './appReleasesHandlers';
 
 // This configures a Service Worker with the given request handlers.
 export const worker = setupWorker(
@@ -30,5 +31,6 @@ export const worker = setupWorker(
 	...appInitialHandlers,
 	...appChatbotHandlers,
 	...appAuditLogsHandlers,
-	...appAccessLogsHandlers
+	...appAccessLogsHandlers,
+	...appReleasesHandlers,
 );
