@@ -6,8 +6,6 @@ function TaskHistoryContainer() {
     const [visibleCodeIndex, setVisibleCodeIndex] = useState(null);
     const TaskHistoryData = useSelector(selectAppTaskHistoryData);
 
-    console.log(TaskHistoryData);
-
     const handleToggleCode = (index) => {
         setVisibleCodeIndex(visibleCodeIndex === index ? null : index);
     };
@@ -16,16 +14,16 @@ function TaskHistoryContainer() {
         <div className="overflow-y-auto">
            {console.log('TaskHistoryData',TaskHistoryData)}
            <div className = 'py-2'>
-           <p className="py-1 font-open-sans text-base font-normal  text-[#5c6167]">
+           <p className="py-1 font-open-sans font-normal text-[#5c6167]">
                             Task Name :{' '}
-                            <span className=" font-semibold">
+                            <span className="  font-bold ">
                                 {TaskHistoryData?.task?.name}
                          
                             </span>
                         </p>
-                        <p className="py-1 font-open-sans text-base font-normal  text-[#5c6167]">
+                        <p className="py-1 font-open-sans  font-normal text-[#5c6167]">
                            Task ID :{' '}
-                            <span className=" font-semibold">
+                            <span className="  font-bold ">
                             {TaskHistoryData?.task?.id}
                             </span>
                         </p>
@@ -48,13 +46,13 @@ function TaskHistoryContainer() {
                                 {eachHistory?.date_started}
                             </span>
                         </p>
-                        <p className="py-1 font-open-sans text-base font-semibold text-[#495057]">
+                        <p className="py-1 font-open-sans text-base font-semibold text-[#5c6167]">
                             End Date & Time:{' '}
                             <span className="text-sm font-normal">
                                 {eachHistory?.date_done}
                             </span>
                         </p>
-                        <p className="py-1 font-open-sans text-base font-semibold text-[#495057]">
+                        <p className="py-1 font-open-sans text-base font-semibold text-[#5c6167]">
                             Result:{' '}
                             <span className="text-sm font-normal">{eachHistory?.result}</span>
                         </p>
