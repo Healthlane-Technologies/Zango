@@ -54,16 +54,14 @@ export default function RowMenu({ rowData }) {
 			});
 
 			if (success && response) {
-				console.log('my response ..... ', response);
 				updateAppTaskHistorydata(response);
 			}
 		};
 
 		makeApiCall();
 
-		console.log('appTaskManagementData....', rowData.id);
+		
 		dispatch(openIsTaskHistoryModalOpen(true));
-		console.log('isTaskHistoryModalOpen...', isTaskHistoryModalOpen);
 	};
 
 	return (
@@ -121,32 +119,6 @@ export default function RowMenu({ rowData }) {
 									>
 										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 											Task History
-										</span>
-									</div>
-								</button>
-							)}
-						</Menu.Item>
-
-						<Menu.Item>
-							{({ active }) => (
-								<button
-									data-cy="remove_all_policies_button"
-									type="button"
-									className="flex w-full disabled:opacity-[0.38]"
-									onClick={handleDeactivateUser}
-									disabled={!rowData?.attached_policies?.length}
-								>
-									<div
-										className={`${
-											active ? 'bg-[#F0F3F4]' : ''
-										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
-									>
-										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
-											Remove all Policies
-										</span>
-										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											this will not delete the task but only remove all
-											associated policies
 										</span>
 									</div>
 								</button>

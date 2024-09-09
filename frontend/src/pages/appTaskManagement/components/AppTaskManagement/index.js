@@ -101,7 +101,6 @@ export default function AppTaskManagement() {
 				</div>
 			</div>
 			<UpdateTaskModal />
-			<RemoveAllPoliciesModal />
 			<TaskHistoryModal/>
 		</>
 	);
