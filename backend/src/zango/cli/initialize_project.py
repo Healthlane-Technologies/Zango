@@ -12,7 +12,7 @@ from django.core.management import call_command
 from .start_project import create_platform_user, create_public_tenant, test_db_conection
 
 
-def create_environment_variables(
+def generate_env_file(
     project_name,
     db_name,
     db_user,
@@ -87,7 +87,7 @@ def initialize_project(
 
     # Initializing the project
     project_root = os.path.join(os.getcwd(), project_name)
-    create_environment_variables(
+    generate_env_file(
         project_name,
         db_name,
         db_user,
