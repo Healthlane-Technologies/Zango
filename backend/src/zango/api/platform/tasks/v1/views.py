@@ -78,7 +78,6 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
             with connection.cursor() as c:
-                ws = Workspace.get_plugin_source()
                 ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                 ws.ready()
                 ws.sync_tasks(tenant.name)
