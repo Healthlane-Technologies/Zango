@@ -77,7 +77,7 @@ class Command(BaseCommand):
                 raise Exception("Codeassist failed")
             try:
                 subprocess.run(["python", "manage.py", "ws_makemigration", app_name])
-                # subprocess.run(["zango", "update-apps", "--app_name", app_name])
+                subprocess.run(["zango", "update-apps", "--app_name", app_name])
             except Exception as e:
                 print(e)
         except json.JSONDecodeError as e:
