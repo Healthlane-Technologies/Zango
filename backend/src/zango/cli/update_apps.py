@@ -374,36 +374,39 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
     if git_mode:
         remote_settings = get_remote_settings(repo_url, branch)
         remote_version = remote_settings["version"]
+    else:
+        remote_settings = app_settings
+        remote_version = local_version
 
     last_release = get_last_release()
+
+    # App name validation
+    app_name = remote_settings.get("app_name")
+    if app_name != tenant:
+        return False, "App name mismatch"
+
+    # Check platform version
+    zango_version = remote_settings.get("zango_version")
+    if not zango_version:
+        return False, "Zango version not found in remote settings"
+
+    installed_zango_version = version.parse(zango.__version__)
+    # Compare the installed version with the required version
+    try:
+        specifier = specifiers.SpecifierSet(zango_version)
+        if installed_zango_version not in specifier:
+            return (
+                False,
+                f"Zango version mismatch: Required version: {zango_version}, Installed version: {installed_zango_version}",
+            )
+    except specifiers.InvalidSpecifier:
+        return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
         if not is_version_greater(remote_version, local_version) or (
             last_release and is_version_greater(remote_version, last_release.version)
         ):
             return False, "No version change detected"
-
-        # Check platform version
-        zango_version = remote_settings.get("zango_version")
-        if not zango_version:
-            return False, "Zango version not found in remote settings"
-
-        installed_zango_version = version.parse(zango.__version__)
-        # Compare the installed version with the required version
-        try:
-            specifier = specifiers.SpecifierSet(zango_version)
-            if installed_zango_version not in specifier:
-                return (
-                    False,
-                    f"Zango version mismatch: Required version: {zango_version}, Installed version: {installed_zango_version}",
-                )
-        except specifiers.InvalidSpecifier:
-            return False, "Invalid Zango version specifier in settings.json"
-
-        # App name validation
-        app_name = remote_settings.get("app_name")
-        if app_name != tenant:
-            return False, "App name mismatch"
 
     if last_release and not is_version_greater(local_version, last_release.version):
         return False, "No version change detected"
