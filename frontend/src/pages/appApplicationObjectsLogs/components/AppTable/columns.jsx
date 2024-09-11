@@ -2,6 +2,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { find } from 'lodash';
 import moment from 'moment';
 import HeaderInfo from '../../../../components/Table/HeaderInfo';
+
 import ListGeneralCell from '../../../../components/Table/ListGeneralCell';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
@@ -146,7 +147,7 @@ function columns({ debounceSearch, localTableData, tableData }) {
 			id: 'actor',
 			header: () => (
 				<div className="flex h-full items-start justify-start gap-[10px] whitespace-nowrap border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
+					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D] ">
 						Actor
 					</span>
 					<HeaderInfo message={'* Denotes Platform User'} />
