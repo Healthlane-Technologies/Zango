@@ -2,9 +2,7 @@ import json
 import traceback
 
 from django_celery_results.models import TaskResult
-from phonenumbers.phonenumberutil import country_code_for_region
 
-from django.conf import settings
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 
@@ -19,7 +17,11 @@ from zango.core.api import (
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
-from zango.core.utils import get_search_columns, validate_phone
+from zango.core.utils import (
+    get_country_code_for_tenant,
+    get_search_columns,
+    validate_phone,
+)
 
 from .serializers import (
     AppUserModelSerializerModel,
@@ -342,6 +344,10 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     pagination_class = ZangoAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
+    def get_app_tenant(self):
+        tenant_obj = TenantModel.objects.get(uuid=self.kwargs["app_uuid"])
+        return tenant_obj
+
     def get_dropdown_options(self):
         options = {}
         options["roles"] = [
@@ -388,11 +394,12 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             app_users = self.paginate_queryset(app_users, request, view=self)
             serializer = AppUserModelSerializerModel(app_users, many=True)
             app_users_data = self.get_paginated_response_data(serializer.data)
+            app_tenant = self.get_app_tenant()
             success = True
             response = {
                 "users": app_users_data,
                 "message": "Users fetched successfully",
-                "pn_country_code": f"+{country_code_for_region(settings.PHONENUMBER_DEFAULT_REGION)}",
+                "pn_country_code": get_country_code_for_tenant(app_tenant),
             }
             if include_dropdown_options:
                 response["dropdown_options"] = self.get_dropdown_options()

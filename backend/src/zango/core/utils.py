@@ -3,6 +3,8 @@ import json
 import phonenumbers
 import pytz
 
+from phonenumbers.phonenumberutil import country_code_for_region
+
 from django.conf import settings
 from django.db import connection
 from django.shortcuts import render
@@ -154,3 +156,29 @@ def get_region_from_timezone(tzname):
         for tz in timezones:
             timezone_country[tz] = countrycode
     return timezone_country[tzname]
+
+
+def get_country_code_for_tenant(tenant, with_plus_sign=True):
+    """
+    Returns the country code for the given tenant.
+
+    The region is first determined from the tenant's timezone. If no timezone is set,
+    the default region from `settings.PHONENUMBER_DEFAULT_REGION` is used.
+
+    Args:
+        tenant: A TenantModel instance.
+        with_plus_sign (bool): Whether to prepend a "+" to the country code. Default is True.
+
+    Returns:
+        str: The country code with or without "+" based on the region (e.g., "+1" for "US", "+91" for "IN").
+    """
+    default_region = settings.PHONENUMBER_DEFAULT_REGION
+
+    if tenant.timezone:
+        try:
+            default_region = get_region_from_timezone(tenant.timezone)
+        except Exception:
+            pass
+
+    country_code = country_code_for_region(default_region)
+    return f"+{country_code}" if with_plus_sign else country_code
