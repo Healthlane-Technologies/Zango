@@ -12,7 +12,6 @@ function TaskHistoryContainer() {
 
     return (
         <div className="overflow-y-auto">
-           {console.log('TaskHistoryData',TaskHistoryData)}
            <div className = 'py-2'>
            <p className="py-1 font-open-sans font-normal text-[#5c6167]">
                             Task Name :{' '}
