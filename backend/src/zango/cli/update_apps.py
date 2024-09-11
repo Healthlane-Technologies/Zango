@@ -403,13 +403,13 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
-        if not is_version_greater(remote_version, local_version) or (
+        if not (is_version_greater(remote_version, local_version) or (
             last_release and is_version_greater(remote_version, last_release.version)
-        ):
+        )):
             return False, "No version change detected"
-
-    if last_release and not is_version_greater(local_version, last_release.version):
-        return False, "No version change detected"
+    else:
+        if last_release and not is_version_greater(local_version, last_release.version):
+            return False, "No version change detected"
 
     return True, "Update allowed"
 
@@ -437,7 +437,7 @@ def update_apps(app_name):
     from zango.apps.shared.tenancy.models import TenantModel
 
     tenants = TenantModel.objects.filter(status="deployed").exclude(
-        tenant_type="public"
+        tenant_type="shared"
     )
     if app_name:
         tenants = tenants.filter(name__in=app_name)
