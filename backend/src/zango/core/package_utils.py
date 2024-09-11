@@ -130,7 +130,7 @@ def get_package_configuration_url(request, tenant, package_name):
     return ""
 
 
-def install_package(package_name, version, tenant):
+def install_package(package_name, version, tenant, release=False):
     if package_installed(package_name, tenant):
         return "Package already installed"
     try:
@@ -160,8 +160,9 @@ def install_package(package_name, version, tenant):
         #         f"tmp/{package_name}/{version}/",
         #         f"workspaces/{tenant}/packages/{package_name}",
         #     )
-        update_manifest_json(tenant, package_name, version)
-        update_settings_json(tenant, package_name, version)
+        if not release:
+            update_manifest_json(tenant, package_name, version)
+            update_settings_json(tenant, package_name, version)
 
         subprocess.run(f"python manage.py sync_static {tenant}", shell=True)
         subprocess.run("python manage.py collectstatic --noinput", shell=True)
@@ -170,17 +171,18 @@ def install_package(package_name, version, tenant):
                 f"python manage.py ws_migrate {tenant} --package {package_name}",
                 shell=True,
             )
+        if not release:
+            from zango.apps.dynamic_models.workspace.base import Workspace
+            from zango.apps.shared.tenancy.models import TenantModel
 
-        from zango.apps.dynamic_models.workspace.base import Workspace
-        from zango.apps.shared.tenancy.models import TenantModel
-
-        tenant_obj = TenantModel.objects.get(name=tenant)
-        connection.set_tenant(tenant_obj)
-        with connection.cursor() as c:
-            ws = Workspace(connection.tenant, request=None, as_systemuser=True)
-            ws.ready()
-            ws.sync_tasks(tenant)
-            ws.sync_policies()
+            tenant_obj = TenantModel.objects.get(name=tenant)
+            connection.set_tenant(tenant_obj)
+            
+            with connection.cursor() as c:
+                ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                ws.ready()
+                ws.sync_policies()
+                ws.sync_tasks(tenant)
 
         return "Package Installed"
     except Exception as e:
