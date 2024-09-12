@@ -1,5 +1,6 @@
 import sys
 
+from django.conf import settings
 from django.db import models
 
 
@@ -9,7 +10,9 @@ from django.db import models
 class ZForeignKey(models.ForeignKey):
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")):
+        if all(
+            arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")
+        ) and not getattr(settings, "TEST_MIGRATION_RUNNING", False):
             cls._meta.apps.add_models(cls, self.related_model)
             try:
                 self.related_model._meta.apps.add_models(self.related_model, cls)
@@ -25,7 +28,9 @@ class ZForeignKey(models.ForeignKey):
 class ZOneToOneField(models.OneToOneField):
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
-        if all(arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")):
+        if all(
+            arg not in sys.argv for arg in ("ws_migrate", "ws_makemigration")
+        ) and not getattr(settings, "TEST_MIGRATION_RUNNING", False):
             # dont need it if related model is of core
             # try:
             cls._meta.apps.add_models(cls, self.related_model)

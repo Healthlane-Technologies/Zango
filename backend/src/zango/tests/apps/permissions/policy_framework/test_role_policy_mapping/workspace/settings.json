@@ -1,0 +1,26 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+        "name":"customers",
+        "path":"customers"
+        },
+        {
+        "name":"retailers",
+        "path":"retailers"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^customers/",
+            "module": "customers",
+            "url": "urls"
+        },
+        {
+            "re_path": "^retailers/",
+            "module": "retailers",
+            "url": "urls"
+        }
+    ],
+    "package_routes": []
+}

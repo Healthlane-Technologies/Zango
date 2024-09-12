@@ -1,5 +1,7 @@
 import json
 
+from importlib import import_module
+
 import pytz
 
 from django.conf import settings
@@ -50,6 +52,14 @@ def get_mock_request(**kwargs):
     request.method = kwargs.get("method", "GET")
     request.META = kwargs.get("META", {})
     request.header = kwargs.get("header", {})
+
+    if kwargs.get("session", False):
+        session = kwargs.get("session")
+        if session:
+            request.session = session
+        else:
+            engine = import_module(settings.SESSION_ENGINE)
+            request.session = engine.SessionStore()
 
     return request
 
