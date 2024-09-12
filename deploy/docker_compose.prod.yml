@@ -98,7 +98,7 @@ services:
       - .env
     volumes:
       - .:/zango/
-      - ./flower/storage:/etc/db/
+      - flower:/etc/db/
     environment:
       - FLOWER_PORT=5555
       - FLOWER_PERSISTENT=True
