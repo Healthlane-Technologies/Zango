@@ -22,7 +22,7 @@ const AddNewUserForm = ({ closeModal }) => {
 		dial_code: '+91',
 		code: 'IN',
 	})
-	const [mobileValid,setMobileValid] = useState(true)
+	const [mobileValid,setMobileValid] = useState(null)
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
@@ -57,6 +57,7 @@ const AddNewUserForm = ({ closeModal }) => {
 				},
 				then: Yup.string()
 					.required('Required'),
+				otherwise: Yup.string().required('Required')
 			}),
 			password: Yup.string().required('Required'),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
@@ -71,7 +72,7 @@ const AddNewUserForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		setMobileValid(true)
+		setMobileValid(null)
 		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
 		let dynamicFormData = transformToFormData(tempValues);
 
@@ -83,12 +84,12 @@ const AddNewUserForm = ({ closeModal }) => {
 				payload: dynamicFormData,
 			});
 
-			if (success && response) {
+			if (success) {
 				closeModal();
 				dispatch(toggleRerenderPage());
 			}
 			else{
-				setMobileValid(false)
+				setMobileValid(response.message)
 			}
 		};
 
@@ -150,7 +151,7 @@ const AddNewUserForm = ({ closeModal }) => {
 										placeholder="00000 00000"
 									/>
 								</div>
-								<p className='text-red-600 text-[11px]'>{!mobileValid && 'Invalid phone number'}</p>
+								<p className='text-red-600 text-[11px]'>{mobileValid==null?null:mobileValid}</p>
 								{formik.touched.mobile && formik.errors.mobile ? (
 									<div data-cy="error_message" className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}
