@@ -312,9 +312,9 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 latest_commit_hash = repo.head.commit.hexsha
 
             last_release = get_last_release()
-            if not last_release or is_version_greater(
+            if not last_release or (last_release and is_version_greater(
                 current_version, last_release.version
-            ):
+            )):
                 release_notes = extract_release_notes(
                     os.path.join(app_directory, "CHANGELOG.md"), current_version
                 )
@@ -369,6 +369,8 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 print(f"No version change detected for")
 
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             print(f"An error occurred while creating/updating release: {e}")
 
 

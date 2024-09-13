@@ -1,4 +1,6 @@
 import os
+import shutil
+import subprocess
 
 import cookiecutter.main
 from celery import shared_task
@@ -10,9 +12,8 @@ from django.core.management import call_command
 
 from .utils import assign_policies_to_anonymous_user, DEFAULT_THEME_CONFIG
 
-
 @shared_task
-def initialize_workspace(tenant_uuid):
+def initialize_workspace(tenant_uuid, app_template_path=None):
     try:
         from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 
@@ -20,7 +21,6 @@ def initialize_workspace(tenant_uuid):
 
         # Creating schema
         tenant.create_schema(check_if_exists=True)
-
         # migrating schema
         call_command(
             "migrate_schemas",
@@ -28,7 +28,6 @@ def initialize_workspace(tenant_uuid):
             schema_name=tenant.schema_name,
             interactive=False,
         )
-
         # Create workspace Folder
         project_base_dir = settings.BASE_DIR
 
@@ -36,27 +35,45 @@ def initialize_workspace(tenant_uuid):
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir)
 
-        # Creating app folder with the initial files
-        template_directory = os.path.join(
-            os.path.dirname(__file__), "workspace_folder_template"
-        )
-        cookiecutter_context = {"app_name": tenant.name}
+        if app_template_path is not None:
+            app_dir = os.path.join(workspace_dir, tenant.name)
+            if not os.path.exists(app_dir):
+                os.makedirs(app_dir)
 
-        cookiecutter.main.cookiecutter(
-            template_directory,
-            extra_context=cookiecutter_context,
-            output_dir=workspace_dir,
-            no_input=True,
-        )
+            shutil.copytree(app_template_path, app_dir, dirs_exist_ok=True)
+
+            shutil.rmtree(app_template_path)
+            shutil.rmtree(os.path.join(app_dir, "packages"))
+        else:
+            # Creating app folder with the initial files
+            template_directory = os.path.join(
+                os.path.dirname(__file__), "workspace_folder_template"
+            )
+            cookiecutter_context = {"app_name": tenant.name}
+
+            cookiecutter.main.cookiecutter(
+                template_directory,
+                extra_context=cookiecutter_context,
+                output_dir=workspace_dir,
+                no_input=True,
+            )
 
         tenant.status = "deployed"
         tenant.deployed_on = timezone.now()
         tenant.save(update_fields=["status", "deployed_on"])
 
-        assign_policies_to_anonymous_user(tenant.schema_name)
-        theme = ThemesModel.objects.create(
-            name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
-        )
+        if not app_template_path:
+            assign_policies_to_anonymous_user(tenant.schema_name)
+            theme = ThemesModel.objects.create(
+                name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
+            )
+        else:
+            try:
+                subprocess.run(
+                    ["zango", "update-apps", "--app_name", tenant.name], check=True
+                )
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to update app: {e}")
         if tenant.status == "deployed":
             return {"result": "success"}
         else:
