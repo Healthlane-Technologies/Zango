@@ -1,8 +1,8 @@
 from django.core.management.commands.loaddata import Command as LoadDataCommand
 from django.db import connection
 
-from zango.apps.shared.tenancy.models import TenantModel
 from zango.apps.dynamic_models.workspace.base import Workspace
+from zango.apps.shared.tenancy.models import TenantModel
 
 
 class Command(LoadDataCommand):

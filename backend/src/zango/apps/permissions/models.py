@@ -1,10 +1,9 @@
-from django.db.models import Q
 from django.db import models
-from django.db.models import JSONField
+from django.db.models import JSONField, Q
 from django.utils import timezone
 
-from zango.core.model_mixins import FullAuditMixin
 from zango.apps.auditlogs.registry import auditlog
+from zango.core.model_mixins import FullAuditMixin
 
 
 class PermissionsModel(FullAuditMixin):

@@ -1,7 +1,7 @@
 from django.db import models
 
-from zango.core.model_mixins import FullAuditMixin
 from zango.apps.auditlogs.registry import auditlog
+from zango.core.model_mixins import FullAuditMixin
 
 
 class AppRelease(FullAuditMixin):

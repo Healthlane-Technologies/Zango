@@ -1,17 +1,19 @@
 import json
-import time
-import re
 import os
-from pathlib import Path
-import sys
+import re
 import subprocess
+import sys
 import traceback
+
+from pathlib import Path
 
 import click
 import git
-from packaging import version, specifiers
+
+from packaging import specifiers, version
 
 import django
+
 from django.core.management import call_command
 
 
@@ -28,8 +30,9 @@ def find_project_name():
 
 def get_remote_settings(repo_url, branch):
     # Extract the username, repository, and file path from the repo_url
-    from django.conf import settings
     import requests
+
+    from django.conf import settings
 
     # Extract the username, repository, and file path from the repo_url
     repo_parts = repo_url.rstrip(".git").split("/")
@@ -166,9 +169,9 @@ def collect_static():
 
 
 def execute_fixtures(tenant_name, last_version, current_version, app_directory):
-    from zango.apps.release.utils import is_version_greater
-    from django.db import transaction
     from packaging.version import Version
+
+    from django.db import transaction
 
     release_mod = os.path.join(app_directory, "release")
     if not os.path.exists(release_mod):
@@ -290,10 +293,11 @@ def extract_release_notes(file_path, version):
 
 
 def create_release(tenant_name, app_settings, app_directory, git_mode):
-    from zango.apps.release.models import AppRelease
-    from zango.apps.shared.tenancy.models import TenantModel
-    from zango.apps.release.utils import is_version_greater
     from django.db import connection
+
+    from zango.apps.release.models import AppRelease
+    from zango.apps.release.utils import is_version_greater
+    from zango.apps.shared.tenancy.models import TenantModel
 
     tenant = TenantModel.objects.get(name=tenant_name)
     connection.set_tenant(tenant)
@@ -360,15 +364,16 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 # TODO: Execute the release script
 
             else:
-                print(f"No version change detected for")
+                print("No version change detected for")
 
         except Exception as e:
             print(f"An error occurred while creating/updating release: {e}")
 
 
 def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branch=None):
-    from zango.apps.release.utils import is_version_greater
     import zango
+
+    from zango.apps.release.utils import is_version_greater
 
     local_version = app_settings["version"]
     if git_mode:
@@ -403,9 +408,13 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
-        if not (is_version_greater(remote_version, local_version) or (
-            last_release and is_version_greater(remote_version, last_release.version)
-        )):
+        if not (
+            is_version_greater(remote_version, local_version)
+            or (
+                last_release
+                and is_version_greater(remote_version, last_release.version)
+            )
+        ):
             return False, "No version change detected"
     else:
         if last_release and not is_version_greater(local_version, last_release.version):
@@ -434,6 +443,7 @@ def update_apps(app_name):
 
     from django.conf import settings
     from django.db import connection
+
     from zango.apps.shared.tenancy.models import TenantModel
 
     tenants = TenantModel.objects.filter(status="deployed").exclude(

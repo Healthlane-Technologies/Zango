@@ -3,9 +3,9 @@ import inspect
 from django.core.management.commands.dumpdata import Command as DumpDataCommand
 from django.db import connection
 
-from zango.apps.shared.tenancy.models import TenantModel
-from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.dynamic_models.models import DynamicModelBase
+from zango.apps.dynamic_models.workspace.base import Workspace
+from zango.apps.shared.tenancy.models import TenantModel
 
 
 class Command(DumpDataCommand):
@@ -39,8 +39,6 @@ class Command(DumpDataCommand):
         )
 
     def get_dynamic_config_models(self, w):
-        from django.apps import apps
-
         models_list = []
 
         # app_config = apps.get_app_config("dynamic_models")
@@ -106,6 +104,7 @@ class Command(DumpDataCommand):
 
         # Saving fixture in release folder under particular version
         import os
+
         from django.conf import settings
 
         workspace_dir = os.path.join(settings.BASE_DIR, "workspaces", tenant)

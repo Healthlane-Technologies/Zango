@@ -1,4 +1,4 @@
-from packaging.version import Version, InvalidVersion
+from packaging.version import InvalidVersion, Version
 
 
 def is_version_greater(version1, version2):

@@ -1,9 +1,10 @@
 import click
+
 from zango.cli import (
+    git_setup,
+    install_package,
     package_info,
     start_project,
-    install_package,
-    git_setup,
     update_apps,
 )
 
