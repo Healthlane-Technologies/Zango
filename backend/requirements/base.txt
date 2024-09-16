@@ -5,11 +5,7 @@ celery==5.3.1
 click==8.1.7
 cookiecutter==2.3.0
 crispy-bootstrap5==0.7
-<<<<<<< HEAD
 django==4.2.15
-=======
-django==4.2.11
->>>>>>> 088a01c8 (ruff formatting)
 django-axes==6.4.0
 django-cachalot==2.6.1
 django-celery-beat==2.5.0
@@ -30,10 +26,7 @@ django-storages==1.14
 django-tenants==3.6.1
 djangorestframework==3.15.2
 flake8==6.1.0
-<<<<<<< HEAD
-=======
 GitPython==3.1.43
->>>>>>> 088a01c8 (ruff formatting)
 loguru==0.7.2
 opentelemetry-api==1.22.0
 opentelemetry-distro==0.43b0
@@ -75,8 +68,3 @@ python3-saml==1.16.0
 pytz==2024.1
 setuptools==70.1.1
 XlsxWriter==3.1.9
-<<<<<<< HEAD
-loguru==0.7.2
-GitPython==3.1.43
-=======
->>>>>>> 088a01c8 (ruff formatting)
