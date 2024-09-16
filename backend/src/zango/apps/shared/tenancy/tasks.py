@@ -8,8 +8,6 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 
-from django.core.management import call_command
-
 from .utils import DEFAULT_THEME_CONFIG, assign_policies_to_anonymous_user
 
 

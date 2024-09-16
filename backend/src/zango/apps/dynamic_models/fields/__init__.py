@@ -6,7 +6,6 @@ from django.db import models
 # from django.utils.translation import gettext_lazy as _
 
 
-
 class ZForeignKey(models.ForeignKey):
     def contribute_to_class(self, cls, related):
         super().contribute_to_class(cls, related)
