@@ -1,5 +1,7 @@
 import os
 import re
+import requests
+import tempfile
 import uuid
 
 from collections import namedtuple
@@ -139,12 +141,26 @@ class TenantModel(TenantMixin, FullAuditMixin):
         )
         app_template_path = None
         if obj.app_template:
+            if obj.app_template.url.startswith("https://"):
+                downloaded_file_path = cls.download_file(obj.app_template.url)
+            else:
+                downloaded_file_path = obj.app_template
             app_template_path = os.path.join(
-                extract_zip_to_temp_dir(obj.app_template), app_template_name
+                extract_zip_to_temp_dir(downloaded_file_path), app_template_name
             )
         # initialize tenant's workspace
         init_task = initialize_workspace.delay(str(obj.uuid), app_template_path)
         return obj, init_task.id
+    
+    @staticmethod
+    def download_file(url):
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(response.content)
+            return temp_file.name
 
 
 class Domain(DomainMixin, FullAuditMixin):
