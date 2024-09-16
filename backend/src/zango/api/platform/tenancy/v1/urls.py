@@ -5,6 +5,7 @@ from zango.api.platform.auditlogs.v1 import urls as auditlog_v1_urls
 from zango.api.platform.codeassist.v1 import urls as codeassist_v1_urls
 from zango.api.platform.packages.v1 import urls as packages_v1_urls
 from zango.api.platform.permissions.v1 import urls as permissions_v1_urls
+from zango.api.platform.releases.v1 import urls as releases_v1_urls
 from zango.api.platform.tasks.v1 import urls as tasks_v1_urls
 
 from .views import (
