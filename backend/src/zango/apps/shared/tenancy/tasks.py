@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from .utils import DEFAULT_THEME_CONFIG, assign_policies_to_anonymous_user
 
+
 @shared_task
 def initialize_workspace(tenant_uuid, app_template_path=None):
     try:

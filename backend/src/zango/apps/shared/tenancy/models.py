@@ -11,10 +11,9 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from zango.api.platform.tenancy.v1.utils import extract_zip_to_temp_dir
 from zango.core.model_mixins import FullAuditMixin
 from zango.core.storage_utils import ZFileField
-from zango.api.platform.tenancy.v1.utils import extract_zip_to_temp_dir
-
 
 from .tasks import initialize_workspace
 from .utils import (
@@ -118,7 +117,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
     logo = ZFileField(verbose_name="Logo", null=True, blank=True)
     fav_icon = ZFileField(verbose_name="Fav Icon", null=True, blank=True)
     extra_config = models.JSONField(null=True, blank=True)
-    app_template = ZFileField(verbose_name="template used for app", null=True, blank=True)
+    app_template = ZFileField(
+        verbose_name="template used for app", null=True, blank=True
+    )
 
     auto_create_schema = False
 
@@ -138,14 +139,11 @@ class TenantModel(TenantMixin, FullAuditMixin):
         )
         app_template_path = None
         if obj.app_template:
-            
-            app_template_path=os.path.join(extract_zip_to_temp_dir(obj.app_template), app_template_name)
+            app_template_path = os.path.join(
+                extract_zip_to_temp_dir(obj.app_template), app_template_name
+            )
         # initialize tenant's workspace
-<<<<<<< Updated upstream
-        init_task = initialize_workspace.apply_async((str(obj.uuid),), countdown=1)
-=======
         init_task = initialize_workspace.delay(str(obj.uuid), app_template_path)
->>>>>>> Stashed changes
         return obj, init_task.id
 
 

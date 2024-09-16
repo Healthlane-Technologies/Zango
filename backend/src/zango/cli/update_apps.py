@@ -266,14 +266,16 @@ def extract_release_notes(file_path, version):
 
     return None
 
+
 def same_package_version_exists(package, app_directory):
-    existing_package_path = os.path.join(app_directory, "packages", package['name'])
+    existing_package_path = os.path.join(app_directory, "packages", package["name"])
     if not os.path.exists(existing_package_path):
         return False
     existing_package = json.loads(
         open(os.path.join(existing_package_path, "manifest.json")).read()
     )
     return package["version"] == existing_package["version"]
+
 
 def install_packages(tenant, app_directory):
     from zango.core.package_utils import install_package
@@ -289,10 +291,13 @@ def install_packages(tenant, app_directory):
         try:
             if not same_package_version_exists(package, app_directory):
                 print(f"Installing package: {package['name']}")
-                res = install_package(package["name"], package["version"], tenant.name, True)
+                res = install_package(
+                    package["name"], package["version"], tenant.name, True
+                )
                 print(res)
         except subprocess.CalledProcessError:
             print("Failed to install package: ", package)
+
 
 def create_release(tenant_name, app_settings, app_directory, git_mode):
     from django.db import connection
@@ -374,6 +379,7 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
 
         except Exception as e:
             import traceback
+
             print(traceback.format_exc())
             print(f"An error occurred while creating/updating release: {e}")
 
@@ -445,7 +451,7 @@ def update_apps(app_name):
     click.echo("Initializing project setup")
     sys.path.insert(0, project_root)
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
-    
+
     django.setup()
 
     click.echo("Project setup initialized")
