@@ -67,8 +67,8 @@ def setup_and_pull(path, repo_url, branch="main"):
             raise Exception("Repository is bare")
         print(f"Repository found at {path}")
 
-        # Clean the working directory (remove untracked files and reset to HEAD)
-        repo.git.clean("-fd")
+        # Clean the working directory (remove untracked files and reset to HEAD) exlcuding packages
+        repo.git.clean("-fd", "--exclude=packages")
         repo.git.reset("--hard", "HEAD")
 
         # Check if the branch is the same, if not, checkout the correct branch
@@ -115,32 +115,7 @@ def setup_and_pull(path, repo_url, branch="main"):
     return success, message
 
 
-def run_migrations(tenant, app_directory):
-    # Run package migrations
-    print("Running package migrations...")
-
-    updated_app_manifest = json.loads(
-        open(os.path.join(app_directory, "manifest.json")).read()
-    )
-
-    installed_packages = updated_app_manifest["packages"]
-
-    for package in installed_packages:
-        try:
-            subprocess.run(
-                [
-                    "python",
-                    "manage.py",
-                    "ws_migrate",
-                    tenant,
-                    "--package",
-                    package["name"],
-                ],
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            print("Migrations failed for package: ", package)
-
+def run_app_migrations(tenant, app_directory):
     print("Running app migrations...")
     try:
         subprocess.run(["python", "manage.py", "ws_migrate", tenant], check=True)
@@ -291,6 +266,33 @@ def extract_release_notes(file_path, version):
 
     return None
 
+def same_package_version_exists(package, app_directory):
+    existing_package_path = os.path.join(app_directory, "packages", package['name'])
+    if not os.path.exists(existing_package_path):
+        return False
+    existing_package = json.loads(
+        open(os.path.join(existing_package_path, "manifest.json")).read()
+    )
+    return package["version"] == existing_package["version"]
+
+def install_packages(tenant, app_directory):
+    from zango.core.package_utils import install_package
+    # Run package migrations
+
+    updated_app_manifest = json.loads(
+        open(os.path.join(app_directory, "manifest.json")).read()
+    )
+
+    installed_packages = updated_app_manifest["packages"]
+
+    for package in installed_packages:
+        try:
+            if not same_package_version_exists(package, app_directory):
+                print(f"Installing package: {package['name']}")
+                res = install_package(package["name"], package["version"], tenant.name, True)
+                print(res)
+        except subprocess.CalledProcessError:
+            print("Failed to install package: ", package)
 
 def create_release(tenant_name, app_settings, app_directory, git_mode):
     from django.db import connection
@@ -333,8 +335,11 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 release.status = "in_progress"
                 release.save(update_fields=["status"])
 
-                # Run migrations
-                run_migrations(tenant_name, app_directory)
+                # install packages
+                install_packages(tenant, app_directory)
+
+                # Run app migrations
+                run_app_migrations(tenant_name, app_directory)
 
                 # Sync Static
                 sync_static(tenant_name)
@@ -368,6 +373,8 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 print("No version change detected for")
 
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             print(f"An error occurred while creating/updating release: {e}")
 
 
@@ -436,8 +443,9 @@ def update_apps(app_name):
     project_name = find_project_name()
     project_root = os.getcwd()
     click.echo("Initializing project setup")
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
     sys.path.insert(0, project_root)
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
+    
     django.setup()
 
     click.echo("Project setup initialized")
