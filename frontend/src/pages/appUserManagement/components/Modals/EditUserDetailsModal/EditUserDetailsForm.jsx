@@ -16,11 +16,12 @@ import {
 	toggleRerenderPage,
 } from '../../../slice';
 import { countryCodeList } from '../../../../../utils/countryCodes';
+import toast from 'react-hot-toast';
+import Notifications from '../../../../../components/Notifications';
 
 const EditUserDetailsForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
-	const [mobileValid,setMobileValid] = useState(null)
 	const [countryCode,setCountryCode] = useState({
 		name: 'India',
 		  dial_code: '+91',
@@ -62,7 +63,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 					if (!email) return true;
 				},
 				then: Yup.string().required('Required'),
-				otherwise: Yup.string().required('Required')
 			}),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
 		},
@@ -70,8 +70,10 @@ const EditUserDetailsForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		setMobileValid(true)
-		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
+		let tempValues = values
+		if(values.mobile){
+			tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
+		}
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -86,7 +88,22 @@ const EditUserDetailsForm = ({ closeModal }) => {
 				closeModal();
 				dispatch(toggleRerenderPage());
 			}else{
-				setMobileValid(response.message)
+				toast.custom(
+					(t) => (
+						<Notifications
+							type="error"
+							toastRef={t}
+							title={`${response.message}`}
+							description={
+								''
+							}
+						/>
+					),
+					{
+						duration: 5000,
+						position: 'bottom-left',
+					}
+				);
 			}
 		};
 
@@ -148,7 +165,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 										placeholder="00000 00000"
 									/>
 								</div>
-								<p className='text-red-600 text-[11px]'>{mobileValid==null?null:mobileValid}</p>
 								{formik.touched.mobile && formik.errors.mobile ? (
 									<div className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}

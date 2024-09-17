@@ -15,6 +15,8 @@ import {
 import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
 import { useState , useLayoutEffect} from 'react';
 import { countryCodeList } from '../../../../../utils/countryCodes';
+import toast from 'react-hot-toast';
+import Notifications from '../../../../../components/Notifications';
 
 const AddNewUserForm = ({ closeModal }) => {
 	const [countryCode,setCountryCode] = useState({
@@ -22,7 +24,6 @@ const AddNewUserForm = ({ closeModal }) => {
 		dial_code: '+91',
 		code: 'IN',
 	})
-	const [mobileValid,setMobileValid] = useState(null)
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
@@ -57,7 +58,6 @@ const AddNewUserForm = ({ closeModal }) => {
 				},
 				then: Yup.string()
 					.required('Required'),
-				otherwise: Yup.string().required('Required')
 			}),
 			password: Yup.string().required('Required'),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
@@ -72,8 +72,10 @@ const AddNewUserForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		setMobileValid(null)
-		let tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
+		let tempValues = values
+		if(values.mobile){
+			tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
+		}
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -89,7 +91,22 @@ const AddNewUserForm = ({ closeModal }) => {
 				dispatch(toggleRerenderPage());
 			}
 			else{
-				setMobileValid(response.message)
+				toast.custom(
+					(t) => (
+						<Notifications
+							type="error"
+							toastRef={t}
+							title={`${response.message}`}
+							description={
+								''
+							}
+						/>
+					),
+					{
+						duration: 5000,
+						position: 'bottom-left',
+					}
+				);
 			}
 		};
 
@@ -151,7 +168,6 @@ const AddNewUserForm = ({ closeModal }) => {
 										placeholder="00000 00000"
 									/>
 								</div>
-								<p className='text-red-600 text-[11px]'>{mobileValid==null?null:mobileValid}</p>
 								{formik.touched.mobile && formik.errors.mobile ? (
 									<div data-cy="error_message" className="font-lato text-form-xs text-[#cc3300]">
 										{formik.errors.mobile}
