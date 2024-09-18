@@ -184,7 +184,7 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_EXTENDED = True
 X_FRAME_OPTIONS = "ALLOW"
 
-PACKAGE_BUCKET_NAME = "zelthy3-packages"
+PACKAGE_BUCKET_NAME = "zelthy3-oss-packages"
 CODEASSIST_ENABLED = True
 
 # Session Security

@@ -32,63 +32,78 @@ def get_installed_packages(tenant):
 
 
 def get_all_packages(request, tenant=None):
-    installed_packages = {}
-    if tenant is not None:
-        installed_packages = get_installed_packages(tenant.name)
-    packages = {}
-    s3 = boto3.client(
-        "s3",
-        config=Config(signature_version=UNSIGNED),
-    )
+    installed_packages = get_installed_packages(tenant.name) if tenant else {}
+    s3_public_packages = get_s3_public_packages()
+
+    packages = merge_package_data(s3_public_packages, installed_packages, tenant)
+
+    resp_data = format_response_data(packages, installed_packages)
+
+    add_config_urls(resp_data, request, tenant)
+
+    return resp_data
+
+
+def get_s3_public_packages():
+    s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
     s3_package_data = s3.list_objects(
-        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/"
+        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/public/"
     )
-    for package in s3_package_data["Contents"]:
-        name = package["Key"]
-        name = name[9:]
-        version = name.split("/")[1]
-        name = name.split("/")[0]
+
+    packages = {}
+    for package in s3_package_data.get("Contents", []):
+        parts = package["Key"].split("/")
+        if len(parts) < 4:
+            continue
+        name, version = parts[2], parts[3]
         if name not in packages:
-            packages[name] = {"versions": [Version(version)]}
-        else:
-            packages[name]["versions"].append(Version(version))
-        if tenant is not None:
-            if installed_packages.get(name):
-                packages[name]["status"] = "Installed"
-                packages[name]["installed_version"] = installed_packages[name]
+            packages[name] = {"versions": []}
+        packages[name]["versions"].append(Version(version))
+
+    return packages
+
+
+def merge_package_data(s3_public_packages, installed_packages, tenant):
+    for name, data in s3_public_packages.items():
+        data["versions"] = sorted(data["versions"], reverse=True)
+        data["versions"] = [str(version) for version in data["versions"]]
+        data["config_url"] = None
+
+        if tenant:
+            if name in installed_packages:
+                data["status"] = "Installed"
+                data["installed_version"] = installed_packages[name]
             else:
-                name = name.split("/")[0]
-                packages[name]["status"] = "Not Installed"
-    resp_data = []
-    for package in packages.keys():
-        if packages[package].get("versions"):
-            packages[package]["versions"] = sorted(
-                packages[package]["versions"], reverse=True
-            )
-            packages[package]["versions"] = [
-                str(version) for version in packages[package]["versions"]
-            ]
-            packages[package]["config_url"] = None
-    for package, data in packages.items():
-        resp_data.append({"name": package, **data})
-    for local_package in installed_packages.keys():
-        if local_package not in packages.keys():
+                data["status"] = "Not Installed"
+
+    return s3_public_packages
+
+
+def format_response_data(packages, installed_packages):
+    resp_data = [{"name": name, **data} for name, data in packages.items()]
+
+    for name, version in installed_packages.items():
+        if name not in packages:
             resp_data.append(
                 {
-                    "name": local_package,
+                    "name": name,
                     "status": "Installed",
-                    "installed_version": installed_packages[local_package],
+                    "installed_version": version,
                 }
             )
+
+    return resp_data
+
+
+def add_config_urls(resp_data, request, tenant):
     for package in resp_data:
         url = get_package_configuration_url(request, tenant, package["name"])
-        if len(url) > 0:
+        if url:
             resp = requests.get(url)
             if resp.status_code == 200:
                 package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
             else:
                 package["config_url"] = None
-    return resp_data
 
 
 def update_settings_json(tenant, package_name, version):
@@ -155,7 +170,7 @@ def install_package(package_name, version, tenant, release=False):
         )
         bucket = resource.Bucket(settings.PACKAGE_BUCKET_NAME)
         bucket.download_file(
-            f"packages/{package_name}/{version}/{package_name}.zip",
+            f"packages/public/{package_name}/{version}/{package_name}.zip",
             f"workspaces/{tenant}/packages/{package_name}.zip",
         )
         with zipfile.ZipFile(
