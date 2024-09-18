@@ -82,11 +82,12 @@ def get_all_packages(request, tenant=None):
             )
     for package in resp_data:
         url = get_package_configuration_url(request, tenant, package["name"])
-        resp = requests.get(url)
-        if resp.status_code == 200:
-            package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
-        else:
-            package["config_url"] = None
+        if len(url) > 0:
+            resp = requests.get(url)
+            if resp.status_code == 200:
+                package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
+            else:
+                package["config_url"] = None
     return resp_data
 
 
