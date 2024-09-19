@@ -9,6 +9,7 @@ import requests
 
 from botocore import UNSIGNED
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from packaging.version import Version
 
 from django.conf import settings
@@ -33,7 +34,7 @@ def get_installed_packages(tenant):
 
 def get_all_packages(request, tenant=None):
     installed_packages = get_installed_packages(tenant.name) if tenant else {}
-    s3_public_packages = get_s3_public_packages()
+    s3_public_packages = get_s3_packages(include_private=True)
 
     packages = merge_package_data(s3_public_packages, installed_packages, tenant)
 
@@ -44,17 +45,39 @@ def get_all_packages(request, tenant=None):
     return resp_data
 
 
-def get_s3_public_packages():
-    s3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
-    s3_package_data = s3.list_objects(
-        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/public/"
-    )
+def get_s3_packages(include_private=False):
+    public_packages = []
+    private_packages = []
+    s3_public = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+    try:
+        public_s3_package_data = s3_public.list_objects(
+            Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/public/"
+        )
+        public_packages = public_s3_package_data.get("Contents",[])
+    except ClientError as e:
+        print(f"Error retrieving public packages: {e}")
+
+    if include_private:
+        try:
+            s3_private = boto3.client(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                config=Config(signature_version='s3v4')
+            )
+            
+            private_s3_package_data = s3_private.list_objects(
+                Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/private/"
+            )
+            private_packages = private_s3_package_data.get("Contents",[])
+        except ClientError as e:
+            print(f"Error retrieving private packages: {e}")
 
     packages = {}
-    for package in s3_package_data.get("Contents", []):
-        parts = package["Key"].split("/")
-        if len(parts) < 4:
+    for package in public_packages + private_packages:
+        if package["Key"].endswith("/"):
             continue
+        parts = package["Key"].split("/")
         name, version = parts[2], parts[3]
         if name not in packages:
             packages[name] = {"versions": []}
