@@ -74,7 +74,7 @@ def get_s3_packages(include_private=False):
             print(f"Error retrieving private packages: {e}")
 
     packages = {}
-    for package in public_packages + private_packages:
+    for package in public_packages:
         if package["Key"].endswith("/"):
             continue
         parts = package["Key"].split("/")
@@ -82,6 +82,17 @@ def get_s3_packages(include_private=False):
         if name not in packages:
             packages[name] = {"versions": []}
         packages[name]["versions"].append(Version(version))
+        packages[name]["type"] = "public"
+
+    for package in private_packages:
+        if package["Key"].endswith("/"):
+            continue
+        parts = package["Key"].split("/")
+        name, version = parts[2], parts[3]
+        if name not in packages:
+            packages[name] = {"versions": []}
+        packages[name]["versions"].append(Version(version))
+        packages[name]["type"] = "private"
 
     return packages
 
@@ -181,19 +192,27 @@ def get_package_configuration_url(request, tenant, package_name):
     return ""
 
 
-def install_package(package_name, version, tenant, release=False):
+def install_package(package_name, version, tenant, type, release=False):
     if package_installed(package_name, tenant):
         return "Package already installed"
     try:
         # if not package_is_cached(package_name, version):
         create_directories([f"workspaces/{tenant}/packages"])
-        resource = boto3.resource(
-            "s3",
-            config=Config(signature_version=UNSIGNED),
-        )
+        if type == "private":
+            resource = boto3.resource(
+                "s3",
+                config=Config(signature_version=UNSIGNED),
+            )
+        else:
+            resource = boto3.resource(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                config=Config(signature_version="s3v4"),
+            )
         bucket = resource.Bucket(settings.PACKAGE_BUCKET_NAME)
         bucket.download_file(
-            f"packages/public/{package_name}/{version}/{package_name}.zip",
+            f"packages/{type}/{package_name}/{version}/{package_name}.zip",
             f"workspaces/{tenant}/packages/{package_name}.zip",
         )
         with zipfile.ZipFile(
