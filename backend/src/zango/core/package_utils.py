@@ -53,7 +53,7 @@ def get_s3_packages(include_private=False):
         public_s3_package_data = s3_public.list_objects(
             Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/public/"
         )
-        public_packages = public_s3_package_data.get("Contents",[])
+        public_packages = public_s3_package_data.get("Contents", [])
     except ClientError as e:
         print(f"Error retrieving public packages: {e}")
 
@@ -63,13 +63,13 @@ def get_s3_packages(include_private=False):
                 "s3",
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                config=Config(signature_version='s3v4')
+                config=Config(signature_version="s3v4"),
             )
-            
+
             private_s3_package_data = s3_private.list_objects(
                 Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/private/"
             )
-            private_packages = private_s3_package_data.get("Contents",[])
+            private_packages = private_s3_package_data.get("Contents", [])
         except ClientError as e:
             print(f"Error retrieving private packages: {e}")
 
