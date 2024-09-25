@@ -418,7 +418,8 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             role_ids = data.getlist("roles")
             if data.get("mobile"):
                 if not validate_phone(data["mobile"]):
-                    return get_api_response(False, "Invalid mobile number", 400)
+                    result = {"message": "Invalid mobile number"}
+                    return get_api_response(False, result, 400)
             creation_result = AppUserModel.create_user(
                 name=data["name"],
                 email=data["email"],
@@ -467,7 +468,8 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
         try:
             if data.get("mobile"):
                 if not validate_phone(data["mobile"]):
-                    return get_api_response(False, "Invalid mobile number", 400)
+                    result = {"message": "Invalid mobile number"}
+                    return get_api_response(False, result, 400)
             obj = self.get_obj(**kwargs)
             update_result = AppUserModel.update_user(obj, request.data)
             success = update_result["success"]
