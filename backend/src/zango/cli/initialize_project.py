@@ -78,6 +78,9 @@ def initialize_project(
     platform_user_password,
     platform_domain_url,
 ):
+    """
+    Used to initialize the zango project on an empty db.
+    """
     db_connection_status = test_db_conection(
         db_name, db_user, db_password, db_host, db_port
     )
