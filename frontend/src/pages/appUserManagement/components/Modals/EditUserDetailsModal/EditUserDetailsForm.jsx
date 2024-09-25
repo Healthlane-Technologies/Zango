@@ -26,7 +26,12 @@ const EditUserDetailsForm = ({ closeModal }) => {
 		name: 'India',
 		  dial_code: '+91',
 		  code: 'IN',
-  })
+  	})
+	const [countryCodeNull,setCountryCodeNull] = useState({
+		name: 'India',
+		  dial_code: '+91',
+		  code: 'IN',
+  	})
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	let appUserManagementFormData = useSelector(
@@ -35,16 +40,19 @@ const EditUserDetailsForm = ({ closeModal }) => {
 
 	const triggerApi = useApi();
 	let pn_country_code = appUserManagementFormData?.pn_country_code ?? '+91'
+	let pn_country_code_null = appUserManagementData?.pn_country_code ?? '+91'
 	useLayoutEffect(()=>{
 		let countryCodeObj = countryCodeList.find((c)=>c.dial_code===pn_country_code)
+		let countryCodeObjNull = countryCodeList.find((c)=>c.dial_code===pn_country_code_null)
 		setCountryCode(countryCodeObj)
+		setCountryCodeNull(countryCodeObjNull)
 	},[])
 
 	
 	let initialValues = {
 		name: appUserManagementFormData?.name ?? '',
 		email: appUserManagementFormData?.email ?? '',
-		mobile: pn_country_code.length>0?appUserManagementFormData?.mobile.slice(pn_country_code.length):appUserManagementFormData?.mobile,
+		mobile: (appUserManagementFormData?.mobile=='' || appUserManagementFormData?.mobile==null)? '': pn_country_code.length!=null?appUserManagementFormData?.mobile.slice(pn_country_code.length):appUserManagementFormData?.mobile,
 		roles: appUserManagementFormData?.roles?.map((eachApp) => eachApp.id) ?? [],
 	};
 
@@ -88,22 +96,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 				closeModal();
 				dispatch(toggleRerenderPage());
 			}else{
-				toast.custom(
-					(t) => (
-						<Notifications
-							type="error"
-							toastRef={t}
-							title={`${response.message}`}
-							description={
-								''
-							}
-						/>
-					),
-					{
-						duration: 5000,
-						position: 'bottom-left',
-					}
-				);
 			}
 		};
 
@@ -152,7 +144,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 								</label>
 								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px]">
 									<span className="font-lato text-[#6C747D]">
-										<CountryCodeSelector countryCode={countryCode} setCountryCode={setCountryCode} />
+										<CountryCodeSelector countryCode={(appUserManagementFormData?.mobile=='' || appUserManagementFormData?.mobile==null)?countryCodeNull:countryCode} setCountryCode={setCountryCode} />
 									</span>
 									<input	
 										id="mobile"

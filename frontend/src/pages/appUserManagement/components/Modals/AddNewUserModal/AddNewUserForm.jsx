@@ -91,22 +91,6 @@ const AddNewUserForm = ({ closeModal }) => {
 				dispatch(toggleRerenderPage());
 			}
 			else{
-				toast.custom(
-					(t) => (
-						<Notifications
-							type="error"
-							toastRef={t}
-							title={`${response.message}`}
-							description={
-								''
-							}
-						/>
-					),
-					{
-						duration: 5000,
-						position: 'bottom-left',
-					}
-				);
 			}
 		};
 
