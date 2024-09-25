@@ -99,6 +99,11 @@ class Command(DumpDataCommand):
             w = Workspace(tenant_obj, None, True)
             w.ready()
             models_list = self.get_dynamic_config_models(w)
+            if len(models_list)<1:
+                self.stdout.write(
+                    "No fixtures found."
+                )
+                return
         elif self.framework_fixtures:
             models_list = ["appauth.UserRoleModel"]
 
