@@ -27,11 +27,6 @@ const EditUserDetailsForm = ({ closeModal }) => {
 		  dial_code: '+91',
 		  code: 'IN',
   	})
-	const [countryCodeNull,setCountryCodeNull] = useState({
-		name: 'India',
-		  dial_code: '+91',
-		  code: 'IN',
-  	})
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	let appUserManagementFormData = useSelector(
@@ -40,12 +35,12 @@ const EditUserDetailsForm = ({ closeModal }) => {
 
 	const triggerApi = useApi();
 	let pn_country_code = appUserManagementFormData?.pn_country_code ?? '+91'
-	let pn_country_code_null = appUserManagementData?.pn_country_code ?? '+91'
 	useLayoutEffect(()=>{
+		if(appUserManagementFormData?.mobile=='' || appUserManagementFormData?.mobile==null){
+			pn_country_code = appUserManagementData?.pn_country_code ?? '+91'
+		}
 		let countryCodeObj = countryCodeList.find((c)=>c.dial_code===pn_country_code)
-		let countryCodeObjNull = countryCodeList.find((c)=>c.dial_code===pn_country_code_null)
 		setCountryCode(countryCodeObj)
-		setCountryCodeNull(countryCodeObjNull)
 	},[])
 
 	
@@ -144,7 +139,10 @@ const EditUserDetailsForm = ({ closeModal }) => {
 								</label>
 								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px]">
 									<span className="font-lato text-[#6C747D]">
-										<CountryCodeSelector countryCode={(appUserManagementFormData?.mobile=='' || appUserManagementFormData?.mobile==null)?countryCodeNull:countryCode} setCountryCode={setCountryCode} />
+										<CountryCodeSelector 
+											countryCode={countryCode} 
+											setCountryCode={setCountryCode} 
+										/>
 									</span>
 									<input	
 										id="mobile"
