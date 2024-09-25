@@ -18,6 +18,8 @@ from django.urls import set_urlconf
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 
+from zango.core.utils import get_region_from_timezone
+
 
 class ZangoTenantMainMiddleware(TenantMainMiddleware):
     TENANT_NOT_FOUND_EXCEPTION = Http404
@@ -146,12 +148,8 @@ class TimezoneMiddleware(MiddlewareMixin):
         try:
             tzname = request.tenant.timezone
             timezone.activate(pytz.timezone(tzname))
-            timezone_country = {}
-            for countrycode in pytz.country_timezones:
-                timezones = pytz.country_timezones[countrycode]
-                for tz in timezones:
-                    timezone_country[tz] = countrycode
-            settings.PHONENUMBER_DEFAULT_REGION = timezone_country[tzname]
+            region = get_region_from_timezone(tzname)
+            settings.PHONENUMBER_DEFAULT_REGION = region
         except Exception:
             timezone.deactivate()
         return self.get_response(request)
