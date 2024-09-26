@@ -55,13 +55,14 @@ jobs:
 
       - name: Zip repository
         run: |
-          zip -r ${{ inputs.aws-pkg-name }}.zip .
+          zip -r ${{ inputs.aws-pkg-name }}.zip ${{ inputs.aws-pkg-name }}
 
       - name: Setup AWS CLI
         run: |
           aws configure set aws_access_key_id ${{ secrets.PKG_S3_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.PKG_S3_ACCESS_KEY_SECRET }}
+          aws configure set region ${{ secrets.PKG_S3_REGION }}
 
       - name: Upload to S3
         run: |
-          aws s3 sync . s3://zelthy3-packages/packages/${{ inputs.aws-pkg-name }}/${{ env.VERSION }}/ --acl public-read --exclude '*' --include '${{ inputs.aws-pkg-name }}.zip'
+          aws s3 cp '${{ inputs.aws-pkg-name }}.zip' s3://zelthy3-packages/packages/${{ inputs.aws-pkg-name }}/${{ env.VERSION }}/ --acl public-read
