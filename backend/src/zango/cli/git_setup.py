@@ -4,6 +4,7 @@ import os
 import click
 import git
 
+from zango.apps.shared.tenancy.models import TenantModel
 
 def is_valid_app_directory(directory):
     # Define your validation criteria
@@ -20,7 +21,7 @@ def update_settings_with_git_repo_url(
     app_directory, git_repo_url, dev_branch, staging_branch, prod_branch
 ):
     """
-    Update the 'git_repo_url' in the 'settings.json' file located in the app directory.
+    Update the 'git_repo_url' in the TenantMode.extra_config field.
 
     Args:
     - app_directory (str): Full path of the app directory.
@@ -37,21 +38,22 @@ def update_settings_with_git_repo_url(
             settings = json.load(settings_file)
 
         # Update git_repo_url in settings
-        git_config = settings.get("git_config", {})
+        app_name = settings.get("app_name", {})
+        tenant_obj = TenantModel.objects.get(name=app_name)
+
+        git_config = tenant_obj.extra_config.get("git_config",{})
         git_config["repo_url"] = git_repo_url
         git_branch = git_config.get("branch", {})
         git_branch.update(
             {"dev": dev_branch, "staging": staging_branch, "prod": prod_branch}
         )
         git_config["branch"] = git_branch
-        settings["git_config"] = git_config
-
-        # Write updated settings back to settings.json
-        with open(settings_file_path, "w") as settings_file:
-            json.dump(settings, settings_file, indent=4)
+        tenant_obj.extra_config.update(git_config)
+        tenant_obj.save()
 
         return True
-
+    except TenantModel.DoesNotExist:
+        click.echo(f"App not found: {e}")
     except FileNotFoundError:
         click.echo(f"Error: settings.json not found in {app_directory}.")
     except json.JSONDecodeError:
