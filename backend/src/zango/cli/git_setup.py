@@ -1,10 +1,12 @@
 import json
 import os
+import sys
 
 import click
 import git
+from .update_apps import find_project_name
 
-from zango.apps.shared.tenancy.models import TenantModel
+import django
 
 def is_valid_app_directory(directory):
     # Define your validation criteria
@@ -33,33 +35,44 @@ def update_settings_with_git_repo_url(
     settings_file_path = os.path.join(app_directory, "settings.json")
 
     try:
+        project_name = find_project_name()
+        project_root = os.getcwd()
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
+        sys.path.insert(0, project_root)
+        django.setup()
+
+        from zango.apps.shared.tenancy.models import TenantModel
+
         # Load current settings from settings.json
         with open(settings_file_path, "r") as settings_file:
             settings = json.load(settings_file)
 
         # Update git_repo_url in settings
-        app_name = settings.get("app_name", {})
+        app_name = settings.get("app_name","")
         tenant_obj = TenantModel.objects.get(name=app_name)
-
-        git_config = tenant_obj.extra_config.get("git_config",{})
-        git_config["repo_url"] = git_repo_url
+        git_config={}
+        if tenant_obj.extra_config:
+            git_config = tenant_obj.extra_config.get("git_config",{})
+        else:
+            git_config["repo_url"] = git_repo_url
         git_branch = git_config.get("branch", {})
         git_branch.update(
             {"dev": dev_branch, "staging": staging_branch, "prod": prod_branch}
         )
         git_config["branch"] = git_branch
-        tenant_obj.extra_config.update(git_config)
+        if tenant_obj.extra_config:
+            tenant_obj.extra_config.update({"git_config":git_config})
+        else:
+            tenant_obj.extra_config={"git_config":git_config}
         tenant_obj.save()
 
         return True
-    except TenantModel.DoesNotExist:
-        click.echo(f"App not found: {e}")
     except FileNotFoundError:
         click.echo(f"Error: settings.json not found in {app_directory}.")
     except json.JSONDecodeError:
         click.echo(f"Error: settings.json is not valid JSON in {app_directory}.")
     except Exception as e:
-        click.echo(f"Error occurred while updating settings.json: {e}")
+        click.echo(f"Error occurred while updating tenant extra config: {e}")
 
     return False
 
