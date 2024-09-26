@@ -63,11 +63,11 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		const extra_config = {
 			git_config: {
 			  branch: {
-				dev: tempValues.dev,
-				prod: tempValues.prod,
-				staging: tempValues.staging
+				dev: tempValues.dev==''?null:tempValues.dev,
+				prod: tempValues.prod==''?null:tempValues.prod,
+				staging: tempValues.staging==''?null:tempValues.staging
 			  },
-			  repo_url: tempValues.repo_url
+			  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
 			}
 		  };
 		
