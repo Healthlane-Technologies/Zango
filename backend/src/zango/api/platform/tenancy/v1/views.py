@@ -153,7 +153,8 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
         return get_api_response(success, response, status)
     
     def get_branch(config, key, default):
-        return config.get("branch", {}).get(key, default)
+        branch = config.get('branch', {}).get(key, default)
+        return branch if branch else default
 
     def put(self, request, *args, **kwargs):
         try:
