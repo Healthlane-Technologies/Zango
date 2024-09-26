@@ -31,12 +31,24 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		timezone: appConfigurationData?.app?.timezone ?? '',
 		date_format: appConfigurationData?.app?.date_format ?? '',
 		datetime_format: appConfigurationData?.app?.datetime_format ?? '',
+		repo_url: appConfigurationData?.app?.extra_config?.repo_url ?? '',
+		dev: appConfigurationData?.app?.extra_config?.git_config?.dev ?? '',
+		prod: appConfigurationData?.app?.extra_config?.git_config?.prod ?? '',
+		staging: appConfigurationData?.app?.extra_config?.git_config?.staging ?? ''
 	};
 
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
 		domains: Yup.array().of(Yup.string().required('Required')),
+		repo_url: Yup.string().url('Must be a valid URL').when(['dev', 'prod', 'staging'], {
+			is: (dev, prod, staging) => dev || prod || staging,
+			then: Yup.string().required('Required'),
+			otherwise: Yup.string().notRequired(),
+		  }),
+		dev: Yup.string(),
+		prod: Yup.string(),
+		staging: Yup.string(),
 	});
 
 	let onSubmit = (values) => {
@@ -48,7 +60,24 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		if (!tempValues['fav_icon']) {
 			delete tempValues['fav_icon'];
 		}
-
+		const extra_config = {
+			git_config: {
+			  branch: {
+				dev: tempValues.dev==''?null:tempValues.dev,
+				prod: tempValues.prod==''?null:tempValues.prod,
+				staging: tempValues.staging==''?null:tempValues.staging
+			  },
+			  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
+			}
+		  };
+		
+		delete tempValues.dev;
+		delete tempValues.prod;
+		delete tempValues.staging;
+		delete tempValues.repo_url;
+		
+		tempValues.extra_config = JSON.stringify(extra_config);
+		
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -166,6 +195,46 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 								optionsData={
 									appConfigurationData?.dropdown_options?.datetime_formats ?? []
 								}
+								formik={formik}
+							/>
+							<InputField
+								key="repo_url"
+								label="Repo URL"
+								name="repo_url"
+								id="repo_url"
+								placeholder="Enter"
+								value={get(formik.values, 'repo_url', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<InputField
+								key="dev"
+								label="Development Branch"
+								name="dev"
+								id="name"
+								placeholder="Enter"
+								value={get(formik.values, 'dev', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<InputField
+								key="prod"
+								label="Production Branch"
+								name="prod"
+								id="prod"
+								placeholder="Enter"
+								value={get(formik.values, 'prod', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<InputField
+								key="staging"
+								label="Staging Branch"
+								name="staging"
+								id="staging"
+								placeholder="Enter"
+								value={get(formik.values, 'staging', '')}
+								onChange={formik.handleChange}
 								formik={formik}
 							/>
 						</div>
