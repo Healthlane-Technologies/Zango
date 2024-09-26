@@ -31,10 +31,10 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		timezone: appConfigurationData?.app?.timezone ?? '',
 		date_format: appConfigurationData?.app?.date_format ?? '',
 		datetime_format: appConfigurationData?.app?.datetime_format ?? '',
-		repo_url: appConfigurationData?.app?.extra_config?.repo_url ?? '',
-		dev: appConfigurationData?.app?.extra_config?.git_config?.dev ?? '',
-		prod: appConfigurationData?.app?.extra_config?.git_config?.prod ?? '',
-		staging: appConfigurationData?.app?.extra_config?.git_config?.staging ?? ''
+		repo_url: appConfigurationData?.app?.extra_config?.git_config?.repo_url ?? '',
+		dev: appConfigurationData?.app?.extra_config?.git_config?.branch?.dev ?? '',
+		prod: appConfigurationData?.app?.extra_config?.git_config?.branch?.prod ?? '',
+		staging: appConfigurationData?.app?.extra_config?.git_config?.branch?.staging ?? ''
 	};
 
 	let validationSchema = Yup.object({
