@@ -1,5 +1,6 @@
 import json
 import traceback
+import os
 
 from django_celery_results.models import TaskResult
 
@@ -10,6 +11,7 @@ from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
+from zango.cli.git_setup import git_setup
 from zango.core.api import (
     ZangoGenericPlatformAPIView,
     get_api_response,
@@ -18,6 +20,7 @@ from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
 from zango.core.utils import get_search_columns
+
 
 from .serializers import (
     AppUserModelSerializerModel,
@@ -148,6 +151,9 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
             status = 500
 
         return get_api_response(success, response, status)
+    
+    def get_branch(config, key, default):
+        return config.get("branch", {}).get(key, default)
 
     def put(self, request, *args, **kwargs):
         try:
@@ -162,6 +168,24 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 serializer.save()
                 success = True
                 status_code = 200
+                if serializer.data.get("extra_config", None):
+                    app_directory = os.path.join(os.getcwd(), "workspaces", obj.name)
+                    new_git_config = serializer.data["extra_config"].get("git_config", {})
+                    old_git_config = obj.extra_config.get("git_config", {}) if obj.extra_config else {}
+                    
+                    new_repo_url = new_git_config.get("repo_url")
+                    old_repo_url = old_git_config.get("repo_url")
+
+                    if new_repo_url and (not old_git_config or new_repo_url != old_repo_url):
+                        git_setup(
+                            app_directory,
+                            new_repo_url,
+                            self.get_branch(new_git_config, "dev", "development"),
+                            self.get_branch(new_git_config, "staging", "staging"),
+                            self.get_branch(new_git_config, "prod", "main"),
+                            True
+                        )
+                
                 result = {
                     "message": "App Settings Updated Successfully",
                     "app_uuid": str(obj.uuid),

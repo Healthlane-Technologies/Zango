@@ -66,7 +66,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
             if created:
                 domain_obj.is_primary = False
                 domain_obj.save()
-
+        
         return instance
 
 
