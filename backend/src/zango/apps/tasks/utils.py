@@ -99,7 +99,4 @@ def get_crontab_obj(crontab={}):
             "month_of_year": "*",
         }
 
-    schedule, created = CrontabSchedule.objects.get_or_create(**crontab)
-    if created:
-        return schedule, True
-    return schedule, False
+    return CrontabSchedule.objects.get_or_create(**crontab)

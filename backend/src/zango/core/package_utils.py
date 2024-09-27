@@ -138,8 +138,9 @@ def get_package_configuration_url(request, tenant, package_name):
     for route in data["package_routes"]:
         if route["package"] == package_name:
             domain = tenant.domains.filter(is_primary=True).last()
-            url = get_current_request_url(request, domain=domain)
-            return f"{url}/{route['re_path'][1:]}configure/"
+            if domain:
+                url = get_current_request_url(request, domain=domain)
+                return f"{url}/{route['re_path'][1:]}configure/"
     return ""
 
 
