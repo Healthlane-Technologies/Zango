@@ -32,7 +32,6 @@ export default function ProfileMenu() {
 				</Menu.Button>
 				<Transition
 					as={Fragment}
-					// @ts-ignore
 					ref={(ref) => setPopperElement(ref)}
 					style={styles['popper']}
 					{...attributes['popper']}

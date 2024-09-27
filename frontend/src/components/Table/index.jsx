@@ -51,7 +51,7 @@ function Table({
 		<div
 			className={`flex ${
 				haveSideMenu ? 'max-w-[calc(100vw_-_88px)]' : 'max-w-[100vw]'
-			}  grow flex-col overflow-auto`}
+			}  grow flex-col overflow-auto `}
 		>
 			<TableSearch
 				searchPlaceholder={searchPlaceholder}
@@ -60,7 +60,7 @@ function Table({
 				SearchFilters={SearchFilters}
 			/>
 			<div className="relative flex grow overflow-x-auto overflow-y-auto">
-				<table className="h-fit w-full border-collapse">
+				<table className="h-fit w-full border-collapse  ">
 					<TableHead table={table} />
 					<TableBody table={table} RowMenu={RowMenu} />
 				</table>
