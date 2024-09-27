@@ -18,23 +18,30 @@ import ResizableInput from '../../../../components/Table/ResizableInput';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import useApi from '../../../../hooks/useApi';
+
 import {
+	setAppAccessLogsData,
 	selectAppAccessLogsData,
 	selectAppAccessLogsTableData,
-	setAppAccessLogsData,
 	setAppAccessLogsTableData,
-} from '../../slice';
+} from '../../../appAccessLogs/slice';
+import {
+	selectAppReleasesData,
+	selectAppReleasesTableData,
+	setAppReleasesData,
+	setAppReleasesTableData,
+} from '../../slice/Index';
 
 export default function Table({ tableData }) {
 	let { appId } = useParams();
 	const searchRef = React.useRef(null);
-	const appAccessLogsTableData = useSelector(selectAppAccessLogsTableData);
+	const appReleasesTableData = useSelector(selectAppReleasesTableData);
 
 	const columnHelper = createColumnHelper();
 
 	const handleSearch = (value) => {
 		let searchData = {
-			...appAccessLogsTableData,
+			...appReleasesTableData,
 			searchValue: value,
 			pageIndex: 0,
 		};
@@ -42,7 +49,7 @@ export default function Table({ tableData }) {
 	};
 
 	const handleColumnSearch = (data) => {
-		let tempTableData = JSON.parse(JSON.stringify(appAccessLogsTableData));
+		let tempTableData = JSON.parse(JSON.stringify(appReleasesTableData));
 		let index = findIndex(tempTableData?.columns, { id: data?.id });
 
 		if (index !== -1) {
@@ -68,7 +75,7 @@ export default function Table({ tableData }) {
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Id
+						Release ID
 					</span>
 				</div>
 			),
@@ -82,13 +89,44 @@ export default function Table({ tableData }) {
 				);
 			},
 		}),
-		columnHelper.accessor((row) => row.user, {
+
+		columnHelper.accessor((row) => row.version, {
 			id: 'user',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						User
+						Version
 					</span>
+					<div className="translate-y-[-2px] ps-2">
+						<TableDropdownFilter
+							key="version"
+							label="Version"
+							name="version"
+							id="version"
+							placeholder="Select"
+							value={
+								find(appReleasesTableData?.columns, {
+									id: 'version',
+								})?.value
+									? find(appReleasesTableData?.columns, {
+											id: 'version',
+									  })?.value
+									: ''
+							}
+							optionsDataName="version"
+							optionsData={
+								appReleasesData?.dropdown_options?.version
+									? appReleasesData?.dropdown_options?.version
+									: []
+							}
+							onChange={(value) => {
+								handleColumnSearch({
+									id: 'version',
+									value: value?.id,
+								});
+							}}
+						/>
+					</div>
 				</div>
 			),
 			cell: (info) => (
@@ -99,13 +137,41 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.username, {
+		columnHelper.accessor((row) => row.created_at, {
 			id: 'username',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Username
+						Release Date
 					</span>
+					<div className="ps-2">
+						<TableDateRangeFilter
+							key="Release_date"
+							label="Release date"
+							name="Release_date"
+							id="Release_date"
+							placeholder="Select"
+							value={
+								find(appReleasesTableData?.columns, {
+									id: 'Release_date',
+								})?.value
+									? find(appReleasesTableData?.columns, {
+											id: 'Release_date',
+									  })?.value
+									: ''
+							}
+							optionsDataName="Release_date"
+							optionsData={
+								appReleasesData?.dropdown_options?.session_expired_at
+							}
+							onChange={(value) => {
+								handleColumnSearch({
+									id: 'Release_date',
+									value: value,
+								});
+							}}
+						/>
+					</div>
 				</div>
 			),
 			cell: (info) => (
@@ -116,12 +182,12 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.ip_address, {
+		columnHelper.accessor((row) => row.description, {
 			id: 'ip_address',
 			header: () => (
 				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Ip Address
+						Description
 					</span>
 				</div>
 			),
@@ -133,38 +199,38 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.attempt_type, {
-			id: 'attempt_type',
+		columnHelper.accessor((row) => row.status, {
+			id: 'status',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full items-start justify-start gap-[8px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Attempt Type
+						Status
 					</span>
-					<div className="translate-y-[-2px]">
+					<div className="translate-y-[-2px] ">
 						<TableDropdownFilter
-							key="attempt_type"
-							label="Attempt Type"
-							name="attempt_type"
-							id="attempt_type"
+							key="status"
+							label="Status"
+							name="status"
+							id="status"
 							placeholder="Select"
 							value={
-								find(appAccessLogsTableData?.columns, {
-									id: 'attempt_type',
+								find(appReleasesTableData?.columns, {
+									id: 'status',
 								})?.value
-									? find(appAccessLogsTableData?.columns, {
-											id: 'attempt_type',
+									? find(appReleasesTableData?.columns, {
+											id: 'status',
 									  })?.value
 									: ''
 							}
-							optionsDataName="attempt_type"
+							optionsDataName="status"
 							optionsData={
-								appAccessLogsData?.dropdown_options?.attempt_type
-									? appAccessLogsData?.dropdown_options?.attempt_type
+								appReleasesData?.dropdown_options?.status
+									? appReleasesData?.dropdown_options?.status
 									: []
 							}
 							onChange={(value) => {
 								handleColumnSearch({
-									id: 'attempt_type',
+									id: 'status',
 									value: value?.id,
 								});
 							}}
@@ -180,102 +246,12 @@ export default function Table({ tableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.attempt_time, {
+		columnHelper.accessor((row) => row.last_git_hash, {
 			id: 'attempt_time',
 			header: () => (
 				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Attempt Time
-					</span>
-					<div className="">
-						<TableDateRangeFilter
-							key="attempt_time"
-							label="Stockist"
-							name="attempt_time"
-							id="attempt_time"
-							placeholder="Select"
-							value={
-								find(appAccessLogsTableData?.columns, {
-									id: 'attempt_time',
-								})?.value
-									? find(appAccessLogsTableData?.columns, {
-											id: 'attempt_time',
-									  })?.value
-									: ''
-							}
-							optionsDataName="attempt_time"
-							optionsData={appAccessLogsData?.dropdown_options?.attempt_time}
-							onChange={(value) => {
-								handleColumnSearch({
-									id: 'attempt_time',
-									value: value,
-								});
-							}}
-						/>
-					</div>
-				</div>
-			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-						{info.getValue()}
-					</span>
-				</div>
-			),
-		}),
-		columnHelper.accessor((row) => row.role, {
-			id: 'role',
-			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Role
-					</span>
-					<div className="translate-y-[-2px]">
-						<TableDropdownFilter
-							key="role"
-							label="Role"
-							name="role"
-							id="role"
-							placeholder="Select"
-							value={
-								find(appAccessLogsTableData?.columns, {
-									id: 'role',
-								})?.value
-									? find(appAccessLogsTableData?.columns, {
-											id: 'role',
-									  })?.value
-									: ''
-							}
-							optionsDataName="role"
-							optionsData={
-								appAccessLogsData?.dropdown_options?.role
-									? appAccessLogsData?.dropdown_options?.role
-									: []
-							}
-							onChange={(value) => {
-								handleColumnSearch({
-									id: 'role',
-									value: value?.id,
-								});
-							}}
-						/>
-					</div>
-				</div>
-			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-					<span className="text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-						{info.getValue()}
-					</span>
-				</div>
-			),
-		}),
-		columnHelper.accessor((row) => row.user_agent, {
-			id: 'user_agent',
-			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						user agent
+						Last Git Hash
 					</span>
 				</div>
 			),
@@ -283,102 +259,6 @@ export default function Table({ tableData }) {
 				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
 						{info.getValue()}
-					</span>
-				</div>
-			),
-		}),
-		columnHelper.accessor((row) => row.session_expired_at, {
-			id: 'session_expired_at',
-			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-					<span className="whitespace-nowrap font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Session Expired At
-					</span>
-					<div className="">
-						<TableDateRangeFilter
-							key="session_expired_at"
-							label="Session Expired At"
-							name="session_expired_at"
-							id="session_expired_at"
-							placeholder="Select"
-							value={
-								find(appAccessLogsTableData?.columns, {
-									id: 'session_expired_at',
-								})?.value
-									? find(appAccessLogsTableData?.columns, {
-											id: 'session_expired_at',
-									  })?.value
-									: ''
-							}
-							optionsDataName="session_expired_at"
-							optionsData={
-								appAccessLogsData?.dropdown_options?.session_expired_at
-							}
-							onChange={(value) => {
-								handleColumnSearch({
-									id: 'session_expired_at',
-									value: value,
-								});
-							}}
-						/>
-					</div>
-				</div>
-			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-					<span className="whitespace-nowrap text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px]">
-						{info.getValue()}
-					</span>
-				</div>
-			),
-		}),
-		columnHelper.accessor((row) => row.is_login_successful, {
-			id: 'is_login_successful',
-			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
-					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Login Attempt
-					</span>
-					<div className="translate-y-[-2px]">
-						<TableDropdownFilter
-							key="is_login_successful"
-							label="Is Login Successful"
-							name="is_login_successful"
-							id="is_login_successful"
-							placeholder="Select"
-							value={
-								find(appAccessLogsTableData?.columns, {
-									id: 'is_login_successful',
-								})?.value
-									? find(appAccessLogsTableData?.columns, {
-											id: 'is_login_successful',
-									  })?.value
-									: ''
-							}
-							optionsDataName="is_login_successful"
-							optionsData={
-								appAccessLogsData?.dropdown_options?.is_login_successful
-									? appAccessLogsData?.dropdown_options?.is_login_successful
-									: []
-							}
-							onChange={(value) => {
-								handleColumnSearch({
-									id: 'is_login_successful',
-									value: value?.id,
-								});
-							}}
-						/>
-					</div>
-				</div>
-			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-					<span
-						className={`w-fit min-w-[77px] rounded-[15px]  px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
-							info.getValue() ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
-						}`}
-					>
-						{info.getValue() ? 'Successful' : 'Failed'}
 					</span>
 				</div>
 			),
@@ -389,18 +269,19 @@ export default function Table({ tableData }) {
 
 	const pagination = useMemo(
 		() => ({
-			pageIndex: appAccessLogsTableData?.pageIndex,
-			pageSize: appAccessLogsTableData?.pageSize,
+			pageIndex: appReleasesTableData?.pageIndex,
+			pageSize: appReleasesTableData?.pageSize,
 		}),
-		[appAccessLogsTableData]
+		[appReleasesTableData]
 	);
 
-	const appAccessLogsData = useSelector(selectAppAccessLogsData);
 
+
+	const appReleasesData = useSelector(selectAppReleasesData);
 	const table = useReactTable({
-		data: appAccessLogsData?.access_logs?.records ?? defaultData,
+		data: appReleasesData?.releases?.records ?? defaultData,
 		columns,
-		pageCount: appAccessLogsData?.access_logs?.total_pages ?? -1,
+		pageCount: appReleasesData?.releases?.total_pages ?? -1,
 		state: {
 			pagination,
 		},
@@ -410,8 +291,8 @@ export default function Table({ tableData }) {
 			const newPageInfo = updater(table.getState().pagination);
 
 			dispatch(
-				setAppAccessLogsTableData({
-					...appAccessLogsTableData,
+				setAppReleasesTableData({
+					...appReleasesTableData,
 					...newPageInfo,
 				})
 			);
@@ -423,21 +304,21 @@ export default function Table({ tableData }) {
 
 	const dispatch = useDispatch();
 
-	function updateAppAccessLogsData(value) {
-		dispatch(setAppAccessLogsData(value));
+	function updateAppReleasesData(value) {
+		dispatch(setAppReleasesData(value));
 	}
 
 	const triggerApi = useApi();
 
 	const debounceSearch = debounce((data) => {
-		dispatch(setAppAccessLogsTableData(data));
+		dispatch(setAppReleasesTableData(data));
 	}, 500);
 
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
 
-		let columnFilter = appAccessLogsTableData?.columns
-			? appAccessLogsTableData?.columns
+		let columnFilter = appReleasesTableData?.columns
+			? appReleasesTableData?.columns
 					?.filter(({ id, value }) => {
 						if (
 							typeof value === 'object' &&
@@ -467,26 +348,28 @@ export default function Table({ tableData }) {
 					.join('')
 			: '';
 
+		
+
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/access-logs/?page=${
+				url: `/api/v1/apps/${appId}/releases/?page=${
 					pageIndex + 1
 				}&page_size=${pageSize}&include_dropdown_options=true&search=${
-					appAccessLogsTableData?.searchValue
+					appReleasesTableData?.searchValue
 				}${columnFilter?.length ? columnFilter : ''}`,
 				type: 'GET',
 				loader: true,
 			});
 			if (success && response) {
-				updateAppAccessLogsData(response);
+				updateAppReleasesData(response);
 			}
 		};
-
+	
 		makeApiCall();
-	}, [appAccessLogsTableData]);
+	}, [appReleasesTableData]);
 
 	useEffect(() => {
-		searchRef.current.value = appAccessLogsTableData?.searchValue || '';
+		searchRef.current.value = appReleasesTableData?.searchValue || '';
 	}, []);
 
 	return (
@@ -501,7 +384,7 @@ export default function Table({ tableData }) {
 							name="searchValue"
 							type="text"
 							className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-							placeholder="Search Access Logs by ID / User / IP Address / User Agent"
+							placeholder="Search Releases by Release ID / Description / Last Git Hash"
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
@@ -571,7 +454,7 @@ export default function Table({ tableData }) {
 			<div className="flex border-t border-[#DDE2E5] py-[4px]">
 				<div className="flex grow items-center justify-between py-[7px] pl-[22px] pr-[24px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-						Total count: {appAccessLogsData?.access_logs?.total_records}
+						Total count: {appReleasesData?.releases?.total_records}
 					</span>
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
 						<PageCountSelectField
@@ -605,7 +488,7 @@ export default function Table({ tableData }) {
 					<div className="flex items-center gap-[8px]">
 						<ResizableInput table={table} />
 						<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
-							/{table.getPageCount()}
+							{table.getPageCount()}
 						</span>
 					</div>
 					<button
