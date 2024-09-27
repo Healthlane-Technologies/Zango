@@ -130,6 +130,7 @@ def git_setup(
 
     try:
         if initialize:
+            os.system(f"rm -rf {app_directory}/.git")
             # Initialize git repository
             repo = git.Repo.init(app_directory)
 

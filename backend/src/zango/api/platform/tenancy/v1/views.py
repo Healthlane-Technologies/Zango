@@ -152,13 +152,14 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
         return get_api_response(success, response, status)
     
-    def get_branch(config, key, default):
+    def get_branch(self, config, key, default):
         branch = config.get('branch', {}).get(key, default)
         return branch if branch else default
 
     def put(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
+            old_git_config = obj.extra_config.get("git_config", {}) if obj.extra_config else {}
             serializer = TenantSerializerModel(
                 instance=obj,
                 data=request.data,
@@ -172,19 +173,26 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 if serializer.data.get("extra_config", None):
                     app_directory = os.path.join(os.getcwd(), "workspaces", obj.name)
                     new_git_config = serializer.data["extra_config"].get("git_config", {})
-                    old_git_config = obj.extra_config.get("git_config", {}) if obj.extra_config else {}
                     
                     new_repo_url = new_git_config.get("repo_url")
                     old_repo_url = old_git_config.get("repo_url")
 
+                    # if repo_url is null, clean the repository
+                    if not new_repo_url:
+                        os.system(f"rm -rf {app_directory}/.git")
                     if new_repo_url and (not old_git_config or new_repo_url != old_repo_url):
                         git_setup(
-                            app_directory,
+                            [app_directory,
+                            "--git_repo_url",
                             new_repo_url,
+                            "--dev_branch",
                             self.get_branch(new_git_config, "dev", "development"),
+                            "--staging_branch",
                             self.get_branch(new_git_config, "staging", "staging"),
+                            "--prod_branch",
                             self.get_branch(new_git_config, "prod", "main"),
-                            True
+                            "--initialize"],
+                            standalone_mode=False
                         )
                 
                 result = {

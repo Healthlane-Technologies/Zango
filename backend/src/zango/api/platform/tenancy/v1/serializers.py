@@ -41,7 +41,6 @@ class TenantSerializerModel(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         request = self.context["request"]
         extra_config_str = request.data.get("extra_config")
-
         # Convert extra_config from string to JSON if it exists
         if extra_config_str:
             try:
