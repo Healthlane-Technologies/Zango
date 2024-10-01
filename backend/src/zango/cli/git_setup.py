@@ -158,11 +158,7 @@ def git_setup(
             remote_branches = [ref.name.split("/")[-1] for ref in origin.refs]
 
             # Check if the branch exists locally
-            if (
-                dev_branch in remote_branches
-                or staging_branch in remote_branches
-                or prod_branch in remote_branches
-            ):
+            if dev_branch in remote_branches:
                 raise Exception(
                     "Can't initialize repository with existing remote branches with same name."
                 )
