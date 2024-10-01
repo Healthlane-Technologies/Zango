@@ -472,10 +472,11 @@ def update_apps(app_name):
             repo_url = None
             branch = None
             git_mode = False
-            if app_settings.get("git_config"):
+            git_settings = tenant_obj.extra_config.get("git_config")
+            if git_settings:
                 git_mode = True
                 # Initialize git repository
-                repo_url = app_settings["git_config"]["repo_url"]
+                repo_url = git_settings["git_config"]["repo_url"]
 
                 # Split the repo URL into parts
                 parts = repo_url.split("://")
@@ -483,7 +484,7 @@ def update_apps(app_name):
                 # Add username and password to the URL
                 repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
 
-                branch = app_settings["git_config"]["branch"].get(settings.ENV, "main")
+                branch = git_settings["git_config"]["branch"].get(settings.ENV, "main")
 
             update_allowed, message = is_update_allowed(
                 tenant, app_settings, git_mode, repo_url, branch
