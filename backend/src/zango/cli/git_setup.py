@@ -131,6 +131,7 @@ def git_setup(
     try:
         if initialize:
             os.system(f"rm -rf {app_directory}/.git")
+            os.system(f"rm -rf .gitignore")
             # Initialize git repository
             repo = git.Repo.init(app_directory)
 
@@ -155,9 +156,8 @@ def git_setup(
             remote_branches = [ref.name.split("/")[-1] for ref in origin.refs]
 
             # Check if the branch exists locally
-            if dev_branch in remote_branches:
-                # Checkout the existing branch
-                repo.git.checkout(dev_branch)
+            if dev_branch in remote_branches or staging_branch in remote_branches or prod_branch in remote_branches:
+                raise Exception("Can't initialize repository with existing remote branches with same name.")
             else:
                 # Create a new branch and checkout
                 repo.git.checkout("-b", dev_branch)

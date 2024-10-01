@@ -1,6 +1,7 @@
 import json
 import traceback
 import os
+import git
 
 from django_celery_results.models import TaskResult
 
@@ -152,7 +153,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
         return get_api_response(success, response, status)
     
-    def get_branch(self, config, key, default):
+    def get_branch(self, config, key, default=None):
         branch = config.get('branch', {}).get(key, default)
         return branch if branch else default
 
@@ -177,9 +178,6 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     new_repo_url = new_git_config.get("repo_url")
                     old_repo_url = old_git_config.get("repo_url")
 
-                    # if repo_url is null, clean the repository
-                    if not new_repo_url:
-                        os.system(f"rm -rf {app_directory}/.git")
                     if new_repo_url and (not old_git_config or new_repo_url != old_repo_url):
                         git_setup(
                             [app_directory,
@@ -213,6 +211,8 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
                 result = {"message": error_message}
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             success = False
             result = {"message": str(e)}
             status_code = 500
