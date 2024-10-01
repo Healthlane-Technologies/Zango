@@ -4,9 +4,11 @@ import sys
 
 import click
 import git
-from .update_apps import find_project_name
 
 import django
+
+from .update_apps import find_project_name
+
 
 def is_valid_app_directory(directory):
     # Define your validation criteria
@@ -48,11 +50,11 @@ def update_settings_with_git_repo_url(
             settings = json.load(settings_file)
 
         # Update git_repo_url in settings
-        app_name = settings.get("app_name","")
+        app_name = settings.get("app_name", "")
         tenant_obj = TenantModel.objects.get(name=app_name)
-        git_config={}
+        git_config = {}
         if tenant_obj.extra_config:
-            git_config = tenant_obj.extra_config.get("git_config",{})
+            git_config = tenant_obj.extra_config.get("git_config", {})
         else:
             git_config["repo_url"] = git_repo_url
         git_branch = git_config.get("branch", {})
@@ -61,9 +63,9 @@ def update_settings_with_git_repo_url(
         )
         git_config["branch"] = git_branch
         if tenant_obj.extra_config:
-            tenant_obj.extra_config.update({"git_config":git_config})
+            tenant_obj.extra_config.update({"git_config": git_config})
         else:
-            tenant_obj.extra_config={"git_config":git_config}
+            tenant_obj.extra_config = {"git_config": git_config}
         tenant_obj.save()
 
         return True
@@ -131,7 +133,7 @@ def git_setup(
     try:
         if initialize:
             os.system(f"rm -rf {app_directory}/.git")
-            os.system(f"rm -rf .gitignore")
+            os.system("rm -rf .gitignore")
             # Initialize git repository
             repo = git.Repo.init(app_directory)
 
@@ -156,8 +158,14 @@ def git_setup(
             remote_branches = [ref.name.split("/")[-1] for ref in origin.refs]
 
             # Check if the branch exists locally
-            if dev_branch in remote_branches or staging_branch in remote_branches or prod_branch in remote_branches:
-                raise Exception("Can't initialize repository with existing remote branches with same name.")
+            if (
+                dev_branch in remote_branches
+                or staging_branch in remote_branches
+                or prod_branch in remote_branches
+            ):
+                raise Exception(
+                    "Can't initialize repository with existing remote branches with same name."
+                )
             else:
                 # Create a new branch and checkout
                 repo.git.checkout("-b", dev_branch)

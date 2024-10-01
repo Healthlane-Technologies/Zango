@@ -47,7 +47,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
                 extra_config_json = json.loads(extra_config_str)
                 validated_data["extra_config"] = extra_config_json
             except json.JSONDecodeError:
-                raise serializers.ValidationError({"extra_config": "Invalid JSON format"})
+                raise serializers.ValidationError(
+                    {"extra_config": "Invalid JSON format"}
+                )
 
         instance = super(TenantSerializerModel, self).update(instance, validated_data)
         request = self.context["request"]
@@ -65,7 +67,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
             if created:
                 domain_obj.is_primary = False
                 domain_obj.save()
-        
+
         return instance
 
 

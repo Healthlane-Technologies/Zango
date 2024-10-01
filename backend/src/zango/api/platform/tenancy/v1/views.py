@@ -1,7 +1,6 @@
 import json
-import traceback
 import os
-import git
+import traceback
 
 from django_celery_results.models import TaskResult
 
@@ -21,7 +20,6 @@ from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
 from zango.core.utils import get_search_columns
-
 
 from .serializers import (
     AppUserModelSerializerModel,
@@ -152,15 +150,17 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
             status = 500
 
         return get_api_response(success, response, status)
-    
+
     def get_branch(self, config, key, default=None):
-        branch = config.get('branch', {}).get(key, default)
+        branch = config.get("branch", {}).get(key, default)
         return branch if branch else default
 
     def put(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
-            old_git_config = obj.extra_config.get("git_config", {}) if obj.extra_config else {}
+            old_git_config = (
+                obj.extra_config.get("git_config", {}) if obj.extra_config else {}
+            )
             serializer = TenantSerializerModel(
                 instance=obj,
                 data=request.data,
@@ -173,26 +173,32 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 status_code = 200
                 if serializer.data.get("extra_config", None):
                     app_directory = os.path.join(os.getcwd(), "workspaces", obj.name)
-                    new_git_config = serializer.data["extra_config"].get("git_config", {})
-                    
+                    new_git_config = serializer.data["extra_config"].get(
+                        "git_config", {}
+                    )
+
                     new_repo_url = new_git_config.get("repo_url")
                     old_repo_url = old_git_config.get("repo_url")
 
-                    if new_repo_url and (not old_git_config or new_repo_url != old_repo_url):
+                    if new_repo_url and (
+                        not old_git_config or new_repo_url != old_repo_url
+                    ):
                         git_setup(
-                            [app_directory,
-                            "--git_repo_url",
-                            new_repo_url,
-                            "--dev_branch",
-                            self.get_branch(new_git_config, "dev", "development"),
-                            "--staging_branch",
-                            self.get_branch(new_git_config, "staging", "staging"),
-                            "--prod_branch",
-                            self.get_branch(new_git_config, "prod", "main"),
-                            "--initialize"],
-                            standalone_mode=False
+                            [
+                                app_directory,
+                                "--git_repo_url",
+                                new_repo_url,
+                                "--dev_branch",
+                                self.get_branch(new_git_config, "dev", "development"),
+                                "--staging_branch",
+                                self.get_branch(new_git_config, "staging", "staging"),
+                                "--prod_branch",
+                                self.get_branch(new_git_config, "prod", "main"),
+                                "--initialize",
+                            ],
+                            standalone_mode=False,
                         )
-                
+
                 result = {
                     "message": "App Settings Updated Successfully",
                     "app_uuid": str(obj.uuid),
@@ -212,6 +218,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 result = {"message": error_message}
         except Exception as e:
             import traceback
+
             print(traceback.format_exc())
             success = False
             result = {"message": str(e)}
