@@ -5,6 +5,7 @@ from importlib import import_module
 import requests
 
 from django.db import connection
+from django.http.response import HttpResponse
 from django.test import RequestFactory
 
 
@@ -37,6 +38,8 @@ def process_internal_request(fake_request, tenant, **kwargs):
     ws = ws_klass(tenant, fake_request)
     ws.ready()
     view, resolve = ws.match_view(fake_request)
+    if not view:
+        return HttpResponse(status=404)
     response = view(fake_request, (), **kwargs)
     return response
 
@@ -74,7 +77,10 @@ def internal_request_post(url, **kwargs):
         # Convert Django response to something that mimics requests.Response
         class InternalResponse:
             def __init__(self, django_response):
-                self.content = django_response.content
+                try:
+                    self.content = getattr(django_response, "content", None)
+                except Exception:
+                    self.content = None
                 self.status_code = django_response.status_code
 
             def json(self):
@@ -111,7 +117,10 @@ def internal_request_put(url, **kwargs):
         # Convert Django response to something that mimics requests.Response
         class InternalResponse:
             def __init__(self, django_response):
-                self.content = django_response.content
+                try:
+                    self.content = getattr(django_response, "content", None)
+                except Exception:
+                    self.content = None
                 self.status_code = django_response.status_code
 
             def json(self):
@@ -138,7 +147,10 @@ def internal_request_get(url, **kwargs):
         # Convert Django response to something that mimics requests.Response
         class InternalResponse:
             def __init__(self, django_response):
-                self.content = django_response.content
+                try:
+                    self.content = getattr(django_response, "content", None)
+                except Exception:
+                    self.content = None
                 self.status_code = django_response.status_code
 
             def json(self):
@@ -175,7 +187,10 @@ def internal_request_delete(url, **kwargs):
         # Convert Django response to something that mimics requests.Response
         class InternalResponse:
             def __init__(self, django_response):
-                self.content = django_response.content
+                try:
+                    self.content = getattr(django_response, "content", None)
+                except Exception:
+                    self.content = None
                 self.status_code = django_response.status_code
 
             def json(self):

@@ -1,0 +1,36 @@
+{% extends 'core/error_pages/base.html' %} 
+{% load i18n static %} 
+{% block title %}Error{% endblock %}
+
+{% block head %}
+
+<link rel="stylesheet" href="{% static 'error_pages/css/error500.css' %}" />
+
+{% endblock %}
+
+
+
+{% block content %}
+
+    <div class="container">
+      <div class="img-container">
+        <img class="error-status" src="{% static 'error_pages/images/Img500.svg' %}" alt="" />
+        <img class="error-img" src="{% static 'error_pages/images/upperImg500.svg' %}" alt="" />
+      </div>
+      <div class="error-content">
+        <div class="not-found">Error</div>
+        <div class="not-found-title">
+          We are currently not able to serve this request as expected. Please try again after sometime or contact support if the error persists.
+        </div>
+        <div class="button-container">
+          <div class="each-button">
+            <button onclick="history.back()" class="back-button" type="submit">Go Back</button>
+          </div>
+          <div class="each-button">
+            <button onclick="location.href='/logout'" class="back-button" type="submit">Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+{% endblock %}

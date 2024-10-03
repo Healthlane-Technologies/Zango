@@ -5,6 +5,7 @@ import subprocess
 import zipfile
 
 import boto3
+import requests
 
 from botocore import UNSIGNED
 from botocore.config import Config
@@ -12,6 +13,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 from django.conf import settings
+from django.core import signing
 from django.db import connection
 
 import zango
@@ -45,23 +47,25 @@ def get_package_manifest(package, version):
 
 
 def dep_check(package, version, manifest, installed_packages):
-    zango_version_specifier_set = SpecifierSet(manifest["zango"], prereleases=True)
-    if not zango_version_specifier_set.contains(Version(zango.__version__)):
-        return False
-    for dependency, version in manifest["dependencies"].items():
-        if not installed_packages.get(dependency):
-            continue
-        if not SpecifierSet(version, prereleases=True).contains(
-            Version(installed_packages[dependency])
-        ):
+    if manifest.get("zango"):
+        zango_version_specifier_set = SpecifierSet(manifest["zango"], prereleases=True)
+        if not zango_version_specifier_set.contains(Version(zango.__version__)):
             return False
+    if manifest.get("dependencies"):
+        for dependency, version in manifest["dependencies"].items():
+            if not installed_packages.get(dependency):
+                continue
+            if not SpecifierSet(version, prereleases=True).contains(
+                Version(installed_packages[dependency])
+            ):
+                return False
     return True
 
 
-def get_all_packages(tenant=None):
+def get_all_packages(request, tenant=None):
     installed_packages = {}
     if tenant is not None:
-        installed_packages = get_installed_packages(tenant)
+        installed_packages = get_installed_packages(tenant.name)
     packages = {}
     s3 = boto3.client(
         "s3",
@@ -72,7 +76,7 @@ def get_all_packages(tenant=None):
     )
     for package in s3_package_data["Contents"]:
         name = package["Key"]
-        if name == "packages/" or name == "packages/frame/" or "manifest" in name:
+        if name == "packages/" or "manifest" in name:
             continue
         name = name[9:]
         version = name.split("/")[1]
@@ -101,6 +105,7 @@ def get_all_packages(tenant=None):
             packages[package]["versions"] = [
                 str(version) for version in packages[package]["versions"]
             ]
+            packages[package]["config_url"] = None
     for package, data in packages.items():
         resp_data.append({"name": package, **data})
     for local_package in installed_packages.keys():
@@ -112,6 +117,13 @@ def get_all_packages(tenant=None):
                     "installed_version": installed_packages[local_package],
                 }
             )
+    for package in resp_data:
+        url = get_package_configuration_url(request, tenant, package["name"])
+        package["config_url"] = None
+        if url:
+            resp = requests.get(url)
+            if resp.status_code == 200:
+                package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
     return resp_data
 
 
@@ -162,8 +174,9 @@ def get_package_configuration_url(request, tenant, package_name):
     for route in data["package_routes"]:
         if route["package"] == package_name:
             domain = tenant.domains.filter(is_primary=True).last()
-            url = get_current_request_url(request, domain=domain)
-            return f"{url}/{route['re_path'][1:]}configure/"
+            if domain:
+                url = get_current_request_url(request, domain=domain)
+                return f"{url}/{route['re_path'][1:]}configure/"
     return ""
 
 

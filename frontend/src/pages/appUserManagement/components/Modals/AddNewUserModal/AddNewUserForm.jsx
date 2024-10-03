@@ -12,13 +12,28 @@ import {
 	selectAppUserManagementData,
 	toggleRerenderPage,
 } from '../../../slice';
+import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
+import { useState , useLayoutEffect} from 'react';
+import { countryCodeList } from '../../../../../utils/countryCodes';
+import toast from 'react-hot-toast';
+import Notifications from '../../../../../components/Notifications';
 
 const AddNewUserForm = ({ closeModal }) => {
+	const [countryCode,setCountryCode] = useState({
+		name: 'India',
+		dial_code: '+91',
+		code: 'IN',
+	})
 	let { appId } = useParams();
 	const dispatch = useDispatch();
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const triggerApi = useApi();
+	let pn_country_code = appUserManagementData?.pn_country_code ?? '+91'
+	useLayoutEffect(()=>{
+		let countryCodeObj = countryCodeList.find((c)=>c.dial_code===pn_country_code)
+		setCountryCode(countryCodeObj)
+	},[])
 	let initialValues = {
 		name: '',
 		email: '',
@@ -42,12 +57,7 @@ const AddNewUserForm = ({ closeModal }) => {
 					if (!email) return true;
 				},
 				then: Yup.string()
-					.min(10, 'Must be 10 digits')
-					.max(10, 'Must be 10 digits')
 					.required('Required'),
-				otherwise: Yup.string()
-					.min(10, 'Must be 10 digits')
-					.max(10, 'Must be 10 digits'),
 			}),
 			password: Yup.string().required('Required'),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
@@ -62,8 +72,10 @@ const AddNewUserForm = ({ closeModal }) => {
 	);
 
 	let onSubmit = (values) => {
-		let tempValues = values;
-
+		let tempValues = values
+		if(values.mobile){
+			tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
+		}
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -74,9 +86,11 @@ const AddNewUserForm = ({ closeModal }) => {
 				payload: dynamicFormData,
 			});
 
-			if (success && response) {
+			if (success) {
 				closeModal();
 				dispatch(toggleRerenderPage());
+			}
+			else{
 			}
 		};
 
@@ -123,8 +137,10 @@ const AddNewUserForm = ({ closeModal }) => {
 								>
 									Mobile
 								</label>
-								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[14px]">
-									<span className="font-lato text-[#6C747D]">+91</span>
+								<div className="flex gap-[12px] rounded-[6px] border border-[#DDE2E5] px-[12px]">
+									<span className="font-lato text-[#6C747D]">
+										<CountryCodeSelector countryCode={countryCode} setCountryCode={setCountryCode} />
+									</span>
 									<input	
 										id="mobile"
 										name="mobile"

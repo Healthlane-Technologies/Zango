@@ -1,6 +1,9 @@
 import json
 
+import phonenumbers
 import pytz
+
+from phonenumbers.phonenumberutil import country_code_for_region
 
 from django.conf import settings
 from django.db import connection
@@ -120,3 +123,62 @@ def generate_lockout_response(request, credentials):
         {"logout_url": "/auth/logout", "cooloff_time": cooloff_time},
         status=403,
     )
+
+
+def validate_phone(phone_number, region=None):
+    """
+    Validates a phone number by parsing it and checking if it is a valid phone number for the given region.
+
+    Args:
+        phone_number (str): The phone number to be validated.
+        region (str, optional): The region in which the phone number is valid. Defaults to None.
+
+    Returns:
+        bool: True if the phone number is valid, False otherwise.
+
+    Raises:
+        None
+
+    """
+    try:
+        region = region or settings.PHONENUMBER_DEFAULT_REGION
+        phone_number = phonenumbers.parse(phone_number, region=region)
+        if phonenumbers.is_valid_number(phone_number):
+            return True
+    except Exception:
+        return False
+
+
+def get_region_from_timezone(tzname):
+    timezone_country = {}
+    for countrycode in pytz.country_timezones:
+        timezones = pytz.country_timezones[countrycode]
+        for tz in timezones:
+            timezone_country[tz] = countrycode
+    return timezone_country[tzname]
+
+
+def get_country_code_for_tenant(tenant, with_plus_sign=True):
+    """
+    Returns the country code for the given tenant.
+
+    The region is first determined from the tenant's timezone. If no timezone is set,
+    the default region from `settings.PHONENUMBER_DEFAULT_REGION` is used.
+
+    Args:
+        tenant: A TenantModel instance.
+        with_plus_sign (bool): Whether to prepend a "+" to the country code. Default is True.
+
+    Returns:
+        str: The country code with or without "+" based on the region (e.g., "+1" for "US", "+91" for "IN").
+    """
+    default_region = settings.PHONENUMBER_DEFAULT_REGION
+
+    if tenant.timezone:
+        try:
+            default_region = get_region_from_timezone(tenant.timezone)
+        except Exception:
+            pass
+
+    country_code = country_code_for_region(default_region)
+    return f"+{country_code}" if with_plus_sign else country_code

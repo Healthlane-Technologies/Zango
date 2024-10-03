@@ -3,7 +3,8 @@ import os
 from axes.decorators import axes_dispatch
 
 from django.conf import settings
-from django.http import Http404, HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
@@ -79,7 +80,7 @@ class DynamicView(View, PermMixin):
                     user_role = get_current_role()
                     if user_role.name == "AnonymousUsers":
                         return redirect("/login/")
-                    return HttpResponseForbidden(
+                    raise PermissionDenied(
                         "You don't have permission to view this page"
                     )
 
@@ -88,4 +89,4 @@ class DynamicView(View, PermMixin):
                 return default_landing_view(request)
 
             raise Http404()
-        return HttpResponseForbidden("You don't have permission to view this page")
+        raise PermissionDenied("You don't have permission to view this page")

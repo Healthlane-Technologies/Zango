@@ -60,6 +60,32 @@ services:
       redis:
         condition: service_healthy
 
+  celery-flower:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+      args:
+        - HOST_UID=${HOST_UID}
+        - HOST_GID=${HOST_GID}
+    restart: always
+    entrypoint:
+      - /bin/sh
+      - start_flower.sh
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    volumes:
+      - .:/zango/
+    environment:
+      - FLOWER_PORT=5555
+      - FLOWER_PERSISTENT=True
+      - FLOWER_STATE_SAVE_INTERVAL=10000
+    depends_on:
+      - postgres
+      - redis
+      - celery
+
   redis:
     image: redis
     ports:
@@ -82,7 +108,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-
 
 volumes:
   dev_db:

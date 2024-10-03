@@ -169,6 +169,7 @@ export const appUsersManagementHandlers = [
 						previous: null,
 						records: searchValue ? [] : slicedData,
 					},
+					pn_country_code:'+213',
 					dropdown_options: {
 						roles: [
 							{

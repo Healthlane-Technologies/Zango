@@ -17,7 +17,11 @@ from zango.core.api import (
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.permissions import IsPlatformUserAllowedApp
-from zango.core.utils import get_search_columns
+from zango.core.utils import (
+    get_country_code_for_tenant,
+    get_search_columns,
+    validate_phone,
+)
 
 from .serializers import (
     AppUserModelSerializerModel,
@@ -340,6 +344,10 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     pagination_class = ZangoAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
+    def get_app_tenant(self):
+        tenant_obj = TenantModel.objects.get(uuid=self.kwargs["app_uuid"])
+        return tenant_obj
+
     def get_dropdown_options(self):
         options = {}
         options["roles"] = [
@@ -386,10 +394,12 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             app_users = self.paginate_queryset(app_users, request, view=self)
             serializer = AppUserModelSerializerModel(app_users, many=True)
             app_users_data = self.get_paginated_response_data(serializer.data)
+            app_tenant = self.get_app_tenant()
             success = True
             response = {
                 "users": app_users_data,
                 "message": "Users fetched successfully",
+                "pn_country_code": get_country_code_for_tenant(app_tenant),
             }
             if include_dropdown_options:
                 response["dropdown_options"] = self.get_dropdown_options()
@@ -406,6 +416,10 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         data = request.data
         try:
             role_ids = data.getlist("roles")
+            if data.get("mobile"):
+                if not validate_phone(data["mobile"]):
+                    result = {"message": "Invalid mobile number"}
+                    return get_api_response(False, result, 400)
             creation_result = AppUserModel.create_user(
                 name=data["name"],
                 email=data["email"],
@@ -437,7 +451,10 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
             obj = self.get_obj(**kwargs)
             serializer = AppUserModelSerializerModel(obj)
             success = True
-            response = {"user": serializer.data}
+            response = {
+                "user": serializer.data,
+                "pn_country_code": f"+{obj.mobile.country_code}",
+            }
             status = 200
         except Exception as e:
             success = False
@@ -447,7 +464,12 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
         return get_api_response(success, response, status)
 
     def put(self, request, *args, **kwargs):
+        data = request.data
         try:
+            if data.get("mobile"):
+                if not validate_phone(data["mobile"]):
+                    result = {"message": "Invalid mobile number"}
+                    return get_api_response(False, result, 400)
             obj = self.get_obj(**kwargs)
             update_result = AppUserModel.update_user(obj, request.data)
             success = update_result["success"]

@@ -1,0 +1,35 @@
+{% extends 'core/error_pages/base.html' %} 
+{% load i18n static %} 
+{% block title %}Page Not Found{% endblock %}
+
+{% block head %}
+
+<link rel="stylesheet" href="{% static 'error_pages/css/error404.css' %}" />
+
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+  <div class="img-container">
+
+    <img class="error-status" src="{% static 'error_pages/images/Img404.svg' %}" alt="" />
+    <img class="error-img" src="{% static 'error_pages/images/upperImg404.svg' %}" alt="" />
+  </div>
+  <div class="error-content">
+    <div class="not-found">Page not found</div>
+    <div class="not-found-title">
+      You seem to be looking for a resource that doesn't exists. Please go back or contact support if you think this is an error.
+    </div>
+    <div class="button-container">
+      <div class="each-button">
+        <button onclick="history.back()" class="back-button" type="submit">Go Back</button>
+      </div>
+      <div class="each-button">
+        <button onclick="location.href='/logout'" class="back-button" type="submit">Logout</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

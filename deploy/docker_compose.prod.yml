@@ -81,6 +81,32 @@ services:
       timeout: 5s
       retries: 3
 
+  celery-flower:
+    build:
+      context: .
+      dockerfile: prod.dockerfile
+      args:
+        - HOST_UID=${HOST_UID}
+        - HOST_GID=${HOST_GID}
+    restart: always
+    entrypoint:
+      - /bin/sh
+      - start_flower.sh
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    volumes:
+      - .:/zango/
+    environment:
+      - FLOWER_PORT=5555
+      - FLOWER_PERSISTENT=True
+      - FLOWER_STATE_SAVE_INTERVAL=10000
+    depends_on:
+      - postgres
+      - redis
+      - celery
+
   celery_beat:
     image: kczelthy/zango:latest
     command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"

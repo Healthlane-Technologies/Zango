@@ -48,7 +48,7 @@ export default function RowMenu({ rowData }) {
 				style={styles['popper']}
 				{...attributes['popper']}
 			>
-				<Menu.Items className="absolute top-[30px] right-0 w-[210px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
+				<Menu.Items className="absolute right-0 top-[30px] w-[210px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 					<div className="p-[4px]">
 						<Menu.Item>
 							{({ active }) => (
@@ -73,30 +73,6 @@ export default function RowMenu({ rowData }) {
 								</button>
 							)}
 						</Menu.Item>
-						{/* <Menu.Item>
-							{({ active }) => (
-								<button
-									type="button"
-									className="flex  w-full disabled:opacity-50"
-									onClick={handleDeletePolicy}
-									disabled={rowData?.type === 'system' ? true : false}
-								>
-									<div
-										className={`${
-											active ? 'bg-[#F0F3F4]' : ''
-										} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
-									>
-										<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#AA2113]">
-											Delete Policy
-										</span>
-										<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
-											this will delete the entire permission along with all it’s
-											details
-										</span>
-									</div>
-								</button>
-							)}
-						</Menu.Item> */}
 					</div>
 				</Menu.Items>
 			</Transition>
