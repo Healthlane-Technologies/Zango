@@ -19,7 +19,11 @@ const LaunchNewAppForm = ({ closeModal }) => {
 	};
 
 	let validationSchema = Yup.object({
-		name: Yup.string().required('Required'),
+		name: Yup.string()
+			.required('Required')
+			.test('no-spaces', 
+					'App name cannot contain spaces',
+					value => !/\s/.test(value)),
 		description: Yup.string().required('Required'),
 	});
 
