@@ -46,7 +46,7 @@ def get_package_manifest(package, version):
         )
         return json.loads(resp["Body"].read().decode("utf-8"))
     except Exception:
-        print("Manifest not found for package: ", package)
+        print(f"Manifest not found for package: {package}.{version} ")
         return {}
 
 
@@ -56,7 +56,7 @@ def dep_check(package, version, manifest, installed_packages):
         return False
     for dependency, version in manifest["dependencies"].items():
         if not installed_packages.get(dependency):
-            continue
+            return False
         if not SpecifierSet(version, prereleases=True).contains(
             Version(installed_packages[dependency])
         ):
@@ -78,7 +78,7 @@ def get_all_packages(request, tenant=None):
     )
     for package in s3_package_data["Contents"]:
         name = package["Key"]
-        if name == "packages/" or name == "packages/frame/" or "manifest" in name:
+        if "manifest.json" in name:
             continue
         name = name[9:]
         version = name.split("/")[1]
@@ -179,12 +179,12 @@ def package_installed(package_name, tenant):
 def get_package_configuration_url(request, tenant, package_name):
     with open(f"workspaces/{tenant.name}/settings.json") as f:
         data = json.loads(f.read())
-    for route in data["package_routes"]:
-        if route["package"] == package_name:
-            domain = tenant.domains.filter(is_primary=True).last()
-            if domain:
-                url = get_current_request_url(request, domain=domain)
-                return f"{url}/{route['re_path'][1:]}configure/"
+        for route in data["package_routes"]:
+            if route["package"] == package_name:
+                domain = tenant.domains.filter(is_primary=True).last()
+                if domain:
+                    url = get_current_request_url(request, domain=domain)
+                    return f"{url}/{route['re_path'][1:]}configure/"
     return ""
 
 
