@@ -121,8 +121,7 @@ def run_app_migrations(tenant, app_directory):
         subprocess.run(["python", "manage.py", "ws_migrate", tenant], check=True)
         print("Migrations ran successfully.")
     except subprocess.CalledProcessError:
-        print("Migrations failed.")
-        raise
+        raise Exception("Migrations failed.")
 
 
 def sync_static(tenant):
@@ -130,8 +129,7 @@ def sync_static(tenant):
         subprocess.run(["python", "manage.py", "sync_static", tenant], check=True)
         print("Static files collected successfully.")
     except subprocess.CalledProcessError:
-        print("Collecting static files failed.")
-        raise
+        raise Exception("Collecting static files failed.")
 
 
 def collect_static():
@@ -220,6 +218,7 @@ def execute_fixtures(tenant_name, last_version, current_version, app_directory):
                 bold=True,
             )
             click.echo(error_message, err=True)
+            raise Exception(message)
 
     return failed_fixture_dict
 
@@ -309,6 +308,7 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
     tenant = TenantModel.objects.get(name=tenant_name)
     connection.set_tenant(tenant)
     with connection.cursor() as c:
+        release = None
         try:
             current_version = app_settings.get("version")
             if not current_version:
@@ -378,10 +378,13 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 print("No version change detected for")
 
         except Exception as e:
+            if release:
+                release.status = "failed"
+                release.save()
             import traceback
 
             print(traceback.format_exc())
-            print(f"An error occurred while creating/updating release: {e}")
+            raise Exception(f"An error occurred while creating/updating release: {e}")
 
 
 def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branch=None):
@@ -422,8 +425,10 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
+        if is_version_greater(remote_version, local_version):
+            return False, "Remote version is greater than local version"
         if not (
-            is_version_greater(remote_version, local_version)
+            is_version_greater(local_version, remote_version)
             or (
                 last_release
                 and is_version_greater(remote_version, last_release.version)
@@ -486,10 +491,11 @@ def update_apps(app_name):
             repo_url = None
             branch = None
             git_mode = False
-            if app_settings.get("git_config"):
+            git_settings = tenant_obj.extra_config.get("git_config")
+            if git_settings:
                 git_mode = True
                 # Initialize git repository
-                repo_url = app_settings["git_config"]["repo_url"]
+                repo_url = git_settings["repo_url"]
 
                 # Split the repo URL into parts
                 parts = repo_url.split("://")
@@ -497,7 +503,7 @@ def update_apps(app_name):
                 # Add username and password to the URL
                 repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
 
-                branch = app_settings["git_config"]["branch"].get(settings.ENV, "main")
+                branch = git_settings["branch"].get(settings.ENV, "main")
 
             update_allowed, message = is_update_allowed(
                 tenant, app_settings, git_mode, repo_url, branch
@@ -541,5 +547,8 @@ def update_apps(app_name):
         except Exception as e:
             import traceback
 
-            print(traceback.format_exc())
-            click.echo(f"An error occurred: {e}")
+            error_message = click.style(
+                f"An error occurred while updating app {tenant}: {traceback.format_exc()}",
+                fg="red",
+                bold=True,
+            )

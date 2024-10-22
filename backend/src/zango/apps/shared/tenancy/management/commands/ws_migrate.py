@@ -1,3 +1,5 @@
+import os
+
 from django_tenants.management.commands.migrate_schemas import MigrateSchemasCommand
 
 from django.conf import settings
@@ -45,8 +47,18 @@ class Command(MigrateSchemasCommand):
                 "dynamic_models": f"workspaces.{ options['workspace']}.migrations"
             }
         else:
-            settings.MIGRATION_MODULES = {
-                "dynamic_models": f"workspaces.{ options['workspace']}.packages.{options['package']}.migrations"
-            }
+            if os.path.exists(
+                f"workspaces/{options['workspace']}/packages/{options['package']}/migrations"
+            ):
+                settings.MIGRATION_MODULES = {
+                    "dynamic_models": f"workspaces.{ options['workspace']}.packages.{options['package']}.migrations"
+                }
+            else:
+                self.stdout.write(
+                    self.style.NOTICE(
+                        f"\n\nThe package '{options['package']}' does not have any migrations. Please ensure that you have entered the correct package name and try again."
+                    )
+                )
+                exit(0)
         options["schema_name"] = tenant_obj.schema_name
         super().handle(*args, **options)
