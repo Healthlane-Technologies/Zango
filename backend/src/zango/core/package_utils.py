@@ -35,15 +35,19 @@ def get_installed_packages(tenant):
 
 
 def get_package_manifest(package, version):
-    s3 = boto3.client(
-        "s3",
-        config=Config(signature_version=UNSIGNED),
-    )
-    resp = s3.get_object(
-        Bucket=settings.PACKAGE_BUCKET_NAME,
-        Key=f"packages/{package}/{version}/manifest.json",
-    )
-    return json.loads(resp["Body"].read().decode("utf-8"))
+    try:
+        s3 = boto3.client(
+            "s3",
+            config=Config(signature_version=UNSIGNED),
+        )
+        resp = s3.get_object(
+            Bucket=settings.PACKAGE_BUCKET_NAME,
+            Key=f"packages/{package}/{version}/manifest.json",
+        )
+        return json.loads(resp["Body"].read().decode("utf-8"))
+    except Exception:
+        print("Manifest not found for package: ", package)
+        return {}
 
 
 def dep_check(package, version, manifest, installed_packages):
@@ -82,7 +86,13 @@ def get_all_packages(request, tenant=None):
         package_manifest = get_package_manifest(name, version)
         if name not in packages.keys():
             packages[name] = {"versions": []}
-        if dep_check(name, version, package_manifest, installed_packages):
+        if package_manifest:
+            if dep_check(name, version, package_manifest, installed_packages):
+                if name not in packages:
+                    packages[name] = {"versions": [Version(version)]}
+                else:
+                    packages[name]["versions"].append(Version(version))
+        else:
             if name not in packages:
                 packages[name] = {"versions": [Version(version)]}
             else:
