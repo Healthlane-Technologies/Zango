@@ -96,3 +96,4 @@ jobs:
       - name: Upload to S3
         run: |
           aws s3 cp '${{ inputs.aws-pkg-name }}.zip' s3://zelthy3-packages/packages/${{ inputs.aws-pkg-name }}/${{ env.VERSION }}/ --acl public-read
+          aws s3 cp '${{ inputs.manifest-file-path }}' s3://zelthy3-packages/packages/${{ inputs.aws-pkg-name }}/${{ env.VERSION }}/ --acl public-read
