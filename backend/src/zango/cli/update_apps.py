@@ -340,8 +340,9 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 release.status = "in_progress"
                 release.save(update_fields=["status"])
 
-                # install packages
-                install_packages(tenant, app_directory)
+                if tenant.extra_config.get("sync_packages", True):
+                    # install packages
+                    install_packages(tenant, app_directory)
 
                 # Run app migrations
                 run_app_migrations(tenant_name, app_directory)
