@@ -27,6 +27,7 @@ from .serializers import (
     ThemeModelSerializer,
     UserRoleSerializerModel,
 )
+from .utils import extract_app_details_from_zip
 
 
 class AppViewAPIV1(ZangoGenericPlatformAPIView):
@@ -94,11 +95,25 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
 
     def post(self, request, *args, **kwargs):
         data = request.data
+        app_template = data.get("app_template", False)
+        app_template_name = None
+        if app_template:
+            app_template_name = str(app_template).split(".")[0]
+            _, app_name, description = extract_app_details_from_zip(app_template)
+            data.update(
+                {
+                    "name": app_name,
+                    "description": description,
+                    "app_template": app_template,
+                }
+            )
         try:
             app, task_id = TenantModel.create(
                 name=data["name"],
                 schema_name=data["name"],
                 description=data["description"],
+                app_template_name=app_template_name,
+                app_template=app_template,
                 tenant_type="app",
                 status="staged",
             )
