@@ -103,7 +103,7 @@ function columns({ debounceSearch, localTableData }) {
 					<span className="min-w-max font-lato text-[11px] font-normal uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Status
 					</span>
-					<div className="translate-y-[-2px]">
+					<div className="translate-y-[-2px] ">
 						<TableDropdownFilter
 							key="is_enabled"
 							label="Status"

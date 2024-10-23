@@ -45,8 +45,6 @@ export default function Table({ tableData }) {
 		let tempTableData = JSON.parse(JSON.stringify(appAccessLogsTableData));
 		let index = findIndex(tempTableData?.columns, { id: data?.id });
 
-		
-
 		if (index !== -1) {
 			set(tempTableData?.columns[index], 'value', data?.value);
 		} else {
@@ -468,8 +466,6 @@ export default function Table({ tableData }) {
 					})
 					.join('')
 			: '';
-
-			console.log('columnFilter', columnFilter, appAccessLogsTableData);
 
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
