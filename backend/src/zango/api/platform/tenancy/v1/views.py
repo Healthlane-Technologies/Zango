@@ -1,4 +1,5 @@
 import json
+import os
 import traceback
 
 from django_celery_results.models import TaskResult
@@ -10,6 +11,7 @@ from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
+from zango.cli.git_setup import git_setup
 from zango.core.api import (
     ZangoGenericPlatformAPIView,
     get_api_response,
@@ -29,6 +31,7 @@ from .serializers import (
     ThemeModelSerializer,
     UserRoleSerializerModel,
 )
+from .utils import extract_app_details_from_zip
 
 
 class AppViewAPIV1(ZangoGenericPlatformAPIView):
@@ -96,11 +99,25 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
 
     def post(self, request, *args, **kwargs):
         data = request.data
+        app_template = data.get("app_template", False)
+        app_template_name = None
+        if app_template:
+            app_template_name = str(app_template).split(".")[0]
+            _, app_name, description = extract_app_details_from_zip(app_template)
+            data.update(
+                {
+                    "name": app_name,
+                    "description": description,
+                    "app_template": app_template,
+                }
+            )
         try:
             app, task_id = TenantModel.create(
                 name=data["name"],
                 schema_name=data["name"],
                 description=data["description"],
+                app_template_name=app_template_name,
+                app_template=app_template,
                 tenant_type="app",
                 status="staged",
             )
@@ -153,9 +170,16 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
         return get_api_response(success, response, status)
 
+    def get_branch(self, config, key, default=None):
+        branch = config.get("branch", {}).get(key, default)
+        return branch if branch else default
+
     def put(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
+            old_git_config = (
+                obj.extra_config.get("git_config", {}) if obj.extra_config else {}
+            )
             serializer = TenantSerializerModel(
                 instance=obj,
                 data=request.data,
@@ -166,6 +190,34 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 serializer.save()
                 success = True
                 status_code = 200
+                if serializer.data.get("extra_config", None):
+                    app_directory = os.path.join(os.getcwd(), "workspaces", obj.name)
+                    new_git_config = serializer.data["extra_config"].get(
+                        "git_config", {}
+                    )
+
+                    new_repo_url = new_git_config.get("repo_url")
+                    old_repo_url = old_git_config.get("repo_url")
+
+                    if new_repo_url and (
+                        not old_git_config or new_repo_url != old_repo_url
+                    ):
+                        git_setup(
+                            [
+                                app_directory,
+                                "--git_repo_url",
+                                new_repo_url,
+                                "--dev_branch",
+                                self.get_branch(new_git_config, "dev", "development"),
+                                "--staging_branch",
+                                self.get_branch(new_git_config, "staging", "staging"),
+                                "--prod_branch",
+                                self.get_branch(new_git_config, "prod", "main"),
+                                "--initialize",
+                            ],
+                            standalone_mode=False,
+                        )
+
                 result = {
                     "message": "App Settings Updated Successfully",
                     "app_uuid": str(obj.uuid),
@@ -184,6 +236,9 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
                 result = {"message": error_message}
         except Exception as e:
+            import traceback
+
+            print(traceback.format_exc())
             success = False
             result = {"message": str(e)}
             status_code = 500

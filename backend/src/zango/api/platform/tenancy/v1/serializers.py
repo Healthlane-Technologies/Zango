@@ -39,6 +39,18 @@ class TenantSerializerModel(serializers.ModelSerializer):
         return obj.get_date_format_display()
 
     def update(self, instance, validated_data):
+        request = self.context["request"]
+        extra_config_str = request.data.get("extra_config")
+        # Convert extra_config from string to JSON if it exists
+        if extra_config_str:
+            try:
+                extra_config_json = json.loads(extra_config_str)
+                validated_data["extra_config"] = extra_config_json
+            except json.JSONDecodeError:
+                raise serializers.ValidationError(
+                    {"extra_config": "Invalid JSON format"}
+                )
+
         instance = super(TenantSerializerModel, self).update(instance, validated_data)
         request = self.context["request"]
         domains = request.data.getlist("domains")
