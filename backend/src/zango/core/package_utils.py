@@ -9,6 +9,7 @@ import requests
 
 from botocore import UNSIGNED
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from packaging.version import Version
 
 from django.conf import settings
@@ -32,63 +33,111 @@ def get_installed_packages(tenant):
 
 
 def get_all_packages(request, tenant=None):
-    installed_packages = {}
-    if tenant is not None:
-        installed_packages = get_installed_packages(tenant.name)
-    packages = {}
-    s3 = boto3.client(
-        "s3",
-        config=Config(signature_version=UNSIGNED),
-    )
-    s3_package_data = s3.list_objects(
-        Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/"
-    )
-    for package in s3_package_data["Contents"]:
-        name = package["Key"]
-        name = name[9:]
-        version = name.split("/")[1]
-        name = name.split("/")[0]
-        if name not in packages:
-            packages[name] = {"versions": [Version(version)]}
-        else:
-            packages[name]["versions"].append(Version(version))
-        if tenant is not None:
-            if installed_packages.get(name):
-                packages[name]["status"] = "Installed"
-                packages[name]["installed_version"] = installed_packages[name]
-            else:
-                name = name.split("/")[0]
-                packages[name]["status"] = "Not Installed"
-    resp_data = []
-    for package in packages.keys():
-        if packages[package].get("versions"):
-            packages[package]["versions"] = sorted(
-                packages[package]["versions"], reverse=True
+    installed_packages = get_installed_packages(tenant.name) if tenant else {}
+    s3_public_packages = get_s3_packages(include_private=True)
+
+    packages = merge_package_data(s3_public_packages, installed_packages, tenant)
+
+    resp_data = format_response_data(packages, installed_packages)
+
+    add_config_urls(resp_data, request, tenant)
+
+    return resp_data
+
+
+def get_s3_packages(include_private=False):
+    public_packages = []
+    private_packages = []
+    s3_public = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+    try:
+        public_s3_package_data = s3_public.list_objects(
+            Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/public/"
+        )
+        public_packages = public_s3_package_data.get("Contents", [])
+    except ClientError as e:
+        print(f"Error retrieving public packages: {e}")
+
+    if include_private:
+        try:
+            s3_private = boto3.client(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                config=Config(signature_version="s3v4"),
             )
-            packages[package]["versions"] = [
-                str(version) for version in packages[package]["versions"]
-            ]
-            packages[package]["config_url"] = None
-    for package, data in packages.items():
-        resp_data.append({"name": package, **data})
-    for local_package in installed_packages.keys():
-        if local_package not in packages.keys():
+
+            private_s3_package_data = s3_private.list_objects(
+                Bucket=settings.PACKAGE_BUCKET_NAME, Prefix="packages/private/"
+            )
+            private_packages = private_s3_package_data.get("Contents", [])
+        except ClientError as e:
+            print(f"Error retrieving private packages: {e}")
+
+    packages = {}
+    for package in public_packages:
+        if package["Key"].endswith("/"):
+            continue
+        parts = package["Key"].split("/")
+        name, version = parts[2], parts[3]
+        if name not in packages:
+            packages[name] = {"versions": []}
+        packages[name]["versions"].append(Version(version))
+        packages[name]["type"] = "public"
+
+    for package in private_packages:
+        if package["Key"].endswith("/"):
+            continue
+        parts = package["Key"].split("/")
+        name, version = parts[2], parts[3]
+        if name not in packages:
+            packages[name] = {"versions": []}
+        packages[name]["versions"].append(Version(version))
+        packages[name]["type"] = "private"
+
+    return packages
+
+
+def merge_package_data(s3_public_packages, installed_packages, tenant):
+    for name, data in s3_public_packages.items():
+        data["versions"] = sorted(data["versions"], reverse=True)
+        data["versions"] = [str(version) for version in data["versions"]]
+        data["config_url"] = None
+
+        if tenant:
+            if name in installed_packages:
+                data["status"] = "Installed"
+                data["installed_version"] = installed_packages[name]
+            else:
+                data["status"] = "Not Installed"
+
+    return s3_public_packages
+
+
+def format_response_data(packages, installed_packages):
+    resp_data = [{"name": name, **data} for name, data in packages.items()]
+
+    for name, version in installed_packages.items():
+        if name not in packages:
             resp_data.append(
                 {
-                    "name": local_package,
+                    "name": name,
                     "status": "Installed",
-                    "installed_version": installed_packages[local_package],
+                    "installed_version": version,
                 }
             )
+
+    return resp_data
+
+
+def add_config_urls(resp_data, request, tenant):
     for package in resp_data:
         url = get_package_configuration_url(request, tenant, package["name"])
-        if len(url) > 0:
+        if url:
             resp = requests.get(url)
             if resp.status_code == 200:
                 package["config_url"] = f"{url}?token={signing.dumps(request.user.id)}"
             else:
                 package["config_url"] = None
-    return resp_data
 
 
 def update_settings_json(tenant, package_name, version):
@@ -143,19 +192,27 @@ def get_package_configuration_url(request, tenant, package_name):
     return ""
 
 
-def install_package(package_name, version, tenant, release=False):
+def install_package(package_name, version, tenant, type, release=False):
     if package_installed(package_name, tenant):
         return "Package already installed"
     try:
         # if not package_is_cached(package_name, version):
         create_directories([f"workspaces/{tenant}/packages"])
-        resource = boto3.resource(
-            "s3",
-            config=Config(signature_version=UNSIGNED),
-        )
+        if type == "private":
+            resource = boto3.resource(
+                "s3",
+                config=Config(signature_version=UNSIGNED),
+            )
+        else:
+            resource = boto3.resource(
+                "s3",
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                config=Config(signature_version="s3v4"),
+            )
         bucket = resource.Bucket(settings.PACKAGE_BUCKET_NAME)
         bucket.download_file(
-            f"packages/{package_name}/{version}/{package_name}.zip",
+            f"packages/{type}/{package_name}/{version}/{package_name}.zip",
             f"workspaces/{tenant}/packages/{package_name}.zip",
         )
         with zipfile.ZipFile(

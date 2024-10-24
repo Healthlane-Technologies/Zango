@@ -1,10 +1,11 @@
 import os
 import re
-import requests
 import tempfile
 import uuid
 
 from collections import namedtuple
+
+import requests
 
 from django_tenants.models import DomainMixin, TenantMixin
 
@@ -151,12 +152,12 @@ class TenantModel(TenantMixin, FullAuditMixin):
         # initialize tenant's workspace
         init_task = initialize_workspace.delay(str(obj.uuid), app_template_path)
         return obj, init_task.id
-    
+
     @staticmethod
     def download_file(url):
         response = requests.get(url)
         response.raise_for_status()  # Raise an exception for bad status codes
-        
+
         # Create a temporary file
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file.write(response.content)
