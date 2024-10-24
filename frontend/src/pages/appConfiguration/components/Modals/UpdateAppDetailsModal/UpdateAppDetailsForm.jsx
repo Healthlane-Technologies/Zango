@@ -9,6 +9,7 @@ import InputFieldArray from '../../../../../components/Form/InputFieldArray';
 import SelectField from '../../../../../components/Form/SelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import TextareaField from '../../../../../components/Form/TextareaField';
+import CheckboxField from '../../../../../components/Form/CheckboxField';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
 
@@ -34,7 +35,8 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		repo_url: appConfigurationData?.app?.extra_config?.git_config?.repo_url ?? '',
 		dev: appConfigurationData?.app?.extra_config?.git_config?.branch?.dev ?? '',
 		prod: appConfigurationData?.app?.extra_config?.git_config?.branch?.prod ?? '',
-		staging: appConfigurationData?.app?.extra_config?.git_config?.branch?.staging ?? ''
+		staging: appConfigurationData?.app?.extra_config?.git_config?.branch?.staging ?? '',
+		sync_packages: appConfigurationData?.app?.extra_config?.sync_packages ?? true 
 	};
 
 	let validationSchema = Yup.object({
@@ -49,6 +51,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		dev: Yup.string(),
 		prod: Yup.string(),
 		staging: Yup.string(),
+		sync_packages: Yup.boolean()
 	});
 
 	let onSubmit = (values) => {
@@ -68,13 +71,15 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 				staging: tempValues.staging==''?null:tempValues.staging
 			  },
 			  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
-			}
+			},
+			sync_packages: tempValues.sync_packages
 		  };
 		
 		delete tempValues.dev;
 		delete tempValues.prod;
 		delete tempValues.staging;
 		delete tempValues.repo_url;
+		delete tempValues.sync_packages;
 		
 		tempValues.extra_config = JSON.stringify(extra_config);
 		
@@ -237,6 +242,17 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 								onChange={formik.handleChange}
 								formik={formik}
 							/>
+							<CheckboxField
+								key="sync_packages"
+								label="Sync Packages"
+								content=""
+								name="sync_packages"
+								id="sync_packages"
+								placeholder=""
+								value={get(formik.values, 'sync_packages', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>						
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<SubmitButton
