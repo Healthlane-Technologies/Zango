@@ -67,8 +67,8 @@ def setup_and_pull(path, repo_url, branch="main"):
             raise Exception("Repository is bare")
         print(f"Repository found at {path}")
 
-        # Clean the working directory (remove untracked files and reset to HEAD)
-        repo.git.clean("-fd")
+        # Clean the working directory (remove untracked files and reset to HEAD) exlcuding packages
+        repo.git.clean("-fd", "--exclude=packages")
         repo.git.reset("--hard", "HEAD")
 
         # Check if the branch is the same, if not, checkout the correct branch
@@ -115,39 +115,13 @@ def setup_and_pull(path, repo_url, branch="main"):
     return success, message
 
 
-def run_migrations(tenant, app_directory):
-    # Run package migrations
-    print("Running package migrations...")
-
-    updated_app_manifest = json.loads(
-        open(os.path.join(app_directory, "manifest.json")).read()
-    )
-
-    installed_packages = updated_app_manifest["packages"]
-
-    for package in installed_packages:
-        try:
-            subprocess.run(
-                [
-                    "python",
-                    "manage.py",
-                    "ws_migrate",
-                    tenant,
-                    "--package",
-                    package["name"],
-                ],
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            print("Migrations failed for package: ", package)
-
+def run_app_migrations(tenant, app_directory):
     print("Running app migrations...")
     try:
         subprocess.run(["python", "manage.py", "ws_migrate", tenant], check=True)
         print("Migrations ran successfully.")
     except subprocess.CalledProcessError:
-        print("Migrations failed.")
-        raise
+        raise Exception("Migrations failed.")
 
 
 def sync_static(tenant):
@@ -155,8 +129,7 @@ def sync_static(tenant):
         subprocess.run(["python", "manage.py", "sync_static", tenant], check=True)
         print("Static files collected successfully.")
     except subprocess.CalledProcessError:
-        print("Collecting static files failed.")
-        raise
+        raise Exception("Collecting static files failed.")
 
 
 def collect_static():
@@ -245,6 +218,7 @@ def execute_fixtures(tenant_name, last_version, current_version, app_directory):
                 bold=True,
             )
             click.echo(error_message, err=True)
+            raise Exception(message)
 
     return failed_fixture_dict
 
@@ -292,6 +266,38 @@ def extract_release_notes(file_path, version):
     return None
 
 
+def same_package_version_exists(package, app_directory):
+    existing_package_path = os.path.join(app_directory, "packages", package["name"])
+    if not os.path.exists(existing_package_path):
+        return False
+    existing_package = json.loads(
+        open(os.path.join(existing_package_path, "manifest.json")).read()
+    )
+    return package["version"] == existing_package["version"]
+
+
+def install_packages(tenant, app_directory):
+    from zango.core.package_utils import install_package
+    # Run package migrations
+
+    updated_app_manifest = json.loads(
+        open(os.path.join(app_directory, "manifest.json")).read()
+    )
+
+    installed_packages = updated_app_manifest["packages"]
+
+    for package in installed_packages:
+        try:
+            if not same_package_version_exists(package, app_directory):
+                print(f"Installing package: {package['name']}")
+                res = install_package(
+                    package["name"], package["version"], tenant.name, True
+                )
+                print(res)
+        except subprocess.CalledProcessError:
+            print("Failed to install package: ", package)
+
+
 def create_release(tenant_name, app_settings, app_directory, git_mode):
     from django.db import connection
 
@@ -302,6 +308,7 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
     tenant = TenantModel.objects.get(name=tenant_name)
     connection.set_tenant(tenant)
     with connection.cursor() as c:
+        release = None
         try:
             current_version = app_settings.get("version")
             if not current_version:
@@ -333,8 +340,11 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 release.status = "in_progress"
                 release.save(update_fields=["status"])
 
-                # Run migrations
-                run_migrations(tenant_name, app_directory)
+                # install packages
+                install_packages(tenant, app_directory)
+
+                # Run app migrations
+                run_app_migrations(tenant_name, app_directory)
 
                 # Sync Static
                 sync_static(tenant_name)
@@ -368,7 +378,13 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 print("No version change detected for")
 
         except Exception as e:
-            print(f"An error occurred while creating/updating release: {e}")
+            if release:
+                release.status = "failed"
+                release.save()
+            import traceback
+
+            print(traceback.format_exc())
+            raise Exception(f"An error occurred while creating/updating release: {e}")
 
 
 def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branch=None):
@@ -409,8 +425,10 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
+        if is_version_greater(remote_version, local_version):
+            return False, "Remote version is greater than local version"
         if not (
-            is_version_greater(remote_version, local_version)
+            is_version_greater(local_version, remote_version)
             or (
                 last_release
                 and is_version_greater(remote_version, last_release.version)
@@ -436,8 +454,9 @@ def update_apps(app_name):
     project_name = find_project_name()
     project_root = os.getcwd()
     click.echo("Initializing project setup")
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
     sys.path.insert(0, project_root)
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
+
     django.setup()
 
     click.echo("Project setup initialized")
@@ -472,10 +491,11 @@ def update_apps(app_name):
             repo_url = None
             branch = None
             git_mode = False
-            if app_settings.get("git_config"):
+            git_settings = tenant_obj.extra_config.get("git_config")
+            if git_settings:
                 git_mode = True
                 # Initialize git repository
-                repo_url = app_settings["git_config"]["repo_url"]
+                repo_url = git_settings["repo_url"]
 
                 # Split the repo URL into parts
                 parts = repo_url.split("://")
@@ -483,7 +503,7 @@ def update_apps(app_name):
                 # Add username and password to the URL
                 repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
 
-                branch = app_settings["git_config"]["branch"].get(settings.ENV, "main")
+                branch = git_settings["branch"].get(settings.ENV, "main")
 
             update_allowed, message = is_update_allowed(
                 tenant, app_settings, git_mode, repo_url, branch
@@ -527,5 +547,8 @@ def update_apps(app_name):
         except Exception as e:
             import traceback
 
-            print(traceback.format_exc())
-            click.echo(f"An error occurred: {e}")
+            error_message = click.style(
+                f"An error occurred while updating app {tenant}: {traceback.format_exc()}",
+                fg="red",
+                bold=True,
+            )

@@ -1,4 +1,7 @@
+import os
 import re
+import requests
+import tempfile
 import uuid
 
 from collections import namedtuple
@@ -10,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from zango.api.platform.tenancy.v1.utils import extract_zip_to_temp_dir
 from zango.core.model_mixins import FullAuditMixin
 from zango.core.storage_utils import ZFileField
 
@@ -115,6 +119,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
     logo = ZFileField(verbose_name="Logo", null=True, blank=True)
     fav_icon = ZFileField(verbose_name="Fav Icon", null=True, blank=True)
     extra_config = models.JSONField(null=True, blank=True)
+    app_template = ZFileField(
+        verbose_name="template used for app", null=True, blank=True
+    )
 
     auto_create_schema = False
 
@@ -127,14 +134,33 @@ class TenantModel(TenantMixin, FullAuditMixin):
         self.save()
 
     @classmethod
-    def create(cls, name, schema_name, description, **other_params):
+    def create(cls, name, schema_name, description, app_template_name, **other_params):
         _check_tenant_name(name)
         obj = cls.objects.create(
             name=name, schema_name=schema_name, description=description, **other_params
         )
+        app_template_path = None
+        if obj.app_template:
+            if obj.app_template.url.startswith("https://"):
+                downloaded_file_path = cls.download_file(obj.app_template.url)
+            else:
+                downloaded_file_path = obj.app_template
+            app_template_path = os.path.join(
+                extract_zip_to_temp_dir(downloaded_file_path), app_template_name
+            )
         # initialize tenant's workspace
-        init_task = initialize_workspace.apply_async((str(obj.uuid),), countdown=1)
+        init_task = initialize_workspace.delay(str(obj.uuid), app_template_path)
         return obj, init_task.id
+    
+    @staticmethod
+    def download_file(url):
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(response.content)
+            return temp_file.name
 
 
 class Domain(DomainMixin, FullAuditMixin):

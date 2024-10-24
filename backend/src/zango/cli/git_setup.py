@@ -1,8 +1,13 @@
 import json
 import os
+import sys
 
 import click
 import git
+
+import django
+
+from .update_apps import find_project_name
 
 
 def is_valid_app_directory(directory):
@@ -20,7 +25,7 @@ def update_settings_with_git_repo_url(
     app_directory, git_repo_url, dev_branch, staging_branch, prod_branch
 ):
     """
-    Update the 'git_repo_url' in the 'settings.json' file located in the app directory.
+    Update the 'git_repo_url' in the TenantMode.extra_config field.
 
     Args:
     - app_directory (str): Full path of the app directory.
@@ -32,32 +37,44 @@ def update_settings_with_git_repo_url(
     settings_file_path = os.path.join(app_directory, "settings.json")
 
     try:
+        project_name = find_project_name()
+        project_root = os.getcwd()
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"{project_name}.settings")
+        sys.path.insert(0, project_root)
+        django.setup()
+
+        from zango.apps.shared.tenancy.models import TenantModel
+
         # Load current settings from settings.json
         with open(settings_file_path, "r") as settings_file:
             settings = json.load(settings_file)
 
         # Update git_repo_url in settings
-        git_config = settings.get("git_config", {})
-        git_config["repo_url"] = git_repo_url
+        app_name = settings.get("app_name", "")
+        tenant_obj = TenantModel.objects.get(name=app_name)
+        git_config = {}
+        if tenant_obj.extra_config:
+            git_config = tenant_obj.extra_config.get("git_config", {})
+        else:
+            git_config["repo_url"] = git_repo_url
         git_branch = git_config.get("branch", {})
         git_branch.update(
             {"dev": dev_branch, "staging": staging_branch, "prod": prod_branch}
         )
         git_config["branch"] = git_branch
-        settings["git_config"] = git_config
-
-        # Write updated settings back to settings.json
-        with open(settings_file_path, "w") as settings_file:
-            json.dump(settings, settings_file, indent=4)
+        if tenant_obj.extra_config:
+            tenant_obj.extra_config.update({"git_config": git_config})
+        else:
+            tenant_obj.extra_config = {"git_config": git_config}
+        tenant_obj.save()
 
         return True
-
     except FileNotFoundError:
         click.echo(f"Error: settings.json not found in {app_directory}.")
     except json.JSONDecodeError:
         click.echo(f"Error: settings.json is not valid JSON in {app_directory}.")
     except Exception as e:
-        click.echo(f"Error occurred while updating settings.json: {e}")
+        click.echo(f"Error occurred while updating tenant extra config: {e}")
 
     return False
 
@@ -115,6 +132,8 @@ def git_setup(
 
     try:
         if initialize:
+            os.system(f"rm -rf {app_directory}/.git")
+            os.system("rm -rf .gitignore")
             # Initialize git repository
             repo = git.Repo.init(app_directory)
 
@@ -140,8 +159,9 @@ def git_setup(
 
             # Check if the branch exists locally
             if dev_branch in remote_branches:
-                # Checkout the existing branch
-                repo.git.checkout(dev_branch)
+                raise Exception(
+                    "Can't initialize repository with existing remote branches with same name."
+                )
             else:
                 # Create a new branch and checkout
                 repo.git.checkout("-b", dev_branch)
