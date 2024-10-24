@@ -23,8 +23,14 @@ const LaunchNewAppForm = ({ closeModal }) => {
 	let validationSchema = Yup.object().shape({
 		name: Yup.string(),
 		description: Yup.string(),
-		app_template: Yup.mixed(),
-	  }).test('custom', null, function(value) {
+		app_template: Yup.mixed().test('fileType', 'Only ZIP files are allowed', (value) => {
+			if (value) {
+				const fileType = value.type;
+				return fileType === 'application/zip' || fileType === 'application/x-zip-compressed';
+			}
+			return true; 
+		}),
+	  	}).test('custom', null, function(value) {
 		if (value.app_template) {
 		  return true; 
 		}
