@@ -5,6 +5,7 @@ import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import TextareaField from '../../../../../components/Form/TextareaField';
+import FileUpload from '../../../../../components/Form/FileUpload';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormDataOrder } from '../../../../../utils/form';
 import { setPollingTastIds, toggleRerenderPage } from '../../../slice';
@@ -16,12 +17,41 @@ const LaunchNewAppForm = ({ closeModal }) => {
 	let initialValues = {
 		name: '',
 		description: '',
+		app_template: null
 	};
 
-	let validationSchema = Yup.object({
-		name: Yup.string().required('Required'),
-		description: Yup.string().required('Required'),
-	});
+	let validationSchema = Yup.object().shape({
+		name: Yup.string(),
+		description: Yup.string(),
+		app_template: Yup.mixed(),
+	  }).test('custom', null, function(value) {
+		if (value.app_template) {
+		  return true; 
+		}
+		
+		if (!value.name && !value.description) {
+		  return this.createError({
+			path: 'app_template',
+			message: 'Required',
+		  });
+		}
+		
+		if (value.name && !value.description) {
+		  return this.createError({
+			path: 'description',
+			message: 'Required',
+		  });
+		}
+		
+		if (!value.name && value.description) {
+		  return this.createError({
+			path: 'name',
+			message: 'Required',
+		  });
+		}
+		
+		return true;
+	  });
 
 	const makeApiCall = async (dynamicFormData) => {
 		const { response, success } = await triggerApi({
@@ -78,6 +108,19 @@ const LaunchNewAppForm = ({ closeModal }) => {
 								value={get(formik.values, 'description', '')}
 								onChange={formik.handleChange}
 								formik={formik}
+							/>
+							<div className='w-full flex my-4'>
+								<div className="w-full flex items-center">
+      							<div className="flex-grow h-px bg-[#A3ABB1]"></div>
+      							<p className="mx-4 text-sm text-[#A3ABB1] font-medium">OR</p>
+      							<div className="flex-grow h-px bg-[#A3ABB1]"></div>
+    							</div>						
+							</div>
+							<FileUpload
+								formik={formik}
+								label={'Template'}
+								id={'app_template'}
+								fileValue={null}
 							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">

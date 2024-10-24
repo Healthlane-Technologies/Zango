@@ -248,13 +248,16 @@ class Workspace:
         """
         pass
 
-    def load_models(self, migration=False) -> None:
+    def is_package_model(self, model_name: str) -> bool:
+        return model_name.split(".")[2] == "packages"
+
+    def load_models(self, migration=False, packages_only=False) -> None:
         """
         get topologically sorted list of models from packages and modules and
         import models.py files in that order
         """
         for m in self.get_models():
-            if m.split(".")[2] == "packages" and migration:
+            if self.is_package_model(m) and migration:
                 continue
             split = m.split(".")[2:]
             module = self.plugin_source.load_plugin(".".join(split))

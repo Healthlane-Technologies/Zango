@@ -2,6 +2,8 @@ import { useSelector } from 'react-redux';
 import { ReactComponent as EachAppIcon } from '../../../../../assets/images/svg/each-app-icon.svg';
 import { selectAppConfigurationData } from '../../../slice';
 import EachDescriptionRow from './EachDescriptionRow';
+import { ReactComponent as SingleFileIcon } from '../../../../../assets/images/svg/single-file.svg';
+
 
 function DetailsTable() {
 	const appConfigurationData = useSelector(selectAppConfigurationData);
@@ -98,6 +100,22 @@ function DetailsTable() {
 						<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
 							{appConfigurationData?.app?.date_format_display}
 						</span>
+					}
+				/>
+				<EachDescriptionRow
+					label="Template:"
+					content={
+						appConfigurationData?.app?.app_template?(
+							<a target='__blank'
+							 href={appConfigurationData?.app?.app_template} 
+							 className='whitespace-nowrap cursor-pointer font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#5048ED]'>
+								<SingleFileIcon />
+							</a>
+						):(
+						<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+							No Template found
+						</span>
+						)
 					}
 				/>
 			</tbody>

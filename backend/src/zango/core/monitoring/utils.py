@@ -53,7 +53,7 @@ def _get_tenant_name():
 
     try:
         tenant_name = connection.tenant.name
-    except Exception as e:
+    except Exception:
         tenant_name = "FakeTenant"
     return tenant_name
 
