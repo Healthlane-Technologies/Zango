@@ -214,6 +214,8 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                                 "--prod_branch",
                                 self.get_branch(new_git_config, "prod", "main"),
                                 "--initialize",
+                                "--app_name",
+                                obj.name,
                             ],
                             standalone_mode=False,
                         )

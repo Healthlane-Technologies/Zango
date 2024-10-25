@@ -22,7 +22,7 @@ def is_valid_app_directory(directory):
 
 
 def update_settings_with_git_repo_url(
-    app_directory, git_repo_url, dev_branch, staging_branch, prod_branch
+    app_name, app_directory, git_repo_url, dev_branch, staging_branch, prod_branch
 ):
     """
     Update the 'git_repo_url' in the TenantMode.extra_config field.
@@ -50,7 +50,6 @@ def update_settings_with_git_repo_url(
             settings = json.load(settings_file)
 
         # Update git_repo_url in settings
-        app_name = settings.get("app_name", "")
         tenant_obj = TenantModel.objects.get(name=app_name)
         git_config = {}
         if tenant_obj.extra_config:
@@ -106,6 +105,7 @@ def update_settings_with_git_repo_url(
 @click.option(
     "--initialize", is_flag=True, default=False, help="Initialize the repository"
 )
+@click.option("--app_name", prompt=True, required=True, help="App Name")
 def git_setup(
     app_directory,
     git_repo_url,
@@ -113,6 +113,7 @@ def git_setup(
     staging_branch,
     prod_branch,
     initialize,
+    app_name,
 ):
     """
     Initialize a git repository in the specified app directory and add the given remote repository URL.
@@ -133,7 +134,7 @@ def git_setup(
     try:
         if initialize:
             os.system(f"rm -rf {app_directory}/.git")
-            os.system("rm -rf .gitignore")
+            os.system(f"rm -rf {app_directory}/.gitignore")
             # Initialize git repository
             repo = git.Repo.init(app_directory)
 
@@ -144,6 +145,8 @@ def git_setup(
                 gitignore_file.write("*.pyc\n")
                 gitignore_file.write("__pycache__/\n")
                 gitignore_file.write(".DS_Store\n")
+                gitignore_file.write("node_modules/\n")
+                gitignore_file.write("*.parcel-cache\n")
 
             # Create README.md
             with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
@@ -171,7 +174,12 @@ def git_setup(
             )
 
         update_settings_with_git_repo_url(
-            app_directory, git_repo_url, dev_branch, staging_branch, prod_branch
+            app_name,
+            app_directory,
+            git_repo_url,
+            dev_branch,
+            staging_branch,
+            prod_branch,
         )
 
         click.echo(f"Git setup completed in {app_directory}")
