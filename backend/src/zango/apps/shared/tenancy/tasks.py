@@ -10,6 +10,8 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 
+import zango
+
 from .utils import DEFAULT_THEME_CONFIG, assign_policies_to_anonymous_user
 
 
@@ -50,7 +52,10 @@ def initialize_workspace(tenant_uuid, app_template_path=None):
             template_directory = os.path.join(
                 os.path.dirname(__file__), "workspace_folder_template"
             )
-            cookiecutter_context = {"app_name": tenant.name}
+            cookiecutter_context = {
+                "app_name": tenant.name,
+                "zango_version": zango.__version__,
+            }
 
             cookiecutter.main.cookiecutter(
                 template_directory,

@@ -45,6 +45,20 @@ class TenantSerializerModel(serializers.ModelSerializer):
         if extra_config_str:
             try:
                 extra_config_json = json.loads(extra_config_str)
+                default_branch_config = {
+                    "dev": "development",
+                    "staging": "staging",
+                    "prod": "main",
+                }
+                if extra_config_json.get("git_config", None):
+                    extra_config_json["git_config"]["branch"] = {
+                        **extra_config_json["git_config"]["branch"],
+                        **{
+                            k: v
+                            for k, v in default_branch_config.items()
+                            if extra_config_json["git_config"]["branch"][k] is None
+                        },
+                    }
                 validated_data["extra_config"] = extra_config_json
             except json.JSONDecodeError:
                 raise serializers.ValidationError(

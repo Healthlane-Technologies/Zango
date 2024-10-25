@@ -3,5 +3,6 @@
     "modules": [],
     "app_routes": [],
     "package_routes": [],
-    "app_name": "{{cookiecutter.app_name}}"
+    "app_name": "{{cookiecutter.app_name}}",
+    "zango_version": ">={{cookiecutter.zango_version}}"
 }
