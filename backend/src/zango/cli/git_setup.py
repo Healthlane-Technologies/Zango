@@ -147,6 +147,7 @@ def git_setup(
                 gitignore_file.write(".DS_Store\n")
                 gitignore_file.write("node_modules/\n")
                 gitignore_file.write("*.parcel-cache\n")
+                gitignore_file.write("packages\n")
 
             # Create README.md
             with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
