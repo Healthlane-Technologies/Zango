@@ -30,7 +30,7 @@ export const appConfigurationHandlers = [
 						datetime_format_display: 'August 05 2006, 3:05 PM',
 						logo: '',
 						fav_icon: '',
-						extra_config: null,
+						extra_config: {"git_config":{"branch":{"dev":"dev","prod":"main","staging":"staging"},"repo_url":"https://github.com/Healthlane-Technologies/Zango"},"sync_packages":true},
 						domains: [
 							{ domain: 'zel3-neapp.zelthy.in', is_primary: true },
 							{ domain: 'domainame2.com', is_primary: false },

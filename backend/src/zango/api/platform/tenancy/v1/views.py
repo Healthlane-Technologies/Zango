@@ -95,7 +95,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
 
     def post(self, request, *args, **kwargs):
         data = request.data
-        app_template = data.get("app_template", False)
+        app_template = data.get("app_template", None)
         app_template_name = None
         if app_template:
             app_template_name = str(app_template).split(".")[0]
