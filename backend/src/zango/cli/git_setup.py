@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 
@@ -22,19 +21,21 @@ def is_valid_app_directory(directory):
 
 
 def update_settings_with_git_repo_url(
-    app_directory, git_repo_url, dev_branch, staging_branch, prod_branch
+    app_name, git_repo_url, dev_branch, staging_branch, prod_branch
 ):
     """
     Update the 'git_repo_url' in the TenantMode.extra_config field.
 
     Args:
-    - app_directory (str): Full path of the app directory.
+    - app_name (str): Full path of the app directory.
     - git_repo_url (str): URL of the remote git repository.
+    - dev_branch (str): Name of the development branch.
+    - staging_branch (str): Name of the staging branch.
+    - prod_branch (str): Name of the production branch.
 
     Returns:
     - bool: True if successful, False otherwise.
     """
-    settings_file_path = os.path.join(app_directory, "settings.json")
 
     try:
         project_name = find_project_name()
@@ -45,12 +46,7 @@ def update_settings_with_git_repo_url(
 
         from zango.apps.shared.tenancy.models import TenantModel
 
-        # Load current settings from settings.json
-        with open(settings_file_path, "r") as settings_file:
-            settings = json.load(settings_file)
-
         # Update git_repo_url in settings
-        app_name = settings["app_name"]
         tenant_obj = TenantModel.objects.get(name=app_name)
         git_config = {}
         if tenant_obj.extra_config:
@@ -69,10 +65,6 @@ def update_settings_with_git_repo_url(
         tenant_obj.save()
 
         return True
-    except FileNotFoundError:
-        click.echo(f"Error: settings.json not found in {app_directory}.")
-    except json.JSONDecodeError:
-        click.echo(f"Error: settings.json is not valid JSON in {app_directory}.")
     except Exception as e:
         click.echo(f"Error occurred while updating tenant extra config: {e}")
 
@@ -80,7 +72,7 @@ def update_settings_with_git_repo_url(
 
 
 @click.command("git-setup")
-@click.argument("app_directory", type=click.Path(exists=True, resolve_path=True))
+@click.argument("app_name", type=str)
 @click.option("--git_repo_url", prompt=True, required=True, help="Repo URL")
 @click.option(
     "--dev_branch",
@@ -107,12 +99,12 @@ def update_settings_with_git_repo_url(
     "--initialize", is_flag=True, default=False, help="Initialize the repository"
 )
 def git_setup(
-    app_directory,
     git_repo_url,
     dev_branch,
     staging_branch,
     prod_branch,
     initialize,
+    app_name,
 ):
     """
     Initialize a git repository in the specified app directory and add the given remote repository URL.
@@ -120,7 +112,19 @@ def git_setup(
     APP_DIRECTORY: The directory of the app.
     GIT_REPO_URL: The URL of the remote git repository.
     """
+
+    try:
+        from zango.apps.shared.tenancy.models import TenantModel
+
+        TenantModel.objects.get(name=app_name)
+    except TenantModel.DoesNotExist:
+        click.echo(
+            f"The app name '{app_name}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."
+        )
+        return
+
     # Check if the app directory exists
+    app_directory = os.path.join("workspaces", app_name)
     if not os.path.exists(app_directory):
         click.echo(f"The directory {app_directory} does not exist.")
         return
@@ -174,7 +178,7 @@ def git_setup(
             )
 
         update_settings_with_git_repo_url(
-            app_directory,
+            app_name,
             git_repo_url,
             dev_branch,
             staging_branch,
