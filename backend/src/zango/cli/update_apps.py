@@ -278,6 +278,7 @@ def same_package_version_exists(package, app_directory):
 
 def install_packages(tenant, app_directory):
     from zango.core.package_utils import install_package
+
     # Run package migrations
 
     updated_app_manifest = json.loads(
