@@ -124,6 +124,33 @@ def run_app_migrations(tenant, app_directory):
         raise Exception("Migrations failed.")
 
 
+def run_package_migrations(tenant, app_directory):
+    # Run package migrations
+    print("Running package migrations...")
+
+    updated_app_manifest = json.loads(
+        open(os.path.join(app_directory, "manifest.json")).read()
+    )
+
+    installed_packages = updated_app_manifest["packages"]
+
+    for package in installed_packages:
+        try:
+            subprocess.run(
+                [
+                    "python",
+                    "manage.py",
+                    "ws_migrate",
+                    tenant,
+                    "--package",
+                    package["name"],
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            print("Migrations failed for package: ", package)
+
+
 def sync_static(tenant):
     try:
         subprocess.run(["python", "manage.py", "sync_static", tenant], check=True)
@@ -340,8 +367,12 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 release.status = "in_progress"
                 release.save(update_fields=["status"])
 
-                # install packages
-                install_packages(tenant, app_directory)
+                if tenant.extra_config.get("sync_packages", True):
+                    # install packages
+                    install_packages(tenant, app_directory)
+                else:
+                    # simply apply package migrations
+                    run_package_migrations(tenant_name, app_directory)
 
                 # Run app migrations
                 run_app_migrations(tenant_name, app_directory)
