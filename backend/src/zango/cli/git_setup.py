@@ -145,7 +145,7 @@ def git_setup(
 
             # Create .gitignore file
             # TODO: Create git files template
-            if settings.env == "dev":
+            if settings.ENV == "dev":
                 with open(os.path.join(app_directory, ".gitignore"), "w") as gitignore_file:
                     gitignore_file.write("venv/\n")
                     gitignore_file.write("*.pyc\n")
@@ -159,8 +159,13 @@ def git_setup(
                 with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
                     readme_file.write(f"# {os.path.basename(app_directory)}\n")
 
+            parts = git_repo_url.split("://")
+
+            # Add username and password to the URL
+            repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
+
             # Add remote repository
-            origin = repo.create_remote("origin", git_repo_url)
+            origin = repo.create_remote("origin", repo_url)
 
             # Fetch all branches from the remote
             origin.fetch()
@@ -168,13 +173,21 @@ def git_setup(
             remote_branches = [ref.name.split("/")[-1] for ref in origin.refs]
 
             # Check if the branch exists locally
-            if dev_branch in remote_branches:
+            if settings.ENV == "dev" and dev_branch in remote_branches:
                 raise Exception(
                     "Can't initialize repository with existing remote branches with same name."
                 )
             else:
                 # Create a new branch and checkout
                 repo.git.checkout("-b", dev_branch)
+            
+            if settings.ENV == "staging":
+                if staging_branch in remote_branches:
+                    repo.git.checkout(staging_branch, force=True)
+            
+            if settings.ENV == "prod":
+                if prod_branch in remote_branches:
+                    repo.git.checkout(prod_branch, force=True)
 
             click.echo(
                 f"Initialized git repository in {app_directory} and set remote to {git_repo_url}"
@@ -191,4 +204,6 @@ def git_setup(
         click.echo(f"Git setup completed in {app_directory}")
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         click.echo(f"An error occurred: {e}")

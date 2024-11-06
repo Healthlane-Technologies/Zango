@@ -465,6 +465,8 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
             )
         ):
             return False, "No version change detected"
+        else:
+            return True, "Update allowed"
     else:
         if last_release and not is_version_greater(local_version, last_release.version):
             return False, "No version change detected"
