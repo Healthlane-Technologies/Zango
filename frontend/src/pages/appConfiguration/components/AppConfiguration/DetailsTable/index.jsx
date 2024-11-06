@@ -3,7 +3,7 @@ import { ReactComponent as EachAppIcon } from '../../../../../assets/images/svg/
 import { selectAppConfigurationData } from '../../../slice';
 import EachDescriptionRow from './EachDescriptionRow';
 import { ReactComponent as SingleFileIcon } from '../../../../../assets/images/svg/single-file.svg';
-
+import { getRepoName } from '../../../../../utils/helper';
 
 function DetailsTable() {
 	const appConfigurationData = useSelector(selectAppConfigurationData);
@@ -118,6 +118,56 @@ function DetailsTable() {
 						)
 					}
 				/>
+				<EachDescriptionRow
+					label="Github Repository:"
+					content={
+						appConfigurationData?.app?.extra_config?.git_config?.repo_url ? (
+							<a
+								href={appConfigurationData?.app?.extra_config?.git_config?.repo_url}
+								alt="#"
+								target={'_blank'}
+								className="w-fit"
+							>
+								<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#5047ED]">
+									{appConfigurationData?.app?.extra_config?.git_config?.repo_url ? getRepoName(appConfigurationData?.app?.extra_config?.git_config?.repo_url) : null}
+								</span>
+							</a>
+						) : (
+							<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+								Not configured
+							</span>
+						)
+					}
+				/>
+				{
+					appConfigurationData?.app?.extra_config?.git_config?.repo_url ? (<>
+						<EachDescriptionRow
+							label="Development:"
+							content={
+								<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+									{appConfigurationData?.app?.extra_config?.git_config?.branch?.dev}
+								</span>
+							}
+						/>
+						<EachDescriptionRow
+							label="Staging:"
+							content={
+								<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+									{appConfigurationData?.app?.extra_config?.git_config?.branch?.staging}
+								</span>
+							}
+						/>
+						<EachDescriptionRow
+							label="Production:"
+							content={
+								<span className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+									{appConfigurationData?.app?.extra_config?.git_config?.branch?.prod}
+								</span>
+							}
+						/>
+					</>) : null
+				}
+
 			</tbody>
 		</table>
 	);

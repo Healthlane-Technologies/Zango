@@ -32,19 +32,18 @@ def extract_app_details_from_zip(template_zip):
             # Parse the JSON content
             settings = json.loads(settings_content)
             return (
-                settings.get("version", None),
-                settings.get("app_name", None),
-                "nice app",
+                settings["version"],
+                settings["app_name"],
             )
 
     except zipfile.BadZipFile:
-        print(f"Error: {template_zip} is not a valid zip file.")
+        raise Exception(f"Error: {template_zip} is not a valid zip file.")
     except json.JSONDecodeError:
-        print(f"Error: {settings_filename} is not a valid JSON file.")
+        raise Exception(f"Error: {settings_filename} is not a valid JSON file.")
+    except KeyError:
+        raise Exception(f"Error: version or app_name not found in {settings_filename}.")
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
-
-    return None, None, None
+        raise Exception(f"An error occurred: {str(e)}")
 
 
 def extract_zip_to_temp_dir(app_template):
