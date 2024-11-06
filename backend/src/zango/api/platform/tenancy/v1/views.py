@@ -3,7 +3,6 @@ import traceback
 
 from django_celery_results.models import TaskResult
 
-from django.conf import settings
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 
@@ -197,9 +196,8 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     new_repo_url = new_git_config.get("repo_url")
                     old_repo_url = old_git_config.get("repo_url")
 
-                    if (
-                        new_repo_url
-                        and (not old_git_config or new_repo_url != old_repo_url)
+                    if new_repo_url and (
+                        not old_git_config or new_repo_url != old_repo_url
                     ):
                         git_setup(
                             [

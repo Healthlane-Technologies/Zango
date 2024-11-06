@@ -146,7 +146,9 @@ def git_setup(
             # Create .gitignore file
             # TODO: Create git files template
             if settings.ENV == "dev":
-                with open(os.path.join(app_directory, ".gitignore"), "w") as gitignore_file:
+                with open(
+                    os.path.join(app_directory, ".gitignore"), "w"
+                ) as gitignore_file:
                     gitignore_file.write("venv/\n")
                     gitignore_file.write("*.pyc\n")
                     gitignore_file.write("__pycache__/\n")
@@ -180,11 +182,11 @@ def git_setup(
             else:
                 # Create a new branch and checkout
                 repo.git.checkout("-b", dev_branch)
-            
+
             if settings.ENV == "staging":
                 if staging_branch in remote_branches:
                     repo.git.checkout(staging_branch, force=True)
-            
+
             if settings.ENV == "prod":
                 if prod_branch in remote_branches:
                     repo.git.checkout(prod_branch, force=True)
@@ -205,5 +207,6 @@ def git_setup(
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         click.echo(f"An error occurred: {e}")
