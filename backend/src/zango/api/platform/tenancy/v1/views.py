@@ -200,7 +200,6 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     if (
                         new_repo_url
                         and (not old_git_config or new_repo_url != old_repo_url)
-                        and settings.ENV == "dev"
                     ):
                         git_setup(
                             [

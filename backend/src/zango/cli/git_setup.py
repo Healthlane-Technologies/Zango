@@ -6,6 +6,8 @@ import git
 
 import django
 
+from django.conf import settings
+
 from .update_apps import find_project_name
 
 
@@ -143,18 +145,19 @@ def git_setup(
 
             # Create .gitignore file
             # TODO: Create git files template
-            with open(os.path.join(app_directory, ".gitignore"), "w") as gitignore_file:
-                gitignore_file.write("venv/\n")
-                gitignore_file.write("*.pyc\n")
-                gitignore_file.write("__pycache__/\n")
-                gitignore_file.write(".DS_Store\n")
-                gitignore_file.write("node_modules/\n")
-                gitignore_file.write("*.parcel-cache\n")
-                gitignore_file.write("packages\n")
+            if settings.env == "dev":
+                with open(os.path.join(app_directory, ".gitignore"), "w") as gitignore_file:
+                    gitignore_file.write("venv/\n")
+                    gitignore_file.write("*.pyc\n")
+                    gitignore_file.write("__pycache__/\n")
+                    gitignore_file.write(".DS_Store\n")
+                    gitignore_file.write("node_modules/\n")
+                    gitignore_file.write("*.parcel-cache\n")
+                    gitignore_file.write("packages\n")
 
-            # Create README.md
-            with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
-                readme_file.write(f"# {os.path.basename(app_directory)}\n")
+                # Create README.md
+                with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
+                    readme_file.write(f"# {os.path.basename(app_directory)}\n")
 
             # Add remote repository
             origin = repo.create_remote("origin", git_repo_url)
