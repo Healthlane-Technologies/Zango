@@ -46,7 +46,9 @@ def initialize_workspace(tenant_uuid, app_template_path=None):
             shutil.copytree(app_template_path, app_dir, dirs_exist_ok=True)
 
             shutil.rmtree(app_template_path)
-            shutil.rmtree(os.path.join(app_dir, "packages"))
+
+            if os.path.exists(os.path.join(app_dir, "packages")):
+                shutil.rmtree(os.path.join(app_dir, "packages"))
         else:
             # Creating app folder with the initial files
             template_directory = os.path.join(
@@ -85,7 +87,9 @@ def initialize_workspace(tenant_uuid, app_template_path=None):
         else:
             return {"result": "failure", "error": "Failed, see error logs"}
     except Exception as e:
+        import traceback
+
         return {
             "result": "failure",
-            "error": str(e),
+            "error": traceback.format_exc(),
         }

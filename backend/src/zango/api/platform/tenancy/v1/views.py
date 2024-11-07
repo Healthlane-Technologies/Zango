@@ -114,7 +114,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
                 name=data["name"],
                 schema_name=data["name"],
                 app_template_name=app_template_name,
-                description="",
+                description=data.get("description"),
                 app_template=app_template,
                 tenant_type="app",
                 status="staged",
