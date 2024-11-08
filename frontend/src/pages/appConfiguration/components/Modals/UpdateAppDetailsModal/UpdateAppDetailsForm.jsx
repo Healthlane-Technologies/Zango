@@ -96,6 +96,12 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			if (success && response) {
 				closeModal();
 				dispatch(toggleRerenderPage());
+			}else{
+				tempValues.dev = extra_config?.git_config?.branch?.dev;
+				tempValues.prod = extra_config?.git_config?.branch?.prod;
+				tempValues.staging = extra_config?.git_config?.branch?.staging;
+				tempValues.repo_url = extra_config?.git_config?.repo_url;
+				tempValues.sync_packages = extra_config?.sync_packages;
 			}
 		};
 
