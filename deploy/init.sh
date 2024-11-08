@@ -20,11 +20,11 @@ if [ -z "$PLATFORM_DOMAIN_URL" ]; then
 fi
 
 if [ "$ENV" = "dev" ]; then 
+    cd "$PROJECT_NAME"
     if [ -d "$PROJECT_NAME" ]; then
         echo "restarting existing project"
         if should_update_on_startup; then
             echo "Updating apps..."
-            cd "$PROJECT_NAME"
             zango update-apps
         fi
     else
@@ -35,9 +35,9 @@ if [ "$ENV" = "dev" ]; then
 else
     if [ -d "$PROJECT_NAME" ]; then
         echo "restarting existing project"
+        cd "$PROJECT_NAME"
         if should_update_on_startup; then
             echo "Updating apps..."
-            cd "$PROJECT_NAME"
             zango update-apps
         fi
     else

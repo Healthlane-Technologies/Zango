@@ -368,7 +368,8 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                 release.status = "in_progress"
                 release.save(update_fields=["status"])
 
-                if tenant.extra_config.get("sync_packages", True):
+                extra_config = tenant.extra_config or {}
+                if extra_config.get("sync_packages", True):
                     # install packages
                     install_packages(tenant, app_directory)
                 else:
@@ -488,7 +489,6 @@ def update_apps(app_name):
     django.setup()
 
     click.echo("Project setup initialized")
-
     from django.conf import settings
     from django.db import connection
 
@@ -498,6 +498,7 @@ def update_apps(app_name):
         tenant_type="shared"
     )
     if app_name:
+        click.echo(f"Updating apps: {app_name}")
         tenants = tenants.filter(name__in=app_name)
         if not tenants.exists():
             error_message = click.style(
@@ -519,7 +520,8 @@ def update_apps(app_name):
             repo_url = None
             branch = None
             git_mode = False
-            git_settings = tenant_obj.extra_config.get("git_config")
+            extra_config = tenant_obj.extra_config or {}
+            git_settings = extra_config.get("git_config")
             if git_settings:
                 git_mode = True
                 # Initialize git repository
@@ -575,8 +577,6 @@ def update_apps(app_name):
         except Exception as e:
             import traceback
 
-            error_message = click.style(
+            click.echo(
                 f"An error occurred while updating app {tenant}: {traceback.format_exc()}",
-                fg="red",
-                bold=True,
             )
