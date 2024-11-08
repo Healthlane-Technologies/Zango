@@ -9,10 +9,40 @@ on:
         required: true
         type: string
 
-
 jobs:
+  check-publish:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check_publish.outputs.version }}
+      publish: ${{ steps.check_publish.outputs.publish }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Extract Latest Tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release ls -L 1 --json "tagName" >> info.json
+          LATEST_TAG=$(cat info.json | jq -r '.[0].tagName')
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+      - name: Check Publish
+        id: check_publish
+        env:
+          LATEST_TAG: ${{ env.LATEST_TAG }}
+        run: |
+          echo "latest_tag=$LATEST_TAG"
+          MANIFEST_VERSION=$(jq -r '.version' ${{ inputs.manifest-file-path }})
+          if [[ "$LATEST_TAG" == "$MANIFEST_VERSION" ]]; then
+            echo "publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "publish=true" >> $GITHUB_OUTPUT
+            echo "version=$MANIFEST_VERSION" >> $GITHUB_OUTPUT
+          fi
+
   get-latest-release:
     runs-on: ubuntu-latest
+    if: needs.check-publish.outputs.publish == 'true'
+    needs: check-publish
 
     steps:
       - name: Check out code
@@ -21,32 +51,32 @@ jobs:
       - name: Get version from file
         id: get_version
         run: |
-            VERSION=$(jq -r '.version' ${{ inputs.manifest-file-path }})
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION=$(jq -r '.version' ${{ inputs.manifest-file-path }})
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Use VERSION
         run: |
-            echo "Version is ${{ env.VERSION }}"
+          echo "Version is ${{ env.VERSION }}"
 
       - name: Extract release notes
         id: extract-changelog
         uses: sean0x42/markdown-extract@v2
         with:
           file: CHANGELOG.md
-          pattern: '[${{ env.VERSION }}]'
+          pattern: "[${{ env.VERSION }}]"
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+
         with:
           tag_name: ${{ env.VERSION }} # Use the environment variable
           release_name: Release ${{ env.VERSION }}
           prerelease: false
           draft: false
           body: ${{ steps.extract-changelog.outputs.markdown }}
-     
+
       - name: Convert release notes to HTML
         id: convert_to_html
         uses: lifepal/markdown-to-html@v1.1
@@ -66,3 +96,4 @@ jobs:
       - name: Upload to S3
         run: |
           aws s3 cp '${{ inputs.aws-pkg-name }}.zip' s3://zelthy3-packages/packages/${{ inputs.aws-pkg-name }}/${{ env.VERSION }}/ --acl public-read
+          aws s3 cp '${{ inputs.manifest-file-path }}' s3://zelthy3-packages/packages/${{ inputs.aws-pkg-name }}/${{ env.VERSION }}/ --acl public-read
