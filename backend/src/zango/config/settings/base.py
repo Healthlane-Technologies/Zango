@@ -184,7 +184,6 @@ CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_EXTENDED = True
 X_FRAME_OPTIONS = "ALLOW"
 
-PACKAGE_BUCKET_NAME = "zelthy3-packages"
 CODEASSIST_ENABLED = True
 
 # Session Security
@@ -297,6 +296,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
+        PACKAGE_BUCKET_NAME=(str, "zelthy3-oss-packages"),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -371,6 +371,7 @@ def setup_settings(settings, BASE_DIR):
     settings.AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
     settings.AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
     settings.AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME")
+    settings.PACKAGE_BUCKET_NAME = env("PACKAGE_BUCKET_NAME")
 
     settings.AWS_MEDIA_STORAGE_BUCKET_NAME = env("AWS_MEDIA_STORAGE_BUCKET_NAME")
     settings.AWS_STATIC_STORAGE_BUCKET_NAME = env("AWS_STATIC_STORAGE_BUCKET_NAME")
