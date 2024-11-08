@@ -305,6 +305,7 @@ def same_package_version_exists(package, app_directory):
 
 def install_packages(tenant, app_directory):
     from zango.core.package_utils import install_package
+
     # Run package migrations
 
     updated_app_manifest = json.loads(
@@ -456,16 +457,12 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
-        if is_version_greater(remote_version, local_version):
-            return False, "Remote version is greater than local version"
-        if not (
-            is_version_greater(local_version, remote_version)
-            or (
-                last_release
-                and is_version_greater(remote_version, last_release.version)
-            )
+        if is_version_greater(local_version, remote_version) or (
+            last_release and is_version_greater(remote_version, last_release.version)
         ):
             return False, "No version change detected"
+        else:
+            return True, "Update allowed"
     else:
         if last_release and not is_version_greater(local_version, last_release.version):
             return False, "No version change detected"

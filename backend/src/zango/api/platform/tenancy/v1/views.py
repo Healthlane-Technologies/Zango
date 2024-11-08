@@ -1,5 +1,4 @@
 import json
-import os
 import traceback
 
 from django_celery_results.models import TaskResult
@@ -115,7 +114,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
                 name=data["name"],
                 schema_name=data["name"],
                 app_template_name=app_template_name,
-                description="",
+                description=data.get("description"),
                 app_template=app_template,
                 tenant_type="app",
                 status="staged",
@@ -190,7 +189,6 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 success = True
                 status_code = 200
                 if serializer.data.get("extra_config", None):
-                    app_directory = os.path.join(os.getcwd(), "workspaces", obj.name)
                     new_git_config = serializer.data["extra_config"].get(
                         "git_config", {}
                     )
@@ -203,7 +201,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     ):
                         git_setup(
                             [
-                                app_directory,
+                                obj.name,
                                 "--git_repo_url",
                                 new_repo_url,
                                 "--dev_branch",
