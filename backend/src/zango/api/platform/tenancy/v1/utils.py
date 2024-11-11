@@ -2,6 +2,11 @@ import json
 import os
 import zipfile
 
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
+import zango
+
 
 def extract_app_details_from_zip(template_zip):
     settings_filename = "settings.json"
@@ -31,6 +36,14 @@ def extract_app_details_from_zip(template_zip):
 
             # Parse the JSON content
             settings = json.loads(settings_content)
+            if settings.get("zango_version"):
+                zango_version = settings["zango_version"]
+                installed_zango_version = Version(zango.__version__)
+                specifier = SpecifierSet(zango_version)
+                if installed_zango_version not in specifier:
+                    raise Exception(
+                        f"Zango version {installed_zango_version} is not compatible with {zango_version}"
+                    )
             return (
                 settings["version"],
                 settings["app_name"],
