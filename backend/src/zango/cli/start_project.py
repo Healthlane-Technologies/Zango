@@ -98,7 +98,7 @@ def create_project(
     project_template_path = os.path.join(
         os.path.dirname(zango.cli.__file__), "project_template"
     )
-    command = f"{command} --template {str(project_template_path)}"
+    command = f"{command} --template '{str(project_template_path)}'"
 
     subprocess.run(command, shell=True, check=True)
     env_keys = {
@@ -110,6 +110,7 @@ def create_project(
         "REDIS_HOST": redis_host,
         "REDIS_PORT": redis_port,
         "PROJECT_NAME": project_name,
+        "UPDATE_APPS_ON_STARTUP": "True",
     }
     env_path = os.path.join(Path(project_root).parent, ".env")
     if not os.path.exists(env_path):

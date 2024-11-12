@@ -9,6 +9,7 @@ import InputFieldArray from '../../../../../components/Form/InputFieldArray';
 import SelectField from '../../../../../components/Form/SelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import TextareaField from '../../../../../components/Form/TextareaField';
+import CheckboxField from '../../../../../components/Form/CheckboxField';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
 
@@ -31,12 +32,26 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		timezone: appConfigurationData?.app?.timezone ?? '',
 		date_format: appConfigurationData?.app?.date_format ?? '',
 		datetime_format: appConfigurationData?.app?.datetime_format ?? '',
+		repo_url: appConfigurationData?.app?.extra_config?.git_config?.repo_url ?? '',
+		dev: appConfigurationData?.app?.extra_config?.git_config?.branch?.dev ?? '',
+		prod: appConfigurationData?.app?.extra_config?.git_config?.branch?.prod ?? '',
+		staging: appConfigurationData?.app?.extra_config?.git_config?.branch?.staging ?? '',
+		sync_packages: appConfigurationData?.app?.extra_config?.sync_packages ?? true 
 	};
 
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
 		domains: Yup.array().of(Yup.string().required('Required')),
+		repo_url: Yup.string().url('Must be a valid URL').when(['dev', 'prod', 'staging'], {
+			is: (dev, prod, staging) => dev || prod || staging,
+			then: Yup.string().required('Required'),
+			otherwise: Yup.string().notRequired(),
+		  }),
+		dev: Yup.string(),
+		prod: Yup.string(),
+		staging: Yup.string(),
+		sync_packages: Yup.boolean()
 	});
 
 	let onSubmit = (values) => {
@@ -48,7 +63,26 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		if (!tempValues['fav_icon']) {
 			delete tempValues['fav_icon'];
 		}
-
+		const extra_config = {
+			git_config: {
+			  branch: {
+				dev: tempValues.dev==''?null:tempValues.dev,
+				prod: tempValues.prod==''?null:tempValues.prod,
+				staging: tempValues.staging==''?null:tempValues.staging
+			  },
+			  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
+			},
+			sync_packages: tempValues.sync_packages
+		  };
+		
+		delete tempValues.dev;
+		delete tempValues.prod;
+		delete tempValues.staging;
+		delete tempValues.repo_url;
+		delete tempValues.sync_packages;
+		
+		tempValues.extra_config = JSON.stringify(extra_config);
+		
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
@@ -62,6 +96,12 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			if (success && response) {
 				closeModal();
 				dispatch(toggleRerenderPage());
+			}else{
+				tempValues.dev = extra_config?.git_config?.branch?.dev;
+				tempValues.prod = extra_config?.git_config?.branch?.prod;
+				tempValues.staging = extra_config?.git_config?.branch?.staging;
+				tempValues.repo_url = extra_config?.git_config?.repo_url;
+				tempValues.sync_packages = extra_config?.sync_packages;
 			}
 		};
 
@@ -168,6 +208,57 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 								}
 								formik={formik}
 							/>
+							<InputField
+								key="repo_url"
+								label="Repo URL"
+								name="repo_url"
+								id="repo_url"
+								placeholder="Enter"
+								value={get(formik.values, 'repo_url', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<InputField
+								key="dev"
+								label="Development Branch"
+								name="dev"
+								id="name"
+								placeholder="Enter"
+								value={get(formik.values, 'dev', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<InputField
+								key="prod"
+								label="Production Branch"
+								name="prod"
+								id="prod"
+								placeholder="Enter"
+								value={get(formik.values, 'prod', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<InputField
+								key="staging"
+								label="Staging Branch"
+								name="staging"
+								id="staging"
+								placeholder="Enter"
+								value={get(formik.values, 'staging', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>
+							<CheckboxField
+								key="sync_packages"
+								label="Sync Packages"
+								content=""
+								name="sync_packages"
+								id="sync_packages"
+								placeholder=""
+								value={get(formik.values, 'sync_packages', '')}
+								onChange={formik.handleChange}
+								formik={formik}
+							/>						
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<SubmitButton

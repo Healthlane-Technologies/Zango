@@ -2,5 +2,7 @@
     "version": "1.0.0",
     "modules": [],
     "app_routes": [],
-    "package_routes": []
+    "package_routes": [],
+    "app_name": "{{cookiecutter.app_name}}",
+    "zango_version": ">={{cookiecutter.zango_version}}"
 }

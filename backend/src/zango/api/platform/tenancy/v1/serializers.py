@@ -39,6 +39,33 @@ class TenantSerializerModel(serializers.ModelSerializer):
         return obj.get_date_format_display()
 
     def update(self, instance, validated_data):
+        request = self.context["request"]
+        extra_config_str = request.data.get("extra_config")
+        # Convert extra_config from string to JSON if it exists
+        if extra_config_str:
+            try:
+                extra_config_json = json.loads(extra_config_str)
+                default_branch_config = {
+                    "dev": "development",
+                    "staging": "staging",
+                    "prod": "main",
+                }
+                if extra_config_json.get("git_config", None):
+                    if extra_config_json["git_config"].get("repo_url", None):
+                        extra_config_json["git_config"]["branch"] = {
+                            **extra_config_json["git_config"]["branch"],
+                            **{
+                                k: v
+                                for k, v in default_branch_config.items()
+                                if extra_config_json["git_config"]["branch"][k] is None
+                            },
+                        }
+                validated_data["extra_config"] = extra_config_json
+            except json.JSONDecodeError:
+                raise serializers.ValidationError(
+                    {"extra_config": "Invalid JSON format"}
+                )
+
         instance = super(TenantSerializerModel, self).update(instance, validated_data)
         request = self.context["request"]
         domains = request.data.getlist("domains")

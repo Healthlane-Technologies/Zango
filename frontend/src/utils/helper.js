@@ -35,3 +35,9 @@ export const getPlatformVersion = () => {
 
 	return platformVersion;
 };
+
+export function getRepoName(githubUrl) {
+    const regex = /github\.com\/([^/]+\/[^/]+)/;
+    const match = githubUrl.match(regex);
+    return match ? match[1] : null;
+}
