@@ -25,7 +25,6 @@ from zango.core.utils import (
     get_search_columns,
     validate_phone,
 )
-from zango.apps.dynamic_models.workspace.base import Workspace
 
 from .serializers import (
     AppUserModelSerializerModel,
