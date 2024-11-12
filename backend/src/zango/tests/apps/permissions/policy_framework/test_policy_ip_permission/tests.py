@@ -1,5 +1,6 @@
 import os
 
+from django_tenants.utils import schema_context
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from django.db import connection
@@ -20,7 +21,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
 
     @classmethod
     def sync_policies(self):
-        with connection.cursor() as c:
+        with schema_context(self.tenant.schema_name):
             ws = Workspace(self.tenant, as_systemuser=True)
             ws.ready()
             ws.sync_policies()

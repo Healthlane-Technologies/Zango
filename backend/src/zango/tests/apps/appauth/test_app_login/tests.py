@@ -1,4 +1,5 @@
 import os
+from django_tenants.utils import schema_context
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from django.db import connection
@@ -27,22 +28,23 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
     @classmethod
     def create_app_user(self):
-        UserRoleModel.objects.create(name="app_login_user")
-        UserRoleModel.objects.create(name="different_view_user")
-        app_user_role = UserRoleModel.objects.filter(name="app_login_user").first()
-        role_ids = [app_user_role.id]
-        result = AppUserModel.create_user(
-            name="John Doe",
-            email="test_login_user@gmail.com",
-            mobile="0000000000",
-            password="#Testpass123",
-            role_ids=role_ids,
-            require_verification=False,
-            force_password_reset=False,
-        )
-        if not result["success"]:
-            raise Exception(result["message"])
-        return result["app_user"]
+        with schema_context(self.tenant.schema_name):
+            UserRoleModel.objects.create(name="app_login_user")
+            UserRoleModel.objects.create(name="different_view_user")
+            app_user_role = UserRoleModel.objects.filter(name="app_login_user").first()
+            role_ids = [app_user_role.id]
+            result = AppUserModel.create_user(
+                name="John Doe",
+                email="test_login_user@gmail.com",
+                mobile="0000000000",
+                password="#Testpass123",
+                role_ids=role_ids,
+                require_verification=False,
+                force_password_reset=False,
+            )
+            if not result["success"]:
+                raise Exception(result["message"])
+            return result["app_user"]
 
     def test_app_login(self):
         app_user = self.create_app_user()

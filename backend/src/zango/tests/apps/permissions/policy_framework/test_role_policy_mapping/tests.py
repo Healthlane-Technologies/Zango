@@ -1,5 +1,6 @@
 import os 
 
+from django_tenants.utils import schema_context
 from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
 from zango.apps.appauth.models import UserRoleModel
@@ -20,7 +21,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     
     @classmethod
     def sync_policies(self):
-        with connection.cursor() as c:
+        with schema_context(self.tenant.schema_name):
             ws = Workspace(self.tenant, as_systemuser=True)
             ws.ready()
             ws.sync_policies()
@@ -60,7 +61,8 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     def test_one_role_with_multi_policy_mapping(self):
         expected_role_name = "dummy_role_1"
         expected_policy_names = ["RetailersGetViewAccess", "DummyGetViewAccess"]
-        UserRoleModel.objects.create(name=expected_role_name)
+        with schema_context(self.tenant.schema_name):
+            UserRoleModel.objects.create(name=expected_role_name)
 
         self.sync_policies()
         

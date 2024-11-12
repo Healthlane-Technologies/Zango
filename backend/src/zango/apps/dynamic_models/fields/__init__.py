@@ -19,7 +19,7 @@ class ZForeignKey(models.ForeignKey):
                 "import_fixture",
                 "update-apps",
             )
-        ):
+        ) and not getattr(settings, "TEST_MIGRATION_RUNNING", False):
             cls._meta.apps.add_models(cls, self.related_model)
             try:
                 self.related_model._meta.apps.add_models(self.related_model, cls)
@@ -44,7 +44,7 @@ class ZOneToOneField(models.OneToOneField):
                 "import_fixture",
                 "update-apps",
             )
-        ):
+        ) and not getattr(settings, "TEST_MIGRATION_RUNNING", False):
             # dont need it if related model is of core
             # try:
             cls._meta.apps.add_models(cls, self.related_model)
