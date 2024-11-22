@@ -1,0 +1,21 @@
+---
+sidebar_label: API Reference
+---
+
+# API Reference
+
+### ModelField
+
+| Parameter         | Type             | Mandatory | Default       | Description/Purpose                                                                                                            |
+|-------------------|------------------|-----------|---------------|---------------------------------------------------------------------------------------------------------------------------------|
+| label             | string           | No        | The field name defined in model | Field Label                                                                                  |
+| placeholder       | string           | No        | Empty         | Field Placeholder                                                                                                               |
+| required          | boolean          | No        | As per model  | Field is Required or not. It will take the value from the field definition in the model                                        |
+| required_msg      | string           | No        | <field_name> is mandatory. | Required validation Error message                                                                                    |
+| pattern           | string           | No        | Empty         | Regex validation                                                                                                                |
+| pattern_msg       | string           | No        | Invalid Pattern (To check once) | Error message if pattern validation fails                                                                             |
+| readonly          | boolean          | No        | False         | Make field readonly                                                                                                             |
+| hidden            | boolean          | No        | False         | Make field hidden                                                                                                               |
+| initial           | value/function   | No        | None          | Initial value for the field. It can be the field value or a function call                                                       |
+| extra_schema      | dict             | No        | `{}`          | Represents JSON Schema of the field Refer. This will be updated on top of existing JSON schema of the field.                     |
+| extra_ui_schema   | dict             | No        | `{}`          | Represents UI Schema of the field Refer. This will be updated on top of existing UI schema of the field.                         |

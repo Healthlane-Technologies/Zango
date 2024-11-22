@@ -1,0 +1,26 @@
+---
+sidebar_label: API Reference
+---
+
+# API Reference
+
+### ModelCol
+
+Can be defined for the fields which are part of model
+
+Parameter | Type | Mandatory | Default | Description/Purpose
+| :-----: | :--: | :--------: |:-------: | :---------------- |
+display_as | string | No | Fieldname in model | Column Title |
+searchable | boolean | No | True | Column is searchable or not |
+sortable | boolean | No | True | Column is sortable or not |
+user_roles | List of strings | No | [] | Column should be visible to certain user roles. Ex:, user_roles = [“PAP Executive”, “PAP Manager”]. If user_roles is not passed then by default column will be visible to all the user roles |
+
+### StringCol
+
+Custom column for the non-model fields, where you can define the column value via custom display methods
+
+Parameter | Type | Mandatory | Default | Description/Purpose
+| :-----: | :--: | :--------: |:-------: | :---------------- |
+| searchable        | boolean          | No        | True    | Column is searchable or not                                 |
+| sortable          | boolean          | No        | True    | Column is sortable or not                                   |
+| user_roles        | List of strings  | No        | []      | Column should be visible to certain user roles.Ex: `user_roles = ["PAP Executive", "PAP Manager"]`. If `user_roles` is not passed, then by default, the column will be visible to all user roles. |

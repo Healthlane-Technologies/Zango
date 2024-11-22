@@ -1,0 +1,116 @@
+---
+sidebar_label: Setting Status Transitions
+---
+
+# Setting Status Transitions
+Status transitions are the heart of the workflow system. They define the flow of activities within the workflow system, guiding the progression of objects through different states. By defining status transitions within your workflow class, you establish the sequence of actions that users can take to transition objects from one state to another, ensuring a structured and organized workflow process.
+
+## Adding Workflow Statuses
+
+In the Meta class of your workflow configuration, you can fine-tune the behavior by defining key parameters. To add statuses, follow the below steps:
+
+1. **Identify Relevant States**: Start by identifying distinct states relevant to the workflow, such as 'active' or 'inactive.'
+
+2. **Declare Statuses**: Declare these statuses with unique identifiers and clear labels to facilitate visual differentiation and user understanding.
+
+3. **Specify Initial Status**: Ensure to specify the initial status assigned to an object using the 'on_create_status' parameter, which is mandatory for workflow configurations.
+
+By following these steps, you can effectively configure the workflow to manage object states efficiently.
+
+**Parameters**
+
+- **statuses:** Defines properties for each status, such as color and label, facilitating visual differentiation and user understanding.
+- **on_create_status:** Indicates the initial status assigned to an object. This parameter is mandatory in workflow configurations.
+
+**Example Usage**
+
+```python
+class UserWorkflow(WorkflowBase):
+   ...
+   class Meta:
+       statuses = {
+           "active",
+           "inactive",
+           "discontinued"
+       }
+       on_create_status = "active"
+```
+
+## Setting Status Properties
+
+Access the Meta configuration to define properties like color and label for each status. These properties aid visual representation and user comprehension. For example, in a healthcare application, you'd define properties for 'active' and 'inactive' statuses.
+
+**Example Usage**
+
+```python
+class UserWorkflow(WorkflowBase):
+   ...
+  
+   class Meta:
+       statuses = {
+           "active": {
+               "color": "#00FF00",
+               "label": "Active",
+           },
+           "inactive": {
+               "color": "#FF0000",
+               "label": "Inactive",
+           },
+       }
+       on_create_status = "active"
+```
+
+## Defining Status Transitions
+In your workflow class, define the status_transitions attribute as a list of dictionaries. 
+
+```python
+class UserWorkflow(WorkflowBase):
+    
+    status_transitions = [
+    {
+        # Transition details
+    },
+    {
+        # Transition details
+    },
+    # Additional transitions...
+]
+```
+
+## Specifying Transition Details
+
+Each dictionary represents a distinct status transition and includes the following keys.
+
+**Parameters**
+
+- **name (required):** Unique identifier for the transition.
+- **display_name:** Human-readable name for display purposes.
+- **description:** Brief description of the transition and its purpose.
+- **confirmation_message:** Message prompting user confirmation before executing the transition.
+- **from:** Starting status of the transition.
+- **to:** Ending status of the transition.
+- **form:** Form class used for form-based transitions.
+
+**Example Usage**
+
+```python
+class UserWorkflow(WorkflowBase):
+    status_transitions = [
+        {
+            "name": "inactivate",
+            "display_name": "Deactivate",
+            "description": "Deactivate the User",
+            "confirmation_message": "Are you sure you want to deactivate?",
+            "from": "active",
+            "to": "inactive",
+        },
+        {
+            "name": "activate",
+            "from": "inactive",
+            "to": "active",
+            "display_name": "Activate",
+            "description": "Activate the User",
+            "confirmation_message": "Are you sure you want to deactivate?",
+        },
+    ]
+```

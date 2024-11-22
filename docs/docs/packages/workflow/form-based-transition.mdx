@@ -1,0 +1,89 @@
+---
+sidebar_label: Setting Form Based Transitions
+---
+# Setting Form Based Transitions
+
+Form-based transitions enable users to change the status of an object by providing input through a form. Here's how to implement form-based transitions within your workflow:
+
+### 1. Importing Dependencies
+
+Import the required dependencies for implementing form-based transitions:
+
+```python
+from ..packages.crud.forms import BaseSimpleForm
+```
+
+If your form relies on a model, import BaseForm instead of BaseSimpleForm as shown below:
+```python
+from ..packages.crud.forms import BaseForm
+```
+
+### 2. Creating Form with BaseForm Class
+Define a form class that serves as the foundation for form-based transitions. 
+
+```python
+class UserActivateForm(BaseSimpleForm):
+    reason = forms.CharField(label="Reason", max_length=100, required=True)
+    date = forms.DateField(label="Date", required=True)
+    file = forms.FileField(label="File", required=False)
+```
+### 3. Utilizing Meta
+Utilize the Meta class within your form to define additional metadata such as title and field order:
+
+```python
+class UserActivateForm(BaseSimpleForm):
+...
+    class Meta:
+        title = "Activate Customer"
+        order = ["date", "reason", "file"]
+```
+
+### 4. Using Save Method
+Implement the save() method within your form class to manage form processing:
+
+```python
+class UserActivateForm(BaseSimpleForm):
+...
+    def save(self):
+        # Handle form processing here
+        pass
+```
+### 5. Using BaseForm for Model-Based Form
+If your form relies on a model, inherit from BaseForm instead of BaseSimpleForm. Here's an example:
+
+```python
+class YourModelForm(BaseForm):
+    # Define your model-based form fields and Meta class here
+    class Meta:
+        model = YourModel
+        ...
+    pass
+```
+
+### 6. Defining Form-Based Transition
+Specify the form class for the desired transition within your workflow class:
+
+```python
+class UserWorkflow(WorkflowBase):
+
+    status_transitions = [
+        {
+            "name": "activate",
+            "from": "inactive",
+            "to": "active",
+            "display_name": "Activate",
+            "description": "Activate the User",
+            "form": UserActivateForm,  # Example of BaseSimpleForm
+        },
+        {
+            "name": "update",
+            "from": "inactive",
+            "to": "active",
+            "display_name": "Update",
+            "description": "Update the User",
+            "form": YourModelForm,  # Example of BaseForm
+        },
+    ]
+```
+
+By following these structured steps and examples, you can effectively implement form-based transitions in your workflow, enabling users to change object statuses via form input.

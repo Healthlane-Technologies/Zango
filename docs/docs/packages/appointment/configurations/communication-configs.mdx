@@ -1,0 +1,21 @@
+---
+sidebar_label: Communication Configs
+---
+
+# Configuring Default Communication Service Providers
+
+The communication configs specify the default service providers to use for different communication channels within the appointment management system. The default providers are set to "default" for SMS, email, and video call channels. These settings can be modified based on the communication service providers configured in the application through the communication package.
+
+```python
+class AppointmentView(AppointmentBaseView):
+    sms_config = "default"
+    email_config = "default"
+    video_call_config = "default"
+```
+
+Explanation:
+- `sms_config`: Specifies the default service provider for SMS communication.
+- `email_config`: Specifies the default service provider for email communication.
+- `video_call_config`: Specifies the default service provider for video call communication.
+- By setting these configurations to "default," the appointment management system will utilize the default service providers configured in the communication package for the respective communication channels. 
+- To customize the communication service providers for SMS, email, and video calls, update these configurations with the appropriate provider names configured in the communication package settings.

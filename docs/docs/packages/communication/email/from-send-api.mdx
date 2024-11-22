@@ -1,0 +1,47 @@
+---
+sidebar_label: From API
+---
+
+# Sending Email from API
+
+To send an email using the API, you can send a POST request to the following HTTPS endpoint.
+
+```python
+http(s)://<your_domain>/communication/email/api/?action=send
+```
+
+You can use the following parameters to customize the email.
+
+
+```python
+ #Recipient email address
+to = 'recipient1@example.com',
+
+#CC recipients (optional)
+cc = 'recipient2@example.com,recipient3@example.com', 
+
+#BCC recipients (optional)
+bcc = 'recipient2@example.com,recipient3@example.com', 
+
+#Email subject
+subject ='Your Subject Here',
+
+#Email body content
+body ='Your email body content here.', 
+
+#Attachments (optional)
+attachments =[file1, file2], 
+
+#Configuration key (optional)
+key ='Key'
+```
+
+You have the flexibility to tailor the SMTP configuration for email delivery based on your needs by specifying the configuration key, which determines the specific SMTP settings to be utilized. If left empty, the system defaults to the configuration marked as default, ensuring seamless email transmission. And if there is no default config then an error would be thrown by the system.
+
+To retrieve the key necessary for configuring SMTP settings for email delivery, follow these steps:
+
+1. Navigate to the details page of the communication package.
+2. Click on the "Email" tab.
+3. Look for the field labeled "Key" on the table.
+
+Once you have obtained the key, you can use it in the 'key' parameter when sending an email via the API. If you have any trouble finding or using the key, please refer to the documentation or contact support for assistance.

@@ -1,0 +1,36 @@
+---
+sidebar_label: Creating a Form Class
+---
+
+# Creating a Form Class
+
+Zango's app development platform empowers developers to seamlessly create forms that integrate with the underlying models. This guide details the step-by-step process of constructing and configuring forms using the platform's features and functionalities.
+
+## Importing Dependencies
+
+Start by importing BaseForm, ModelField from the form package and the Datamodel of your choice as shown below:
+
+
+``` python
+from ..packages.crud.forms import BaseForm
+from ..packages.crud.form_fields import ModelField
+
+from .models import User # Import model of your choice
+``` 
+
+
+# Creating a Form class
+Now, let's begin structuring the data presentation by crafting a YourModelForm class. This class serves as the backbone for data representation and interaction, facilitating the organization and management of information in a form format. This would act as a foundation for subsequent CRUD operations.
+
+``` python
+class UserForm(BaseForm)
+```
+
+
+# Mapping the model
+
+Leverage the Meta class within the form class to map the form’s model with the Data model of your choice. 
+``` python
+ class Meta:
+        model = User
+```

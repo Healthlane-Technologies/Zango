@@ -1,0 +1,107 @@
+---
+sidebar_label: Notifications Configs
+---
+
+# Notification Configurations
+
+Effectively managing notifications in your application is essential for maintaining user engagement and security. The Advanced Authentication Package enables you to customize SMS and email notifications for actions such as signup and login. This guide will help you configure the content, default values, and parameters of these notifications using JSON in the App Panel UI.
+
+## 1. Overview of Configuration Parameters
+
+The notification configuration allows precise adjustment of SMS and email settings, including:
+
+- **Default Phone Numbers and Emails:** Set default contact details used for testing or fallback.
+- **Messages:** Customize the text body sent via SMS or email.
+- **OTP Values:** Specify default OTPs, which are especially useful during testing or demonstrations.
+- **Subjects:** For emails, configure the subject lines for clarity and recognition.
+
+## 2. Sample JSON Configuration
+
+```json
+{
+  "triggers": {
+    "signup_otp": {
+      "sms": {
+        "default_primary_phone": "+917021640519",
+        "message": "Your signup OTP is {otp}",
+        "config_id": 1,
+        "default_otp": "111111"
+      },
+      "email": {
+        "default_email": "rajat@zelthy.com",
+        "message": "Your signup OTP is {otp}",
+        "config_id": 1,
+        "default_otp": "111111",
+        "subject": "Signup OTP"
+      }
+    },
+    "login_otp": {
+      "sms": {
+        "default_primary_phone": "+917021640519",
+        "message": "Your login OTP is {otp}",
+        "config_id": 1,
+        "default_otp": "111111"
+      },
+      "email": {
+        "default_email": "rajat@zelthy.com",
+        "message": "Your login OTP is {otp}",
+        "config_id": 1,
+        "default_otp": "111111",
+        "subject": "Login OTP"
+      }
+    }
+  }
+}
+```
+
+## 3. Configuring Notification Settings
+
+Each notification can have both SMS and email components:
+
+### SMS Configuration
+
+- **Field:** `default_primary_phone`
+- **Type:** String (phone number)
+- **Description:** The default phone number to send OTP SMS messages.
+
+- **Field:** `message`
+- **Type:** String
+- **Description:** The body of the SMS message. Placeholders like `{otp}` can be used to insert dynamic content.
+
+- **Field:** `config_id`
+- **Type:** Integer
+- **Description:** Configuration identifier for system reference.
+
+- **Field:** `default_otp`
+- **Type:** String
+- **Description:** The default OTP to use, primarily for testing purposes.
+
+### Email Configuration
+
+- **Field:** `default_email`
+- **Type:** String (email address)
+- **Description:** The default email address to send OTP emails.
+
+- **Field:** `message`
+- **Type:** String
+- **Description:** The body of the email message. Placeholders like `{otp}` can be used here as well.
+
+- **Field:** `subject`
+- **Type:** String
+- **Description:** The subject line of the email, which helps users identify the purpose of the message.
+
+- **Field:** `config_id`
+- **Type:** Integer
+- **Description:** Configuration identifier similar to SMS for system reference.
+
+- **Field:** `default_otp`
+- **Type:** String
+- **Description:** Default OTP used in emails, useful for testing.
+
+## 4. Applying Configurations
+
+- Ensure your JSON configuration matches the specified format and schema.
+- Input the JSON configuration into the designated configuration area in the App Panel UI under notification settings.
+- Save and review your changes, testing both SMS and email outcomes to ensure they perform as expected.
+
+By following this guide, you can tailor the notification behaviors in your application, enhancing both the security and user experience through personalized and reliable communication.

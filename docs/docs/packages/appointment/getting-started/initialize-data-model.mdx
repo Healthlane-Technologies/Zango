@@ -1,0 +1,28 @@
+---
+sidebar_label: Initializing the Database Model
+---
+
+# Initializing the Database Model
+
+After installing the Appointments package and creating a new module in your app dedicated to handling appointments, the next step is to initialize the database model for appointments. The Appointments package provides an abstract model containing common fields used in appointments. Follow these steps to set up the database model for appointments:
+
+1. **Create `models.py` File**:
+In your module's folder, create a `models.py` file where you will define the database models related to appointments.
+
+2. **Import Abstract Model**:
+Import the abstract model from the appointments package into your `models.py` file:
+```python
+from ..packages.appointments.models import AbstractAppointmentModel
+```
+
+3. **Initialize AppointmentModel**:
+Define a new class called `AppointmentModel` that extends the `AbstractAppointmentModel`:
+```python
+class AppointmentModel(AbstractAppointmentModel):
+    # Add custom fields or methods here if needed
+```
+
+4. **Customization and Extension**:
+At this stage, the database model for appointments is initialized with common fields. You can customize and extend the `AppointmentModel` class by adding or modifying fields as required for your specific use case. This process is similar to customizing any general database model in Django.
+
+With the database model initialized and the `AppointmentModel` class set up, you now have a foundation to build upon for managing appointments within your app. Customize the model further to suit your app's requirements and incorporate any additional fields or methods needed to enhance the functionality of your appointment management system.

@@ -1,0 +1,18 @@
+---
+sidebar_label: Email Template
+---
+
+# Configuring Email Template for Notification Layout
+
+To define the HTML template file responsible for the layout and design of email notifications without specifying content, set the `trigger_email_template` attribute in the `AppointmentView` class. This template file will govern the visual structure and styling of the email notifications sent to recipients for appointment-related information.
+
+```python
+class AppointmentView(AppointmentBaseView):
+    trigger_email_template = "generic_email_template.html"
+```
+
+**Explanation:**
+
+- The `trigger_email_template` attribute specifies the HTML template file used solely for shaping the layout and design of the email notifications.
+- By setting it to `"generic_email_template.html"`, the template will determine the visual presentation, styling elements, and overall structure of the appointment notification emails.
+- This configuration separates the content management from the layout design, ensuring that the emails maintain a consistent look and feel dictated by the specified HTML template file, while the dynamic content can be injected separately.

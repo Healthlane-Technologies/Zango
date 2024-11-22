@@ -1,0 +1,62 @@
+---
+sidebar_label: Participants
+---
+
+# Configuring Participants for Appointments
+
+To define the list of model classes that can become participants for appointments, the `participants` configuration can be set within the `AppointmentView` class. This configuration determines the types of participants allowed for appointments. 
+
+```python
+class AppointmentView(AppointmentBaseView):
+    participants = [PatientModel, DoctorModel]
+```
+
+In the above configuration:
+- `PatientModel`: Represents the model class for patients who can participate in appointments.
+- `DoctorModel`: Represents the model class for doctors who can participate in appointments.
+
+By specifying these model classes in the `participants` configuration, the appointment system can effectively manage and interact with participants from the `PatientModel` and `DoctorModel` classes during the appointment workflow.
+
+
+### Configuring Single Participant for Appointments
+
+By setting the `participant_single_select` configuration to `True` within the `AppointmentView` class, you can enforce the rule that only a single participant can be mapped to an appointment. This configuration restricts appointments to have only one participant associated with them.
+
+```python
+class AppointmentView(AppointmentBaseView):
+    participant_single_select = True
+```
+
+Explanation:
+- When `participant_single_select` is set to `True`, it enforces the constraint that each appointment can have only a single participant.
+- This configuration ensures that appointments are associated with a single participant at a time, maintaining consistency and simplifying appointment management with one primary participant.
+
+
+### Overriding `get_participants` Function to Filter Participants
+
+In the AppointmentView class, the `get_participants` function can be overridden to customize the way participants are retrieved based on the configured participant models. This function fetches participants from the specified model classes and filters them as needed. 
+
+```python
+class AppointmentView(AppointmentBaseView):
+    participants = [PatientModel, DoctorModel]
+    
+    def get_participants(self):
+        '''
+        This method contains logic for getting participants based on the variable participants.
+        In case some changes are required, this method can be overridden.
+        '''
+        participant_values = []
+        
+        for model in self.participants:
+            objects = model.objects.all()
+            object_values = [(str(obj.object_uuid), obj.__str__()) for obj in objects]
+            participant_values += object_values
+        
+        return participant_values
+```
+
+In the `get_participants` function:
+- The method iterates over the specified participant model classes.
+- It fetches all objects from each participant model class.
+- It extracts relevant information (like object UUID and display name) from each object and aggregates them into `participant_values`.
+- Finally, it returns the list of participant values, allowing for customization and filtering based on the specified model classes.

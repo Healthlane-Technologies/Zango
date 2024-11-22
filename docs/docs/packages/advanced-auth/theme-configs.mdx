@@ -1,0 +1,108 @@
+---
+sidebar_label: Theme Configs
+---
+
+# Theme Configurations
+
+Enhancing the look and feel of your application's authentication screens is crucial for maintaining a consistent brand identity and creating a welcoming user environment. The Advanced Authentication Package on the Zango platform allows you to customize various theme elements to match your branding requirements. Here are detailed instructions on how to configure these elements using JSON in the App Panel UI.
+
+## 1. Overview of Configuration Parameters
+
+The theme configuration allows you to customize aesthetic and textual elements including:
+
+- **Title and Colors:** Set the title, primary and secondary colors of your app.
+- **Texts and Links:** Define welcome text, header text, footer text, and links to your privacy policy and terms of use.
+- **Images and Backgrounds:** Choose images for your background and logo, and set the background color for your app and boxes.
+
+## 2. Sample JSON Configuration
+
+```json
+{
+  "theme": {
+    "default": {
+      "meta_title": "Your App Title",
+      "primary_color": "#007bff",
+      "secondary_color": "#6c757d",
+      "para_text": "Welcome to Your App",
+      "bg_img": "url('your-bg-image.jpg')",
+      "bg_color": "#f8f9fa",
+      "privacy_policy": "URL to Privacy Policy",
+      "header_text": "Welcome to Your App",
+      "box_bg_color": "#ffffff",
+      "logo": "url('your-logo.png')",
+      "footer_text": "© 2023 Your Company",
+      "terms_of_use": "URL to Terms of Use"
+    }
+  }
+}
+```
+
+## 3. Configuring Theme Elements
+
+### Meta Title
+
+- **Field:** `meta_title`
+- **Type:** String
+- **Description:** The title of your app, typically displayed in the browser tab.
+
+### Colors
+
+- **Field:** `primary_color`
+- **Type:** Color (Hexadecimal)
+- **Description:** Main color theme used throughout the app.
+
+- **Field:** `secondary_color`
+- **Type:** Color (Hexadecimal)
+- **Description:** Secondary color that complements the primary color.
+
+### Textual Content
+
+- **Field:** `para_text`
+- **Type:** String
+- **Description:** Welcome text displayed on the main authentication page.
+
+- **Field:** `header_text`
+- **Type:** String
+- **Description:** Text displayed in the header of the authentication pages.
+
+- **Field:** `footer_text`
+- **Type:** String
+- **Description:** Text displayed in the footer of the authentication pages.
+
+### Images and Backgrounds
+
+- **Field:** `bg_img`
+- **Type:** URL
+- **Description:** URL to the background image for the authentication pages.
+
+- **Field:** `logo`
+- **Type:** URL
+- **Description:** URL to your app's logo.
+
+### Background Colors
+
+- **Field:** `bg_color`
+- **Type:** Color (Hexadecimal)
+- **Description:** Background color for the main authentication area.
+
+- **Field:** `box_bg_color`
+- **Type:** Color (Hexadecimal)
+- **Description:** Background color for boxes or cards within the authentication pages.
+
+### Legal Links
+
+- **Field:** `privacy_policy`
+- **Type:** URL
+- **Description:** URL to the Privacy Policy page.
+
+- **Field:** `terms_of_use`
+- **Type:** URL
+- **Description:** URL to the Terms of Use page.
+
+## 4. Applying Configurations
+
+- Ensure the JSON configuration adheres to the correct format as shown in the sample.
+- Input the JSON into the designated configuration area in the App Panel UI under theme settings.
+- Review and save your configurations, and then verify by previewing the changes on your authentication screens.
+
+By customizing the theme settings according to this guide, you effectively align the authentication experience with your corporate branding and user expectations, enhancing both visual appeal and user engagement.
