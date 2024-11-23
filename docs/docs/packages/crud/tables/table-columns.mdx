@@ -1,0 +1,37 @@
+---
+sidebar_label: Defining Table Columns
+---
+
+# Table Columns
+
+Table columns define the specific attributes or fields from a data model represented within a table. Understanding and customizing table columns are essential for organizing and presenting data effectively to users.
+
+# Defining Table Columns 
+Inside the YourModelTable class, you can specify column properties to mirror your data model accurately. Here you can define types, formats, and other attributes for each column, ensuring a smooth transition from your model to the table. 
+
+```python
+class PatientTable(ModelTable):
+
+    name = ModelCol(
+        display_as='Name', 
+        sortable=True, 
+        searchable=True
+    )
+```
+
+# Column restrictions for user roles
+
+The user_roles key is used to specify which user roles have access to interact with the column. By defining user roles for a specific column, you can control who can see and use that column in the table. 
+
+It is an optional attribute that you can include when defining a ModelCol or StringCol (string column) as shown below:
+
+```python
+class PatientTable(ModelTable):
+
+    name = StringCol(
+        display_as='Name', 
+        sortable=True, 
+        searchable=True, 
+        user_roles=["Role1", "Role2"]
+    )
+```

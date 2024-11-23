@@ -1,0 +1,40 @@
+---
+sidebar_label: Email Synchronization Task
+---
+
+# Email Synchronization Task
+
+The email synchronization task is a vital component of our system, designed to seamlessly retrieve and sync emails according to predefined configurations and schedules. Below are the details and configurations associated with this task:
+
+#### 1. Access the App Panel:​
+Navigate to your Zango application's landing page and access the App Panel.
+
+#### 2. Navigate to the Tasks Menu:​
+In the App Panel, locate and click on the "Tasks" menu.
+
+#### 3. Sync tasks:
+Locate the “Sync Task” button and click on it. to manually sync all the tasks. This action triggers a function that scans through all tasks listed in the tasks.py files within modules. These tasks are then loaded into the database, allowing you to enable them from the dashboard as needed.
+
+#### 4. Browse Available Tasks:​
+Now, you will see a list of all the available tasks. Locate the "packages.communication.email.tasks.sync_email" task from the list.
+
+#### 5. Updating the Task:
+Click on the three-dot menu icon located on the right side of the task row. From the context menu that appears, select the "Update Task" option.
+
+![Updating the Task](./images/updateEmailTask.png)
+
+#### 6. Configuring the task
+Update Task option allows you to fine-tune the email syncing task to meet your specific needs, ensuring efficient and reliable synchronization of emails within your application. Here's a breakdown of the available options:
+- **Policy (optional):** Choose the desired policy for the task, specifying the behavior or rules it should follow.
+- **Kwargs:** Use this field to provide additional keyword arguments, such as the configuration key ("config_key") which determines specific configurations to be applied. For example, setting "config_key" to "Zango" would ensure that the task utilizes the designated Zango configuration for email synchronization.
+- **Schedule (UTC):** Define the schedule for the task in Coordinated Universal Time (UTC) using the following suboptions:
+    - **Minute:** Specify the minute at which the task should run.
+    - **Hour:** Specify the hour at which the task should run.
+    - **Day of Week:** Specify the day of the week (e.g., Monday, Tuesday) when the task should run.
+    - **Day of Month:** Specify the day of the month when the task should run.
+    - **Month of Year:** Specify the month of the year when the task should run.
+- **Is Enabled:** Toggle this option to enable or disable the task. When enabled, the task will execute according to the defined schedule and configuration settings. Disabling the task suspends its execution until re-enabled.
+
+![Activating Email](./images/activateEmail.png)
+
+By configuring this task with precision and aligning it with your operational needs, you ensure a smooth and efficient email synchronization process, enhancing communication and productivity within your organization. If you require any assistance or further customization, feel free to reach out to our support team for guidance.

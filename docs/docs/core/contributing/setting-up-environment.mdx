@@ -1,0 +1,170 @@
+# Setting up Zango locally
+
+To start contributing to Zango, you will first need to install its local copy using the Python package manager, pip.
+
+Please ensure you have Python and pip installed on your system. If you haven't installed them yet, you can find Python installation instructions here and pip installation instructions here.
+
+Once Python and pip are installed, you can create virtual environment in which your cloned zango will be installed. Follow the below steps for complete setup:
+
+1. Clone the forked zango repository
+2. Create a new virtual environment inside a fresh directory (this virtual env will be used to setup a zango project using local copy of zango similar to django.)
+3. Activate your virtual env and run the below command to install local copy of zango:
+    ```
+    pip install -e path/to/your/zango_repo/backend
+    ```
+    
+Congrats! You have successfully installed the local zango framework in you virtual environment. Now, lets move forward to the next section
+where you will setup a project using the local copy of zango framework.
+
+
+# Setting up a zango project
+
+### PostgreSQL Database Setup
+Run the below command in your terminal to create a postgres container
+
+```
+docker run -d \
+   --name <db_name> \
+   -p 5432:5432 \
+   -e POSTGRES_USER=<username>\
+   -e POSTGRES_PASSWORD=<password> \
+   -e POSTGRES_DB=<db_name> \
+   -v db:/var/lib/postgresql/data \
+   postgres:latest
+```
+
+ex:
+
+```
+docker run -d \
+   --name zango_postgres_db \
+   -p 5432:5432 \
+   -e POSTGRES_USER=zango_admin \
+   -e POSTGRES_PASSWORD=zangopass \
+   -e POSTGRES_DB=zango_db \
+   -v db:/var/lib/postgresql/data \
+   postgres:latest
+```
+
+### Redis Setup
+Run the below command in your terminal to create a redis container
+```
+docker run --name <name> -d -p 6379:6379 redis
+```
+ex:
+
+```
+docker run --name zango_redis -d -p 6379:6379 redis
+```
+
+# Creating the test Project
+Follow these steps to create your project's root folder, initialize the project, and configure the necessary settings:
+
+1. Choose a Directory:
+Navigate to the directory where you want to create your project's root folder. You can use your preferred file explorer or the command line to create and navigate to this directory.
+
+2. Activate the virtual env:
+Activate the virtual env in which you installed the local copy of zango in above steps. Then, you can use the zango start-project command to initiate the creation of a new test project. You can also replace "testproject" with your preferred test project name.
+    
+    zango start-project "testproject"
+    
+3. Provide Database Credentials:
+During the project setup, you'll be prompted to provide your PostgreSQL database credentials. These credentials include:
+
+    Database Name
+    Database Username
+    Database Password
+    Database Host
+    Database Port (default is usually 5432)
+If the provided credentials are incorrect or if there are issues with the database connection, the setup process will throw errors and cancel the project creation. This is because Zango will create schemas and perform migrations during the project's creation.
+
+4. Migrate Schemas and Create Public Tenant:
+Upon successful database connection, the setup process will automatically migrate schemas and create a public tenant. This ensures that your project is ready to go with the necessary database structure.
+
+5. Configure Default Platform User:
+Next, you'll be asked to provide details for the default platform user. This user serves as the first administrator and will have access to App Panel, where you can begin creating apps. You'll need to provide the following information:
+
+    Platform User Email Address
+    Password
+    Password Confirmation
+Once you've entered these details, the setup process will create the default platform user for your project.
+
+6. Project Folder Structure and Boilerplate Code:
+With all the necessary configurations in place, the setup process will proceed to create your project's folder structure and populate it with boilerplate code. You're now ready to start developing your business apps within the Zango platform.
+
+    Project Structure
+    project_name/                  # Project root directory
+    ├── manage.py                  # Django command-line utility for administrative tasks
+    └── project_name/              # Django project package
+        ├── __init__.py
+        ├── asgi.py                # ASGI config for the project
+        ├── settings.py            # Project settings (database, static files, etc.)
+        ├── urls_public.py         # Public URL patterns
+        ├── urls_tenant.py         # Tenant-specific URL pattern
+        ├── urls.py                # Project-level URL patterns
+        └── wsgi.py                # WSGI config for the project
+
+
+Running the Development Server
+Now that you've set up your project using Zango, the next step is to start the development server. This server allows you to access App Panel, where you can begin creating your business apps. Follow these steps to run the development server:
+
+1. Navigate to Your Project Folder:
+Open your terminal or command prompt and navigate to the directory where you created your project's root folder. You can use the cd (change directory) command to move to the project directory. For example:
+
+    cd path/to/your/project
+    Replace path/to/your/project with the actual path to your project folder.
+
+2. Start the Development Server:
+Once you're inside the project folder, you can start the development server using the following command:
+
+    python manage.py runserver
+This command will initiate the development server, and you'll see output indicating that the server is running. By default, the server will be available at http://localhost:8000/.
+
+Running the development server is a crucial step in your project setup, as it provides you with a local environment for app development and testing.
+
+Perform the below steps from the root directory of the project:
+
+Starting the celery worker
+
+    celery -A testproject worker -l INFO
+Starting Celery beat
+
+    celery -A testproject beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+### Creating task and syncing it
+1. Navigate to the module or package where you need to create the task and create tasks.py
+    ```
+    workspace
+    App_Name
+        module_name
+            tasks.py    --> Task File
+    ```
+
+2. Add the task with @shared_task decorator
+    ```
+    from celery import shared_task
+
+    @shared_task
+    def download_task(request_data):
+
+        print("request_data: ", request_data)
+        pat = Patient.objects.create(
+            name="Download oc"
+        )
+    ```
+3. Navigate to App Panel and under Tasks Table sync the tasks
+
+4. Executing task programmatically
+    ```
+    from zango.core.tasks import zango_task_executor
+    zango_task_executor.delay(request.tenant.name, "<task_name>", *args, **kwargs)
+
+    task_name can be taken from App Panel -> Tasks table
+    ```
+5. Example
+    ```
+    from zango.core.tasks import zango_task_executor
+    zango_task_executor.delay(request.tenant.name, ""patient.tasks.export_table", {"test": "test_kwarg"})
+
+    task_name can be taken from App Panel -> Tasks table
+    ```

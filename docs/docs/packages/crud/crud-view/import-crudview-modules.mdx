@@ -1,0 +1,16 @@
+---
+sidebar_label: Importing dependencies
+---
+
+# Importing Required Modules
+
+In your Module’s folder, search for views.py file. Here you can initiate the setup by importing essential modules required for implementing the CRUD functionalities:
+
+``` python
+from ..packages.crud.base import BaseCrudView
+
+from .tables import YourModelTable
+from .forms import YourModelForm
+```
+
+Note: Ensure to replace ``YourModelTable`` and ``YourModelForm`` with the names of your actual table and form class respectively.

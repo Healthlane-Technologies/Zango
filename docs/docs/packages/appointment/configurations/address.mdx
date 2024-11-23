@@ -1,0 +1,35 @@
+---
+sidebar_label: Address for Face-to-Face
+---
+
+# Configuring Address Types for Face-to-Face Appointments
+
+When the appointment type is selected as face-to-face (F2F), different address types can be configured: "lat-long," "open text," and "select." Depending on the chosen address type, the input fields for addresses will vary.
+
+```python
+class AppointmentView(AppointmentBaseView):
+    address_type = "lat-long"  # Options: "lat-long", "open", "select"
+    
+    def get_address_values(self):
+        '''
+        In case of address type is 'select', override this method to return a list of address tuples.
+        Each tuple should contain a unique identifier and the corresponding address.
+        Example: [('xxxx-xxxx-xxxx', "A2, HSR Layout, Bengaluru")]
+        '''
+        return []
+```
+
+**Explanation:**
+
+1. **Address Type "lat-long":**
+   - When "lat-long" is selected, the address input will display fields for latitude and longitude to pinpoint the exact location on a map.
+
+2. **Address Type "open text":**
+   - Selecting "open" allows users to enter the complete address in a text field, providing flexibility for detailed address input.
+
+3. **Address Type "select" (for Participant Addresses):**
+   - To fetch participant addresses for selection in face-to-face appointments, override the `get_address_values` function.
+   - Modify this function to retrieve address details from the participant model based on how addresses are stored.
+   - Ensure that the function returns a list of tuples. Each tuple should include a unique identifier and the corresponding address value for selection.
+
+By outlining these address types and customizing the `get_address_values` function, you can configure how participant addresses are managed and displayed in face-to-face appointments based on the selected address type.

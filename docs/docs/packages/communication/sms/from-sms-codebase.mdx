@@ -1,0 +1,47 @@
+---
+sidebar_label: From Codebase
+---
+
+# Sending SMS from Codebase
+Empower your application with the ability to send SMS messages programmatically, providing unparalleled control and flexibility over your communication channels. Follow these straightforward steps to seamlessly integrate SMS sending into your codebase:
+
+## Importing Required Modules
+To initiate SMS communication within your module, navigate to the views.py file located in your module's folder. Here, you will begin the setup process by importing the SMs class from the Communication Package as shown below.
+
+```python
+from ..packages.communication.sms.utils import SMS
+```
+## Customization made simple
+
+Once imported, you can customize the SMS parameters using the SMS class. This includes specifying the message content and the recipient's phone number. Please note that both these fields are required arguments.
+
+```python
+# Customizing SMS parameters
+sms = SMS(
+    "<message>",                    # SMS message content
+    "<to_number>",               # Recipient's phone number
+)
+```
+
+## Fine-tuning SMS Configuration
+
+You have the flexibility to tailor the SMS configuration for SMS delivery based on your needs by specifying the configuration key. The config argument plays a pivotal role in this process; by providing a value for this argument when configuring the SMS object, you can explicitly define the SMS configuration to be employed.
+
+However, it's essential to note that in scenarios where no default configuration is specified and the config key is not passed, an error will be raised. This ensures that proper configuration is enforced, preventing potential issues with SMS delivery.
+
+```python
+# Customizing SMS parameters
+ sms  = SMS(
+    .
+    .   
+    "<config_key>"               # Configuration key (optional)
+)
+```
+
+## Effortless Delivery
+
+Once your SMS is configured to perfection, simply call the send_sms() method to initiate the delivery process, ensuring your message reaches its intended recipients effectively.
+
+```python
+response = sms.send_sms()
+```

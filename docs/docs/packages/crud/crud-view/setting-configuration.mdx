@@ -1,0 +1,36 @@
+---
+sidebar_label: Configuration Settings
+---
+
+# Setting Initial Configuration
+
+In this section, the 'CrudTestView' class is tailored to oversee the essential CRUD functionalities for a specified model. The initialization within the 'CrudTestView' class defines crucial aspects of the view interface, ensuring a seamless user experience.
+
+### Page Title Customization
+The page_title attribute serves as the title displayed on the CRUD interface, representing the managed records. Customize it to reflect the nature of the data being managed.
+
+### Add Button Text
+The add_btn_title attribute defines the text displayed on the "Add New" button within the interface. This feature enables users to seamlessly add new records to the system.
+
+### Table and Form Assignment
+Replace 'UserTableClass' and 'UserFormClass' with the appropriate classes that mirror your data model's table structure and form elements. This replacement is crucial for precise representation and interaction with your data model.
+
+### Example
+
+``` python
+class CrudTestView(BaseCrudView):
+    # Customize page title
+    page_title = "User Master"
+
+    # Customize add button text
+    add_btn_title = "Add User"
+
+    # Replace with your actual table class
+    table = UserTableClass
+
+    # Replace with your actual form class
+    form = UserFormClass
+```
+
+
+This configuration lays the groundwork for the 'CrudTestView' class, allowing for the personalized representation of titles, button texts, and the linkage between table structure and form elements, ensuring a tailored interface for managing your specified model's data. Adjust these attributes to align seamlessly with your application's requirements and model specifics.
