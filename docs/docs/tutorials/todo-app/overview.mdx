@@ -102,10 +102,10 @@ After we have created your module we have register that module inside settings.j
 #### 3. Installing the required Zango packages
 One of the powerful component of Zango is it package ecosystem. Zango Packages are reusable components that add functionality 
 to your Zango applications. Like Python packages, they offer a convenient way to modularize and share components across 
-various applications on the Zango platform. The packages required for our todo app are [crud](../../packages/crud/overview), 
-[frame](../../packages/frame/overview), [login](../../packages/basic-auth/overview) and [workflow](../../packages/workflow/overview).
+various applications on the Zango platform. The packages required for our todo app are [crud](../../crud/introduction), 
+[frame](../../frame/introduction), [login](../../basic-auth/introduction) and [workflow](../../workflow/overview).
 We can install a package by simply clicking on three dots which appears on the the right side when we hover on the package 
-and then clicking on the install package button. You can read more about Zango packages [here](../../category/packages).
+and then clicking on the install package button.
 ![Zango packages](/img/todoapp_packages.png)
 
 #### 3. Creating the model
@@ -162,7 +162,7 @@ class NoteForm(BaseForm):
 Tables visually display structured data in a clear, organized format within applications. Customizing tables enhances 
 data presentation for user-friendly interaction. By organizing information into rows and columns, tables make data easy
 to understand and navigate. This layout helps users quickly grasp essential details. You can read more about tables 
-[here](../../packages/crud/tables/overview).
+[here](../../crud/tables/overview).
 
 We are going create a `TodoTable` which will display all the objects of our note model in a structured way. The table will 
 look something like:
@@ -199,7 +199,7 @@ class TodoTable(ModelTable):
 ```
 
 #### 6. Defining the Workflow
-The Workflow component, offered by the [Workflow Package](../../packages/workflow/overview), is an essential tool for managing and structuring 
+The Workflow component, offered by the [Workflow Package](../../workflow/overview), is an essential tool for managing and structuring 
 data model lifecycles. It allows developers to define statuses, create transitions, and trigger actions, 
 making it easier to enforce business rules and maintain a transparent workflow.
 
@@ -305,7 +305,7 @@ class TodoWorkflow(WorkflowBase):
 
 #### 7. Creating the view
 We will combine all the parts that we created in the previous steps and serve them through the powerful `BaseCrudView`
-of the [Crud Package](../../packages/crud/overview). We have to simply tell `BaseCrudView` about the Format to display the data in,
+of the [Crud Package](../../crud/introduction). We have to simply tell `BaseCrudView` about the Format to display the data in,
 i.e the table, the form to add new records to that table and the workflow to be used to modify the records, And it automatically
 creates all the functionality by itself. Our `TodoCrudView` will look something like this:
 
@@ -415,12 +415,12 @@ anywhere.
 #### Frames
 
 Next, we will specify the urls which should be linked to a particular user role. This functionality is 
-provided by the [frames package](../../packages/crud/overview).
+provided by the [frames package](../../frames/introduction).
 In our todo app, we will allow our `Todo_user` role to access the `/todo/all` url.
 ![Todo app frames](/img/todoapp_frames.png)
 
 #### Login
-In the last step, we have to configure the [login package](../../packages/basic-auth/overview) to redirect us our todo app url
+In the last step, we have to configure the [login package](../../basic-auth/introduction) to redirect us our todo app url
 after the user is logged in. When you click on the configure button, a sidebar will open, scroll down to the bottom, under routing
 click add more, select `Todo_user` in user role and set url as `/todo/all` and save it. Thats it!
 Now when you will login with your user having `Todo_user` role, it will redirect that user to `/todo/all` url.
