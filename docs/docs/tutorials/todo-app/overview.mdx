@@ -110,7 +110,7 @@ and then clicking on the install package button. You can read more about Zango p
 
 #### 3. Creating the model
 We will be creating a note model to store all the todo items in the database. You can read about models 
-[here](../../core/category/packages-ecosystem).
+[here](../../core/ddms/overview).
 
 `MyFirstProject/workspaces/todoapp/todo/models.py`
 ```
@@ -162,7 +162,7 @@ class NoteForm(BaseForm):
 Tables visually display structured data in a clear, organized format within applications. Customizing tables enhances 
 data presentation for user-friendly interaction. By organizing information into rows and columns, tables make data easy
 to understand and navigate. This layout helps users quickly grasp essential details. You can read more about tables 
-[here](../../category/tables).
+[here](../../packages/crud/tables/overview).
 
 We are going create a `TodoTable` which will display all the objects of our note model in a structured way. The table will 
 look something like:
@@ -199,7 +199,7 @@ class TodoTable(ModelTable):
 ```
 
 #### 6. Defining the Workflow
-The Workflow component, offered by the [Workflow Package](../../category/workflow), is an essential tool for managing and structuring 
+The Workflow component, offered by the [Workflow Package](../../packages/workflow/overview), is an essential tool for managing and structuring 
 data model lifecycles. It allows developers to define statuses, create transitions, and trigger actions, 
 making it easier to enforce business rules and maintain a transparent workflow.
 
@@ -305,7 +305,7 @@ class TodoWorkflow(WorkflowBase):
 
 #### 7. Creating the view
 We will combine all the parts that we created in the previous steps and serve them through the powerful `BaseCrudView`
-of the [Crud Package](../../category/workflow). We have to simply tell `BaseCrudView` about the Format to display the data in,
+of the [Crud Package](../../packages/crud/overview). We have to simply tell `BaseCrudView` about the Format to display the data in,
 i.e the table, the form to add new records to that table and the workflow to be used to modify the records, And it automatically
 creates all the functionality by itself. Our `TodoCrudView` will look something like this:
 
