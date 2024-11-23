@@ -1,0 +1,165 @@
+---
+sidebar_label: Overview
+pagination_label: Setting up zango project
+description: Information & pre-requisite for setting up zango project
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Zango Project is basically our main project on which we can create, develop and host multiple apps under the same
+Infrastructure. Zango uses [django-tenants](https://github.com/django-tenants/django-tenants) package to isolate applications
+at the database level.
+
+Think of it as your own private app ecosystem, where each application maintains its isolation while benefiting from 
+shared resources and infrastructure
+
+
+# Pre-requisites
+There are a few requisites that needs to be completed before you start creating a zango project. If you already have them
+configured, consider moving on to the [next steps](../../core/setting-up-zango-project/creating-zango-project).
+
+### 1. PostgreSQL Database Setup
+
+<Tabs>
+  <TabItem value="manual" label="Manual" default>
+To get started, follow these steps to set up a PostgreSQL database:
+
+1. Install PostgreSQL:
+If you haven't already, you'll need to install PostgreSQL on your system. 
+You can download the PostgreSQL installer for your platform 
+from the official website: [PostgreSQL Downloads](https://www.postgresql.org/download/)
+2. Create a Fresh Database:
+Once PostgreSQL is installed, open your terminal or a PostgreSQL client.
+Use the following command to create a new database. Replace your_database_name with 
+the desired name for your project's database:
+```bash
+createdb your_database_name
+```
+Ensure that the newly created database is fresh without any existing tables or data.
+With the PostgreSQL database set up and ready to go, you can proceed 
+with setting up your Zango project, confident that you have the necessary infrastructure in place.
+
+:::note
+Keep in mind that the exact steps for installing PostgreSQL may vary depending 
+on your operating system. Be sure to consult the PostgreSQL documentation or 
+installation guide for your specific platform if you encounter any issues during 
+the installation process.
+:::
+  </TabItem>
+  <TabItem value="docker" label="Docker">
+    Installing and setting up postgresql database manually can be overwhelming sometimes, if you have docker installed, you can set it up in just 3 commands as follows:
+
+1. Pull the Postgres Docker Image
+The first step is to pull the Postgres Docker image from the Docker Hub repository. This is done by running the following command:
+```
+docker pull postgres
+```
+2. Create a Docker Volume
+Next, we need to create a Docker volume to persist our Postgres data. This is done by running the following command:
+docker volume create postgres_data
+
+3. Run the Postgres Docker Container
+Now we can run the Postgres Docker container using the following command:
+```
+docker run --name postgres_container -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 -v postgres_data:/var/lib/postgresql/data postgres
+```
+
+After the setup is complete, the values of DB configuration for .env would look something like:
+```
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+```
+  </TabItem>
+</Tabs>
+
+### 2. Redis setup
+Redis is used as a broker by celery workers. Use the steps below to run redis on your local machine:
+<Tabs>
+<TabItem value="manual" label="Manual">
+
+#### Ubuntu/Debian Linux
+
+  ```
+  # Step 1: Update package list
+  sudo apt update
+
+  # Step 2: Install Redis
+  sudo apt install redis-server
+
+  # Step 3: Start Redis service
+  sudo systemctl start redis-server
+
+  # Step 4: Enable Redis to start on boot
+  sudo systemctl enable redis-server
+
+  # Step 5: Verify installation
+  redis-cli ping  # Should return "PONG"
+  ```
+
+#### macOS (using Homebrew)
+
+  ```
+  # Step 1: Install Homebrew (if not installed)
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  # Step 2: Install Redis
+  brew install redis
+
+  # Step 3: Start Redis
+  brew services start redis
+  # OR run without service
+  redis-server
+
+  # Step 4: Verify installation
+  redis-cli ping
+  ```
+
+#### From Source (Any Linux/Unix system)
+
+  ```
+  # Step 1: Install dependencies
+  sudo apt install build-essential tcl  # For Ubuntu/Debian
+  # OR
+  sudo yum groupinstall "Development Tools"  # For RHEL/CentOS
+
+  # Step 2: Download Redis
+  wget https://download.redis.io/redis-stable.tar.gz
+
+  # Step 3: Extract the archive
+  tar xzf redis-stable.tar.gz
+
+  # Step 4: Enter directory
+  cd redis-stable
+
+  # Step 5: Compile
+  make
+
+  # Step 6: Install
+  sudo make install
+
+  # Step 7: Create directories and copy config
+  sudo mkdir /etc/redis
+  sudo cp redis.conf /etc/redis
+
+  # Step 8: Start Redis
+  redis-server
+
+  # Step 9: Verify installation
+  redis-cli ping
+  ```
+
+</TabItem>
+  <TabItem value="docker" label="Docker" default>
+  Simply run the below command to start redis inside a docker container on port 6379.<br/>
+
+    docker run --name "name" -d -p 6379:6379 redis
+
+  For example:
+
+    docker run --name zango_redis -d -p 6379:6379 redis
+
+  </TabItem>
+</Tabs>
