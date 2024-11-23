@@ -178,7 +178,6 @@ const sidebars = {
           collapsed: true,
           items: [
             "core/views-and-routes/overview",
-            "core/views-and-routes/types-of-views",
             "core/views-and-routes/creating-a-view",
             "core/views-and-routes/assigning-route-to-a-view",
           ],
