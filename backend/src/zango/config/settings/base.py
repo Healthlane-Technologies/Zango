@@ -83,6 +83,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "zango.middleware.token.TokenMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "session_security.middleware.SessionSecurityMiddleware",
@@ -104,6 +105,19 @@ AUTHENTICATION_BACKENDS = (
     "zango.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
     "zango.apps.appauth.auth_backend.AppUserModelBackend",
 )
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "knox.auth.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+}
+
+REST_KNOX = {
+    "TOKEN_TTL": None,
+    "AUTH_HEADER_PREFIX": "Bearer",
+}
 
 TEMPLATES = [
     {
