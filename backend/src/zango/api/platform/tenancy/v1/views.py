@@ -323,7 +323,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 connection.set_tenant(tenant)
                 with connection.cursor() as c:
                     ws = Workspace(connection.tenant, request=None, as_systemuser=True)
-                    ws.sync_role_with_policies()
+                    ws.sync_role_policies()
         else:
             success = False
             status_code = 400
@@ -383,7 +383,7 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 connection.set_tenant(tenant)
                 with connection.cursor() as c:
                     ws = Workspace(connection.tenant, request=None, as_systemuser=True)
-                    ws.sync_role_with_policies()
+                    ws.sync_role_policies()
             else:
                 success = False
                 status_code = 400
@@ -397,6 +397,10 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
                 result = {"message": error_message}
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+
             success = False
             result = {"message": str(e)}
             status_code = 500
