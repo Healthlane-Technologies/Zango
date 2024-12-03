@@ -434,7 +434,7 @@ class Workspace:
         existing_policies = list(
             PolicyModel.objects.filter(type="user").values_list("id", flat=True)
         )
-        role_with_policies = defaultdict(list)
+        policy_roles = defaultdict(list)
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
@@ -475,7 +475,7 @@ class Workspace:
                                 existing_policies.remove(policy.id)
                             roles = policy_details.get("roles", [])
                             for role in roles:
-                                role_with_policies[role].append(policy.id)
+                                policy_roles[policy.id].append(role)
                         except Exception as e:
                             raise Exception(
                                 f"Error creating policy {policy_details['name']} in {policy_path}: {e}"
@@ -483,23 +483,21 @@ class Workspace:
 
         for policy_id in existing_policies:
             PolicyModel.objects.get(id=policy_id).delete()
-        self.sync_policies_with_roles(role_with_policies)
+        self.sync_policies_with_roles(policy_roles)
 
-    def sync_policies_with_roles(self, role_with_policies):
+    def sync_policies_with_roles(self, policy_roles):
         """
         mapping roles from policies.json to UserRoleModel
         """
-        for role, policies in role_with_policies.items():
+        for policy_id, roles in policy_roles.items():
             try:
-                user_role = UserRoleModel.objects.get(name=role)
-                package_and_system_policies = [
-                    policy.id
-                    for policy in user_role.policies.all()
-                    if not policy.path or "packages" in policy.path
-                ]
-                user_role.policies.set(policies + package_and_system_policies)
+                policy = PolicyModel.objects.get(id=policy_id)
+                role_ids = [UserRoleModel.objects.get(name=role).id for role in roles]
+                policy.role_policies.set(role_ids)
+            except Exception as e:
+                raise Exception(f"Error adding roles to policy {policy.name}: {e}")
             except UserRoleModel.DoesNotExist:
-                raise Exception(f"Role '{role}' does not exist")
+                raise Exception("Role does not exist")
 
     def sync_role_policies(self):
         for policy in PolicyModel.objects.all():
