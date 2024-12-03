@@ -60,7 +60,8 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     def test_one_role_with_multi_policy_mapping(self):
         expected_role_name = "dummy_role_1"
         expected_policy_names = ["RetailersGetViewAccess", "DummyGetViewAccess"]
-        UserRoleModel.objects.create(name=expected_role_name)
+        with schema_context(self.tenant.schema_name):
+            UserRoleModel.objects.create(name=expected_role_name)
 
         self.sync_policies()
 
