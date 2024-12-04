@@ -137,12 +137,20 @@ class PolicyDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
         return get_api_response(success, response, status)
 
-    def put(self, request, *args, **kwargs):
+    def put(self, request, app_uuid, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
             serializer = PolicySerializer(instance=obj, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save(**{"roles": request.data.getlist("roles", [])})
+
+                tenant = TenantModel.objects.get(uuid=app_uuid)
+                connection.set_tenant(tenant)
+                with connection.cursor() as c:
+                    ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                    ws.ready()
+                    ws.sync_role_policies()
+
                 success = True
                 status_code = 200
                 result = {

@@ -1,0 +1,66 @@
+name: Zango tests
+
+on:
+  pull_request:
+  push:
+    branches: main
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U zango"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      # Step 1: Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Setup up python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'  # Specify the Python version you need
+
+      # Step 3: Install dependencies
+      - name: Install local zango package
+        run: |
+          python -m pip install -e ./backend
+
+      # Step 4: Setup up environment variables
+      - name: Set up environment variables
+        shell: bash
+        run: |
+          cat <<EOF > backend/test_project/.env
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=mysecretpassword
+          POSTGRES_DB=postgres
+          POSTGRES_HOST=127.0.0.1
+          POSTGRES_PORT=5432
+          PLATFORM_DOMAIN_URL=localhost
+          PROJECT_NAME=test_project
+          EOF
+      
+      # Step 5: Run tests
+      - name: Run tests
+        run: |
+          chmod +x ./runtests.sh
+          ./runtests.sh
+      
+      - name: Show coverage
+        run: |
+          mv backend/test_project/.coverage* .
+          coverage report --fail-under=45 -m --ignore-errors # TODO: change 50% to 80%

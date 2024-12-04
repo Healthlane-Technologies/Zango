@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+        "name":"run_migrations",
+        "path":"run_migrations"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^run_migrations/",
+            "module": "run_migrations",
+            "url": "urls"
+        }
+    ],
+    "package_routes": []
+}
