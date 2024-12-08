@@ -64,6 +64,7 @@ class Workspace:
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
         self.models = []  # sorted with bfs
+        self._module_paths_cache = None  # cache
 
     @classmethod
     def get_plugin_source(cls):
@@ -113,6 +114,11 @@ class Workspace:
         """
         returns path of all ws modules as well as package modules
         """
+
+        # Return cached result if available
+        if self._module_paths_cache is not None:
+            return self._module_paths_cache
+
         modules = []
         ws_tree = self.get_wtree()
         bfs = ws_tree.bfs()
@@ -127,6 +133,9 @@ class Workspace:
                 path = self.path + item["path"]
                 if path not in modules:
                     modules.append(path)
+
+        # Cache the result
+        self._module_paths_cache = modules
         return modules
 
     def get_models(self) -> list[str]:
