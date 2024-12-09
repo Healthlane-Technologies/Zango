@@ -5,6 +5,8 @@ import json
 import os
 import re
 
+from collections import defaultdict
+
 from django.conf import settings
 from django.db import connection
 
@@ -432,6 +434,7 @@ class Workspace:
         existing_policies = list(
             PolicyModel.objects.filter(type="user").values_list("id", flat=True)
         )
+        policy_roles = defaultdict(list)
         modules = self.get_all_module_paths()
         for module in modules:
             policy_file = f"{module}/policies.json"
@@ -470,6 +473,9 @@ class Workspace:
                                 if policy.id not in existing_policies:
                                     raise Exception("Policy name already exists")
                                 existing_policies.remove(policy.id)
+                            roles = policy_details.get("roles", None)
+                            if roles is not None:
+                                policy_roles[policy.id].extend(roles)
                         except Exception as e:
                             raise Exception(
                                 f"Error creating policy {policy_details['name']} in {policy_path}: {e}"
@@ -477,3 +483,33 @@ class Workspace:
 
         for policy_id in existing_policies:
             PolicyModel.objects.get(id=policy_id).delete()
+        self.sync_policies_with_roles(policy_roles)
+
+    def sync_policies_with_roles(self, policy_roles):
+        """
+        mapping roles from policies.json to UserRoleModel
+        """
+        for policy_id, roles in policy_roles.items():
+            try:
+                policy = PolicyModel.objects.get(id=policy_id)
+                role_ids = [UserRoleModel.objects.get(name=role).id for role in roles]
+                policy.role_policies.set(role_ids)
+            except Exception as e:
+                raise Exception(f"Error adding roles to policy {policy.name}: {e}")
+            except UserRoleModel.DoesNotExist:
+                raise Exception("Role does not exist")
+
+    def sync_role_policies(self):
+        for policy in PolicyModel.objects.all():
+            if not policy.path:
+                continue
+            if policy.path and "packages" in policy.path:
+                continue
+            roles = policy.role_policies.all()
+            with open(f"{self.path}/{policy.path}/policies.json", "r") as f:
+                policies = json.load(f)
+                for policy_details in policies["policies"]:
+                    if policy_details["name"] == policy.name:
+                        policy_details["roles"] = [role.name for role in roles]
+            with open(f"{self.path}/{policy.path}/policies.json", "w") as f:
+                json.dump(policies, f, indent=4)

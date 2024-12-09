@@ -1,0 +1,61 @@
+{
+      "policies": [
+            {
+                  "name": "CustomerGetViewAccess",
+                  "description": "Access to the Customer GET View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "type": "userAccess",
+                                    "accessIP": ["1.2.3.4"]
+                              },
+                              {
+                                    "name": "customers.views.TestDynamicView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "AnonymousUsers"
+                  ]
+            },
+            {
+                  "name": "CIDRGetViewAccess",
+                  "description": "Access to the CIDR GET View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "type": "userAccess",
+                                    "accessIP": ["10.0.0.0/24"]
+                              },
+                              {
+                                    "name": "customers.views.CIDRDynamicView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "AnonymousUsers"
+                  ]
+            },
+            {
+                  "name": "AllIPGetViewAccess",
+                  "description": "Access to the All IP GET View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "type": "userAccess",
+                                    "accessIP": ["0.0.0.0/0"]
+                              },
+                              {
+                                    "name": "customers.views.AllIPDynamicView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "AnonymousUsers"
+                  ]
+            }
+      ]
+}
