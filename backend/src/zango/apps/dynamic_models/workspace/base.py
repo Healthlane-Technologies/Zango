@@ -473,8 +473,9 @@ class Workspace:
                                 if policy.id not in existing_policies:
                                     raise Exception("Policy name already exists")
                                 existing_policies.remove(policy.id)
-                            roles = policy_details.get("roles", [])
-                            policy_roles[policy.id].extend(roles)
+                            roles = policy_details.get("roles", None)
+                            if roles is not None:
+                                policy_roles[policy.id].extend(roles)
                         except Exception as e:
                             raise Exception(
                                 f"Error creating policy {policy_details['name']} in {policy_path}: {e}"
