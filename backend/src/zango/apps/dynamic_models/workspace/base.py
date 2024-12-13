@@ -492,7 +492,11 @@ class Workspace:
         for policy_id, roles in policy_roles.items():
             try:
                 policy = PolicyModel.objects.get(id=policy_id)
-                role_ids = [UserRoleModel.objects.get(name=role).id for role in roles]
+                role_ids = [
+                    UserRoleModel.objects.get(name=role).id
+                    for role in roles
+                    if UserRoleModel.objects.filter(name=role).exists()
+                ]
                 policy.role_policies.set(role_ids)
             except Exception as e:
                 raise Exception(f"Error adding roles to policy {policy.name}: {e}")
