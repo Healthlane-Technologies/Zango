@@ -43,19 +43,19 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
 		domains: Yup.array().of(Yup.string().required('Required')),
-		repo_url: Yup.string().url('Must be a valid URL').when(['dev', 'prod', 'staging'], {
+		repo_url: Yup.string().url('Must be a valid URL').nullable().when(['dev', 'prod', 'staging'], {
 			is: (dev, prod, staging) => dev || prod || staging,
 			then: Yup.string().required('Required'),
 			otherwise: Yup.string().notRequired(),
 		  }),
-		dev: Yup.string(),
-		prod: Yup.string(),
-		staging: Yup.string(),
+		dev: Yup.string().nullable(),
+		prod: Yup.string().nullable(),
+		staging: Yup.string().nullable(),
 		sync_packages: Yup.boolean()
 	});
 
 	let onSubmit = (values) => {
-		let tempValues = values;
+		let tempValues = { ...values };
 		if (!tempValues['logo']) {
 			delete tempValues['logo'];
 		}
@@ -63,17 +63,20 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		if (!tempValues['fav_icon']) {
 			delete tempValues['fav_icon'];
 		}
+
+		// Preserve existing git config if not modified
+		const existingGitConfig = appConfigurationData?.app?.extra_config?.git_config || {};
 		const extra_config = {
 			git_config: {
 			  branch: {
-				dev: tempValues.dev==''?null:tempValues.dev,
-				prod: tempValues.prod==''?null:tempValues.prod,
-				staging: tempValues.staging==''?null:tempValues.staging
+				dev: tempValues.dev || existingGitConfig.branch?.dev || null,
+				prod: tempValues.prod || existingGitConfig.branch?.prod || null,
+				staging: tempValues.staging || existingGitConfig.branch?.staging || null
 			  },
-			  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
+			  repo_url: tempValues.repo_url || existingGitConfig.repo_url || null
 			},
 			sync_packages: tempValues.sync_packages
-		  };
+		};
 		
 		delete tempValues.dev;
 		delete tempValues.prod;
@@ -96,7 +99,8 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			if (success && response) {
 				closeModal();
 				dispatch(toggleRerenderPage());
-			}else{
+			} else {
+				// Restore values in case of error
 				tempValues.dev = extra_config?.git_config?.branch?.dev;
 				tempValues.prod = extra_config?.git_config?.branch?.prod;
 				tempValues.staging = extra_config?.git_config?.branch?.staging;
@@ -107,6 +111,60 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 
 		makeApiCall();
 	};
+
+	// let onSubmit = (values) => {
+	// 	let tempValues = values;
+	// 	if (!tempValues['logo']) {
+	// 		delete tempValues['logo'];
+	// 	}
+
+	// 	if (!tempValues['fav_icon']) {
+	// 		delete tempValues['fav_icon'];
+	// 	}
+	// 	const extra_config = {
+	// 		git_config: {
+	// 		  branch: {
+	// 			dev: tempValues.dev==''?null:tempValues.dev,
+	// 			prod: tempValues.prod==''?null:tempValues.prod,
+	// 			staging: tempValues.staging==''?null:tempValues.staging
+	// 		  },
+	// 		  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
+	// 		},
+	// 		sync_packages: tempValues.sync_packages
+	// 	  };
+		
+	// 	delete tempValues.dev;
+	// 	delete tempValues.prod;
+	// 	delete tempValues.staging;
+	// 	delete tempValues.repo_url;
+	// 	delete tempValues.sync_packages;
+		
+	// 	tempValues.extra_config = JSON.stringify(extra_config);
+		
+	// 	let dynamicFormData = transformToFormData(tempValues);
+
+	// 	const makeApiCall = async () => {
+	// 		const { response, success } = await triggerApi({
+	// 			url: `/api/v1/apps/${appId}/`,
+	// 			type: 'PUT',
+	// 			loader: true,
+	// 			payload: dynamicFormData,
+	// 		});
+
+	// 		if (success && response) {
+	// 			closeModal();
+	// 			dispatch(toggleRerenderPage());
+	// 		}else{
+	// 			tempValues.dev = extra_config?.git_config?.branch?.dev;
+	// 			tempValues.prod = extra_config?.git_config?.branch?.prod;
+	// 			tempValues.staging = extra_config?.git_config?.branch?.staging;
+	// 			tempValues.repo_url = extra_config?.git_config?.repo_url;
+	// 			tempValues.sync_packages = extra_config?.sync_packages;
+	// 		}
+	// 	};
+
+	// 	makeApiCall();
+	// };
 
 	return (
 		<Formik
