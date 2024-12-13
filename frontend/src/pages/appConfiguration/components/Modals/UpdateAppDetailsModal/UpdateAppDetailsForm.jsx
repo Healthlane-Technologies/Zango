@@ -54,6 +54,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		sync_packages: Yup.boolean()
 	});
 
+
 	let onSubmit = (values) => {
 		let tempValues = { ...values };
 		if (!tempValues['logo']) {
@@ -63,20 +64,28 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		if (!tempValues['fav_icon']) {
 			delete tempValues['fav_icon'];
 		}
+
 		const existingGitConfig = appConfigurationData?.app?.extra_config?.git_config || {};
 		let extra_config = {
 			git_config: {
 			  branch: {
-				dev: tempValues.dev || existingGitConfig.branch?.dev || null,
-				prod: tempValues.prod || existingGitConfig.branch?.prod || null,
-				staging: tempValues.staging || existingGitConfig.branch?.staging || null
+				dev: tempValues.dev || null,
+				prod: tempValues.prod || null,
+				staging: tempValues.staging || null
 			  },
-			  repo_url: tempValues.repo_url || existingGitConfig.repo_url || null
+			  repo_url: tempValues.repo_url || null
 			},
 			sync_packages: tempValues.sync_packages
 		};
-		if(extra_config?.git_config?.repo_url=='' || extra_config?.git_config?.repo_url==null){
-			extra_config.git_config = {}
+		if (!extra_config.git_config.repo_url) {
+			extra_config.git_config.repo_url = null;
+		}
+
+		if (!extra_config.git_config.repo_url && 
+			!extra_config.git_config.branch.dev && 
+			!extra_config.git_config.branch.prod && 
+			!extra_config.git_config.branch.staging) {
+			extra_config.git_config = {};
 		}
 		
 		delete tempValues.dev;
@@ -111,7 +120,6 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 
 		makeApiCall();
 	};
-
 
 	return (
 		<Formik
