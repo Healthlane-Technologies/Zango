@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2024-10-23
+
+### Added
+* Zango tests setup [(#350)](https://github.com/Healthlane-Technologies/Zango/pull/350)
+* feat: release workflow, launch app from template [(#409)](https://github.com/Healthlane-Technologies/Zango/pull/409)
+* docs version 2 [(#415)](https://github.com/Healthlane-Technologies/Zango/pull/415)
+* Pre-commit and ruff configuration [(#340)](https://github.com/Healthlane-Technologies/Zango/pull/340)
+* custom error pages added by [(#356)](https://github.com/Healthlane-Technologies/Zango/pull/356)
+* Show configure for only packages with configure functionality [(#368)](https://github.com/Healthlane-Technologies/Zango/pull/368)
+* tasks code and task history displayed in app panel [(#360)](https://github.com/Healthlane-Technologies/Zango/pull/360)
+* celery flower service added [(#366)](https://github.com/Healthlane-Technologies/Zango/pull/366)
+* package dependency check added [(#363)](https://github.com/Healthlane-Technologies/Zango/pull/363)
+
+### Fixed
+* removed space between key and value in app config page [(#353)](https://github.com/Healthlane-Technologies/Zango/pull/353)
+* django version bump to 4.2.15 [(#373)](https://github.com/Healthlane-Technologies/Zango/pull/373)
+* apply_async used instead of delay to create tenant [(#374)](https://github.com/Healthlane-Technologies/Zango/pull/374)
+* fixed setup-project with directory bug  [(#346)](https://github.com/Healthlane-Technologies/Zango/pull/346)
+* limit tenant set calls by @deepakdinesh1123 [(#369)](Healthlane-Technologies/Zango/pull/369)
+* country code selection dropdown for phone number [(#362)](https://github.com/Healthlane-Technologies/Zango/pull/362)
+* fix: release package git workflow, config url incase no domain configured [(#389)](https://github.com/Healthlane-Technologies/Zango/pull/389)
+* Removed unnecessary if else conditions for get or create ORM method in Celery CrontabSchedule model [(#382)](https://github.com/Healthlane-Technologies/Zango/pull/382)
+* version checked before releasing package [(#396)](https://github.com/Healthlane-Technologies/Zango/pull/396)
+
 ## [0.3.0] - 2024-08-06
 
 ### Added
