@@ -64,7 +64,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			delete tempValues['fav_icon'];
 		}
 		const existingGitConfig = appConfigurationData?.app?.extra_config?.git_config || {};
-		const extra_config = {
+		let extra_config = {
 			git_config: {
 			  branch: {
 				dev: tempValues.dev || existingGitConfig.branch?.dev || null,
@@ -75,6 +75,9 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			},
 			sync_packages: tempValues.sync_packages
 		};
+		if(extra_config?.git_config?.repo_url=='' || extra_config?.git_config?.repo_url==null){
+			extra_config.git_config = {}
+		}
 		
 		delete tempValues.dev;
 		delete tempValues.prod;
