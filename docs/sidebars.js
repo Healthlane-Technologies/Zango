@@ -13,19 +13,16 @@
 
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
-  docsSidebar: [   
+  docsSidebar: [
     {
-      type: 'category', 
-      label: 'Introduction',
-      items: [
-        "core/introduction",
-        "core/framework-architecture", 
-      ],
-      collapsible: false
+      type: "category",
+      label: "Introduction",
+      items: ["core/introduction", "core/framework-architecture"],
+      collapsible: false,
     },
     {
-      type: 'category', 
-      label: 'Getting Started',
+      type: "category",
+      label: "Getting Started",
       items: [
         "core/quickstart",
         {
@@ -62,16 +59,14 @@ const sidebars = {
             type: "generated-index",
           },
           collapsed: true,
-          items: [
-            "tutorials/todo-app/overview",
-          ],
+          items: ["tutorials/todo-app/overview"],
         },
       ],
-      collapsible: false
+      collapsible: false,
     },
     {
-      type: 'category', 
-      label: 'Framework Components',
+      type: "category",
+      label: "Framework Components",
       items: [
         {
           type: "category",
@@ -93,7 +88,7 @@ const sidebars = {
             "core/user-roles/creating-a-user-role",
             "core/user-roles/deactivating-a-user-role",
             "core/user-roles/assigning-policies-to-user-roles",
-            "core/user-roles/reserved-user-roles"
+            "core/user-roles/reserved-user-roles",
           ],
         },
         {
@@ -136,7 +131,7 @@ const sidebars = {
           collapsed: true,
           items: [
             "core/packages-ecosystem/overview",
-            "core/packages-ecosystem/installing-a-package"
+            "core/packages-ecosystem/installing-a-package",
           ],
         },
         {
@@ -148,7 +143,7 @@ const sidebars = {
             "core/async-tasks/creating-an-async-task",
             "core/async-tasks/manually-triggering-async-tasks",
             "core/async-tasks/scheduling-async-tasks",
-            "core/async-tasks/syncing-and-viewing-async-tasks"
+            "core/async-tasks/syncing-and-viewing-async-tasks",
           ],
         },
       ],
@@ -159,8 +154,8 @@ const sidebars = {
       },
     },
     {
-      type: 'category', 
-      label: 'Development Workflow',
+      type: "category",
+      label: "Development Workflow",
       items: [
         {
           type: "category",
@@ -171,7 +166,7 @@ const sidebars = {
             "core/modules/creating-a-module",
             "core/modules/registering-a-module",
           ],
-        }, 
+        },
         {
           type: "category",
           label: "Views and Routes",
@@ -181,15 +176,13 @@ const sidebars = {
             "core/views-and-routes/creating-a-view",
             "core/views-and-routes/assigning-route-to-a-view",
           ],
-        }, 
+        },
         {
           type: "category",
           label: "Templates",
           collapsed: true,
-          items: [
-            "core/templates/overview"
-          ],
-        }, 
+          items: ["core/templates/overview"],
+        },
         {
           type: "category",
           label: "Models",
@@ -200,7 +193,7 @@ const sidebars = {
             "core/ddms/ddm-field-types",
             "core/ddms/migrating-ddms",
           ],
-        }, 
+        },
       ],
       collapsible: true,
       link: {
@@ -208,6 +201,7 @@ const sidebars = {
       },
     },
     "core/enterprise-readiness",
+    require("./pkgsSidebar") ? require("./pkgsSidebar") : null,
     // {
     //   "type": "category",
     //   "label": "Deployment",
