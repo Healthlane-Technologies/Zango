@@ -70,11 +70,12 @@ def initialize_workspace(tenant_uuid, app_template_path=None):
         tenant.deployed_on = timezone.now()
         tenant.save(update_fields=["status", "deployed_on"])
 
+        theme = ThemesModel.objects.create(
+            name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
+        )
+
         if not app_template_path:
             assign_policies_to_anonymous_user(tenant.schema_name)
-            theme = ThemesModel.objects.create(
-                name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
-            )
         else:
             try:
                 subprocess.run(
