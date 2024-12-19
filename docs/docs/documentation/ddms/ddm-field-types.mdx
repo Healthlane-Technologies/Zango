@@ -68,7 +68,7 @@ Relational fields in Zango models are specialized field types imported from Zang
    from zango.apps.dynamic_models.fields import ZForeignKey
 
    class MyModel(DynamicModelBase):
-       related_model = ZOneToOneField(RelatedModel, null=True, blank=True, on_delete=models.CASCADE)
+       related_model = ZForeignKey(RelatedModel, on_delete=models.CASCADE)
    ```
 
 3. **ManyToManyField**: 

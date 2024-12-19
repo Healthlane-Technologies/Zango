@@ -1,0 +1,50 @@
+{
+      "policies": [
+            {
+                  "name": "DynamicGetViewAccess",
+                  "description": "Access to the Dynamic GET View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "name": "login_app.views.TestDynamicView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "app_login_user"
+                  ]
+            },
+            {
+                  "name": "DummyGetViewAccess",
+                  "description": "Access to the Dummy GET View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "name": "login_app.views.TestDummyView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "different_view_user"
+                  ]
+            },
+            {
+                  "name": "AllowTestUserFromAnywhere",
+                  "description": "Allow test user to access the app from anywhere.",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "type": "userAccess",
+                                    "accessIP": ["0.0.0.0/0"]
+                              }
+                        ]
+                  },
+                  "roles":[
+                        "app_login_user",
+                        "different_view_user"
+                  ]
+            }
+      ]
+}

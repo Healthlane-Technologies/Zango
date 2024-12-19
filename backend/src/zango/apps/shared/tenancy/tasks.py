@@ -79,19 +79,13 @@ def initialize_workspace(tenant_uuid, app_template_path=None, run_migrations=Fal
             subprocess.run(["python", "manage.py", "ws_makemigration", tenant.name])
             with open(f"workspaces/{tenant.name}/manifest.json", "w") as f:
                 f.write(json.dumps(manifest, indent=4))
+        theme = ThemesModel.objects.create(
+            name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
+        )
 
         if not app_template_path:
             assign_policies_to_anonymous_user(tenant.schema_name)
-            theme = ThemesModel.objects.create(
-                name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
-            )
         else:
-            theme = ThemesModel.objects.create(
-                name="Default",
-                tenant=tenant,
-                config=DEFAULT_THEME_CONFIG,
-                is_active=True,
-            )
             try:
                 subprocess.run(
                     ["zango", "update-apps", "--app_name", tenant.name], check=True

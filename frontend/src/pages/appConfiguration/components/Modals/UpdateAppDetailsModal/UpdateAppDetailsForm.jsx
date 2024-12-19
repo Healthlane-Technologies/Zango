@@ -43,19 +43,20 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
 		domains: Yup.array().of(Yup.string().required('Required')),
-		repo_url: Yup.string().url('Must be a valid URL').when(['dev', 'prod', 'staging'], {
+		repo_url: Yup.string().url('Must be a valid URL').nullable().when(['dev', 'prod', 'staging'], {
 			is: (dev, prod, staging) => dev || prod || staging,
 			then: Yup.string().required('Required'),
 			otherwise: Yup.string().notRequired(),
 		  }),
-		dev: Yup.string(),
-		prod: Yup.string(),
-		staging: Yup.string(),
+		dev: Yup.string().nullable(),
+		prod: Yup.string().nullable(),
+		staging: Yup.string().nullable(),
 		sync_packages: Yup.boolean()
 	});
 
+
 	let onSubmit = (values) => {
-		let tempValues = values;
+		let tempValues = { ...values };
 		if (!tempValues['logo']) {
 			delete tempValues['logo'];
 		}
@@ -63,17 +64,29 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 		if (!tempValues['fav_icon']) {
 			delete tempValues['fav_icon'];
 		}
-		const extra_config = {
+
+		const existingGitConfig = appConfigurationData?.app?.extra_config?.git_config || {};
+		let extra_config = {
 			git_config: {
 			  branch: {
-				dev: tempValues.dev==''?null:tempValues.dev,
-				prod: tempValues.prod==''?null:tempValues.prod,
-				staging: tempValues.staging==''?null:tempValues.staging
+				dev: tempValues.dev || null,
+				prod: tempValues.prod || null,
+				staging: tempValues.staging || null
 			  },
-			  repo_url: tempValues.repo_url==''?null:tempValues.repo_url
+			  repo_url: tempValues.repo_url || null
 			},
 			sync_packages: tempValues.sync_packages
-		  };
+		};
+		if (!extra_config.git_config.repo_url) {
+			extra_config.git_config.repo_url = null;
+		}
+
+		if (!extra_config.git_config.repo_url && 
+			!extra_config.git_config.branch.dev && 
+			!extra_config.git_config.branch.prod && 
+			!extra_config.git_config.branch.staging) {
+			extra_config.git_config = {};
+		}
 		
 		delete tempValues.dev;
 		delete tempValues.prod;
@@ -96,7 +109,7 @@ const UpdateAppDetailsForm = ({ closeModal }) => {
 			if (success && response) {
 				closeModal();
 				dispatch(toggleRerenderPage());
-			}else{
+			} else {
 				tempValues.dev = extra_config?.git_config?.branch?.dev;
 				tempValues.prod = extra_config?.git_config?.branch?.prod;
 				tempValues.staging = extra_config?.git_config?.branch?.staging;

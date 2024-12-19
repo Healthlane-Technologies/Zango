@@ -522,7 +522,7 @@ def update_apps(app_name):
             git_mode = False
             extra_config = tenant_obj.extra_config or {}
             git_settings = extra_config.get("git_config")
-            if git_settings:
+            if git_settings and git_settings.get("repo_url", None):
                 git_mode = True
                 # Initialize git repository
                 repo_url = git_settings["repo_url"]

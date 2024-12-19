@@ -1,82 +1,52 @@
 ---
-sidebar_label: Introduction
+sidebar_label: Overview
 ---
+# What is Zango?
 
-# Introduction
+Zango is an open source web framework for building custom business applications.
 
-Welcome to the Zango documentation!
-***
+It is a **Django meta-framework** that takes the opinionated approach of Django one step further -  by being ** strongly opinionated towards building custom business applications**. Becuases of this opionianted approach, Zango includes a lot of additional batteries at the framework level and also supports a package ecosystem to achieve the below goals:
+<ul>
+  <li>Build <b>professional quality, maintainable</b> applications</li>
+  <li>Enable <b>faster development</b></li>
+</ul>
 
-### Overview
 
-Zango is a web application development framework built upon Django, designed to accelerate the development of custom business apps.
+To begin with, lets first understand what are custom business applications. 
 
-
-The key tenets of Zango are:
- - Leverage the stengths of Django, an already proven and battle tested web framework
- - Make available the basics of business web apps as part of the framework
- - Natively multi-tenant - Host multiple apps from a single deployment
- - Security & Compliances are built in. 
- - Suite of essential packages to serve as the building blocks of Apps
- - Use case packages to build the industry specific use cases
-***
-
-### What are custom business apps?
+#### What are custom business applications?
 <p>
-Custom Business Apps are apps that are needed to support business workflows and processes that are not normally supported by available ERPs, CRMs, SaaS, etc. The main reason for this is the uniqueness of workflows to the specific business. Because of the unique requirement, these apps are often required to be developed from scratch.</p>
-<p>
-No Code/ Low Code platform are considered by many as good solution for these types of apps but in our opinion these platforms suffer with a limitation of customizability.</p>
+Custom Business Application are apps that are needed to support business workflows and processes that are not normally supported by available ERPs, CRMs, SaaS, etc. The main reason for this is the uniqueness of workflows to the specific business. 
+
+The common denominator that makes it a unique category includes:
+- Typically exists to support business operations/workflows
+- Typically one or more user roles collaborate on a set of objects
+- Foundation of such apps are CRUD interfaces, and workflows on objects
+- Objects are often business confidential, so there is a strong need for security and compliance
 
 
-### Main Features
-Some of the main features of Zango framework includes:
+Because of the custom requirement, these apps are often required to be developed from scratch, typically utilizing one of the below tech solutions:
+</p>
+<ul>
+  <li>Building from scratch on web frameworks (e.g. Django, Express, etc.)</li>
+  <li>Proprietary full stack platforms (e.g. Salesforce Apex) </li>
+  <li>Low code frameworks</li>
+</ul>
 
-<table>
-  <thead>
-    <tr>
-      <th>Feature</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Native Django development</td>
-      <td>Retain all the Django features (ORM, Views, Templates, etc.) and development patterns while developing your apps</td>
-    </tr>
-    <tr>
-      <td>App Lifecycle Management</td>
-      <td>UI based App Lifecycle Management</td>
-    </tr>
-    <tr>
-      <td>Multi-tenancy</td>
-      <td>Host multiple apps, completely isolated in terms of data models & workflows, from a single deployment</td>
-    </tr>
-    <tr>
-      <td>User Management</td>
-      <td>Off the shelf user management, including user roles with customizability</td>
-    </tr>
-    <tr>
-      <td>Policies & Permissions</td>
-      <td>Fine grained access control linked to Views and Models</td>
-    </tr>
-    <tr>
-      <td>Task Management</td>
-      <td>Managed async tasks with scheduling</td>
-    </tr>
-    <tr>
-      <td>Enterprise Features</td>
-      <td>Host of enterprise features to deliver entrprise grade apps without additional hassle</td>
-    </tr>
-    <tr>
-      <td>Packages Ecosystem</td>
-      <td>Rich and growing ecosystem of packages to make development of high quality business apps super fast</td>
-    </tr>
-  </tbody>
-</table>
+
+#### Why Zango?
+
+Some of the key challenges with the available development approaches that exist for developing custom business applications are:
+- **Vendor Lock-Ins:** Seen with proprietary platforms
+- **Limitation on customizability:** Predominant with low-code/no-code frameworks
+- **Need to reinvent/re-develop fundamentals such as security, compliance, etc:** Agnostic web frameworks such as Django, Laravel, Express, etc.
 
 
 
-***
+<!-- ### Zango in Action -->
+
+<!-- In this video, we cover the process of the development of a simple CRUD application with Zango, covering the fundamentals and demonstrating the power of Zango. -->
+ 
 
 ### Our Core Principles
 Zango framework is architecured keeping in mind the key requirements of business applications. The fundamental principles that guides the development of the framework are:
@@ -91,12 +61,3 @@ Zango framework is architecured keeping in mind the key requirements of business
 ***
 
 
-### Pre-Requisite Knowledge
-- Basics of Python Coding
-- Fundamentals of web development
-- Fundamentals of Django
- 
-***
-
-### Join our Community
-Coming soon
