@@ -22,6 +22,56 @@ def is_valid_app_directory(directory):
     return True
 
 
+def switch_branch(app_name, branch_name, environment):
+    """
+    Switch to the specified branch in the app directory if required.
+
+    Args:
+    - app_name (str): Name of the application.
+    - branch_name (str): Name of the branch to switch to.
+    - environment (str): Environment to switch the branch in.
+    """
+
+    print(
+        f"Switching to branch {branch_name} in {app_name} for {environment} environment"
+    )
+
+    if settings.ENV != environment:
+        return {
+            "success": True,
+            "message": "Environment does not match. Skipping branch switch.",
+        }
+
+    app_directory = os.path.join("workspaces", app_name)
+    if not os.path.exists(app_directory):
+        return {
+            "success": False,
+            "message": f"The directory {app_directory} does not exist.",
+        }
+    # Validate if the app directory is valid
+    if not is_valid_app_directory(app_directory):
+        return {
+            "success": False,
+            "message": f"The directory {app_directory} is not a valid zango app directory.",
+        }
+
+    try:
+        repo = git.Repo(app_directory)
+        if settings.ENV == "dev":
+            repo.git.checkout("-b", branch_name)
+        else:
+            repo.git.checkout(branch_name)
+        return {
+            "success": True,
+            "message": f"Switched to branch {branch_name}",
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"An error occurred: {e}",
+        }
+
+
 def update_settings_with_git_repo_url(
     app_name, git_repo_url, dev_branch, staging_branch, prod_branch
 ):
@@ -56,6 +106,12 @@ def update_settings_with_git_repo_url(
         else:
             git_config["repo_url"] = git_repo_url
         git_branch = git_config.get("branch", {})
+        if git_branch.get("dev") != dev_branch:
+            switch_branch(app_name, dev_branch, "dev")
+        if git_branch.get("staging") != staging_branch:
+            switch_branch(app_name, staging_branch, "staging")
+        if git_branch.get("prod") != prod_branch:
+            switch_branch(app_name, prod_branch, "prod")
         git_branch.update(
             {"dev": dev_branch, "staging": staging_branch, "prod": prod_branch}
         )
@@ -73,68 +129,53 @@ def update_settings_with_git_repo_url(
     return False
 
 
-@click.command("git-setup")
-@click.argument("app_name", type=str)
-@click.option("--git_repo_url", prompt=True, required=True, help="Repo URL")
-@click.option(
-    "--dev_branch",
-    prompt="Development Branch",
-    required=True,
-    help="Git Branch for Development",
-    default="development",
-)
-@click.option(
-    "--staging_branch",
-    prompt="Staging Branch",
-    required=True,
-    help="Git Branch for Staging",
-    default="staging",
-)
-@click.option(
-    "--prod_branch",
-    prompt="Production Branch",
-    required=True,
-    help="Git Branch for Production",
-    default="main",
-)
-@click.option(
-    "--initialize", is_flag=True, default=False, help="Initialize the repository"
-)
-def git_setup(
-    git_repo_url,
-    dev_branch,
-    staging_branch,
-    prod_branch,
-    initialize,
+def git_setup_function(
     app_name,
+    git_repo_url,
+    dev_branch="development",
+    staging_branch="staging",
+    prod_branch="main",
+    initialize=False,
 ):
     """
     Initialize a git repository in the specified app directory and add the given remote repository URL.
 
-    APP_DIRECTORY: The directory of the app.
-    GIT_REPO_URL: The URL of the remote git repository.
+    Args:
+    - app_name (str): Name of the app.
+    - git_repo_url (str): URL of the remote git repository.
+    - dev_branch (str): Name of the development branch.
+    - staging_branch (str): Name of the staging branch.
+    - prod_branch (str): Name of the production branch.
+    - initialize (bool): Flag to initialize the repository.
+
+    Returns:
+    - dict: Result of the operation.
     """
 
     try:
         from zango.apps.shared.tenancy.models import TenantModel
 
-        TenantModel.objects.get(name=app_name)
+        tenant = TenantModel.objects.get(name=app_name)
     except TenantModel.DoesNotExist:
-        click.echo(
-            f"The app name '{app_name}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again."
-        )
-        return
+        return {
+            "success": False,
+            "message": f"The app name '{app_name}' provided as an argument is invalid. Please ensure that you have entered the correct app name and try again.",
+        }
 
     # Check if the app directory exists
     app_directory = os.path.join("workspaces", app_name)
     if not os.path.exists(app_directory):
-        click.echo(f"The directory {app_directory} does not exist.")
-        return
+        return {
+            "success": False,
+            "message": f"The directory {app_directory} does not exist.",
+        }
 
     # Validate if the app directory is valid
     if not is_valid_app_directory(app_directory):
-        click.echo(f"The directory {app_directory} is not a valid zango app directory.")
-        return
+        return {
+            "success": False,
+            "message": f"The directory {app_directory} is not a valid zango app directory.",
+        }
 
     try:
         if initialize:
@@ -155,7 +196,8 @@ def git_setup(
                     gitignore_file.write(".DS_Store\n")
                     gitignore_file.write("node_modules/\n")
                     gitignore_file.write("*.parcel-cache\n")
-                    gitignore_file.write("packages\n")
+                    if tenant.extra_config.get("sync_packages"):
+                        gitignore_file.write("packages\n")
 
                 # Create README.md
                 with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
@@ -186,14 +228,18 @@ def git_setup(
             if settings.ENV == "staging":
                 if staging_branch in remote_branches:
                     repo.git.checkout(staging_branch, force=True)
+                else:
+                    raise Exception(
+                        f"Branch {staging_branch} does not exist in the remote repository."
+                    )
 
             if settings.ENV == "prod":
                 if prod_branch in remote_branches:
                     repo.git.checkout(prod_branch, force=True)
-
-            click.echo(
-                f"Initialized git repository in {app_directory} and set remote to {git_repo_url}"
-            )
+                else:
+                    raise Exception(
+                        f"Branch {prod_branch} does not exist in the remote repository."
+                    )
 
         update_settings_with_git_repo_url(
             app_name,
@@ -203,10 +249,71 @@ def git_setup(
             prod_branch,
         )
 
-        click.echo(f"Git setup completed in {app_directory}")
+        return {
+            "success": True,
+            "message": f"Git setup completed in {app_directory}",
+        }
 
     except Exception as e:
+        os.system(f"rm -rf {app_directory}/.git")
+        os.system(f"rm -rf {app_directory}/.gitignore")
+
+        tenant.extra_config["git_config"] = {}
+
         import traceback
 
         traceback.print_exc()
-        click.echo(f"An error occurred: {e}")
+        return {
+            "success": False,
+            "message": f"An error occurred: {e}",
+        }
+
+
+@click.command("git-setup")
+@click.argument("app_name", type=str)
+@click.option("--git_repo_url", prompt=True, required=True, help="Repo URL")
+@click.option(
+    "--dev_branch",
+    prompt="Development Branch",
+    required=True,
+    help="Git Branch for Development",
+    default="development",
+)
+@click.option(
+    "--staging_branch",
+    prompt="Staging Branch",
+    required=True,
+    help="Git Branch for Staging",
+    default="staging",
+)
+@click.option(
+    "--prod_branch",
+    prompt="Production Branch",
+    required=True,
+    help="Git Branch for Production",
+    default="main",
+)
+@click.option(
+    "--initialize", is_flag=True, default=False, help="Initialize the repository"
+)
+def git_setup(
+    app_name,
+    git_repo_url,
+    dev_branch,
+    staging_branch,
+    prod_branch,
+    initialize,
+):
+    """
+    Initialize a git repository in the specified app directory and add the given remote repository URL.
+    """
+    result = git_setup_function(
+        app_name,
+        git_repo_url,
+        dev_branch,
+        staging_branch,
+        prod_branch,
+        initialize,
+    )
+
+    click.echo(result["message"])
