@@ -60,11 +60,14 @@ project_name/                  # Project root directory
 Follow this guide, and you'll be well on your way to creating powerful and efficient healthcare applications using Zango.
 
 ## Starting the celery worker and celery beat
-Perform the below steps from the root directory of the project
+
+Open a new terminal tab, activate the virtual environment, go to the project directory and run the below commands:
+
+To start the celery worker:
 ```
 celery -A <project_name> worker -l INFO
 ```
-Starting Celery beat
+To start celery beat:
 ```
 celery -A <project_name> beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
