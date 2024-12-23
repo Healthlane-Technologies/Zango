@@ -76,6 +76,7 @@ const sidebars = {
         {
           type: "category",
           label: "User Management",
+          description: "Seamlessly manage application users.",
           collapsed: true,
           items: [
             "core/user-management/overview",
@@ -87,6 +88,7 @@ const sidebars = {
         {
           type: "category",
           label: "User Roles",
+          description: "User roles with Role Based Access Control (RBAC).",
           collapsed: true,
           items: [
             "core/user-roles/overview",
@@ -99,6 +101,7 @@ const sidebars = {
         {
           type: "category",
           label: "Permissions Framework",
+          description: "Permission rules and access control.",
           collapsed: true,
           items: [
             "core/permission-framework/overview",
@@ -133,6 +136,7 @@ const sidebars = {
         {
           type: "category",
           label: "Packages Ecosystem",
+          description:"Modular, extensible software components.",
           collapsed: true,
           items: [
             "core/packages-ecosystem/overview",
@@ -142,6 +146,7 @@ const sidebars = {
         {
           type: "category",
           label: "Async Tasks",
+          description: "Seamlessly manage background tasks.",
           collapsed: true,
           items: [
             "core/async-tasks/overview",
@@ -165,6 +170,7 @@ const sidebars = {
         {
           type: "category",
           label: "Modules",
+          description: "Code organisation within your Zango app.",
           collapsed: true,
           items: [
             "core/modules/overview",
@@ -175,6 +181,7 @@ const sidebars = {
         {
           type: "category",
           label: "Views and Routes",
+          description: "Implement Django Views within your Zango app.",
           collapsed: true,
           items: [
             "core/views-and-routes/overview",
@@ -185,6 +192,7 @@ const sidebars = {
         {
           type: "category",
           label: "Templates",
+          description: "Leverage Django’s Templates.",
           collapsed: true,
           items: [
             "core/templates/overview"
@@ -193,6 +201,7 @@ const sidebars = {
         {
           type: "category",
           label: "Models",
+          description: "Django models adapted for Zango.",
           collapsed: true,
           items: [
             "core/ddms/overview",

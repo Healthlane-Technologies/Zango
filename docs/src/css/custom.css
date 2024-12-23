@@ -87,3 +87,21 @@ body[data-theme="dark"] {
 .medium-zoom--opened .medium-zoom-overlay {
   z-index: 998;
 }
+
+.api-tabs-container{ 
+  border: 1px;
+  border-style: solid;
+  border-color: #4b3fe1;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.api-tabs .tabs__item {
+  color: rgb(149, 149, 149);
+}
+
+.api-tabs .tabs__item--active {
+  background-color: #4b3fe1;
+  color: white;
+  border-radius: 5px;
+}

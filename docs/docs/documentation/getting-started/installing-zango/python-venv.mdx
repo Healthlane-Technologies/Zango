@@ -30,25 +30,31 @@ cd my_zango_project
 ## Step 2: Create a Virtual Environment
 
 Run the following command to create a virtual environment:
+
 ```bash
 python -m venv venv
 ```
+
 This creates a directory named `venv` in your project folder.
 
 ---
 ## Step 3: Activate the Virtual Environment
+<div className="api-tabs-container">
 <Tabs className="api-tabs">
-  <TabItem value="macos" label="macOS/Linux">
+  <TabItem value="macos" label="macOS/Linux" default>
 
-    source venv/bin/activate
-    
+  ```bash
+  source venv/bin/activate
+  ```
+
   </TabItem>
-  <TabItem value="windows" label="Windows" default>
+  <TabItem value="windows" label="Windows">
 
     venv\Scripts\activate
 
   </TabItem>
 </Tabs>
+</div>
 
 Once activated, your command prompt should display `(venv)` at the beginning, indicating the virtual environment is active.
 
