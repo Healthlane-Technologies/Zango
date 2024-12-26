@@ -178,14 +178,20 @@ def git_setup_function(
         }
 
     try:
+        parts = git_repo_url.split("://")
+        repo_url = (
+            f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
+        )
+
         if initialize:
+            # Clean up existing git files
             os.system(f"rm -rf {app_directory}/.git")
             os.system(f"rm -rf {app_directory}/.gitignore")
+
             # Initialize git repository
             repo = git.Repo.init(app_directory)
 
             # Create .gitignore file
-            # TODO: Create git files template
             if settings.ENV == "dev":
                 with open(
                     os.path.join(app_directory, ".gitignore"), "w"
@@ -203,43 +209,76 @@ def git_setup_function(
                 with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
                     readme_file.write(f"# {os.path.basename(app_directory)}\n")
 
-            parts = git_repo_url.split("://")
-
-            # Add username and password to the URL
-            repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
-
             # Add remote repository
             origin = repo.create_remote("origin", repo_url)
 
-            # Fetch all branches from the remote
+            # Fetch all branches from remote
             origin.fetch()
 
-            remote_branches = [ref.name.split("/")[-1] for ref in origin.refs]
+            # Get the default branch from remote
+            default_branch = None
+            for ref in origin.refs:
+                if ref.remote_head == "HEAD":
+                    default_branch = ref.reference.remote_head
+                    break
 
-            # Check if the branch exists locally
-            if settings.ENV == "dev" and dev_branch in remote_branches:
-                raise Exception(
-                    "Can't initialize repository with existing remote branches with same name."
-                )
+            if not default_branch:
+                default_branch = "main"
+
+            # Create and checkout main branch
+            repo.git.checkout("-b", default_branch)
+
+            # Create initial commit
+            repo.index.add(".")
+            repo.index.commit("Initial commit")
+
+            # Create dev branch from main
+            repo.git.checkout("-b", dev_branch)
+
+        else:
+            # Clone the repository if it doesn't exist
+            if not os.path.exists(os.path.join(app_directory, ".git")):
+                return {
+                    "success": False,
+                    "message": "Invalid repository, Please initialize the repository first.",
+                }
             else:
-                # Create a new branch and checkout
+                repo = git.Repo(app_directory)
+
+            try:
+                origin = repo.remote("origin")
+            except ValueError:
+                origin = repo.create_remote("origin", repo_url)
+
+            # Fetch all branches from remote
+            origin.fetch()
+
+            # Get the default branch from remote
+            default_branch = None
+            for ref in origin.refs:
+                if ref.remote_head == "HEAD":
+                    default_branch = ref.reference.remote_head
+                    break
+
+            if not default_branch:
+                default_branch = next(ref.name.split("/")[-1] for ref in origin.refs)
+
+            # Checkout default branch
+            repo.git.checkout(default_branch)
+
+            # Create dev branch from default branch if it doesn't exist
+            if dev_branch not in [branch.name for branch in repo.heads]:
                 repo.git.checkout("-b", dev_branch)
 
-            if settings.ENV == "staging":
-                if staging_branch in remote_branches:
-                    repo.git.checkout(staging_branch, force=True)
-                else:
-                    raise Exception(
-                        f"Branch {staging_branch} does not exist in the remote repository."
-                    )
-
-            if settings.ENV == "prod":
-                if prod_branch in remote_branches:
-                    repo.git.checkout(prod_branch, force=True)
-                else:
-                    raise Exception(
-                        f"Branch {prod_branch} does not exist in the remote repository."
-                    )
+        # Handle environment-specific branch checkouts
+        if settings.ENV == "staging" and staging_branch in [
+            ref.name.split("/")[-1] for ref in origin.refs
+        ]:
+            repo.git.checkout(staging_branch, force=True)
+        elif settings.ENV == "prod" and prod_branch in [
+            ref.name.split("/")[-1] for ref in origin.refs
+        ]:
+            repo.git.checkout(prod_branch, force=True)
 
         update_settings_with_git_repo_url(
             app_name,
@@ -259,6 +298,7 @@ def git_setup_function(
         os.system(f"rm -rf {app_directory}/.gitignore")
 
         tenant.extra_config["git_config"] = {}
+        tenant.save()
 
         import traceback
 

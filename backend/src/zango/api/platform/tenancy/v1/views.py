@@ -194,7 +194,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     new_git_config = serializer.data["extra_config"].get(
                         "git_config", {}
                     )
-
+                    initialize = new_git_config.get("initialize", True)
                     new_repo_url = new_git_config.get("repo_url")
                     old_repo_url = old_git_config.get("repo_url")
 
@@ -207,7 +207,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                             self.get_branch(new_git_config, "dev", "development"),
                             self.get_branch(new_git_config, "staging", "staging"),
                             self.get_branch(new_git_config, "prod", "main"),
-                            True,
+                            initialize,
                         )
                         if not res.get("success"):
                             return get_api_response(
