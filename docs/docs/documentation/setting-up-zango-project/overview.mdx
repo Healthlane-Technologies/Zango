@@ -20,8 +20,9 @@ configured, consider moving on to the [next steps](../../core/setting-up-zango-p
 
 ### 1. PostgreSQL Database Setup
 
-<Tabs>
-  <TabItem value="manual" label="Manual" default>
+<div className="api-tabs-container">
+<Tabs className="api-tabs">
+  <TabItem value="manual" label="Manual" >
 To get started, follow these steps to set up a PostgreSQL database:
 
 1. Install PostgreSQL:
@@ -32,9 +33,11 @@ from the official website: [PostgreSQL Downloads](https://www.postgresql.org/dow
 Once PostgreSQL is installed, open your terminal or a PostgreSQL client.
 Use the following command to create a new database. Replace your_database_name with 
 the desired name for your project's database:
+
 ```bash
 createdb your_database_name
 ```
+
 Ensure that the newly created database is fresh without any existing tables or data.
 With the PostgreSQL database set up and ready to go, you can proceed 
 with setting up your Zango project, confident that you have the necessary infrastructure in place.
@@ -46,26 +49,28 @@ installation guide for your specific platform if you encounter any issues during
 the installation process.
 :::
   </TabItem>
-  <TabItem value="docker" label="Docker">
+  <TabItem value="docker" label="Docker" default>
     Installing and setting up postgresql database manually can be overwhelming sometimes, if you have docker installed, you can set it up in just 3 commands as follows:
 
 1. Pull the Postgres Docker Image
 The first step is to pull the Postgres Docker image from the Docker Hub repository. This is done by running the following command:
-```
-docker pull postgres
-```
+  ```bash
+  docker pull postgres
+  ```
 2. Create a Docker Volume
 Next, we need to create a Docker volume to persist our Postgres data. This is done by running the following command:
-docker volume create postgres_data
+  ```bash
+  docker volume create postgres_data
+  ```
 
 3. Run the Postgres Docker Container
 Now we can run the Postgres Docker container using the following command:
-```
-docker run --name postgres_container -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 -v postgres_data:/var/lib/postgresql/data postgres
-```
+  ```bash
+  docker run --name postgres_container -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 -v postgres_data:/var/lib/postgresql/data postgres
+  ```
 
 After the setup is complete, the values of DB configuration for .env would look something like:
-```
+```bash
 POSTGRES_DB=postgres
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=mysecretpassword
@@ -74,15 +79,17 @@ POSTGRES_PORT=5432
 ```
   </TabItem>
 </Tabs>
+</div>
 
 ### 2. Redis setup
 Redis is used as a broker by celery workers. Use the steps below to run redis on your local machine:
-<Tabs>
+<div className="api-tabs-container">
+<Tabs className="api-tabs">
 <TabItem value="manual" label="Manual">
 
 #### Ubuntu/Debian Linux
 
-  ```
+  ```bash
   # Step 1: Update package list
   sudo apt update
 
@@ -101,7 +108,7 @@ Redis is used as a broker by celery workers. Use the steps below to run redis on
 
 #### macOS (using Homebrew)
 
-  ```
+  ```bash
   # Step 1: Install Homebrew (if not installed)
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
@@ -119,7 +126,7 @@ Redis is used as a broker by celery workers. Use the steps below to run redis on
 
 #### From Source (Any Linux/Unix system)
 
-  ```
+  ```bash
   # Step 1: Install dependencies
   sudo apt install build-essential tcl  # For Ubuntu/Debian
   # OR
@@ -153,13 +160,17 @@ Redis is used as a broker by celery workers. Use the steps below to run redis on
 
 </TabItem>
   <TabItem value="docker" label="Docker" default>
-  Simply run the below command to start redis inside a docker container on port 6379.<br/>
+  Simply run the below command to start redis inside a docker container on port 6379. 
 
-    docker run --name "name" -d -p 6379:6379 redis
+  ```bash
+  docker run --name "name" -d -p 6379:6379 redis
+  ```
 
   For example:
-
-    docker run --name zango_redis -d -p 6379:6379 redis
+  ```bash
+  docker run --name zango_redis -d -p 6379:6379 redis
+  ```
 
   </TabItem>
 </Tabs>
+</div>
