@@ -32,7 +32,7 @@ class CeleryStatusAPIView(ZangoGenericPlatformAPIView):
             is_running = bool(active_workers)  # True if there are active workers
 
             response = {
-                "status": "Running" if is_running else "Not Running",
+                "status": is_running,
                 "active_workers": active_workers or {},
             }
             success = True
