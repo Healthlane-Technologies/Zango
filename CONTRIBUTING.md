@@ -70,7 +70,7 @@ This section describes the general practices for contributing to zango, you can 
     pip install -e path/to/your/zango_repo/backend
 ```
 
-4. Perform the steps to setup a new project as described in the docs [here.](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual#zango-the-zango-cli)
+4. Perform the steps to setup a new project as described in the docs [here.](https://www.zango.dev/docs/core/getting-started/installing-zango/manual#zango-the-zango-cli)
 5. Start your project and launch a new app.
 6. Now whatever changes you will do to your local zango it will be reflected in your project.
 
