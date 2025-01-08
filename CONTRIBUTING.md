@@ -81,6 +81,8 @@ core migrations only, you can create and run app specific migrations as describe
 
 ## Contributing to Zango frontend
 
+### with mock server
+
 1. Go to the frontend directory of the repository and install the dependencies
 
 ```bash
@@ -94,8 +96,32 @@ core migrations only, you can create and run app specific migrations as describe
     yarn mock
 ```
 
-3. Generating and Using frontend build in Zango
-   To test your frontend app with the Zango framework, follow these steps:
+### with live data
+
+#### Prerequisite
+
+Before running this application, ensure that your Zango backend is up and running.
+
+#### Default Port Configuration
+
+By default, the application uses Zango's default running port `(localhost:8000)`. If you wish to use a different port, you can easily configure this in your package.json file under the proxy key.
+
+1. Go to the frontend directory of the repository and install the dependencies
+
+```bash
+    cd frontend
+    yarn install
+```
+
+2. Start the application with dev server
+
+```bash
+    yarn dev
+```
+
+### Generating and Using frontend build in Zango
+
+To test your frontend app with the Zango framework, follow these steps:
 
 Run the build command:
 
@@ -105,8 +131,7 @@ Run the build command:
 
 This command generates the build and places it inside the `backend/src/zango/assets/app_panel/js` directory of Zango.
 
-The generated build will include the latest timestamp in its filename (`build.<timestamp>.min.js`). By default, the most recent build will be served. If you need to use a different build, you can update the filename in the ``backend/src/zango/apps/shared/tenancy/templates/app_panel.html`` file.
-
+The generated build will include the latest timestamp in its filename (`build.<timestamp>.min.js`). By default, the most recent build will be served. If you need to use a different build, you can update the filename in the `backend/src/zango/apps/shared/tenancy/templates/app_panel.html` file.
 
 4. Collecting Static Build for Your Project
 
