@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2024-01-10
+
+### Added
+* Setup App Panel Frontend for Local API Development [(#357)](https://github.com/Healthlane-Technologies/Zango/pull/357)
+* openpyxl dependency added [(#431)](https://github.com/Healthlane-Technologies/Zango/pull/431)
+
+### Fixed
+* pkg config_url None if configure route fails [(#423)](https://github.com/Healthlane-Technologies/Zango/pull/423)
+* default theme created when uploading template [(#424)](https://github.com/Healthlane-Technologies/Zango/pull/424)
+* minor fixes in App Panel login page [(#351)](https://github.com/Healthlane-Technologies/Zango/pull/351)
+* Color Picker Input Issue in App Panel Theme Configuration [(#432)](https://github.com/Healthlane-Technologies/Zango/pull/432)
+
 ## [0.4.0] - 2024-12-13
 
 ### Added
