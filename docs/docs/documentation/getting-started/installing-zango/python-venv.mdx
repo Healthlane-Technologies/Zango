@@ -10,6 +10,16 @@ import TabItem from '@theme/TabItem';
 
 This guide will walk you through the steps to install Zango within a Python virtual environment. Virtual environments allow you to create isolated environments for your projects, ensuring that dependencies are managed separately for each project.
 
+<div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+ <iframe style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+    }} src="https://www.youtube.com/embed/r0bUXHaEbTE?si=4ixcPSXlCnTqLOEA" title="Zango Installation & Project Setup Guide" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
 ---
 ## Pre-requisites
 
@@ -30,25 +40,31 @@ cd my_zango_project
 ## Step 2: Create a Virtual Environment
 
 Run the following command to create a virtual environment:
+
 ```bash
 python -m venv venv
 ```
+
 This creates a directory named `venv` in your project folder.
 
 ---
 ## Step 3: Activate the Virtual Environment
+<div className="api-tabs-container">
 <Tabs className="api-tabs">
-  <TabItem value="macos" label="macOS/Linux">
+  <TabItem value="macos" label="macOS/Linux" default>
 
-    source venv/bin/activate
-    
+  ```bash
+  source venv/bin/activate
+  ```
+
   </TabItem>
-  <TabItem value="windows" label="Windows" default>
+  <TabItem value="windows" label="Windows">
 
     venv\Scripts\activate
 
   </TabItem>
 </Tabs>
+</div>
 
 Once activated, your command prompt should display `(venv)` at the beginning, indicating the virtual environment is active.
 

@@ -13,19 +13,16 @@
 
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
-  docsSidebar: [   
+  docsSidebar: [
     {
-      type: 'category', 
-      label: 'Introduction',
-      items: [
-        "core/introduction",
-        "core/framework-architecture", 
-      ],
-      collapsible: false
+      type: "category",
+      label: "Introduction",
+      items: ["core/introduction", "core/framework-architecture"],
+      collapsible: false,
     },
     {
-      type: 'category', 
-      label: 'Getting Started',
+      type: "category",
+      label: "Getting Started",
       items: [
         "core/quickstart",
         {
@@ -62,20 +59,19 @@ const sidebars = {
             type: "generated-index",
           },
           collapsed: true,
-          items: [
-            "tutorials/todo-app/overview",
-          ],
+          items: ["tutorials/todo-app/overview"],
         },
       ],
-      collapsible: false
+      collapsible: false,
     },
     {
-      type: 'category', 
-      label: 'Framework Components',
+      type: "category",
+      label: "Framework Components",
       items: [
         {
           type: "category",
           label: "User Management",
+          description: "Seamlessly manage application users.",
           collapsed: true,
           items: [
             "core/user-management/overview",
@@ -87,18 +83,20 @@ const sidebars = {
         {
           type: "category",
           label: "User Roles",
+          description: "User roles with Role Based Access Control (RBAC).",
           collapsed: true,
           items: [
             "core/user-roles/overview",
             "core/user-roles/creating-a-user-role",
             "core/user-roles/deactivating-a-user-role",
             "core/user-roles/assigning-policies-to-user-roles",
-            "core/user-roles/reserved-user-roles"
+            "core/user-roles/reserved-user-roles",
           ],
         },
         {
           type: "category",
           label: "Permissions Framework",
+          description: "Permission rules and access control.",
           collapsed: true,
           items: [
             "core/permission-framework/overview",
@@ -133,22 +131,24 @@ const sidebars = {
         {
           type: "category",
           label: "Packages Ecosystem",
+          description:"Modular, extensible software components.",
           collapsed: true,
           items: [
             "core/packages-ecosystem/overview",
-            "core/packages-ecosystem/installing-a-package"
+            "core/packages-ecosystem/installing-a-package",
           ],
         },
         {
           type: "category",
           label: "Async Tasks",
+          description: "Seamlessly manage background tasks.",
           collapsed: true,
           items: [
             "core/async-tasks/overview",
             "core/async-tasks/creating-an-async-task",
             "core/async-tasks/manually-triggering-async-tasks",
             "core/async-tasks/scheduling-async-tasks",
-            "core/async-tasks/syncing-and-viewing-async-tasks"
+            "core/async-tasks/syncing-and-viewing-async-tasks",
           ],
         },
       ],
@@ -159,40 +159,42 @@ const sidebars = {
       },
     },
     {
-      type: 'category', 
-      label: 'Development Workflow',
+      type: "category",
+      label: "Development Workflow",
       items: [
         {
           type: "category",
           label: "Modules",
+          description: "Code organisation within your Zango app.",
           collapsed: true,
           items: [
             "core/modules/overview",
             "core/modules/creating-a-module",
             "core/modules/registering-a-module",
           ],
-        }, 
+        },
         {
           type: "category",
           label: "Views and Routes",
+          description: "Implement Django Views within your Zango app.",
           collapsed: true,
           items: [
             "core/views-and-routes/overview",
             "core/views-and-routes/creating-a-view",
             "core/views-and-routes/assigning-route-to-a-view",
           ],
-        }, 
+        },
         {
           type: "category",
           label: "Templates",
+          description: "Leverage Django’s Templates.",
           collapsed: true,
-          items: [
-            "core/templates/overview"
-          ],
-        }, 
+          items: ["core/templates/overview"],
+        },
         {
           type: "category",
           label: "Models",
+          description: "Django models adapted for Zango.",
           collapsed: true,
           items: [
             "core/ddms/overview",
@@ -200,7 +202,7 @@ const sidebars = {
             "core/ddms/ddm-field-types",
             "core/ddms/migrating-ddms",
           ],
-        }, 
+        },
       ],
       collapsible: true,
       link: {
@@ -208,6 +210,7 @@ const sidebars = {
       },
     },
     "core/enterprise-readiness",
+    require("./pkgsSidebar") ? require("./pkgsSidebar") : null,
     // {
     //   "type": "category",
     //   "label": "Deployment",

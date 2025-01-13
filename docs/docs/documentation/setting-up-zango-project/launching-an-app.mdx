@@ -15,7 +15,13 @@ After you have setup a zango project, its time to launch a new app on Zango. To 
 
 ![Todo app launch](/img/todoapp_launch.gif)
 
-# App Domain configuration
+## App Domain and Timezone configuration
+
+:::warning
+Configuring app domain and timezone is very important, you will not be able to access your app without app domain and timezone.
+:::
+
+#### Domain
 Since zango has the ability to create multiple projects under one single zango project, it uses domains to identify which project
 should the request be redirected to. Hence, we will assign a domain, say `todoapp.zango.com`(you can add any domain) to our app from the app panel.
 ![Todo app domain](/img/todoapp_domain_configure.gif)
@@ -25,17 +31,22 @@ the requests to.
 To make it work we'll have to map the domain `todoapp.zango.com` to `localhost` in the `/etc/hosts` file. Lets see how to do that
 for different operating systems:
 
-<Tabs>
+<div className="api-tabs-container">
+<Tabs className="api-tabs">
   <TabItem value="macos" label="MacOS/Linux" default>
   <li>Open a new terminal window</li>
   <li>Run the below command to open `/etc/hosts` file on macOS or Linux:</li>
 
-    sudo nano /etc/hosts
+  ```bash
+  sudo nano /etc/hosts
+  ```
 
   <li>A file will open in the terminal, paste the below line in that file:</li>
 
-    0.0.0.0           todoapp.zango.com
-    
+  ```bash
+  0.0.0.0           todoapp.zango.com
+  ```  
+
   <li>Save and exit the editor</li>
   </TabItem>
   <TabItem value="windows" label="Windows">
@@ -43,12 +54,17 @@ for different operating systems:
   <li>Navigate to the hosts file path which will be `C:\Windows\System32\drivers\etc\hosts`</li>
   <li>Paste the below line in that file:</li>
 
-    0.0.0.0           todoapp.zango.com
+  ```bash
+  0.0.0.0           todoapp.zango.com
+  ```
 
   <li>Save and close the notepad</li>
   </TabItem>
 </Tabs>
-    
+</div>
 
-Congratulations! you have successfully configured the domain for your Zango app. The app will be accessile on the address
+#### Timezone
+![App timezone](/img/timezone_configuration.gif)
+
+Congratulations! you have successfully configured the domain and timezone for your Zango app. The app will be accessile on the address
 `http://domain:port`.
