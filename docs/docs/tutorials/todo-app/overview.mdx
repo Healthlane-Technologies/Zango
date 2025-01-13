@@ -18,7 +18,7 @@ Consider this as similar to a django project in which we are going to write all 
 isolates the projects at code level.
 
 :::warning
-Before moving on to code, make sure you have [configured a domain](../../core/setting-up-zango-project/configuring-app-domain) for your app.
+Before moving on to code, make sure you have [configured a domain](../../core/setting-up-zango-project/launching-an-app#app-domain-configuration) for your app.
 :::
 
 ## Lets write some code!
@@ -375,7 +375,7 @@ And with this we have completed the coding part. Or we can say, At code level, O
 
 - Now make migrations for our todo app and app it on our database. For generating migrations use the below command:
     ```
-    python manage.py ws_makemigrations todoapp
+    python manage.py ws_makemigration todoapp
     ```
 
 - To apply the generated migrations to our database, simply run:

@@ -1,6 +1,6 @@
 ---
 sidebar_label: Zango CLI
-description: Learn more about the Zango CLI
+description: Command Line Interface for managing Zango
 ---
 
 # The Zango CLI
@@ -36,5 +36,14 @@ To get started with **zango CLI**, open your terminal and run the following comm
   ```
   zango [command] --help
   ```
+
+### List of Available Zango CLI Commands
+
+| Command         | Description                                    | Options                                                                                  |
+|-----------------|------------------------------------------------|------------------------------------------------------------------------------------------|
+| `start-project` | Start a Zango project                          | <ul><li>`--directory`: Project Directory</li><li>`--db_name`: DB Name</li><li>`--db_user`: DB User</li><li>`--db_password`: DB Password</li><li>`--db_host`: DB Host</li><li>`--db_port`: DB Port</li><li>`--redis_host`: Redis Host</li><li>`--redis_port`: Redis Port</li><li>`--platform_username`: Platform Username</li><li>`--platform_domain_url`: Platform Domain URL</li><li>`--platform_user_password`: Platform User Password</li></ul>|
+| `git-setup`     |Initialize a git repository in the specified app| <ul><li>`--git_repo_url`: Repo URL <b>[required]</b></li><li>`--dev_branch`: Git Branch for Development <b>[required]</b></li><li>`--staging_branch`: Git Branch for Staging <b>[required]</b></li><li>`--prod_branch`: Git Branch for Production <b>[required]</b></li><li>`--initialize`: Initialize the repository</li></ul> |
+| `update-apps`   | To release an app                              | `--app_name`: App Name(s)                                                                |
+
 
 **Zango CLI** is an invaluable tool for efficiently managing your Zango projects and applications through the command line, enhancing your development and administrative capabilities.
