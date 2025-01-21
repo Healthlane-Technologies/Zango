@@ -70,4 +70,5 @@ PyJWT==2.8.0
 python3-saml==1.16.0
 pytz==2024.1
 setuptools==70.1.1
+single-beat==0.6.3
 XlsxWriter==3.1.9
