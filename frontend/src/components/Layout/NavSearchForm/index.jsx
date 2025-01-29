@@ -6,7 +6,7 @@ import * as Yup from 'yup';
 import { ReactComponent as SearchIcon } from '../../../assets/images/svg/search-icon.svg';
 import SelectField from './SelectField';
 import useApi from '../../../hooks/useApi';
-
+import {useLocation} from 'react-router-dom'
 const AutoSave = ({ debounceMs }) => {
 	const formik = useFormikContext();
 	const [lastSaved, setLastSaved] = useState(null);
@@ -25,6 +25,10 @@ const AutoSave = ({ debounceMs }) => {
 };
 
 export default function NavSearchForm() {
+	const location = useLocation();
+	const isValidPath =
+		location.pathname === '/platform/apps' ||
+		location.pathname === '/platform/apps/';
 	const [isCeleryRunning, setIsCeleryRunning] = useState('Loading...');
 	const triggerApi = useApi();
 	let initialValues = {
@@ -53,12 +57,14 @@ export default function NavSearchForm() {
 	};
 
 	useEffect(() => {
-		fetchCeleryData();
+		if(isValidPath){
+			fetchCeleryData();
 
-		const intervalId = setInterval(fetchCeleryData, 7500);
-
-		return () => clearInterval(intervalId);
-	}, []);
+			const intervalId = setInterval(fetchCeleryData, 7500);
+	
+			return () => clearInterval(intervalId);
+		}
+	}, [isValidPath]);
 
 	let onSubmit = (values) => {
 		makeApiCall();
@@ -124,23 +130,28 @@ export default function NavSearchForm() {
 									/>
 								</div>
 							</div>
-							<div
-								className={`flex font-semibold rounded-sm px-5 items-center justify-center text-xs ${
-									isCeleryRunning === 'Running'
-										? 'bg-green-200'
+							{
+								isValidPath && (
+								<div
+									className={`flex font-semibold rounded-sm px-5 items-center justify-center text-xs ${
+										isCeleryRunning === 'Running'
+											? 'bg-green-200'
+											: isCeleryRunning === 'Not Running'
+											? 'bg-red-200'
+											: 'bg-gray-100'
+									}`}
+								>
+									Celery Status: <span className={` ml-2 ${
+										isCeleryRunning === 'Running'
+										? 'text-green-700'
 										: isCeleryRunning === 'Not Running'
-										? 'bg-red-200'
-										: 'bg-gray-100'
-								}`}
-							>
-								Celery Status: <span className={` ml-2 ${
-									isCeleryRunning === 'Running'
-									? 'text-green-700'
-									: isCeleryRunning === 'Not Running'
-									? 'text-red-700'
-									: 'text-gray-700'
-								}`}>{isCeleryRunning}</span> 
-							</div>{' '}
+										? 'text-red-700'
+										: 'text-gray-700'
+									}`}>{isCeleryRunning}</span> 
+								</div>
+								)
+							}
+							
 						</div>
 					</form>
 				);
