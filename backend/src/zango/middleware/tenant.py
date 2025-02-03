@@ -5,6 +5,7 @@ from django_tenants.utils import (
     get_public_schema_name,
     get_public_schema_urlconf,
     get_tenant_domain_model,
+    get_tenant_model,
     get_tenant_types,
     has_multi_type_tenants,
     remove_www,
@@ -51,6 +52,41 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         domain = domain_model.objects.select_related("tenant").get(domain=hostname)
         return domain.tenant
 
+    def get_public_tenant(self):
+        """
+        Retrieve the public tenant.
+
+        This method fetches the tenant that is marked as "shared" in the tenant model.
+
+        Returns:
+            Tenant: The tenant instance with `tenant_type="shared"`.
+
+        Raises:
+            DoesNotExist: If no tenant with `tenant_type="shared"` exists.
+            MultipleObjectsReturned: If multiple tenants with `tenant_type="shared"` exist.
+        """
+        tenant_model = get_tenant_model()
+        tenant = tenant_model.objects.get(tenant_type="shared")
+        return tenant
+
+    def get_tenant_domain(self, tenant, domain_model):
+        """
+        Retrieve the domain associated with a given tenant.
+
+        Args:
+            tenant (Tenant): The tenant instance for which the domain is retrieved.
+            domain_model (Model): The domain model used for querying.
+
+        Returns:
+            str: The domain name associated with the tenant.
+
+        Raises:
+            DoesNotExist: If no domain is found for the given tenant.
+            MultipleObjectsReturned: If multiple domains exist for the given tenant.
+        """
+        domain = domain_model.objects.select_related("tenant").get(tenant=tenant)
+        return domain.domain
+
     def __call__(self, request):
         """
         Determines the tenant based on the request's hostname,
@@ -68,8 +104,12 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         try:
             tenant = self.get_tenant(domain_model, hostname)
         except domain_model.DoesNotExist:
-            self.no_tenant_found(request, hostname)
-            return
+            if request.path == "/api/v1/health/":
+                tenant = self.get_public_tenant()
+                hostname = self.get_tenant_domain(tenant, domain_model)
+            else:
+                self.no_tenant_found(request, hostname)
+                return
 
         tenant.domain_url = hostname
         request.tenant = tenant
