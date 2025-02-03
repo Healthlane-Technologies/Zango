@@ -114,11 +114,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
-REST_KNOX = {
-    "TOKEN_TTL": None,
-    "AUTH_HEADER_PREFIX": "Bearer",
-}
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -310,6 +305,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
+        ZANGO_TOKEN_TTL=(int, 4),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -414,6 +410,13 @@ def setup_settings(settings, BASE_DIR):
     settings.AXES_FAILURE_LIMIT = env("AXES_FAILURE_LIMIT")
     settings.AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
     settings.AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))
+
+    settings.REST_KNOX = {
+        "TOKEN_TTL": None
+        if env("ZANGO_TOKEN_TTL") == 0
+        else timedelta(weeks=env("ZANGO_TOKEN_TTL")),
+        "AUTH_HEADER_PREFIX": "Bearer",
+    }
 
     log_folder = os.path.join(BASE_DIR, "log")
     log_file = os.path.join(log_folder, "zango.log")
