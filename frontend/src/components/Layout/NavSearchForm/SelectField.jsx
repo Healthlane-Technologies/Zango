@@ -15,7 +15,7 @@ export default function SelectField() {
 			{
 				name: 'offset',
 				options: {
-					offset: [0, -32],
+					offset: [0, 0],
 				},
 			},
 		],
@@ -25,7 +25,7 @@ export default function SelectField() {
 
 	return (
 		<div className="relative">
-			<Menu as="div" className="relative flex w-[198px]">
+			<Menu as="div" className="relative flex w-[228px]">
 				<Menu.Button
 					data-cy="top_menu_button"
 					className="flex w-full items-center gap-[12px] rounded-r-[4px] border-l border-l-[#DDE2E5] bg-[#F0F3F4] px-[16px] py-[6px] hover:outline-0 focus:outline-0"
@@ -34,7 +34,11 @@ export default function SelectField() {
 					<span
 						className={`block w-[80%] truncate bg-transparent text-left font-lato text-sm font-bold tracking-[0.2px] text-[#212429] outline-0  ring-0 placeholder:text-[#6C747D] `}
 					>
-						{pathnameArray.indexOf('apps') > -1 ? 'Apps' : 'User Management'}
+						{pathnameArray.indexOf('apps') > -1
+							? 'Apps'
+							: pathnameArray.indexOf('deployment-checklist') > -1
+							? 'Deployment Checklist'
+							: 'User Management'}
 					</span>
 					<span className="pointer-events-none absolute inset-y-0 right-[24px] flex items-center">
 						<NavSearchDownArrowIcon aria-hidden="true" />
@@ -46,6 +50,12 @@ export default function SelectField() {
 					ref={(ref) => setPopperElement(ref)}
 					style={styles['popper']}
 					{...attributes['popper']}
+					enter="transition ease-out duration-200"
+					enterFrom="transform opacity-0 scale-95"
+					enterTo="transform opacity-100 scale-100"
+					leave="transition ease-in duration-150"
+					leaveFrom="transform opacity-100 scale-100"
+					leaveTo="transform opacity-0 scale-95"
 				>
 					<Menu.Items className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto rounded-[4px] bg-[#495057] font-lato text-base focus:outline-none sm:text-sm">
 						<div className="relative">
@@ -63,7 +73,10 @@ export default function SelectField() {
 								</span>
 							</div>
 						</div>
-						<div data-cy="top_menu_items" className="flex flex-col pb-[12px] pt-[6px]">
+						<div
+							data-cy="top_menu_items"
+							className="flex flex-col pb-[12px] pt-[6px]"
+						>
 							<Menu.Item>
 								{({ active }) => (
 									<NavLink
@@ -126,6 +139,46 @@ export default function SelectField() {
 															}`}
 														>
 															User Management
+														</span>
+													</div>
+													<span
+														className={`block font-lato text-[#FFFFFF] ${
+															isActive ? 'font-bold' : ''
+														}`}
+													></span>
+												</div>
+											);
+										}}
+									/>
+								)}
+							</Menu.Item>
+							<Menu.Item>
+								{({ active }) => (
+									<NavLink
+										exact="true"
+										to={`/platform/deployment-checklist`}
+										className="relative flex items-center px-[16px] py-[4px]"
+										children={({ isActive }) => {
+											return (
+												<div
+													className={`${
+														active ? '' : ''
+													} relative flex w-full flex-col rounded-[2px]`}
+												>
+													<div className="flex gap-[12px]">
+														<div className="min-w-[12px]">
+															<SelectDynamicCheckIcon
+																className={`${
+																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+																}`}
+															/>
+														</div>
+														<span
+															className={`block font-lato text-[#FFFFFF] ${
+																isActive ? 'font-bold' : ''
+															}`}
+														>
+															Deployment Checklist
 														</span>
 													</div>
 													<span

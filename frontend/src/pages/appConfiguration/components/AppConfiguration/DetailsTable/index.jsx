@@ -65,10 +65,11 @@ function DetailsTable() {
 										target={'_blank'}
 										key={key}
 										className="w-fit"
+										rel='noreferrer'
 									>
 										<span
 											key={eachDomain.domain}
-											className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429] hover:text-[#5048ED]"
+											className="whitespace-nowrap font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#5047ED]"
 										>
 											{eachDomain.domain}
 										</span>
