@@ -36,8 +36,6 @@ export default function SelectField() {
 					>
 						{pathnameArray.indexOf('apps') > -1
 							? 'Apps'
-							: pathnameArray.indexOf('deployment-checklist') > -1
-							? 'Deployment Checklist'
 							: 'User Management'}
 					</span>
 					<span className="pointer-events-none absolute inset-y-0 right-[24px] flex items-center">
@@ -139,46 +137,6 @@ export default function SelectField() {
 															}`}
 														>
 															User Management
-														</span>
-													</div>
-													<span
-														className={`block font-lato text-[#FFFFFF] ${
-															isActive ? 'font-bold' : ''
-														}`}
-													></span>
-												</div>
-											);
-										}}
-									/>
-								)}
-							</Menu.Item>
-							<Menu.Item>
-								{({ active }) => (
-									<NavLink
-										exact="true"
-										to={`/platform/deployment-checklist`}
-										className="relative flex items-center px-[16px] py-[4px]"
-										children={({ isActive }) => {
-											return (
-												<div
-													className={`${
-														active ? '' : ''
-													} relative flex w-full flex-col rounded-[2px]`}
-												>
-													<div className="flex gap-[12px]">
-														<div className="min-w-[12px]">
-															<SelectDynamicCheckIcon
-																className={`${
-																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
-																}`}
-															/>
-														</div>
-														<span
-															className={`block font-lato text-[#FFFFFF] ${
-																isActive ? 'font-bold' : ''
-															}`}
-														>
-															Deployment Checklist
 														</span>
 													</div>
 													<span
