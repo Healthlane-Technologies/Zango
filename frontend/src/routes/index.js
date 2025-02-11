@@ -7,6 +7,8 @@ import PlatformAppRoutes from '../pages/app/routes';
 import PlatformRoutes from '../pages/platform/routes';
 import { setAppPanelInitialData } from '../pages/platform/slice';
 import PlatformUserManagementRoutes from '../pages/platformUserManagement/routes';
+import DeplymentCheckListRoutes from '../pages/platformDeploymentChecklistRoute/routes';
+
 
 export const AppRoutes = () => {
 	const location = useLocation();
@@ -38,6 +40,10 @@ export const AppRoutes = () => {
 				<Route
 					path="/platform/user-managements/*"
 					element={<PlatformUserManagementRoutes />}
+				></Route>
+				<Route
+					path="/platform/deployment-checklist/*"
+					element={<DeplymentCheckListRoutes />}
 				></Route>
 				<Route path="/platform/apps/:appId/*" element={<PlatformAppRoutes />} />
 				<Route path="*" element={<Navigate to="./platform/apps" />} />
