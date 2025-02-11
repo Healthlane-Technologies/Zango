@@ -15,7 +15,7 @@ export default function SelectField() {
 			{
 				name: 'offset',
 				options: {
-					offset: [0, 0],
+					offset: [0, -32],
 				},
 			},
 		],
@@ -25,7 +25,7 @@ export default function SelectField() {
 
 	return (
 		<div className="relative">
-			<Menu as="div" className="relative flex w-[228px]">
+			<Menu as="div" className="relative flex w-[198px]">
 				<Menu.Button
 					data-cy="top_menu_button"
 					className="flex w-full items-center gap-[12px] rounded-r-[4px] border-l border-l-[#DDE2E5] bg-[#F0F3F4] px-[16px] py-[6px] hover:outline-0 focus:outline-0"
@@ -34,9 +34,7 @@ export default function SelectField() {
 					<span
 						className={`block w-[80%] truncate bg-transparent text-left font-lato text-sm font-bold tracking-[0.2px] text-[#212429] outline-0  ring-0 placeholder:text-[#6C747D] `}
 					>
-						{pathnameArray.indexOf('apps') > -1
-							? 'Apps'
-							: 'User Management'}
+						{pathnameArray.indexOf('apps') > -1 ? 'Apps' : 'User Management'}
 					</span>
 					<span className="pointer-events-none absolute inset-y-0 right-[24px] flex items-center">
 						<NavSearchDownArrowIcon aria-hidden="true" />
