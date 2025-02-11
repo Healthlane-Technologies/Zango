@@ -89,6 +89,7 @@ export default function NavSearchForm() {
 								optionsData={[
 									{ id: 'Apps', label: 'Apps' },
 									{ id: 'User Management', label: 'User Management' },
+									{ id: 'deployment-checklist', label: 'Deployment Checklist' },
 								]}
 								onChange={formik.handleChange}
 								formik={formik}
