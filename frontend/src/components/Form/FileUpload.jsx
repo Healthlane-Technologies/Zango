@@ -4,7 +4,7 @@ import { ReactComponent as UploadIcon } from '../../assets/images/svg/upload-ico
 import { ReactComponent as UploadCloseIcon } from '../../assets/images/svg/upload-close-icon.svg';
 import { useState } from 'react';
 
-export default function FileUpload({ formik, label, id, fileValue }) {
+export default function FileUpload({ formik, label, id, fileValue, fileType = '*' }) {
 	const [previewUrl, setPreviewUrl] = useState();
 
 	return (
@@ -68,6 +68,7 @@ export default function FileUpload({ formik, label, id, fileValue }) {
 							setPreviewUrl(URL.createObjectURL(e.target.files[0]));
 							e.target.value = '';
 						}}
+						accept={fileType}
 					/>
 				</div>
 			</div>
