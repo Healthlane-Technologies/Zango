@@ -131,7 +131,7 @@ const sidebars = {
         {
           type: "category",
           label: "Packages Ecosystem",
-          description:"Modular, extensible software components.",
+          description: "Modular, extensible software components.",
           collapsed: true,
           items: [
             "core/packages-ecosystem/overview",
@@ -210,6 +210,7 @@ const sidebars = {
       },
     },
     "core/enterprise-readiness",
+    "core/deployment-checklist",
     require("./pkgsSidebar") ? require("./pkgsSidebar") : null,
     // {
     //   "type": "category",

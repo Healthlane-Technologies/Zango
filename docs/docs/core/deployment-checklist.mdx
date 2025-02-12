@@ -1,0 +1,59 @@
+---
+title: Deployment Checklist
+sidebar_label: Deployment Checklist
+---
+
+# Zango Deployment Checklist
+
+This checklist ensures that the **Zango** application is deployed securely and follows best practices. Before deploying, review the following key areas.
+
+## **1. Security Configuration**
+
+- **Debug Mode**: Ensure `DEBUG = False` in production.
+- **IP Restriction**: Restrict App Panel access to approved IP addresses.
+- **Two-Factor Authentication (2FA)**: Enforce 2FA for all user accounts.
+- **Single Sign-On (SSO/OIDC)**: Verify if SSO/OIDC authentication is enforced.
+- **Default Credentials**: Ensure no default IDs or passwords are active in production.
+- **Concurrent Sessions**: Disable concurrent sessions to prevent session hijacking.
+
+## **2. Authentication & Access Controls**
+
+- **Account Lockout Time**: Set and verify the duration of account lockouts after failed login attempts.
+- **Allowed Password Attempts**: Define and enforce a limit for failed login attempts.
+- **Password Age Policies**: Ensure password expiration policies are enforced.
+- **Password Strength Policies**: Require strong passwords (length, complexity, special characters, etc.).
+
+## **3. Network & Communication Security**
+
+- **HTTPS Enforcement**: Ensure HTTPS is strictly enforced.
+- **Data Encryption in Transit**: Verify that all data transmissions use TLS encryption.
+- **Server Time Synchronization**: Ensure the server is synchronized with an NTP server.
+
+## **4. Web Security & Protection**
+
+- **Cross-Site Scripting (XSS) Protection**: Enable XSS protection headers (e.g., `X-XSS-Protection`).
+- **Content Security Policy (CSP)**: Define a CSP to mitigate data injection attacks like XSS.
+- **SQL Injection Protection**: Use prepared statements or ORM security features to prevent SQL injection.
+- **Clickjacking Protection**: Set `X-Frame-Options` headers to prevent clickjacking.
+- **Security Headers Compliance**: Ensure essential HTTP security headers are set:
+  - `Strict-Transport-Security`
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+
+## **5. API & Application Security**
+
+- **Secure Cookies**: Set cookies with `Secure` and `HttpOnly` flags to prevent unauthorized access and ensure they are transmitted only over HTTPS.
+- **API Rate Limiting**: Implement rate limiting on API endpoints to mitigate brute-force and DoS attacks.
+- **External Resources Control**: Allow only trusted external resources (e.g., JavaScript libraries, stylesheets) to be used.
+
+## **6. Logging & Monitoring**
+
+- **Audit Logging**: Enable logging for critical actions, including:
+  - Login attempts
+  - Password changes
+  - Access to sensitive data
+- **Monitor Security Logs**: Regularly review logs for suspicious activity.
+
+---
+
+Following this checklist will help ensure a secure and reliable deployment of the **Zango** application. For additional security configurations, refer to the [Zango Security Guidelines](../security).
