@@ -75,7 +75,18 @@ def internal_request_post(url, **kwargs):
             query_params=query_params,
         )
         query_dict = QueryDict("", mutable=True)
-        query_dict.update(data)
+
+        # Check if data is a string (i.e., a JSON string)
+        if isinstance(data, str):
+            # Parse the JSON string back into a dictionary
+            data = json.loads(data)
+
+        # Convert data to a dictionary with string keys and values
+        data_dict = {str(k): str(v) for k, v in data.items()}
+
+        query_dict.update(data_dict)
+
+        # query_dict.update({"data":data})
 
         # Assign the QueryDict to request.POST
         fake_request.POST = query_dict
