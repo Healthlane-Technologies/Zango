@@ -72,7 +72,7 @@ services:
 
   celery_beat:
     image: local/zango-base:latest
-    command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    command: /bin/sh -c "cd ${PROJECT_NAME} && single-beat celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/zango/
     env_file:
