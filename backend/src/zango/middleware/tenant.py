@@ -69,24 +69,6 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         tenant = tenant_model.objects.get(tenant_type="shared")
         return tenant
 
-    def get_tenant_domain(self, tenant, domain_model):
-        """
-        Retrieve the domain associated with a given tenant.
-
-        Args:
-            tenant (Tenant): The tenant instance for which the domain is retrieved.
-            domain_model (Model): The domain model used for querying.
-
-        Returns:
-            str: The domain name associated with the tenant.
-
-        Raises:
-            DoesNotExist: If no domain is found for the given tenant.
-            MultipleObjectsReturned: If multiple domains exist for the given tenant.
-        """
-        domain = domain_model.objects.select_related("tenant").get(tenant=tenant)
-        return domain.domain
-
     def __call__(self, request):
         """
         Determines the tenant based on the request's hostname,
@@ -106,7 +88,7 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         except domain_model.DoesNotExist:
             if request.path == "/api/v1/health/":
                 tenant = self.get_public_tenant()
-                hostname = self.get_tenant_domain(tenant, domain_model)
+                hostname = tenant.get_primary_domain().domain
             else:
                 self.no_tenant_found(request, hostname)
                 return
