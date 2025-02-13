@@ -51,6 +51,8 @@ def get_package_manifest(package, version):
 
 
 def dep_check(package, version, manifest, installed_packages):
+    if not manifest.get("zango"):
+        return True
     zango_version_specifier_set = SpecifierSet(manifest["zango"], prereleases=True)
     if not zango_version_specifier_set.contains(Version(zango.__version__)):
         return False
@@ -198,6 +200,13 @@ def install_package(package_name, version, tenant, release=False):
     if package_installed(package_name, tenant):
         return "Package already installed"
     try:
+        installed_packages = get_installed_packages(tenant)
+        package_manifest = get_package_manifest(package_name, version)
+        if not dep_check(package_name, version, package_manifest, installed_packages):
+            raise Exception(
+                "Version of the package not supported by current version of Zango"
+            )
+
         # if not package_is_cached(package_name, version):
         create_directories([f"workspaces/{tenant}/packages"])
         resource = boto3.resource(

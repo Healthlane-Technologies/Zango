@@ -135,7 +135,15 @@ class TenantModel(TenantMixin, FullAuditMixin):
         self.save()
 
     @classmethod
-    def create(cls, name, schema_name, description, app_template_name, **other_params):
+    def create(
+        cls,
+        name,
+        schema_name,
+        description,
+        app_template_name,
+        run_migrations=False,
+        **other_params,
+    ):
         _check_tenant_name(name)
         obj = cls.objects.create(
             name=name, schema_name=schema_name, description=description, **other_params
@@ -150,7 +158,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
                 extract_zip_to_temp_dir(downloaded_file_path), app_template_name
             )
         # initialize tenant's workspace
-        init_task = initialize_workspace.delay(str(obj.uuid), app_template_path)
+        init_task = initialize_workspace.delay(
+            str(obj.uuid), app_template_path, run_migrations
+        )
         return obj, init_task.id
 
     @staticmethod
