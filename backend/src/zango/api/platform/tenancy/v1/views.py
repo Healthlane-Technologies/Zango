@@ -12,7 +12,7 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
-from zango.cli.git_setup import git_setup
+from zango.cli.git_setup import git_setup_function, switch_branch
 from zango.core.api import (
     ZangoGenericPlatformAPIView,
     get_api_response,
@@ -194,29 +194,50 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     new_git_config = serializer.data["extra_config"].get(
                         "git_config", {}
                     )
-
+                    initialize = new_git_config.get("initialize", True)
                     new_repo_url = new_git_config.get("repo_url")
                     old_repo_url = old_git_config.get("repo_url")
 
                     if new_repo_url and (
                         not old_git_config or new_repo_url != old_repo_url
                     ):
-                        git_setup(
-                            [
-                                obj.name,
-                                "--git_repo_url",
-                                new_repo_url,
-                                "--dev_branch",
-                                self.get_branch(new_git_config, "dev", "development"),
-                                "--staging_branch",
-                                self.get_branch(new_git_config, "staging", "staging"),
-                                "--prod_branch",
-                                self.get_branch(new_git_config, "prod", "main"),
-                                "--initialize",
-                            ],
-                            standalone_mode=False,
+                        res = git_setup_function(
+                            obj.name,
+                            new_repo_url,
+                            self.get_branch(new_git_config, "dev", "development"),
+                            self.get_branch(new_git_config, "staging", "staging"),
+                            self.get_branch(new_git_config, "prod", "main"),
+                            initialize,
                         )
+                        if not res.get("success"):
+                            return get_api_response(
+                                success, {"message": res["message"]}, 400
+                            )
+                    else:
+                        resp = None
+                        old_git_branch = old_git_config.get("branch", {})
+                        new_git_branch = new_git_config.get("branch", {})
 
+                        if old_git_branch.get("dev") != new_git_branch.get("dev"):
+                            resp = switch_branch(
+                                obj.name, new_git_branch.get("dev"), "dev"
+                            )
+                        if old_git_branch.get("staging") != new_git_branch.get(
+                            "staging"
+                        ):
+                            resp = switch_branch(
+                                obj.name, new_git_branch.get("staging"), "staging"
+                            )
+                        if old_git_branch.get("prod") != new_git_branch.get("prod"):
+                            resp = switch_branch(
+                                obj.name, new_git_branch.get("prod"), "prod"
+                            )
+                        if not resp:
+                            return get_api_response(
+                                True, {"message": "Branch switch not required"}, 200
+                            )
+                        if not resp.get("success"):
+                            raise Exception(resp.get("message"))
                 result = {
                     "message": "App Settings Updated Successfully",
                     "app_uuid": str(obj.uuid),
