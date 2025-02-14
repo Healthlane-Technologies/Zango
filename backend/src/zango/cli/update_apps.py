@@ -456,6 +456,16 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
+        if not last_release:
+            return True, "update allowed: No release found"
+        if last_release and (
+            is_version_greater(remote_version, last_release.version)
+            or is_version_greater(local_version, last_release.version)
+        ):
+            return (
+                True,
+                "update allowed: remote or local version greater than last release version",
+            )
         if is_version_greater(local_version, remote_version):
             return (
                 False,
