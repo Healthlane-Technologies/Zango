@@ -1,14 +1,16 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import traceback
 
 from pathlib import Path
 
 import click
-import git
+import requests
 
 from packaging import specifiers, version
 
@@ -60,59 +62,60 @@ def get_remote_settings(repo_url, branch):
 
 
 def setup_and_pull(path, repo_url, branch="main"):
+    app_name = Path(path).name
+    workspace_folder = Path(path).parent
+    shutil.rmtree(path)
+
+    from django.conf import settings
+
+    latest_commit = ""
     try:
-        # Try to open an existing repository
-        repo = git.Repo(path)
-        if repo.bare:
-            raise Exception("Repository is bare")
-        print(f"Repository found at {path}")
+        # Get the latest commit hash of the specified branch
+        repo_parts = repo_url.rstrip(".git").split("/")
+        username = repo_parts[-2]
+        repo_name = repo_parts[-1]
+        api_url = f"https://api.github.com/repos/{username}/{repo_name}/git/ref/heads/{branch}"
 
-        # Clean the working directory (remove untracked files and reset to HEAD) exlcuding packages
-        repo.git.clean("-fd", "--exclude=packages")
-        repo.git.reset("--hard", "HEAD")
+        headers = {
+            "Authorization": f"token {settings.GIT_PASSWORD}",
+            "Accept": "application/vnd.github.v3+json",
+        }
 
-        # Check if the branch is the same, if not, checkout the correct branch
-        if repo.active_branch.name != branch:
-            repo.git.checkout(branch)
-            print(f"Checked out branch {branch}")
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        latest_commit = response.json()["object"]["sha"]
 
-        # Pull the latest changes from the specified branch
-        origin = repo.remote(name="origin")
-        origin.pull(branch)
+        # Download the zip file of the latest commit
+        zip_url = (
+            f"https://github.com/{username}/{repo_name}/archive/{latest_commit}.zip"
+        )
+        zip_response = requests.get(zip_url, headers=headers)
+        zip_response.raise_for_status()
 
-        success = True
-        message = f"Successfully pulled from origin/{branch}"
+        # Extract the zip file in the specified path
+        zip_file_path = os.path.join(tempfile.mkdtemp(), f"{app_name}.zip")
+        with open(zip_file_path, "wb") as zip_file:
+            zip_file.write(zip_response.content)
 
-    except git.InvalidGitRepositoryError:
-        # If not a repository, initialize a new repository and set up the remote
-        print(f"No repository found at {path}, initializing a new one.")
+        shutil.unpack_archive(zip_file_path, workspace_folder)
+        os.remove(zip_file_path)
 
-        # Remove manifest.json and settings.json if they exist
-        files_to_remove = ["manifest.json", "settings.json"]
-        for filename in files_to_remove:
-            file_path = os.path.join(path, filename)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
-        repo = git.Repo.init(path)
-        origin = repo.create_remote("origin", repo_url)
-
-        # Fetch and check out the specified branch
-        origin.fetch()
-        repo.create_head(branch, origin.refs[branch]).set_tracking_branch(
-            origin.refs[branch]
-        ).checkout()
+        # Remove the commit sha from the extracted folder name
+        extracted_folder = workspace_folder / f"{repo_name}-{latest_commit}"
+        final_folder = workspace_folder / app_name
+        shutil.move(extracted_folder, final_folder)
 
         success = True
-        message = "Repository initialized and checked out branch {branch}"
-    except git.GitCommandError as e:
+        message = f"Successfully downloaded and extracted the latest commit {latest_commit} from branch {branch}"
+
+    except requests.RequestException as e:
         success = False
-        message = f"An error occurred while executing Git commands: {e}\n{traceback.format_exc()}"
+        message = f"An error occurred while downloading the zip file: {e}\n{traceback.format_exc()}"
     except Exception as e:
         success = False
         message = f"An error occurred: {e}\n{traceback.format_exc()}"
 
-    return success, message
+    return success, message, latest_commit
 
 
 def run_app_migrations(tenant, app_directory):
@@ -326,7 +329,7 @@ def install_packages(tenant, app_directory):
             print("Failed to install package: ", package)
 
 
-def create_release(tenant_name, app_settings, app_directory, git_mode):
+def create_release(tenant_name, app_settings, app_directory, git_mode, commit_sha=None):
     from django.db import connection
 
     from zango.apps.release.models import AppRelease
@@ -342,11 +345,6 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
             if not current_version:
                 raise ValueError("Version key not found in settings.json")
 
-            latest_commit_hash = None
-            if git_mode:
-                repo = git.Repo(app_directory)
-                latest_commit_hash = repo.head.commit.hexsha
-
             last_release = get_last_release()
             if not last_release or (
                 last_release
@@ -361,7 +359,7 @@ def create_release(tenant_name, app_settings, app_directory, git_mode):
                         release_notes.get("changes", "NA") if release_notes else "NA"
                     ),
                     status="initiated",
-                    last_git_hash=latest_commit_hash,
+                    last_git_hash=commit_sha,
                 )
                 click.echo(f"New release initiated with version {current_version}")
 
@@ -458,17 +456,39 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "Invalid Zango version specifier in settings.json"
 
     if git_mode:
-        if is_version_greater(local_version, remote_version) or (
-            last_release and is_version_greater(remote_version, last_release.version)
+        if not last_release:
+            return True, "update allowed: No release found"
+        if last_release and (
+            is_version_greater(remote_version, last_release.version)
+            or is_version_greater(local_version, last_release.version)
         ):
-            return False, "No version change detected"
-        else:
-            return True, "Update allowed"
-    else:
-        if last_release and not is_version_greater(local_version, last_release.version):
-            return False, "No version change detected"
+            return (
+                True,
+                "update allowed: remote or local version greater than last release version",
+            )
+        if is_version_greater(local_version, remote_version):
+            return (
+                False,
+                "Update not allowed: Local version is newer than the remote version.",
+            )
+        if last_release and is_version_greater(last_release.version, remote_version):
+            return (
+                False,
+                "Update not allowed: Last release version is newer than the remote version.",
+            )
+        if local_version == remote_version or (
+            last_release and last_release.version == remote_version
+        ):
+            return (
+                False,
+                "No update needed: Local version or last release version matches the remote version.",
+            )
+        return True, "Update allowed: Local version is older than the remote version."
 
-    return True, "Update allowed"
+    if last_release and not is_version_greater(local_version, last_release.version):
+        return False, "No update needed: Local version has not changed."
+
+    return True, "Update allowed: Local version is newer than the last release."
 
 
 @click.command("update-apps")
@@ -547,9 +567,12 @@ def update_apps(app_name):
                 click.echo(error_message, err=True)
                 continue
 
+            commit_sha = None
             # Pull latest code
             if git_mode:
-                pull_status, message = setup_and_pull(app_directory, repo_url, branch)
+                pull_status, message, commit_sha = setup_and_pull(
+                    app_directory, repo_url, branch
+                )
                 if not pull_status:
                     error_message = click.style(
                         f"An error occurred while pulling code: {message}",
@@ -564,9 +587,13 @@ def update_apps(app_name):
             )
 
             # Create entry in release model
-            release = create_release(tenant, app_settings, app_directory, git_mode)
-
+            release = create_release(
+                tenant, app_settings, app_directory, git_mode, commit_sha
+            )
             if release:
+                app_settings["last_release_sha"] = commit_sha
+                with open(os.path.join(app_directory, "settings.json"), "w") as f:
+                    json.dump(app_settings, f)
                 success_message = click.style(
                     f"Successfully updated app {tenant} to version {release.version}",
                     fg="green",
