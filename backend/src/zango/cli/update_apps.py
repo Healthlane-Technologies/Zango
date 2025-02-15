@@ -8,6 +8,7 @@ import tempfile
 import traceback
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 import click
 import requests
@@ -37,9 +38,11 @@ def get_remote_settings(repo_url, branch):
     from django.conf import settings
 
     # Extract the username, repository, and file path from the repo_url
-    repo_parts = repo_url.rstrip(".git").split("/")
-    username = repo_parts[-2]
-    repo_name = repo_parts[-1]
+    parsed_url = urlparse(repo_url)
+
+    # Extract path and remove leading slash
+    repo_parts = parsed_url.path.lstrip("/").replace(".git", "").split("/")
+    username, repo_name = repo_parts
     file_path = "settings.json"
 
     # Construct the URL to the GitHub API to get the file content
@@ -71,9 +74,11 @@ def setup_and_pull(path, repo_url, branch="main"):
     latest_commit = ""
     try:
         # Get the latest commit hash of the specified branch
-        repo_parts = repo_url.rstrip(".git").split("/")
-        username = repo_parts[-2]
-        repo_name = repo_parts[-1]
+        parsed_url = urlparse(repo_url)
+
+        # Extract path and remove leading slash
+        repo_parts = parsed_url.path.lstrip("/").replace(".git", "").split("/")
+        username, repo_name = repo_parts
         api_url = f"https://api.github.com/repos/{username}/{repo_name}/git/ref/heads/{branch}"
 
         headers = {
