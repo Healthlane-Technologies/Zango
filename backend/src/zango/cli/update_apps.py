@@ -74,9 +74,11 @@ def setup_and_pull(path, repo_url, branch="main"):
     latest_commit = ""
     try:
         # Get the latest commit hash of the specified branch
-        repo_parts = repo_url.replace(".git", "").split("/")
-        username = repo_parts[-2]
-        repo_name = repo_parts[-1]
+        parsed_url = urlparse(repo_url)
+
+        # Extract path and remove leading slash
+        repo_parts = parsed_url.path.lstrip("/").replace(".git", "").split("/")
+        username, repo_name = repo_parts
         api_url = f"https://api.github.com/repos/{username}/{repo_name}/git/ref/heads/{branch}"
 
         headers = {
