@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Post internal request change [(#444)](https://github.com/Healthlane-Technologies/Zango/pull/444)
 * update actions/upload-artifact version to v4 [(#446)](https://github.com/Healthlane-Technologies/Zango/pull/446)
 * update actions/download-artifact version to v4 [(#448)](https://github.com/Healthlane-Technologies/Zango/pull/448)
+* update sigstore/gh-action-sigstore-python version to 3.0.0 [(#449)](https://github.com/Healthlane-Technologies/Zango/pull/449)
 
 ## [0.4.1] - 2025-01-10
 
