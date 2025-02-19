@@ -102,9 +102,10 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             data = request.data
             app_template = data.get("app_template", None)
             app_template_name = None
+            run_migrations = False
             if app_template:
                 app_template_name = str(app_template).split(".")[0]
-                _, app_name = extract_app_details_from_zip(app_template)
+                _, app_name, run_migrations = extract_app_details_from_zip(app_template)
                 data.update(
                     {
                         "name": app_name,
@@ -119,6 +120,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
                 app_template=app_template,
                 tenant_type="app",
                 status="staged",
+                run_migrations=run_migrations,
             )
             result = {
                 "message": "App Launch Initiated Successfully",
@@ -128,6 +130,9 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             status = 200
             success = True
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             # logger.error(traceback.format_exc())
             result = {"message": str(e)}
             status = 500
@@ -192,7 +197,6 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     "app_uuid": str(obj.uuid),
                 }
             else:
-                print(serializer.errors)
                 success = False
                 status_code = 400
                 if serializer.errors:
