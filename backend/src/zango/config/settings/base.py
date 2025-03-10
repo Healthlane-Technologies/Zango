@@ -4,7 +4,10 @@ from datetime import timedelta
 
 import environ
 
+from celery.schedules import crontab
+
 import zango
+import zango.apps.tasks.tasks  # noqa
 
 from zango.core.utils import generate_lockout_response
 
@@ -191,6 +194,13 @@ MEDIA_URL = "/media/"
 # Celery
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_EXTENDED = True
+CELERY_BEAT_SCHEDULE = {
+    "health_check_periodic_task": {
+        "task": "zango.apps.tasks.tasks.health_check_periodic_task",
+        "schedule": crontab(minute="*/1"),
+    },
+}
+
 X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
