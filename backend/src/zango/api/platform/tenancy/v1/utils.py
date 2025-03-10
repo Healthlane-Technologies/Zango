@@ -20,13 +20,12 @@ def extract_app_details_from_zip(template_zip):
             all_files = zip_file.namelist()
 
             # Find the settings file path
-            settings_path = None
-            run_migrations = False
-            for file_path in all_files:
-                if settings_filename in file_path:
-                    settings_path = file_path
-                if migration_gen_path in file_path:
-                    run_migrations = True
+            settings_path = next(
+                (path for path in all_files if settings_filename in path), None
+            )
+            run_migrations = next(
+                (True for path in all_files if migration_gen_path in path), False
+            )
 
             if not settings_path:
                 raise FileNotFoundError(
