@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db.models import Q
 
 from zango.apps.shared.platformauth.models import PlatformUserModel
@@ -157,9 +156,6 @@ class AppPanelDetailsView(ZangoGenericPlatformAPIView):
             response = {
                 "app_data": {
                     "user_logged_in": serializer.data,
-                    "is_codeassist_enabled": getattr(
-                        settings, "CODEASSIST_ENABLED", False
-                    ),
                 },
             }
             status = 200

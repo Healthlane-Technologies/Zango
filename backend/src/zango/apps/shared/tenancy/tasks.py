@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -16,7 +17,7 @@ from .utils import DEFAULT_THEME_CONFIG, assign_policies_to_anonymous_user
 
 
 @shared_task
-def initialize_workspace(tenant_uuid, app_template_path=None):
+def initialize_workspace(tenant_uuid, app_template_path=None, run_migrations=False):
     try:
         from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 
@@ -70,6 +71,14 @@ def initialize_workspace(tenant_uuid, app_template_path=None):
         tenant.deployed_on = timezone.now()
         tenant.save(update_fields=["status", "deployed_on"])
 
+        if run_migrations:
+            manifest = json.load(open(f"workspaces/{tenant.name}/manifest.json", "r"))
+            os.remove(f"workspaces/{tenant.name}/manifest.json")
+            with open(f"workspaces/{tenant.name}/manifest.json", "w") as f:
+                f.write(json.dumps({"packages": []}))
+            subprocess.run(["python", "manage.py", "ws_makemigration", tenant.name])
+            with open(f"workspaces/{tenant.name}/manifest.json", "w") as f:
+                f.write(json.dumps(manifest, indent=4))
         theme = ThemesModel.objects.create(
             name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
         )
