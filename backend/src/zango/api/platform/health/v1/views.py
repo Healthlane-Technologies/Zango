@@ -10,7 +10,8 @@ from rest_framework.views import APIView
 from django.conf import settings
 from django.core.cache import CacheKeyWarning, caches
 from django.db import connection
-from django.http import JsonResponse
+
+from zango.core.api import get_api_response
 
 
 class HealthCheckAPIV1(APIView):
@@ -105,8 +106,9 @@ class HealthCheckAPIV1(APIView):
             self.AVAILABLE_SERVICES
         )
         if invalid_services:
-            return JsonResponse(
-                {
+            return get_api_response(
+                success=False,
+                response_content={
                     "error": f'Invalid services: {", ".join(invalid_services)}',
                     "available_services": self.AVAILABLE_SERVICES,
                 },
@@ -131,8 +133,9 @@ class HealthCheckAPIV1(APIView):
             check.get("success", False) for check in health_checks.values()
         )
 
-        return JsonResponse(
-            {
+        return get_api_response(
+            success=True if is_healthy else False,
+            response_content={
                 "status": "healthy" if is_healthy else "unhealthy",
                 "timestamp": datetime.now(tz=pytz.utc).isoformat(),
                 "services": health_checks,
