@@ -10,6 +10,7 @@ import zango
 
 def extract_app_details_from_zip(template_zip):
     settings_filename = "settings.json"
+    migration_gen_path = "migrations/generate.txt"
     try:
         with zipfile.ZipFile(template_zip, "r") as zip_file:
             # Check if the settings file exists in the zip
@@ -19,11 +20,12 @@ def extract_app_details_from_zip(template_zip):
             all_files = zip_file.namelist()
 
             # Find the settings file path
-            settings_path = None
-            for file_path in all_files:
-                if file_path == os.path.join(zip_name, settings_filename):
-                    settings_path = file_path
-                    break
+            settings_path = next(
+                (path for path in all_files if settings_filename in path), None
+            )
+            run_migrations = next(
+                (True for path in all_files if migration_gen_path in path), False
+            )
 
             if not settings_path:
                 raise FileNotFoundError(
@@ -33,6 +35,7 @@ def extract_app_details_from_zip(template_zip):
             # Read the contents of the settings file
             with zip_file.open(settings_path) as settings_file:
                 settings_content = settings_file.read()
+                print("Settings content:", settings_content)
 
             # Parse the JSON content
             settings = json.loads(settings_content)
@@ -44,10 +47,7 @@ def extract_app_details_from_zip(template_zip):
                     raise Exception(
                         f"Zango version {installed_zango_version} is not compatible with {zango_version}"
                     )
-            return (
-                settings["version"],
-                settings["app_name"],
-            )
+            return (settings["version"], settings["app_name"], run_migrations)
 
     except zipfile.BadZipFile:
         raise Exception(f"Error: {template_zip} is not a valid zip file.")
