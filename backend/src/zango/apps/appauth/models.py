@@ -17,7 +17,7 @@ from ..permissions.mixin import PermissionMixin
 
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.models import PolicyGroupModel, PolicyModel
-
+import uuid
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
     name = models.CharField("Unique Name of the User Role", max_length=50, unique=True)
@@ -53,6 +53,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
 
 
 class AppUserModel(AbstractZangoUserModel, PermissionMixin):
+    slug = models.UUIDField(default=uuid.uuid4, editable=False)
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
