@@ -3,7 +3,8 @@ name: Zango tests
 on:
   pull_request:
   push:
-    branches: main
+    branches:
+      - main
 
 jobs:
   run-tests:
@@ -35,6 +36,10 @@ jobs:
         with:
           python-version: '3.9'  # Specify the Python version you need
 
+      - name: Install Dependencies
+        run: |
+          apt install libxmlsec1 libxmlsec1-dev
+
       # Step 3: Install dependencies
       - name: Install local zango package
         run: |
@@ -53,13 +58,13 @@ jobs:
           PLATFORM_DOMAIN_URL=localhost
           PROJECT_NAME=test_project
           EOF
-      
+
       # Step 5: Run tests
       - name: Run tests
         run: |
           chmod +x ./runtests.sh
           ./runtests.sh
-      
+
       - name: Show coverage
         run: |
           mv backend/test_project/.coverage* .
