@@ -7,7 +7,6 @@
 <hr>
 
 ### **✨ Django framework to build enterprise-ready business applications. Rapid development. Multiple applications as independently deployable units on a single monolith ✨** 
-<a href="https://www.zango.dev/blog/architecting-microservices-as-a-tenant-on-a-monolith" target="_blank">Know more</a> 
 <hr>  
 <p align="center">
   <a href="#">

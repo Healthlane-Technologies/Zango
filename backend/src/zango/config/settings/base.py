@@ -4,7 +4,10 @@ from datetime import timedelta
 
 import environ
 
+from celery.schedules import crontab
+
 import zango
+import zango.apps.tasks.tasks  # noqa
 
 from zango.core.utils import generate_lockout_response
 
@@ -83,6 +86,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "zango.middleware.token.TokenMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "session_security.middleware.SessionSecurityMiddleware",
@@ -104,6 +108,14 @@ AUTHENTICATION_BACKENDS = (
     "zango.apps.shared.platformauth.auth_backend.PlatformUserModelBackend",
     "zango.apps.appauth.auth_backend.AppUserModelBackend",
 )
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "knox.auth.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+}
 
 TEMPLATES = [
     {
@@ -182,10 +194,16 @@ MEDIA_URL = "/media/"
 # Celery
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_EXTENDED = True
+CELERY_BEAT_SCHEDULE = {
+    "health_check_periodic_task": {
+        "task": "zango.apps.tasks.tasks.health_check_periodic_task",
+        "schedule": crontab(minute="*/1"),
+    },
+}
+
 X_FRAME_OPTIONS = "ALLOW"
 
 PACKAGE_BUCKET_NAME = "zelthy3-packages"
-CODEASSIST_ENABLED = True
 
 # Session Security
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -297,6 +315,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
+        ZANGO_TOKEN_TTL=(int, 4),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -401,6 +420,13 @@ def setup_settings(settings, BASE_DIR):
     settings.AXES_FAILURE_LIMIT = env("AXES_FAILURE_LIMIT")
     settings.AXES_LOCK_OUT_AT_FAILURE = env("AXES_LOCK_OUT_AT_FAILURE")
     settings.AXES_COOLOFF_TIME = timedelta(seconds=env("AXES_COOLOFF_TIME"))
+
+    settings.REST_KNOX = {
+        "TOKEN_TTL": None
+        if env("ZANGO_TOKEN_TTL") == 0
+        else timedelta(weeks=env("ZANGO_TOKEN_TTL")),
+        "AUTH_HEADER_PREFIX": "Bearer",
+    }
 
     log_folder = os.path.join(BASE_DIR, "log")
     log_file = os.path.join(log_folder, "zango.log")
