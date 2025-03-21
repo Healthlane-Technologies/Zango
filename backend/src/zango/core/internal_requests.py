@@ -2,6 +2,7 @@ import io
 import json
 
 from importlib import import_module
+from urllib.parse import urlencode
 
 import requests
 
@@ -82,7 +83,11 @@ def process_internal_request(fake_request, tenant, **kwargs):
     if captured_kwargs:
         kwargs.update(captured_kwargs)
 
-    response = view(fake_request, (), **kwargs)
+    kwargs.pop("data")
+    kwargs.pop("headers")
+    kwargs.pop("params")
+
+    response = view(fake_request, fake_request.META["PATH_INFO"], **kwargs)
 
     return response
 
@@ -90,7 +95,7 @@ def process_internal_request(fake_request, tenant, **kwargs):
 def process_request_headers(headers):
     headers_dict = {}
     for k, v in headers.items():
-        if k not in ["Content-Type"]:
+        if k not in ["content-type"]:
             headers_dict[k] = v
     return headers_dict
 
@@ -105,14 +110,21 @@ def internal_request_post(url, **kwargs):
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
 
-        content_type = headers.get("Content-Type", "")
+        query_string = urlencode(query_params)
+
+        content_type = headers.get("content-type")
+
+        if not content_type:
+            raise Exception(
+                "content-type not specified, please specify content type for internal requests"
+            )
 
         fake_request = fake_request.post(
             url,
             data=data,
             headers=headers,
             content_type=content_type,
-            query_params=query_params,
+            QUERY_STRING=query_string,
         )
         query_dict = QueryDict("", mutable=True)
 
@@ -181,15 +193,21 @@ def internal_request_put(url, **kwargs):
         data = kwargs.get("data", {})
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
+        query_string = urlencode(query_params)
 
-        content_type = headers.get("Content-Type", "")
+        content_type = headers.get("content-type")
+
+        if not content_type:
+            raise Exception(
+                "content-type not specified, please specify content type for internal requests"
+            )
 
         fake_request = fake_request.put(
             url,
             data=data,
             headers=headers,
             content_type=content_type,
-            query_params=query_params,
+            QUERY_STRING=query_string,
         )
         query_dict = QueryDict("", mutable=True)
 
@@ -255,8 +273,9 @@ def internal_request_get(url, **kwargs):
 
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
+        query_string = urlencode(query_params)
 
-        fake_request = fake_request.get(url, headers=headers, query_params=query_params)
+        fake_request = fake_request.get(url, headers=headers, QUERY_STRING=query_string)
 
         django_response = process_internal_request(fake_request, tenant, **kwargs)
 
@@ -306,7 +325,12 @@ def internal_request_delete(url, **kwargs):
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
 
-        content_type = headers.get("Content-Type", "")
+        content_type = headers.get("content-type", "")
+
+        if not content_type:
+            raise Exception(
+                "content-type not specified, please specify content type for internal requests"
+            )
 
         fake_request = fake_request.delete(
             url,
