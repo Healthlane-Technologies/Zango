@@ -5,7 +5,6 @@ import pytz
 from celery import current_app
 from redis import from_url
 from redis.exceptions import ConnectionError, RedisError, TimeoutError
-from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 from django.conf import settings
@@ -17,7 +16,6 @@ from zango.core.api import get_api_response
 
 class HealthCheckAPIV1(APIView):
     AVAILABLE_SERVICES = ["redis", "cache", "celery", "celery_beat", "database"]
-    permission_classes = [AllowAny]
 
     def check_redis(self):
         try:
