@@ -83,9 +83,9 @@ def process_internal_request(fake_request, tenant, **kwargs):
     if captured_kwargs:
         kwargs.update(captured_kwargs)
 
-    kwargs.pop("data")
-    kwargs.pop("headers")
-    kwargs.pop("params")
+    kwargs.pop("data", None)
+    kwargs.pop("headers", None)
+    kwargs.pop("params", None)
 
     response = view(fake_request, fake_request.META["PATH_INFO"], **kwargs)
 
