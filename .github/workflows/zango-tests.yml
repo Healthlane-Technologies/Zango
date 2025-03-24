@@ -38,7 +38,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt install libxmlsec1 libxmlsec1-dev libxml2-dev libxmlsec1-openssl
+          sudo apt update -y && sudo apt install -y libxmlsec1 libxmlsec1-dev libxml2-dev libxmlsec1-openssl
 
       # Step 3: Install dependencies
       - name: Install local zango package
