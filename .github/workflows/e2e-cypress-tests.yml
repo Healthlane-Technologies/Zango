@@ -137,7 +137,7 @@ jobs:
 
       # Step 15: Upload Cypress screenshots
       - name: Upload Cypress screenshots
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: cypress-${{ matrix.os }}-${{ matrix.browser }}-screenshots
           path: e2e-tests/cypress/screenshots
@@ -145,7 +145,7 @@ jobs:
 
       # Step 16: Upload Cypress videos
       - name: Upload Cypress videos
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: cypress-${{ matrix.os }}-${{ matrix.browser }}-videos
           path: e2e-tests/cypress/videos
@@ -153,7 +153,7 @@ jobs:
 
       # Step 17: Upload Cucumber HTML Report
       - name: Upload Cucumber HTML Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: cucumber-html-report on ${{ matrix.os }}-${{ matrix.browser }}
           path: e2e-tests/reports/cucumber-html-report.html
