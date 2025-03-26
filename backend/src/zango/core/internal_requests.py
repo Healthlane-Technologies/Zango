@@ -12,6 +12,7 @@ from requests.structures import CaseInsensitiveDict
 from requests.utils import get_encoding_from_headers
 from urllib3.response import HTTPResponse
 
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connection
 from django.http import QueryDict
 from django.http.response import HttpResponse
@@ -86,6 +87,7 @@ def process_internal_request(fake_request, tenant, **kwargs):
     kwargs.pop("data", None)
     kwargs.pop("headers", None)
     kwargs.pop("params", None)
+    kwargs.pop("files", None)
 
     response = view(fake_request, fake_request.META["PATH_INFO"], **kwargs)
 
@@ -109,6 +111,7 @@ def internal_request_post(url, **kwargs):
         data = kwargs.get("data", {})
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
+        files = kwargs.get("files", {})
 
         query_string = urlencode(query_params)
 
@@ -126,6 +129,19 @@ def internal_request_post(url, **kwargs):
             content_type=content_type,
             QUERY_STRING=query_string,
         )
+        for file in files:
+            field_name, (file_name, file_obj, content_type) = file
+            uploaded_file = InMemoryUploadedFile(
+                file=file_obj,
+                field_name=field_name,
+                name=file_name,
+                content_type=content_type,
+                size=file_obj.seek(0, 2),  # Move to the end of the file to get its size
+                charset=None,
+            )
+            file_obj.seek(0)
+
+            fake_request.FILES[field_name] = uploaded_file
         query_dict = QueryDict("", mutable=True)
 
         # Check if data is a string (i.e., a JSON string)
