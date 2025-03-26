@@ -316,6 +316,13 @@ def setup_settings(settings, BASE_DIR):
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
         ZANGO_TOKEN_TTL=(int, 4),
+        PLATFORM_AUTH_OIDC_ENABLE=(bool, False),
+        GOOGLE_OIDC_CLIENT_ID=(str, ""),
+        GOOGLE_OIDC_CLIENT_SECRET=(str, ""),
+        GOOGLE_OIDC_ENABLE=(bool, False),
+        AZURE_OIDC_CLIENT_ID=(str, ""),
+        AZURE_OIDC_CLIENT_SECRET=(str, ""),
+        AZURE_OIDC_ENABLE=(bool, False),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -467,6 +474,14 @@ def setup_settings(settings, BASE_DIR):
     # Git Settings
     settings.GIT_USERNAME = env("GIT_USERNAME")
     settings.GIT_PASSWORD = env("GIT_PASSWORD")
+
+    settings.PLATFORM_AUTH_OIDC_ENABLE = env("PLATFORM_AUTH_OIDC_ENABLE")
+    settings.GOOGLE_OIDC_CLIENT_ID = env("GOOGLE_OIDC_CLIENT_ID")
+    settings.GOOGLE_OIDC_CLIENT_SECRET = env("GOOGLE_OIDC_CLIENT_SECRET")
+    settings.GOOGLE_OIDC_ENABLE = env("GOOGLE_OIDC_ENABLE")
+    settings.AZURE_OIDC_CLIENT_ID = env("AZURE_OIDC_CLIENT_ID")
+    settings.AZURE_OIDC_CLIENT_SECRET = env("AZURE_OIDC_CLIENT_SECRET")
+    settings.AZURE_OIDC_ENABLE = env("AZURE_OIDC_ENABLE")
 
     settings_result = {"env": env}
 
