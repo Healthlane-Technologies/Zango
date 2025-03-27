@@ -44,7 +44,8 @@ export default function NavSearchForm() {
 		const { response, success } = await triggerApi({
 			url: `/platform/celery-status/`,
 			type: 'GET',
-			loader: true,
+			loader: false,
+			showErrorModal: false,
 		});
 		if (success) {
 			console.log(response);
