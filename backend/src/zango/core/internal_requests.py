@@ -129,8 +129,13 @@ def internal_request_post(url, **kwargs):
             content_type=content_type,
             QUERY_STRING=query_string,
         )
-        for file in files:
-            field_name, (file_name, file_obj, content_type) = file
+        uploaded_files = {}
+
+        # Process each file in the list
+        for file_info in files:
+            field_name, (file_name, file_obj, content_type) = file_info
+
+            # Create an InMemoryUploadedFile object
             uploaded_file = InMemoryUploadedFile(
                 file=file_obj,
                 field_name=field_name,
@@ -139,9 +144,20 @@ def internal_request_post(url, **kwargs):
                 size=file_obj.seek(0, 2),  # Move to the end of the file to get its size
                 charset=None,
             )
+
+            # Reset the file pointer to the beginning
             file_obj.seek(0)
 
-            fake_request.FILES[field_name] = uploaded_file
+            # Add the file to the dictionary
+            if field_name in uploaded_files:
+                uploaded_files[field_name].append(uploaded_file)
+            else:
+                uploaded_files[field_name] = [uploaded_file]
+
+        # Add the files to request.FILES
+        for field_name, files in uploaded_files.items():
+            for file in files:
+                fake_request.FILES.appendlist(field_name, file)
         query_dict = QueryDict("", mutable=True)
 
         # Check if data is a string (i.e., a JSON string)
@@ -226,8 +242,13 @@ def internal_request_put(url, **kwargs):
             content_type=content_type,
             QUERY_STRING=query_string,
         )
-        for file in files:
-            field_name, (file_name, file_obj, content_type) = file
+        uploaded_files = {}
+
+        # Process each file in the list
+        for file_info in files:
+            field_name, (file_name, file_obj, content_type) = file_info
+
+            # Create an InMemoryUploadedFile object
             uploaded_file = InMemoryUploadedFile(
                 file=file_obj,
                 field_name=field_name,
@@ -236,9 +257,15 @@ def internal_request_put(url, **kwargs):
                 size=file_obj.seek(0, 2),  # Move to the end of the file to get its size
                 charset=None,
             )
+
+            # Reset the file pointer to the beginning
             file_obj.seek(0)
 
-            fake_request.FILES[field_name] = uploaded_file
+            # Add the file to the dictionary
+            if field_name in uploaded_files:
+                uploaded_files[field_name].append(uploaded_file)
+            else:
+                uploaded_files[field_name] = [uploaded_file]
         query_dict = QueryDict("", mutable=True)
 
         # Check if data is a string (i.e., a JSON string)
