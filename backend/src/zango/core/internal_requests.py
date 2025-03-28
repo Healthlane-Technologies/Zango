@@ -266,6 +266,11 @@ def internal_request_put(url, **kwargs):
                 uploaded_files[field_name].append(uploaded_file)
             else:
                 uploaded_files[field_name] = [uploaded_file]
+
+        # Add the files to request.FILES
+        for field_name, files in uploaded_files.items():
+            for file in files:
+                fake_request.FILES.appendlist(field_name, file)
         query_dict = QueryDict("", mutable=True)
 
         # Check if data is a string (i.e., a JSON string)
@@ -293,8 +298,10 @@ def internal_request_put(url, **kwargs):
 
         if isinstance(resp_body, dict):
             resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, str) or isinstance(resp_body, bytes):
+        elif isinstance(resp_body, bytes):
             resp_body = resp_body
+        elif isinstance(resp_body, str):
+            resp_body = resp_body.encode("utf-8")
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
 
@@ -343,12 +350,12 @@ def internal_request_get(url, **kwargs):
 
         if isinstance(resp_body, dict):
             resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, str) or isinstance(resp_body, bytes):
+        elif isinstance(resp_body, bytes):
             resp_body = resp_body
+        elif isinstance(resp_body, str):
+            resp_body = resp_body.encode("utf-8")
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
-
-        resp_body = resp_body.encode("utf-8")
 
         # Convert Django response to urllib3.response.HTTPResponse
         urllib_response = HTTPResponse(
@@ -425,8 +432,10 @@ def internal_request_delete(url, **kwargs):
 
         if isinstance(resp_body, dict):
             resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, str) or isinstance(resp_body, bytes):
+        elif isinstance(resp_body, bytes):
             resp_body = resp_body
+        elif isinstance(resp_body, str):
+            resp_body = resp_body.encode("utf-8")
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
 
