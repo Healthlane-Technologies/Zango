@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+from knox.models import AbstractAuthToken
+
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import models
@@ -264,6 +266,16 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
+
+
+class AppUserAuthToken(AbstractAuthToken):
+    user = models.ForeignKey(
+        AppUserModel,
+        null=False,
+        blank=False,
+        related_name="auth_token_set",
+        on_delete=models.CASCADE,
+    )
 
 
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
