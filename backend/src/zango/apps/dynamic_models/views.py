@@ -1,6 +1,7 @@
 import os
 
 from axes.decorators import axes_dispatch
+from knox.settings import CONSTANTS
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -10,6 +11,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.generic import View
 
+from zango.apps.appauth.models import AppUserAuthToken, UserRoleModel
 from zango.apps.dynamic_models.permissions import is_platform_user
 from zango.core.utils import get_current_role
 
@@ -28,6 +30,21 @@ class PermMixin:
             return True
         user_role = get_current_role()
         return user_role.has_perm(request, "view", view_name=view_name)
+
+    def has_token_perm(self, request, view_name):
+        token = request.headers.get("Authorization")
+        if token:
+            prefix, token = token.split()
+            try:
+                apt = AppUserAuthToken.objects.get(
+                    token_key=token[: CONSTANTS.TOKEN_KEY_LENGTH]
+                )
+                role = apt.extra_data["role"]
+                role_inst = UserRoleModel.objects.get(name=role)
+                return role_inst.has_perm(request, "view", view_name=view_name)
+            except Exception:
+                return False
+        return False
 
 
 def default_landing_view(request):
@@ -71,8 +88,10 @@ class DynamicView(View, PermMixin):
             )
             if view and view_name:
                 kwargs = resolve.__dict__["kwargs"]
-                if request.internal_routing or self.has_view_perm(
-                    request, view_name, *args, **kwargs
+                if (
+                    request.internal_routing
+                    or self.has_view_perm(request, view_name, *args, **kwargs)
+                    or self.has_token_perm(request, view_name)
                 ):
                     response = csrf_protect(view)(request, *args, **kwargs)
                     return response

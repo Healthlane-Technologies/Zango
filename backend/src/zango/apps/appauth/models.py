@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from knox.models import AbstractAuthToken
+from knox.settings import knox_settings
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
@@ -61,6 +62,18 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         PolicyGroupModel, related_name="user_policy_groups"
     )
     app_objects = models.JSONField(null=True)
+
+    def create_token(self, request, role, expiry=knox_settings.TOKEN_PREFIX):
+        try:
+            AppUserAuthToken.objects.filter(user=request.user).delete()
+        except Exception:
+            pass
+        inst, token = AppUserAuthToken.objects.create(
+            user=request.user, expiry=knox_settings.TOKEN_TTL, prefix=expiry
+        )
+        inst.extra_data = {"role": role}
+        inst.save()
+        return (inst, token)
 
     def __str__(self):
         return self.name
@@ -258,7 +271,6 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         old_passwords = self.oldpasswords_set.all().filter(
             password_date__gt=date.today() - timedelta(days)
         )
-        print(old_passwords)
         if old_passwords.count() > 0:
             return False
         return True
@@ -276,8 +288,10 @@ class AppUserAuthToken(AbstractAuthToken):
         related_name="auth_token_set",
         on_delete=models.CASCADE,
     )
+    extra_data = models.JSONField(null=True, blank=True)
 
 
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
+auditlog.register(AppUserAuthToken)
