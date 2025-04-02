@@ -71,7 +71,7 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         inst, token = AppUserAuthToken.objects.create(
             user=request.user, expiry=knox_settings.TOKEN_TTL, prefix=expiry
         )
-        inst.extra_data = {"role": role}
+        inst.role = role
         inst.save()
         return (inst, token)
 
@@ -289,6 +289,13 @@ class AppUserAuthToken(AbstractAuthToken):
         on_delete=models.CASCADE,
     )
     extra_data = models.JSONField(null=True, blank=True)
+    role = models.ForeignKey(
+        UserRoleModel,
+        null=True,
+        blank=True,
+        related_name="role",
+        on_delete=models.CASCADE,
+    )
 
 
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})

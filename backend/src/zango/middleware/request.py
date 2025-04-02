@@ -33,6 +33,9 @@ class UserRoleAndAppObjectAssignmentMiddleware:
 
         try:
             user = request.user
+            _request_local.user = request.user
+            _request_local.META = request.META
+            _request_local.headers = request.headers
             user_role = _request_local.user_role
             if user_role and not user_role.name == "AnonymousUsers":
                 _request_local.app_object = user.get_app_object(

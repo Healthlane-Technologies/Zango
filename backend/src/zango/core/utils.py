@@ -1,8 +1,8 @@
 import json
 
-import phonenumbers
 from importlib import import_module
 
+import phonenumbers
 import pytz
 
 from phonenumbers.phonenumberutil import country_code_for_region
@@ -19,7 +19,22 @@ def get_current_request():
 
 
 def get_current_role():
+    from knox.settings import CONSTANTS
+
+    from zango.apps.appauth.models import AppUserAuthToken
+
     from ..middleware.request import _request_local
+
+    token = _request_local.headers.get("Authorization", None)
+    if token:
+        try:
+            prefix, token = token.split()
+            apt = AppUserAuthToken.objects.get(
+                token_key=token[: CONSTANTS.TOKEN_KEY_LENGTH]
+            )
+            return apt.role
+        except Exception:
+            pass
 
     # model = apps.get_model('appauth', 'UserRoleModel')
     return getattr(_request_local, "user_role", None)

@@ -1,7 +1,6 @@
 import os
 
 from axes.decorators import axes_dispatch
-from knox.settings import CONSTANTS
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -11,7 +10,6 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.generic import View
 
-from zango.apps.appauth.models import AppUserAuthToken, UserRoleModel
 from zango.apps.dynamic_models.permissions import is_platform_user
 from zango.core.utils import get_current_role
 
@@ -32,19 +30,8 @@ class PermMixin:
         return user_role.has_perm(request, "view", view_name=view_name)
 
     def has_token_perm(self, request, view_name):
-        token = request.headers.get("Authorization")
-        if token:
-            prefix, token = token.split()
-            try:
-                apt = AppUserAuthToken.objects.get(
-                    token_key=token[: CONSTANTS.TOKEN_KEY_LENGTH]
-                )
-                role = apt.extra_data["role"]
-                role_inst = UserRoleModel.objects.get(name=role)
-                return role_inst.has_perm(request, "view", view_name=view_name)
-            except Exception:
-                return False
-        return False
+        role = get_current_role()
+        return role.has_perm(request, "view", view_name=view_name)
 
 
 def default_landing_view(request):
