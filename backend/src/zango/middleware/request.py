@@ -19,13 +19,33 @@ class UserRoleAndAppObjectAssignmentMiddleware:
         _request_local.current_request = request
         from django.apps import apps
 
+        from zango.apps.appauth.auth_backend import KnoxTokenAuthBackend
+
         model = apps.get_model("appauth", "UserRoleModel")
+        authTokenModel = apps.get_model("appauth", "AppUserAuthToken")
         obj_store_model = apps.get_model("object_store", "ObjectStore")
         try:
             _request_local.user_role = model.objects.get(id=request.session["role_id"])
         except Exception:
             if request.tenant.tenant_type == "app":
-                _request_local.user_role = model.objects.get(name="AnonymousUsers")
+                if request.headers.get("Authorization"):
+                    try:
+                        resp = KnoxTokenAuthBackend().authenticate(request)
+                        if resp:
+                            user, token = resp
+                            request.user = user
+                            request.auth = token
+                            apt = authTokenModel.objects.get(user=user)
+                            _request_local.user_role = apt.role
+                    except Exception:
+                        import traceback
+
+                        traceback.print_exc()
+                        _request_local.user_role = model.objects.get(
+                            name="AnonymousUsers"
+                        )
+                else:
+                    _request_local.user_role = model.objects.get(name="AnonymousUsers")
             else:
                 _request_local.user_role = (
                     None  # user role is not applicable at platform level

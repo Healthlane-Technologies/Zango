@@ -29,27 +29,6 @@ class PermMixin:
         user_role = get_current_role()
         return user_role.has_perm(request, "view", view_name=view_name)
 
-    def has_token_perm(self, request, view_name):
-        role = get_current_role()
-        return role.has_perm(request, "view", view_name=view_name)
-
-    def get_user_from_token(self, request):
-        from knox.settings import CONSTANTS
-
-        from zango.apps.appauth.models import AppUserAuthToken
-
-        token = request.headers.get("Authorization", None)
-        if token:
-            try:
-                prefix, token = token.split()
-                apt = AppUserAuthToken.objects.get(
-                    token_key=token[: CONSTANTS.TOKEN_KEY_LENGTH]
-                )
-                return apt.user
-            except Exception:
-                return None
-        return None
-
 
 def default_landing_view(request):
     """
@@ -92,15 +71,9 @@ class DynamicView(View, PermMixin):
             )
             if view and view_name:
                 kwargs = resolve.__dict__["kwargs"]
-                if (
-                    request.internal_routing
-                    or self.has_view_perm(request, view_name, *args, **kwargs)
-                    or self.has_token_perm(request, view_name)
+                if request.internal_routing or self.has_view_perm(
+                    request, view_name, *args, **kwargs
                 ):
-                    if request.headers.get("Authorization"):
-                        usr = self.get_user_from_token(request)
-                        if usr:
-                            request.user = usr
                     response = csrf_protect(view)(request, *args, **kwargs)
                     return response
                 else:

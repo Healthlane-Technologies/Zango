@@ -314,7 +314,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
-        ZANGO_TOKEN_TTL=(int, 4),
+        ZANGO_TOKEN_TTL=(int, 86400),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -423,7 +423,7 @@ def setup_settings(settings, BASE_DIR):
     settings.REST_KNOX = {
         "TOKEN_TTL": None
         if env("ZANGO_TOKEN_TTL") == 0
-        else timedelta(weeks=env("ZANGO_TOKEN_TTL")),
+        else timedelta(seconds=env("ZANGO_TOKEN_TTL")),
         "AUTH_HEADER_PREFIX": "Bearer",
     }
 
