@@ -69,10 +69,48 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_internal_request_path_params(self):
-        pass
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+
+        # Test Path params
+
+        res = self.client.post("/app/view/?action=get_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=post_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=put_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=delete_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        # Test RE Path params
+
+        res = self.client.post("/app/view/?action=get_re_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=post_re_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=put_re_path_params")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=delete_re_path_params")
+        self.assertEqual(res.status_code, 200)
 
     def test_internal_request_json_data(self):
-        pass
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+
+        # Test JSON Data
+
+        res = self.client.post("/app/view/?action=post_json_data")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=put_json_data")
+        self.assertEqual(res.status_code, 200)
 
     def test_internal_request_files(self):
         pass
@@ -84,4 +122,37 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         pass
 
     def test_internal_request_cookies(self):
-        pass
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+
+        # Test Request Cookies
+
+        res = self.client.post("/app/view/?action=get_cookie")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=post_cookie")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=put_cookie")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=delete_cookie")
+        self.assertEqual(res.status_code, 200)
+    
+    def test_internal_request_response_cookies(self):
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+
+        # Test Request Cookies
+
+        res = self.client.post("/app/view/?action=get_response_cookie")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=post_response_cookie")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=put_response_cookie")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=delete_response_cookie")
+        self.assertEqual(res.status_code, 200)

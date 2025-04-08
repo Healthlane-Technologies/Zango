@@ -112,10 +112,14 @@ def internal_request_post(url, **kwargs):
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
         files = kwargs.get("files", {})
+        cookies = kwargs.get("cookies", {})
+        cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
+        if not headers.get("cookies"):
+            headers["Cookie"] = cookie_header
 
         query_string = urlencode(query_params)
 
-        content_type = headers.get("content-type")
+        content_type = headers.get("Content-Type")
 
         if not content_type:
             raise Exception(
@@ -186,13 +190,13 @@ def internal_request_post(url, **kwargs):
             resp_body = getattr(django_response, "data", "")
 
         if isinstance(resp_body, dict):
-            resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, str) or isinstance(resp_body, bytes):
+            resp_body = json.dumps(resp_body).encode("utf-8")
+        elif isinstance(resp_body, str):
+            resp_body = resp_body.encode("utf-8")
+        elif isinstance(resp_body, bytes):
             resp_body = resp_body
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
-
-        resp_body = resp_body.encode("utf-8")
 
         # Convert Django response to urllib3.response.HTTPResponse
         urllib_response = HTTPResponse(
@@ -227,12 +231,16 @@ def internal_request_put(url, **kwargs):
         query_params = kwargs.get("params", {})
         files = kwargs.get("files", {})
         query_string = urlencode(query_params)
+        cookies = kwargs.get("cookies", {})
+        cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
+        if not headers.get("cookies"):
+            headers["Cookie"] = cookie_header
 
-        content_type = headers.get("content-type")
+        content_type = headers.get("Content-Type")
 
         if not content_type:
             raise Exception(
-                "content-type not specified, please specify content type for internal requests"
+                "Content-Type not specified, please specify content type for internal requests"
             )
 
         fake_request = fake_request.put(
@@ -297,15 +305,13 @@ def internal_request_put(url, **kwargs):
             resp_body = getattr(django_response, "data", "")
 
         if isinstance(resp_body, dict):
-            resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, bytes):
-            resp_body = resp_body
+            resp_body = json.dumps(resp_body).encode("utf-8")
         elif isinstance(resp_body, str):
             resp_body = resp_body.encode("utf-8")
+        elif isinstance(resp_body, bytes):
+            resp_body = resp_body
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
-
-        resp_body = resp_body.encode("utf-8")
 
         # Convert Django response to urllib3.response.HTTPResponse
         urllib_response = HTTPResponse(
@@ -338,6 +344,10 @@ def internal_request_get(url, **kwargs):
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
         query_string = urlencode(query_params)
+        cookies = kwargs.get("cookies", {})
+        cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
+        if not headers.get("cookies"):
+            headers["Cookie"] = cookie_header
 
         fake_request = fake_request.get(url, headers=headers, QUERY_STRING=query_string)
 
@@ -349,11 +359,11 @@ def internal_request_get(url, **kwargs):
             resp_body = getattr(django_response, "data", "")
 
         if isinstance(resp_body, dict):
-            resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, bytes):
-            resp_body = resp_body
+            resp_body = json.dumps(resp_body).encode("utf-8")
         elif isinstance(resp_body, str):
             resp_body = resp_body.encode("utf-8")
+        elif isinstance(resp_body, bytes):
+            resp_body = resp_body
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
 
@@ -367,12 +377,11 @@ def internal_request_get(url, **kwargs):
             preload_content=False,
         )
 
-        # Set additional attributes on the urllib response
-        urllib_response.reason = getattr(django_response, "reason_phrase", "")
-
         # Convert urllib response to requests.Response using the existing build_response function
         req = requests.Request("GET", url, headers=headers).prepare()
         response = build_response(req, urllib_response)
+        for cookie in django_response.cookies.values():
+            response.cookies.set_cookie(cookie)
         return response
 
     # If domain is not internal, proceed with the normal requests.get call
@@ -388,13 +397,13 @@ def internal_request_delete(url, **kwargs):
         data = kwargs.get("data", {})
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
+        cookies = kwargs.get("cookies", {})
+        cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
+        query_string = urlencode(query_params)
+        if not headers.get("cookies"):
+            headers["Cookie"] = cookie_header
 
-        content_type = headers.get("content-type", "")
-
-        if not content_type:
-            raise Exception(
-                "content-type not specified, please specify content type for internal requests"
-            )
+        content_type = headers.get("Content-Type", "")
 
         fake_request = fake_request.delete(
             url,
@@ -402,6 +411,7 @@ def internal_request_delete(url, **kwargs):
             headers=headers,
             content_type=content_type,
             query_params=query_params,
+            QUERY_STRING=query_string,
         )
         query_dict = QueryDict("", mutable=True)
 
@@ -431,15 +441,13 @@ def internal_request_delete(url, **kwargs):
             resp_body = getattr(django_response, "data", "")
 
         if isinstance(resp_body, dict):
-            resp_body = json.dumps(resp_body)
-        elif isinstance(resp_body, bytes):
-            resp_body = resp_body
+            resp_body = json.dumps(resp_body).encode("utf-8")
         elif isinstance(resp_body, str):
             resp_body = resp_body.encode("utf-8")
+        elif isinstance(resp_body, bytes):
+            resp_body = resp_body
         else:
             raise ValueError(f"Unknown response type: {type(resp_body)} returned")
-
-        resp_body = resp_body.encode("utf-8")
 
         # Convert Django response to urllib3.response.HTTPResponse
         urllib_response = HTTPResponse(
