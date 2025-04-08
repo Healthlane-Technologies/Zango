@@ -63,7 +63,7 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
     )
     app_objects = models.JSONField(null=True)
 
-    def create_token(self, role, expiry=knox_settings.TOKEN_TTL):
+    def generate_auth_token(self, role, expiry=knox_settings.TOKEN_TTL):
         try:
             AppUserAuthToken.objects.filter(user=self).delete()
         except Exception:
