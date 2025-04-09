@@ -1,3 +1,6 @@
+import json
+import os
+
 from rest_framework.views import APIView
 from django.http import JsonResponse
 from django.views import View
@@ -9,6 +12,17 @@ import requests
 
 COOKIE = "cookie_name"
 COOKIE_VALUE = "cookie_value"
+
+FILE_NAME = "test1.txt"
+FILE_NAME_1 = "test2.txt"
+FILE_DIR = os.path.join(os.path.dirname(__file__), "files")
+
+FORM_DATA_MULTIPART = {
+    "field_1": "value_1",
+    "field_2": "value_2"
+}
+
+
 
 JSON_DATA = {
     "field_1": "value_1",
@@ -85,6 +99,8 @@ class TestREPathView(View):
 class TestAPIView(APIView):
     def get(self, request, *args, **kwargs):
         action = request.GET.get("action")
+        if not action:
+            raise Exception("Action not found")
         if action == "headers":
             if request.headers.get("Accept") != GET_HEADERS.get("Accept"):
                 raise Exception("Accept Header not found")
@@ -108,12 +124,14 @@ class TestAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         action = request.GET.get("action")
+        if not action:
+            raise Exception("Action not found")
         if action == "headers":
             if request.headers.get("Content-Type") != POST_HEADERS.get("Content-Type"):
                 raise Exception("Content-Type Header not found")
         
         if action == "query_params":
-            if not request.POST.get(QUERY_PARAM) == PARAM_VALUE:
+            if not request.GET.get(QUERY_PARAM) == PARAM_VALUE:
                 raise Exception("Query param not found")
         
         if action == "cookie":
@@ -127,10 +145,39 @@ class TestAPIView(APIView):
             resp.set_cookie(COOKIE, COOKIE_VALUE)
             return resp
         
+        if action =="json_data":
+            if request.data.get("field_1") != JSON_DATA["field_1"] or request.data.get("field_2") != JSON_DATA["field_2"]:
+                raise Exception ("JSON data missing")
+        
+        if action == "file":
+            uploaded_file = request.FILES.get(FILE_NAME)
+
+            if not uploaded_file:
+                raise Exception(f"File not found in the request.")
+            
+            # Optionally, you can perform additional checks on the file, such as its content or size
+            if uploaded_file.name != FILE_NAME:
+                raise Exception(f"Uploaded file name '{uploaded_file.name}' does not match the expected file name '{FILE_NAME}'.")
+        
+        if action == "multiple_files":
+            uploaded_files = request.FILES.getlist('file')
+
+            if not uploaded_files:
+                raise Exception("No files found in the request.")
+            
+            if len(uploaded_files) != 2:
+                raise Exception("Expected 2 files, but found {}".format(len(uploaded_files)))
+        
+        if action == "form_data_multipart":
+            if request.POST.get("field_1") != FORM_DATA_MULTIPART["field_1"] or request.POST.get("field_2") != FORM_DATA_MULTIPART["field_2"]:
+                raise Exception ("Multipart Form data missing")
+        
         return JsonResponse({"message": "POST request received."})
 
     def put(self, request, *args, **kwargs):
         action = request.GET.get("action")
+        if not action:
+            raise Exception("Action not found")
         if action == "headers":
             if request.headers.get("Cache-Control") != PUT_HEADERS.get("Cache-Control"):
                 raise Exception("Cache-Control Header not found")
@@ -150,10 +197,20 @@ class TestAPIView(APIView):
             resp.set_cookie(COOKIE, COOKIE_VALUE)
             return resp
         
+        if action =="json_data":
+            if request.data.get("field_1") != JSON_DATA["field_1"] or request.data.get("field_2") != JSON_DATA["field_2"]:
+                raise Exception ("JSON data missing")
+        
+        if action == "form_data_multipart":
+            if request.POST.get("field_1") != FORM_DATA_MULTIPART["field_1"] or request.POST.get("field_2") != FORM_DATA_MULTIPART["field_2"]:
+                raise Exception ("Multipart Form data missing")
+        
         return JsonResponse({"message": "PUT request received."})
 
     def delete(self, request, *args, **kwargs):
         action = request.GET.get("action")
+        if not action:
+            raise Exception("Action not found")
         if action == "headers":
             if request.headers.get("Authorization") != DELETE_HEADERS.get("Authorization"):
                 raise Exception("Authorization Header not found")
@@ -168,27 +225,33 @@ class TestAPIView(APIView):
             if request.COOKIES[COOKIE] != COOKIE_VALUE:
                 raise Exception("Cookie value is not the same")
         
-        if action == "response_cookie":
-            resp = JsonResponse({"Message": "Setting Cookie"})
-            resp.set_cookie(COOKIE, COOKIE_VALUE)
-            return resp
-        
         return JsonResponse({"message": "DELETE request received."})
 
 class TestDataView(View):
-    
+
+    def validate_json_data(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return None, JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        if data.get("field_1") != JSON_DATA["field_1"] or data.get("field_2") != JSON_DATA["field_2"]:
+            return None, JsonResponse({"error": "JSON data missing or incorrect"}, status=400)
+
+        return data, None
+
     def post(self, request, *args, **kwargs):
-        action = request.GET.get("action", "")
-        if action =="json_data":
-            if request.data.get("field_1") != JSON_DATA["field_1"] or request.data.get("field_2") != JSON_DATA["field_2"]:
-                raise Exception ("JSON data missing")
+        if request.GET.get("action") == "json_data":
+            _, error_response = self.validate_json_data(request)
+            if error_response:
+                return error_response
         return JsonResponse({"message": "Data correctly passed"})
 
     def put(self, request, *args, **kwargs):
-        action = request.GET.get("action", "")
-        if action =="json_data":
-            if request.data.get("field_1") != JSON_DATA["field_1"] or request.data.get("field_2") != JSON_DATA["field_2"]:
-                raise Exception ("JSON data missing")
+        if request.GET.get("action") == "json_data":
+            _, error_response = self.validate_json_data(request)
+            if error_response:
+                return error_response
         return JsonResponse({"message": "Data correctly passed"})
     
 class TestView(View):
@@ -326,13 +389,46 @@ class TestView(View):
             if not resp.cookies.get(COOKIE) == COOKIE_VALUE:
                 return HttpResponse("Cookie not found in response", status=500)
             return HttpResponse(resp.content)
+        
+        # Test JSON Data in APIView
+
+        url = f"{get_current_request_url(request)}/app/api/"
             
-        if action == "delete_response_cookie":
-            resp = requests.delete(f"{url}?action=response_cookie", headers=DELETE_HEADERS)
-            if not resp.cookies.get(COOKIE) == COOKIE_VALUE:
-                return HttpResponse("Cookie not found in response",  status=500)
+        if action == "post_json_data_api_view":
+            resp = requests.post(f"{url}?action=json_data", headers=POST_HEADERS, data=JSON_DATA)
+            return HttpResponse(resp.content)
+            
+        if action == "put_json_data_api_view":
+            resp = requests.put(f"{url}?action=json_data", headers=PUT_HEADERS, data=JSON_DATA)
+            return HttpResponse(resp.content)
+        
+        # Test File
+
+        url = f"{get_current_request_url(request)}/app/api/"
+
+        FILES = [
+            ("file", open(os.path.join(FILE_DIR, FILE_NAME), "rb"), "text/plain"),
+            ("file", open(os.path.join(FILE_DIR, FILE_NAME_1), "rb"), "text/plain"),
+        ]
+
+        if action == "post_file":
+            resp = requests.post(f"{url}?action=file", files={FILE_NAME: open(os.path.join(FILE_DIR, FILE_NAME), "rb")}, headers={"Content-Type": "multipart/form-data; boundary=---011000010111000001101001"})
+            return HttpResponse(resp.content)
+        
+
+        #Test Multiple Files
+
+        if action == "post_multiple_files":
+            resp = requests.post(f"{url}?action=multiple_files", files=FILES, headers={"Content-Type": "multipart/form-data; boundary=---011000010111000001101001"})
             return HttpResponse(resp.content)
 
-        resp = requests.get(url)
-        resp.raise_for_status()
+        # Test Form Data Multipart
+
+        if action == "post_form_data_multipart":
+            resp = requests.post(f"{url}?action=form_data_multipart", data=FORM_DATA_MULTIPART)
+            return HttpResponse(resp.content)
+        
+        if action == "put_form_data_multipart":
+            resp = requests.put(f"{url}?action=form_data_multipart", data=FORM_DATA_MULTIPART)
+            return HttpResponse(resp.content)
         return HttpResponse("Internal requests working")

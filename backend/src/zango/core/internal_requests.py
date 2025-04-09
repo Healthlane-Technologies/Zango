@@ -1,8 +1,9 @@
 import io
 import json
+import mimetypes
 
 from importlib import import_module
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 
@@ -14,7 +15,6 @@ from urllib3.response import HTTPResponse
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connection
-from django.http import QueryDict
 from django.http.response import HttpResponse
 from django.template.response import ContentNotRenderedError
 from django.test import RequestFactory
@@ -108,7 +108,7 @@ def internal_request_post(url, **kwargs):
         tenant = domain_obj.tenant
         fake_request = RequestFactory()
 
-        data = kwargs.get("data", {})
+        data = kwargs.get("data", kwargs.get("json", {}))
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
         files = kwargs.get("files", {})
@@ -117,70 +117,80 @@ def internal_request_post(url, **kwargs):
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
 
-        query_string = urlencode(query_params)
+        query_params.update(parse_qs(urlparse(url).query))
+        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
 
-        content_type = headers.get("Content-Type")
+        content_type = headers.pop("Content-Type", "")
 
-        if not content_type:
-            raise Exception(
-                "content-type not specified, please specify content type for internal requests"
-            )
+        req_args = {"path": url, "data": data}
+        if headers:
+            req_args["headers"] = headers
+        if content_type:
+            req_args["content_type"] = content_type
+        if query_params:
+            req_args["query_params"] = query_params
 
-        fake_request = fake_request.post(
-            url,
-            data=data,
-            headers=headers,
-            content_type=content_type,
-            QUERY_STRING=query_string,
-        )
+        fake_request = fake_request.post(**req_args)
         uploaded_files = {}
 
         # Process each file in the list
-        for file_info in files:
-            field_name, (file_name, file_obj, content_type) = file_info
+        if isinstance(files, list):
+            for file_info in files:
+                try:
+                    field_name, (file_name, file_obj, content_type) = file_info
+                except ValueError:
+                    field_name, file_obj, content_type = file_info
+                    file_name = file_obj.name
 
-            # Create an InMemoryUploadedFile object
-            uploaded_file = InMemoryUploadedFile(
-                file=file_obj,
-                field_name=field_name,
-                name=file_name,
-                content_type=content_type,
-                size=file_obj.seek(0, 2),  # Move to the end of the file to get its size
-                charset=None,
-            )
+                # Create an InMemoryUploadedFile object
+                uploaded_file = InMemoryUploadedFile(
+                    file=file_obj,
+                    field_name=field_name,
+                    name=file_name,
+                    content_type=content_type,
+                    size=file_obj.seek(
+                        0, 2
+                    ),  # Move to the end of the file to get its size
+                    charset=None,
+                )
 
-            # Reset the file pointer to the beginning
-            file_obj.seek(0)
+                # Reset the file pointer to the beginning
+                file_obj.seek(0)
 
-            # Add the file to the dictionary
-            if field_name in uploaded_files:
-                uploaded_files[field_name].append(uploaded_file)
-            else:
-                uploaded_files[field_name] = [uploaded_file]
+                # Add the file to the dictionary
+                if field_name in uploaded_files:
+                    uploaded_files[field_name].append(uploaded_file)
+                else:
+                    uploaded_files[field_name] = [uploaded_file]
 
-        # Add the files to request.FILES
-        for field_name, files in uploaded_files.items():
-            for file in files:
-                fake_request.FILES.appendlist(field_name, file)
-        query_dict = QueryDict("", mutable=True)
+            # Add the files to request.FILES
+            for field_name, files in uploaded_files.items():
+                for file in files:
+                    fake_request.FILES.appendlist(field_name, file)
+        if isinstance(files, dict):
+            for field_name, file_obj in files.items():
+                # Create an InMemoryUploadedFile object
+                uploaded_file = InMemoryUploadedFile(
+                    file=file_obj,
+                    field_name=field_name,
+                    name=file_obj.name,
+                    content_type=mimetypes.guess_type(file_obj.name)[0],
+                    size=file_obj.seek(
+                        0, 2
+                    ),  # Move to the end of the file to get its size
+                    charset=None,
+                )
 
-        # Check if data is a string (i.e., a JSON string)
-        if isinstance(data, str):
-            # Parse the JSON string back into a dictionary
-            try:
-                data = json.loads(data)
+                # Reset the file pointer to the beginning
+                file_obj.seek(0)
 
-                # Convert data to a dictionary with string keys and values
-                data_dict = {str(k): str(v) for k, v in data.items()}
+                # Add the file to request.FILES
+                fake_request.FILES[field_name] = uploaded_file
 
-                query_dict.update(data_dict)
-            except json.JSONDecodeError:
-                pass
+        # query_dict = QueryDict(urlencode(data, doseq=True), mutable=True)
 
-        # query_dict.update({"data":data})
-
-        # Assign the QueryDict to request.POST
-        fake_request.POST = query_dict
+        # fake_request.POST = query_dict
+        # fake_request.data = query_dict
 
         django_response = process_internal_request(fake_request, tenant, **kwargs)
 
@@ -214,6 +224,18 @@ def internal_request_post(url, **kwargs):
         # Convert urllib response to requests.Response using the existing build_response function
         req = requests.Request("POST", url, data=data, headers=headers).prepare()
         response = build_response(req, urllib_response)
+        if hasattr(django_response, "cookies"):
+            for cookie_name, cookie_obj in django_response.cookies.items():
+                # Extract cookie properties
+                cookie_value = cookie_obj.value
+                cookie_dict = {
+                    "value": cookie_value,
+                    "path": cookie_obj.get("path", "/"),
+                    "domain": cookie_obj.get("domain", None),
+                    "secure": cookie_obj.get("secure", False),
+                }
+                # Set the cookie in the requests.Response object
+                response.cookies.set(cookie_name, **cookie_dict)
         return response
 
     # If domain is not internal, proceed with the normal requests.get call
@@ -226,76 +248,84 @@ def internal_request_put(url, **kwargs):
         tenant = domain_obj.tenant
         fake_request = RequestFactory()
 
-        data = kwargs.get("data", {})
+        data = kwargs.get("data", kwargs.get("json", {}))
         headers = kwargs.get("headers", {})
         query_params = kwargs.get("params", {})
         files = kwargs.get("files", {})
-        query_string = urlencode(query_params)
         cookies = kwargs.get("cookies", {})
         cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
 
-        content_type = headers.get("Content-Type")
+        query_params.update(parse_qs(urlparse(url).query))
+        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
 
-        if not content_type:
-            raise Exception(
-                "Content-Type not specified, please specify content type for internal requests"
-            )
+        content_type = headers.pop("Content-Type", "")
 
-        fake_request = fake_request.put(
-            url,
-            data=data,
-            headers=headers,
-            content_type=content_type,
-            QUERY_STRING=query_string,
-        )
+        req_args = {"path": url, "data": data}
+        if headers:
+            req_args["headers"] = headers
+        if content_type:
+            req_args["content_type"] = content_type
+        if query_params:
+            req_args["query_params"] = query_params
+
+        fake_request = fake_request.put(**req_args)
         uploaded_files = {}
 
         # Process each file in the list
-        for file_info in files:
-            field_name, (file_name, file_obj, content_type) = file_info
+        if isinstance(files, list):
+            for file_info in files:
+                try:
+                    field_name, (file_name, file_obj, content_type) = file_info
+                except ValueError:
+                    field_name, file_obj, content_type = file_info
+                    file_name = file_obj.name
 
-            # Create an InMemoryUploadedFile object
-            uploaded_file = InMemoryUploadedFile(
-                file=file_obj,
-                field_name=field_name,
-                name=file_name,
-                content_type=content_type,
-                size=file_obj.seek(0, 2),  # Move to the end of the file to get its size
-                charset=None,
-            )
+                # Create an InMemoryUploadedFile object
+                uploaded_file = InMemoryUploadedFile(
+                    file=file_obj,
+                    field_name=field_name,
+                    name=file_name,
+                    content_type=content_type,
+                    size=file_obj.seek(
+                        0, 2
+                    ),  # Move to the end of the file to get its size
+                    charset=None,
+                )
 
-            # Reset the file pointer to the beginning
-            file_obj.seek(0)
+                # Reset the file pointer to the beginning
+                file_obj.seek(0)
 
-            # Add the file to the dictionary
-            if field_name in uploaded_files:
-                uploaded_files[field_name].append(uploaded_file)
-            else:
-                uploaded_files[field_name] = [uploaded_file]
+                # Add the file to the dictionary
+                if field_name in uploaded_files:
+                    uploaded_files[field_name].append(uploaded_file)
+                else:
+                    uploaded_files[field_name] = [uploaded_file]
 
-        # Add the files to request.FILES
-        for field_name, files in uploaded_files.items():
-            for file in files:
-                fake_request.FILES.appendlist(field_name, file)
-        query_dict = QueryDict("", mutable=True)
+            # Add the files to request.FILES
+            for field_name, files in uploaded_files.items():
+                for file in files:
+                    fake_request.FILES.appendlist(field_name, file)
+        if isinstance(files, dict):
+            for field_name, file_obj in files.items():
+                # Create an InMemoryUploadedFile object
+                uploaded_file = InMemoryUploadedFile(
+                    file=file_obj,
+                    field_name=field_name,
+                    name=file_obj.name,
+                    content_type=mimetypes.guess_type(file_obj.name)[0],
+                    size=file_obj.seek(
+                        0, 2
+                    ),  # Move to the end of the file to get its size
+                    charset=None,
+                )
 
-        # Check if data is a string (i.e., a JSON string)
-        if isinstance(data, str):
-            # Parse the JSON string back into a dictionary
-            try:
-                data = json.loads(data)
+                # Reset the file pointer to the beginning
+                file_obj.seek(0)
 
-                # Convert data to a dictionary with string keys and values
-                data_dict = {str(k): str(v) for k, v in data.items()}
-
-                query_dict.update(data_dict)
-            except json.JSONDecodeError:
-                pass
-
-        # Assign the QueryDict to request.POST
-        fake_request.POST = query_dict
+                # Add the file to request.FILES
+                fake_request.FILES[field_name] = uploaded_file
 
         django_response = process_internal_request(fake_request, tenant, **kwargs)
 
@@ -329,6 +359,18 @@ def internal_request_put(url, **kwargs):
         # Convert urllib response to requests.Response using the existing build_response function
         req = requests.Request("PUT", url, data=data, headers=headers).prepare()
         response = build_response(req, urllib_response)
+        if hasattr(django_response, "cookies"):
+            for cookie_name, cookie_obj in django_response.cookies.items():
+                # Extract cookie properties
+                cookie_value = cookie_obj.value
+                cookie_dict = {
+                    "value": cookie_value,
+                    "path": cookie_obj.get("path", "/"),
+                    "domain": cookie_obj.get("domain", None),
+                    "secure": cookie_obj.get("secure", False),
+                }
+                # Set the cookie in the requests.Response object
+                response.cookies.set(cookie_name, **cookie_dict)
         return response
 
     # If domain is not internal, proceed with the normal requests.put call
@@ -349,7 +391,18 @@ def internal_request_get(url, **kwargs):
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
 
-        fake_request = fake_request.get(url, headers=headers, QUERY_STRING=query_string)
+        query_params.update(parse_qs(urlparse(url).query))
+        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
+
+        req_args = {
+            "path": url,
+        }
+        if headers:
+            req_args["headers"] = headers
+        if query_params:
+            req_args["query_params"] = query_params
+
+        fake_request = fake_request.get(**req_args)
 
         django_response = process_internal_request(fake_request, tenant, **kwargs)
 
@@ -380,8 +433,16 @@ def internal_request_get(url, **kwargs):
         # Convert urllib response to requests.Response using the existing build_response function
         req = requests.Request("GET", url, headers=headers).prepare()
         response = build_response(req, urllib_response)
-        for cookie in django_response.cookies.values():
-            response.cookies.set_cookie(cookie)
+        if hasattr(django_response, "cookies"):
+            for cookie_name, cookie_obj in django_response.cookies.items():
+                cookie_value = cookie_obj.value
+                cookie_dict = {
+                    "value": cookie_value,
+                    "path": cookie_obj.get("path", "/"),
+                    "domain": cookie_obj.get("domain", None),
+                    "secure": cookie_obj.get("secure", False),
+                }
+                response.cookies.set(cookie_name, **cookie_dict)
         return response
 
     # If domain is not internal, proceed with the normal requests.get call
@@ -399,39 +460,19 @@ def internal_request_delete(url, **kwargs):
         query_params = kwargs.get("params", {})
         cookies = kwargs.get("cookies", {})
         cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
-        query_string = urlencode(query_params)
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
 
-        content_type = headers.get("Content-Type", "")
+        query_params.update(parse_qs(urlparse(url).query))
+        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
 
-        fake_request = fake_request.delete(
-            url,
-            data=data,
-            headers=headers,
-            content_type=content_type,
-            query_params=query_params,
-            QUERY_STRING=query_string,
-        )
-        query_dict = QueryDict("", mutable=True)
+        req_args = {"path": url, "data": data}
+        if headers:
+            req_args["headers"] = headers
+        if query_params:
+            req_args["query_params"] = query_params
 
-        # Check if data is a string (i.e., a JSON string)
-        if isinstance(data, str):
-            # Parse the JSON string back into a dictionary
-            try:
-                data = json.loads(data)
-
-                # Convert data to a dictionary with string keys and values
-                data_dict = {str(k): str(v) for k, v in data.items()}
-
-                query_dict.update(data_dict)
-            except json.JSONDecodeError:
-                pass
-
-        # query_dict.update({"data":data})
-
-        # Assign the QueryDict to request.POST
-        fake_request.POST = query_dict
+        fake_request = fake_request.delete(**req_args)
 
         django_response = process_internal_request(fake_request, tenant, **kwargs)
 
@@ -465,6 +506,16 @@ def internal_request_delete(url, **kwargs):
         # Convert urllib response to requests.Response using the existing build_response function
         req = requests.Request("DELETE", url, data=data, headers=headers).prepare()
         response = build_response(req, urllib_response)
+        if hasattr(django_response, "cookies"):
+            for cookie_name, cookie_obj in django_response.cookies.items():
+                cookie_value = cookie_obj.value
+                cookie_dict = {
+                    "value": cookie_value,
+                    "path": cookie_obj.get("path", "/"),
+                    "domain": cookie_obj.get("domain", None),
+                    "secure": cookie_obj.get("secure", False),
+                }
+                response.cookies.set(cookie_name, **cookie_dict)
         return response
 
     # If domain is not internal, proceed with the normal requests.delete call

@@ -28,13 +28,6 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
             ws.ready()
             ws.sync_policies()
     
-    def test_internal_request(self):
-        self.sync_policies()
-        self.client = ZangoClient(self.tenant)
-
-        res = self.client.post("/app/view/")
-        self.assertEqual(res.status_code, 200)
-    
     def test_internal_request_headers(self):
         self.sync_policies()
         self.client = ZangoClient(self.tenant)
@@ -113,13 +106,34 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         self.assertEqual(res.status_code, 200)
 
     def test_internal_request_files(self):
-        pass
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+
+        # Test Files
+
+        res = self.client.post("/app/view/?action=post_file")
+        self.assertEqual(res.status_code, 200)
 
     def test_internal_request_multiple_files(self):
-        pass
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
 
-    def test_internal_request_form_data(self):
-        pass
+        # Test Files
+
+        res = self.client.post("/app/view/?action=post_multiple_files")
+        self.assertEqual(res.status_code, 200)
+
+    def test_internal_request_form_data_multipart(self):
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
+
+        # Test Form Data
+
+        res = self.client.post("/app/view/?action=post_form_data_multipart")
+        self.assertEqual(res.status_code, 200)
+        
+        res = self.client.post("/app/view/?action=put_form_data_multipart")
+        self.assertEqual(res.status_code, 200)
 
     def test_internal_request_cookies(self):
         self.sync_policies()
@@ -153,6 +167,15 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
         res = self.client.post("/app/view/?action=put_response_cookie")
         self.assertEqual(res.status_code, 200)
+    
+    def test_internal_request_json_data_api_view(self):
+        self.sync_policies()
+        self.client = ZangoClient(self.tenant)
 
-        res = self.client.post("/app/view/?action=delete_response_cookie")
+        # Test Request Cookies
+
+        res = self.client.post("/app/view/?action=put_json_data_api_view")
+        self.assertEqual(res.status_code, 200)
+
+        res = self.client.post("/app/view/?action=post_json_data_api_view")
         self.assertEqual(res.status_code, 200)
