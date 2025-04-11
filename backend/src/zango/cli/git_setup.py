@@ -2,11 +2,8 @@ import os
 import sys
 
 import click
-import git
 
 import django
-
-from django.conf import settings
 
 from .update_apps import find_project_name
 
@@ -137,64 +134,6 @@ def git_setup(
         return
 
     try:
-        if initialize:
-            os.system(f"rm -rf {app_directory}/.git")
-            os.system(f"rm -rf {app_directory}/.gitignore")
-            # Initialize git repository
-            repo = git.Repo.init(app_directory)
-
-            # Create .gitignore file
-            # TODO: Create git files template
-            if settings.ENV == "dev":
-                with open(
-                    os.path.join(app_directory, ".gitignore"), "w"
-                ) as gitignore_file:
-                    gitignore_file.write("venv/\n")
-                    gitignore_file.write("*.pyc\n")
-                    gitignore_file.write("__pycache__/\n")
-                    gitignore_file.write(".DS_Store\n")
-                    gitignore_file.write("node_modules/\n")
-                    gitignore_file.write("*.parcel-cache\n")
-                    gitignore_file.write("packages\n")
-
-                # Create README.md
-                with open(os.path.join(app_directory, "README.md"), "w") as readme_file:
-                    readme_file.write(f"# {os.path.basename(app_directory)}\n")
-
-            parts = git_repo_url.split("://")
-
-            # Add username and password to the URL
-            repo_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
-
-            # Add remote repository
-            origin = repo.create_remote("origin", repo_url)
-
-            # Fetch all branches from the remote
-            origin.fetch()
-
-            remote_branches = [ref.name.split("/")[-1] for ref in origin.refs]
-
-            # Check if the branch exists locally
-            if settings.ENV == "dev" and dev_branch in remote_branches:
-                raise Exception(
-                    "Can't initialize repository with existing remote branches with same name."
-                )
-            else:
-                # Create a new branch and checkout
-                repo.git.checkout("-b", dev_branch)
-
-            if settings.ENV == "staging":
-                if staging_branch in remote_branches:
-                    repo.git.checkout(staging_branch, force=True)
-
-            if settings.ENV == "prod":
-                if prod_branch in remote_branches:
-                    repo.git.checkout(prod_branch, force=True)
-
-            click.echo(
-                f"Initialized git repository in {app_directory} and set remote to {git_repo_url}"
-            )
-
         update_settings_with_git_repo_url(
             app_name,
             git_repo_url,
