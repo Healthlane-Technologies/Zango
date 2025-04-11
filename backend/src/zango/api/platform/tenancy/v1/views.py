@@ -12,7 +12,6 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
-from zango.cli.git_setup import git_setup
 from zango.core.api import (
     ZangoGenericPlatformAPIView,
     get_api_response,
@@ -103,9 +102,10 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             data = request.data
             app_template = data.get("app_template", None)
             app_template_name = None
+            run_migrations = False
             if app_template:
                 app_template_name = str(app_template).split(".")[0]
-                _, app_name = extract_app_details_from_zip(app_template)
+                _, app_name, run_migrations = extract_app_details_from_zip(app_template)
                 data.update(
                     {
                         "name": app_name,
@@ -120,6 +120,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
                 app_template=app_template,
                 tenant_type="app",
                 status="staged",
+                run_migrations=run_migrations,
             )
             result = {
                 "message": "App Launch Initiated Successfully",
@@ -129,6 +130,9 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             status = 200
             success = True
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             # logger.error(traceback.format_exc())
             result = {"message": str(e)}
             status = 500
@@ -177,9 +181,6 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
     def put(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
-            old_git_config = (
-                obj.extra_config.get("git_config", {}) if obj.extra_config else {}
-            )
             serializer = TenantSerializerModel(
                 instance=obj,
                 data=request.data,
@@ -190,39 +191,12 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
                 serializer.save()
                 success = True
                 status_code = 200
-                if serializer.data.get("extra_config", None):
-                    new_git_config = serializer.data["extra_config"].get(
-                        "git_config", {}
-                    )
-
-                    new_repo_url = new_git_config.get("repo_url")
-                    old_repo_url = old_git_config.get("repo_url")
-
-                    if new_repo_url and (
-                        not old_git_config or new_repo_url != old_repo_url
-                    ):
-                        git_setup(
-                            [
-                                obj.name,
-                                "--git_repo_url",
-                                new_repo_url,
-                                "--dev_branch",
-                                self.get_branch(new_git_config, "dev", "development"),
-                                "--staging_branch",
-                                self.get_branch(new_git_config, "staging", "staging"),
-                                "--prod_branch",
-                                self.get_branch(new_git_config, "prod", "main"),
-                                "--initialize",
-                            ],
-                            standalone_mode=False,
-                        )
 
                 result = {
                     "message": "App Settings Updated Successfully",
                     "app_uuid": str(obj.uuid),
                 }
             else:
-                print(serializer.errors)
                 success = False
                 status_code = 400
                 if serializer.errors:

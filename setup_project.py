@@ -45,6 +45,7 @@ def write_env_file(project_dir, args):
         f.write("OTEL_EXPORTER_OTLP_HEADERS=''\n")
         f.write("OTEL_EXPORTER_PROTOCOL=''\n")
         f.write(f"OTEL_RESROUCE_NAME={args.project_name}\n")
+        f.write("SINGLE_BEAT_REDIS_SERVER=redis://redis:6379/1")
 
         if args.platform_domain_url:
             f.write(f"PLATFORM_DOMAIN_URL={args.platform_domain_url}\n")
