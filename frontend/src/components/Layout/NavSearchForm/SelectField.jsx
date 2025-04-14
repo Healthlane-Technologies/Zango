@@ -46,6 +46,12 @@ export default function SelectField() {
 					ref={(ref) => setPopperElement(ref)}
 					style={styles['popper']}
 					{...attributes['popper']}
+					enter="transition ease-out duration-200"
+					enterFrom="transform opacity-0 scale-95"
+					enterTo="transform opacity-100 scale-100"
+					leave="transition ease-in duration-150"
+					leaveFrom="transform opacity-100 scale-100"
+					leaveTo="transform opacity-0 scale-95"
 				>
 					<Menu.Items className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto rounded-[4px] bg-[#495057] font-lato text-base focus:outline-none sm:text-sm">
 						<div className="relative">
@@ -63,7 +69,10 @@ export default function SelectField() {
 								</span>
 							</div>
 						</div>
-						<div data-cy="top_menu_items" className="flex flex-col pb-[12px] pt-[6px]">
+						<div
+							data-cy="top_menu_items"
+							className="flex flex-col pb-[12px] pt-[6px]"
+						>
 							<Menu.Item>
 								{({ active }) => (
 									<NavLink
