@@ -3,7 +3,6 @@ import json
 import mimetypes
 
 from importlib import import_module
-from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 
@@ -108,27 +107,21 @@ def internal_request_post(url, **kwargs):
         tenant = domain_obj.tenant
         fake_request = RequestFactory()
 
-        data = kwargs.get("data", kwargs.get("json", {}))
+        data = kwargs.get("data", {})
         headers = kwargs.get("headers", {})
-        query_params = kwargs.get("params", {})
+
+        content_type = headers.pop("Content-Type", "")
         files = kwargs.get("files", {})
         cookies = kwargs.get("cookies", {})
         cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
 
-        query_params.update(parse_qs(urlparse(url).query))
-        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
-
-        content_type = headers.pop("Content-Type", "")
-
         req_args = {"path": url, "data": data}
         if headers:
             req_args["headers"] = headers
         if content_type:
             req_args["content_type"] = content_type
-        if query_params:
-            req_args["query_params"] = query_params
 
         fake_request = fake_request.post(**req_args)
         uploaded_files = {}
@@ -250,15 +243,11 @@ def internal_request_put(url, **kwargs):
 
         data = kwargs.get("data", kwargs.get("json", {}))
         headers = kwargs.get("headers", {})
-        query_params = kwargs.get("params", {})
         files = kwargs.get("files", {})
         cookies = kwargs.get("cookies", {})
         cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
-
-        query_params.update(parse_qs(urlparse(url).query))
-        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
 
         content_type = headers.pop("Content-Type", "")
 
@@ -267,8 +256,6 @@ def internal_request_put(url, **kwargs):
             req_args["headers"] = headers
         if content_type:
             req_args["content_type"] = content_type
-        if query_params:
-            req_args["query_params"] = query_params
 
         fake_request = fake_request.put(**req_args)
         uploaded_files = {}
@@ -384,23 +371,16 @@ def internal_request_get(url, **kwargs):
         fake_request = RequestFactory()
 
         headers = kwargs.get("headers", {})
-        query_params = kwargs.get("params", {})
-        query_string = urlencode(query_params)
         cookies = kwargs.get("cookies", {})
         cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
-
-        query_params.update(parse_qs(urlparse(url).query))
-        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
 
         req_args = {
             "path": url,
         }
         if headers:
             req_args["headers"] = headers
-        if query_params:
-            req_args["query_params"] = query_params
 
         fake_request = fake_request.get(**req_args)
 
@@ -457,20 +437,14 @@ def internal_request_delete(url, **kwargs):
 
         data = kwargs.get("data", {})
         headers = kwargs.get("headers", {})
-        query_params = kwargs.get("params", {})
         cookies = kwargs.get("cookies", {})
         cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
         if not headers.get("cookies"):
             headers["Cookie"] = cookie_header
 
-        query_params.update(parse_qs(urlparse(url).query))
-        url = f"{urlparse(url).scheme}://{urlparse(url).netloc}{urlparse(url).path}"
-
         req_args = {"path": url, "data": data}
         if headers:
             req_args["headers"] = headers
-        if query_params:
-            req_args["query_params"] = query_params
 
         fake_request = fake_request.delete(**req_args)
 
