@@ -36,7 +36,7 @@ To begin using Zango through Docker installation, ensure that Docker and Docker 
    - `--project_name`: Modifies the name of the project (Default: `zango_project`).
    - `--project_dir`: Specifies the directory for project creation (Default: `zproject`).
    - `--build_core`: Builds the Zango library (Default: `False`).
-   - `--platform_username`: The user email of the platform user (Default: `platform_admin@zelthy.com`).
+   - `--platform_username`: The user email of the platform user (Default: `platform_admin@zango.dev`).
    - `--platform_user_password`: The password for the platform user (Default: `Zango@123`).
 
 #### 4. Navigate to ``project_dir`` to start the project.
@@ -44,14 +44,21 @@ To begin using Zango through Docker installation, ensure that Docker and Docker 
 #### 5. Docker is started as a non root user, run the below commands to export the host UID and GID
 
 ```bash
-export UID=$(id -u)
-export GID=$(id -g)
+export HOST_UID=$(id -u)
+export HOST_GID=$(id -g)
 ```
 
 #### 6. Run `docker compose up` in the project directory to start the project
 
-# Syncing Static Files And Running Migrations
 
-You can sync static files by running `python manage.py collectstatic` from the project directory in the `<project>-app-1` container. Make sure to sync the static files before deploying
+After starting the Docker services, please wait a minute or two to ensure all services are fully up and running.
 
-You can run migrations by running `python manage.py ws_makemigrations <project_name>` and `python manage.py ws_migrate <project_name` from the project directory in the container
+Once ready, you can access the platform in your browser at:
+
+[http://localhost:8000/platform](http://localhost:8000/platform)
+
+To log in to the platform, use the default credentials below or the credentials you specified when running the   
+``python setup_project.py`` command.
+
+- **Username:** `platform_admin@zango.dev`  
+- **Password:** `Zango@123`
