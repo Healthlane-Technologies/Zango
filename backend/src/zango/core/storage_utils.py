@@ -49,6 +49,8 @@ def validate_file_extension(value):
         ".pptx",
         ".zip",
         ".ico",
+        ".mp4",
+        ".webm"
     ]
     if ext.lower() not in valid_extensions:
         raise ValidationError(
