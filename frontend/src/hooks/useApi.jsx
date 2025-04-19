@@ -90,7 +90,9 @@ export default function useApi() {
 					const { response, success } = await apiRequest.json();
 
 					if (!success) {
-						setErrorMessage(response?.message || 'Server Error');
+						if(apiDetails.showErrorModal!==false){
+							setErrorMessage(response?.message || 'Server Error');
+						}
 					} else {
 						if (apiDetails?.notify) {
 							notify('success', 'Success', response.message);
@@ -103,7 +105,9 @@ export default function useApi() {
 						responseStatus: apiRequest.status,
 					};
 				} catch (error) {
-					setErrorMessage('Server Error');
+					if(apiDetails.showErrorModal!==false){
+						setErrorMessage('Server Error');
+					}
 
 					return {
 						response: {
@@ -117,7 +121,10 @@ export default function useApi() {
 				try {
 					const { response } = await apiRequest.json();
 
-					setErrorMessage(response.message);
+					if(apiDetails.showErrorModal!==false){
+						setErrorMessage(response.message);
+					}
+
 
 					return {
 						response: {
@@ -141,7 +148,9 @@ export default function useApi() {
 				try {
 					const { response } = await apiRequest.json();
 
-					setErrorMessage(response.message);
+					if(apiDetails.showErrorModal!==false){
+						setErrorMessage(response.message);
+					}
 
 					return {
 						response: {
@@ -162,7 +171,9 @@ export default function useApi() {
 					};
 				}
 			} else {
-				setErrorMessage('Server Error');
+				if(apiDetails.showErrorModal!==false){
+					setErrorMessage('Server Error');
+				}
 
 				return {
 					response: {
