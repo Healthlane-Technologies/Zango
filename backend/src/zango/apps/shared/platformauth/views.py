@@ -57,19 +57,19 @@ class PlatformUserLoginView(LoginView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        OIDC_CONTEXT = {
-            "enabled": settings.PLATFORM_AUTH_OIDC_ENABLE,
+        oidc_context_data = {
+            "enabled": getattr(settings, "PLATFORM_AUTH_OIDC_ENABLE", False),
             "google": {
-                "enabled": settings.GOOGLE_OIDC_ENABLE,
+                "enabled": getattr(settings, "GOOGLE_OIDC_ENABLE", False),
                 "image_url": static("app_panel/images/googleLogin.svg"),
             },
             "azure": {
-                "enabled": settings.AZURE_OIDC_ENABLE,
+                "enabled": getattr(settings, "AZURE_OIDC_ENABLE", False),
                 "image_url": static("app_panel/images/azureLogin.svg"),
             },
             "oidc_url": "/auth/openid/initiate/",
         }
-        context.update({"OIDC_Context": OIDC_CONTEXT})
+        context["oidc_context"] = oidc_context_data
         return context
 
     template_name = "app_panel/app_panel_login.html"
