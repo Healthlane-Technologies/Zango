@@ -169,8 +169,6 @@
     </div>
   </div>
   <script>
-    const OIDC_Context = "{{ oidc_context | safe }}";
-    
     function convertToJson(pyLikeString) {
         let jsonString = pyLikeString
           .replace(/'/g, '"') // Replace single quotes with double quotes
@@ -187,7 +185,15 @@
         }
     }
 
+    const OIDC_Context = "{{ oidc_context | safe }}";
     let OIDC_config = convertToJson(OIDC_Context);
+
+    if (!OIDC_config?.azure?.enabled) {
+      document.getElementById("microsoft-signin").style.display = "none";
+    }
+    if (!OIDC_config?.google?.enabled) {
+      document.getElementById("google-signin").style.display = "none";
+    }
 
     if (OIDC_config.enabled) {
       document.getElementById("sso-container").style.display = "flex";
@@ -197,9 +203,6 @@
       const getOidcUrl = async (url) => {
         const response = await fetch(url, {
           method: "GET",
-          // headers: {
-          //   'Content-Type': 'application/json',
-          // },
         });
         const responseData = await response.json();
         return responseData;
