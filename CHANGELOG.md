@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2025-04-19
+
+### Fixed
+
+* remove celery status loader from App Panel [(#457)](https://github.com/Healthlane-Technologies/Zango/pull/457)
+* platforms for latest docker image release [(#470)](https://github.com/Healthlane-Technologies/Zango/pull/470)
+
 ## [0.5.1] - 2025-03-28
 
 ### Fixed
