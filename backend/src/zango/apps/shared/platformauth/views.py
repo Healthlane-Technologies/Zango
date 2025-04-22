@@ -20,6 +20,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from zango.apps.shared.platformauth.models import PlatformUserModel
+from zango.core.api import get_api_response
 
 from .constants import AZURE_URL, GOOGLE_OAUTH_BASE_URL, GOOGLE_URL
 from .utils import OpenIDValidator
@@ -130,7 +131,9 @@ class OpenIDInitiateView(View):
             nonce=nonce,
             state=json.dumps(state),
         )
-        return redirect(url)
+        return get_api_response(
+            success=True, response_content={"redirect_url": url}, status=200
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")

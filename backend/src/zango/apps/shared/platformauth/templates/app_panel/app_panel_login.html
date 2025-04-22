@@ -41,6 +41,38 @@
       letter-spacing: 0.2px;
       color: #000000;
     }
+    .sso-container {
+      display: none;
+      justify-content: space-around;
+      align-items: center;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    #initial-login-container {
+      margin-top: 128px;
+      width: 392px;
+      background: #ffffff;
+      border: 1px solid #dde2e5;
+      box-sizing: border-box;
+      box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+      padding: 24px;
+      z-index: 1;
+    }
+    .sso-item-container {
+      height: 40px;
+      width: 40px;
+      border-radius: 4px;
+      border: 1px solid #dde2e5;
+      padding: 8px;
+      cursor: pointer;
+    }
+    #sso-divicer-container {
+      display: none;
+    }
+    .sso-divider {
+      height: 1px; width: 100%; border-top: 1px solid #dde2e5;
+    }
   </style>
 
 </head>
@@ -62,33 +94,69 @@
       <div id="AuthCard">
         <script>
           document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('submit-id-submit').disabled = true;
-            setTimeout(function () { document.getElementById('submit-id-submit').disabled = false; }, 1000);
+            // document.getElementById('submit-id-submit').disabled = true;
+            // setTimeout(function () { document.getElementById('submit-id-submit').disabled = false; }, 1000);
           })
         </script>
-        <form action="" method="POST" id="initial-login">
-          <h3
-            style="font-weight: 600; font-size: 18px; line-height: 24px; text-align: center; letter-spacing: -0.2px; color: rgb(33, 36, 41); padding-bottom: 32px;">
-            Log In to your account</h3>
-
-          {% csrf_token %}
-          <input type="text" name="username" autofocus="" autocapitalize="none" autocomplete="username"
-            maxlength="150" placeholder="Enter Username" class="textinput form-control" required="">
-          <input type="password" name="password" autofocus="" autocapitalize="none" autocomplete="password"
-            maxlength="150" placeholder="Email Password" class="textinput form-control" required="">
-          {% if error_message %}
-            <p style="color: red; text-align: left; font-size: 11px;
-            color: #d52918;
-            font-weight: 700;
-            line-height: 16px;
-            letter-spacing: 0.2px;
-            ">{{ error_message }}</p>
-          {% endif %}
-          <button type="submit"
-            style="width: 100%; background: rgb(80, 72, 237); border-radius: 4px; color: white; padding: 9px; margin: 12px 0px 0px; border: none; cursor: pointer; font-weight: 700; font-size: 16px; line-height: 24px;">
-            Login
-          </button>
-        </form>
+        <div id="initial-login-container">
+          <form action="" method="POST" style="width: auto;" id="initial-login">
+            <h3
+              style="font-weight: 600; font-size: 18px; line-height: 24px; text-align: center; letter-spacing: -0.2px; color: rgb(33, 36, 41); padding-bottom: 32px;">
+              Log In to your account</h3>
+  
+            {% csrf_token %}
+            <input type="text" name="username" autofocus="" autocapitalize="none" autocomplete="username"
+              maxlength="150" placeholder="Enter Username" class="textinput form-control" required="">
+            <input type="password" name="password" autofocus="" autocapitalize="none" autocomplete="password"
+              maxlength="150" placeholder="Email Password" class="textinput form-control" required="">
+            {% if error_message %}
+              <p style="color: red; text-align: left; font-size: 11px;
+              color: #d52918;
+              font-weight: 700;
+              line-height: 16px;
+              letter-spacing: 0.2px;
+              ">{{ error_message }}</p>
+            {% endif %}
+            <button type="submit"
+              style="width: 100%; background: rgb(80, 72, 237); border-radius: 4px; color: white; padding: 9px; margin: 12px 0px 0px; border: none; cursor: pointer; font-weight: 700; font-size: 16px; line-height: 24px;">
+              Login
+            </button>
+          </form>
+          <div style="margin-top: 24px;" id="sso-divicer-container">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div class="sso-divider"></div>
+              <div style="color: #0000007a">OR</div>
+              <div class="sso-divider"></div>
+            </div>
+          </div>
+          <div class="sso-container" id="sso-container">
+            <div class="sso-item-container" id="google-signin">
+              <svg  viewBox="-3 0 262 262" xmlns="http://www.w3.org/2000/svg"
+                preserveAspectRatio="xMidYMid">
+                <path
+                  d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027"
+                  fill="#4285F4" />
+                <path
+                  d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1"
+                  fill="#34A853" />
+                <path
+                  d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782"
+                  fill="#FBBC05" />
+                <path
+                  d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"
+                  fill="#EB4335" />
+              </svg>
+            </div>
+            <div class="sso-item-container" id="microsoft-signin">
+              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="17" y="17" width="10" height="10" fill="#FEBA08" />
+                <rect x="5" y="17" width="10" height="10" fill="#05A6F0" />
+                <rect x="17" y="5" width="10" height="10" fill="#80BC06" />
+                <rect x="5" y="5" width="10" height="10" fill="#F25325" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="footer"
@@ -101,6 +169,58 @@
     </div>
   </div>
   <script>
+    const OIDC_Context = "{{ oidc_context | safe }}";
+    
+    function convertToJson(pyLikeString) {
+        let jsonString = pyLikeString
+          .replace(/'/g, '"') // Replace single quotes with double quotes
+          .replace(/False/g, 'false') // Convert Python booleans to JS
+          .replace(/True/g, 'true')   // (if needed)
+          .replace(/None/g, 'null');  // Convert Python None to JS null
+
+        try {
+          let jsonObject = JSON.parse(jsonString);
+          return jsonObject;
+        } catch (error) {
+          console.error("Invalid input string:", error);
+          return null;
+        }
+    }
+
+    let OIDC_config = convertToJson(OIDC_Context);
+
+    if (OIDC_config.enabled) {
+      document.getElementById("sso-container").style.display = "flex";
+      document.getElementById("sso-divicer-container").style.display = "block";
+      
+      
+      const getOidcUrl = async (url) => {
+        const response = await fetch(url, {
+          method: "GET",
+          // headers: {
+          //   'Content-Type': 'application/json',
+          // },
+        });
+        const responseData = await response.json();
+        return responseData;
+      }
+  
+      document.getElementById("google-signin").addEventListener("click", async function () {
+        const response = await getOidcUrl(OIDC_config.oidc_url + `google/?redirect_url=/auth/openid/login/`);
+        let result = response.response;
+        if (result) {
+          window.location.href = result.redirect_url;
+        }
+      });
+  
+      document.getElementById("microsoft-signin").addEventListener("click", async function () {
+          const response = await getOidcUrl(OIDC_config.oidc_url + `microsoft/?redirect_url=${window.location.origin}/auth/openid/login/`);
+          let result = response.response;
+          if (result) {
+            window.location.href = result.redirect_url;
+          } 
+        });
+    }
 
 
     //setHeight of main-container
@@ -111,7 +231,7 @@
 
     var messageListContainer = document.getElementById("messageListContainer")
     var listDiv = document.getElementById("list_div")
-    if (messageListContainer.contains(listDiv)) {
+    if (messageListContainer?.contains(listDiv)) {
       messageListContainer.style.display = "block";
     }
 
