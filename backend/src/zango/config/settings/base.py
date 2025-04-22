@@ -43,7 +43,7 @@ SHARED_APPS = [
     "django_celery_results",
     "rest_framework",
     "knox",
-    # 'nocaptcha_recaptcha',
+    "django_recaptcha",
     "zango.apps.shared.tenancy",
     "zango.apps.shared.platformauth",
 ]
@@ -68,6 +68,7 @@ TENANT_APPS = [
     "django_celery_results",
     # "cachalot",
     "axes",
+    "django_recaptcha",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -315,6 +316,11 @@ def setup_settings(settings, BASE_DIR):
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
         ZANGO_TOKEN_TTL=(int, 4),
+        PASSWORD_RECOVERY_TOKEN_EXPIRY=(int, 3600 * 2),
+        PASSWORD_RECOVERY_TIME_MESSAGE=(str, "2 hours"),
+        PASSWORD_RECOVERY_SALT=(str, "recover-password"),
+        RECAPTCHA_PUBLIC_KEY=(str, ""),
+        RECAPTCHA_PRIVATE_KEY=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -466,6 +472,13 @@ def setup_settings(settings, BASE_DIR):
     # Git Settings
     settings.GIT_USERNAME = env("GIT_USERNAME")
     settings.GIT_PASSWORD = env("GIT_PASSWORD")
+
+    settings.PASSWORD_RECOVERY_TOKEN_EXPIRY = env("PASSWORD_RECOVERY_TOKEN_EXPIRY")
+    settings.PASSWORD_RECOVERY_TIME_MESSAGE = env("PASSWORD_RECOVERY_TIME_MESSAGE")
+    settings.PASSWORD_RECOVERY_SALT = env("PASSWORD_RECOVERY_SALT")
+
+    settings.RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
+    settings.RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
 
     settings_result = {"env": env}
 
