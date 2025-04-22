@@ -1,8 +1,8 @@
 import json
 
-import phonenumbers
 from importlib import import_module
 
+import phonenumbers
 import pytz
 
 from phonenumbers.phonenumberutil import country_code_for_region
@@ -192,3 +192,21 @@ def get_country_code_for_tenant(tenant, with_plus_sign=True):
 
     country_code = country_code_for_region(default_region)
     return f"+{country_code}" if with_plus_sign else country_code
+
+
+def get_app_secret(label=None, id=None):
+    from zango.apps.secrets.models import SecretsModel
+
+    try:
+        sec = None
+        if label:
+            sec = SecretsModel.objects.get(label=label)
+        elif id:
+            sec = SecretsModel.objects.get(id=id)
+        else:
+            return None
+        return sec.get_unencrypted_val()
+    except SecretsModel.DoesNotExist:
+        return None
+    except Exception:
+        return None
