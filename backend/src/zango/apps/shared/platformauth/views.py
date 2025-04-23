@@ -70,6 +70,11 @@ class PlatformUserLoginView(LoginView):
             },
             "oidc_url": "/auth/openid/initiate/",
         }
+        if (
+            not oidc_context_data["google"]["enabled"]
+            and not oidc_context_data["azure"]["enabled"]
+        ):
+            oidc_context_data["enabled"] = False
         context["oidc_context"] = oidc_context_data
         return context
 
