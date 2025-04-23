@@ -188,6 +188,10 @@
     const OIDC_Context = "{{ oidc_context | safe }}";
     let OIDC_config = convertToJson(OIDC_Context);
 
+     if (!OIDC_config?.azure?.enabled && !OIDC_config?.google?.enabled) {
+       document.getElementById("sso-divicer-container").style.display = "none";
+     }
+
     if (!OIDC_config?.azure?.enabled) {
       document.getElementById("microsoft-signin").style.display = "none";
     }
