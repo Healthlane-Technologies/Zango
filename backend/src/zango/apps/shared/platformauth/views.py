@@ -312,7 +312,7 @@ class OpenIDValidationView(View):
 
             traceback.print_exc()
             url = current_domain_url + state.get(
-                "target_url", "/login/"
+                "target_url", "/auth/login/"
             )  # Default to login page on error
             return HttpResponseRedirect(url)
 

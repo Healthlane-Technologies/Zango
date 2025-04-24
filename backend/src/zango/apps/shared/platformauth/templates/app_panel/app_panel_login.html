@@ -221,7 +221,7 @@
       });
   
       document.getElementById("microsoft-signin").addEventListener("click", async function () {
-          const response = await getOidcUrl(OIDC_config.oidc_url + `microsoft/?redirect_url=${window.location.origin}/auth/openid/login/`);
+          const response = await getOidcUrl(OIDC_config.oidc_url + `azure/?redirect_url=${window.location.origin}/auth/openid/login/`);
           let result = response.response;
           if (result) {
             window.location.href = result.redirect_url;
