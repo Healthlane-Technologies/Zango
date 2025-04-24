@@ -15,8 +15,8 @@ urlpatterns = [
     re_path(
         r"^openid/initiate/(?P<provider>[\w-]+)/$",
         OpenIDInitiateView.as_view(),
-        name="oidc-validate",
+        name="oidc-initiate",
     ),
-    re_path(r"^openid/router/$", OpenIDValidationView.as_view(), name="oidc-initiate"),
+    re_path(r"^openid/router/$", OpenIDValidationView.as_view(), name="oidc-validate"),
     re_path(r"^openid/login/$", AppOpenIDLogin.as_view(), name="oidc-login"),
 ]
