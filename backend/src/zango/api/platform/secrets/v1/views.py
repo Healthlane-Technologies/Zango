@@ -74,7 +74,7 @@ class SecretsViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                         return get_api_response(False, "Secret not found", 404)
                     return get_api_response(True, {"secret_value": secret}, 200)
                 except Exception as e:
-                    return get_api_response(False, str(e), 500)
+                    return get_api_response(False, {"message": str(e)}, 500)
             tenant = TenantModel.objects.get(uuid=app_uuid)
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
