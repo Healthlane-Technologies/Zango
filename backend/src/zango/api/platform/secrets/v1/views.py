@@ -150,6 +150,12 @@ class SecretsViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         try:
             secret_id = self.process_id(request.GET.get("secret_id", None))
             secret = SecretsModel.objects.get(id=secret_id)
+            if secret.active:
+                return get_api_response(
+                    False,
+                    {"message": "Secret is active, deactivate before deleting"},
+                    400,
+                )
             secret.delete()
             success = True
             response = {"message": "Secret deleted successfully"}

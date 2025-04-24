@@ -197,16 +197,11 @@ def get_country_code_for_tenant(tenant, with_plus_sign=True):
 def get_app_secret(label=None, id=None):
     from zango.apps.secrets.models import SecretsModel
 
-    try:
-        sec = None
-        if label:
-            sec = SecretsModel.objects.get(label=label)
-        elif id:
-            sec = SecretsModel.objects.get(id=id)
-        else:
-            return None
-        return sec.get_unencrypted_val()
-    except SecretsModel.DoesNotExist:
-        return None
-    except Exception:
-        return None
+    sec = None
+    if label:
+        sec = SecretsModel.objects.get(label=label)
+    elif id:
+        sec = SecretsModel.objects.get(id=id)
+    if sec and not sec.active:
+        raise ValueError("Secret is inactive")
+    return sec.get_unencrypted_val()
