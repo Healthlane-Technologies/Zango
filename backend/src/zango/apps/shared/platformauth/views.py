@@ -335,7 +335,9 @@ class AppOpenIDLogin(LoginView):
         email = self.get_email()
         if email:
             try:
-                user = PlatformUserModel.objects.get(email__iexact=email)
+                user = PlatformUserModel.objects.get(
+                    email__iexact=email, is_active=True
+                )
                 return user.user
             except PlatformUserModel.DoesNotExist:
                 # Case where the user does not exist
@@ -354,7 +356,6 @@ class AppOpenIDLogin(LoginView):
         user = self.get_user()
         if user and user.is_active:
             login(request, user, backend=USER_AUTH_BACKEND)
-            request.session.save()
             redirect_to = "/platform/apps/"
             response = redirect(redirect_to)
             return response
