@@ -60,6 +60,7 @@ TENANT_APPS = [
     "zango.apps.auditlogs",
     "zango.apps.accesslogs",
     "zango.apps.release",
+    "zango.apps.secrets",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -315,6 +316,7 @@ def setup_settings(settings, BASE_DIR):
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
         ZANGO_TOKEN_TTL=(int, 4),
+        FIELD_ENCRYPTION_KEY=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -466,6 +468,8 @@ def setup_settings(settings, BASE_DIR):
     # Git Settings
     settings.GIT_USERNAME = env("GIT_USERNAME")
     settings.GIT_PASSWORD = env("GIT_PASSWORD")
+
+    settings.FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")
 
     settings_result = {"env": env}
 

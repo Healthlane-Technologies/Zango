@@ -1,11 +1,5 @@
-import json
 import traceback
 
-from datetime import datetime
-
-import pytz
-
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.decorators import method_decorator
@@ -15,6 +9,7 @@ from zango.apps.shared.tenancy.models import TenantModel
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
+from zango.core.time_utils import process_timestamp
 from zango.core.utils import get_search_columns
 
 from .serializers import AuditLogSerializerModel
@@ -23,24 +18,6 @@ from .serializers import AuditLogSerializerModel
 @method_decorator(set_app_schema_path, name="dispatch")
 class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     pagination_class = ZangoAPIPagination
-
-    def process_timestamp(self, timestamp, timezone):
-        try:
-            ts = json.loads(timestamp)
-            if not timezone:
-                timezone = settings.TIME_ZONE
-            tz = pytz.timezone(timezone)
-            ts["start"] = tz.localize(
-                datetime.strptime(ts["start"] + "-" + "00:00", "%Y-%m-%d-%H:%M"),
-                is_dst=None,
-            )
-            ts["end"] = tz.localize(
-                datetime.strptime(ts["end"] + "-" + "23:59", "%Y-%m-%d-%H:%M"),
-                is_dst=None,
-            )
-            return ts
-        except Exception:
-            return None
 
     def process_id(self, id):
         try:
@@ -61,7 +38,7 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         search_filters = {
             "id": self.process_id,
             "object_id": self.process_id,
-            "timestamp": self.process_timestamp,
+            "timestamp": process_timestamp,
         }
         if model_type == "dynamic_models":
             records = (
@@ -88,9 +65,7 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                     filters |= Q(**{query: search})
         records = records.filter(filters).distinct()
         if columns.get("timestamp"):
-            processed = self.process_timestamp(
-                columns.get("timestamp"), tenant.timezone
-            )
+            processed = process_timestamp(columns.get("timestamp"), tenant.timezone)
             if processed is not None:
                 records = records.filter(
                     timestamp__gte=processed["start"], timestamp__lte=processed["end"]
