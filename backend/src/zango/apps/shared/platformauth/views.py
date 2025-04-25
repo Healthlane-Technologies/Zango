@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from zango.apps.shared.platformauth.models import PlatformUserModel
 from zango.core.api import get_api_response
+from zango.core.decorators import internal_access_only
 
 from .constants import AZURE_URL, GOOGLE_OAUTH_BASE_URL, GOOGLE_URL
 from .utils import OpenIDValidator
@@ -49,7 +50,7 @@ def get_openid_config(provider):
     raise ValueError("Invalid Provider")
 
 
-@method_decorator(axes_dispatch, name="dispatch")
+@method_decorator([axes_dispatch, internal_access_only], name="dispatch")
 # Create your views here.
 class PlatformUserLoginView(LoginView):
     """
@@ -92,6 +93,7 @@ class PlatformUserLoginView(LoginView):
             return TemplateResponse(request, self.template_name, context)
 
 
+@method_decorator(internal_access_only, name="dispatch")
 class OpenIDInitiateView(View):
     """
     OpenID workflow; Triggered when OpenID provider is selected on the login page
@@ -317,7 +319,7 @@ class OpenIDValidationView(View):
             return HttpResponseRedirect(url)
 
 
-@method_decorator(axes_dispatch, name="dispatch")
+@method_decorator([axes_dispatch, internal_access_only], name="dispatch")
 class AppOpenIDLogin(LoginView):
     """
     View to signin into the platform
@@ -362,7 +364,7 @@ class AppOpenIDLogin(LoginView):
         return HttpResponseRedirect(url)
 
 
-@method_decorator(axes_dispatch, name="dispatch")
+@method_decorator([axes_dispatch, internal_access_only], name="dispatch")
 class PlatformUserLogoutView(LogoutView):
     """
     View to logout the user.
