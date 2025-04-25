@@ -7,8 +7,8 @@ from zango.core.model_mixins import FullAuditMixin
 
 
 class SecretsModel(ZEncryptedFieldMixin, FullAuditMixin):
-    label = models.CharField(
-        "Secret Label",
+    key = models.CharField(
+        "Secret key",
         max_length=50,
         validators=[
             RegexValidator(
@@ -22,7 +22,7 @@ class SecretsModel(ZEncryptedFieldMixin, FullAuditMixin):
     active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.label
+        return self.key
 
     def get_unencrypted_val(self):
         return self.decrypter(self.value)

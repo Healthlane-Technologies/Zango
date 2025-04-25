@@ -9,12 +9,13 @@ class SecretSerializer(serializers.ModelSerializer):
     modified_at = serializers.SerializerMethodField()
     value = serializers.CharField(write_only=True, required=False)
     id = serializers.IntegerField(read_only=True)
+    active = serializers.BooleanField(default=True)
 
     class Meta:
         model = SecretsModel
         fields = [
             "id",
-            "label",
+            "key",
             "active",
             "value",
             "created_at",

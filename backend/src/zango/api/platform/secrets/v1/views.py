@@ -7,7 +7,7 @@ from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.time_utils import process_timestamp
-from zango.core.utils import get_app_secret, get_search_columns
+from zango.core.utils import get_search_columns
 
 from .serializers import SecretSerializer
 
@@ -25,7 +25,7 @@ class SecretsViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def get_queryset(self, search, tenant, columns={}):
         field_name_query_mapping = {
             "active": "active",
-            "label": "label__icontains",
+            "key": "key__icontains",
             "id": "id__icontains",
         }
         search_filters = {
@@ -69,7 +69,9 @@ class SecretsViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             if action == "get_secret_value":
                 secret_id = self.process_id(request.GET.get("secret_id", None))
                 try:
-                    secret = get_app_secret(id=secret_id)
+                    secret = SecretsModel.objects.get(
+                        id=secret_id
+                    ).get_unencrypted_val()
                     if not secret:
                         return get_api_response(False, "Secret not found", 404)
                     return get_api_response(True, {"secret_value": secret}, 200)

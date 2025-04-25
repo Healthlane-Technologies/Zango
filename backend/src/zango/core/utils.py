@@ -194,12 +194,12 @@ def get_country_code_for_tenant(tenant, with_plus_sign=True):
     return f"+{country_code}" if with_plus_sign else country_code
 
 
-def get_app_secret(label=None, id=None):
+def get_app_secret(key=None, id=None):
     from zango.apps.secrets.models import SecretsModel
 
     sec = None
-    if label:
-        sec = SecretsModel.objects.get(label=label)
+    if key:
+        sec = SecretsModel.objects.get(key=key)
     elif id:
         sec = SecretsModel.objects.get(id=id)
     if sec and not sec.active:
