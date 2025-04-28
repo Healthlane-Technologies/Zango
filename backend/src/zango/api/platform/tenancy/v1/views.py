@@ -3,6 +3,7 @@ import traceback
 
 from django_celery_results.models import TaskResult
 
+from django.conf import settings
 from django.db import connection
 from django.db.models import Q
 from django.utils.decorators import method_decorator
@@ -35,6 +36,16 @@ from .utils import extract_app_details_from_zip
 
 
 class AppViewAPIV1(ZangoGenericPlatformAPIView):
+    def get_zango_settings(self):
+        zango_settings = {
+            "DEBUG": settings.DEBUG,
+            "IP_RESTRICTED": settings.INTERNAL_IPS != ["0.0.0.0/0"],
+            "ACCOUNT_LOCKOUT_TIME": str(settings.AXES_COOLOFF_TIME),
+            "ALLOWED_PASSWORD_ATTEMPTS": settings.AXES_FAILURE_LIMIT,
+            # "ZANGO_TOKEN_EXPIRY": settings.ZANGO_TOKEN_TTL,
+        }
+        return zango_settings
+
     def get(self, request, *args, **kwargs):
         try:
             action = request.GET.get("action")
@@ -86,6 +97,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             success = True
             response = {
                 "apps": serializer.data,
+                "settings": self.get_zango_settings(),
                 "message": "All apps fetched successfully",
             }
             status = 200
