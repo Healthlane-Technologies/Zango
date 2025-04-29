@@ -4,7 +4,6 @@ import { Fragment, useEffect, useState } from 'react';
 import 'react-dates/initialize';
 import 'react-dates/lib/css/_datepicker.css';
 import { usePopper } from 'react-popper';
-import { FixedSizeList as List } from 'react-window';
 import { ReactComponent as FormSelectSearchCloseIcon } from '../../assets/images/svg/form-select-search-close-icon.svg';
 import { ReactComponent as FormSelectDropdownIcon } from '../../assets/images/svg/form-select-dropdown-icon.svg';
 import { ReactComponent as RemoveOptionIcon } from '../../assets/images/svg/remove-option-icon.svg';
@@ -108,7 +107,10 @@ const MultiSelectField = ({
 							style={styles['popper']}
 							{...attributes['popper']}
 						>
-							<Listbox.Options data-cy="multi_select_values" className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto border bg-white px-[8px] py-[12px] font-lato text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+							<Listbox.Options
+								data-cy="multi_select_values"
+								className="absolute z-[1] h-fit max-h-96 w-full overflow-y-auto border bg-white px-[8px] py-[12px] font-lato text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+							>
 								{optionsData?.length > 10 ? (
 									<div className="relative mb-4">
 										<input
@@ -130,33 +132,23 @@ const MultiSelectField = ({
 									</div>
 								) : null}
 
-								<List
-									height={
-										filteredOptions.length < 10
-											? filteredOptions.length * 40
-											: 300
-									}
-									itemCount={filteredOptions.length}
-									itemSize={40}
-									itemData={filteredOptions}
-									className="complete-hidden-scroll-style"
-								>
-									{({ index, style }) => (
+								{/* Replaced the react-window List with a normal map */}
+								<Listbox.Options className="space-y-2">
+									{filteredOptions.map((option, index) => (
 										<Listbox.Option
 											key={index}
-											style={style}
 											className={({ active }) =>
 												`relative flex cursor-default select-none items-center gap-[12px] p-2 ${
 													active ? '' : ''
 												}`
 											}
-											value={filteredOptions[index]}
-											disabled={filteredOptions[index].unavailable || false}
+											value={option}
+											disabled={option.unavailable || false}
 										>
 											<span className="flex items-center">
 												<FormMultiSelectCheckIcon
 													className={`${
-														value.indexOf(filteredOptions[index].id) >= 0
+														value.indexOf(option.id) >= 0
 															? 'text-[#000000]'
 															: 'text-[#eff3f4]'
 													} `}
@@ -164,16 +156,16 @@ const MultiSelectField = ({
 											</span>
 											<span
 												className={`block truncate font-lato ${
-													filteredOptions[index].unavailable || false
+													option.unavailable || false
 														? 'opacity-50'
 														: 'cursor-pointer'
 												}`}
 											>
-												{filteredOptions[index].label}
+												{option.label}
 											</span>
 										</Listbox.Option>
-									)}
-								</List>
+									))}
+								</Listbox.Options>
 							</Listbox.Options>
 						</Transition>
 					</div>
@@ -200,7 +192,12 @@ const MultiSelectField = ({
 			</div>
 
 			{meta.touched && meta.error ? (
-				<div data-cy="error_message" className="font-lato text-[12px] text-[#cc3300]">{meta.error}</div>
+				<div
+					data-cy="error_message"
+					className="font-lato text-[12px] text-[#cc3300]"
+				>
+					{meta.error}
+				</div>
 			) : null}
 		</div>
 	);
