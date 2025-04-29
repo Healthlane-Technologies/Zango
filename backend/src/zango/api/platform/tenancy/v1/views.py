@@ -1,6 +1,8 @@
 import json
 import traceback
 
+from datetime import timedelta
+
 from django_celery_results.models import TaskResult
 
 from django.conf import settings
@@ -38,11 +40,33 @@ from .utils import extract_app_details_from_zip
 class AppViewAPIV1(ZangoGenericPlatformAPIView):
     def get_zango_settings(self):
         zango_settings = {
-            "DEBUG": settings.DEBUG,
-            "IP_RESTRICTED": settings.INTERNAL_IPS != ["0.0.0.0/0"],
-            "ACCOUNT_LOCKOUT_TIME": str(settings.AXES_COOLOFF_TIME),
-            "ALLOWED_PASSWORD_ATTEMPTS": settings.AXES_FAILURE_LIMIT,
-            # "ZANGO_TOKEN_EXPIRY": settings.ZANGO_TOKEN_TTL,
+            "DEBUG": getattr(settings, "DEBUG", True),
+            "IP_RESTRICTED": getattr(settings, "INTERNAL_IPS", None) is not None
+            and not any(cidr in settings.INTERNAL_IPS for cidr in ["0.0.0.0/0", "*"]),
+            "ACCOUNT_LOCKOUT_TIME": str(
+                getattr(settings, "AXES_COOLOFF_TIME", timedelta(seconds=900))
+            ),
+            "ALLOWED_PASSWORD_ATTEMPTS": getattr(settings, "AXES_FAILURE_LIMIT", 6),
+            "ZANGO_TOKEN_EXPIRY": getattr(settings, "ZANGO_TOKEN_TTL", None),
+            "PASSWORD_MIN_LENGTH": getattr(settings, "PASSWORD_MIN_LENGTH", 8),
+            "PASSWORD_NO_REPEAT_DAYS": getattr(
+                settings, "PASSWORD_NO_REPEAT_DAYS", 180
+            ),
+            "PASSWORD_RESET_DAYS": getattr(settings, "PASSWORD_RESET_DAYS", 90),
+            "SESSION_COOKIE_NAME": getattr(
+                settings, "SESSION_COOKIE_NAME", "zangocookie"
+            ),
+            "SESSION_COOKIE_SECURE": getattr(settings, "SESSION_COOKIE_SECURE", False),
+            "CSRF_COOKIE_SECURE": getattr(settings, "CSRF_COOKIE_SECURE", False),
+            "SESSION_EXPIRE_AT_BROWSER_CLOSE": getattr(
+                settings, "SESSION_EXPIRE_AT_BROWSER_CLOSE", True
+            ),
+            "SESSION_SECURITY_WARN_AFTER": getattr(
+                settings, "SESSION_SECURITY_WARN_AFTER", 1700
+            ),
+            "SESSION_SECURITY_EXPIRE_AFTER": getattr(
+                settings, "SESSION_SECURITY_EXPIRE_AFTER", 1800
+            ),
         }
         return zango_settings
 
