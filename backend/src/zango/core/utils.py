@@ -30,6 +30,11 @@ def get_current_role():
         if role_id:
             user_role = UserRoleModel.objects.get(id=role_id)
             return user_role
+
+        role_name = current_task.request.kwargs.get("user_role")
+        if role_name:
+            user_role = UserRoleModel.objects.get(name=role_name)
+            return user_role
         else:
             return UserRoleModel.objects.get(name="AnonymousUsers")
 
