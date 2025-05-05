@@ -13,13 +13,13 @@ class SecretsModel(ZEncryptedFieldMixin, FullAuditMixin):
         validators=[
             RegexValidator(
                 "^[A-Z][a-z0-9_]*$",
-                "No Space, First Character Caps, No Special Character except _",
+                "No Space, First Character Caps, No Special Character except _ allowed in Secret key",
             )
         ],
         unique=True,
     )
     value = EncryptedTextField("Secret Value", blank=True)
-    active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.key
