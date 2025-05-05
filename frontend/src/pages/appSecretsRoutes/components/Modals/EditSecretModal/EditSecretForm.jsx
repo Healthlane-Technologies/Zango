@@ -23,10 +23,13 @@ const EditSecretForm = ({ closeModal }) => {
 
 	let validationSchema = Yup.object().shape({
 		key: Yup.string().required('Required'),
-		value: Yup.string().required('Required'),
+		value: Yup.string().optional(),
 	});
 
 	let onSubmit = (values) => {
+		if (!values.value) {
+			delete values.value;
+		}
 		let dynamicFormData = transformToFormData(values);
 
 		const makeApiCall = async () => {

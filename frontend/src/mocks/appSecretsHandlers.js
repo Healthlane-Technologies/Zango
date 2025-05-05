@@ -86,25 +86,35 @@ export const appSecretsHandlers = [
 				success: true,
 				response: {
 					secrets: {
-						total_records: totalData,
-						total_pages: Math.ceil(data.length / pageSize),
-						next: '.',
+						total_records: 3,
+						total_pages: 1,
+						next: null,
 						previous: null,
-						records: searchValue ? [] : slicedData,
-					},
-					dropdown_options: {
-						attempt_type: [
+						records: [
 							{
-								id: 'login',
-								label: 'Login',
+								id: 3,
+								key: 'Key3',
+								active: true,
+								created_at: '25 Apr 2025 09:45 AM',
+								modified_at: '25 Apr 2025 10:13 AM',
 							},
 							{
-								id: 'switch_role',
-								label: 'Switched Role',
+								id: 2,
+								key: 'Key1',
+								active: false,
+								created_at: '24 Apr 2025 07:48 PM',
+								modified_at: '24 Apr 2025 07:48 PM',
+							},
+							{
+								id: 1,
+								key: 'Something',
+								active: false,
+								created_at: '24 Apr 2025 07:38 PM',
+								modified_at: '24 Apr 2025 07:43 PM',
 							},
 						],
 					},
-					message: 'Releases fetched successfully',
+					message: 'All secrets fetched successfully',
 				},
 			})
 		);
@@ -113,11 +123,12 @@ export const appSecretsHandlers = [
 	rest.post('/api/v1/apps/:appId/secrets/', (req, res, ctx) => {
 		return res(
 			ctx.delay(500),
-			ctx.status(500),
+			ctx.status(400),
 			ctx.json({
 				success: false,
 				response: {
-					message: 'Platform user fetched successfully',
+					message:
+						'No Space, First Character Caps, No Special Character except _',
 				},
 			})
 		);

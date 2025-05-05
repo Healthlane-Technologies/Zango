@@ -60,29 +60,28 @@ export default function RowMenu({ rowData }) {
 
 	const dispatch = useDispatch();
 
-	  const handleEditClick = () => {
+	const handleEditClick = () => {
 		dispatch(setEditSecretModalOpen(true));
 		dispatch(setAppSecretsFormData(rowData));
 
-			// Open your modal here
+		// Open your modal here
+	};
+
+	const handleDelete = () => {
+		const makeApiCall = async () => {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/secrets/?secret_id=${rowData?.id}`,
+				type: 'DELETE',
+				loader: true,
+			});
+
+			if (success) {
+				dispatch(toggleRerenderPage());
+			}
 		};
 
-		const handleDelete = () => {
-		
-			const makeApiCall = async () => {
-				const { response, success } = await triggerApi({
-					url: `/api/v1/apps/${appId}/secrets/?secret_id=${appSecretsFormData?.id}`,
-					type: 'DELETE',
-					loader: true,
-				});
-
-				if (success) {
-					dispatch(toggleRerenderPage());
-				}
-			};
-
-			makeApiCall();
-		};
+		makeApiCall();
+	};
 
 	// const handleEditUserDetails = () => {
 	// 	dispatch(openIsEditUserDetailModalOpen(rowData));
@@ -99,6 +98,23 @@ export default function RowMenu({ rowData }) {
 	// const handleResetUserPassword = () => {
 	// 	dispatch(openIsResetPasswordModalOpen(rowData));
 	// };
+
+	const handleStatusChange = async (status) => {
+		const payload = new FormData()
+
+		payload.append('is_active', status);
+		
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/secrets/?secret_id=${rowData?.id}`,
+			type: 'PUT',
+			payload: payload,
+			loader: true,
+		});
+
+		if (success) {
+			dispatch(toggleRerenderPage());
+		}
+	};
 
 	return (
 		<Menu as="div" className="relative flex">
@@ -148,8 +164,8 @@ export default function RowMenu({ rowData }) {
 									<button
 										data-cy="secrets_mark_inactive_button"
 										type="button"
-										className="flex  w-full"
-										// onClick={handleDeactivateUser}
+										className="flex w-full"
+										onClick={() => handleStatusChange(false)}
 									>
 										<div
 											className={`${
@@ -172,8 +188,8 @@ export default function RowMenu({ rowData }) {
 									<button
 										data-cy="activate_user_button"
 										type="button"
-										className="flex  w-full"
-										// onClick={handleActivateUser}
+										className="flex w-full"
+										onClick={() => handleStatusChange(true)}
 									>
 										<div
 											className={`${

@@ -331,7 +331,7 @@ export default function Table({ tableData }) {
 								name="searchValue"
 								type="text"
 								className="w-full bg-transparent font-lato text-sm leading-[20px] tracking-[0.2px] outline-0 ring-0 placeholder:text-[#6C747D]"
-								placeholder="Search Secrets by key"
+								placeholder="Search Secrets by key/id"
 								onChange={(e) => handleSearch(e.target.value)}
 							/>
 						</div>
