@@ -202,6 +202,6 @@ def get_app_secret(key=None, id=None):
         sec = SecretsModel.objects.get(key=key)
     elif id:
         sec = SecretsModel.objects.get(id=id)
-    if sec and not sec.active:
+    if sec and not sec.is_active:
         raise ValueError("Secret is inactive")
     return sec.get_unencrypted_val()
