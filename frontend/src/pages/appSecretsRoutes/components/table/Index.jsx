@@ -22,6 +22,7 @@ import PasswardVisability from './PasswardVisability';
 import {
 	selectAppSecretsData,
 	selectAppSecretsTableData,
+	selectRerenderPage,
 	setAppSecretsData,
 	setAppSecretsTableData,
 } from '../../slice/Index';
@@ -30,6 +31,7 @@ import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFil
 export default function Table({ tableData }) {
 	let { appId } = useParams();
 	const searchRef = React.useRef(null);
+		const rerenderPage = useSelector(selectRerenderPage);
 	const appSecretsTableData = useSelector(selectAppSecretsTableData);
 	
 	const columnHelper = createColumnHelper();
@@ -294,8 +296,6 @@ export default function Table({ tableData }) {
 					.join('')
 			: '';
 
-		
-
 		const makeApiCall = async () => {
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/secrets/?page=${
@@ -310,9 +310,9 @@ export default function Table({ tableData }) {
 				updateAppSecretsData(response);
 			}
 		};
-	
+
 		makeApiCall();
-	}, [appSecretsTableData]);
+	}, [appSecretsTableData, rerenderPage]);
 
 	useEffect(() => {
 		searchRef.current.value = appSecretsTableData?.searchValue || '';

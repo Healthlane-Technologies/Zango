@@ -25,7 +25,7 @@ const PasswardVisability = ({ info }) => {
 		<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 			<span
 				onClick={handleViewSecret}
-				className="flex cursor-pointer items-center gap-2 text-start font-lato text-[14px] font-normal capitalize leading-[20px] tracking-[0.2px] text-[#6C747D]"
+				className="flex cursor-pointer items-center gap-2 text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px] text-[#6C747D]"
 			>
 				{secretValue ? (
 					<span className="font-lato text-[14px] font-normal text-[#6C747D]">
