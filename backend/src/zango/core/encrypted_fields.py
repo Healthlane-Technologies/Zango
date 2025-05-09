@@ -71,36 +71,23 @@ class EncryptedMixin(ZEncryptedFieldMixin):
     """
 
     def get_db_prep_save(self, value, connection):
-        # Use super() without arguments in Python 3
         value = super().get_db_prep_save(value, connection)
 
         if value is None:
             return value
 
-        # In Python 3, strings are unicode by default.
-        # We need to check if the value is already encrypted bytes or a string.
-        # If it's bytes and decrypts successfully, assume it's already encrypted.
-        # If it's a string or bytes that don't decrypt, encrypt it.
-
-        # First, handle the case where the value might be bytes (e.g., coming from the DB)
         if isinstance(value, bytes):
             try:
-                self.decrypter(value)  # Check if it's valid encrypted data
-                return value  # It's already encrypted bytes, return as is
+                self.decrypter(value)
+                return value
             except InvalidToken:
-                # Not valid encrypted data, treat as raw value and encrypt
-                value = value.decode("utf-8")  # Decode bytes to string for encryption
+                value = value.decode("utf-8")
 
-        # If it's a string or was invalid bytes, encrypt the string representation
         try:
-            self.decrypter(value)  # Check if it's valid encrypted string
-            return value.encode("utf-8")  # It's already encrypted, return bytes
+            self.decrypter(value)
+            return value.encode("utf-8")
         except InvalidToken:
-            # Not valid encrypted string data, encrypt the raw value
-            # encrypt_str returns bytes
             encrypted_value_bytes = self.encrypt_str(str(value))
-            # Many database backends expect string type from get_db_prep_save
-            # The original code decoded bytes back to string, we'll replicate that.
             return encrypted_value_bytes.decode("utf-8")
 
     def get_internal_type(self):

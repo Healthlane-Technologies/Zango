@@ -31,3 +31,12 @@ class SecretSerializer(serializers.ModelSerializer):
         return get_datetime_str_in_tenant_timezone(
             obj.modified_at, self.context["tenant"]
         )
+
+    def update(self, instance, validated_data):
+        if "value" not in validated_data:
+            current_value = instance.get_unencrypted_val()
+            validated_data["value"] = current_value
+            instance = super().update(instance, validated_data)
+            return instance
+        else:
+            return super().update(instance, validated_data)
