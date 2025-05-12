@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* support for forgot password flow in basicAuth package [(#473)](https://github.com/Healthlane-Technologies/Zango/pull/473)
-* Feat/basic auth pkg forgot password [(#471)](https://github.com/Healthlane-Technologies/Zango/pull/471)
+* support for forgot password in basicAuth package [(#473)](https://github.com/Healthlane-Technologies/Zango/pull/473)
+* handle form data in internal requests and support new file formats [(#461)](https://github.com/Healthlane-Technologies/Zango/pull/461)
 
 ## [0.5.2] - 2025-04-19
 
