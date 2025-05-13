@@ -55,6 +55,8 @@ class KnoxTokenAuthBackend(TokenAuthentication):
                 request.auth = token
                 return (user, token)
             return resp
+        elif request is None:
+            return None
         else:
             return super().authenticate(request)
 
