@@ -6,6 +6,7 @@ click==8.1.7
 cookiecutter==2.3.0
 coverage==7.6.1
 crispy-bootstrap5==0.7
+cryptography==44.0.3
 django==4.2.15
 django-axes==6.4.0
 django-cachalot==2.6.1
