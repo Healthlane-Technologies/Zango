@@ -68,6 +68,10 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
             AppUserAuthToken.objects.filter(user=self).delete()
         except Exception:
             pass
+
+        if isinstance(expiry, int):
+            expiry = timedelta(seconds=expiry)
+
         inst, token = AppUserAuthToken.objects.create(
             user=self,
             expiry=expiry,
