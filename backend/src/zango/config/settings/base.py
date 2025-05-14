@@ -112,8 +112,8 @@ AUTHENTICATION_BACKENDS = (
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "knox.auth.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
+        "zango.apps.appauth.auth_backend.KnoxTokenAuthBackend",
     ),
 }
 
@@ -315,7 +315,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
-        ZANGO_TOKEN_TTL=(int, 4),
+        ZANGO_TOKEN_TTL=(int, 86400),
         PASSWORD_RECOVERY_TOKEN_EXPIRY=(int, 3600 * 2),
         PASSWORD_RECOVERY_TIME_MESSAGE=(str, "2 hours"),
         PASSWORD_RECOVERY_SALT=(str, "recover-password"),
@@ -429,7 +429,7 @@ def setup_settings(settings, BASE_DIR):
     settings.REST_KNOX = {
         "TOKEN_TTL": None
         if env("ZANGO_TOKEN_TTL") == 0
-        else timedelta(weeks=env("ZANGO_TOKEN_TTL")),
+        else timedelta(seconds=env("ZANGO_TOKEN_TTL")),
         "AUTH_HEADER_PREFIX": "Bearer",
     }
 
