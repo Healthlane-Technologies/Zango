@@ -1,5 +1,9 @@
 from threading import local
 
+from rest_framework import exceptions
+
+from django.http import JsonResponse
+
 
 _request_local = local()
 
@@ -37,6 +41,8 @@ class UserRoleAndAppObjectAssignmentMiddleware:
                             request.auth = token
                             apt = authTokenModel.objects.get(user=user)
                             _request_local.user_role = apt.role
+                    except exceptions.AuthenticationFailed:
+                        return JsonResponse({"message": "Unauthorized"}, status=401)
                     except Exception:
                         import traceback
 
