@@ -8,6 +8,10 @@ const PasswardVisability = ({ info }) => {
 	let { appId } = useParams();
 	const triggerApi = useApi();
 	const [secretValue, setSecretValue] = React.useState('');
+
+	const items = Array.from({ length: 8 }, (_, i) => i);
+
+
 	const handleViewSecret = async () => {
 		const { response, success } = await triggerApi({
 			url: `/api/v1/apps/${appId}/secrets/?secret_id=${info.row.original.id}&action=get_secret_value`,
@@ -33,14 +37,9 @@ const PasswardVisability = ({ info }) => {
 					</span>
 				) : (
 					<span className="flex">
-						<AsteriskIcon />
-						<AsteriskIcon />
-						<AsteriskIcon />
-						<AsteriskIcon />
-						<AsteriskIcon />
-						<AsteriskIcon />
-						<AsteriskIcon />
-						<AsteriskIcon />
+						{items.map((item) => (
+							<AsteriskIcon key={item} />
+						))}
 					</span>
 				)}
 				<span
