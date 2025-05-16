@@ -65,6 +65,7 @@ jobs:
       with:
         context: .
         push: true
+        platforms: linux/amd64,linux/arm64
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
     
     - name: Build and Push Docker image with tag

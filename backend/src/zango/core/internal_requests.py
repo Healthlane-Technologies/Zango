@@ -5,6 +5,7 @@ from importlib import import_module
 import requests
 
 from django.db import connection
+from django.http import QueryDict
 from django.http.response import HttpResponse
 from django.test import RequestFactory
 
@@ -40,7 +41,9 @@ def process_internal_request(fake_request, tenant, **kwargs):
     view, resolve = ws.match_view(fake_request)
     if not view:
         return HttpResponse(status=404)
+
     response = view(fake_request, (), **kwargs)
+
     return response
 
 
@@ -67,10 +70,26 @@ def internal_request_post(url, **kwargs):
         fake_request = fake_request.post(
             url,
             data=data,
-            # headers=headers, # TODO
+            # headers=headers,  # TODO
             content_type=content_type,
             query_params=query_params,
         )
+        query_dict = QueryDict("", mutable=True)
+
+        # Check if data is a string (i.e., a JSON string)
+        if isinstance(data, str):
+            # Parse the JSON string back into a dictionary
+            data = json.loads(data)
+
+        # Convert data to a dictionary with string keys and values
+        data_dict = {str(k): str(v) for k, v in data.items()}
+
+        query_dict.update(data_dict)
+
+        # query_dict.update({"data":data})
+
+        # Assign the QueryDict to request.POST
+        fake_request.POST = query_dict
 
         response = process_internal_request(fake_request, tenant, **kwargs)
 
