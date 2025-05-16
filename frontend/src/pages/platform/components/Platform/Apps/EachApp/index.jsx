@@ -15,7 +15,7 @@ export default function EachApp({ data }) {
 	return (
 		<Link
 			to={`${uuid}/app-settings/app-configuration/`}
-			className="group relative flex w-full flex-col rounded-[8px] border border-[#DDE2E5] hover:border-[#8485F6] hover:shadow-eachApp"
+			className="group relative flex w-full flex-col rounded-[8px] border border-[#DDE2E5] transition-all duration-200 ease-in-out hover:border-[#8485F6] hover:shadow-eachApp"
 		>
 			<div className="relative flex flex-col border-b border-[#F0F3F4] px-[16px] py-[22px]">
 				{logo ? (
@@ -44,22 +44,34 @@ export default function EachApp({ data }) {
 					) : null}
 				</div>
 			</div>
-			<div data-cy="app_list" className="flex grow flex-col gap-[28px] px-[16px] pb-[16px] pt-[22px]">
+			<div
+				data-cy="app_list"
+				className="flex grow flex-col gap-[28px] px-[16px] pb-[16px] pt-[22px]"
+			>
 				<div className="flex grow flex-col gap-[8px]">
-					<span data-cy="app_id" className="font-lato text-[12px] font-bold uppercase leading-[20px] tracking-[0.6px] text-[#A3ABB1]">
+					<span
+						data-cy="app_id"
+						className="font-lato text-[12px] font-bold uppercase leading-[20px] tracking-[0.6px] text-[#A3ABB1]"
+					>
 						App ID: {uuid?.slice(0, 7)}
 					</span>
-					<span data-cy="app_name" className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+					<span
+						data-cy="app_name"
+						className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]"
+					>
 						{name}
 					</span>
-					<span data-cy="app_description "className="truncate font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]">
+					<span
+						data-cy="app_description "
+						className="truncate font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#212429]"
+					>
 						{description}
 					</span>
 				</div>
 				<div data-cy="domain_url" className="flex flex-col gap-[8px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#000000]">
 						Modified {getTimeFromNow(modified_at)}
-					</span> 
+					</span>
 					{domain_url ? <AppLinkButton domain_url={domain_url} /> : null}
 				</div>
 			</div>

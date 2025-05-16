@@ -35,7 +35,7 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 					ref={(ref) => setReferenceElement(ref)}
 				>
 					<div
-						className={`flex w-full cursor-pointer flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						className={`flex w-full cursor-pointer flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 							isCurrentPage ? 'bg-[#d3c9a4]' : 'bg-transparent'
 						}`}
 					>
@@ -52,6 +52,12 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 					ref={(ref) => setPopperElement(ref)}
 					style={styles['popper']}
 					{...attributes['popper']}
+					enter="transition ease-out duration-200"
+					enterFrom="transform opacity-0 scale-95"
+					enterTo="transform opacity-100 scale-100"
+					leave="transition ease-in duration-150"
+					leaveFrom="transform opacity-100 scale-100"
+					leaveTo="transform opacity-0 scale-95"
 				>
 					<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
 						<div className="flex flex-col gap-[6px] px-[20px] py-[12px]">

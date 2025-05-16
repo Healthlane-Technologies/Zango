@@ -6,7 +6,7 @@ function TableBody({ table, RowMenu }) {
 			{table.getRowModel().rows.map((row) => (
 				<tr
 					key={row.id}
-					className="group relative hover:bg-[#f5f7f8] hover:shadow-table-row"
+					className="group relative transition-all duration-200 ease-in-out hover:bg-[#f5f7f8] hover:shadow-table-row"
 				>
 					{row.getVisibleCells().map((cell) => (
 						<td key={cell.id}>

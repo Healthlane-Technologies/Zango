@@ -9,7 +9,10 @@ import SideMenuDropdown from './SideMenuDropdown';
 
 export default function SideMenu() {
 	return (
-		<div data-cy="menu_section"className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]">
+		<div
+			data-cy="menu_section"
+			className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]"
+		>
 			<SideMenuDropdown
 				Icon={AppSettingsIcon}
 				label="App Settings"
@@ -30,7 +33,7 @@ export default function SideMenu() {
 				data-cy="user_roles"
 				to={`user-roles/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
@@ -44,7 +47,7 @@ export default function SideMenu() {
 				data-cy="user_management"
 				to={`user-management/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
@@ -58,7 +61,7 @@ export default function SideMenu() {
 				data-cy="policies"
 				to={`permission-management/policies/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
@@ -72,7 +75,7 @@ export default function SideMenu() {
 				data-cy="task_management"
 				to={`tasks-management/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
@@ -86,7 +89,7 @@ export default function SideMenu() {
 				data-cy="packages"
 				to={`packages-management/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
@@ -115,7 +118,7 @@ export default function SideMenu() {
 			<NavLink
 				to={`access-logs/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
@@ -129,14 +132,14 @@ export default function SideMenu() {
 			<NavLink
 				to={`Releases/`}
 				className={({ isActive, isPending }) =>
-					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] transition-all duration-200 ease-in-out hover:bg-[#d3c9a4] ${
 						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
 					}`
 				}
 			>
 				<AppSettingsIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
-					 Releases
+					Releases
 				</span>
 			</NavLink>
 		</div>
