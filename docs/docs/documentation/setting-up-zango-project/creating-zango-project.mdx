@@ -110,6 +110,46 @@ users, user roles, permissions, packages, logs etc
 To access the app panel go to `http://localhost:8000/platform`, and enter the platform username and password that you entered while creating the project.
 ![App Panel Login](/img/app_panel_login.gif)
 
+### Enabling OpenID Connect (OIDC) Authentication For App Panel
+OpenID Connect (OIDC) allows users to authenticate using their existing accounts from identity providers like Google or Microsoft.
+
+#### Getting Started:
+To enable OIDC authentication, add the following environment variable to your project's .env file:
+```
+PLATFORM_AUTH_OIDC_ENABLE=True
+```
+#### Supported Identity Providers
+
+**Google**:
+
+To configure Google as an identity provider:
+
+- Create OAuth credentials in the Google Cloud Console
+
+- Add the following environment variables to your .env file:
+```
+GOOGLE_OIDC_ENABLE=True
+GOOGLE_OIDC_CLIENT_ID=<your_client_id>
+GOOGLE_OIDC_CLIENT_SECRET=<your_client_secret>
+```
+**Microsoft**:
+
+To configure Microsoft as an identity provider:
+
+- Register an application in the Azure Portal
+
+- Add the following environment variables to your .env file:
+```
+AZURE_OIDC_ENABLE=True
+AZURE_OIDC_CLIENT_ID=<your_client_id>
+AZURE_OIDC_CLIENT_SECRET=<your_client_secret>
+```
+
+**Callback URLs**:
+
+For both providers, configure the redirect URL in their respective developer consoles to:
+https://<platform_url>/auth/openid/router/
+
 ---
 You're all set to develop your start developing your applications on Zango :tada:. Now, lets move to the next step and launch our first Zango app.
 

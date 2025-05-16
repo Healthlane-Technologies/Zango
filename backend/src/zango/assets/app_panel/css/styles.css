@@ -80,16 +80,15 @@ body {
 #reset-otp-form,
 #final-otp,
 #initial-login {
-  margin-top: 128px;
-  width: 392px;
+  /* width: 392px; */
 
-  background: #ffffff;
+  /* background: #ffffff;
   border: 1px solid #dde2e5;
   box-sizing: border-box;
   box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   padding: 24px;
-  z-index: 1;
+  z-index: 1; */
 
   display: flex;
   flex-direction: column;
