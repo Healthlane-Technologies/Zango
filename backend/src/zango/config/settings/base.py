@@ -43,7 +43,7 @@ SHARED_APPS = [
     "django_celery_results",
     "rest_framework",
     "knox",
-    # 'nocaptcha_recaptcha',
+    "django_recaptcha",
     "zango.apps.shared.tenancy",
     "zango.apps.shared.platformauth",
 ]
@@ -68,6 +68,7 @@ TENANT_APPS = [
     "django_celery_results",
     # "cachalot",
     "axes",
+    "django_recaptcha",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -111,8 +112,8 @@ AUTHENTICATION_BACKENDS = (
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        # "knox.auth.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
+        "zango.apps.appauth.auth_backend.KnoxTokenAuthBackend",
     ),
 }
 
@@ -314,7 +315,12 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
-        ZANGO_TOKEN_TTL=(int, 4),
+        ZANGO_TOKEN_TTL=(int, 86400),
+        PASSWORD_RECOVERY_TOKEN_EXPIRY=(int, 3600 * 2),
+        PASSWORD_RECOVERY_TIME_MESSAGE=(str, "2 hours"),
+        PASSWORD_RECOVERY_SALT=(str, "recover-password"),
+        RECAPTCHA_PUBLIC_KEY=(str, ""),
+        RECAPTCHA_PRIVATE_KEY=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -423,7 +429,7 @@ def setup_settings(settings, BASE_DIR):
     settings.REST_KNOX = {
         "TOKEN_TTL": None
         if env("ZANGO_TOKEN_TTL") == 0
-        else timedelta(weeks=env("ZANGO_TOKEN_TTL")),
+        else timedelta(seconds=env("ZANGO_TOKEN_TTL")),
         "AUTH_HEADER_PREFIX": "Bearer",
     }
 
@@ -466,6 +472,13 @@ def setup_settings(settings, BASE_DIR):
     # Git Settings
     settings.GIT_USERNAME = env("GIT_USERNAME")
     settings.GIT_PASSWORD = env("GIT_PASSWORD")
+
+    settings.PASSWORD_RECOVERY_TOKEN_EXPIRY = env("PASSWORD_RECOVERY_TOKEN_EXPIRY")
+    settings.PASSWORD_RECOVERY_TIME_MESSAGE = env("PASSWORD_RECOVERY_TIME_MESSAGE")
+    settings.PASSWORD_RECOVERY_SALT = env("PASSWORD_RECOVERY_SALT")
+
+    settings.RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
+    settings.RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
 
     settings_result = {"env": env}
 
