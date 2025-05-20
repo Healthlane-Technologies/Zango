@@ -1,9 +1,4 @@
-import json
 import traceback
-
-from datetime import datetime
-
-import pytz
 
 from django.db.models import Q
 from django.utils.decorators import method_decorator
@@ -14,28 +9,13 @@ from zango.apps.shared.tenancy.models import TenantModel
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
+from zango.core.time_utils import process_timestamp
 from zango.core.utils import get_search_columns
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     pagination_class = ZangoAPIPagination
-
-    def process_timestamp(self, timestamp, timezone):
-        try:
-            ts = json.loads(timestamp)
-            tz = pytz.timezone(timezone)
-            ts["start"] = tz.localize(
-                datetime.strptime(ts["start"] + "-" + "00:00", "%Y-%m-%d-%H:%M"),
-                is_dst=None,
-            )
-            ts["end"] = tz.localize(
-                datetime.strptime(ts["end"] + "-" + "23:59", "%Y-%m-%d-%H:%M"),
-                is_dst=None,
-            )
-            return ts
-        except Exception:
-            return None
 
     def process_id(self, id):
         try:
@@ -56,8 +36,8 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         }
         search_filters = {
             "id": self.process_id,
-            "attempt_time": self.process_timestamp,
-            "session_expired_at": self.process_timestamp,
+            "attempt_time": process_timestamp,
+            "session_expired_at": process_timestamp,
         }
 
         records = AppAccessLog.objects.all().order_by("-id")
@@ -81,9 +61,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         records = records.filter(filters).distinct()
 
         if columns.get("attempt_time"):
-            processed = self.process_timestamp(
-                columns.get("attempt_time"), tenant.timezone
-            )
+            processed = process_timestamp(columns.get("attempt_time"), tenant.timezone)
             if processed is not None:
                 records = records.filter(
                     attempt_time__gte=processed["start"],
@@ -91,7 +69,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 )
 
         if columns.get("session_expired_at"):
-            processed = self.process_timestamp(
+            processed = process_timestamp(
                 columns.get("session_expired_at"), tenant.timezone
             )
             if processed is not None:

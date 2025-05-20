@@ -60,6 +60,7 @@ TENANT_APPS = [
     "zango.apps.auditlogs",
     "zango.apps.accesslogs",
     "zango.apps.release",
+    "zango.apps.secrets",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -315,6 +316,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_RESOURCE_NAME=(str, "Zango"),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
+        FIELD_ENCRYPTION_KEY=(str, ""),
         ZANGO_TOKEN_TTL=(int, 86400),
         PASSWORD_RECOVERY_TOKEN_EXPIRY=(int, 3600 * 2),
         PASSWORD_RECOVERY_TIME_MESSAGE=(str, "2 hours"),
@@ -473,6 +475,7 @@ def setup_settings(settings, BASE_DIR):
     settings.GIT_USERNAME = env("GIT_USERNAME")
     settings.GIT_PASSWORD = env("GIT_PASSWORD")
 
+    settings.FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")
     settings.PASSWORD_RECOVERY_TOKEN_EXPIRY = env("PASSWORD_RECOVERY_TOKEN_EXPIRY")
     settings.PASSWORD_RECOVERY_TIME_MESSAGE = env("PASSWORD_RECOVERY_TIME_MESSAGE")
     settings.PASSWORD_RECOVERY_SALT = env("PASSWORD_RECOVERY_SALT")

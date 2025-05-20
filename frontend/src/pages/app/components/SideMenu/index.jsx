@@ -5,11 +5,15 @@ import { ReactComponent as AppSettingsIcon } from '../../../../assets/images/svg
 import { ReactComponent as AppTasksIcon } from '../../../../assets/images/svg/app-tasks-icon.svg';
 import { ReactComponent as AppUserManagementIcon } from '../../../../assets/images/svg/app-user-management-icon.svg';
 import { ReactComponent as AppUserRoleIcon } from '../../../../assets/images/svg/app-user-role-icon.svg';
+import { ReactComponent as AppSecretsIcon } from '../../../../assets/images/svg/app-secrets-icon.svg';
 import SideMenuDropdown from './SideMenuDropdown';
 
 export default function SideMenu() {
 	return (
-		<div data-cy="menu_section"className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]">
+		<div
+			data-cy="menu_section"
+			className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]"
+		>
 			<SideMenuDropdown
 				Icon={AppSettingsIcon}
 				label="App Settings"
@@ -136,7 +140,21 @@ export default function SideMenu() {
 			>
 				<AppSettingsIcon />
 				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
-					 Releases
+					Releases
+				</span>
+			</NavLink>
+
+			<NavLink
+				to={`Secrets/`}
+				className={({ isActive, isPending }) =>
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
+					}`
+				}
+			>
+				<AppSecretsIcon />
+				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
+					Secrets
 				</span>
 			</NavLink>
 		</div>
