@@ -57,6 +57,7 @@ jobs:
           POSTGRES_PORT=5432
           PLATFORM_DOMAIN_URL=localhost
           PROJECT_NAME=test_project
+          FIELD_ENCRYPTION_KEY='PK-l6ehzlAhry16AUac7Q6-TkeC2QblqwQ6rbWTe9Jg='
           EOF
 
       # Step 5: Run tests
