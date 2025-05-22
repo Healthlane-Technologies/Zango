@@ -1,0 +1,34 @@
+{
+      "policies": [
+            {
+                  "name": "TestAPIView",
+                  "description": "Test API View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "name": "app.views.TestAPIView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "AnonymousUsers"
+                  ]
+            },
+            {
+                  "name": "TestView",
+                  "description": "Test View",
+                  "statement": {
+                        "permissions": [
+                              {
+                                    "name": "app.views.TestView",
+                                    "type": "view"
+                              }
+                        ]
+                  },
+                  "roles": [
+                        "AnonymousUsers"
+                  ]
+            }
+      ]
+}
