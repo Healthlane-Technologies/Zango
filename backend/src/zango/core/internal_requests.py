@@ -96,6 +96,8 @@ def process_internal_request(request, tenant, **kwargs) -> HttpResponse:
     Returns:
         A Django HttpResponse
     """
+    original_tenant = connection.tenant
+
     request.tenant = tenant
     request.internal_routing = True
     connection.set_tenant(tenant)
@@ -120,7 +122,9 @@ def process_internal_request(request, tenant, **kwargs) -> HttpResponse:
     for key in ("data", "headers", "params", "files"):
         kwargs.pop(key, None)
 
-    return view(request, request.META["PATH_INFO"], **kwargs)
+    response = view(request, request.META["PATH_INFO"], **kwargs)
+    connection.set_tenant(original_tenant)
+    return response
 
 
 def process_uploaded_files(request, files):
@@ -221,7 +225,9 @@ def create_django_request(method, url, **kwargs):
         headers["Cookie"] = cookie_header
 
     # Extract content type
-    content_type = headers.pop("Content-Type", "") if headers else ""
+    content_type = headers.get("Content-Type")
+    if isinstance(headers, dict):
+        content_type = headers.pop("Content-Type", "") if headers else ""
 
     # Create request args
     req_args = {"path": url}
