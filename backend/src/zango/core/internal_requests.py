@@ -226,6 +226,11 @@ def create_django_request(method, url, **kwargs):
     # Create request args
     req_args = {"path": url}
     if method.lower() in ("post", "put", "patch") and data:
+        try:
+            data = json.loads(data)
+            content_type = "application/json"
+        except Exception:
+            pass
         req_args["data"] = data
     if headers:
         req_args["headers"] = headers
