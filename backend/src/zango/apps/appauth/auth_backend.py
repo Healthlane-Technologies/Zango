@@ -43,7 +43,9 @@ class AppUserModelBackend(ModelBackend):
 
 class KnoxTokenAuthBackend(TokenAuthentication):
     def authenticate(self, request):
-        if request and request.tenant.tenant_type == "app":
+        if request is None or getattr(request, "internal_routing", False):
+            return None
+        elif request and request.tenant.tenant_type == "app":
             resp = self.authenticate_app_creds(request)
             if resp:
                 user, token = resp
@@ -51,8 +53,6 @@ class KnoxTokenAuthBackend(TokenAuthentication):
                 request.auth = token
                 return (user, token)
             return resp
-        elif request is None:
-            return None
         else:
             return super().authenticate(request)
 
