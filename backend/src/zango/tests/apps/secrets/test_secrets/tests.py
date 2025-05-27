@@ -56,7 +56,7 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
     def test_secret_delete(self):
         sec = SecretsModel.objects.create(key="Key5", value="Value5")
         sec.delete()
-        with self.assertRaises(SecretsModel.DoesNotExist):
+        with self.assertRaises(ValueError):
             get_app_secret("Key5")
         
         
