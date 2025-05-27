@@ -195,13 +195,40 @@ def get_country_code_for_tenant(tenant, with_plus_sign=True):
 
 
 def get_app_secret(key=None, id=None):
+    """
+    Retrieves a secret from the database.
+
+    Args:
+        key (str, optional): The key of the secret to retrieve.
+        id (int, optional): The ID of the secret to retrieve.
+
+    Returns:
+        str: The unencrypted value of the secret.
+
+    Raises:
+        ValueError: If the secret is not found or is inactive.
+    """
     from zango.apps.secrets.models import SecretsModel
 
+    if key and id:
+        raise ValueError("Provide either 'key' or 'id', not both.")
+    if not key and not id:
+        raise ValueError("Either 'key' or 'id' must be provided.")
+
     sec = None
-    if key:
-        sec = SecretsModel.objects.get(key=key)
-    elif id:
-        sec = SecretsModel.objects.get(id=id)
-    if sec and not sec.is_active:
-        raise ValueError("Secret is inactive")
+    try:
+        if key:
+            sec = SecretsModel.objects.get(key=key)
+        if id:
+            sec = SecretsModel.objects.get(id=id)
+    except SecretsModel.DoesNotExist:
+        raise ValueError(
+            f"Secret not found for key={key}"
+            if key
+            else f"Secret not found for id={id}"
+        )
+
+    if not sec.is_active:
+        raise ValueError(f"Secret {sec.key} is inactive.")
+
     return sec.get_unencrypted_val()
