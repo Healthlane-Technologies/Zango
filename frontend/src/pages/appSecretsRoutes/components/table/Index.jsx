@@ -174,10 +174,10 @@ export default function Table({ tableData }) {
 							id="modified_at"
 							placeholder="Select"
 							value={
-								find(appSecretsData?.columns, {
+								find(appSecretsTableData?.columns, {
 									id: 'modified_at',
 								})?.value
-									? find(appSecretsData?.columns, {
+									? find(appSecretsTableData?.columns, {
 											id: 'modified_at',
 									  })?.value
 									: ''
