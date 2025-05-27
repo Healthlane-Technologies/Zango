@@ -22,7 +22,9 @@ const EditSecretForm = ({ closeModal }) => {
 	};
 
 	let validationSchema = Yup.object().shape({
-		key: Yup.string().required('Required'),
+		key: Yup.string()
+			.required('Required')
+			.matches(/^[A-Z][a-z0-9_]*$/, 'Key must start with uppercase letter and can contain lowercase letters, numbers and underscores'),
 		value: Yup.string().optional(),
 	});
 
