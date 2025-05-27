@@ -1,5 +1,8 @@
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter as OTLPSpanExporterGRPC,
+)
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
@@ -17,6 +20,7 @@ from opentelemetry.trace import ProxyTracerProvider
 from .celery_instrument import ZangoCeleryInstrumentor
 from .utils import (
     LogGuruCompatibleLoggerHandler,
+    otel_collector,
     otel_export_to_otlp,
     otel_is_enabled,
     otel_otlp_endpoint,
@@ -55,9 +59,14 @@ def setup_telemetry(add_django_instrumentation: bool):
                 endpoint = otel_otlp_endpoint()
                 if endpoint:
                     headers = otel_otlp_headers()
-                    exporter = OTLPSpanExporter(
-                        endpoint=f"{endpoint}/v1/traces", headers=headers
-                    )
+                    if otel_collector():
+                        exporter = OTLPSpanExporter(
+                            endpoint=f"{endpoint}/v1/traces", headers=headers
+                        )
+                    else:
+                        exporter = OTLPSpanExporterGRPC(
+                            endpoint=endpoint, headers=headers
+                        )
                     print(f"Exporter set to {endpoint}")
                 else:
                     print("OTLP endpoint not provided. Switching to console exporter")

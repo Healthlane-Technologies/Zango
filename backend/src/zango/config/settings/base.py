@@ -312,6 +312,7 @@ def setup_settings(settings, BASE_DIR):
         OTEL_EXPORTER_OTLP_HEADERS=(str, ""),
         OTEL_EXPORTER_PROTOCOL=(str, ""),
         OTEL_RESOURCE_NAME=(str, "Zango"),
+        OTEL_COLLECTOR=(bool, True),
         GIT_USERNAME=(str, ""),
         GIT_PASSWORD=(str, ""),
         ZANGO_TOKEN_TTL=(int, 4),
@@ -459,6 +460,7 @@ def setup_settings(settings, BASE_DIR):
     settings.OTEL_EXPORTER_OTLP_HEADERS = env("OTEL_EXPORTER_OTLP_HEADERS")
     settings.OTEL_EXPORTER_PROTOCOL = env("OTEL_EXPORTER_PROTOCOL")
     settings.OTEL_RESOURCE_NAME = env("OTEL_RESOURCE_NAME")
+    settings.OTEL_COLLECTOR = env("OTEL_COLLECTOR")
 
     if settings.OTEL_IS_ENABLED:
         MIDDLEWARE.append("zango.middleware.telemetry.OtelZangoContextMiddleware")
