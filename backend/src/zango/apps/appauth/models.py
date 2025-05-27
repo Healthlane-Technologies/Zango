@@ -1,5 +1,8 @@
 from datetime import date, timedelta
 
+from knox.models import AbstractAuthToken
+from knox.settings import knox_settings
+
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import models
@@ -59,6 +62,30 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         PolicyGroupModel, related_name="user_policy_groups"
     )
     app_objects = models.JSONField(null=True)
+
+    def generate_auth_token(self, role, expiry=knox_settings.TOKEN_TTL):
+        try:
+            AppUserAuthToken.objects.filter(user=self).delete()
+        except Exception:
+            pass
+
+        if isinstance(expiry, int):
+            expiry = timedelta(seconds=expiry)
+
+        inst, token = AppUserAuthToken.objects.create(
+            user=self,
+            expiry=expiry,
+            prefix=knox_settings.TOKEN_PREFIX,
+        )
+        if isinstance(role, str):
+            role = UserRoleModel.objects.get(name=role)
+        elif isinstance(role, int):
+            role = UserRoleModel.objects.get(id=role)
+        else:
+            raise Exception("Specify Role ID or Role name")
+        inst.role = role
+        inst.save()
+        return (inst, token)
 
     def __str__(self):
         return self.name
@@ -256,7 +283,6 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         old_passwords = self.oldpasswords_set.all().filter(
             password_date__gt=date.today() - timedelta(days)
         )
-        print(old_passwords)
         if old_passwords.count() > 0:
             return False
         return True
@@ -266,6 +292,25 @@ class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
 
 
+class AppUserAuthToken(AbstractAuthToken):
+    user = models.ForeignKey(
+        AppUserModel,
+        null=False,
+        blank=False,
+        related_name="auth_token_set",
+        on_delete=models.CASCADE,
+    )
+    extra_data = models.JSONField(null=True, blank=True)
+    role = models.ForeignKey(
+        UserRoleModel,
+        null=True,
+        blank=True,
+        related_name="role",
+        on_delete=models.CASCADE,
+    )
+
+
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
+auditlog.register(AppUserAuthToken)

@@ -3,6 +3,8 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from zango.apps.appauth.auth_backend import KnoxTokenAuthBackend
+
 from ..permissions import IsAuthenticatedAppUser, IsAuthenticatedPlatformUser
 
 
@@ -52,5 +54,8 @@ class ZangoGenericPlatformAPIView(APIView):
 
 
 class ZangoGenericAppAPIView(APIView):
-    authentication_classes = (TokenAuthentication, SessionAuthentication)
-    permission_classes = (IsAuthenticatedAppUser, IsAuthenticated)
+    authentication_classes = (
+        SessionAuthentication,
+        KnoxTokenAuthBackend,
+    )
+    permission_classes = (IsAuthenticated,)
