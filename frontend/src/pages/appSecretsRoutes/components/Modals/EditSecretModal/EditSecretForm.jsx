@@ -69,7 +69,7 @@ const EditSecretForm = ({ closeModal }) => {
 								label="Key"
 								name="key"
 								id="key"
-								placeholder="Enter secret key"
+								placeholder="Enter secret key, e.g., Mysecret_key"
 								value={get(formik.values, 'key', '')}
 								onChange={formik.handleChange}
 								formik={formik}
@@ -86,8 +86,8 @@ const EditSecretForm = ({ closeModal }) => {
 							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
-							<SubmitButton 
-								label={'Save'} 
+							<SubmitButton
+								label={'Save'}
 								formik={formik}
 								allowDisabled={false}
 							/>

@@ -64,7 +64,7 @@ const AddSecretForm = ({ closeModal }) => {
 								label="Key"
 								name="key"
 								id="key"
-								placeholder="Enter secret key"
+								placeholder="Enter secret key, e.g., Mysecret_key"
 								value={get(formik.values, 'key', '')}
 								onChange={formik.handleChange}
 								formik={formik}
