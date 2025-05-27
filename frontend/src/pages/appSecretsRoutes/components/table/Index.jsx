@@ -31,7 +31,7 @@ import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFil
 export default function Table({ tableData }) {
 	let { appId } = useParams();
 	const searchRef = React.useRef(null);
-		const rerenderPage = useSelector(selectRerenderPage);
+	const rerenderPage = useSelector(selectRerenderPage);
 	const appSecretsTableData = useSelector(selectAppSecretsTableData);
 	
 	const columnHelper = createColumnHelper();
@@ -48,6 +48,9 @@ export default function Table({ tableData }) {
 	const handleColumnSearch = (data) => {
 		let tempTableData = JSON.parse(JSON.stringify(appSecretsTableData));
 		let index = findIndex(tempTableData?.columns, { id: data?.id });
+
+		console.log('index >> tempTableData', index, tempTableData);
+		
 
 		if (index !== -1) {
 			set(tempTableData?.columns[index], 'value', data?.value);
@@ -122,15 +125,15 @@ export default function Table({ tableData }) {
 					<div className="">
 						<TableDateRangeFilter
 							key="created_at"
-							label="Stockist"
+							label="Created At"
 							name="created_at"
 							id="created_at"
 							placeholder="Select"
 							value={
-								find(appSecretsData?.columns, {
+								find(appSecretsTableData?.columns, {
 									id: 'created_at',
 								})?.value
-									? find(appSecretsData?.columns, {
+									? find(appSecretsTableData?.columns, {
 											id: 'created_at',
 									  })?.value
 									: ''
@@ -159,7 +162,7 @@ export default function Table({ tableData }) {
 		columnHelper.accessor((row) => row.modified_at, {
 			id: 'modified_at',
 			header: () => (
-				<div className="flex h-full gap-2 items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full items-start justify-start gap-2 border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Modified At
 					</span>

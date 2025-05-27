@@ -6,6 +6,17 @@ export function isMockApi() {
 	return process.env.REACT_APP_MSW_MOCK_API === 'true';
 }
 
+function getPageCookie(name) {
+	const cookies = document.cookie.split('; ');
+	for (const cookie of cookies) {
+		const [key, value] = cookie.split('=');
+		if (key === name) {
+			return decodeURIComponent(value);
+		}
+	}
+	return null;
+}
+
 /**
  * Fetch CSRF token which is passed in html file by Django code
  * @returns CSRF Token
@@ -15,7 +26,7 @@ export const getCookie = () => {
 
 	/*eslint-disable */
 	if (csrf_token !== 'undefined') {
-		csrfToken = csrf_token;
+		csrfToken = csrf_token || getPageCookie('csrftoken');
 	}
 
 	return csrfToken;

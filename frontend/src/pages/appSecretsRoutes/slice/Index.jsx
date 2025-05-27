@@ -59,7 +59,7 @@ export const {
 export const selectIsDeactivateUserRolesModalOpen = (state) =>
 	state.appSecrets.isDeactivateUserRolesModalOpen;
 
-export const selectRerenderPage = (state) => state.appAccessLogs.rerenderPage;
+export const selectRerenderPage = (state) => state.appSecrets.rerenderPage;
 
 export const selectAppSecretsData = (state) =>
 	state.appSecrets.appSecretsData;
