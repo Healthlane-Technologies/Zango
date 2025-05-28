@@ -1,8 +1,8 @@
 import json
 
-import phonenumbers
 from importlib import import_module
 
+import phonenumbers
 import pytz
 
 from phonenumbers.phonenumberutil import country_code_for_region
@@ -192,3 +192,43 @@ def get_country_code_for_tenant(tenant, with_plus_sign=True):
 
     country_code = country_code_for_region(default_region)
     return f"+{country_code}" if with_plus_sign else country_code
+
+
+def get_app_secret(key=None, id=None):
+    """
+    Retrieves a secret from the database.
+
+    Args:
+        key (str, optional): The key of the secret to retrieve.
+        id (int, optional): The ID of the secret to retrieve.
+
+    Returns:
+        str: The unencrypted value of the secret.
+
+    Raises:
+        ValueError: If the secret is not found or is inactive.
+    """
+    from zango.apps.secrets.models import SecretsModel
+
+    if key and id:
+        raise ValueError("Provide either 'key' or 'id', not both.")
+    if not key and not id:
+        raise ValueError("Either 'key' or 'id' must be provided.")
+
+    sec = None
+    try:
+        if key:
+            sec = SecretsModel.objects.get(key=key)
+        if id:
+            sec = SecretsModel.objects.get(id=id)
+    except SecretsModel.DoesNotExist:
+        raise ValueError(
+            f"Secret not found for key={key}"
+            if key
+            else f"Secret not found for id={id}"
+        )
+
+    if not sec.is_active:
+        raise ValueError(f"Secret {sec.key} is inactive.")
+
+    return sec.get_unencrypted_val()

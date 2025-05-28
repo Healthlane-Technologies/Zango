@@ -1,10 +1,3 @@
-import json
-
-from datetime import datetime
-
-import pytz
-
-from django.conf import settings
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 
@@ -13,6 +6,7 @@ from zango.apps.shared.tenancy.models import TenantModel
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
+from zango.core.time_utils import process_timestamp
 from zango.core.utils import get_search_columns
 
 from .serializers import AppReleaseSerializer
@@ -21,27 +15,6 @@ from .serializers import AppReleaseSerializer
 @method_decorator(set_app_schema_path, name="dispatch")
 class AppReleaseView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     pagination_class = ZangoAPIPagination
-
-    def process_timestamp(self, timestamp, timezone):
-        try:
-            ts = json.loads(timestamp)
-            if not timezone:
-                timezone = settings.TIME_ZONE
-            tz = pytz.timezone(timezone)
-            ts["start"] = tz.localize(
-                datetime.strptime(ts["start"] + "-" + "00:00", "%Y-%m-%d-%H:%M"),
-                is_dst=None,
-            )
-            ts["end"] = tz.localize(
-                datetime.strptime(ts["end"] + "-" + "23:59", "%Y-%m-%d-%H:%M"),
-                is_dst=None,
-            )
-            return ts
-        except Exception:
-            import traceback
-
-            traceback.print_exc()
-            return None
 
     def process_id(self, id):
         try:
@@ -58,7 +31,7 @@ class AppReleaseView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         }
         search_filters = {
             "id": self.process_id,
-            "Release_date": self.process_timestamp,
+            "Release_date": process_timestamp,
         }
         if columns.get("status") == "" or columns.get("status") is None:
             field_name_query_mapping.pop("status")
@@ -76,9 +49,7 @@ class AppReleaseView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                     filters |= Q(**{query: search})
         records = records.filter(filters).distinct()
         if columns.get("Release_date"):
-            processed = self.process_timestamp(
-                columns.get("Release_date"), tenant.timezone
-            )
+            processed = process_timestamp(columns.get("Release_date"), tenant.timezone)
             if processed is not None:
                 records = records.filter(
                     created_at__gte=processed["start"], created_at__lte=processed["end"]
