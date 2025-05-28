@@ -10,7 +10,7 @@ from zango.core.decorators import internal_access_only
 urlpatterns = [
     re_path(
         r"^auth/",
-        decorator_include(internal_access_only, "zango.apps.shared.platformauth.urls"),
+        include("zango.apps.shared.platformauth.urls"),
     ),
     re_path(
         r"^api/", decorator_include(internal_access_only, "zango.api.platform.urls")
