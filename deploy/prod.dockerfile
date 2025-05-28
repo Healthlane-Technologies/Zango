@@ -1,7 +1,7 @@
-ARG IMAGE_NAME=kczelthy/zango
-ARG IMAGE_TAG=latest
+ARG ZANGO_IMAGE_NAME=kczelthy/zango
+ARG ZANGO_IMAGE_TAG=latest
 
-FROM ${IMAGE_NAME}:${IMAGE_TAG}
+FROM ${ZANGO_IMAGE_NAME}:${ZANGO_IMAGE_TAG}
 
 RUN apt update
 RUN pip install gunicorn

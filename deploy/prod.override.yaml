@@ -2,20 +2,20 @@ services:
   app:
     build:
       args:
-        - IMAGE_NAME=${IMAGE_NAME}
-        - IMAGE_TAG=${IMAGE_TAG}
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
   celery:
     build:
       args:
-        - IMAGE_NAME=${IMAGE_NAME}
-        - IMAGE_TAG=${IMAGE_TAG}
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
   celery-flower:
     build:
       args:
-        - IMAGE_NAME=${IMAGE_NAME}
-        - IMAGE_TAG=${IMAGE_TAG}
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
   celery-beat:
     build:
       args:
-        - IMAGE_NAME=${IMAGE_NAME}
-        - IMAGE_TAG=${IMAGE_TAG}
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
