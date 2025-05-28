@@ -1,7 +1,6 @@
+import datetime
 import json
 import traceback
-
-from datetime import timedelta
 
 from django_celery_results.models import TaskResult
 
@@ -38,35 +37,110 @@ from .utils import extract_app_details_from_zip
 
 
 class AppViewAPIV1(ZangoGenericPlatformAPIView):
+    def convert_to_time(self, value):
+        if isinstance(value, datetime.timedelta):
+            value = value.total_seconds()
+        hours = int(value // 3600)
+        minutes = int((value % 3600) // 60)
+        seconds = int(value % 60)
+        return f"{hours}h {minutes}m {seconds}s"
+
     def get_zango_settings(self):
         zango_settings = {
-            "DEBUG": getattr(settings, "DEBUG", True),
-            "IP_RESTRICTED": getattr(settings, "INTERNAL_IPS", None) is not None
-            and not any(cidr in settings.INTERNAL_IPS for cidr in ["0.0.0.0/0", "*"]),
-            "ACCOUNT_LOCKOUT_TIME": str(
-                getattr(settings, "AXES_COOLOFF_TIME", timedelta(seconds=900))
-            ),
-            "ALLOWED_PASSWORD_ATTEMPTS": getattr(settings, "AXES_FAILURE_LIMIT", 6),
-            "ZANGO_TOKEN_EXPIRY": getattr(settings, "ZANGO_TOKEN_TTL", None),
-            "PASSWORD_MIN_LENGTH": getattr(settings, "PASSWORD_MIN_LENGTH", 8),
-            "PASSWORD_NO_REPEAT_DAYS": getattr(
-                settings, "PASSWORD_NO_REPEAT_DAYS", 180
-            ),
-            "PASSWORD_RESET_DAYS": getattr(settings, "PASSWORD_RESET_DAYS", 90),
-            "SESSION_COOKIE_NAME": getattr(
-                settings, "SESSION_COOKIE_NAME", "zangocookie"
-            ),
-            "SESSION_COOKIE_SECURE": getattr(settings, "SESSION_COOKIE_SECURE", False),
-            "CSRF_COOKIE_SECURE": getattr(settings, "CSRF_COOKIE_SECURE", False),
-            "SESSION_EXPIRE_AT_BROWSER_CLOSE": getattr(
-                settings, "SESSION_EXPIRE_AT_BROWSER_CLOSE", True
-            ),
-            "SESSION_SECURITY_WARN_AFTER": getattr(
-                settings, "SESSION_SECURITY_WARN_AFTER", 1700
-            ),
-            "SESSION_SECURITY_EXPIRE_AFTER": getattr(
-                settings, "SESSION_SECURITY_EXPIRE_AFTER", 1800
-            ),
+            "GENERAL": {
+                "DEBUG": {
+                    "value": getattr(settings, "DEBUG", True),
+                    "enabled": "red",
+                    "disabled": "green",
+                    "enabled_text": "Debug must not be enabled in production",
+                    "disabled_text": "Debug not enabled",
+                },
+                "IP_RESTRICTED": getattr(settings, "INTERNAL_IPS", None) is not None
+                and not any(
+                    cidr in settings.INTERNAL_IPS for cidr in ["0.0.0.0/0", "*"]
+                ),
+                "CSRF_TRUSTED_ORIGINS": getattr(settings, "CSRF_TRUSTED_ORIGINS", []),
+                "CORS_ORIGIN_WHITELIST": getattr(settings, "CORS_ORIGIN_WHITELIST", []),
+            },
+            "AUTHENTICATION_POLICIES": {
+                "ACCOUNT_LOCKOUT": {
+                    "value": getattr(settings, "AXES_LOCK_OUT_AT_FAILURE", True),
+                    "enabled": "green",
+                    "disabled": "red",
+                    "enabled_text": "Account lockout enabled",
+                    "disabled_text": "Account lockout not enabled",
+                },
+                "ACCOUNT_LOCKOUT_TIME": self.convert_to_time(
+                    getattr(settings, "AXES_COOLOFF_TIME", 900)
+                ),
+                "ALLOWED_PASSWORD_ATTEMPTS": getattr(settings, "AXES_FAILURE_LIMIT", 6),
+                "TOKEN_EXPIRY": self.convert_to_time(
+                    getattr(settings, "ZANGO_TOKEN_TTL", 86400)
+                ),
+                "PASSWORD_MIN_LENGTH": getattr(settings, "PASSWORD_MIN_LENGTH", 8),
+                "PASSWORD_NO_REPEAT_DAYS": getattr(
+                    settings, "PASSWORD_NO_REPEAT_DAYS", 180
+                ),
+                "PASSWORD_AGE": getattr(settings, "PASSWORD_RESET_DAYS", 90),
+            },
+            "SECURE_COOKIES": {
+                "SESSION_COOKIE_SECURE": {
+                    "value": getattr(settings, "SESSION_COOKIE_SECURE", False),
+                    "enabled": "green",
+                    "disabled": "red",
+                    "enabled_text": "Session cookie secure",
+                    "disabled_text": "Session cookie not secure",
+                },
+                "CSRF_COOKIE_SECURE": {
+                    "value": getattr(settings, "CSRF_COOKIE_SECURE", False),
+                    "enabled": "green",
+                    "disabled": "red",
+                    "enabled_text": "CSRF cookie secure",
+                    "disabled_text": "CSRF cookie not secure",
+                },
+                "CSRF_COOKIE_SAMESITE": getattr(settings, "CSRF_COOKIE_SAMESITE", ""),
+                "SESSION_COOKIE_SAMESITE": getattr(
+                    settings, "SESSION_COOKIE_SAMESITE", ""
+                ),
+            },
+            "SESSION": {
+                "SESSION_COOKIE_NAME": getattr(
+                    settings, "SESSION_COOKIE_NAME", "zangocookie"
+                ),
+                "SESSION_EXPIRE_AT_BROWSER_CLOSE": {
+                    "value": getattr(settings, "SESSION_EXPIRE_AT_BROWSER_CLOSE", True),
+                    "enabled": "green",
+                    "disabled": "red",
+                    "enabled_text": "Session expires at browser close",
+                    "disabled_text": "Session does not expire at browser close",
+                },
+                "SESSION_SECURITY_WARN_AFTER": self.convert_to_time(
+                    getattr(settings, "SESSION_SECURITY_WARN_AFTER", 1700)
+                ),
+                "SESSION_SECURITY_EXPIRE_AFTER": self.convert_to_time(
+                    getattr(settings, "SESSION_SECURITY_EXPIRE_AFTER", 1800)
+                ),
+            },
+            "TELEMETRY": {
+                "ENABLED": {
+                    "value": getattr(settings, "OTEL_IS_ENABLED", False),
+                    "enabled": "green",
+                    "disabled": "red",
+                    "enabled_text": "Telemetry enabled",
+                    "disabled_text": "Telemetry not enabled",
+                },
+                "ENDPOINT": getattr(settings, "OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+                "HEADERS": getattr(settings, "OTEL_EXPORTER_OTLP_HEADERS", ""),
+                "PROTOCOL": getattr(settings, "OTEL_EXPORTER_OTLP_PROTOCOL", ""),
+                "RESOURCE_NAME": getattr(settings, "OTEL_RESOURCE_NAME", ""),
+                "EXPORT_TO_OTLP": {
+                    "value": getattr(settings, "OTEL_EXPORT_TO_OTLP", False),
+                    "enabled": "green",
+                    "disabled": "red",
+                    "enabled_text": "Export to OTLP enabled",
+                    "disabled_text": "Export to OTLP not enabled",
+                },
+            },
         }
         return zango_settings
 
