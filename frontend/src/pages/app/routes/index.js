@@ -20,6 +20,7 @@ import Chatbot from '../components/Chatbot';
 import DragablePopover from '../components/Chatbot/DragablePopover';
 import SideMenu from '../components/SideMenu';
 import { AppLogsRoutes, AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
+import { AppSecretsRoutes } from '../../appSecretsRoutes/routes/Index';
 
 const PlatformAppRoutes = () => {
 	let { appId } = useParams();
@@ -107,7 +108,8 @@ const PlatformAppRoutes = () => {
 					element={<Navigate to="./app-settings/app-configuration//*" />}
 				/>
 				<Route path="/access-logs//*" element={<AppAccessLogsRoutes />} />
-				<Route path="/Releases//*" element={<AppReleasesRoutes/>} />
+				<Route path="/Releases//*" element={<AppReleasesRoutes />} />
+				<Route path="/Secrets//*" element={<AppSecretsRoutes />} />
 			</Routes>
 		</Layout>
 	);
