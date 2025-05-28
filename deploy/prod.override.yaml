@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      args:
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
+  celery:
+    build:
+      args:
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
+  celery-flower:
+    build:
+      args:
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
+  celery-beat:
+    build:
+      args:
+        - ZANGO_IMAGE_NAME=${ZANGO_IMAGE_NAME}
+        - ZANGO_IMAGE_TAG=${ZANGO_IMAGE_TAG}
