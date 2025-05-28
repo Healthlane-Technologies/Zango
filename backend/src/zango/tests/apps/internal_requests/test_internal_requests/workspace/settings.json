@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+        "name":"app",
+        "path":"app"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^app/",
+            "module": "app",
+            "url": "urls"
+        }
+    ],
+    "package_routes": []
+}
