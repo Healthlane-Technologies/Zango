@@ -124,5 +124,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./config/collector.yml:/etc/otel-collector-config.yaml
+    ports:
+      - 4317:4317
+      - 4318:4318
+      - 9090:9090
 volumes:
   prod_db: null

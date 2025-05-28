@@ -60,6 +60,7 @@ TENANT_APPS = [
     "zango.apps.auditlogs",
     "zango.apps.accesslogs",
     "zango.apps.release",
+    "zango.apps.secrets",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -323,6 +324,7 @@ def setup_settings(settings, BASE_DIR):
         AZURE_OIDC_CLIENT_ID=(str, ""),
         AZURE_OIDC_CLIENT_SECRET=(str, ""),
         AZURE_OIDC_ENABLE=(bool, False),
+        FIELD_ENCRYPTION_KEY=(str, ""),
         ZANGO_TOKEN_TTL=(int, 86400),
         PASSWORD_RECOVERY_TOKEN_EXPIRY=(int, 3600 * 2),
         PASSWORD_RECOVERY_TIME_MESSAGE=(str, "2 hours"),
@@ -489,6 +491,9 @@ def setup_settings(settings, BASE_DIR):
     settings.AZURE_OIDC_CLIENT_ID = env("AZURE_OIDC_CLIENT_ID")
     settings.AZURE_OIDC_CLIENT_SECRET = env("AZURE_OIDC_CLIENT_SECRET")
     settings.AZURE_OIDC_ENABLE = env("AZURE_OIDC_ENABLE")
+
+    settings.FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")
+
     settings.PASSWORD_RECOVERY_TOKEN_EXPIRY = env("PASSWORD_RECOVERY_TOKEN_EXPIRY")
     settings.PASSWORD_RECOVERY_TIME_MESSAGE = env("PASSWORD_RECOVERY_TIME_MESSAGE")
     settings.PASSWORD_RECOVERY_SALT = env("PASSWORD_RECOVERY_SALT")
