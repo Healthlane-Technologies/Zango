@@ -48,6 +48,13 @@ def otel_resource_name():
     return getattr(settings, "OTEL_RESOURCE_NAME", "Zango")
 
 
+def otel_collector():
+    """
+    Returns the value of the `OTEL_COLLECTOR` setting from the Django settings.
+    """
+    return getattr(settings, "OTEL_COLLECTOR", True)
+
+
 def _get_tenant_name():
     from django.db import connection
 
