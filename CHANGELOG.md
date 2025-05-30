@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-05-30
+
+### Fixed
+
+* image tag and image name can be overriden in prod environment [(#481)](https://github.com/Healthlane-Technologies/Zango/pull/481)
+* internal request improvements [(#482)](https://github.com/Healthlane-Technologies/Zango/pull/482)
+* opentelemetry working with otel collector [(#486)](https://github.com/Healthlane-Technologies/Zango/pull/486)
+* OIDC login [(#488)](https://github.com/Healthlane-Technologies/Zango/pull/488)
+
 ## [0.5.3] - 2025-05-12
 
 ### Fixed
