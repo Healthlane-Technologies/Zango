@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.0] - 2025-05-30
 
 ### Added
+* OIDC login support in App Panel [(#464)](https://github.com/Healthlane-Technologies/Zango/pull/464)
 * Token Authentication for App Users [(#466)](https://github.com/Healthlane-Technologies/Zango/pull/466)
 * Added support for managing app secrets via the App Panel, making them available for use within applications. [(#472)](https://github.com/Healthlane-Technologies/Zango/pull/472)
-* OIDC login support in App Panel [(#488)](https://github.com/Healthlane-Technologies/Zango/pull/488)
 
 ### Fixed
 
