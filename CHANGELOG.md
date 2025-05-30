@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0] - 2025-05-30
 
+### Added
+* Token Authentication for App Users [(#466)](https://github.com/Healthlane-Technologies/Zango/pull/466)
+* Added support for managing app secrets via the App Panel, making them available for use within applications. [(#472)](https://github.com/Healthlane-Technologies/Zango/pull/472)
+* OIDC login support in App Panel [(#488)](https://github.com/Healthlane-Technologies/Zango/pull/488)
+
 ### Fixed
 
-* image tag and image name can be overriden in prod environment [(#481)](https://github.com/Healthlane-Technologies/Zango/pull/481)
-* internal request improvements [(#482)](https://github.com/Healthlane-Technologies/Zango/pull/482)
-* opentelemetry working with otel collector [(#486)](https://github.com/Healthlane-Technologies/Zango/pull/486)
-* OIDC login [(#488)](https://github.com/Healthlane-Technologies/Zango/pull/488)
+* Configurable image tags and names for production environment [(#481)](https://github.com/Healthlane-Technologies/Zango/pull/481)
+* Internal request improvements [(#482)](https://github.com/Healthlane-Technologies/Zango/pull/482)
+* Opentelemetry working with otel collector [(#486)](https://github.com/Healthlane-Technologies/Zango/pull/486)
+
 
 ## [0.5.3] - 2025-05-12
 
