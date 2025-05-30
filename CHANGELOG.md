@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-05-30
+
+### Added
+* OIDC login support in App Panel [(#464)](https://github.com/Healthlane-Technologies/Zango/pull/464)
+* Token Authentication for App Users [(#466)](https://github.com/Healthlane-Technologies/Zango/pull/466)
+* Added support for managing app secrets via the App Panel, making them available for use within applications. [(#472)](https://github.com/Healthlane-Technologies/Zango/pull/472)
+
+### Fixed
+
+* Configurable image tags and names for production environment [(#481)](https://github.com/Healthlane-Technologies/Zango/pull/481)
+* Internal request improvements [(#482)](https://github.com/Healthlane-Technologies/Zango/pull/482)
+* Opentelemetry working with otel collector [(#486)](https://github.com/Healthlane-Technologies/Zango/pull/486)
+
+
 ## [0.5.3] - 2025-05-12
 
 ### Fixed
