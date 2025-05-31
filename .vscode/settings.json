@@ -1,0 +1,4 @@
+{
+  "eslint.workingDirectories": ["frontend/"],
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+}
