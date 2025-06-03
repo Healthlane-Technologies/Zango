@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+        "name":"login_app",
+        "path":"login_app"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^login_app/",
+            "module": "login_app",
+            "url": "urls"
+        }
+    ],
+    "package_routes": []
+}
