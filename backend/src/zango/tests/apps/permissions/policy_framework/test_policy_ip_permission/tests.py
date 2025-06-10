@@ -14,21 +14,19 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
     initialize_workspace = True
 
     @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.sync_policies()
+
+    @classmethod
     def get_test_module_path(self):
         return os.path.join(
             "apps/permissions/policy_framework/test_policy_ip_permission"
         )
 
-    @classmethod
-    def sync_policies(self):
-        with schema_context(self.tenant.schema_name):
-            ws = Workspace(self.tenant, as_systemuser=True)
-            ws.ready()
-            ws.sync_policies()
-
     def test_role_ip_permissions(self):
 
-        self.sync_policies()
+        # self.sync_policies()
         # delete the all ip view policy as we have to check for specific IPs.
         PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
         PolicyModel.objects.get(name="AllowFromAnywhere").delete()
@@ -45,7 +43,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
 
     def test_cidr_ip_permissions(self):
 
-        self.sync_policies()
+        # self.sync_policies()
         # delete the all ip view policy as we have to check for specific IPs.
         PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
         PolicyModel.objects.get(name="AllowFromAnywhere").delete()
@@ -62,7 +60,7 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
 
     def test_all_ip_permissions(self):
 
-        self.sync_policies()
+        # self.sync_policies()
 
         self.client = ZangoClient(self.tenant)
 

@@ -18,13 +18,6 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         return os.path.join(
             "apps/appauth/test_app_login"
         )
-    
-    @classmethod
-    def sync_policies(self):
-        with connection.cursor() as c:
-            ws = Workspace(connection.tenant, as_systemuser=True)
-            ws.ready()
-            ws.sync_policies()
 
     @classmethod
     def create_app_user(self):
@@ -73,8 +66,7 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
     def test_logged_in_user_policy_map(self):
         app_user = self.create_app_user()
         self.sync_policies()
-        self.client = ZangoClient(self.tenant)
-        self.client.user = app_user
+        self.client = ZangoClient(self.tenant,user=app_user)
 
         # add app_login_user role to app user.
         session = self.client.session
