@@ -19,13 +19,6 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
             "apps/permissions/policy_framework/test_role_policy_mapping"
         )
 
-    @classmethod
-    def sync_policies(self):
-        with schema_context(self.tenant.schema_name):
-            ws = Workspace(self.tenant, as_systemuser=True)
-            ws.ready()
-            ws.sync_policies()
-
     def test_multi_role_with_one_policy_mapping(self):
 
         expected_role_names = ["test_role_1", "test_role_2"]

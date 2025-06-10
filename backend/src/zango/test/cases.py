@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 
@@ -6,8 +7,11 @@ from pathlib import Path
 from django_tenants.test.cases import FastTenantTestCase, TenantTestCase
 
 from django.conf import settings
+from django.core.management import call_command
 from django.db import connection
+from django.test import override_settings
 
+from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.shared.tenancy.models import ThemesModel
 from zango.apps.shared.tenancy.tasks import initialize_workspace
 
@@ -27,6 +31,10 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
     module = None
 
     @classmethod
+    def get_app_name(cls):
+        return "testapp"
+
+    @classmethod
     def setup_tenant(cls, tenant):
         """
         Add any additional setting to the tenant before it get saved. This is required if you have
@@ -34,17 +42,17 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
         :param tenant:
         :return:
         """
-        tenant.name = "testapp"
+        tenant.name = cls.get_app_name()
         tenant.tenant_type = "app"
         return tenant
 
     @classmethod
     def get_test_tenant_domain(cls):
-        return "testapp.testserver.com"
+        return f"{cls.get_app_name()}.testserver.com"
 
     @classmethod
     def get_test_schema_name(cls):
-        return "testapp"
+        return cls.get_app_name()
 
     @classmethod
     def setUpClass(cls):
@@ -70,17 +78,17 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
             print("test workspaces does not exist.")
 
     @classmethod
-    def get_test_module_path(self):
+    def get_test_module_path(cls):
         """
         If the module is not present at path tests/parent/module, override this method.
         """
-        return os.path.join(self.parent, self.module)
+        return os.path.join(cls.parent, cls.module)
 
     @classmethod
-    def setUpTestModule(self):
+    def setUpTestModule(cls):
         # Paths to the test module directory and the files folder within it
         test_module_dir = os.path.join(
-            Path(__file__).resolve().parent.parent, "tests", self.get_test_module_path()
+            Path(__file__).resolve().parent.parent, "tests", cls.get_test_module_path()
         )
 
         if not os.path.exists(test_module_dir):
@@ -110,7 +118,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
 
         if os.path.exists(migrations_dir) and os.path.isdir(migrations_dir):
             src = migrations_dir
-            dst = os.path.join(base_dir, "testapp", "migrations")
+            dst = os.path.join(base_dir, cls.get_app_name(), "migrations")
             shutil.copytree(src, dst, dirs_exist_ok=True)
 
     @classmethod
@@ -118,9 +126,10 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
         """
         tests if the module exists inside test_project/workspaces/testapp/
         """
-        instance = cls()
-        module_path = Path(settings.BASE_DIR) / "workspaces" / "testapp" / module_name
-        instance.assertEqual(module_path.exists(), expected)
+        module_path = (
+            Path(settings.BASE_DIR) / "workspaces" / cls.get_app_name() / module_name
+        )
+        cls.assertEqual(module_path.exists(), expected)
 
     @classmethod
     def setUpAppAndModule(cls, parent, module):
@@ -136,3 +145,68 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
         cls.domain.delete()
         cls.tenant.delete(force_drop=False)
         cls.remove_allowed_test_domain()
+
+    @classmethod
+    def get_package_root(cls):
+        return os.path.join(
+            settings.BASE_DIR, "workspaces", cls.get_app_name(), "packages"
+        )
+
+    @classmethod
+    def get_app_root(cls):
+        return os.path.join(settings.BASE_DIR, "workspaces", cls.get_app_name())
+
+    @classmethod
+    def sync_packages(cls):
+        """Synchronize packages from the manifest file."""
+        workspace_root = os.path.abspath(cls.get_app_root())
+        manifest_path = os.path.join(workspace_root, "manifest.json")
+
+        if not os.path.exists(manifest_path):
+            raise FileNotFoundError(f"Manifest file not found at: {manifest_path}")
+
+        with open(manifest_path, "r") as f:
+            updated_app_manifest = json.load(f)
+
+        installed_packages = updated_app_manifest.get("packages", [])
+        if not installed_packages:
+            print("Warning: No packages found in manifest.json")
+            return
+
+        print(f"Found {len(installed_packages)} packages to migrate")
+        for package in installed_packages:
+            package_name = package.get("name")
+            if not package_name:
+                print("Warning: Package entry missing 'name' field")
+                continue
+
+            print(f"Migrating package: {package_name}")
+            try:
+                if os.path.exists(
+                    os.path.join(cls.get_package_root(), package_name, "migrations")
+                ):
+                    call_command(
+                        "ws_migrate",
+                        cls.get_app_name(),
+                        "--package",
+                        package_name,
+                        verbosity=1,
+                    )
+                print(f"Successfully migrated package: {package_name}")
+            except Exception as e:
+                print(f"Warning: Failed to migrate package {package_name}: {str(e)}")
+
+    @classmethod
+    def sync_policies(cls):
+        """Synchronize policies for the workspace."""
+        with connection.cursor() as c:
+            ws = Workspace(connection.tenant, as_systemuser=True)
+            ws.ready()
+            ws.sync_policies()
+
+    @classmethod
+    @override_settings(TEST_MIGRATION_RUNNING=True)
+    def sync_database(cls):
+        """Synchronize the test database."""
+        cls.sync_packages()
+        call_command("ws_migrate", cls.get_app_name())

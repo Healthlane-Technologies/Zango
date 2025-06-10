@@ -21,13 +21,6 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
             "apps/internal_requests/test_internal_requests"
         )
     
-    @classmethod
-    def sync_policies(self):
-        with connection.cursor() as c:
-            ws = Workspace(connection.tenant, as_systemuser=True)
-            ws.ready()
-            ws.sync_policies()
-    
     def test_internal_request_headers(self):
         self.sync_policies()
         self.client = ZangoClient(self.tenant)

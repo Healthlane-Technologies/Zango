@@ -24,7 +24,7 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
     @classmethod
     def setUpClass(self):
         super().setUpClass()
-        self.syn_db()
+        self.sync_database()
         self.ws = Workspace(self.tenant, request=None, as_systemuser=True)
         self.ws.ready()
         self.zforeignkey = self.ws.plugin_source.load_plugin("zforeignkey.models")
@@ -41,14 +41,6 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
             second_poll = self.Poll.objects.create(
                 question="What's the second question?", creator=jim
             )
-
-    @classmethod
-    @override_settings(TEST_MIGRATION_RUNNING=True)
-    def syn_db(self):
-        call_command(
-            'ws_migrate',
-            'testapp'
-        )
 
     def test_callable_default(self):
         """A lazy callable may be used for ForeignKey.default."""
