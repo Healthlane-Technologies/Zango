@@ -1,5 +1,5 @@
 from importlib import import_module
-from typing import List, Optional, TypeVar
+from typing import List, Optional
 
 from django_tenants.utils import schema_context
 
@@ -12,9 +12,6 @@ from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.permissions.models import PolicyModel
 from zango.core.utils import get_mock_request
 from zango.middleware.tenant import ZangoTenantMainMiddleware
-
-
-T = TypeVar("T", bound="BaseZangoRequestFactory")
 
 
 class BaseZangoRequestFactory:
@@ -41,6 +38,39 @@ class BaseZangoRequestFactory:
         return request
 
     @classmethod
+    def create_roles(cls, tenant, names: List[str]) -> List[int]:
+        """Create a role with basic permissions."""
+        with schema_context(tenant.schema_name):
+            ids = []
+            for name in names:
+                role, created = UserRoleModel.objects.get_or_create(name=name)
+                ids.append(role.id)
+            return ids
+
+    def get_role_id(cls, tenant, name: str) -> int:
+        """Get a role id."""
+        with schema_context(tenant.schema_name):
+            role = UserRoleModel.objects.get(name=name)
+            return role.id
+
+    def create_policies(cls, names: List[str]) -> List[int]:
+        """Create a policy."""
+        with schema_context(cls.tenant.schema_name):
+            ids = []
+            for name in names:
+                policy, created = PolicyModel.objects.get_or_create(name=name)
+                ids.append(policy.id)
+            return ids
+
+    def delete_policies(self, names: List[str]) -> None:
+        """Delete a policy."""
+        with schema_context(self.tenant.schema_name):
+            for name in names:
+                policy = PolicyModel.objects.get(name=name)
+                if policy:
+                    policy.delete()
+
+    @classmethod
     def create_user(
         cls,
         tenant,
@@ -48,16 +78,18 @@ class BaseZangoRequestFactory:
         email: str = "admin@zelthy.com",
         mobile: str = "0000000000",
         password: str = "Zelthy@123",
-        role_ids: Optional[List[int]] = None,
+        roles: Optional[List[str]] = None,
         **extra_fields,
     ) -> AppUserModel:
         """Create a test user with the given parameters."""
-        role_ids = role_ids or []
+        roles = roles or []
 
         with schema_context(tenant.schema_name):
-            if not role_ids:
+            if not roles:
                 admin_role = cls.create_admin_role(tenant)
                 role_ids = [admin_role.id]
+            else:
+                role_ids = cls.create_roles(tenant, names=roles)
 
             user_data = {
                 "name": name,
