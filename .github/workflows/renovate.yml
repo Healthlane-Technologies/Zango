@@ -1,12 +1,10 @@
+---
 name: Renovate
-
 on:
   schedule:
-    - cron: '0 0 * * *' # daily at midnight UTC
-  # Allow manual triggering of the workflow
-  workflow_dispatch:
-  push:
-
+    - cron: 0 0 * * *
+  workflow_dispatch: null
+  push: null
 jobs:
   renovate:
     runs-on: ubuntu-latest
@@ -16,7 +14,8 @@ jobs:
       - name: Run Renovate
         uses: renovatebot/github-action@v42.0.4
         env:
-            LOG_LEVEL: debug
+          - name: LOG_LEVEL
+            value: debug
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker-cmd-file: .github/renovate-entrypoint.sh
