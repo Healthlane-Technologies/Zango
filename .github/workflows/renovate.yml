@@ -14,6 +14,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Run Renovate
-        uses: renovatebot/renovate-action@v3
+        uses: renovatebot/github-action@v42.0.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
