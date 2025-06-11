@@ -13,10 +13,9 @@ jobs:
         uses: actions/checkout@v4
       - name: Run Renovate
         uses: renovatebot/github-action@v42.0.4
-        env:
-          - name: LOG_LEVEL
-            value: debug
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker-cmd-file: .github/renovate-entrypoint.sh
           docker-user: root
+        env:
+          LOG_LEVEL: info
