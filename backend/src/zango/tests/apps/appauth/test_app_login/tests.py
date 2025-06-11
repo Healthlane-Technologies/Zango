@@ -15,18 +15,21 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
     initialize_workspace = True
 
     @classmethod
-    def get_test_module_path(self):
+    def get_test_module_path(cls):
         return os.path.join(
             "apps/appauth/test_app_login"
         )
+    
+    def setUp(self):
+        super().setUp()
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         super().setUpClass()
-        client = ZangoClient(self.tenant)
-        client.create_roles(tenant=self.tenant, names = ["app_login_user", "different_view_user"])
-        self.app_user = BaseZangoRequestFactory.create_user(
-            tenant=self.tenant,
+        client = ZangoClient(cls.tenant)
+        client.create_roles(tenant=cls.tenant, names = ["app_login_user", "different_view_user"])
+        cls.app_user = BaseZangoRequestFactory.create_user(
+            tenant=cls.tenant,
             name="John Doe",
             email="test_login_user@gmail.com",
             mobile="0000000000",
@@ -35,8 +38,8 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
             require_verification=False,
             force_password_reset=False,
         )
-        client.user = self.app_user
-        self.sync_policies()
+        client.user = cls.app_user
+        cls.sync_policies()
 
     def test_app_login(self):
         session = self.client.session
