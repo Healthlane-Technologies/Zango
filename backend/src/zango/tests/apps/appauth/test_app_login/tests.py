@@ -20,6 +20,9 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
             "apps/appauth/test_app_login"
         )
     
+
+
+
     def setUp(self):
         super().setUp()
 
