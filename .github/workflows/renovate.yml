@@ -17,5 +17,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker-cmd-file: .github/renovate-entrypoint.sh
           docker-user: root
+          env-regex: "^(?:RENOVATE_\\w+|LOG_LEVEL)$"
         env:
           LOG_LEVEL: info
