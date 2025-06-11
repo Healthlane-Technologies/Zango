@@ -7,6 +7,7 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.test.client import ZangoClient
 from django.http import HttpResponseRedirect
+from zango.test.client import BaseZangoRequestFactory
 
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
@@ -20,35 +21,28 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         )
 
     @classmethod
-    def create_app_user(self):
-        with schema_context(self.tenant.schema_name):
-            UserRoleModel.objects.create(name="app_login_user")
-            UserRoleModel.objects.create(name="different_view_user")
-            app_user_role = UserRoleModel.objects.filter(name="app_login_user").first()
-            role_ids = [app_user_role.id]
-            result = AppUserModel.create_user(
-                name="John Doe",
-                email="test_login_user@gmail.com",
-                mobile="0000000000",
-                password="#Testpass123",
-                role_ids=role_ids,
-                require_verification=False,
-                force_password_reset=False,
-            )
-            if not result["success"]:
-                raise Exception(result["message"])
-            return result["app_user"]
+    def setUpClass(self):
+        super().setUpClass()
+        client = ZangoClient(self.tenant)
+        client.create_roles(tenant=self.tenant, names = ["app_login_user", "different_view_user"])
+        self.app_user = BaseZangoRequestFactory.create_user(
+            tenant=self.tenant,
+            name="John Doe",
+            email="test_login_user@gmail.com",
+            mobile="0000000000",
+            password="#Testpass123",
+            roles=["app_login_user"],
+            require_verification=False,
+            force_password_reset=False,
+        )
+        client.user = self.app_user
+        self.sync_policies()
 
     def test_app_login(self):
-        app_user = self.create_app_user()
-        self.sync_policies()
-        self.client = ZangoClient(self.tenant)
-        self.client.user = app_user
         session = self.client.session
-        
-        session["role_id"] = app_user.roles.filter(name="app_login_user").values_list("id", flat=True)[0]
+        session["role_id"] = self.app_user.roles.filter(name="app_login_user").values_list("id", flat=True)[0]
         session.save()
-        
+
         logged_in = self.client.login(username="test_login_user@gmail.com", password="#Testpass123")
         
         if not logged_in:
@@ -64,13 +58,9 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
         self.assertEqual(res.url, "/login/")
 
     def test_logged_in_user_policy_map(self):
-        app_user = self.create_app_user()
-        self.sync_policies()
-        self.client = ZangoClient(self.tenant,user=app_user)
-
         # add app_login_user role to app user.
         session = self.client.session
-        session["role_id"] = app_user.roles.filter(name="app_login_user").values_list("id", flat=True)[0]
+        session["role_id"] = self.app_user.roles.filter(name="app_login_user").values_list("id", flat=True)[0]
         session.save()
 
         # login app user.
@@ -89,11 +79,11 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
         # assign app_login_user role and different_view_user role to user.
         new_role_ids = UserRoleModel.objects.filter(name__in=["app_login_user", "different_view_user"]).values_list("id", flat=True)
-        app_user.add_roles(new_role_ids)
+        self.app_user.add_roles(new_role_ids)
 
         # set role_id as per the view permissions.
         session = self.client.session
-        session["role_id"] = app_user.roles.filter(name="different_view_user").values_list("id", flat=True)[0]  
+        session["role_id"] = self.app_user.roles.filter(name="different_view_user").values_list("id", flat=True)[0]  
         session.save()
 
         # now user has permission to this view.

@@ -14,6 +14,7 @@ from django.test import override_settings
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.shared.tenancy.models import ThemesModel
 from zango.apps.shared.tenancy.tasks import initialize_workspace
+from zango.test.client import ZangoClient
 
 
 class ZangoTestCase(TenantTestCase):
@@ -29,6 +30,10 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
     initialize_workspace = False
     parent = None
     module = None
+
+    def setUp(self):
+        super().setUp()
+        self.client = ZangoClient(self.tenant)
 
     @classmethod
     def get_app_name(cls):
@@ -138,6 +143,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        super().tearDownClass()
         if cls.initialize_workspace:
             cls.clean_workspaces()
         connection.set_schema_to_public()
