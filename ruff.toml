@@ -26,7 +26,6 @@ exclude = [
     "site-packages",
     "venv",
     "docs",
-    "tests",
     "migrations",
     "frontend",
 ]
