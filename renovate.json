@@ -1,0 +1,22 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "labels": ["renovate"],
+  "automerge": false,
+  "prHourlyLimit": 1,
+  "prConcurrentLimit": 10,
+  "timezone": "Asia/Kuala_Lumpur",
+  "packageRules": [
+    {
+      "matchManagers": ["pip_requirements"],
+      "groupName": "backend - python dependencies",
+      "labels": ["backend", "dependencies", "renovate"]
+    },
+    {
+      "matchManagers": ["yarn"],
+      "groupName": "frontend - javascript dependencies",
+      "labels": ["frontend", "dependencies", "renovate"]
+    }
+  ]
+}
