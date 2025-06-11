@@ -47,12 +47,14 @@ class BaseZangoRequestFactory:
                 ids.append(role.id)
             return ids
 
+    @classmethod
     def get_role_id(cls, tenant, name: str) -> int:
         """Get a role id."""
         with schema_context(tenant.schema_name):
             role = UserRoleModel.objects.get(name=name)
             return role.id
 
+    @classmethod
     def create_policies(cls, names: List[str]) -> List[int]:
         """Create a policy."""
         with schema_context(cls.tenant.schema_name):
@@ -62,9 +64,10 @@ class BaseZangoRequestFactory:
                 ids.append(policy.id)
             return ids
 
-    def delete_policies(self, names: List[str]) -> None:
+    @classmethod
+    def delete_policies(cls, names: List[str]) -> None:
         """Delete a policy."""
-        with schema_context(self.tenant.schema_name):
+        with schema_context(cls.tenant.schema_name):
             for name in names:
                 policy = PolicyModel.objects.get(name=name)
                 if policy:
