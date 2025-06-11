@@ -1,5 +1,5 @@
 from importlib import import_module
-from typing import List, Optional
+from typing import List, Optional, overload
 
 from django_tenants.utils import schema_context
 
@@ -37,8 +37,22 @@ class BaseZangoRequestFactory:
             request.user = self.user
         return request
 
+    @overload
     @classmethod
-    def create_roles(cls, tenant, names: List[str]) -> List[int]:
+    def create_roles(cls, tenant, *, names: List[str]) -> List[int]: ...
+
+    @overload
+    @classmethod
+    def create_roles(cls, tenant, *, ids: List[int]) -> List[int]: ...
+
+    @classmethod
+    def create_roles(
+        cls,
+        tenant,
+        *,
+        names: Optional[List[str]] = None,
+        ids: Optional[List[int]] = None,
+    ) -> List[int]:
         """Create a role with basic permissions."""
         with schema_context(tenant.schema_name):
             ids = []
