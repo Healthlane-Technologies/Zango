@@ -200,10 +200,6 @@ CELERY_BEAT_SCHEDULE = {
         "task": "zango.apps.tasks.tasks.health_check_periodic_task",
         "schedule": crontab(minute="*/1"),
     },
-    "health_check_task": {
-        "task": "zango.apps.tasks.tasks.health_check_task",
-        "schedule": crontab(minute="*/1"),
-    },
 }
 
 X_FRAME_OPTIONS = "ALLOW"

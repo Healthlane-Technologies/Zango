@@ -12,6 +12,11 @@ def health_check():
 
     from django.conf import settings
 
-    resp = requests.get(settings.HEALTH_CHECK_URL)
-    resp.raise_for_status()
-    return {"result": "success"}
+    try:
+        resp = requests.get(settings.HEALTH_CHECK_URL)
+        resp.raise_for_status()
+        return {"result": "success"}
+    except Exception as e:
+        import traceback
+
+        return {"result": "failure", "error": traceback.format_exc()}
