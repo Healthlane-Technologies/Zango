@@ -13,6 +13,8 @@ def health_check():
     from django.conf import settings
 
     try:
+        if not settings.HEALTH_CHECK_URL:
+            return {"result": "failure", "error": "HEALTH_CHECK_URL is not set"}
         resp = requests.get(settings.HEALTH_CHECK_URL)
         resp.raise_for_status()
         return {"result": "success"}
