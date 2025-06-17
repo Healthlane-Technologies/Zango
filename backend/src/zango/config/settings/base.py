@@ -200,6 +200,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "zango.apps.tasks.tasks.health_check_periodic_task",
         "schedule": crontab(minute="*/1"),
     },
+    "health_check_task": {
+        "task": "zango.apps.tasks.tasks.health_check",
+        "schedule": crontab(minute="*/1"),
+        "enabled": False,
+    },
 }
 
 X_FRAME_OPTIONS = "ALLOW"
@@ -331,6 +336,7 @@ def setup_settings(settings, BASE_DIR):
         PASSWORD_RECOVERY_SALT=(str, "recover-password"),
         RECAPTCHA_PUBLIC_KEY=(str, ""),
         RECAPTCHA_PRIVATE_KEY=(str, ""),
+        HEALTH_CHECK_URL=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -500,6 +506,11 @@ def setup_settings(settings, BASE_DIR):
 
     settings.RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
     settings.RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
+
+    settings.HEALTH_CHECK_URL = env("HEALTH_CHECK_URL")
+
+    if settings.HEALTH_CHECK_URL:
+        CELERY_BEAT_SCHEDULE["health_check_task"]["enabled"] = True
 
     settings_result = {"env": env}
 
