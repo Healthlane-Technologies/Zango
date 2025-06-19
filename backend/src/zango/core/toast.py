@@ -18,6 +18,8 @@ def ztoast(
     primary_action: ActionSchema | None = None,
     secondary_action: ActionSchema | None = None,
     placement="bottomRight",
+    color="default",
+    extra_tags="",
 ):
     if title == "":
         title = level.capitalize()
@@ -38,4 +40,10 @@ def ztoast(
         "secondary_action": secondary_action,
         "placement": placement,
     }
-    messages.add_message(request, level, json.dumps(msg))
+    if color != "default":
+        msg["color"] = color
+    if extra_tags:
+        extra_tags = f"{extra_tags} zango"
+    else:
+        extra_tags = "zango"
+    messages.add_message(request, level, json.dumps(msg), extra_tags=extra_tags)
