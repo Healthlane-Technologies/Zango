@@ -17,7 +17,7 @@ def ztoast(
     level="success",
     primary_action: ActionSchema | None = None,
     secondary_action: ActionSchema | None = None,
-    placement="bottomRight",
+    placement="default",
     color="default",
     extra_tags="",
 ):
@@ -38,10 +38,11 @@ def ztoast(
         "title": title,
         "primary_action": primary_action,
         "secondary_action": secondary_action,
-        "placement": placement,
     }
     if color != "default":
         msg["color"] = color
+    if placement != "default":
+        msg["placement"] = placement
     if extra_tags:
         extra_tags = f"{extra_tags} zango"
     else:
