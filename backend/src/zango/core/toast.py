@@ -30,6 +30,8 @@ def ztoast(
         level = messages.ERROR
     elif level == "warning":
         level = messages.WARNING
+    elif level == "info":
+        level = messages.INFO
     else:
         raise ValueError("Invalid level: %s" % level)
 
