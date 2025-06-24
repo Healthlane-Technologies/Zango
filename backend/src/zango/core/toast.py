@@ -1,8 +1,9 @@
 import json
 
-from typing import Optional, TypedDict
+from typing import Dict, Literal, Optional, TypedDict
 
 from django.contrib import messages
+from django.http import request
 
 
 class ActionSchema(TypedDict, total=False):
@@ -10,32 +11,71 @@ class ActionSchema(TypedDict, total=False):
     url: Optional[str]
 
 
+Placement = Literal[
+    "top-left",
+    "top-center",
+    "top-right",
+    "bottom-left",
+    "bottom-center",
+    "bottom-right",
+    "center",
+    "default",
+]
+
+
 def ztoast(
-    request,
-    message,
-    title="",
-    level="success",
+    request: request.HttpRequest,
+    message: str,
+    title: str = "",
+    level: Literal["success", "error", "warning", "info"] = "success",
     primary_action: ActionSchema | None = None,
     secondary_action: ActionSchema | None = None,
-    placement="default",
-    color="default",
-    extra_tags="",
+    placement: Placement = "default",
+    duration: int | None = None,
+    color: str = "default",
+    extra_tags: str = "",
 ):
+    """
+    Displays a toast notification with the specified parameters.
+
+    Args:
+        request: The HTTP request object.
+        message: The message content of the toast notification.
+        title: The title of the toast notification. Defaults to an empty string,
+            which will result in the title being set to the capitalized `level`.
+        level: The severity level of the toast notification. Defaults to "success".
+            Accepted values are "success", "error", "warning", and "info".
+        primary_action: An optional primary action for the toast, defined by an
+            ActionSchema dictionary with 'text' and 'url' keys.
+        secondary_action: An optional secondary action for the toast, defined by an
+            ActionSchema dictionary with 'text' and 'url' keys.
+        placement: The placement of the toast notification on the screen. Defaults to "default".
+        duration: The duration the toast should be visible, in milliseconds. Defaults to None.
+        color: The color style of the toast. Defaults to "default".
+        extra_tags: Additional tags to categorize the toast notification. Defaults to "".
+
+    Raises:
+        ValueError: If `level` is not one of the accepted values.
+
+    """
+
     if title == "":
         title = level.capitalize()
 
+    msg_level = messages.SUCCESS
+
     if level == "success":
-        level = messages.SUCCESS
+        msg_level = messages.SUCCESS
     elif level == "error":
-        level = messages.ERROR
+        msg_level = messages.ERROR
     elif level == "warning":
-        level = messages.WARNING
+        msg_level = messages.WARNING
     elif level == "info":
-        level = messages.INFO
+        msg_level = messages.INFO
     else:
         raise ValueError("Invalid level: %s" % level)
 
-    msg = {
+    msg: Dict[str, str | ActionSchema | None | int] = {
         "message": message,
         "title": title,
         "primary_action": primary_action,
@@ -45,8 +85,10 @@ def ztoast(
         msg["color"] = color
     if placement != "default":
         msg["placement"] = placement
+    if duration is not None:
+        msg["duration"] = duration
     if extra_tags:
         extra_tags = f"{extra_tags} zango"
     else:
         extra_tags = "zango"
-    messages.add_message(request, level, json.dumps(msg), extra_tags=extra_tags)
+    messages.add_message(request, msg_level, json.dumps(msg), extra_tags=extra_tags)
