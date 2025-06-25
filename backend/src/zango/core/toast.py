@@ -11,18 +11,6 @@ class ActionSchema(TypedDict, total=False):
     url: Optional[str]
 
 
-Placement = Literal[
-    "top-left",
-    "top-center",
-    "top-right",
-    "bottom-left",
-    "bottom-center",
-    "bottom-right",
-    "center",
-    "default",
-]
-
-
 def ztoast(
     request: request.HttpRequest,
     message: str,
@@ -30,9 +18,7 @@ def ztoast(
     level: Literal["success", "error", "warning", "info"] = "success",
     primary_action: ActionSchema | None = None,
     secondary_action: ActionSchema | None = None,
-    placement: Placement = "default",
     duration: int | None = None,
-    color: str = "default",
     extra_tags: str = "",
 ):
     """
@@ -49,9 +35,7 @@ def ztoast(
             ActionSchema dictionary with 'text' and 'url' keys.
         secondary_action: An optional secondary action for the toast, defined by an
             ActionSchema dictionary with 'text' and 'url' keys.
-        placement: The placement of the toast notification on the screen. Defaults to "default".
         duration: The duration the toast should be visible, in milliseconds. Defaults to None.
-        color: The color style of the toast. Defaults to "default".
         extra_tags: Additional tags to categorize the toast notification. Defaults to "".
 
     Raises:
@@ -81,10 +65,6 @@ def ztoast(
         "primary_action": primary_action,
         "secondary_action": secondary_action,
     }
-    if color != "default":
-        msg["color"] = color
-    if placement != "default":
-        msg["placement"] = placement
     if duration is not None:
         msg["duration"] = duration
     if extra_tags:
