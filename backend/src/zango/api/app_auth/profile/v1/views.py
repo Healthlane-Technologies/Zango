@@ -31,12 +31,14 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
 
 
 class PasswordChangeViewAPIV1(ZangoSessionAppAPIView, PasswordValidationMixin):
-    def clean_password(self, email, password):
+    def clean_password(self, request, password):
         """
         Validates that the email is not already in use.
         """
         try:
-            user = authenticate(username=email, password=password)
+            user = authenticate(
+                username=request.user.email, password=password, request=request
+            )
         except Exception:
             raise ValidationError(
                 "The current password you have entered is wrong. Please try again!"
@@ -57,7 +59,7 @@ class PasswordChangeViewAPIV1(ZangoSessionAppAPIView, PasswordValidationMixin):
         new_password = request.data.get("new_password")
         success = False
         try:
-            self.clean_password(request.user.email, current_password)
+            self.clean_password(request, current_password)
             self.clean_password2(request.user, current_password, new_password)
             request.user.set_password(new_password)
             request.user.save()
