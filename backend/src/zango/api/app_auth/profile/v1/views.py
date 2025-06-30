@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, update_session_auth_hash
 from django.core.exceptions import ValidationError
 
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
@@ -69,6 +69,7 @@ class PasswordChangeViewAPIV1(ZangoSessionAppAPIView, PasswordValidationMixin):
             success = True
             response = {}
             status = 200
+            update_session_auth_hash(request, request.user)
             return get_api_response(success, response, status)
         except ValidationError as e:
             response = {"message": e.message}
