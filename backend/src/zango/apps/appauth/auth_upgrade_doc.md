@@ -137,11 +137,9 @@
 
 - Request recovery email to registered address
 
-3.  **Identity Verification**: Additional security questions or admin approval
+3.  **Reset 2FA**: User can set up new 2FA method
 
-4.  **Reset 2FA**: User can set up new 2FA method
-
-5.  **Notification**: Email sent about 2FA change for security
+4.  **Notification**: Email sent about 2FA change for security
 
   
 
@@ -263,15 +261,13 @@ Sample
 
 ## API Changes
 	
-  - Single LoginAPI in zango core for appauth module
+  - Single LoginAPI in zango core for ``appauth`` module
   - Support for 2FA
-  - OIDC and SSO to be moved to core
+  - OIDC and SSO to be also part of core under appauth module
  
 
 
 ## Notes
-
-  
 
 - Users can only make settings MORE restrictive than role/tenant
 
