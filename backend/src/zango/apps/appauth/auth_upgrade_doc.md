@@ -163,6 +163,7 @@ Sample
     "password_expiry_days": 90
   },
   "login_methods": {
+    "allowed_usernames": ["email", "mobile"],
     "password": {
       "enabled": true,
       "forgot_password_enabled": true,
@@ -173,7 +174,10 @@ Sample
     },
     "oidc": {
       "enabled": false
-    }
+    },
+    "otp": {
+	"enabled": false
+    },
   },
   "two_factor_auth": {
     "required": false,
