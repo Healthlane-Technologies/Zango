@@ -98,9 +98,7 @@ def create_project(
     project_template_path = os.path.join(
         os.path.dirname(zango.cli.__file__), "project_template"
     )
-    # command = f"{command} --template '{str(project_template_path)}'"
     command = f'{command} --template "{project_template_path}"'
-
     subprocess.run(command, shell=True, check=True)
     env_keys = {
         "POSTGRES_DB": db_name,
