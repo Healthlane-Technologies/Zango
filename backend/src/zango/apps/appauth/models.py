@@ -1,3 +1,5 @@
+import secrets
+
 from datetime import date, timedelta
 
 from knox.models import AbstractAuthToken
@@ -7,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from zango.apps.auditlogs.registry import auditlog
 from zango.apps.object_store.models import ObjectStore
@@ -20,6 +23,7 @@ from ..permissions.mixin import PermissionMixin
 
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.models import PolicyGroupModel, PolicyModel
+from .utils import APP_USER_AUTH_CONFIG, USER_ROLE_AUTH_CONFIG
 
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
@@ -33,6 +37,7 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
     config = models.JSONField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
+    auth_config = models.JSONField(default=USER_ROLE_AUTH_CONFIG)
 
     def __str__(self):
         return self.name
@@ -62,6 +67,7 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         PolicyGroupModel, related_name="user_policy_groups"
     )
     app_objects = models.JSONField(null=True)
+    auth_config = models.JSONField(default=APP_USER_AUTH_CONFIG)
 
     def generate_auth_token(self, role, expiry=knox_settings.TOKEN_TTL):
         try:
@@ -310,7 +316,76 @@ class AppUserAuthToken(AbstractAuthToken):
     )
 
 
+class OTPCode(FullAuditMixin):
+    """
+    Model to store various types of One-Time Passwords (OTPs) and login codes for users.
+    """
+
+    OTP_TYPE_CHOICES = (
+        ("two_factor_auth", "Two-Factor Authentication"),
+        ("login_code", "Login Code"),
+    )
+
+    user = models.ForeignKey(
+        AppUserModel,
+        on_delete=models.CASCADE,
+        related_name="otp_codes",
+    )
+    code = models.CharField(
+        max_length=128,
+    )
+    otp_type = models.CharField(
+        max_length=50,
+        choices=OTP_TYPE_CHOICES,
+    )
+    is_used = models.BooleanField(
+        default=False,
+    )
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.name}'s {self.get_otp_type_display()} code ({self.code})"
+
+    def is_valid(self):
+        """
+        Checks if the OTP code is still valid (not expired and not used).
+        """
+        return not self.is_used and self.expires_at > timezone.now()
+
+    def mark_as_used(self):
+        """
+        Marks the OTP code as used.
+        """
+        self.delete()
+
+
+def generate_otp(user, otp_type, expires_at=5, digits=6):
+    try:
+        min_value = 10 ** (digits - 1)
+        max_value = 10**digits - 1
+
+        code = str(secrets.randbelow(max_value - min_value + 1) + min_value)
+        expires_at = timezone.now() + timezone.timedelta(minutes=expires_at)
+        OTPCode.objects.filter(user=user, otp_type=otp_type).delete()
+        return OTPCode.objects.create(
+            user=user,
+            code=code,
+            otp_type=otp_type,
+            is_used=False,
+            expires_at=expires_at,
+        ).code
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        return None
+
+
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
 auditlog.register(AppUserAuthToken)
+auditlog.register(OTPCode, exclude_fields=["code"])

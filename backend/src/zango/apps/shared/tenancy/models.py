@@ -19,11 +19,7 @@ from zango.core.model_mixins import FullAuditMixin
 from zango.core.storage_utils import ZFileField
 
 from .tasks import initialize_workspace
-from .utils import (
-    DATEFORMAT,
-    DATETIMEFORMAT,
-    TIMEZONES,
-)
+from .utils import DATEFORMAT, DATETIMEFORMAT, DEFAULT_AUTH_CONFIG, TIMEZONES
 
 
 Choice = namedtuple("Choice", ["value", "display"])
@@ -123,6 +119,7 @@ class TenantModel(TenantMixin, FullAuditMixin):
     app_template = ZFileField(
         verbose_name="template used for app", null=True, blank=True
     )
+    auth_config = models.JSONField(default=DEFAULT_AUTH_CONFIG)
 
     auto_create_schema = False
 
