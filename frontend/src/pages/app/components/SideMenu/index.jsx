@@ -12,7 +12,8 @@ export default function SideMenu() {
 	return (
 		<div
 			data-cy="menu_section"
-			className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px]"
+			className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px] sticky top-0 overflow-y-auto"
+			style={{ height: 'calc(100vh - var(--navHeight, 64px))' }}
 		>
 			<SideMenuDropdown
 				Icon={AppSettingsIcon}
@@ -22,6 +23,11 @@ export default function SideMenu() {
 						url: `app-settings/app-configuration/`,
 						label: 'App Configuration',
 						dataCy: 'app_configuration',
+					},
+					{
+						url: `app-settings/app-configuration/auth/`,
+						label: 'Auth Configuration',
+						dataCy: 'auth_configuration',
 					},
 					{
 						url: `app-settings/app-theme-configuration/`,
