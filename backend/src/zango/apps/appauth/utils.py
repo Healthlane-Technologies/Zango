@@ -10,8 +10,8 @@ class TwoFactorAuth(TypedDict, total=False):
 
 class UserRoleAuthConfig(TypedDict, total=False):
     password_policy: PasswordPolicy
-    allow_password_auth: bool
     two_factor_auth: TwoFactorAuth
+    redirect_url: Required[str]
 
 
 class SSOIdentity(TypedDict):
@@ -20,17 +20,17 @@ class SSOIdentity(TypedDict):
 
 
 class AppUserAuthConfig(TypedDict, total=False):
-    preferred_login_method: Literal["password", "sso", "2fa_only", "biometric"]
     two_factor_auth: TwoFactorAuth
     sso_identities: List[SSOIdentity]
-    redirect_url: Required[str]
 
 
-USER_ROLE_AUTH_CONFIG: UserRoleAuthConfig = {}
-APP_USER_AUTH_CONFIG: AppUserAuthConfig = {
-    "preferred_login_method": "password",
-    "two_factor_auth": {
-        "required": False,
-    },
-    "redirect_url": "/frame/router/",
-}
+USER_ROLE_AUTH_CONFIG: UserRoleAuthConfig = {"redirect_url": "/frame/router/"}
+APP_USER_AUTH_CONFIG: AppUserAuthConfig = {}
+
+
+def get_default_user_role_auth_config():
+    return USER_ROLE_AUTH_CONFIG
+
+
+def get_default_app_user_auth_config():
+    return APP_USER_AUTH_CONFIG

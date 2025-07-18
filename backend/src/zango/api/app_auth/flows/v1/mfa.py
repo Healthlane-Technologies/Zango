@@ -64,12 +64,13 @@ class GetMFACodeViewAPIV1(APIView):
                             status=400,
                         )
                     send_otp.delay(
-                        preferred_method,
-                        "two_factor_auth",
-                        user.id,
-                        request.tenant.id,
-                        request_data,
-                        request.session.get("role_id"),
+                        method=preferred_method,
+                        otp_type="two_factor_auth",
+                        user_id=user.id,
+                        tenant_id=request.tenant.id,
+                        request_data=request_data,
+                        user_role_id=request.session.get("role_id"),
+                        message="Your 2FA code is",
                     )
                 else:
                     user = self.get_user(latest_auth_method.get("phone"))
@@ -89,12 +90,14 @@ class GetMFACodeViewAPIV1(APIView):
                             status=400,
                         )
                     send_otp.delay(
-                        preferred_method,
-                        "two_factor_auth",
-                        user.id,
-                        request.tenant.id,
-                        request_data,
-                        request.session.get("role_id"),
+                        method=preferred_method,
+                        otp_type="two_factor_auth",
+                        user_id=user.id,
+                        tenant_id=request.tenant.id,
+                        request_data=request_data,
+                        user_role_id=request.session.get("role_id"),
+                        message="Your 2FA code is",
+                        subject="2FA Verification Code",
                     )
                 return get_api_response(
                     success=True,
@@ -118,7 +121,7 @@ class MFAVerifyViewAPIV1(AuthenticateView):
     def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         return get_api_response(
-            success=True if resp.status_code == 200 else False,
+            success=True,
             response_content=json.loads(resp.content.decode("utf-8")),
             status=resp.status_code,
         )

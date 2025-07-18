@@ -24,7 +24,6 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
         Validates that the current password is correct
         """
         try:
-            print("Email and password", email, password)
             user = authenticate(request=request, username=email, password=password)
         except Exception:
             import traceback

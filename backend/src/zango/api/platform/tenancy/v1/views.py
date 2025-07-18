@@ -3,6 +3,7 @@ import traceback
 
 from django_celery_results.models import TaskResult
 
+from django.core.exceptions import ValidationError
 from django.db import connection
 from django.db.models import Q
 from django.utils.decorators import method_decorator
@@ -13,6 +14,7 @@ from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
 from zango.apps.shared.tenancy.utils import DATEFORMAT, DATETIMEFORMAT, TIMEZONES
 from zango.core.api import (
+    TenantMixin,
     ZangoGenericPlatformAPIView,
     get_api_response,
 )
@@ -140,12 +142,8 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
         return get_api_response(success, result, status)
 
 
-class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
+class AppDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
     permission_classes = (IsPlatformUserAllowedApp,)
-
-    def get_obj(self, **kwargs):
-        obj = TenantModel.objects.get(uuid=kwargs.get("app_uuid"))
-        return obj
 
     def get_dropdown_options(self):
         options = {}
@@ -158,9 +156,9 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            obj = self.get_obj(**kwargs)
+            tenant = self.get_tenant(**kwargs)
             include_dropdown_options = request.GET.get("include_dropdown_options")
-            serializer = TenantSerializerModel(obj)
+            serializer = TenantSerializerModel(tenant)
             success = True
             response = {"app": serializer.data}
             if include_dropdown_options:
@@ -180,7 +178,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
     def put(self, request, *args, **kwargs):
         try:
-            obj = self.get_obj(**kwargs)
+            obj = self.get_tenant(**kwargs)
             serializer = TenantSerializerModel(
                 instance=obj,
                 data=request.data,
@@ -315,7 +313,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
+class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
@@ -339,11 +337,12 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
     def put(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
+            tenant = self.get_tenant(**kwargs)
             serializer = UserRoleSerializerModel(
                 instance=obj,
                 data=request.data,
                 partial=True,
-                context={"request": request},
+                context={"request": request, "tenant": tenant},
             )
             if serializer.is_valid():
                 serializer.save()
@@ -383,13 +382,9 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
+class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin):
     pagination_class = ZangoAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
-
-    def get_app_tenant(self):
-        tenant_obj = TenantModel.objects.get(uuid=self.kwargs["app_uuid"])
-        return tenant_obj
 
     def get_dropdown_options(self):
         options = {}
@@ -437,7 +432,7 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             app_users = self.paginate_queryset(app_users, request, view=self)
             serializer = AppUserModelSerializerModel(app_users, many=True)
             app_users_data = self.get_paginated_response_data(serializer.data)
-            app_tenant = self.get_app_tenant()
+            app_tenant = self.get_tenant(**kwargs)
             success = True
             response = {
                 "users": app_users_data,
@@ -455,6 +450,43 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
         return get_api_response(success, response, status)
 
+    def validate_email_and_phone_passed(
+        self, tenant_auth_config, user_auth_config, email, phone
+    ):
+        login_methods = tenant_auth_config.get("login_methods")
+        if login_methods.get("otp", {}).get("enabled", False):
+            allowed_methods = login_methods["otp"].get("allowed_methods")
+            if "email" in allowed_methods and not email:
+                raise ValidationError(
+                    "Email is required since email based login is enabled"
+                )
+            if "sms" in allowed_methods and not phone:
+                raise ValidationError(
+                    "Phone is required since SMS based login is enabled"
+                )
+
+        if login_methods.get("two_factor_auth", {}).get("required", False):
+            allowed_methods = login_methods["two_factor_auth"]["allowed_methods"]
+            if not email or not phone:
+                raise ValidationError("Email and Phone are required")
+
+        if login_methods.get("password", {}).get("enabled", False):
+            allowed_methods = login_methods["password"].get("allowed_usernames", [])
+            if "email" in allowed_methods and not email:
+                raise ValidationError(
+                    "Email is required since email based login is enabled"
+                )
+            if "phone" in allowed_methods and not phone:
+                raise ValidationError(
+                    "Phone is required since SMS based login is enabled"
+                )
+
+    def validate_password_passed(self, tenant_auth_config, user_auth_config, password):
+        login_methods = tenant_auth_config.get("login_methods")
+        if login_methods.get("password", {}).get("enabled", False):
+            if not password:
+                raise ValidationError("Password is required for password based login")
+
     def post(self, request, *args, **kwargs):
         data = request.data
         try:
@@ -463,6 +495,16 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 if not validate_phone(data["mobile"]):
                     result = {"message": "Invalid mobile number"}
                     return get_api_response(False, result, 400)
+            app_tenant = self.get_tenant(**kwargs)
+            self.validate_email_and_phone_passed(
+                app_tenant.auth_config,
+                data.get("auth_config"),
+                data.get("email"),
+                data.get("mobile"),
+            )
+            self.validate_password_passed(
+                app_tenant.auth_config, data.get("auth_config"), data.get("password")
+            )
             creation_result = AppUserModel.create_user(
                 name=data["name"],
                 email=data["email"],
@@ -518,6 +560,24 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
             success = update_result["success"]
             message = update_result["message"]
             status_code = 200 if success else 400
+            if status_code != 400:
+                if request.data.get("auth_config"):
+                    ser = AppUserModelSerializerModel(
+                        instance=obj, data=request.data["auth_config"], partial=True
+                    )
+                    if ser.is_valid():
+                        ser.save()
+                    else:
+                        if ser.errors:
+                            error_messages = [
+                                error[0] for field_name, error in ser.errors.items()
+                            ]
+                            error_message = ", ".join(error_messages)
+                        else:
+                            error_message = "Invalid data"
+
+                        result = {"message": error_message}
+                        return get_api_response(False, result, 400)
             result = {
                 "message": message,
                 "user_id": obj.id,
