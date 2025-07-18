@@ -25,10 +25,11 @@ class PasswordPolicy(TypedDict):
     reset: PasswordReset
 
 
-class PasswordLoginMethod(TypedDict):
+class PasswordLoginMethod(TypedDict, total=False):
     enabled: bool
     forgot_password_enabled: bool
     password_reset_link_expiry_hours: int
+    allowed_usernames: List[Literal["email", "phone"]]
 
 
 class SSOLoginMethod(TypedDict):
@@ -39,12 +40,14 @@ class OIDCLoginMethod(TypedDict):
     enabled: bool
 
 
-class OTPLoginMethod(TypedDict):
-    enabled: bool
+class OTPLoginMethod(TypedDict, total=False):
+    enabled: Required[bool]
+    allowed_methods: List[Literal["sms", "email"]]
+    email_hook: str
+    sms_hook: str
 
 
 class LoginMethods(TypedDict):
-    allowed_usernames: List[Literal["email", "phone"]]
     password: PasswordLoginMethod
     sso: SSOLoginMethod
     oidc: OIDCLoginMethod
@@ -66,7 +69,7 @@ class SessionPolicy(TypedDict):
     force_logout_on_password_change: bool
 
 
-class AuthConfigSchema(TypedDict):
+class AuthConfigSchema(TypedDict, total=False):
     password_policy: PasswordPolicy
     login_methods: LoginMethods
     two_factor_auth: TwoFactorAuth
@@ -90,11 +93,10 @@ DEFAULT_AUTH_CONFIG: AuthConfigSchema = {
         },
     },
     "login_methods": {
-        "allowed_usernames": ["email", "phone"],
         "password": {
             "enabled": True,
-            "forgot_password_enabled": True,
-            "password_reset_link_expiry_hours": 24,
+            "forgot_password_enabled": False,
+            "allowed_usernames": ["email", "phone"],
         },
         "sso": {
             "enabled": False,
@@ -103,13 +105,13 @@ DEFAULT_AUTH_CONFIG: AuthConfigSchema = {
         "otp": {"enabled": False},
     },
     "two_factor_auth": {
-        "required": True,
-    },
-    "session_policy": {
-        "max_concurrent_sessions": 0,
-        "force_logout_on_password_change": True,
+        "required": False,
     },
 }
+
+
+def get_default_auth_config() -> AuthConfigSchema:
+    return DEFAULT_AUTH_CONFIG
 
 
 __all__ = [

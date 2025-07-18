@@ -59,7 +59,7 @@ const AddNewUserForm = ({ closeModal }) => {
 				then: Yup.string()
 					.required('Required'),
 			}),
-			password: Yup.string().required('Required'),
+			password: Yup.string(),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
 		},
 		[

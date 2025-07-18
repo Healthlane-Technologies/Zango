@@ -4,7 +4,9 @@ from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.appauth.utils import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
+from zango.apps.shared.tenancy.utils import AuthConfigSchema as TenantAuthConfigSchema
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -38,6 +40,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
     def get_date_format_display(self, obj):
         return obj.get_date_format_display()
 
+    def validate_auth_config(self, value: TenantAuthConfigSchema):
+        return value
+
     def update(self, instance, validated_data):
         request = self.context["request"]
         extra_config_str = request.data.get("extra_config")
@@ -70,6 +75,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
         request = self.context["request"]
         domains = request.data.getlist("domains")
 
+        if not domains:
+            return instance
+
         # Removing existing domains
         domains_to_be_removed = instance.domains.all().exclude(domain__in=domains)
         domains_to_be_removed.delete()
@@ -91,25 +99,27 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
 
     class Meta:
         model = UserRoleModel
-        fields = [
-            "id",
-            "name",
-            "is_active",
-            "is_default",
-            "no_of_users",
-            "policies",
-            "attached_policies",
-            "policy_groups",
-            "created_at",
-            "created_by",
-            "modified_at",
-            "modified_by",
-        ]
+        fields = "__all__"
 
     def get_attached_policies(self, obj):
         policies = obj.policies.all()
         policy_serializer = PolicySerializer(policies, many=True)
         return policy_serializer.data
+
+    def validate_auth_config(self, value: UserRoleAuthConfig):
+        tenant = self.context.get("tenant")
+        tenant_auth_config = tenant.auth_config
+
+        # Validate two_factor_auth config not overridden by role
+        if tenant_auth_config.get("two_factor_auth", {}).get("required", False):
+            if value.get("two_factor_auth", {}).get("required", False) is False:
+                raise serializers.ValidationError(
+                    "Two-factor authentication is required for this user role as it is enabled for the tenant."
+                )
+        return value
+
+    def validate(self, attrs):
+        return attrs
 
     def update(self, instance, validated_data):
         if not validated_data.get("policies"):
@@ -123,22 +133,35 @@ class AppUserModelSerializerModel(serializers.ModelSerializer):
 
     class Meta:
         model = AppUserModel
-        fields = [
-            "id",
-            "name",
-            "email",
-            "mobile",
-            "roles",
-            "is_active",
-            "last_login",
-            "created_at",
-            "pn_country_code",
-        ]
+        fields = "__all__"
 
     def get_pn_country_code(self, obj):
         if obj.mobile:
             return f"+{obj.mobile.country_code}"
         return None
+
+    def validate_user_role_two_factor_not_overridden(self, auth_config, roles):
+        user_two_factor_auth_enabled = auth_config.get("two_factor_auth", {}).get(
+            "required"
+        )
+        for role in roles:
+            if role.auth_config.get("two_factor_auth", {}):
+                two_factor_auth = auth_config["two_factor_auth"]
+                if two_factor_auth.get("required") and not user_two_factor_auth_enabled:
+                    raise serializers.ValidationError(
+                        "Two-factor authentication is required for this user role."
+                    )
+
+    def validate(self, attrs):
+        auth_config = attrs.get("auth_config", {})
+        if auth_config:
+            self.validate_user_role_two_factor_not_overridden(
+                auth_config, attrs.get("roles")
+            )
+        return attrs
+
+    def validate_auth_config(self, value):
+        return value
 
 
 class ThemeModelSerializer(serializers.ModelSerializer):

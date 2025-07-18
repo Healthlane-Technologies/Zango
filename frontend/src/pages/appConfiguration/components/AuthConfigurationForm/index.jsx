@@ -6,50 +6,21 @@ import * as Yup from "yup";
 import { toggleRerenderPage } from "../../slice";
 import InputField from "../../../../components/Form/InputField";
 import BreadCrumbs from "../../../app/components/BreadCrumbs";
+import { useSelector } from "react-redux";
+import { selectAppConfigurationData } from '../../slice';
+import useApi from "../../../../hooks/useApi";
+import { transformToFormData } from "../../../../utils/form";
+import { useParams } from "react-router-dom";
 
 const AuthConfigurationForm = () => {
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const triggerApi = useApi();
 
-	// Mock initial values - will be populated from API later
-	const initialValues = {
-		login_methods: {
-			password: {
-				enabled: true,
-				forgot_password_enabled: true,
-				password_reset_link_expiry_hours: 24,
-			},
-			otp: {
-				enabled: false,
-			},
-			sso: {
-				enabled: false,
-			},
-			oidc: {
-				enabled: false,
-			},
-			allowed_usernames: ["email"],
-		},
-		session_policy: {
-			max_concurrent_sessions: 0,
-			force_logout_on_password_change: false,
-		},
-		password_policy: {
-			min_length: 8,
-			allow_change: true,
-			require_numbers: true,
-			require_lowercase: true,
-			require_uppercase: true,
-			require_special_chars: true,
-			password_expiry_days: 90,
-			password_history_count: 3,
-		},
-		two_factor_auth: {
-			required: true,
-			allowedMethods: ["email"],
-		},
-	};
+	const appConfigurationData = useSelector(selectAppConfigurationData);
+	const auth_config = appConfigurationData?.app?.auth_config;
+	const { appId } = useParams();
 
 	const validationSchema = Yup.object({
 		login_methods: Yup.object({
@@ -91,24 +62,46 @@ const AuthConfigurationForm = () => {
 		}),
 	});
 
-	const handleSubmit = async (values) => {
-		setIsSubmitting(true);
+	let onSubmit = (values) => {
+		const cleanedAuthConfig = values;
 		
-		// Simulate API call delay
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		if (Object.keys(cleanedAuthConfig).length === 0) {
+			console.warn('No configuration changes to save');
+			return;
+		}
 		
-		// Log the values for now - will be replaced with actual API call later
-		console.log("Auth config values to be saved:", values);
-		
-		// Navigate back to auth config page and trigger re-render
-		dispatch(toggleRerenderPage());
-		navigate("../");
-		
-		setIsSubmitting(false);
+		const tempValues = {
+			auth_config: JSON.stringify(cleanedAuthConfig)
+		};
+
+		const dynamicFormData = transformToFormData(tempValues);
+
+		const makeApiCall = async () => {
+			setIsSubmitting(true);
+			try {
+				const { response, success } = await triggerApi({
+					url: `/api/v1/apps/${appId}/`,
+					type: 'PUT',
+					loader: true,
+					payload: dynamicFormData,
+				});
+
+				if (success && response) {
+					dispatch(toggleRerenderPage());
+					window.location.reload();
+				}
+			} catch (error) {
+				console.error('Error saving configuration:', error);
+			} finally {
+				setIsSubmitting(false);
+			}
+		};
+
+		makeApiCall();
 	};
 
 	const handleCancel = () => {
-		navigate("../");
+		navigate(-1);
 	};
 
 	const usernameOptions = [
@@ -116,44 +109,15 @@ const AuthConfigurationForm = () => {
 		{ id: "phone", label: "Phone Number" },
 	];
 
-	const twoFactorMethodOptions = [
+	const loginOTPMethodOptions = [
 		{ id: "email", label: "Email" },
 		{ id: "sms", label: "SMS" },
 	];
 
-	const RadioButtonGroup = ({ label, name, options, value, onChange, description }) => (
-		<div className="space-y-[16px]">
-			<div>
-				<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] mb-[4px] block">
-					{label}
-				</label>
-				{description && (
-					<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
-						{description}
-					</p>
-				)}
-			</div>
-			<div className="flex flex-wrap gap-[12px]">
-				{options.map((option) => (
-					<button
-						key={option.id}
-						type="button"
-						onClick={() => onChange(option.id)}
-						className={`relative px-[20px] py-[12px] rounded-[10px] border-2 font-lato text-[14px] font-medium transition-all duration-200 transform hover:scale-[1.02] ${
-							value === option.id
-								? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg'
-								: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC] hover:shadow-md'
-						}`}
-					>
-						{value === option.id && (
-							<div className="absolute -top-[2px] -right-[2px] w-[8px] h-[8px] bg-[#10B981] rounded-full border-2 border-white"></div>
-						)}
-						{option.label}
-					</button>
-				))}
-			</div>
-		</div>
-	);
+	const twoFactorMethodOptions = [
+		{ id: "email", label: "Email" },
+		{ id: "sms", label: "SMS" },
+	];
 
 	const MultiSelectChips = ({ label, name, options, value, onChange, description }) => (
 		<div className="space-y-[16px]">
@@ -280,6 +244,18 @@ const AuthConfigurationForm = () => {
 		{ id: "2fa", label: "Two-Factor Auth", icon: "🛡️" }
 	];
 
+	// Show loading state while data is being fetched
+	if (!appConfigurationData || !auth_config) {
+		return (
+			<div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5048ED] mx-auto mb-4"></div>
+					<p className="text-[#6B7280] font-lato">Loading configuration...</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0]">
 			{/* Header */}
@@ -312,9 +288,10 @@ const AuthConfigurationForm = () => {
 						<button
 							type="submit"
 							form="auth-config-form"
-							className="px-[24px] py-[12px] bg-[#5048ED] text-white rounded-[10px] font-semibold text-[16px] hover:bg-[#3d38c7] transition-all duration-200 shadow-lg"
+							disabled={isSubmitting}
+							className="px-[24px] py-[12px] bg-[#5048ED] text-white rounded-[10px] font-semibold text-[16px] hover:bg-[#3d38c7] transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							Save Changes
+							{isSubmitting ? 'Saving...' : 'Save Changes'}
 						</button>
 					</div>
 				</div>
@@ -350,9 +327,9 @@ const AuthConfigurationForm = () => {
 				{/* Content Area */}
 				<div className="flex-1 p-[40px]">
 					<Formik
-						initialValues={initialValues}
+						initialValues={auth_config}
 						validationSchema={validationSchema}
-						onSubmit={handleSubmit}
+						onSubmit={onSubmit}
 						enableReinitialize={true}
 					>
 						{(formik) => {
@@ -377,64 +354,79 @@ const AuthConfigurationForm = () => {
 													</div>
 													
 													<div className="space-y-[24px]">
-														<ToggleCard
-															title="Password Authentication"
-															description="Allow users to log in with email/username and password"
-															name="login_methods.password.enabled"
-															value={values.login_methods.password.enabled}
-															onChange={(e) => setFieldValue("login_methods.password.enabled", e.target.checked)}
-														>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-[20px]">
-																<ToggleCard
-																	title="Forgot Password"
-																	description="Enable password reset functionality"
-																	name="login_methods.password.forgot_password_enabled"
-																	value={values.login_methods.password.forgot_password_enabled}
-																	onChange={(e) => setFieldValue("login_methods.password.forgot_password_enabled", e.target.checked)}
-																>
-																	<InputField
-																		name="login_methods.password.password_reset_link_expiry_hours"
-																		label="Reset Link Expiry (Hours)"
-																		type="number"
-																		value={values.login_methods.password.password_reset_link_expiry_hours}
-																		onChange={(e) => setFieldValue("login_methods.password.password_reset_link_expiry_hours", parseInt(e.target.value))}
+															<ToggleCard
+																title="Password Authentication"
+																description="Allow users to log in with email/username and password"
+																name="login_methods.password.enabled"
+																value={values?.login_methods?.password?.enabled}
+																onChange={(e) => setFieldValue("login_methods.password.enabled", e.target.checked)}
+															>
+																
+																<div className="max-w-2xl">
+																	<MultiSelectChips
+																		name="login_methods.password.allowed_usernames"
+																		label="Allowed Username Types"
+																		description="Select the types of username users can use to log in"
+																		options={usernameOptions}
+																		value={values?.login_methods?.password?.allowed_usernames || []}
+																		onChange={(value) => setFieldValue("login_methods.password.allowed_usernames", value)}
 																	/>
-																</ToggleCard>
-															</div>
-														</ToggleCard>
+																</div>
+																
+																<div className="grid grid-cols-1 md:grid-cols-2 gap-[20px]">
+																	
+																	<ToggleCard
+																		title="Forgot Password"
+																		description="Enable password reset functionality"
+																		name="login_methods.password.forgot_password_enabled"
+																		value={values?.login_methods?.password?.forgot_password_enabled}
+																		onChange={(e) => setFieldValue("login_methods.password.forgot_password_enabled", e.target.checked)}
+																	>
+																		<InputField
+																			name="login_methods.password.password_reset_link_expiry_hours"
+																			label="Reset Link Expiry (Hours)"
+																			type="number"
+																			value={values?.login_methods?.password?.password_reset_link_expiry_hours}
+																			onChange={(e) => setFieldValue("login_methods.password.password_reset_link_expiry_hours", parseInt(e.target.value))}
+																		/>
+																	</ToggleCard>
+																	
+																</div>
+															</ToggleCard>
 
 														<div className="grid grid-cols-1 md:grid-cols-3 gap-[20px]">
-															<ToggleCard
-																title="OTP Authentication"
-																description="One-time password login"
-																name="login_methods.otp.enabled"
-																value={values.login_methods.otp.enabled}
-																onChange={(e) => setFieldValue("login_methods.otp.enabled", e.target.checked)}
-															/>
+															<div>
+																<ToggleCard
+																	title="OTP Authentication"
+																	description="One Time Password integration"
+																	name="login_methods.otp.enabled"
+																	value={values?.login_methods?.otp?.enabled}
+																	onChange={(e) => setFieldValue("login_methods.otp.enabled", e.target.checked)}
+																>
+																	<MultiSelectChips
+																		name="login_methods.otp.allowed_methods"
+																		label="Allowed OTP Methods"
+																		description="Select the types of OTP methods allowed for login"
+																		options={loginOTPMethodOptions}
+																		value={values?.login_methods?.otp?.allowed_methods || []}
+																		onChange={(value) => setFieldValue("login_methods.otp.allowed_methods", value)}
+																	/>
+																</ToggleCard>
+
+															</div>
 															<ToggleCard
 																title="SSO Authentication"
 																description="Single Sign-On integration"
 																name="login_methods.sso.enabled"
-																value={values.login_methods.sso.enabled}
+																value={values?.login_methods?.sso?.enabled}
 																onChange={(e) => setFieldValue("login_methods.sso.enabled", e.target.checked)}
 															/>
 															<ToggleCard
 																title="OIDC Authentication"
 																description="OpenID Connect integration"
 																name="login_methods.oidc.enabled"
-																value={values.login_methods.oidc.enabled}
+																value={values?.login_methods?.oidc?.enabled}
 																onChange={(e) => setFieldValue("login_methods.oidc.enabled", e.target.checked)}
-															/>
-														</div>
-
-														<div className="max-w-2xl">
-															<MultiSelectChips
-																name="login_methods.allowed_usernames"
-																label="Allowed Username Types"
-																description="Select the types of username users can use to log in"
-																options={usernameOptions}
-																value={values.login_methods.allowed_usernames || []}
-																onChange={(value) => setFieldValue("login_methods.allowed_usernames", value)}
 															/>
 														</div>
 													</div>
@@ -459,23 +451,22 @@ const AuthConfigurationForm = () => {
 														</div>
 													</div>
 													
+													
 													<div className="grid grid-cols-1 md:grid-cols-2 gap-[24px]">
 														<InputField
 															name="session_policy.max_concurrent_sessions"
 															label="Max Concurrent Sessions"
 															type="number"
-															value={values.session_policy.max_concurrent_sessions}
+															value={values?.session_policy?.max_concurrent_sessions}
 															onChange={(e) => setFieldValue("session_policy.max_concurrent_sessions", parseInt(e.target.value) || 0)}
 														/>
-														<div className="flex items-center">
-															<ToggleCard
-																title="Force Logout on Password Change"
-																description="Automatically log out all sessions when password changes"
-																name="session_policy.force_logout_on_password_change"
-																value={values.session_policy.force_logout_on_password_change}
-																onChange={(e) => setFieldValue("session_policy.force_logout_on_password_change", e.target.checked)}
-															/>
-														</div>
+														<ToggleCard
+															title="Force Logout on Password Change"
+															description="Automatically log out all sessions when password changes"
+															name="session_policy.force_logout_on_password_change"
+															value={values?.session_policy?.force_logout_on_password_change}
+															onChange={(e) => setFieldValue("session_policy.force_logout_on_password_change", e.target.checked)}
+														/>
 													</div>
 												</div>
 											</div>
@@ -498,20 +489,21 @@ const AuthConfigurationForm = () => {
 														</div>
 													</div>
 													
+
 													<div className="space-y-[24px]">
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-[24px]">
 															<InputField
 																name="password_policy.min_length"
 																label="Minimum Password Length"
 																type="number"
-																value={values.password_policy.min_length}
+																value={values?.password_policy?.min_length}
 																onChange={(e) => setFieldValue("password_policy.min_length", parseInt(e.target.value))}
 															/>
 															<InputField
 																name="password_policy.password_expiry_days"
 																label="Password Expiry (Days)"
 																type="number"
-																value={values.password_policy.password_expiry_days}
+																value={values?.password_policy?.password_expiry_days}
 																onChange={(e) => setFieldValue("password_policy.password_expiry_days", parseInt(e.target.value))}
 															/>
 														</div>
@@ -521,48 +513,50 @@ const AuthConfigurationForm = () => {
 																title="Allow Password Change"
 																description="Users can change their passwords"
 																name="password_policy.allow_change"
-																value={values.password_policy.allow_change}
+																value={values?.password_policy?.allow_change}
 																onChange={(e) => setFieldValue("password_policy.allow_change", e.target.checked)}
 															/>
 															<ToggleCard
 																title="Require Numbers"
 																description="Passwords must contain numbers"
 																name="password_policy.require_numbers"
-																value={values.password_policy.require_numbers}
+																value={values?.password_policy?.require_numbers}
 																onChange={(e) => setFieldValue("password_policy.require_numbers", e.target.checked)}
 															/>
 															<ToggleCard
 																title="Require Lowercase"
 																description="Passwords must contain lowercase letters"
 																name="password_policy.require_lowercase"
-																value={values.password_policy.require_lowercase}
+																value={values?.password_policy?.require_lowercase}
 																onChange={(e) => setFieldValue("password_policy.require_lowercase", e.target.checked)}
 															/>
 															<ToggleCard
 																title="Require Uppercase"
 																description="Passwords must contain uppercase letters"
 																name="password_policy.require_uppercase"
-																value={values.password_policy.require_uppercase}
+																value={values?.password_policy?.require_uppercase}
 																onChange={(e) => setFieldValue("password_policy.require_uppercase", e.target.checked)}
 															/>
 															<ToggleCard
 																title="Require Special Characters"
 																description="Passwords must contain special characters"
 																name="password_policy.require_special_chars"
-																value={values.password_policy.require_special_chars}
+																value={values?.password_policy?.require_special_chars}
 																onChange={(e) => setFieldValue("password_policy.require_special_chars", e.target.checked)}
 															/>
 														</div>
+
 
 														<div className="max-w-md">
 															<InputField
 																name="password_policy.password_history_count"
 																label="Password History Count"
 																type="number"
-																value={values.password_policy.password_history_count}
+																value={values?.password_policy?.password_history_count}
 																onChange={(e) => setFieldValue("password_policy.password_history_count", parseInt(e.target.value))}
 															/>
 														</div>
+
 													</div>
 												</div>
 											</div>
@@ -584,27 +578,55 @@ const AuthConfigurationForm = () => {
 															<p className="font-lato text-[14px] text-[#6B7280]">Configure additional security layer</p>
 														</div>
 													</div>
-													
-													<div className="space-y-[24px]">
-														<ToggleCard
-															title="Require Two-Factor Authentication"
-															description="Make 2FA mandatory for all users"
-															name="two_factor_auth.required"
-															value={values.two_factor_auth.required}
-															onChange={(e) => setFieldValue("two_factor_auth.required", e.target.checked)}
-														>
-															<div className="max-w-2xl">
-																<MultiSelectChips
-																	name="two_factor_auth.allowedMethods"
-																	label="Allowed Two-Factor Methods"
-																	description="Select available methods for two-factor authentication"
-																	options={twoFactorMethodOptions}
-																	value={values.two_factor_auth.allowedMethods || []}
-																	onChange={(value) => setFieldValue("two_factor_auth.allowedMethods", value)}
-																/>
-															</div>
-														</ToggleCard>
-													</div>
+
+														<div className="space-y-[24px]">
+																<ToggleCard
+																	title="Require Two-Factor Authentication"
+																	description="Make 2FA mandatory for all users"
+																	name="two_factor_auth.required"
+																	value={values?.two_factor_auth?.required}
+																	onChange={(e) => setFieldValue("two_factor_auth.required", e.target.checked)}
+																>
+																	<div className="space-y-[24px]">
+																		
+																			<div className="max-w-2xl">
+																				<MultiSelectChips
+																					name="two_factor_auth.allowed_methods"
+																					label="Allowed Two-Factor Methods"
+																					description="Select available methods for two-factor authentication"
+																					options={twoFactorMethodOptions}
+																					value={values?.two_factor_auth?.allowed_methods || []}
+																					onChange={(value) => setFieldValue("two_factor_auth.allowed_methods", value)}
+																				/>
+																			</div>
+																		
+																		
+																		<div className="max-w-2xl">
+																			<InputField
+																				name="two_factor_auth.email_hook"
+																				label="Email Hook URL"
+																				description="Webhook URL for email-based two-factor authentication"
+																				type="url"
+																				placeholder="https://your-domain.com/email-2fa-hook"
+																				value={values?.two_factor_auth?.email_hook || ""}
+																				onChange={(e) => setFieldValue("two_factor_auth.email_hook", e.target.value)}
+																			/>
+																		</div>
+																		
+																		<div className="max-w-2xl">
+																			<InputField
+																				name="two_factor_auth.sms_hook"
+																				label="SMS Hook URL"
+																				description="Webhook URL for SMS-based two-factor authentication"
+																				type="url"
+																				placeholder="https://your-domain.com/sms-2fa-hook"
+																				value={values?.two_factor_auth?.sms_hook || ""}
+																				onChange={(e) => setFieldValue("two_factor_auth.sms_hook", e.target.value)}
+																			/>
+																		</div>
+																	</div>
+																</ToggleCard>
+														</div>
 												</div>
 											</div>
 										);

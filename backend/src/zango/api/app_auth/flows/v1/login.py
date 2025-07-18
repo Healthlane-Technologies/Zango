@@ -13,7 +13,7 @@ class AppLoginViewAPIV1(LoginView):
     def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         return get_api_response(
-            success=False,
+            success=True,
             response_content=json.loads(resp.content.decode("utf-8")),
             status=resp.status_code,
         )
@@ -54,7 +54,7 @@ class UserRoleViewAPIV1(APIView):
         request.session["role_id"] = role
         response = self.respond_next_stage()
         return get_api_response(
-            success=True if response.status_code == 200 else False,
+            success=True,
             response_content=json.loads(response.content.decode("utf-8")),
             status=response.status_code,
         )
