@@ -68,11 +68,11 @@ const PlatformAppRoutes = () => {
 					element={<AppUserManagementRoutes />}
 				/>
 				<Route
-					path="/app-settings//*"
-					element={<Navigate to="./app-configuration//*" />}
+					path="/app-settings/*"
+					element={<Navigate to="./app-configuration/*" />}
 				/>
 				<Route
-					path="/app-settings/app-configuration//*"
+					path="/app-settings/app-configuration/*"
 					element={<AppConfigurationRoutes />}
 				/>
 				<Route
@@ -103,13 +103,13 @@ const PlatformAppRoutes = () => {
 					path="/audit-logs/framework-objects-logs//*"
 					element={<AppFrameworkObjectsLogsRoutes />}
 				/>
-				<Route
-					path="*"
-					element={<Navigate to="./app-settings/app-configuration//*" />}
-				/>
 				<Route path="/access-logs//*" element={<AppAccessLogsRoutes />} />
 				<Route path="/Releases//*" element={<AppReleasesRoutes />} />
 				<Route path="/Secrets//*" element={<AppSecretsRoutes />} />
+				<Route
+					path="*"
+					element={<Navigate to="./app-settings/app-configuration/*" />}
+				/>
 			</Routes>
 		</Layout>
 	);

@@ -1,6 +1,7 @@
 import json
 
 from importlib import import_module
+from typing import Any, Dict, Literal, Optional, Union
 
 import phonenumbers
 import pytz
@@ -232,3 +233,115 @@ def get_app_secret(key=None, id=None):
         raise ValueError(f"Secret {sec.key} is inactive.")
 
     return sec.get_unencrypted_val()
+
+
+AuthLevel = Literal["user", "user_role", "tenant"]
+
+
+def get_auth_priority(
+    config_key: Optional[str] = None,
+    policy: Optional[str] = None,
+    request: Any = None,
+    user: Any = None,
+    user_role: Any = None,
+    tenant: Any = None,
+) -> Dict[str, Dict[str, Any]] | Union[str, int, bool, float]:
+    """
+    Check authentication priority for a configuration key across user, role, and tenant levels.
+    When policy is specified, merges the policy configurations across all levels.
+
+    Args:
+        config_key: The configuration key to check
+        policy: Optional policy name to check within auth configs
+        request: HTTP request object (auto-resolved if None)
+        user: User object (auto-resolved from request if None)
+        user_role: User role object (auto-resolved if None)
+        tenant: Tenant object (auto-resolved from request if None)
+
+    Returns:
+        If policy is specified:
+            - The merged policy configuration across all levels
+        If policy is not specified:
+            - The value of the configuration key from the first level that has it,
+              or an empty string if not found at any level
+    """
+
+    from zango.apps.appauth.models import UserRoleModel
+
+    if request is None:
+        request = get_current_request()
+    if user is None:
+        user = request.user
+    if user_role is None:
+        if getattr(request, "session", None):
+            if request.session.get("role_id"):
+                user_role = UserRoleModel.objects.get(id=request.session["role_id"])
+        else:
+            user_role = get_current_role()
+    if tenant is None:
+        tenant = request.tenant
+
+    user_auth_config = getattr(user, "auth_config", {})
+    user_role_auth_config = getattr(user_role, "auth_config", {}) if user_role else {}
+    tenant_auth_config = getattr(tenant, "auth_config", {})
+
+    if not config_key and not policy:
+        merged_policy = {}
+
+        merged_policy.update(tenant_auth_config)
+        merged_policy.update(user_role_auth_config)
+        merged_policy.update(user_auth_config)
+        return merged_policy
+
+    if policy:
+        merged_policy = {}
+
+        tenant_policy = tenant_auth_config.get(policy, {})
+        if tenant_policy:
+            merged_policy.update(tenant_policy)
+        user_role_policy = user_role_auth_config.get(policy, {})
+        if user_role_policy:
+            merged_policy.update(user_role_policy)
+        user_policy = user_auth_config.get(policy, {})
+        if user_policy:
+            merged_policy.update(user_policy)
+        return merged_policy
+    else:
+        auth_levels = [
+            ("user", user_auth_config),
+            ("user_role", user_role_auth_config),
+            ("tenant", tenant_auth_config),
+        ]
+
+        for level, config in auth_levels:
+            if config.get(config_key) is not None:
+                return config.get(config_key)
+
+        return ""
+
+
+def mask_email(email):
+    """Masks an email address, showing only the first and last character before the '@' and the domain."""
+    if "@" not in email:
+        return email
+
+    parts = email.split("@")
+    local_part = parts[0]
+    domain_part = parts[1]
+
+    if len(local_part) <= 2:
+        masked_local = "*" * len(local_part)
+    else:
+        masked_local = local_part[0] + "*" * (len(local_part) - 2) + local_part[-1]
+
+    return f"{masked_local}@{domain_part}"
+
+
+def mask_phone_number(phone_number):
+    """Masks a phone number, showing only the last four digits."""
+    digits_only = "".join(filter(str.isdigit, phone_number))
+
+    if len(digits_only) <= 4:
+        return "*" * len(digits_only)
+    else:
+        return "*" * (len(digits_only) - 4) + digits_only[-4:]

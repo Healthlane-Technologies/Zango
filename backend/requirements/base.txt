@@ -7,7 +7,7 @@ cookiecutter==2.3.0
 coverage==7.6.1
 crispy-bootstrap5==0.7
 cryptography==44.0.3
-django==4.2.15
+django==4.2.16
 django-axes==6.4.0
 django-cachalot==2.6.1
 django-celery-beat==2.5.0
@@ -28,6 +28,7 @@ django-smtp-ssl==1.0
 django-storages==1.14
 django-tenants==3.6.1
 djangorestframework==3.15.2
+fido2==2.0.0
 flake8==6.1.0
 flower==2.0.1
 GitPython==3.1.43
