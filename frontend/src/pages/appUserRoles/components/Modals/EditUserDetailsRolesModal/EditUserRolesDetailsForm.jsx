@@ -115,6 +115,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
             policies: appUserRolesFormData?.attached_policies?.map((eachApp) => eachApp.id) ?? [],
             // Only include auth_config properties if they exist in the existing data
             auth_config: {
+                redirect_url: existingAuthConfig?.redirect_url ?? '/frame/router',
                 two_factor_auth: {
                     required: existingAuthConfig?.two_factor_auth?.required ?? false,
                     allowedMethods: existingAuthConfig?.two_factor_auth?.allowedMethods ?? [],
@@ -161,6 +162,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
     let validationSchema = Yup.object({
         name: Yup.string().required('Required'),
         auth_config: Yup.object({
+            redirect_url: Yup.string().required('Required'),
             two_factor_auth: Yup.object({
                 required: Yup.boolean(),
                 allowedMethods: Yup.array().when('required', {
@@ -208,6 +210,9 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
     // Helper function to remove empty/default values from auth_config
     const cleanAuthConfig = (authConfig) => {
         const cleanedConfig = {};
+        
+        // Always include redirect_url
+        cleanedConfig.redirect_url = authConfig.redirect_url;
         
         // Handle two_factor_auth
         if (authConfig.two_factor_auth.required || authConfig.two_factor_auth.allowedMethods.length > 0) {
@@ -319,6 +324,17 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                                 id="name"
                                 placeholder="Enter role name"
                                 value={get(formik.values, 'name', '')}
+                                onChange={formik.handleChange}
+                                formik={formik}
+                            />
+
+                            <InputField
+                                key="auth_config.redirect_url"
+                                label="Redirect URL"
+                                name="auth_config.redirect_url"
+                                id="auth_config.redirect_url"
+                                placeholder="Enter redirect URL"
+                                value={get(formik.values, 'auth_config.redirect_url', '')}
                                 onChange={formik.handleChange}
                                 formik={formik}
                             />
