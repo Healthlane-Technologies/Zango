@@ -31,6 +31,7 @@ djangorestframework==3.15.2
 fido2==2.0.0
 flake8==6.1.0
 flower==2.0.1
+git+https://github.com/Healthlane-Technologies/django-allauth.git@feat/forgot_password
 GitPython==3.1.43
 loguru==0.7.2
 lxml==5.3.0
