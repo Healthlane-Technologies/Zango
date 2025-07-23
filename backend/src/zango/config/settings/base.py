@@ -70,6 +70,7 @@ TENANT_APPS = [
     # "cachalot",
     "axes",
     "django_recaptcha",
+    "allauth",
     "allauth.account",
     "allauth.headless",
     "allauth.mfa",

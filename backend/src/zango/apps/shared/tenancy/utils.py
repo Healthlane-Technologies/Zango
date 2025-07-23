@@ -7,8 +7,12 @@ from django_tenants.utils import schema_context
 
 class PasswordReset(TypedDict, total=False):
     enabled: Required[bool]
-    method: List[Literal["email", "sms", "both"]]
-    expiry_hours: int
+    allowed_methods: List[Literal["email", "sms"]]
+    by_code: bool
+    by_email: bool
+    login_after_reset: bool
+    expiry: int
+    max_attempts: int
     sms_hook: str
     email_hook: str
 

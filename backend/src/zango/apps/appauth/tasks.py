@@ -57,7 +57,7 @@ class OTPService:
     """Service class to handle OTP operations"""
 
     SUPPORTED_METHODS = {"email", "sms"}
-    SUPPORTED_OTP_TYPES = {"two_factor_auth", "login_code"}
+    SUPPORTED_OTP_TYPES = {"two_factor_auth", "login_code", "reset_password"}
     REQUEST_TIMEOUT = 30
 
     def __init__(self, config: OTPConfig):
@@ -213,6 +213,27 @@ class OTPService:
             url = self._get_service_url(sms_config, "sms")
             self._send_sms(message, url)
 
+    def _handle_reset_password(self) -> None:
+        password_policy = self._get_policy_config("password_policy")
+        password_reset_policy = password_policy.get("reset", {})
+        if not password_reset_policy.get("by_code", False):
+            return
+
+        if not self.config.code:
+            otp = generate_otp(self.config.otp_type, self.user)
+            message = f"{self.config.message} {otp}"
+        else:
+            message = f"{self.config.message} {self.config.code}"
+
+        if self.config.method == "email":
+            email_config = password_reset_policy.get("email", {})
+            url = self._get_service_url(email_config, "email")
+            self._send_email(message, url)
+        elif self.config.method == "sms":
+            sms_config = password_reset_policy.get("sms", {})
+            url = self._get_service_url(sms_config, "sms")
+            self._send_sms(message, url)
+
     def send_otp(self) -> Dict[str, Any]:
         """Main method to send OTP"""
         try:
@@ -226,7 +247,8 @@ class OTPService:
                 self._handle_two_factor_auth()
             elif self.config.otp_type == "login_code":
                 self._handle_login_code()
-
+            elif self.config.otp_type == "reset_password":
+                self._handle_reset_password()
             return {
                 "success": True,
                 "message": "OTP sent successfully",
@@ -244,9 +266,8 @@ class OTPService:
             }
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task
 def send_otp(
-    self,
     method: str,
     otp_type: str,
     message: str,
@@ -294,14 +315,114 @@ def send_otp(
     service = OTPService(config)
     result = service.send_otp()
 
-    # Retry logic for specific errors
-    if not result["success"] and result.get("error_type") in [
-        "TIMEOUT",
-        "REQUEST_ERROR",
-    ]:
-        try:
-            raise self.retry(countdown=60 * (2**self.request.retries))
-        except self.MaxRetriesExceededError:
-            result["message"] = "Failed to send OTP after multiple attempts"
-
     return result
+
+
+@shared_task
+def send_email(
+    to: str,
+    subject: str,
+    body: str,
+    tenant_id: int,
+    email_hook: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Simple celery task to send email.
+
+    Args:
+        to: Email recipient address
+        subject: Email subject
+        body: Email body content
+        tenant_id: ID of the tenant
+
+    Returns:
+        Dict containing success status and message
+    """
+    try:
+        # Setup tenant
+        tenant = TenantModel.objects.get(id=tenant_id)
+        connection.set_tenant(tenant)
+
+        # Setup request
+        request = get_mock_request()
+        request.META = {"HTTP_HOST": tenant.get_primary_domain()}
+
+        # Get email service URL
+        if not email_hook:
+            endpoint = "email/api/?action=send"
+            email_hook = get_package_url(request, endpoint, "communication")
+
+        # Send email
+        payload = {
+            "body": body,
+            "to": to,
+            "subject": subject,
+        }
+
+        response = requests.post(email_hook, data=payload, timeout=30)
+        response.raise_for_status()
+
+        return {
+            "success": True,
+            "message": "Email sent successfully",
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to send email: {str(e)}",
+        }
+
+
+@shared_task
+def send_sms(
+    to: str,
+    message: str,
+    tenant_id: int,
+    sms_hook: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Simple celery task to send SMS.
+
+    Args:
+        to: Phone number recipient
+        message: SMS message content
+        tenant_id: ID of the tenant
+        sms_hook: Optional SMS service URL
+
+    Returns:
+        Dict containing success status and message
+    """
+    try:
+        # Setup tenant
+        tenant = TenantModel.objects.get(id=tenant_id)
+        connection.set_tenant(tenant)
+
+        # Setup request
+        request = get_mock_request()
+        request.META = {"HTTP_HOST": tenant.get_primary_domain()}
+
+        # Get SMS service URL
+        if not sms_hook:
+            endpoint = "sms/api/?action=send"
+            sms_hook = get_package_url(request, endpoint, "communication")
+
+        # Send SMS
+        payload = {
+            "message": message,
+            "to": to,
+        }
+
+        response = requests.post(sms_hook, data=payload, timeout=30)
+        response.raise_for_status()
+
+        return {
+            "success": True,
+            "message": "SMS sent successfully",
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to send SMS: {str(e)}",
+        }
