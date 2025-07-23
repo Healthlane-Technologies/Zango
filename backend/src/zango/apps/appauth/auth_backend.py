@@ -25,12 +25,7 @@ class AppUserModelBackend(ModelBackend):
     ):
         if request and request.tenant.tenant_type == "app":
             try:
-                user = AppUserModel.objects.get(
-                    Q(email=username)
-                    | Q(mobile=username)
-                    | Q(email=email)
-                    | Q(mobile=phone)
-                )
+                user = AppUserModel.objects.get(Q(email=email) | Q(mobile=phone))
                 pwd_valid = user.check_password(password)
                 if pwd_valid and user.is_active:
                     return user

@@ -102,6 +102,7 @@ const AddNewUserRolesForm = ({ closeModal }) => {
     let initialValues = {
         name: '',
         policies: [],
+        redirect_url: '/frame/router',
         two_factor_auth: {
             required: false,
             allowedMethods: [],
@@ -120,6 +121,7 @@ const AddNewUserRolesForm = ({ closeModal }) => {
     // Updated validationSchema to make fields optional
     let validationSchema = Yup.object({
         name: Yup.string().required('Required'),
+        redirect_url: Yup.string().required('Required'),
         two_factor_auth: Yup.object({
             required: Yup.boolean(),
             allowedMethods: Yup.array().when('required', {
@@ -155,8 +157,10 @@ const AddNewUserRolesForm = ({ closeModal }) => {
     let onSubmit = (values) => {
         let tempValues = { ...values };
         
-        // Create auth_config object from two_factor_auth and password_policy
-        const auth_config = {};
+        // Create auth_config object from two_factor_auth, password_policy, and redirect_url
+        const auth_config = {
+            redirect_url: tempValues.redirect_url
+        };
         
         // Only include two_factor_auth if it's enabled or has custom settings
         if (tempValues.two_factor_auth.required || tempValues.two_factor_auth.allowedMethods.length > 0) {
@@ -180,10 +184,9 @@ const AddNewUserRolesForm = ({ closeModal }) => {
         // Remove the original fields and add auth_config
         delete tempValues.two_factor_auth;
         delete tempValues.password_policy;
+        delete tempValues.redirect_url;
         
-        if (Object.keys(auth_config).length > 0) {
-            tempValues.auth_config = auth_config;
-        }
+        tempValues.auth_config = auth_config;
 
         let dynamicFormData = transformToFormData(tempValues);
 
@@ -224,6 +227,16 @@ const AddNewUserRolesForm = ({ closeModal }) => {
                                 id="name"
                                 placeholder="Enter role name"
                                 value={get(formik.values, 'name', '')}
+                                onChange={formik.handleChange}
+                                formik={formik}
+                            />
+                            <InputField
+                                key="redirect_url"
+                                label="Redirect URL"
+                                name="redirect_url"
+                                id="redirect_url"
+                                placeholder="Enter redirect URL"
+                                value={get(formik.values, 'redirect_url', '')}
                                 onChange={formik.handleChange}
                                 formik={formik}
                             />

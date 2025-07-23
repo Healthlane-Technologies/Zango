@@ -1,7 +1,11 @@
 import json
 
 from allauth.account.stages import LoginStageController, SetPasswordStage
-from allauth.headless.account.views import ChangePasswordView, RequestPasswordResetView
+from allauth.headless.account.views import (
+    ChangePasswordView,
+    RequestPasswordResetView,
+    ResetPasswordView,
+)
 from allauth.headless.base import response
 from allauth.headless.base.views import APIView
 
@@ -9,11 +13,10 @@ from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
-from zango.apps.appauth.models import OldPasswords
 from zango.core.api import (
-    ZangoSessionAppAPIView,
     get_api_response,
 )
+from zango.core.utils import get_auth_priority
 
 from .forms import PasswordSetForm
 
@@ -60,25 +63,19 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
                     self.input.cleaned_data["current_password"],
                     self.input.cleaned_data["new_password"],
                 )
-
-                user = request.user
-
                 resp = super().post(request, *args, **kwargs)
-
+                resp_data = json.loads(resp.content.decode("utf-8"))
+                if resp.status_code == 401:
+                    resp_data["message"] = "Successfully changed password"
                 if resp.status_code != 401:
                     return get_api_response(
                         success=False,
-                        response_content=resp.content.decode("utf-8"),
+                        response_content=resp_data,
                         status=resp.status_code,
                     )
-
-                user.refresh_from_db()
-                obj = OldPasswords.objects.create(user=user)
-                obj.setPasswords(user.password)
-                obj.save()
                 success = True
                 status = 200
-                return get_api_response(success, resp.content.decode("utf-8"), status)
+                return get_api_response(success, resp_data, status)
             except ValidationError as e:
                 response = {"message": e.message}
             if success:
@@ -123,5 +120,56 @@ class SetPasswordViewAPIV1(APIView):
         )
 
 
-class RequestResetPasswordViewAPIV1(ZangoSessionAppAPIView, RequestPasswordResetView):
-    pass
+class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
+    def post(self, request, *args, **kwargs):
+        resp = super().post(request, *args, **kwargs)
+        data = json.loads(resp.content.decode("utf-8"))
+        password_policy = get_auth_priority(policy="password_policy", request=request)
+        password_reset_policy = password_policy.get("reset", {})
+        if password_reset_policy.get("by_code", False):
+            data["message"] = (
+                "Password reset code has been sent to your email/phone number"
+            )
+        else:
+            data["message"] = "Password reset link has been sent to your email address"
+        return get_api_response(
+            success=True if resp.status_code == 200 else False,
+            response_content=data,
+            status=resp.status_code,
+        )
+
+
+class ResetPasswordViewAPIV1(ResetPasswordView, PasswordValidationMixin):
+    def get(self, request, *args, **kwargs):
+        resp = super().get(request, *args, **kwargs)
+        resp_data = json.loads(resp.content.decode("utf-8"))
+        if not resp_data.get("data"):
+            resp_data["data"] = {}
+        password_policy = get_auth_priority(policy="password_policy")
+        if resp.status_code == 200:
+            resp_data["data"]["metadata"] = {"password_policy": password_policy}
+        return get_api_response(
+            success=True if resp.status_code == 200 else False,
+            response_content=resp_data,
+            status=resp.status_code,
+        )
+
+    def post(self, request, *args, **kwargs):
+        resp = super().post(request, *args, **kwargs)
+        resp_data = json.loads(resp.content.decode("utf-8"))
+        if not resp_data.get("data"):
+            resp_data["data"] = {}
+        login_methods = get_auth_priority(policy="login_methods", request=request)
+        if resp.status_code == 401 and not resp_data["data"].get("next_step"):
+            resp_data["data"]["next_step"] = {
+                "id": "login",
+                "is_pending": True,
+                "metadata": {"login_methods": login_methods},
+            }
+        return get_api_response(
+            success=True
+            if resp.status_code == 200 or resp.status_code == 401
+            else False,
+            response_content=resp_data,
+            status=resp.status_code,
+        )

@@ -109,6 +109,11 @@ const AuthConfigurationForm = () => {
 		{ id: "phone", label: "Phone Number" },
 	];
 
+	const passwordResetOptions = [
+		{ id: "email", label: "Email" },
+		{ id: "sms", label: "SMS" },
+	]
+
 	const loginOTPMethodOptions = [
 		{ id: "email", label: "Email" },
 		{ id: "sms", label: "SMS" },
@@ -119,7 +124,7 @@ const AuthConfigurationForm = () => {
 		{ id: "sms", label: "SMS" },
 	];
 
-	const MultiSelectChips = ({ label, name, options, value, onChange, description }) => (
+	const MultiSelectChips = ({ label, name, options, value, onChange, description, disabledOptions = [], requiredOptions = [] }) => (
 		<div className="space-y-[16px]">
 			<div>
 				<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] mb-[4px] block">
@@ -134,11 +139,17 @@ const AuthConfigurationForm = () => {
 			<div className="flex flex-wrap gap-[12px]">
 				{options.map((option) => {
 					const isSelected = Array.isArray(value) ? value.includes(option.id) : value === option.id;
+					const isDisabled = disabledOptions.includes(option.id);
+					const isRequired = requiredOptions.includes(option.id);
+					const cannotUnselect = isRequired && isSelected;
 					return (
 						<button
 							key={option.id}
 							type="button"
+							disabled={isDisabled}
 							onClick={() => {
+								if (isDisabled) return;
+								if (cannotUnselect) return; // Prevent unselecting required options
 								const currentValue = Array.isArray(value) ? value : [value];
 								const newValue = isSelected
 									? currentValue.filter(v => v !== option.id)
@@ -146,7 +157,11 @@ const AuthConfigurationForm = () => {
 								onChange(newValue);
 							}}
 							className={`relative px-[20px] py-[12px] rounded-[10px] border-2 font-lato text-[14px] font-medium transition-all duration-200 flex items-center gap-[8px] transform hover:scale-[1.02] ${
-								isSelected
+								isDisabled
+									? 'border-[#E5E7EB] bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed opacity-50'
+									: cannotUnselect
+									? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg cursor-not-allowed'
+									: isSelected
 									? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg'
 									: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC] hover:shadow-md'
 							}`}
@@ -378,16 +393,75 @@ const AuthConfigurationForm = () => {
 																	<ToggleCard
 																		title="Forgot Password"
 																		description="Enable password reset functionality"
-																		name="login_methods.password.forgot_password_enabled"
-																		value={values?.login_methods?.password?.forgot_password_enabled}
-																		onChange={(e) => setFieldValue("login_methods.password.forgot_password_enabled", e.target.checked)}
+																		name="password_policy.reset.enabled"
+																		value={values?.password_policy?.reset?.enabled}
+																		onChange={(e) => setFieldValue("password_policy.reset.enabled", e.target.checked)}
 																	>
+																		<div className="space-y-[16px]">
+																			<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] mb-[4px] block">
+																				Reset Method Type
+																			</label>
+																			<div className="flex gap-[12px]">
+																				<button
+																					type="button"
+																					onClick={() => {
+																						setFieldValue("password_policy.reset.by_code", true);
+																						setFieldValue("password_policy.reset.by_email", false);
+																					}}
+																					className={`px-[20px] py-[12px] rounded-[10px] border-2 font-lato text-[14px] font-medium transition-all duration-200 flex items-center gap-[8px] transform hover:scale-[1.02] ${
+																						values?.password_policy?.reset?.by_code === true
+																							? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg'
+																							: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC] hover:shadow-md'
+																					}`}
+																				>
+																					Code
+																				</button>
+																				<button
+																					type="button"
+																					onClick={() => {
+																						setFieldValue("password_policy.reset.by_email", true);
+																						setFieldValue("password_policy.reset.by_code", false);
+																						// When link is selected, ensure email is selected and remove SMS
+																						setFieldValue("password_policy.reset.allowed_methods", ["email"]);
+																					}}
+																					className={`px-[20px] py-[12px] rounded-[10px] border-2 font-lato text-[14px] font-medium transition-all duration-200 flex items-center gap-[8px] transform hover:scale-[1.02] ${
+																						values?.password_policy?.reset?.by_email === true
+																							? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg'
+																							: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC] hover:shadow-md'
+																					}`}
+																				>
+																					Link
+																				</button>
+																			</div>
+																			<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
+																				Choose whether users receive a code to enter or a direct reset link
+																			</p>
+																		</div>
 																		<InputField
-																			name="login_methods.password.password_reset_link_expiry_hours"
-																			label="Reset Link Expiry (Hours)"
+																			name="password_policy.reset.expiry"
+																			label="Reset Link Expiry (Seconds)"
 																			type="number"
-																			value={values?.login_methods?.password?.password_reset_link_expiry_hours}
-																			onChange={(e) => setFieldValue("login_methods.password.password_reset_link_expiry_hours", parseInt(e.target.value))}
+																			value={values?.password_policy?.reset?.expiry}
+																			onChange={(e) => setFieldValue("password_policy.reset.expiry", parseInt(e.target.value))}
+																		/>
+																		<MultiSelectChips
+																			name="password_policy.reset.allowed_methods"
+																			label="Password reset methods"
+																			description="Select the method which user can use to get forgot password code/link"
+																			options={passwordResetOptions}
+																			value={values?.password_policy?.reset?.allowed_methods || []}
+																			onChange={(value) => {
+																				setFieldValue("password_policy.reset.allowed_methods", value);
+																			}}
+																			disabledOptions={values?.password_policy?.reset?.by_email === true ? ["sms"] : []}
+																			requiredOptions={values?.password_policy?.reset?.by_email === true ? ["email"] : []}
+																		/>
+																		<ToggleCard
+																			title="Login After Reset"
+																			description="Automatically log in users after successful password reset"
+																			name="password_policy.reset.login_after_reset"
+																			value={values?.password_policy?.reset?.login_after_reset}
+																			onChange={(e) => setFieldValue("password_policy.reset.login_after_reset", e.target.checked)}
 																		/>
 																	</ToggleCard>
 																	
