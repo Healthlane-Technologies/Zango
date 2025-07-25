@@ -1,7 +1,7 @@
 import json
 
+from allauth.headless.base.views import APIView
 from allauth.headless.mfa.views import AuthenticateView
-from rest_framework.views import APIView
 
 from zango.apps.appauth.tasks import send_otp
 from zango.core.api import get_api_response
@@ -20,6 +20,7 @@ class GetMFACodeViewAPIV1(APIView):
             return None
 
     def get(self, request, *args, **kwargs):
+        print("request session is ", request.session.items())
         policy = get_auth_priority(policy="two_factor_auth", request=request)
         if not policy.get("required"):
             return get_api_response(
