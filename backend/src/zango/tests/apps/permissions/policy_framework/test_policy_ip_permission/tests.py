@@ -1,11 +1,9 @@
 import os
 
-from django_tenants.utils import schema_context
-from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
-from django.db import connection
+
 from zango.apps.permissions.models import PolicyModel
-from zango.apps.dynamic_models.workspace.base import Workspace
+from zango.test.cases import ZangoAppBaseTestCase
 from zango.test.client import ZangoClient
 
 
@@ -25,7 +23,6 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
         )
 
     def test_role_ip_permissions(self):
-
         # self.sync_policies()
         # delete the all ip view policy as we have to check for specific IPs.
         PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
@@ -42,7 +39,6 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
         self.assertEqual(res.status_code, 403)
 
     def test_cidr_ip_permissions(self):
-
         # self.sync_policies()
         # delete the all ip view policy as we have to check for specific IPs.
         PolicyModel.objects.get(name="AllIPGetViewAccess").delete()
@@ -59,7 +55,6 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
         self.assertEqual(res.status_code, 403)
 
     def test_all_ip_permissions(self):
-
         # self.sync_policies()
 
         self.client = ZangoClient(self.tenant)

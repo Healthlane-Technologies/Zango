@@ -1,11 +1,12 @@
 import os
-from django.http import HttpResponseRedirect
 
+from django.conf import settings
+from django.http import HttpResponseRedirect
+from django.test import override_settings
+
+from zango.cli.start_project import create_platform_user
 from zango.test.cases import ZangoTestCase
 from zango.test.client import ZangoClient
-from django.test import override_settings
-from django.conf import settings
-from zango.cli.start_project import create_platform_user
 
 
 @override_settings(ROOT_URLCONF="zango.tests.test_client.urls")
@@ -13,11 +14,10 @@ class ZangoPlatformLoginTests(ZangoTestCase):
     """
     This test class is configured to use public tenant.
     """
+
     @classmethod
     def get_test_module_path(self):
-        return os.path.join(
-            "apps/appauth/test_platform_login"
-        )
+        return os.path.join("apps/appauth/test_platform_login")
 
     @classmethod
     def setup_tenant(cls, tenant):
@@ -72,6 +72,7 @@ class ZangoPlatformLoginTests(ZangoTestCase):
     def test_client_login(self):
         self.client = ZangoClient(self.tenant)
         res = self.client.login(
-            username="test_user@gmail.com", password="Testpassword@123" #pragma: allowlist secret
+            username="test_user@gmail.com",
+            password="Testpassword@123",  # pragma: allowlist secret
         )
         self.assertTrue(res)

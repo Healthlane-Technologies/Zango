@@ -1,12 +1,12 @@
 import os
 
 from django_tenants.utils import schema_context
-from zango.test.cases import ZangoAppBaseTestCase
+
 from django.test import override_settings
+
 from zango.apps.appauth.models import UserRoleModel
 from zango.apps.permissions.models import PolicyModel
-from django.db import connection
-from zango.apps.dynamic_models.workspace.base import Workspace
+from zango.test.cases import ZangoAppBaseTestCase
 
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
@@ -20,7 +20,6 @@ class RolePolicyMappingTest(ZangoAppBaseTestCase):
         )
 
     def test_multi_role_with_one_policy_mapping(self):
-
         expected_role_names = ["test_role_1", "test_role_2"]
         expected_policy_name = "CustomerGetViewAccess"
         UserRoleModel.objects.create(name="test_role_1")

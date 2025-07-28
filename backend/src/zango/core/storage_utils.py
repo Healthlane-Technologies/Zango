@@ -50,7 +50,7 @@ def validate_file_extension(value):
         ".zip",
         ".ico",
         ".mp4",
-        ".webm"
+        ".webm",
     ]
     if ext.lower() not in valid_extensions:
         raise ValidationError(
