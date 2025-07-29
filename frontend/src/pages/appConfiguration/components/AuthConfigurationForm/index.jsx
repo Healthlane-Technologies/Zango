@@ -250,6 +250,97 @@ const AuthConfigurationForm = () => {
 		</div>
 	);
 
+	const KeyValuePairs = ({ label, name, value, onChange, description }) => {
+		const dictionary = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+		const pairs = Object.entries(dictionary).map(([key, val]) => ({ key, value: val }));
+
+		const addPair = () => {
+			const newPairs = [...pairs, { key: '', value: '' }];
+			const newDictionary = {};
+			newPairs.forEach(pair => {
+				newDictionary[pair.key] = pair.value;
+			});
+			onChange(newDictionary);
+		};
+
+		const removePair = (index) => {
+			const newPairs = pairs.filter((_, i) => i !== index);
+			const newDictionary = {};
+			newPairs.forEach(pair => {
+				if (pair.key !== '') {
+					newDictionary[pair.key] = pair.value;
+				}
+			});
+			onChange(newDictionary);
+		};
+
+		const updatePair = (index, field, newValue) => {
+			const newPairs = [...pairs];
+			newPairs[index] = { ...newPairs[index], [field]: newValue };
+			const newDictionary = {};
+			newPairs.forEach(pair => {
+				if (pair.key !== '') {
+					newDictionary[pair.key] = pair.value;
+				}
+			});
+			onChange(newDictionary);
+		};
+
+		return (
+			<div className="space-y-[16px]">
+				<div>
+					<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] mb-[4px] block">
+						{label}
+					</label>
+					{description && (
+						<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
+							{description}
+						</p>
+					)}
+				</div>
+				<div className="space-y-[12px]">
+					{pairs.map((pair, index) => (
+						<div key={index} className="flex gap-[12px] items-center">
+							<input
+								type="text"
+								placeholder="Key"
+								value={pair.key || ''}
+								onChange={(e) => updatePair(index, 'key', e.target.value)}
+								className="flex-1 px-[12px] py-[8px] border-2 border-[#E5E7EB] rounded-[8px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200"
+							/>
+							<input
+								type="text"
+								placeholder="Value"
+								value={pair.value || ''}
+								onChange={(e) => updatePair(index, 'value', e.target.value)}
+								className="flex-1 px-[12px] py-[8px] border-2 border-[#E5E7EB] rounded-[8px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200"
+							/>
+							<button
+								type="button"
+								onClick={() => removePair(index)}
+								className="px-[12px] py-[8px] bg-[#EF4444] text-white rounded-[8px] hover:bg-[#DC2626] transition-all duration-200 flex items-center justify-center"
+							>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								</svg>
+							</button>
+						</div>
+					))}
+					<button
+						type="button"
+						onClick={addPair}
+						className="w-full px-[16px] py-[12px] border-2 border-dashed border-[#D1D5DB] text-[#6B7280] rounded-[8px] hover:border-[#5048ED] hover:text-[#5048ED] transition-all duration-200 flex items-center justify-center gap-[8px] font-medium"
+					>
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+						</svg>
+						Add Key-Value Pair
+					</button>
+				</div>
+			</div>
+		);
+	};
+
 	const [activeTab, setActiveTab] = useState("login");
 
 	const tabs = [
@@ -456,6 +547,85 @@ const AuthConfigurationForm = () => {
 																			disabledOptions={values?.password_policy?.reset?.by_email === true ? ["sms"] : []}
 																			requiredOptions={values?.password_policy?.reset?.by_email === true ? ["email"] : []}
 																		/>
+																		{(values?.password_policy?.reset?.by_email === true || values?.password_policy?.reset?.by_code === true) && values?.password_policy?.reset?.allowed_methods?.includes("email") && (
+																			<div className="space-y-[16px]">
+																				<InputField
+																					name="password_policy.reset.email_subject"
+																					label="Email Subject"
+																					type="text"
+																					placeholder="Enter the subject line for password reset emails"
+																					value={values?.password_policy?.reset?.email_subject || ''}
+																					onChange={(e) => setFieldValue("password_policy.reset.email_subject", e.target.value)}
+																				/>
+																				<div className="space-y-[8px]">
+																					<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
+																						Email Content
+																					</label>
+																					<textarea
+																						name="password_policy.reset.email_content"
+																						className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
+																						placeholder={values?.password_policy?.reset?.by_code 
+																							? "Enter the email content with {code} variable. Example: Your password reset code is: {code}" 
+																							: "Enter the email content with {reset_url} variable. Example: Click here to reset your password: {reset_url}"}
+																						value={values?.password_policy?.reset?.email_content || ''}
+																						onChange={(e) => setFieldValue("password_policy.reset.email_content", e.target.value)}
+																					/>
+																					<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
+																						This content will be included in the password reset email sent to users. 
+																						{values?.password_policy?.reset?.by_code 
+																							? " Use {code} to include the reset code." 
+																							: " Use {reset_url} to include the reset link."}
+																					</p>
+																				</div>
+																				<InputField
+																					name="password_policy.reset.email_config_key"
+																					label="Email Config Key"
+																					type="text"
+																					placeholder="Enter email configuration key"
+																					value={values?.password_policy?.reset?.email_config_key || ''}
+																					onChange={(e) => setFieldValue("password_policy.reset.email_config_key", e.target.value)}
+																				/>
+																			</div>
+																		)}
+																		{values?.password_policy?.reset?.allowed_methods?.includes("sms") && (
+																			<div className="space-y-[16px]">
+																				<div className="space-y-[8px]">
+																					<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
+																						SMS Content
+																					</label>
+																					<textarea
+																						name="password_policy.reset.sms_content"
+																						className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
+																						placeholder={values?.password_policy?.reset?.by_code 
+																							? "Enter the SMS content with {code} variable. Example: Your password reset code is: {code}" 
+																							: "Enter the SMS content with {reset_url} variable. Example: Reset your password: {reset_url}"}
+																						value={values?.password_policy?.reset?.sms_content || ''}
+																						onChange={(e) => setFieldValue("password_policy.reset.sms_content", e.target.value)}
+																					/>
+																					<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
+																						This content will be included in the password reset SMS sent to users. 
+																						{values?.password_policy?.reset?.by_code 
+																							? " Use {code} to include the reset code." 
+																							: " Use {reset_url} to include the reset link."}
+																					</p>
+																				</div>
+																				<KeyValuePairs
+																					name="password_policy.reset.sms_extra_data"
+																					label="SMS Extra Data"
+																					description="Additional key-value pairs to include in the SMS payload"
+																					value={values?.password_policy?.reset?.sms_extra_data || {}}
+																					onChange={(value) => setFieldValue("password_policy.reset.sms_extra_data", value)}
+																				/>
+																				<InputField
+																					name="password_policy.reset.sms_config_key"
+																					label="SMS Config Key"
+																					type="text"
+																					placeholder="Enter SMS configuration key"
+																					value={values?.password_policy?.reset?.sms_config_key || ''}
+																					onChange={(e) => setFieldValue("password_policy.reset.sms_config_key", e.target.value)}
+																				/>
+																			</div>
+																		)}
 																		<ToggleCard
 																			title="Login After Reset"
 																			description="Automatically log in users after successful password reset"
@@ -485,6 +655,75 @@ const AuthConfigurationForm = () => {
 																		value={values?.login_methods?.otp?.allowed_methods || []}
 																		onChange={(value) => setFieldValue("login_methods.otp.allowed_methods", value)}
 																	/>
+																	{values?.login_methods?.otp?.allowed_methods?.includes("email") && (
+																		<div className="space-y-[16px]">
+																			<InputField
+																				name="login_methods.otp.email_subject"
+																				label="Email Subject"
+																				type="text"
+																				placeholder="Enter the subject line for OTP emails"
+																				value={values?.login_methods?.otp?.email_subject || ''}
+																				onChange={(e) => setFieldValue("login_methods.otp.email_subject", e.target.value)}
+																			/>
+																			<div className="space-y-[8px]">
+																				<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
+																					Email Content
+																				</label>
+																				<textarea
+																					name="login_methods.otp.email_content"
+																					className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
+																					placeholder="Enter the email content with {code} variable. Example: Your login code is: {code}"
+																					value={values?.login_methods?.otp?.email_content || ''}
+																					onChange={(e) => setFieldValue("login_methods.otp.email_content", e.target.value)}
+																				/>
+																				<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
+																					This content will be included in the OTP email sent to users. Use {'{code}'} to include the OTP code.
+																				</p>
+																			</div>
+																			<InputField
+																				name="login_methods.otp.email_config_key"
+																				label="Email Config Key"
+																				type="text"
+																				placeholder="Enter email configuration key"
+																				value={values?.login_methods?.otp?.email_config_key || ''}
+																				onChange={(e) => setFieldValue("login_methods.otp.email_config_key", e.target.value)}
+																			/>
+																		</div>
+																	)}
+																	{values?.login_methods?.otp?.allowed_methods?.includes("sms") && (
+																		<div className="space-y-[16px]">
+																			<div className="space-y-[8px]">
+																				<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
+																					SMS Content
+																				</label>
+																				<textarea
+																					name="login_methods.otp.sms_content"
+																					className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
+																					placeholder="Enter the SMS content with {code} variable. Example: Your login code is: {code}"
+																					value={values?.login_methods?.otp?.sms_content || ''}
+																					onChange={(e) => setFieldValue("login_methods.otp.sms_content", e.target.value)}
+																				/>
+																				<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
+																					This content will be included in the OTP SMS sent to users. Use {'{code}'} to include the OTP code.
+																				</p>
+																			</div>
+																			<KeyValuePairs
+																				name="login_methods.otp.sms_extra_data"
+																				label="SMS Extra Data"
+																				description="Additional key-value pairs to include in the SMS payload"
+																				value={values?.login_methods?.otp?.sms_extra_data || {}}
+																				onChange={(value) => setFieldValue("login_methods.otp.sms_extra_data", value)}
+																			/>
+																			<InputField
+																				name="login_methods.otp.sms_config_key"
+																				label="SMS Config Key"
+																				type="text"
+																				placeholder="Enter SMS configuration key"
+																				value={values?.login_methods?.otp?.sms_config_key || ''}
+																				onChange={(e) => setFieldValue("login_methods.otp.sms_config_key", e.target.value)}
+																			/>
+																		</div>
+																	)}
 																</ToggleCard>
 
 															</div>

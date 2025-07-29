@@ -1,3 +1,5 @@
+import json
+
 from typing import Any, Dict, Optional
 
 import requests
@@ -33,6 +35,9 @@ class OTPConfig:
         user_role_id: Optional[int] = None,
         subject: Optional[str] = None,
         code: Optional[str] = None,
+        hook: Optional[str] = None,
+        config_key: Optional[str] = None,
+        extra_data: Optional[Dict[str, Any]] = None,
     ):
         self.method = method
         self.otp_type = otp_type
@@ -45,6 +50,9 @@ class OTPConfig:
         self.user_role_id = user_role_id
         self.subject = subject
         self.code = code
+        self.hook = hook
+        self.config_key = config_key
+        self.extra_data = extra_data
 
 
 class OTPSendError(Exception):
@@ -138,6 +146,10 @@ class OTPService:
             "subject": self.config.subject or "OTP Verification",
         }
 
+        # Add config_key if specified
+        if self.config.config_key:
+            payload["config_key"] = self.config.config_key
+
         try:
             response = requests.post(url, data=payload, timeout=self.REQUEST_TIMEOUT)
             response.raise_for_status()
@@ -153,6 +165,16 @@ class OTPService:
 
         payload = {"message": message, "to": str(self.user.mobile)}
 
+        # Add config_key if specified
+        if self.config.config_key:
+            payload["key"] = self.config.config_key
+
+        # Add extra_data if specified
+        if self.config.extra_data:
+            if isinstance(self.config.extra_data, str):
+                self.config.extra_data = json.loads(self.config.extra_data)
+            payload["extra_data"] = self.config.extra_data
+
         try:
             response = requests.post(url, data=payload, timeout=self.REQUEST_TIMEOUT)
             response.raise_for_status()
@@ -163,6 +185,11 @@ class OTPService:
 
     def _get_service_url(self, method_config: Dict[str, Any], service_type: str) -> str:
         """Get service URL for email or SMS"""
+        # Use hook if provided
+        if self.config.hook:
+            return self.config.hook
+
+        # Otherwise, use URL from method config or generate default
         url = method_config.get("url")
         if not url:
             endpoint = f"{service_type}/api/?action=send"
@@ -178,9 +205,9 @@ class OTPService:
 
         if not self.config.code:
             otp = generate_otp(self.config.otp_type, self.user)
-            message = f"{self.config.message} {otp}"
+            message = self.config.message.format(code=otp)
         else:
-            message = f"{self.config.message} {self.config.code}"
+            message = self.config.message.format(code=self.config.code)
 
         if self.config.method == "email":
             email_config = policy.get("email", {})
@@ -257,12 +284,22 @@ class OTPService:
             }
 
         except OTPSendError as e:
-            return {"success": False, "message": str(e), "error_type": "OTP_SEND_ERROR"}
+            import traceback
+
+            return {
+                "success": False,
+                "message": str(e),
+                "error_type": "OTP_SEND_ERROR",
+                "traceback": traceback.format_exc(),
+            }
         except Exception as e:
+            import traceback
+
             return {
                 "success": False,
                 "message": "An unexpected error occurred while sending OTP",
                 "error_type": "UNEXPECTED_ERROR",
+                "traceback": traceback.format_exc(),
             }
 
 
@@ -279,6 +316,9 @@ def send_otp(
     user_role_id: Optional[int] = None,
     subject: Optional[str] = None,
     code: Optional[str] = None,
+    config_key: Optional[str] = None,
+    hook: Optional[str] = None,
+    extra_data: Optional[Dict[Any, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Celery task to send OTP via email or SMS.
@@ -310,6 +350,9 @@ def send_otp(
         user_role_id=user_role_id,
         subject=subject,
         code=code,
+        hook=hook,
+        config_key=config_key,
+        extra_data=extra_data,
     )
 
     service = OTPService(config)
@@ -325,6 +368,7 @@ def send_email(
     body: str,
     tenant_id: int,
     email_hook: Optional[str] = None,
+    config_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Simple celery task to send email.

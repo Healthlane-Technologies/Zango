@@ -15,6 +15,12 @@ class PasswordReset(TypedDict, total=False):
     max_attempts: int
     sms_hook: str
     email_hook: str
+    email_content: str
+    email_subject: str
+    email_config_key: str
+    sms_template_id: str
+    sms_config_key: str
+    sms_extra_data: str
 
 
 class PasswordPolicy(TypedDict):
@@ -49,6 +55,12 @@ class OTPLoginMethod(TypedDict, total=False):
     allowed_methods: List[Literal["sms", "email"]]
     email_hook: str
     sms_hook: str
+    email_content: str
+    email_subject: str
+    email_config_key: str
+    sms_template_id: str
+    sms_config_key: str
+    sms_extra_data: str
 
 
 class LoginMethods(TypedDict):
@@ -92,8 +104,8 @@ DEFAULT_AUTH_CONFIG: AuthConfigSchema = {
         "allow_change": True,
         "reset": {
             "enabled": True,
-            "method": ["email"],
-            "expiry_hours": 2,
+            "allowed_methods": ["email"],
+            "expiry": 7200,
         },
     },
     "login_methods": {
