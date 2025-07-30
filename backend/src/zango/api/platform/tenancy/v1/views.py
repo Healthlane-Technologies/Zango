@@ -516,6 +516,12 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
             success = creation_result["success"]
             result = {"message": creation_result["message"]}
             status = 200 if success else 400
+
+        except ValidationError as e:
+            result = {"message": str(e)}
+            status = 400
+            success = False
+
         except Exception as e:
             result = {"message": str(e)}
             status = 500
