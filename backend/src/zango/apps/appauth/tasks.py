@@ -397,7 +397,9 @@ def send_email(
             email_hook = get_package_url(request, endpoint, "communication")
 
         # Send email
-        payload = {"body": body, "to": to, "subject": subject, "config_key": config_key}
+        payload = {"body": body, "to": to, "subject": subject}
+        if config_key:
+            payload["config_key"] = config_key
 
         response = requests.post(email_hook, data=payload, timeout=30)
         response.raise_for_status()

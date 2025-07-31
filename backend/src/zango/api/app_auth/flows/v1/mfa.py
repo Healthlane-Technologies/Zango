@@ -71,7 +71,7 @@ class GetMFACodeViewAPIV1(APIView):
                         tenant_id=request.tenant.id,
                         request_data=request_data,
                         user_role_id=request.session.get("role_id"),
-                        message="Your 2FA code is",
+                        message="Your 2FA code is {code}",
                     )
                 else:
                     user = self.get_user(latest_auth_method.get("phone"))
