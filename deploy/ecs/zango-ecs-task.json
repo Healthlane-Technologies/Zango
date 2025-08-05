@@ -1,0 +1,313 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "zango-app",
+            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-base-project:latest",
+            "cpu": 512,
+            "memory": 1024,
+            "portMappings": [
+                {
+                    "name": "zango-app-8000-tcp",
+                    "containerPort": 8000,
+                    "hostPort": 0,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_SECRET_NAME",
+                    "value": "zango-test-secret"
+                }
+            ],
+            "mountPoints": [
+                {
+                    "sourceVolume": "static_volume",
+                    "containerPath": "/zango/zango_project/static"
+                },
+                {
+                    "sourceVolume": "media_volume",
+                    "containerPath": "/zango/zango_project/media"
+                },
+                {
+                    "sourceVolume": "app_volume",
+                    "containerPath": "/zango/zango_project/workspaces"
+                },
+                {
+                    "sourceVolume": "logs_volume",
+                    "containerPath": "/zango/zango_project/logs"
+                }
+            ],
+            "volumesFrom": [],
+            "dependsOn": [
+                {
+                    "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/zango",
+                    "awslogs-region": "ap-south-1"
+                },
+                "secretOptions": []
+            },
+            "healthCheck": {
+                "command": [
+                    "CMD-SHELL",
+                    "netstat -ltn | grep -q 8000"
+                ],
+                "interval": 30,
+                "timeout": 5,
+                "retries": 3,
+                "startPeriod": 60
+            },
+            "systemControls": []
+        },
+        {
+            "name": "nginx",
+            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-nginx:latest",
+            "cpu": 256,
+            "memory": 1024,
+            "portMappings": [
+                {
+                    "name": "nginx-1443-tcp",
+                    "containerPort": 1443,
+                    "hostPort": 443,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "mountPoints": [
+                {
+                    "sourceVolume": "static_volume",
+                    "containerPath": "/zango/zango_project/static",
+                    "readOnly": true
+                },
+                {
+                    "sourceVolume": "media_volume",
+                    "containerPath": "/zango/zango_project/media",
+                    "readOnly": true
+                }
+            ],
+            "volumesFrom": [],
+            "dependsOn": [
+                {
+                    "containerName": "zango-app",
+                    "condition": "HEALTHY"
+                },
+                {
+                    "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/zango",
+                    "awslogs-region": "ap-south-1"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        },
+        {
+            "name": "celery",
+            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-nginx:latest",
+            "cpu": 512,
+            "memory": 1024,
+            "portMappings": [],
+            "essential": false,
+            "entryPoint": [
+                "/bin/sh",
+                "-c",
+                "cd zango_project && celery -A zango_project worker -l info"
+            ],
+            "environment": [],
+            "mountPoints": [
+                {
+                    "sourceVolume": "app_volume",
+                    "containerPath": "/zango/zango_project/workspaces"
+                },
+                {
+                    "sourceVolume": "logs_volume",
+                    "containerPath": "/zango/zango_project/logs"
+                }
+            ],
+            "volumesFrom": [],
+            "dependsOn": [
+                {
+                    "containerName": "zango-app",
+                    "condition": "HEALTHY"
+                },
+                {
+                    "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/zango",
+                    "awslogs-region": "ap-south-1"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        },
+        {
+            "name": "celery-beat",
+            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-nginx:latest",
+            "cpu": 512,
+            "memory": 256,
+            "portMappings": [],
+            "essential": false,
+            "entryPoint": [
+                "/bin/sh",
+                "-c",
+                "cd zango_project && single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+            ],
+            "environment": [],
+            "mountPoints": [
+                {
+                    "sourceVolume": "app_volume",
+                    "containerPath": "/zango/zango_project/workspaces"
+                },
+                {
+                    "sourceVolume": "logs_volume",
+                    "containerPath": "/zango/zango_project/logs"
+                }
+            ],
+            "volumesFrom": [],
+            "dependsOn": [
+                {
+                    "containerName": "zango-app",
+                    "condition": "HEALTHY"
+                },
+                {
+                    "containerName": "celery",
+                    "condition": "START"
+                },
+                {
+                    "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/zango",
+                    "awslogs-region": "ap-south-1"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        },
+        {
+            "name": "change-vol-ownership",
+            "image": "alpine:3.22.1",
+            "cpu": 128,
+            "memory": 256,
+            "portMappings": [],
+            "essential": false,
+            "entryPoint": [
+                "chown",
+                "-R",
+                "2048:2048",
+                "/tmp/change-app-ownership",
+                "/tmp/change-static-ownership",
+                "/tmp/change-media-ownership",
+                "/tmp/change-logs-ownership"
+            ],
+            "environment": [],
+            "mountPoints": [
+                {
+                    "sourceVolume": "app_volume",
+                    "containerPath": "/tmp/change-app-ownership"
+                },
+                {
+                    "sourceVolume": "static_volume",
+                    "containerPath": "/tmp/change-static-ownership"
+                },
+                {
+                    "sourceVolume": "media_volume",
+                    "containerPath": "/tmp/change-media-ownership"
+                },
+                {
+                    "sourceVolume": "logs_volume",
+                    "containerPath": "/tmp/change-logs-ownership"
+                }
+            ],
+            "volumesFrom": [],
+            "user": "0:2048",
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/zango",
+                    "awslogs-region": "ap-south-1"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "zango",
+    "taskRoleArn": "arn:aws:iam::114454670435:role/zango-ecs-task-role",
+    "executionRoleArn": "arn:aws:iam::114454670435:role/zango-ecs-task-execution-role",
+    "networkMode": "bridge",
+    "volumes": [
+        {
+            "name": "app_volume",
+            "dockerVolumeConfiguration": {
+                "scope": "shared",
+                "autoprovision": true,
+                "driver": "local"
+            }
+        },
+        {
+            "name": "static_volume",
+            "dockerVolumeConfiguration": {
+                "scope": "shared",
+                "autoprovision": true,
+                "driver": "local"
+            }
+        },
+        {
+            "name": "media_volume",
+            "dockerVolumeConfiguration": {
+                "scope": "shared",
+                "autoprovision": true,
+                "driver": "local"
+            }
+        },
+        {
+            "name": "logs_volume",
+            "dockerVolumeConfiguration": {
+                "scope": "shared",
+                "autoprovision": true,
+                "driver": "local"
+            }
+        }
+    ],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "EC2"
+    ],
+    "tags": [
+        {
+            "key": "Environment",
+            "value": "production"
+        },
+        {
+            "key": "Application",
+            "value": "zango"
+        }
+    ]
+}

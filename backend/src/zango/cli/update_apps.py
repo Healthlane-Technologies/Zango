@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 import click
 import requests
 
+from git import Repo
 from packaging import specifiers, version
 
 import django
@@ -496,6 +497,62 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
     return True, "Update allowed: Local version is newer than the last release."
 
 
+def create_workspace(tenant_obj, project_root):
+    from django.conf import settings
+
+    from zango.apps.release.models import AppRelease
+
+    release = (
+        AppRelease.objects.filter(status="released").order_by("-created_at").first()
+    )
+    if release and release.last_git_hash:
+        git_config = tenant_obj.extra_config.get("git_config", {})
+        repo_url = git_config.get("repo_url")
+        git_hash = release.last_git_hash
+
+        if repo_url and git_hash:
+            tenant_name = tenant_obj.name
+            workspace_path = os.path.join(project_root, "workspaces", tenant_name)
+
+            try:
+                # Create workspaces directory if it doesn't exist
+                workspaces_dir = os.path.join(project_root, "workspaces")
+                if not os.path.exists(workspaces_dir):
+                    os.makedirs(workspaces_dir)
+
+                # Construct authenticated URL
+                parts = repo_url.split("://")
+                authenticated_url = f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
+
+                # Clone repository at specific commit
+                repo = Repo.clone_from(authenticated_url, workspace_path)
+                repo.git.checkout(git_hash)
+
+                click.echo(
+                    f"Successfully created workspace for {tenant_name} from commit {git_hash}"
+                )
+                return True
+
+            except Exception as e:
+                error_message = (
+                    f"Failed to create workspace from git commit {git_hash}: {e}"
+                )
+                click.echo(click.style(error_message, fg="red", bold=True), err=True)
+                if os.path.exists(workspace_path):
+                    shutil.rmtree(workspace_path)
+                return False
+        else:
+            click.echo(
+                f"No git configuration found for {tenant_obj.name}, skipping workspace creation"
+            )
+            return False
+    else:
+        click.echo(
+            f"No release with git hash found for {tenant_obj.name}, skipping workspace creation"
+        )
+        return False
+
+
 @click.command("update-apps")
 @click.option(
     "--app_name",
@@ -538,6 +595,11 @@ def update_apps(app_name):
 
         try:
             app_directory = os.path.join(project_root, "workspaces", tenant)
+            if not os.path.exists(app_directory):
+                click.echo(f"Creating workspace for {tenant}")
+                create_workspace(tenant_obj, project_root)
+            else:
+                click.echo(f"Workspace for {tenant} already exists")
             app_settings = json.loads(
                 open(os.path.join(app_directory, "settings.json")).read()
             )

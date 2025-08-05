@@ -1,5 +1,9 @@
 #!/bin/sh
 
+sleep 10
+
+PROJECT_NAME=zango_project
+
 should_update_on_startup() {
     if [ -z "$UPDATE_APPS_ON_STARTUP" ]; then
         UPDATE_APPS_ON_STARTUP="true"
@@ -19,6 +23,8 @@ if [ -z "$PLATFORM_DOMAIN_URL" ]; then
     PLATFORM_DOMAIN_URL="localhost"
 fi
 
+./fetch-secrets.sh
+
 if [ "$ENV" = "dev" ]; then 
     cd "$PROJECT_NAME"
     if [ -d "$PROJECT_NAME" ]; then
@@ -33,16 +39,11 @@ if [ "$ENV" = "dev" ]; then
     fi
     python manage.py runserver 0.0.0.0:8000
 else
-    if [ -d "$PROJECT_NAME" ]; then
-        echo "restarting existing project"
-        cd "$PROJECT_NAME"
-        if should_update_on_startup; then
-            echo "Updating apps..."
-            zango update-apps
-        fi
-    else
-        zango start-project $PROJECT_NAME --db_name="$POSTGRES_DB" --db_user="$POSTGRES_USER" --db_password="$POSTGRES_PASSWORD" --db_host="$POSTGRES_HOST" --db_port="$POSTGRES_PORT" --platform_username="$PLATFORM_USERNAME" --platform_user_password="$PLATFORM_USER_PASSWORD" --redis_host="$REDIS_HOST" --redis_port="$REDIS_PORT" --platform_domain_url="$PLATFORM_DOMAIN_URL"
-        cd "$PROJECT_NAME"
+    zango start-project $PROJECT_NAME --db_name="$POSTGRES_DB" --db_user="$POSTGRES_USER" --db_password="$POSTGRES_PASSWORD" --db_host="$POSTGRES_HOST" --db_port="$POSTGRES_PORT" --platform_username="$PLATFORM_USERNAME" --platform_user_password="$PLATFORM_USER_PASSWORD" --redis_host="$REDIS_HOST" --redis_port="$REDIS_PORT" --platform_domain_url="$PLATFORM_DOMAIN_URL"
+    cd "$PROJECT_NAME"
+    if should_update_on_startup; then
+        echo "Updating apps..."
+        zango update-apps
     fi
     cp /zango/config/gunicorn.conf.py .
     python manage.py collectstatic --noinput
