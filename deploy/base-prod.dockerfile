@@ -44,4 +44,4 @@ USER zango_user
 
 
 # Default command - same as current prod.dockerfile
-ENTRYPOINT ["/bin/sh", "/zango/init.sh"]
+ENTRYPOINT ["/bin/bash", "/zango/init.sh"]

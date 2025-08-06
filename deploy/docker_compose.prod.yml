@@ -9,8 +9,15 @@ services:
       - static_volume:/tmp/change-static-ownership
       - media_volume:/tmp/change-media-ownership
       - logs_volume:/tmp/change-logs-ownership
-    command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership
-
+      - secrets_volume:/tmp/change-secrets-ownership
+    command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership /tmp/change-secrets-ownership
+  
+  fetch-secrets:
+    image: amazon/aws-cli
+    volumes:
+      - secrets_volume:/zango/secrets
+    command: >
+      --region ap-south-1 secretsmanager get-secret-value --secret-id zango-test-secret --query SecretString --output text > /zango/secrets/.env
 
   postgres:
     image: postgres
@@ -29,6 +36,7 @@ services:
       - "prod_db:/var/lib/postgresql/data"
     profiles:
       - with-db
+
   app:
     build:
       context: .
@@ -37,6 +45,8 @@ services:
       - "8000:8000"
     depends_on:
       change-vol-ownership:
+        condition: service_completed_successfully
+      fetch-secrets:
         condition: service_completed_successfully
     env_file:
       - .env
@@ -51,6 +61,7 @@ services:
       - media_volume:/zango/zango_project/media
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
+      - secrets_volume:/zango/secrets
 
   nginx:
     build:
@@ -79,12 +90,15 @@ services:
     volumes:
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
+      - secrets_volume:/zango/secrets
     depends_on:
       app:
         condition: service_healthy
       redis:
         condition: service_healthy
       change-vol-ownership:
+        condition: service_completed_successfully
+      fetch-secrets:
         condition: service_completed_successfully
 
   redis:
@@ -116,6 +130,7 @@ services:
     volumes:
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
+      - secrets_volume:/zango/secrets
     depends_on:
       app:
         condition: service_healthy
@@ -124,6 +139,8 @@ services:
       celery:
         condition: service_started
       change-vol-ownership:
+        condition: service_completed_successfully
+      fetch-secrets:
         condition: service_completed_successfully
 
   celery_beat:
@@ -136,6 +153,7 @@ services:
     volumes:
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
+      - secrets_volume:/zango/secrets
     depends_on:
       app:
         condition: service_healthy
@@ -144,6 +162,8 @@ services:
       celery:
         condition: service_started
       change-vol-ownership:
+        condition: service_completed_successfully
+      fetch-secrets:
         condition: service_completed_successfully
 
   otel-collector:
@@ -164,3 +184,4 @@ volumes:
   static_volume: null
   media_volume: null
   logs_volume: null
+  secrets_volume: null

@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+source /zango/secrets/.env
 
 PROJECT_NAME=zango_project
 

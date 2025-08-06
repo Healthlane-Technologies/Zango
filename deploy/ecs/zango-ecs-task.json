@@ -34,12 +34,21 @@
                     "sourceVolume": "env_file_volume",
                     "containerPath": "/zango/.env",
                     "readOnly": true
+                },
+                {
+                    "sourceVolume": "secrets_volume",
+                    "containerPath": "/zango/secrets",
+                    "readOnly": true
                 }
             ],
             "volumesFrom": [],
             "dependsOn": [
                 {
                     "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                },
+                {
+                    "containerName": "fetch-secrets",
                     "condition": "SUCCESS"
                 }
             ],
@@ -73,12 +82,12 @@
                 {
                     "name": "nginx-1443-tcp",
                     "containerPort": 1443,
-                    "hostPort": 443,
+                    "hostPort": 1443,
                     "protocol": "tcp"
                 }
             ],
             "essential": true,
-            "environment": [],
+            "links": ["app"],
             "mountPoints": [
                 {
                     "sourceVolume": "static_volume",
@@ -121,9 +130,9 @@
             "portMappings": [],
             "essential": false,
             "entryPoint": [
-                "/bin/sh",
+                "/bin/bash",
                 "-c",
-                "cd zango_project && celery -A zango_project worker -l info"
+                "source /zango/secrets/.env && cd zango_project && celery -A zango_project worker -l info"
             ],
             "environment": [],
             "mountPoints": [
@@ -139,6 +148,11 @@
                     "sourceVolume": "env_file_volume",
                     "containerPath": "/zango/.env",
                     "readOnly": true
+                },
+                {
+                    "sourceVolume": "secrets_volume",
+                    "containerPath": "/zango/secrets",
+                    "readOnly": true
                 }
             ],
             "volumesFrom": [],
@@ -149,6 +163,10 @@
                 },
                 {
                     "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                },
+                {
+                    "containerName": "fetch-secrets",
                     "condition": "SUCCESS"
                 }
             ],
@@ -171,9 +189,9 @@
             "portMappings": [],
             "essential": false,
             "entryPoint": [
-                "/bin/sh",
+                "/bin/bash",
                 "-c",
-                "cd zango_project && single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+                "source /zango/secrets/.env && cd zango_project && single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
             ],
             "environment": [],
             "mountPoints": [
@@ -189,6 +207,11 @@
                     "sourceVolume": "env_file_volume",
                     "containerPath": "/zango/.env",
                     "readOnly": true
+                },
+                {
+                    "sourceVolume": "secrets_volume",
+                    "containerPath": "/zango/secrets",
+                    "readOnly": true
                 }
             ],
             "volumesFrom": [],
@@ -203,6 +226,10 @@
                 },
                 {
                     "containerName": "change-vol-ownership",
+                    "condition": "SUCCESS"
+                },
+                {
+                    "containerName": "fetch-secrets",
                     "condition": "SUCCESS"
                 }
             ],
@@ -264,6 +291,37 @@
                 "secretOptions": []
             },
             "systemControls": []
+        },
+        {
+            "name": "fetch-secrets",
+            "image": "amazon/aws-cli",
+            "cpu": 128,
+            "memory": 256,
+            "portMappings": [],
+            "essential": false,
+            "entryPoint": [
+                "sh",
+                "-c",
+                "aws --region ap-south-1 secretsmanager get-secret-value --secret-id zango-test-secret --query SecretString --output text > /zango/secrets/.env"
+            ],
+            "environment": [],
+            "mountPoints": [
+                {
+                    "sourceVolume": "secrets_volume",
+                    "containerPath": "/zango/secrets"
+                }
+            ],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/zango",
+                    "awslogs-region": "ap-south-1"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
         }
     ],
     "family": "zango",
@@ -307,6 +365,14 @@
             "name": "env_file_volume",
             "host": {
                 "sourcePath": "/mnt/config/.env"
+            }
+        },
+        {
+            "name": "secrets_volume",
+            "dockerVolumeConfiguration": {
+                "scope": "shared",
+                "autoprovision": true,
+                "driver": "local"
             }
         }
     ],
