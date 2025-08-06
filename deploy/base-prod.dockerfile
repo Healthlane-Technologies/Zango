@@ -13,10 +13,6 @@ RUN apt update && \
 # Install Python packages
 RUN pip install --no-cache-dir gunicorn==23.0.0
 
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install
-
 # Create non-root user
 RUN apt update && \
     groupadd -o -g 2048 -r zango_user && \

@@ -1,25 +1,18 @@
 {
     "containerDefinitions": [
         {
-            "name": "zango-app",
+            "name": "app",
             "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-base-project:latest",
             "cpu": 512,
-            "memory": 1024,
+            "memory": 2048,
             "portMappings": [
                 {
-                    "name": "zango-app-8000-tcp",
+                    "name": "app-8000-tcp",
                     "containerPort": 8000,
-                    "hostPort": 0,
                     "protocol": "tcp"
                 }
             ],
             "essential": true,
-            "environment": [
-                {
-                    "name": "AWS_SECRET_NAME",
-                    "value": "zango-test-secret"
-                }
-            ],
             "mountPoints": [
                 {
                     "sourceVolume": "static_volume",
@@ -36,6 +29,11 @@
                 {
                     "sourceVolume": "logs_volume",
                     "containerPath": "/zango/zango_project/logs"
+                },
+                {
+                    "sourceVolume": "env_file_volume",
+                    "containerPath": "/zango/.env",
+                    "readOnly": true
                 }
             ],
             "volumesFrom": [],
@@ -96,7 +94,7 @@
             "volumesFrom": [],
             "dependsOn": [
                 {
-                    "containerName": "zango-app",
+                    "containerName": "app",
                     "condition": "HEALTHY"
                 },
                 {
@@ -117,9 +115,9 @@
         },
         {
             "name": "celery",
-            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-nginx:latest",
+            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-base-project:latest",
             "cpu": 512,
-            "memory": 1024,
+            "memory": 2048,
             "portMappings": [],
             "essential": false,
             "entryPoint": [
@@ -136,12 +134,17 @@
                 {
                     "sourceVolume": "logs_volume",
                     "containerPath": "/zango/zango_project/logs"
+                },
+                {
+                    "sourceVolume": "env_file_volume",
+                    "containerPath": "/zango/.env",
+                    "readOnly": true
                 }
             ],
             "volumesFrom": [],
             "dependsOn": [
                 {
-                    "containerName": "zango-app",
+                    "containerName": "app",
                     "condition": "HEALTHY"
                 },
                 {
@@ -162,9 +165,9 @@
         },
         {
             "name": "celery-beat",
-            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-nginx:latest",
+            "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-base-project:latest",
             "cpu": 512,
-            "memory": 256,
+            "memory": 1024,
             "portMappings": [],
             "essential": false,
             "entryPoint": [
@@ -181,12 +184,17 @@
                 {
                     "sourceVolume": "logs_volume",
                     "containerPath": "/zango/zango_project/logs"
+                },
+                {
+                    "sourceVolume": "env_file_volume",
+                    "containerPath": "/zango/.env",
+                    "readOnly": true
                 }
             ],
             "volumesFrom": [],
             "dependsOn": [
                 {
-                    "containerName": "zango-app",
+                    "containerName": "app",
                     "condition": "HEALTHY"
                 },
                 {
@@ -293,6 +301,12 @@
                 "scope": "shared",
                 "autoprovision": true,
                 "driver": "local"
+            }
+        },
+        {
+            "name": "env_file_volume",
+            "host": {
+                "sourcePath": "/mnt/config/.env"
             }
         }
     ],

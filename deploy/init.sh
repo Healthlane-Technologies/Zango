@@ -1,7 +1,5 @@
 #!/bin/sh
 
-sleep 10
-
 PROJECT_NAME=zango_project
 
 should_update_on_startup() {
@@ -22,8 +20,6 @@ should_update_on_startup() {
 if [ -z "$PLATFORM_DOMAIN_URL" ]; then
     PLATFORM_DOMAIN_URL="localhost"
 fi
-
-./fetch-secrets.sh
 
 if [ "$ENV" = "dev" ]; then 
     cd "$PROJECT_NAME"
