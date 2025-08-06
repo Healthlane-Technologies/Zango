@@ -4,7 +4,7 @@
             "name": "app",
             "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-base-project:latest",
             "cpu": 512,
-            "memory": 2048,
+            "memory": 1024,
             "portMappings": [
                 {
                     "name": "app-8000-tcp",
@@ -117,7 +117,7 @@
             "name": "celery",
             "image": "114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango-prod-base-project:latest",
             "cpu": 512,
-            "memory": 2048,
+            "memory": 1024,
             "portMappings": [],
             "essential": false,
             "entryPoint": [
