@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source /zango/secrets/.env
+cp /zango/secrets/.env /zango/.env
 
 PROJECT_NAME=zango_project
 

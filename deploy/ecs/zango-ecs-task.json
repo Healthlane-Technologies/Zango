@@ -132,7 +132,7 @@
             "entryPoint": [
                 "/bin/bash",
                 "-c",
-                "source /zango/secrets/.env && cd zango_project && celery -A zango_project worker -l info"
+                "cp /zango/secrets/.env /zango/.env && cd zango_project && celery -A zango_project worker -l info"
             ],
             "environment": [],
             "mountPoints": [
@@ -191,7 +191,7 @@
             "entryPoint": [
                 "/bin/bash",
                 "-c",
-                "source /zango/secrets/.env && cd zango_project && SINGLE_BEAT_REDIS_SERVER=redis://${REDIS_HOST}:${REDIS_PORT}/1 single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+                "cp /zango/secrets/.env /zango/.env && cd zango_project && SINGLE_BEAT_REDIS_SERVER=redis://${REDIS_HOST}:${REDIS_PORT}/1 single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
             ],
             "environment": [],
             "mountPoints": [
