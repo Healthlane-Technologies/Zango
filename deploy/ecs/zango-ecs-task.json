@@ -81,7 +81,6 @@
                 }
             ],
             "essential": true,
-            "links": ["app"],
             "mountPoints": [
                 {
                     "sourceVolume": "static_volume",
@@ -309,7 +308,7 @@
     "family": "zango",
     "taskRoleArn": "arn:aws:iam::114454670435:role/zango-ecs-task-role",
     "executionRoleArn": "arn:aws:iam::114454670435:role/zango-ecs-task-execution-role",
-    "networkMode": "bridge",
+    "networkMode": "awsvpc",
     "volumes": [
         {
             "name": "app_volume",
