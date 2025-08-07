@@ -337,6 +337,11 @@ def setup_settings(settings, BASE_DIR):
         RECAPTCHA_PUBLIC_KEY=(str, ""),
         RECAPTCHA_PRIVATE_KEY=(str, ""),
         HEALTH_CHECK_URL=(str, ""),
+        MEDIA_STORAGE_BACKEND=(str, "django.core.files.storage.FileSystemStorage"),
+        STATIC_STORAGE_BACKEND=(
+            str,
+            "django.contrib.staticfiles.storage.StaticFilesStorage",
+        ),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -447,6 +452,11 @@ def setup_settings(settings, BASE_DIR):
         if env("ZANGO_TOKEN_TTL") == 0
         else timedelta(seconds=env("ZANGO_TOKEN_TTL")),
         "AUTH_HEADER_PREFIX": "Bearer",
+    }
+
+    settings.STORAGES = {
+        "default": {"BACKEND": env("MEDIA_STORAGE_BACKEND")},
+        "staticfiles": {"BACKEND": env("STATIC_STORAGE_BACKEND")},
     }
 
     log_folder = os.path.join(BASE_DIR, "log")
