@@ -31,14 +31,8 @@
                     "containerPath": "/zango/zango_project/logs"
                 },
                 {
-                    "sourceVolume": "env_file_volume",
-                    "containerPath": "/zango/.env",
-                    "readOnly": true
-                },
-                {
                     "sourceVolume": "secrets_volume",
-                    "containerPath": "/zango/secrets",
-                    "readOnly": true
+                    "containerPath": "/zango/secrets"
                 }
             ],
             "volumesFrom": [],
@@ -145,14 +139,8 @@
                     "containerPath": "/zango/zango_project/logs"
                 },
                 {
-                    "sourceVolume": "env_file_volume",
-                    "containerPath": "/zango/.env",
-                    "readOnly": true
-                },
-                {
                     "sourceVolume": "secrets_volume",
-                    "containerPath": "/zango/secrets",
-                    "readOnly": true
+                    "containerPath": "/zango/secrets"
                 }
             ],
             "volumesFrom": [],
@@ -204,14 +192,8 @@
                     "containerPath": "/zango/zango_project/logs"
                 },
                 {
-                    "sourceVolume": "env_file_volume",
-                    "containerPath": "/zango/.env",
-                    "readOnly": true
-                },
-                {
                     "sourceVolume": "secrets_volume",
-                    "containerPath": "/zango/secrets",
-                    "readOnly": true
+                    "containerPath": "/zango/secrets"
                 }
             ],
             "volumesFrom": [],
@@ -359,12 +341,6 @@
                 "scope": "shared",
                 "autoprovision": true,
                 "driver": "local"
-            }
-        },
-        {
-            "name": "env_file_volume",
-            "host": {
-                "sourcePath": "/mnt/config/.env"
             }
         },
         {
