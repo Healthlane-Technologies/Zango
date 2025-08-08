@@ -598,6 +598,8 @@ def update_apps(app_name):
             if not os.path.exists(app_directory):
                 click.echo(f"Creating workspace for {tenant}")
                 create_workspace(tenant_obj, project_root)
+                sync_static(tenant)
+                collect_static()
             else:
                 click.echo(f"Workspace for {tenant} already exists")
             app_settings = json.loads(
