@@ -483,7 +483,9 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
                 "Update not allowed: Last release version is newer than the remote version.",
             )
         if local_version == remote_version or (
-            last_release and last_release.version == remote_version
+            last_release
+            and last_release.version == remote_version
+            and not is_version_greater(remote_version, local_version)
         ):
             return (
                 False,
