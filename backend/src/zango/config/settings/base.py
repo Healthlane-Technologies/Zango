@@ -342,6 +342,8 @@ def setup_settings(settings, BASE_DIR):
             str,
             "django.contrib.staticfiles.storage.StaticFilesStorage",
         ),
+        SECURE_PROXY_SSL_HEADER=(list, []),
+        SENTRY_DSN=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -518,6 +520,14 @@ def setup_settings(settings, BASE_DIR):
     settings.RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
 
     settings.HEALTH_CHECK_URL = env("HEALTH_CHECK_URL")
+
+    if env("SENTRY_DSN"):
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=env("SENTRY_DSN"),
+            enable_tracing=True,
+        )
 
     if settings.HEALTH_CHECK_URL:
         CELERY_BEAT_SCHEDULE["health_check_task"]["enabled"] = True
