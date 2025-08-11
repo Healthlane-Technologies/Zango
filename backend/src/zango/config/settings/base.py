@@ -522,12 +522,13 @@ def setup_settings(settings, BASE_DIR):
     settings.HEALTH_CHECK_URL = env("HEALTH_CHECK_URL")
 
     settings.SECURE_PROXY_SSL_HEADER = tuple(env("SECURE_PROXY_SSL_HEADER"))
+    settings.SENTRY_DSN = env("SENTRY_DSN")
 
-    if env("SENTRY_DSN"):
+    if settings.SENTRY_DSN:
         import sentry_sdk
 
         sentry_sdk.init(
-            dsn=env("SENTRY_DSN"),
+            dsn=settings.SENTRY_DSN,
             enable_tracing=True,
         )
 
