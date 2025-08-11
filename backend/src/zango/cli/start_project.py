@@ -133,6 +133,8 @@ def create_project(
 def create_public_tenant(platform_domain_url="localhost"):
     from zango.apps.shared.tenancy.models import Domain, TenantModel
 
+    created = False
+
     # Creating public tenant
     if not TenantModel.objects.filter(schema_name="public").exists():
         public_tenant = TenantModel.objects.create(
@@ -146,9 +148,11 @@ def create_public_tenant(platform_domain_url="localhost"):
         Domain.objects.create(
             tenant=public_tenant, domain=platform_domain_url, is_primary=True
         )
+        created = True
         click.echo("Public tenant created successfully.")
     else:
         click.echo("Public tenant already exists. Skipping creation.")
+    return created
 
 
 def create_platform_user(platform_username, platform_username_password):
@@ -294,29 +298,32 @@ def start_project(
     call_command("migrate_schemas", schema="public")
 
     # Creating Public Tenant
-    create_public_tenant(platform_domain_url=platform_domain_url)
+    created = create_public_tenant(platform_domain_url=platform_domain_url)
 
-    # Prompting default platform user details
-    while True:
-        if not platform_username:
-            click.echo("Please enter platform user email")
-            platform_username = click.prompt("Email")
-        if not platform_user_password:
-            platform_user_password = click.prompt(
-                "Password", hide_input=True, confirmation_prompt=True
+    if created:
+        # Prompting default platform user details
+        while True:
+            if not platform_username:
+                click.echo("Please enter platform user email")
+                platform_username = click.prompt("Email")
+            if not platform_user_password:
+                platform_user_password = click.prompt(
+                    "Password", hide_input=True, confirmation_prompt=True
+                )
+
+            user_creation_result = create_platform_user(
+                platform_username, platform_user_password
             )
+            if user_creation_result["success"]:
+                break
+            else:
+                platform_username = None
+                platform_user_password = None
+                click.echo(user_creation_result["message"])
+                retry = click.prompt(
+                    "Do you want to try again? (yes/no)", default="yes"
+                )
+                if retry.lower() != "yes":
+                    raise click.ClickException("User creation aborted by the user.")
 
-        user_creation_result = create_platform_user(
-            platform_username, platform_user_password
-        )
-        if user_creation_result["success"]:
-            break
-        else:
-            platform_username = None
-            platform_user_password = None
-            click.echo(user_creation_result["message"])
-            retry = click.prompt("Do you want to try again? (yes/no)", default="yes")
-            if retry.lower() != "yes":
-                raise click.ClickException("User creation aborted by the user.")
-
-    click.echo(user_creation_result["message"])
+        click.echo(user_creation_result["message"])

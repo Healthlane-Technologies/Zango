@@ -3,16 +3,6 @@
 
 FROM zango_img
 
-# Install production dependencies
-RUN apt update && \
-    apt install -y \
-    net-tools \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python packages
-RUN pip install --no-cache-dir gunicorn==23.0.0
-
 # Create non-root user
 RUN apt update && \
     groupadd -o -g 2048 -r zango_user && \
