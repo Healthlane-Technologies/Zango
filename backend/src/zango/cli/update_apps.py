@@ -533,6 +533,12 @@ def create_workspace(tenant_obj, project_root):
                 click.echo(
                     f"Successfully created workspace for {tenant_name} from commit {git_hash}"
                 )
+                if (
+                    settings.STORAGES["staticfiles"]["BACKEND"]
+                    == "django.contrib.staticfiles.storage.StaticFilesStorage"
+                ):
+                    sync_static(tenant_obj.name)
+                    collect_static()
                 return True
 
             except Exception as e:
@@ -576,8 +582,6 @@ def update_apps(app_name):
     from django.conf import settings
     from django.db import connection
 
-    print("Storage settings is ", settings.STORAGES)
-
     from zango.apps.shared.tenancy.models import TenantModel
 
     tenants = TenantModel.objects.filter(status="deployed").exclude(
@@ -602,12 +606,6 @@ def update_apps(app_name):
             if not os.path.exists(app_directory):
                 click.echo(f"Creating workspace for {tenant}")
                 create_workspace(tenant_obj, project_root)
-                if (
-                    settings.STORAGES["staticfiles"]["BACKEND"]
-                    == "django.contrib.staticfiles.storage.StaticFilesStorage"
-                ):
-                    sync_static(tenant_obj.name)
-                    collect_static()
             else:
                 click.echo(f"Workspace for {tenant} already exists")
             app_settings = json.loads(
