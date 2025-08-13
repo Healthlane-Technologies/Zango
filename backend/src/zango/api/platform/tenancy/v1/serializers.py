@@ -4,9 +4,9 @@ from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
-from zango.apps.appauth.utils import UserRoleAuthConfig
+from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
-from zango.apps.shared.tenancy.utils import AuthConfigSchema as TenantAuthConfigSchema
+from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -141,23 +141,30 @@ class AppUserModelSerializerModel(serializers.ModelSerializer):
         return None
 
     def validate_user_role_two_factor_not_overridden(self, auth_config, roles):
+        if not roles:
+            return
         user_two_factor_auth_enabled = auth_config.get("two_factor_auth", {}).get(
             "required"
         )
         for role in roles:
             if role.auth_config.get("two_factor_auth", {}):
-                two_factor_auth = auth_config["two_factor_auth"]
-                if two_factor_auth.get("required") and not user_two_factor_auth_enabled:
+                role_two_factor_auth = role.auth_config["two_factor_auth"]
+                if (
+                    role_two_factor_auth.get("required")
+                    and not user_two_factor_auth_enabled
+                ):
                     raise serializers.ValidationError(
-                        "Two-factor authentication is required for this user role."
+                        f"Two-factor authentication is required for {role.name} role."
                     )
 
     def validate(self, attrs):
         auth_config = attrs.get("auth_config", {})
         if auth_config:
-            self.validate_user_role_two_factor_not_overridden(
-                auth_config, attrs.get("roles")
-            )
+            # For partial updates, if roles are not in attrs, use the instance's roles
+            roles = attrs.get("roles")
+            if roles is None and self.instance:
+                roles = self.instance.roles.all()
+            self.validate_user_role_two_factor_not_overridden(auth_config, roles)
         return attrs
 
     def validate_auth_config(self, value):

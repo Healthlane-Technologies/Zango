@@ -74,6 +74,8 @@ TENANT_APPS = [
     "allauth.account",
     "allauth.headless",
     "allauth.mfa",
+    "allauth.usersessions",
+    "django.contrib.humanize",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -108,6 +110,7 @@ MIDDLEWARE = [
     "axes.middleware.AxesMiddleware",
     "zango.middleware.telemetry.OtelZangoContextMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "allauth.usersessions.middleware.UserSessionsMiddleware",
 ]
 
 AUTHENTICATION_BACKENDS = (

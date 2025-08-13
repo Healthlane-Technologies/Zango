@@ -120,7 +120,36 @@ def get_search_columns(request):
 
 
 def generate_lockout_response(request, credentials):
+    from .api.utils import get_api_response
+
     cooloff_time = settings.AXES_COOLOFF_TIME
+
+    # change this path
+    if "/api/v1/appauth/" in request.path:
+        cooloff_seconds = (
+            int(cooloff_time.total_seconds())
+            if hasattr(cooloff_time, "total_seconds")
+            else cooloff_time
+        )
+        cooloff_minutes = cooloff_seconds // 60
+
+        # Determine time unit for message
+        if cooloff_seconds < 60:
+            time_message = f"{cooloff_seconds} seconds"
+        else:
+            time_message = f"{cooloff_minutes} minutes"
+
+        return get_api_response(
+            success=False,
+            response_content={
+                "message": f"Account locked due to too many failed login attempts. Please try again after {time_message}.",
+                "cooloff_time_seconds": cooloff_seconds,
+                "cooloff_time_minutes": cooloff_minutes,
+                "error_code": "ACCOUNT_LOCKED",
+            },
+            status=403,
+        )
+
     if connection.tenant.tenant_type == "app":
         return render(
             request,

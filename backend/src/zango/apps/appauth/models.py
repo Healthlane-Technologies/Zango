@@ -24,7 +24,7 @@ from ..permissions.mixin import PermissionMixin
 
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.models import PolicyGroupModel, PolicyModel
-from .utils import get_default_app_user_auth_config, get_default_user_role_auth_config
+from .schema import get_default_app_user_auth_config, get_default_user_role_auth_config
 
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
@@ -261,7 +261,7 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
                 message = str(e)
         return {"success": success, "message": message, "app_user": app_user}
 
-    def update_user(self, data):
+    def update_user(self, data, profile_image=None):
         success = False
         try:
             user_query = Q()
@@ -303,6 +303,13 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
                 is_active = True if is_active == "true" else False
 
             self.is_active = is_active
+
+            # Handle profile picture update
+            if profile_image:
+                # Delete old profile pic if exists
+                if self.profile_pic:
+                    self.profile_pic.delete(save=False)
+                self.profile_pic = profile_image
 
             self.save()
             success = True

@@ -1,21 +1,35 @@
+from zango.apps.appauth.models import AppUserAuthToken
+from zango.apps.appauth.serializers import AppUserAuthTokenSerializer
 from zango.core.api import (
     ZangoGenericAppAPIView,
     get_api_response,
 )
+from zango.core.utils import get_auth_priority
 
 from .serializers import ProfileSerializer
 
 
 class ProfileViewAPIV1(ZangoGenericAppAPIView):
     def get(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(request.user)
+        serializer = ProfileSerializer(request.user, context={"request": request})
         success = True
-        response = {"message": "success", "profile_data": serializer.data}
+        tokens = AppUserAuthToken.objects.filter(user=request.user)
+        token_serializer = AppUserAuthTokenSerializer(tokens, many=True)
+        password_policy = get_auth_priority(
+            policy="password_policy", user=request.user, request=request
+        )
+        response = {
+            "message": "success",
+            "profile_data": serializer.data,
+            "password_policy": password_policy,
+            "tokens": token_serializer.data,
+        }
         status = 200
         return get_api_response(success, response, status)
 
     def put(self, request, *args, **kwargs):
-        response = request.user.update_user(request.data)
+        profile_image = request.FILES.get("profile_pic")
+        response = request.user.update_user(request.data, profile_image=profile_image)
         success = response.pop("success")
         if success:
             status = 200

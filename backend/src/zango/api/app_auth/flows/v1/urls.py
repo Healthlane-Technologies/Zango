@@ -11,6 +11,7 @@ from .password import (
     SetPasswordViewAPIV1,
 )
 from .role import SwitchRoleAPIV1, UserRoleViewAPIV1
+from .session import AppSessionsViewAPIV1
 
 
 urlpatterns = [
@@ -99,5 +100,15 @@ urlpatterns = [
         "password/reset/",
         ResetPasswordViewAPIV1.as_api_view(client="browser"),
         name="reset-password-from-key",
+    ),
+    path(
+        "app/sessions/",
+        AppSessionsViewAPIV1.as_api_view(client="app"),
+        name="app-sessions",
+    ),
+    path(
+        "sessions/",
+        AppSessionsViewAPIV1.as_api_view(client="browser"),
+        name="sessions",
     ),
 ]
