@@ -11,13 +11,6 @@ services:
       - logs_volume:/tmp/change-logs-ownership
       - secrets_volume:/tmp/change-secrets-ownership
     command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership /tmp/change-secrets-ownership
-  
-  fetch-secrets:
-    image: amazon/aws-cli
-    volumes:
-      - secrets_volume:/zango/secrets
-    command: >
-      --region ap-south-1 secretsmanager get-secret-value --secret-id zango-test-secret --query SecretString --output text > /zango/secrets/.env
 
   postgres:
     image: postgres
@@ -45,8 +38,6 @@ services:
       - "8000:8000"
     depends_on:
       change-vol-ownership:
-        condition: service_completed_successfully
-      fetch-secrets:
         condition: service_completed_successfully
     env_file:
       - .env
@@ -98,8 +89,6 @@ services:
         condition: service_healthy
       change-vol-ownership:
         condition: service_completed_successfully
-      fetch-secrets:
-        condition: service_completed_successfully
 
   redis:
     image: redis
@@ -140,8 +129,6 @@ services:
         condition: service_started
       change-vol-ownership:
         condition: service_completed_successfully
-      fetch-secrets:
-        condition: service_completed_successfully
 
   celery_beat:
     build:
@@ -163,20 +150,18 @@ services:
         condition: service_started
       change-vol-ownership:
         condition: service_completed_successfully
-      fetch-secrets:
-        condition: service_completed_successfully
 
   otel-collector:
-    image: otel/opentelemetry-collector:latest
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./config/collector.yml:/etc/otel-collector-config.yaml
+    build:
+      context: .
+      dockerfile: config/otel-collector.dockerfile
+    entrypoint: ["/start_otel.sh"]
+    env_file:
+      - .env
     ports:
       - 4317:4317
       - 4318:4318
       - 9090:9090
-    profiles:
-      - with-instrumentation
     
 volumes:
   prod_db: null
