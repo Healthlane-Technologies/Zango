@@ -9,8 +9,7 @@ services:
       - static_volume:/tmp/change-static-ownership
       - media_volume:/tmp/change-media-ownership
       - logs_volume:/tmp/change-logs-ownership
-      - secrets_volume:/tmp/change-secrets-ownership
-    command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership /tmp/change-secrets-ownership
+    command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership
 
   postgres:
     image: postgres
@@ -52,7 +51,6 @@ services:
       - media_volume:/zango/zango_project/media
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
-      - secrets_volume:/zango/secrets
 
   nginx:
     build:
@@ -81,7 +79,6 @@ services:
     volumes:
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
-      - secrets_volume:/zango/secrets
     depends_on:
       app:
         condition: service_healthy
@@ -119,7 +116,6 @@ services:
     volumes:
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
-      - secrets_volume:/zango/secrets
     depends_on:
       app:
         condition: service_healthy
@@ -140,7 +136,6 @@ services:
     volumes:
       - app_volume:/zango/zango_project/workspaces
       - logs_volume:/zango/zango_project/logs
-      - secrets_volume:/zango/secrets
     depends_on:
       app:
         condition: service_healthy
@@ -162,6 +157,8 @@ services:
       - 4317:4317
       - 4318:4318
       - 9090:9090
+    profiles:
+      - with-instrumentation
     
 volumes:
   prod_db: null
@@ -169,4 +166,3 @@ volumes:
   static_volume: null
   media_volume: null
   logs_volume: null
-  secrets_volume: null
