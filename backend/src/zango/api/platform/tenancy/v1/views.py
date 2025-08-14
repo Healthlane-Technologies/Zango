@@ -218,7 +218,7 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
+class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin):
     pagination_class = ZangoAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
@@ -261,7 +261,12 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             columns = get_search_columns(request)
             roles = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(roles, request, view=self)
-            serializer = UserRoleSerializerModel(paginated_roles, many=True)
+            tenant = self.get_tenant(**kwargs)
+            serializer = UserRoleSerializerModel(
+                paginated_roles,
+                many=True,
+                context={"request": request, "tenant": tenant},
+            )
             paginated_roles_data = self.get_paginated_response_data(serializer.data)
 
             success = True
@@ -282,7 +287,10 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
     def post(self, request, *args, **kwargs):
         data = request.data
-        role_serializer = UserRoleSerializerModel(data=data)
+        tenant = self.get_tenant(**kwargs)
+        role_serializer = UserRoleSerializerModel(
+            data=data, context={"request": request, "tenant": tenant}
+        )
         if role_serializer.is_valid():
             success = True
             status_code = 200
@@ -323,7 +331,11 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
     def get(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
-            serializer = UserRoleSerializerModel(obj)
+            tenant = self.get_tenant(**kwargs)
+            serializer = UserRoleSerializerModel(
+                obj,
+                context={"request": request, "tenant": tenant},
+            )
             success = True
             response = {"role": serializer.data}
             status = 200

@@ -7,6 +7,7 @@ from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
+from zango.core.utils import get_auth_priority
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -96,6 +97,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
 class UserRoleSerializerModel(serializers.ModelSerializer):
     attached_policies = serializers.SerializerMethodField()
+    auth_config = serializers.SerializerMethodField()
 
     class Meta:
         model = UserRoleModel
@@ -105,6 +107,10 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         policies = obj.policies.all()
         policy_serializer = PolicySerializer(policies, many=True)
         return policy_serializer.data
+
+    def get_auth_config(self, obj):
+        tenant = self.context.get("tenant")
+        return get_auth_priority(tenant=tenant, user_role=obj)
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
         tenant = self.context.get("tenant")

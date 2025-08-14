@@ -1,6 +1,6 @@
 from typing import List, Literal, Required, TypedDict
 
-from zango.apps.shared.tenancy.utils import PasswordPolicy
+from zango.apps.shared.tenancy.schema import PasswordPolicy
 
 
 class TwoFactorAuth(TypedDict, total=False):

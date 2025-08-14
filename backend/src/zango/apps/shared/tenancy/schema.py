@@ -78,7 +78,6 @@ class TwoFactorAuth(TypedDict, total=False):
 
 class SessionPolicy(TypedDict):
     max_concurrent_sessions: int
-    force_logout_on_password_change: bool
 
 
 class AuthConfigSchema(TypedDict, total=False):

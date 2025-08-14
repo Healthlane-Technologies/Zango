@@ -267,6 +267,28 @@ def get_app_secret(key=None, id=None):
 AuthLevel = Literal["user", "user_role", "tenant"]
 
 
+def filter_user_auth_config(user_auth_config, user_role_auth_config):
+    if user_role_auth_config.get("two_factor_auth", {}).get("required"):
+        if user_auth_config.get("two_factor_auth", {}):
+            user_auth_config["two_factor_auth"]["required"] = True
+        else:
+            user_auth_config["two_factor_auth"] = {
+                "required": True,
+            }
+    return user_auth_config
+
+
+def filter_user_role_auth_config(user_role_auth_config, tenant_auth_config):
+    if tenant_auth_config.get("two_factor_auth", {}).get("required"):
+        if user_role_auth_config.get("two_factor_auth", {}):
+            user_role_auth_config["two_factor_auth"]["required"] = True
+        else:
+            user_role_auth_config["two_factor_auth"] = {
+                "required": True,
+            }
+    return user_role_auth_config
+
+
 def get_auth_priority(
     config_key: Optional[str] = None,
     policy: Optional[str] = None,
@@ -307,12 +329,16 @@ def get_auth_priority(
                 user_role = UserRoleModel.objects.get(id=request.session["role_id"])
         else:
             user_role = get_current_role()
+    print("tenant is", tenant)
     if tenant is None:
         tenant = request.tenant
-
-    user_auth_config = getattr(user, "auth_config", {})
-    user_role_auth_config = getattr(user_role, "auth_config", {}) if user_role else {}
     tenant_auth_config = getattr(tenant, "auth_config", {})
+    user_role_auth_config = filter_user_role_auth_config(
+        getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
+    )
+    user_auth_config = filter_user_auth_config(
+        getattr(user, "auth_config", {}) if user else {}, user_role_auth_config
+    )
 
     if not config_key and not policy:
         merged_policy = {}
