@@ -4,7 +4,6 @@ import os
 
 bind = "0.0.0.0:8000"
 workers = multiprocessing.cpu_count() * 2 + 1
-limit_request_line = os.environ.get("GUNICORN_LIMIT_REQUEST_LINE", 8190)
 
 
 # https://opentelemetry-python.readthedocs.io/en/latest/examples/fork-process-model/README.html
