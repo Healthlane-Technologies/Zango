@@ -1,5 +1,16 @@
-version: "3.8"
 services:
+  change-vol-ownership:
+    image: alpine:3.22.1
+    user: "root"
+    group_add:
+      - 2048
+    volumes:
+      - app_volume:/tmp/change-app-ownership
+      - static_volume:/tmp/change-static-ownership
+      - media_volume:/tmp/change-media-ownership
+      - logs_volume:/tmp/change-logs-ownership
+    command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership
+
   postgres:
     image: postgres
     env_file:
@@ -15,61 +26,66 @@ services:
       retries: 5
     volumes:
       - "prod_db:/var/lib/postgresql/data"
+    profiles:
+      - with-db
+
   app:
     build:
       context: .
-      dockerfile: prod.dockerfile
-      args:
-        - HOST_UID=${HOST_UID}
-        - HOST_GID=${HOST_GID}
+      dockerfile: project.base.dockerfile
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      change-vol-ownership:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
       ENV: prod
-    volumes:
-      - .:/zango/
     healthcheck:
       test: ["CMD-SHELL", "netstat -ltn | grep -q 8000"]
       timeout: 5s
       retries: 3
+    volumes:
+      - static_volume:/zango/zango_project/static
+      - media_volume:/zango/zango_project/media
+      - app_volume:/zango/zango_project/workspaces
+      - logs_volume:/zango/zango_project/logs
+
   nginx:
     build:
       context: .
-      dockerfile: config/Dockerfile
+      dockerfile: config/nginx.dockerfile
     ports:
       - "1443:1443"
     env_file:
       - .env
     volumes:
-      - ./${PROJECT_NAME}/static:/zango/${PROJECT_NAME}/static
-      - ./${PROJECT_NAME}/media:/zango/${PROJECT_NAME}/media
-      - ./nginx_logs:/var/log/nginx
+      - static_volume:/zango/zango_project/static:ro
+      - media_volume:/zango/zango_project/media:ro
     depends_on:
       app:
         condition: service_healthy
+      change-vol-ownership:
+        condition: service_completed_successfully
 
   celery:
     build:
       context: .
-      dockerfile: prod.dockerfile
-      args:
-        - HOST_UID=${HOST_UID}
-        - HOST_GID=${HOST_GID}
-    command: /bin/sh -c "cd ${PROJECT_NAME} && celery -A ${PROJECT_NAME} worker -l info"
-    volumes:
-      - .:/zango/
+      dockerfile: project.base.dockerfile
+    entrypoint: /bin/sh -c "cd zango_project && celery -A zango_project worker -l info"
     env_file:
       - .env
+    volumes:
+      - app_volume:/zango/zango_project/workspaces
+      - logs_volume:/zango/zango_project/logs
     depends_on:
       app:
         condition: service_healthy
       redis:
         condition: service_healthy
+      change-vol-ownership:
+        condition: service_completed_successfully
 
   redis:
     image: redis
@@ -84,55 +100,69 @@ services:
   celery-flower:
     build:
       context: .
-      dockerfile: prod.dockerfile
-      args:
-        - HOST_UID=${HOST_UID}
-        - HOST_GID=${HOST_GID}
+      dockerfile: project.base.dockerfile
     restart: always
     entrypoint:
-      - /bin/sh
+      - /bin/sh 
       - start_flower.sh
     ports:
       - "5555:5555"
     env_file:
       - .env
-    volumes:
-      - .:/zango/
     environment:
       - FLOWER_PORT=5555
       - FLOWER_PERSISTENT=True
       - FLOWER_STATE_SAVE_INTERVAL=10000
-    depends_on:
-      - postgres
-      - redis
-      - celery
-
-  celery_beat:
-    build:
-      context: .
-      dockerfile: prod.dockerfile
-      args:
-        - HOST_UID=${HOST_UID}
-        - HOST_GID=${HOST_GID}
-    command: /bin/sh -c "cd ${PROJECT_NAME} && single-beat celery -A ${PROJECT_NAME} beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
-      - .:/zango/
-    env_file:
-      - .env
+      - app_volume:/zango/zango_project/workspaces
+      - logs_volume:/zango/zango_project/logs
     depends_on:
       app:
         condition: service_healthy
       redis:
         condition: service_healthy
+      celery:
+        condition: service_started
+      change-vol-ownership:
+        condition: service_completed_successfully
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: project.base.dockerfile
+    entrypoint: /bin/sh -c "cd zango_project && single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    env_file:
+      - .env
+    volumes:
+      - app_volume:/zango/zango_project/workspaces
+      - logs_volume:/zango/zango_project/logs
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery:
+        condition: service_started
+      change-vol-ownership:
+        condition: service_completed_successfully
 
   otel-collector:
-    image: otel/opentelemetry-collector:latest
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./config/collector.yml:/etc/otel-collector-config.yaml
+    build:
+      context: .
+      dockerfile: config/otel-collector.dockerfile
+    entrypoint: ["/start_otel.sh"]
+    env_file:
+      - .env
     ports:
       - 4317:4317
       - 4318:4318
       - 9090:9090
+    profiles:
+      - with-instrumentation
+    
 volumes:
   prod_db: null
+  app_volume: null
+  static_volume: null
+  media_volume: null
+  logs_volume: null

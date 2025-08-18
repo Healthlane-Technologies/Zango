@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 import click
 import requests
 
+from git import Repo
 from packaging import specifiers, version
 
 import django
@@ -482,7 +483,9 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
                 "Update not allowed: Last release version is newer than the remote version.",
             )
         if local_version == remote_version or (
-            last_release and last_release.version == remote_version
+            last_release
+            and last_release.version == remote_version
+            and not is_version_greater(remote_version, local_version)
         ):
             return (
                 False,
@@ -494,6 +497,94 @@ def is_update_allowed(tenant, app_settings, git_mode=False, repo_url=None, branc
         return False, "No update needed: Local version has not changed."
 
     return True, "Update allowed: Local version is newer than the last release."
+
+
+def create_workspace(tenant_obj, project_root):
+    from django.conf import settings
+
+    from zango.apps.release.models import AppRelease
+
+    git_config = tenant_obj.extra_config.get("git_config", {})
+    repo_url = git_config.get("repo_url")
+    tenant_name = tenant_obj.name
+    workspace_path = os.path.join(project_root, "workspaces", tenant_name)
+
+    if not repo_url:
+        click.echo("No git repository URL found in settings.")
+        return False
+
+    # Construct authenticated URL
+    parts = repo_url.split("://")
+    authenticated_url = (
+        f"{parts[0]}://{settings.GIT_USERNAME}:{settings.GIT_PASSWORD}@{parts[1]}"
+    )
+
+    release = (
+        AppRelease.objects.filter(status="released").order_by("-created_at").first()
+    )
+    if release and release.last_git_hash:
+        git_hash = release.last_git_hash
+
+        if repo_url and git_hash:
+            try:
+                # Create workspaces directory if it doesn't exist
+                workspaces_dir = os.path.join(project_root, "workspaces")
+                if not os.path.exists(workspaces_dir):
+                    os.makedirs(workspaces_dir)
+
+                # Clone repository at specific commit
+                repo = Repo.clone_from(authenticated_url, workspace_path)
+                repo.git.checkout(git_hash)
+
+                click.echo(
+                    f"Successfully created workspace for {tenant_name} from commit {git_hash}"
+                )
+                if (
+                    settings.STORAGES["staticfiles"]["BACKEND"]
+                    == "django.contrib.staticfiles.storage.StaticFilesStorage"
+                ):
+                    sync_static(tenant_obj.name)
+                    collect_static()
+                return True
+
+            except Exception as e:
+                error_message = (
+                    f"Failed to create workspace from git commit {git_hash}: {e}"
+                )
+                click.echo(click.style(error_message, fg="red", bold=True), err=True)
+                if os.path.exists(workspace_path):
+                    shutil.rmtree(workspace_path)
+                return False
+    else:
+        if settings.ENV == "staging":
+            branch = git_config.get("branch", {}).get("staging")
+        elif settings.ENV == "prod":
+            branch = git_config.get("branch", {}).get("production")
+        elif settings.ENV == "dev":
+            branch = git_config.get("branch", {}).get("development")
+        if not branch:
+            click.echo(f"No {settings.ENV} branch found in git config.")
+            return False
+
+        try:
+            repo = Repo.clone_from(authenticated_url, workspace_path)
+            repo.git.checkout(branch)
+
+            click.echo(f"Successfully created workspace from {branch} branch.")
+            if (
+                settings.STORAGES["staticfiles"]["BACKEND"]
+                == "django.contrib.staticfiles.storage.StaticFilesStorage"
+            ):
+                sync_static(tenant_obj.name)
+                collect_static()
+            return True
+        except Exception as e:
+            error_message = f"Failed to create workspace from staging branch: {e}"
+            click.echo(click.style(error_message, fg="red", bold=True), err=True)
+            if os.path.exists(workspace_path):
+                shutil.rmtree(workspace_path)
+            return False
+        return False
 
 
 @click.command("update-apps")
@@ -538,6 +629,11 @@ def update_apps(app_name):
 
         try:
             app_directory = os.path.join(project_root, "workspaces", tenant)
+            if not os.path.exists(app_directory):
+                click.echo(f"Creating workspace for {tenant}")
+                create_workspace(tenant_obj, project_root)
+            else:
+                click.echo(f"Workspace for {tenant} already exists")
             app_settings = json.loads(
                 open(os.path.join(app_directory, "settings.json")).read()
             )
