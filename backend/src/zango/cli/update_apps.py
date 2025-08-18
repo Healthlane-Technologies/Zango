@@ -560,6 +560,8 @@ def create_workspace(tenant_obj, project_root):
             branch = git_config.get("branch", {}).get("staging")
         elif settings.ENV == "prod":
             branch = git_config.get("branch", {}).get("production")
+        elif settings.ENV == "dev":
+            branch = git_config.get("branch", {}).get("development")
         if not branch:
             click.echo(f"No {settings.ENV} branch found in git config.")
             return False

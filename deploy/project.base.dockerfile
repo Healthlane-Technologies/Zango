@@ -20,13 +20,12 @@ RUN zango start-project zango_project --skip-db-setup
 COPY --chown=zango_user:zango_user init.sh /zango/
 COPY --chown=zango_user:zango_user start_flower.sh /zango/
 COPY --chown=zango_user:zango_user config/gunicorn.conf.py /zango/config/
-COPY --chown=zango_user:zango_user fetch-secrets.sh /zango/
 
 # Remove .envs - this will be created at runtime
 RUN rm -f /zango/.env
 
 # Set proper permissions
-RUN chmod +x /zango/init.sh /zango/start_flower.sh /zango/fetch-secrets.sh
+RUN chmod +x /zango/init.sh /zango/start_flower.sh
 RUN chown -R zango_user:zango_user /zango
 
 # Switch to non-root user

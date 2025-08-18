@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.10-bookworm
 RUN  apt-get update && apt-get install -y libxml2-dev \
     libxmlsec1-dev \
     libxmlsec1-openssl \
