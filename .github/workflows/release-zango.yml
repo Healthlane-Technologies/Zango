@@ -60,7 +60,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and Push Docker image
+    - name: Build and Push Zango Docker image
       uses: docker/build-push-action@v4
       with:
         context: .
@@ -68,13 +68,31 @@ jobs:
         platforms: linux/amd64,linux/arm64
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
     
-    - name: Build and Push Docker image with tag
+    - name: Build and Push Zango Docker image with tag
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
         platforms: linux/amd64,linux/arm64
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:${{ needs.check-publish.outputs.version }}
+    
+    - name: Build and Push Zango Project Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./deploy/project.base.dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango-base-project:latest
+    
+    - name: Build and Push Zango Project Docker image with tag
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./deploy/project.base.dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango-base-project:${{ needs.check-publish.outputs.version }}
 
   build-zango:
     name: Build zango

@@ -32,7 +32,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: base-prod.dockerfile
+      dockerfile: project.base.dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -72,7 +72,7 @@ services:
   celery:
     build:
       context: .
-      dockerfile: base-prod.dockerfile
+      dockerfile: project.base.dockerfile
     entrypoint: /bin/sh -c "cd zango_project && celery -A zango_project worker -l info"
     env_file:
       - .env
@@ -100,7 +100,7 @@ services:
   celery-flower:
     build:
       context: .
-      dockerfile: base-prod.dockerfile
+      dockerfile: project.base.dockerfile
     restart: always
     entrypoint:
       - /bin/sh 
@@ -129,7 +129,7 @@ services:
   celery_beat:
     build:
       context: .
-      dockerfile: base-prod.dockerfile
+      dockerfile: project.base.dockerfile
     entrypoint: /bin/sh -c "cd zango_project && single-beat celery -A zango_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     env_file:
       - .env
