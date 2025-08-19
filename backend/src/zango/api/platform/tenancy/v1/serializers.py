@@ -97,7 +97,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
 class UserRoleSerializerModel(serializers.ModelSerializer):
     attached_policies = serializers.SerializerMethodField()
-    auth_config = serializers.SerializerMethodField()
+    auth_config = serializers.JSONField(required=False)
 
     class Meta:
         model = UserRoleModel
@@ -108,9 +108,11 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         policy_serializer = PolicySerializer(policies, many=True)
         return policy_serializer.data
 
-    def get_auth_config(self, obj):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
         tenant = self.context.get("tenant")
-        return get_auth_priority(tenant=tenant, user_role=obj)
+        data["auth_config"] = get_auth_priority(tenant=tenant, user_role=instance)
+        return data
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
         tenant = self.context.get("tenant")
@@ -136,6 +138,7 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
 class AppUserModelSerializerModel(serializers.ModelSerializer):
     roles = UserRoleSerializerModel(many=True)
     pn_country_code = serializers.SerializerMethodField()
+    auth_config = serializers.JSONField(required=False)
 
     class Meta:
         model = AppUserModel
@@ -145,6 +148,22 @@ class AppUserModelSerializerModel(serializers.ModelSerializer):
         if obj.mobile:
             return f"+{obj.mobile.country_code}"
         return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        tenant = self.context.get("tenant")
+        auth_config = get_auth_priority(tenant=tenant, user=instance)
+        twofa_enabled = auth_config.get("two_factor_auth", {}).get("required", False)
+        for role in instance.roles.all():
+            role_twofa_config = get_auth_priority(
+                tenant=tenant, user_role=role, policy="two_factor_auth"
+            )
+            if role_twofa_config.get("required", False):
+                twofa_enabled = True
+                break
+        auth_config["two_factor_auth"]["required"] = twofa_enabled
+        data["auth_config"] = auth_config
+        return data
 
     def validate_user_role_two_factor_not_overridden(self, auth_config, roles):
         if not roles:

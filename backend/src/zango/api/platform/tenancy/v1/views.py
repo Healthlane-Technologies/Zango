@@ -580,8 +580,9 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
             status_code = 200 if success else 400
             if status_code != 400:
                 if request.data.get("auth_config"):
+                    auth_config = json.loads(request.data["auth_config"])
                     ser = AppUserModelSerializerModel(
-                        instance=obj, data=request.data["auth_config"], partial=True
+                        instance=obj, data={"auth_config": auth_config}, partial=True
                     )
                     if ser.is_valid():
                         ser.save()

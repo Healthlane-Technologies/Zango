@@ -1,5 +1,6 @@
 import json
 
+from copy import deepcopy
 from importlib import import_module
 from typing import Any, Dict, Literal, Optional, Union
 
@@ -267,6 +268,27 @@ def get_app_secret(key=None, id=None):
 AuthLevel = Literal["user", "user_role", "tenant"]
 
 
+def deep_merge(target: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recursively merge two dictionaries, with source values taking precedence.
+
+    Args:
+        target: The target dictionary to merge into
+        source: The source dictionary to merge from
+
+    Returns:
+        A new dictionary with deeply merged values
+    """
+    result = deepcopy(target)
+
+    for key, value in source.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = deepcopy(value)
+    return result
+
+
 def filter_user_auth_config(user_auth_config, user_role_auth_config):
     if user_role_auth_config.get("two_factor_auth", {}).get("required"):
         if user_auth_config.get("two_factor_auth", {}):
@@ -323,13 +345,25 @@ def get_auth_priority(
         request = get_current_request()
     if user is None:
         user = request.user
+        if user.is_anonymous:
+            from allauth.account.internal.stagekit import unstash_login
+
+            login = unstash_login(request, peek=True)
+            if login:
+                user = login.user
+            else:
+                user = None
     if user_role is None:
         if getattr(request, "session", None):
             if request.session.get("role_id"):
                 user_role = UserRoleModel.objects.get(id=request.session["role_id"])
         else:
             user_role = get_current_role()
-    print("tenant is", tenant)
+        if user_role is None:
+            if user and not user.is_anonymous:
+                roles = user.roles.filter(is_active=True)
+                if roles.count() == 1:
+                    user_role = roles.first()
     if tenant is None:
         tenant = request.tenant
     tenant_auth_config = getattr(tenant, "auth_config", {})
@@ -337,15 +371,16 @@ def get_auth_priority(
         getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
     )
     user_auth_config = filter_user_auth_config(
-        getattr(user, "auth_config", {}) if user else {}, user_role_auth_config
+        getattr(user, "auth_config", {}) if user and not user.is_anonymous else {},
+        user_role_auth_config,
     )
 
     if not config_key and not policy:
         merged_policy = {}
 
-        merged_policy.update(tenant_auth_config)
-        merged_policy.update(user_role_auth_config)
-        merged_policy.update(user_auth_config)
+        merged_policy = deep_merge(merged_policy, tenant_auth_config)
+        merged_policy = deep_merge(merged_policy, user_role_auth_config)
+        merged_policy = deep_merge(merged_policy, user_auth_config)
         return merged_policy
 
     if policy:
@@ -353,13 +388,13 @@ def get_auth_priority(
 
         tenant_policy = tenant_auth_config.get(policy, {})
         if tenant_policy:
-            merged_policy.update(tenant_policy)
+            merged_policy = deep_merge(merged_policy, tenant_policy)
         user_role_policy = user_role_auth_config.get(policy, {})
         if user_role_policy:
-            merged_policy.update(user_role_policy)
+            merged_policy = deep_merge(merged_policy, user_role_policy)
         user_policy = user_auth_config.get(policy, {})
         if user_policy:
-            merged_policy.update(user_policy)
+            merged_policy = deep_merge(merged_policy, user_policy)
         return merged_policy
     else:
         auth_levels = [
