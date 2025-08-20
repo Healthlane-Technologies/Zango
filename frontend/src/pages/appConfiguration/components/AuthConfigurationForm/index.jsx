@@ -898,7 +898,15 @@ const AuthConfigurationForm = () => {
 																	description="Make 2FA mandatory for all users"
 																	name="two_factor_auth.required"
 																	value={values?.two_factor_auth?.required}
-																	onChange={(e) => setFieldValue("two_factor_auth.required", e.target.checked)}
+																	onChange={(e) => {
+																		const isEnabled = e.target.checked;
+																		setFieldValue("two_factor_auth.required", isEnabled);
+																		if (isEnabled) {
+																			setFieldValue("two_factor_auth.allowed_methods", ["email", "sms"]);
+																		} else {
+																			setFieldValue("two_factor_auth.allowed_methods", []);
+																		}
+																	}}
 																>
 																	<div className="space-y-[24px]">
 																		
@@ -910,6 +918,7 @@ const AuthConfigurationForm = () => {
 																					options={twoFactorMethodOptions}
 																					value={values?.two_factor_auth?.allowed_methods || []}
 																					onChange={(value) => setFieldValue("two_factor_auth.allowed_methods", value)}
+																					requiredOptions={values?.two_factor_auth?.required ? ["email", "sms"] : []}
 																				/>
 																			</div>
 																		
