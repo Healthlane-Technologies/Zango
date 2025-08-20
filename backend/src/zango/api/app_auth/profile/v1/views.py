@@ -14,7 +14,9 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
         serializer = ProfileSerializer(request.user, context={"request": request})
         success = True
         tokens = AppUserAuthToken.objects.filter(user=request.user)
-        token_serializer = AppUserAuthTokenSerializer(tokens, many=True)
+        token_serializer = AppUserAuthTokenSerializer(
+            tokens, many=True, context={"request": request, "tenant": request.tenant}
+        )
         password_policy = get_auth_priority(
             policy="password_policy", user=request.user, request=request
         )

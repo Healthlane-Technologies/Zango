@@ -179,22 +179,16 @@ const EditUserDetailsForm = ({ closeModal }) => {
 		}
 
 		// Create auth_config object from two_factor_auth
-		const auth_config = {};
-		
-		// Only include two_factor_auth if it's enabled or has custom settings
-		if (tempValues.two_factor_auth.required || tempValues.two_factor_auth.allowedMethods.length > 0) {
-			auth_config.two_factor_auth = tempValues.two_factor_auth;
-		}
+		const auth_config = {
+			two_factor_auth: tempValues.two_factor_auth
+		};
 		
 		// Remove the original two_factor_auth field
 		delete tempValues.two_factor_auth;
 		
 		let dynamicFormData = transformToFormData(tempValues);
 		
-		// Add auth_config as JSON if it has content
-		if (Object.keys(auth_config).length > 0) {
-			dynamicFormData.append('auth_config', JSON.stringify(auth_config));
-		}
+		dynamicFormData.append('auth_config', JSON.stringify(auth_config));
 
 		const makeApiCall = async () => {
 			const { success } = await triggerApi({

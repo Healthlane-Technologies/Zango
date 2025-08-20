@@ -125,7 +125,6 @@ def generate_lockout_response(request, credentials):
 
     cooloff_time = settings.AXES_COOLOFF_TIME
 
-    # change this path
     if "/api/v1/appauth/" in request.path:
         cooloff_seconds = (
             int(cooloff_time.total_seconds())

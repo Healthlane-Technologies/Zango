@@ -3,6 +3,7 @@ import json
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
+from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
@@ -135,7 +136,9 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         return super(UserRoleSerializerModel, self).update(instance, validated_data)
 
 
-class AppUserModelSerializerModel(serializers.ModelSerializer):
+class AppUserModelSerializerModel(
+    serializers.ModelSerializer, UserAuthConfigValidationMixin
+):
     roles = UserRoleSerializerModel(many=True)
     pn_country_code = serializers.SerializerMethodField()
     auth_config = serializers.JSONField(required=False)
@@ -164,23 +167,6 @@ class AppUserModelSerializerModel(serializers.ModelSerializer):
         auth_config["two_factor_auth"]["required"] = twofa_enabled
         data["auth_config"] = auth_config
         return data
-
-    def validate_user_role_two_factor_not_overridden(self, auth_config, roles):
-        if not roles:
-            return
-        user_two_factor_auth_enabled = auth_config.get("two_factor_auth", {}).get(
-            "required"
-        )
-        for role in roles:
-            if role.auth_config.get("two_factor_auth", {}):
-                role_two_factor_auth = role.auth_config["two_factor_auth"]
-                if (
-                    role_two_factor_auth.get("required")
-                    and not user_two_factor_auth_enabled
-                ):
-                    raise serializers.ValidationError(
-                        f"Two-factor authentication is required for {role.name} role."
-                    )
 
     def validate(self, attrs):
         auth_config = attrs.get("auth_config", {})

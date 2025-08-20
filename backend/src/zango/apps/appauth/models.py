@@ -1,3 +1,4 @@
+import json
 import secrets
 
 from datetime import date, timedelta
@@ -11,6 +12,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.auditlogs.registry import auditlog
 from zango.apps.object_store.models import ObjectStore
 from zango.apps.shared.platformauth.abstract_model import (
@@ -61,7 +63,9 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
         super().delete(*args, **kwargs)
 
 
-class AppUserModel(AbstractZangoUserModel, PermissionMixin):
+class AppUserModel(
+    AbstractZangoUserModel, PermissionMixin, UserAuthConfigValidationMixin
+):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
@@ -267,6 +271,7 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
             user_query = Q()
             email = data.get("email")
             mobile = data.get("mobile")
+            auth_config = json.loads(data.get("auth_config", "{}"))
             if email:
                 user_query = user_query | Q(email=email)
             if mobile:
@@ -285,10 +290,16 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
 
                 self.set_password(password)
 
+            self.validate_user_role_two_factor_not_overridden(
+                auth_config, self.roles.all()
+            )
+
             if email:
                 self.email = email
             if mobile:
                 self.mobile = mobile
+            if auth_config:
+                self.auth_config = auth_config
 
             name = data.get("name")
             if name:

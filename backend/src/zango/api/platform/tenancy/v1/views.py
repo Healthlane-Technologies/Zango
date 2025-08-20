@@ -442,7 +442,11 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
             columns = get_search_columns(request)
             app_users = self.get_queryset(search, columns)
             app_users = self.paginate_queryset(app_users, request, view=self)
-            serializer = AppUserModelSerializerModel(app_users, many=True)
+            serializer = AppUserModelSerializerModel(
+                app_users,
+                many=True,
+                context={"request": request, "tenant": self.get_tenant(**kwargs)},
+            )
             app_users_data = self.get_paginated_response_data(serializer.data)
             app_tenant = self.get_tenant(**kwargs)
             success = True
