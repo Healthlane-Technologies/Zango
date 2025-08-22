@@ -8,6 +8,7 @@ from django.db import connection
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 
+from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.permissions.models import PolicyModel
@@ -394,7 +395,12 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin):
+class UserViewAPIV1(
+    ZangoGenericPlatformAPIView,
+    ZangoAPIPagination,
+    TenantMixin,
+    UserAuthConfigValidationMixin,
+):
     pagination_class = ZangoAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
@@ -466,37 +472,6 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
 
         return get_api_response(success, response, status)
 
-    def validate_email_and_phone_passed(
-        self, tenant_auth_config, user_auth_config, email, phone
-    ):
-        login_methods = tenant_auth_config.get("login_methods")
-        if login_methods.get("otp", {}).get("enabled", False):
-            allowed_methods = login_methods["otp"].get("allowed_methods")
-            if "email" in allowed_methods and not email:
-                raise ValidationError(
-                    "Email is required since email based login is enabled"
-                )
-            if "sms" in allowed_methods and not phone:
-                raise ValidationError(
-                    "Phone is required since SMS based login is enabled"
-                )
-
-        if login_methods.get("two_factor_auth", {}).get("required", False):
-            allowed_methods = login_methods["two_factor_auth"]["allowed_methods"]
-            if not email or not phone:
-                raise ValidationError("Email and Phone are required")
-
-        if login_methods.get("password", {}).get("enabled", False):
-            allowed_methods = login_methods["password"].get("allowed_usernames", [])
-            if "email" in allowed_methods and not email:
-                raise ValidationError(
-                    "Email is required since email based login is enabled"
-                )
-            if "phone" in allowed_methods and not phone:
-                raise ValidationError(
-                    "Phone is required since SMS based login is enabled"
-                )
-
     def validate_password_passed(self, tenant_auth_config, user_auth_config, password):
         login_methods = tenant_auth_config.get("login_methods")
         if login_methods.get("password", {}).get("enabled", False):
@@ -513,10 +488,10 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
                     return get_api_response(False, result, 400)
             app_tenant = self.get_tenant(**kwargs)
             self.validate_email_and_phone_passed(
-                app_tenant.auth_config,
                 data.get("auth_config"),
                 data.get("email"),
                 data.get("mobile"),
+                app_tenant,
             )
             self.validate_password_passed(
                 app_tenant.auth_config, data.get("auth_config"), data.get("password")
@@ -546,7 +521,7 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
+class UserDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
@@ -578,7 +553,9 @@ class UserDetailViewAPIV1(ZangoGenericPlatformAPIView):
                     result = {"message": "Invalid mobile number"}
                     return get_api_response(False, result, 400)
             obj = self.get_obj(**kwargs)
-            update_result = AppUserModel.update_user(obj, request.data)
+            update_result = AppUserModel.update_user(
+                obj, request.data, tenant=self.get_tenant(**kwargs)
+            )
             success = update_result["success"]
             message = update_result["message"]
             status_code = 200 if success else 400
