@@ -175,7 +175,9 @@ class AppUserModelSerializerModel(
             roles = attrs.get("roles")
             if roles is None and self.instance:
                 roles = self.instance.roles.all()
-            self.validate_user_role_two_factor_not_overridden(auth_config, roles)
+            self.validate_user_role_two_factor_not_overridden(
+                auth_config, self.instance, roles
+            )
         return attrs
 
     def validate_auth_config(self, value):

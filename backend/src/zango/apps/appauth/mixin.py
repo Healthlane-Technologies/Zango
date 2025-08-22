@@ -57,22 +57,22 @@ class UserAuthConfigValidationMixin:
         login_methods = tenant_auth_config.get("login_methods")
         if login_methods.get("otp", {}).get("enabled", False):
             allowed_methods = login_methods["otp"].get("allowed_methods")
-            if "email" in allowed_methods and not email:
+            if ["email"] == allowed_methods and not email:
                 raise ValidationError(
                     "Email is required since email based login is enabled"
                 )
-            if "sms" in allowed_methods and not phone:
+            if ["sms"] == allowed_methods and not phone:
                 raise ValidationError(
                     "Phone is required since SMS based login is enabled"
                 )
 
         if login_methods.get("password", {}).get("enabled", False):
             allowed_methods = login_methods["password"].get("allowed_usernames", [])
-            if "email" in allowed_methods and not email:
+            if ["email"] == allowed_methods and not email:
                 raise ValidationError(
                     "Email is required since email based login is enabled"
                 )
-            if "phone" in allowed_methods and not phone:
+            if ["phone"] == allowed_methods and not phone:
                 raise ValidationError(
                     "Phone is required since SMS based login is enabled"
                 )

@@ -93,7 +93,6 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             }
             status = 200
         except Exception as e:
-            print(traceback.format_exc())
             success = False
             response = {"message": str(e)}
             status = 500
@@ -208,9 +207,6 @@ class AppDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
 
                 result = {"message": error_message}
         except Exception as e:
-            import traceback
-
-            print(traceback.format_exc())
             success = False
             result = {"message": str(e)}
             status_code = 500
@@ -487,15 +483,6 @@ class UserViewAPIV1(
                     result = {"message": "Invalid mobile number"}
                     return get_api_response(False, result, 400)
             app_tenant = self.get_tenant(**kwargs)
-            self.validate_email_and_phone_passed(
-                data.get("auth_config"),
-                data.get("email"),
-                data.get("mobile"),
-                app_tenant,
-            )
-            self.validate_password_passed(
-                app_tenant.auth_config, data.get("auth_config"), data.get("password")
-            )
             creation_result = AppUserModel.create_user(
                 name=data["name"],
                 email=data["email"],
@@ -503,6 +490,7 @@ class UserViewAPIV1(
                 password=data["password"],
                 role_ids=role_ids,
                 require_verification=False,
+                tenant=app_tenant,
             )
             success = creation_result["success"]
             result = {"message": creation_result["message"]}

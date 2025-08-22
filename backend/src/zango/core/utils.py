@@ -359,10 +359,13 @@ def get_auth_priority(
         else:
             user_role = get_current_role()
         if user_role is None:
-            if user and not user.is_anonymous:
-                roles = user.roles.filter(is_active=True)
-                if roles.count() == 1:
-                    user_role = roles.first()
+            try:
+                if user and not user.is_anonymous:
+                    roles = user.roles.filter(is_active=True)
+                    if roles.count() == 1:
+                        user_role = roles.first()
+            except Exception:
+                pass
     if tenant is None:
         tenant = request.tenant
     tenant_auth_config = getattr(tenant, "auth_config", {})

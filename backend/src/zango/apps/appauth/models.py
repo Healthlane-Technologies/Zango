@@ -197,6 +197,7 @@ class AppUserModel(
         require_verification=True,
         app_objects=None,
         auth_config=None,
+        tenant=None,
     ):
         """ """
         success = False
@@ -276,7 +277,7 @@ class AppUserModel(
                 final_auth_config,
                 app_user,
                 existing_roles or UserRoleModel.objects.none(),
-                connection.tenant,
+                tenant or connection.tenant,
             )
 
             # Set password

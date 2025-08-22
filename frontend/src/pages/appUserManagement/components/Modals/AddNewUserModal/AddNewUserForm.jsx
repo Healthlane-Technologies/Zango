@@ -5,7 +5,6 @@ import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import MultiSelectField from '../../../../../components/Form/MultiSelectField';
-import CheckboxField from '../../../../../components/Form/CheckboxField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
@@ -16,8 +15,6 @@ import {
 import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
 import { useState , useLayoutEffect} from 'react';
 import { countryCodeList } from '../../../../../utils/countryCodes';
-import toast from 'react-hot-toast';
-import Notifications from '../../../../../components/Notifications';
 
 const AddNewUserForm = ({ closeModal }) => {
 	const [countryCode,setCountryCode] = useState({
@@ -31,89 +28,6 @@ const AddNewUserForm = ({ closeModal }) => {
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const triggerApi = useApi();
 
-	const twoFactorMethodOptions = [
-		{ id: "email", label: "Email" },
-		{ id: "sms", label: "SMS" },
-	];
-
-	const MultiSelectChips = ({ label, name, options, value, onChange, description, twoFactorEnabled = false }) => (
-		<div className="space-y-[12px]">
-			<div>
-				<label className="font-lato text-[12px] font-semibold text-[#A3ABB1] uppercase tracking-[0.5px]">
-					{label}
-				</label>
-				{description && (
-					<p className="font-lato text-[10px] leading-[14px] text-[#6B7280] mt-[2px]">
-						{description}
-					</p>
-				)}
-			</div>
-			<div className="flex flex-wrap gap-[8px]">
-				{options.map((option) => {
-					const isSelected = Array.isArray(value) ? value.includes(option.id) : value === option.id;
-					const isDisabled = twoFactorEnabled && isSelected;
-					return (
-						<button
-							key={option.id}
-							type="button"
-							disabled={isDisabled}
-							onClick={() => {
-								if (isDisabled) return;
-								const currentValue = Array.isArray(value) ? value : [value];
-								const newValue = isSelected
-									? currentValue.filter(v => v !== option.id)
-									: [...currentValue, option.id];
-								onChange(newValue);
-							}}
-							className={`px-[12px] py-[6px] rounded-[6px] border font-lato text-[12px] font-medium transition-all duration-200 flex items-center gap-[6px] ${
-								isSelected
-									? `border-[#5048ED] bg-[#5048ED] text-white ${isDisabled ? 'opacity-75 cursor-not-allowed' : ''}`
-									: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC]'
-							}`}
-						>
-							{isSelected && (
-								<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-								</svg>
-							)}
-							{option.label}
-						</button>
-					);
-				})}
-			</div>
-		</div>
-	);
-
-	const ToggleCard = ({ title, description, name, value, onChange, children }) => (
-		<div className={`rounded-[8px] border transition-all duration-200 ${
-			value ? 'border-[#5048ED] bg-[#F8FAFC]' : 'border-[#E5E7EB] bg-white'
-		}`}>
-			<div className="p-[12px]">
-				<div className="flex items-start gap-[8px]">
-					<CheckboxField
-						name={name}
-						value={value}
-						onChange={onChange}
-					/>
-					<div className="flex-1">
-						<h4 className="font-lato text-[12px] font-semibold leading-[16px] text-[#111827]">
-							{title}
-						</h4>
-						{description && (
-							<p className="font-lato text-[10px] leading-[14px] text-[#6B7280] mt-[2px]">
-								{description}
-							</p>
-						)}
-					</div>
-				</div>
-				{value && children && (
-					<div className="mt-[12px] pl-[24px] space-y-[8px]">
-						{children}
-					</div>
-				)}
-			</div>
-		</div>
-	);
 
 	let pn_country_code = appUserManagementData?.pn_country_code ?? '+91'
 	useLayoutEffect(()=>{
@@ -126,10 +40,6 @@ const AddNewUserForm = ({ closeModal }) => {
 		mobile: '',
 		password: '',
 		roles: [],
-		two_factor_auth: {
-			required: false,
-			allowedMethods: [],
-		},
 	};
 
 	let validationSchema = Yup.object().shape(
@@ -151,14 +61,6 @@ const AddNewUserForm = ({ closeModal }) => {
 			}),
 			password: Yup.string(),
 			roles: Yup.array().min(1, 'Minimun one is required').required('Required'),
-			two_factor_auth: Yup.object({
-				required: Yup.boolean(),
-				allowedMethods: Yup.array().when('required', {
-					is: true,
-					then: (schema) => schema.min(1, 'At least one method is required'),
-					otherwise: (schema) => schema,
-				}),
-			}),
 		},
 		[
 			['name'],
@@ -175,23 +77,7 @@ const AddNewUserForm = ({ closeModal }) => {
 			tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
 		}
 
-		// Create auth_config object from two_factor_auth
-		const auth_config = {};
-		
-		// Only include two_factor_auth if it's enabled or has custom settings
-		if (tempValues.two_factor_auth.required || tempValues.two_factor_auth.allowedMethods.length > 0) {
-			auth_config.two_factor_auth = tempValues.two_factor_auth;
-		}
-		
-		// Remove the original two_factor_auth field
-		delete tempValues.two_factor_auth;
-		
 		let dynamicFormData = transformToFormData(tempValues);
-		
-		// Add auth_config as JSON if it has content
-		if (Object.keys(auth_config).length > 0) {
-			dynamicFormData.append('auth_config', JSON.stringify(auth_config));
-		}
 
 		const makeApiCall = async () => {
 			const { success } = await triggerApi({
@@ -298,37 +184,6 @@ const AddNewUserForm = ({ closeModal }) => {
 								formik={formik}
 							/>
 
-							{/* Two-Factor Authentication Section */}
-							<div className="space-y-[12px]">
-								<h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
-									Two-Factor Authentication
-								</h3>
-								<ToggleCard
-									title="Require Two-Factor Authentication"
-									description="Make 2FA mandatory for this user"
-									name="two_factor_auth.required"
-									value={get(formik.values, 'two_factor_auth.required', false)}
-									onChange={(e) => {
-										const isEnabled = e.target.checked;
-										formik.setFieldValue('two_factor_auth.required', isEnabled);
-										if (isEnabled) {
-											formik.setFieldValue('two_factor_auth.allowedMethods', ['email', 'sms']);
-										} else {
-											formik.setFieldValue('two_factor_auth.allowedMethods', []);
-										}
-									}}
-								>
-									<MultiSelectChips
-										name="two_factor_auth.allowedMethods"
-										label="Allowed Methods"
-										description="Select available methods for two-factor authentication"
-										options={twoFactorMethodOptions}
-										value={get(formik.values, 'two_factor_auth.allowedMethods', [])}
-										onChange={(value) => formik.setFieldValue('two_factor_auth.allowedMethods', value)}
-										twoFactorEnabled={get(formik.values, 'two_factor_auth.required', false)}
-									/>
-								</ToggleCard>
-							</div>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<SubmitButton label={'Add User'} formik={formik} />
