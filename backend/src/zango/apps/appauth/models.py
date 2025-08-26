@@ -209,11 +209,6 @@ class AppUserModel(
             return {"success": success, "message": message, "app_user": app_user}
 
         try:
-            # Check for existing user with same name
-            if cls.objects.filter(name=name).exists():
-                message = f"User with name '{name}' already exists"
-                return {"success": success, "message": message, "app_user": app_user}
-
             # Check for existing user with same email or mobile
             existing_fields = []
             if email and cls.objects.filter(email=email).exists():
@@ -332,14 +327,6 @@ class AppUserModel(
             role_ids = data.getlist("roles", [])
             is_active = data.get("is_active", self.is_active)
             auth_config = json.loads(data.get("auth_config", "{}"))
-
-            # Validate name uniqueness
-            if (
-                name
-                and AppUserModel.objects.filter(name=name).exclude(id=self.id).exists()
-            ):
-                message = f"User with name '{name}' already exists"
-                return {"success": False, "message": message}
 
             # Validate email/mobile uniqueness
             existing_fields = []
