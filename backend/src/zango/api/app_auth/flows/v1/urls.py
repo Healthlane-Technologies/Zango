@@ -1,9 +1,14 @@
+from allauth.socialaccount.providers.google.views import (
+    oauth2_callback as google_oauth2_callback,
+)
+
 from django.urls import path
 
 from .login import AppLoginViewAPIV1
 from .login_with_code import ConfirmLoginCodeViewAPIV1, RequestLoginCodeViewAPIV1
 from .logout import AppLogoutViewAPIV1
 from .mfa import GetMFACodeViewAPIV1, MFAVerifyViewAPIV1
+from .oauth import OAuthRedirectView
 from .password import (
     PasswordChangeViewAPIV1,
     RequestResetPasswordViewAPIV1,
@@ -110,5 +115,15 @@ urlpatterns = [
         "sessions/",
         AppSessionsViewAPIV1.as_api_view(client="browser"),
         name="sessions",
+    ),
+    path(
+        "oauth/redirect/",
+        OAuthRedirectView.as_api_view(client="browser"),
+        name="oauth-redirect",
+    ),
+    path(
+        "google/callback/",
+        google_oauth2_callback,
+        name="google_callback",
     ),
 ]

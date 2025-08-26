@@ -75,6 +75,8 @@ TENANT_APPS = [
     "allauth.headless",
     "allauth.mfa",
     "allauth.usersessions",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "django.contrib.humanize",
 ]
 
