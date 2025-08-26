@@ -1,4 +1,10 @@
-from typing import List, Literal, Optional, Required, TypedDict
+from typing import List, Literal, Optional, TypedDict
+
+
+try:
+    from typing import Required
+except ImportError:
+    from typing_extensions import Required
 
 
 class PasswordReset(TypedDict, total=False):

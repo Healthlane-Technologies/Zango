@@ -1,4 +1,10 @@
-from typing import List, Literal, Required, TypedDict
+from typing import List, Literal, TypedDict
+
+
+try:
+    from typing import Required
+except ImportError:
+    from typing_extensions import Required
 
 from zango.apps.shared.tenancy.schema import PasswordPolicy
 
