@@ -343,8 +343,8 @@ def get_auth_priority(
     if request is None:
         request = get_current_request()
     if user is None:
-        user = request.user
-        if user.is_anonymous:
+        user = request.user if request else None
+        if user and user.is_anonymous:
             from allauth.account.internal.stagekit import unstash_login
 
             login = unstash_login(request, peek=True)
@@ -367,8 +367,13 @@ def get_auth_priority(
             except Exception:
                 pass
     if tenant is None:
-        tenant = request.tenant
-    tenant_auth_config = getattr(tenant, "auth_config", {})
+        tenant = request.tenant if request else None
+    try:
+        tenant_auth_config = getattr(tenant, "auth_config", {}) if tenant else {}
+    except Exception:
+        from zango.apps.shared.tenancy.schema import DEFAULT_AUTH_CONFIG
+
+        tenant_auth_config = DEFAULT_AUTH_CONFIG
     user_role_auth_config = filter_user_role_auth_config(
         getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
     )

@@ -25,6 +25,10 @@ class UserAuthConfigValidationMixin:
                     )
 
     def validate_tenant_two_factor_not_overridden(self, tenant, auth_config):
+        try:
+            getattr(tenant, "auth_config")
+        except AttributeError:
+            return
         if tenant.auth_config.get("two_factor_auth", {}).get("required"):
             if not auth_config.get("two_factor_auth", {}).get("required", True):
                 raise ValidationError(
@@ -45,7 +49,12 @@ class UserAuthConfigValidationMixin:
             if role_twofa_config.get("required", False):
                 twofa_enabled = True
                 break
-        auth_priority["two_factor_auth"]["required"] = twofa_enabled
+        if auth_priority.get("two_factor_auth"):
+            auth_priority["two_factor_auth"]["required"] = twofa_enabled
+        else:
+            auth_priority["two_factor_auth"] = {
+                "required": twofa_enabled,
+            }
         if twofa_enabled:
             if not user.email or not user.mobile:
                 raise ValidationError(
@@ -53,6 +62,10 @@ class UserAuthConfigValidationMixin:
                 )
 
     def validate_email_and_phone_passed(self, user_auth_config, email, phone, tenant):
+        try:
+            getattr(tenant, "auth_config")
+        except AttributeError:
+            return
         tenant_auth_config = tenant.auth_config
         login_methods = tenant_auth_config.get("login_methods")
         if login_methods.get("otp", {}).get("enabled", False):
