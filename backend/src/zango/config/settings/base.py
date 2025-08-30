@@ -290,6 +290,15 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
 TENANT_LIMIT_SET_CALLS = True
 
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+    }
+}
+
 
 def setup_settings(settings, BASE_DIR):
     env = environ.Env(

@@ -122,7 +122,7 @@ urlpatterns = [
         name="oauth-redirect",
     ),
     path(
-        "google/callback/",
+        "oauth/google/callback/",
         google_oauth2_callback,
         name="google_callback",
     ),
