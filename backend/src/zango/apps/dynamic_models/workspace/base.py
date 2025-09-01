@@ -376,6 +376,150 @@ class Workspace:
                 )
         return routes
 
+    def get_all_view_urls(self) -> list[dict]:
+        """
+        Returns URLs of all views in the workspace by examining urlpatterns
+        from each module defined in get_root_urls()
+        """
+        all_urls = []
+        root_urls = self.get_root_urls()
+
+        for root_url in root_urls:
+            try:
+                module_path = root_url["module"] + "." + root_url["url"]
+                module = self.plugin_source.load_plugin(module_path)
+                urlpatterns = getattr(module, "urlpatterns", [])
+
+                for pattern in urlpatterns:
+                    # Construct full URL by combining root path and pattern
+                    root_path = root_url["re_path"].strip("^$")
+                    pattern_str = str(pattern.pattern).strip("^$")
+                    full_url = "/" + root_path.strip("/") + "/" + pattern_str.strip("/")
+                    full_url = re.sub(r"/+", "/", full_url)  # Remove duplicate slashes
+
+                    url_info = {
+                        "root_path": root_url["re_path"],
+                        "module": root_url["module"],
+                        "pattern": str(pattern.pattern),
+                        "full_url": full_url,
+                        "name": getattr(pattern, "name", None),
+                        "callback": getattr(
+                            pattern.callback, "__name__", str(pattern.callback)
+                        )
+                        if pattern.callback
+                        else None,
+                        "full_module_path": module_path,
+                    }
+                    all_urls.append(url_info)
+
+            except Exception:
+                # Skip modules that can't be loaded or don't have urlpatterns
+                continue
+
+        return all_urls
+
+    def generate_openapi_spec(self) -> dict:
+        """
+        Generates an OpenAPI 3.0 specification for all views in the workspace
+        """
+        all_urls = self.get_all_view_urls()
+
+        openapi_spec = {
+            "openapi": "3.0.0",
+            "info": {
+                "title": f"{self.wobj.name} API",
+                "description": f"API specification for {self.wobj.name} workspace",
+                "version": self.get_version(),
+            },
+            "servers": [{"url": "/", "description": "Default server"}],
+            "paths": {},
+        }
+
+        for url_info in all_urls:
+            path = url_info["full_url"]
+
+            # Convert Django URL patterns to OpenAPI path parameters
+            # Replace Django patterns like (?P<id>\d+) with OpenAPI {id}
+            openapi_path = re.sub(r"\(\?P<([^>]+)>[^)]+\)", r"{\1}", path)
+            openapi_path = re.sub(
+                r"\(\?[^)]+\)", "", openapi_path
+            )  # Remove other regex groups
+            openapi_path = re.sub(r"\$", "", openapi_path)  # Remove end anchors
+
+            if openapi_path not in openapi_spec["paths"]:
+                openapi_spec["paths"][openapi_path] = {}
+
+            # Determine HTTP methods (default to GET if not specified)
+            methods = ["get"]  # Default method
+
+            # Try to inspect the view to determine supported methods
+            try:
+                callback = url_info.get("callback")
+                if callback:
+                    # For class-based views, check for allowed methods
+                    module_path = url_info["full_module_path"]
+                    module = self.plugin_source.load_plugin(module_path)
+
+                    # Find the view class/function
+                    for pattern in getattr(module, "urlpatterns", []):
+                        if str(pattern.pattern) == url_info["pattern"]:
+                            view_obj = pattern.callback
+                            if hasattr(view_obj, "http_method_names"):
+                                methods = [
+                                    m.lower()
+                                    for m in view_obj.http_method_names
+                                    if m.lower() != "options"
+                                ]
+                            elif hasattr(view_obj, "allowed_methods"):
+                                methods = [m.lower() for m in view_obj.allowed_methods]
+                            break
+            except Exception:
+                pass
+
+            for method in methods:
+                openapi_spec["paths"][openapi_path][method] = {
+                    "summary": f"{method.upper()} {openapi_path}",
+                    "description": f"Endpoint for {url_info.get('name', 'unnamed')} view",
+                    "operationId": f"{method}_{url_info.get('name', callback or 'unknown')}",
+                    "parameters": [],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {"schema": {"type": "object"}}
+                            },
+                        }
+                    },
+                    "tags": [url_info.get("module", "default")],
+                }
+
+                # Add path parameters for parameterized URLs
+                path_params = re.findall(r"\{([^}]+)\}", openapi_path)
+                for param in path_params:
+                    openapi_spec["paths"][openapi_path][method]["parameters"].append(
+                        {
+                            "name": param,
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
+                    )
+
+        return openapi_spec
+
+    def write_openapi_spec(self) -> str:
+        """
+        Generates and writes the OpenAPI specification to the workspace folder
+        Returns the path of the written file
+        """
+        openapi_spec = self.generate_openapi_spec()
+        spec_path = self.path + "openapi.json"
+
+        with open(spec_path, "w") as f:
+            json.dump(openapi_spec, f, indent=2)
+
+        return spec_path
+
     def match_view(self, request) -> object:
         routes = self.get_root_urls()
         path = request.path.lstrip("/")
