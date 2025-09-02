@@ -28,6 +28,7 @@ django-smtp-ssl==1.0
 django-storages==1.14
 django-tenants==3.6.1
 djangorestframework==3.15.2
+docusign-esign==5.2.0
 fido2==2.0.0
 flake8==6.1.0
 flower==2.0.1
