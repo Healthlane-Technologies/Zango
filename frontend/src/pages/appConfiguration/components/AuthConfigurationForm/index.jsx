@@ -60,6 +60,62 @@ const AuthConfigurationForm = () => {
 			required: Yup.boolean(),
 			allowedMethods: Yup.array().min(1, "At least one method is required"),
 		}),
+		oauth_providers: Yup.object({
+			google: Yup.object({
+				enabled: Yup.boolean(),
+				client_id: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Client ID is required when Google OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				client_secret: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Client Secret is required when Google OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				redirect_uri: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when Google OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+			}),
+			github: Yup.object({
+				enabled: Yup.boolean(),
+				client_id: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Client ID is required when GitHub OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				client_secret: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Client Secret is required when GitHub OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				redirect_uri: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when GitHub OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+			}),
+			microsoft: Yup.object({
+				enabled: Yup.boolean(),
+				client_id: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Client ID is required when Microsoft OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				client_secret: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Client Secret is required when Microsoft OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				redirect_uri: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when Microsoft OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+			}),
+		}),
 	});
 
 	let onSubmit = (values) => {
@@ -345,6 +401,7 @@ const AuthConfigurationForm = () => {
 
 	const tabs = [
 		{ id: "login", label: "Login Methods", icon: "🔐" },
+		{ id: "oauth", label: "OAuth Providers", icon: "🔗" },
 		{ id: "session", label: "Session Policy", icon: "⏰" },
 		{ id: "password", label: "Password Policy", icon: "🔒" },
 		{ id: "2fa", label: "Two-Factor Auth", icon: "🛡️" }
@@ -742,6 +799,136 @@ const AuthConfigurationForm = () => {
 																onChange={(e) => setFieldValue("login_methods.oidc.enabled", e.target.checked)}
 															/>
 														</div>
+													</div>
+												</div>
+											</div>
+										);
+									
+									case "oauth":
+										return (
+											<div className="space-y-[32px]">
+												<div className="bg-white rounded-[16px] shadow-lg border border-[#E5E7EB] p-[32px]">
+													<div className="flex items-center gap-[16px] mb-[24px]">
+														<div className="flex h-[40px] w-[40px] items-center justify-center rounded-[10px] bg-[#5048ED]">
+															<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+																<path d="M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10Z" stroke="white" strokeWidth="2"/>
+																<path d="M10 7.5V10L12.5 12.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+															</svg>
+														</div>
+														<div>
+															<h2 className="font-source-sans-pro text-[20px] font-bold text-[#111827]">OAuth Providers</h2>
+															<p className="font-lato text-[14px] text-[#6B7280]">Configure third-party authentication providers</p>
+														</div>
+													</div>
+													
+													<div className="space-y-[24px]">
+														{/* Google OAuth */}
+														<ToggleCard
+															title="Google OAuth"
+															description="Allow users to sign in with their Google account"
+															name="oauth_providers.google.enabled"
+															value={values?.oauth_providers?.google?.enabled || false}
+															onChange={(e) => setFieldValue("oauth_providers.google.enabled", e.target.checked)}
+														>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+																<InputField
+																	name="oauth_providers.google.client_id"
+																	label="Client ID"
+																	type="text"
+																	value={values?.oauth_providers?.google?.client_id || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.google.client_id", e.target.value)}
+																	placeholder="Enter Google Client ID"
+																/>
+																<InputField
+																	name="oauth_providers.google.client_secret"
+																	label="Client Secret"
+																	type="password"
+																	value={values?.oauth_providers?.google?.client_secret || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.google.client_secret", e.target.value)}
+																	placeholder="Enter Google Client Secret"
+																/>
+															</div>
+															<InputField
+																name="oauth_providers.google.redirect_uri"
+																label="Redirect URI"
+																type="url"
+																value={values?.oauth_providers?.google?.redirect_uri || ""}
+																onChange={(e) => setFieldValue("oauth_providers.google.redirect_uri", e.target.value)}
+																placeholder="Enter Google Redirect URI"
+															/>
+														</ToggleCard>
+														
+														{/* GitHub OAuth */}
+														<ToggleCard
+															title="GitHub OAuth"
+															description="Allow users to sign in with their GitHub account"
+															name="oauth_providers.github.enabled"
+															value={values?.oauth_providers?.github?.enabled || false}
+															onChange={(e) => setFieldValue("oauth_providers.github.enabled", e.target.checked)}
+														>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+																<InputField
+																	name="oauth_providers.github.client_id"
+																	label="Client ID"
+																	type="text"
+																	value={values?.oauth_providers?.github?.client_id || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.github.client_id", e.target.value)}
+																	placeholder="Enter GitHub Client ID"
+																/>
+																<InputField
+																	name="oauth_providers.github.client_secret"
+																	label="Client Secret"
+																	type="password"
+																	value={values?.oauth_providers?.github?.client_secret || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.github.client_secret", e.target.value)}
+																	placeholder="Enter GitHub Client Secret"
+																/>
+															</div>
+															<InputField
+																name="oauth_providers.github.redirect_uri"
+																label="Redirect URI"
+																type="url"
+																value={values?.oauth_providers?.github?.redirect_uri || ""}
+																onChange={(e) => setFieldValue("oauth_providers.github.redirect_uri", e.target.value)}
+																placeholder="Enter GitHub Redirect URI"
+															/>
+														</ToggleCard>
+														
+														{/* Microsoft OAuth */}
+														<ToggleCard
+															title="Microsoft OAuth"
+															description="Allow users to sign in with their Microsoft account"
+															name="oauth_providers.microsoft.enabled"
+															value={values?.oauth_providers?.microsoft?.enabled || false}
+															onChange={(e) => setFieldValue("oauth_providers.microsoft.enabled", e.target.checked)}
+														>
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+																<InputField
+																	name="oauth_providers.microsoft.client_id"
+																	label="Client ID"
+																	type="text"
+																	value={values?.oauth_providers?.microsoft?.client_id || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.microsoft.client_id", e.target.value)}
+																	placeholder="Enter Microsoft Client ID"
+																/>
+																<InputField
+																	name="oauth_providers.microsoft.client_secret"
+																	label="Client Secret"
+																	type="password"
+																	value={values?.oauth_providers?.microsoft?.client_secret || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.microsoft.client_secret", e.target.value)}
+																	placeholder="Enter Microsoft Client Secret"
+																/>
+															</div>
+															<InputField
+																name="oauth_providers.microsoft.redirect_uri"
+																label="Redirect URI"
+																type="url"
+																value={values?.oauth_providers?.microsoft?.redirect_uri || ""}
+																onChange={(e) => setFieldValue("oauth_providers.microsoft.redirect_uri", e.target.value)}
+																placeholder="Enter Microsoft Redirect URI"
+															/>
+														</ToggleCard>
 													</div>
 												</div>
 											</div>

@@ -1,6 +1,7 @@
 import json
 import traceback
 
+from allauth.socialaccount.models import SocialApp
 from django_celery_results.models import TaskResult
 
 from django.core.exceptions import ValidationError
@@ -30,6 +31,7 @@ from zango.core.utils import (
 
 from .serializers import (
     AppUserModelSerializerModel,
+    SocialAppSerializer,
     TenantSerializerModel,
     ThemeModelSerializer,
     UserRoleSerializerModel,
@@ -701,3 +703,87 @@ class ThemeDetailViewAPIV1(ZangoGenericPlatformAPIView):
             status_code = 500
 
         return get_api_response(success, result, status_code)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            obj = SocialApp.objects.all()
+            serializer = SocialAppSerializer(obj, many=True)
+            success = True
+            response = {"providers": serializer.data}
+            status = 200
+        except Exception as e:
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def post(self, request, *args, **kwargs):
+        data = request.data
+        try:
+            obj = SocialApp.objects.create(**data)
+            serializer = SocialAppSerializer(obj)
+            success = True
+            response = {"provider": serializer.data}
+            status = 200
+        except Exception as e:
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class OAuthProvidersDetailViewAPIV1(ZangoGenericPlatformAPIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            obj = SocialApp.objects.get(provider=kwargs.get("provider"))
+            serializer = SocialAppSerializer(obj)
+            success = True
+            response = {"provider": serializer.data}
+            status = 200
+        except Exception as e:
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def put(self, request, *args, **kwargs):
+        data = request.data
+        try:
+            obj = SocialApp.objects.get(provider=kwargs.get("provider"))
+            serializer = SocialAppSerializer(instance=obj, data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                success = True
+                status = 200
+                response = {"message": "Provider Updated Successfully"}
+            else:
+                success = False
+                status = 400
+                response = {"message": serializer.errors}
+        except Exception as e:
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            obj = SocialApp.objects.get(provider=kwargs.get("provider"))
+            obj.delete()
+            success = True
+            response = {"message": "Provider Deleted Successfully"}
+            status = 200
+        except Exception as e:
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)

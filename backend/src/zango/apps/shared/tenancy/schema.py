@@ -42,8 +42,13 @@ class SSOLoginMethod(TypedDict):
     enabled: bool
 
 
-class OIDCLoginMethod(TypedDict):
+class Provider(TypedDict):
+    name: str
     enabled: bool
+
+
+class OIDCLoginMethod(TypedDict):
+    providers: List[Provider]
 
 
 class OTPLoginMethod(TypedDict, total=False):

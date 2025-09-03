@@ -1,5 +1,6 @@
 import json
 
+from allauth.socialaccount.models import SocialApp
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
@@ -227,3 +228,10 @@ class ThemeModelSerializer(serializers.ModelSerializer):
             validated_data["config"] = statement
 
         return super(ThemeModelSerializer, self).update(instance, validated_data)
+
+
+class SocialAppSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialApp
+        fields = ["provider", "name", "client_id", "key", "settings"]
+        extra_kwargs = {"secret": {"write_only": True}}

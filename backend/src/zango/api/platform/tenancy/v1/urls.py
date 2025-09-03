@@ -11,6 +11,8 @@ from zango.api.platform.tasks.v1 import urls as tasks_v1_urls
 from .views import (
     AppDetailViewAPIV1,
     AppViewAPIV1,
+    OAuthProvidersDetailViewAPIV1,
+    OAuthProvidersViewAPIV1,
     ThemeDetailViewAPIV1,
     ThemeViewAPIV1,
     UserDetailViewAPIV1,
@@ -56,6 +58,16 @@ urlpatterns = [
         r"^(?P<app_uuid>[\w-]+)/themes/(?P<theme_id>[\w-]+)/$",
         ThemeDetailViewAPIV1.as_view(),
         name="apps-apiv1-themedetailview",
+    ),
+    re_path(
+        r"^(?P<app_uuid>[\w-]+)/oauth-providers/$",
+        OAuthProvidersViewAPIV1.as_view(),
+        name="apps-apiv1-oauthprovidersview",
+    ),
+    re_path(
+        r"^(?P<app_uuid>[\w-]+)/oauth-providers/(?P<provider>[\w-]+)/$",
+        OAuthProvidersDetailViewAPIV1.as_view(),
+        name="apps-apiv1-oauthprovidersdetailview",
     ),
     re_path(r"^(?P<app_uuid>[\w-]+)/packages/$", include(packages_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/tasks/", include(tasks_v1_urls)),

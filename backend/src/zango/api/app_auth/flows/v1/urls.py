@@ -1,3 +1,6 @@
+from allauth.socialaccount.providers.github.views import (
+    oauth2_callback as github_oauth2_callback,
+)
 from allauth.socialaccount.providers.google.views import (
     oauth2_callback as google_oauth2_callback,
 )
@@ -125,5 +128,10 @@ urlpatterns = [
         "oauth/google/callback/",
         google_oauth2_callback,
         name="google_callback",
+    ),
+    path(
+        "oauth/github/callback/",
+        github_oauth2_callback,
+        name="github_callback",
     ),
 ]
