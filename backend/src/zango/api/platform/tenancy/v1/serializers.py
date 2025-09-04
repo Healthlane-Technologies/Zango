@@ -233,5 +233,13 @@ class ThemeModelSerializer(serializers.ModelSerializer):
 class SocialAppSerializer(serializers.ModelSerializer):
     class Meta:
         model = SocialApp
-        fields = ["provider", "name", "client_id", "key", "settings"]
+        fields = [
+            "provider",
+            "name",
+            "client_id",
+            "secret",
+            "key",
+            "settings",
+            "enabled",
+        ]
         extra_kwargs = {"secret": {"write_only": True}}

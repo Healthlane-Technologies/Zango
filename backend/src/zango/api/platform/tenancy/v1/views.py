@@ -707,44 +707,27 @@ class ThemeDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
     def get(self, request, *args, **kwargs):
         try:
-            obj = SocialApp.objects.all()
-            serializer = SocialAppSerializer(obj, many=True)
+            # Since set_app_schema_path handles tenant isolation,
+            # we can directly query SocialApp objects
+            providers = SocialApp.objects.all()
+            serializer = SocialAppSerializer(providers, many=True)
+
+            # Transform the data to match frontend expectations
+            oauth_providers = {}
+            for provider_data in serializer.data:
+                provider_name = provider_data["provider"]
+                oauth_providers[provider_name] = {
+                    "enabled": provider_data.get("enabled", False),
+                    "client_id": provider_data.get("client_id", ""),
+                    "client_secret": "",  # Don't send secret in GET response
+                }
+
             success = True
-            response = {"providers": serializer.data}
-            status = 200
-        except Exception as e:
-            success = False
-            response = {"message": str(e)}
-            status = 500
-
-        return get_api_response(success, response, status)
-
-    def post(self, request, *args, **kwargs):
-        data = request.data
-        try:
-            obj = SocialApp.objects.create(**data)
-            serializer = SocialAppSerializer(obj)
-            success = True
-            response = {"provider": serializer.data}
-            status = 200
-        except Exception as e:
-            success = False
-            response = {"message": str(e)}
-            status = 500
-
-        return get_api_response(success, response, status)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class OAuthProvidersDetailViewAPIV1(ZangoGenericPlatformAPIView):
-    def get(self, request, *args, **kwargs):
-        try:
-            obj = SocialApp.objects.get(provider=kwargs.get("provider"))
-            serializer = SocialAppSerializer(obj)
-            success = True
-            response = {"provider": serializer.data}
+            response = {"oauth_providers": oauth_providers}
             status = 200
         except Exception as e:
             success = False
@@ -754,34 +737,93 @@ class OAuthProvidersDetailViewAPIV1(ZangoGenericPlatformAPIView):
         return get_api_response(success, response, status)
 
     def put(self, request, *args, **kwargs):
-        data = request.data
         try:
-            obj = SocialApp.objects.get(provider=kwargs.get("provider"))
-            serializer = SocialAppSerializer(instance=obj, data=data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                success = True
-                status = 200
-                response = {"message": "Provider Updated Successfully"}
-            else:
-                success = False
-                status = 400
-                response = {"message": serializer.errors}
-        except Exception as e:
-            success = False
-            response = {"message": str(e)}
-            status = 500
+            # Parse oauth_providers data from request
+            oauth_providers_str = request.data.get("oauth_providers")
+            if not oauth_providers_str:
+                return get_api_response(
+                    False, {"message": "oauth_providers data is required"}, 400
+                )
 
-        return get_api_response(success, response, status)
+            try:
+                oauth_providers = json.loads(oauth_providers_str)
+            except json.JSONDecodeError:
+                return get_api_response(
+                    False, {"message": "Invalid JSON format for oauth_providers"}, 400
+                )
 
-    def delete(self, request, *args, **kwargs):
-        try:
-            obj = SocialApp.objects.get(provider=kwargs.get("provider"))
-            obj.delete()
+            success_count = 0
+            errors = []
+
+            # Process each provider
+            for provider_name, provider_config in oauth_providers.items():
+                try:
+                    enabled = provider_config.get("enabled", False)
+                    client_id = provider_config.get("client_id", "")
+                    client_secret = provider_config.get("client_secret", "")
+
+                    if enabled and client_id and client_secret:
+                        # Create or update the provider
+                        social_app, created = SocialApp.objects.update_or_create(
+                            provider=provider_name,
+                            defaults={
+                                "name": f"{provider_name.title()}",
+                                "client_id": client_id,
+                                "secret": client_secret,
+                                "enabled": True,
+                                "settings": {},
+                            },
+                        )
+                        success_count += 1
+
+                    else:
+                        # Handle disabled providers or providers without credentials
+                        try:
+                            social_app = SocialApp.objects.get(provider=provider_name)
+                            if not enabled:
+                                # If provider exists but is disabled, update enabled field to False
+                                social_app.enabled = False
+                                social_app.save()
+                            elif enabled and (not client_id or not client_secret):
+                                # If enabled but missing credentials, disable it
+                                social_app.enabled = False
+                                social_app.save()
+                            success_count += 1
+                        except SocialApp.DoesNotExist:
+                            # If disabled and doesn't exist, nothing to do
+                            if not enabled:
+                                pass
+                            else:
+                                # If trying to enable but missing credentials, create disabled entry
+                                if not client_id or not client_secret:
+                                    SocialApp.objects.create(
+                                        provider=provider_name,
+                                        name=f"{provider_name.title()}",
+                                        client_id=client_id,
+                                        secret=client_secret,
+                                        enabled=False,
+                                        settings={},
+                                    )
+                                    success_count += 1
+
+                except Exception as provider_error:
+                    errors.append(f"{provider_name}: {str(provider_error)}")
+
+            if errors:
+                return get_api_response(
+                    False, {"message": f"Errors occurred: {'; '.join(errors)}"}, 400
+                )
+
             success = True
-            response = {"message": "Provider Deleted Successfully"}
+            response = {
+                "message": f"OAuth providers updated successfully. {success_count} providers processed."
+            }
             status = 200
+
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             success = False
             response = {"message": str(e)}
             status = 500

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Formik } from "formik";
@@ -16,11 +16,68 @@ const AuthConfigurationForm = () => {
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [oauthProviders, setOauthProviders] = useState({});
+	const [isLoading, setIsLoading] = useState(true);
 	const triggerApi = useApi();
 
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 	const auth_config = appConfigurationData?.app?.auth_config;
 	const { appId } = useParams();
+
+	// Fetch OAuth providers data separately
+	useEffect(() => {
+		const fetchOAuthProviders = async () => {
+			try {
+				const { response, success } = await triggerApi({
+					url: `/api/v1/apps/${appId}/oauth-providers/`,
+					type: 'GET',
+					loader: false,
+				});
+				
+				if (success && response) {
+					setOauthProviders(response.oauth_providers || {});
+				}
+			} catch (error) {
+				console.error('Error fetching OAuth providers:', error);
+				// Set default structure if fetch fails
+				setOauthProviders({
+					google: {
+						enabled: false,
+						client_id: '',
+						client_secret: ''
+					}
+				});
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		if (appId) {
+			fetchOAuthProviders();
+		}
+	}, [appId]);
+
+	// Combine auth_config and oauth_providers for form initial values
+	const getInitialValues = () => {
+		if (!auth_config) return {};
+		
+		// Ensure oauth_providers structure exists with default values
+		const defaultOAuthProviders = {
+			google: {
+				enabled: false,
+				client_id: '',
+				client_secret: ''
+			}
+		};
+		
+		return {
+			...auth_config,
+			oauth_providers: {
+				...defaultOAuthProviders,
+				...oauthProviders
+			}
+		};
+	};
 
 	const validationSchema = Yup.object({
 		login_methods: Yup.object({
@@ -73,76 +130,59 @@ const AuthConfigurationForm = () => {
 					then: Yup.string().required('Client Secret is required when Google OAuth is enabled'),
 					otherwise: Yup.string()
 				}),
-				redirect_uri: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when Google OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-			}),
-			github: Yup.object({
-				enabled: Yup.boolean(),
-				client_id: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Client ID is required when GitHub OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-				client_secret: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Client Secret is required when GitHub OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-				redirect_uri: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when GitHub OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-			}),
-			microsoft: Yup.object({
-				enabled: Yup.boolean(),
-				client_id: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Client ID is required when Microsoft OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-				client_secret: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Client Secret is required when Microsoft OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-				redirect_uri: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when Microsoft OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
 			}),
 		}),
 	});
 
 	let onSubmit = (values) => {
-		const cleanedAuthConfig = values;
+		// Extract OAuth providers data from values
+		const { oauth_providers, ...authConfigWithoutOAuth } = values;
 		
-		if (Object.keys(cleanedAuthConfig).length === 0) {
+		const cleanedAuthConfig = authConfigWithoutOAuth;
+		
+		if (Object.keys(cleanedAuthConfig).length === 0 && (!oauth_providers || Object.keys(oauth_providers).length === 0)) {
 			console.warn('No configuration changes to save');
 			return;
 		}
 		
-		const tempValues = {
-			auth_config: JSON.stringify(cleanedAuthConfig)
-		};
-
-		const dynamicFormData = transformToFormData(tempValues);
-
 		const makeApiCall = async () => {
 			setIsSubmitting(true);
 			try {
-				const { response, success } = await triggerApi({
-					url: `/api/v1/apps/${appId}/`,
-					type: 'PUT',
-					loader: true,
-					payload: dynamicFormData,
-				});
+				let authConfigSuccess = true;
+				let oauthSuccess = true;
 
-				if (success && response) {
+				// Send auth_config without OAuth providers if there are changes
+				if (Object.keys(cleanedAuthConfig).length > 0) {
+					const tempValues = {
+						auth_config: JSON.stringify(cleanedAuthConfig)
+					};
+					const dynamicFormData = transformToFormData(tempValues);
+
+					const { response, success } = await triggerApi({
+						url: `/api/v1/apps/${appId}/`,
+						type: 'PUT',
+						loader: true,
+						payload: dynamicFormData,
+					});
+					authConfigSuccess = success;
+				}
+
+				// Send OAuth providers data to different endpoint if there are changes
+				if (oauth_providers && Object.keys(oauth_providers).length > 0) {
+					const oauthFormData = transformToFormData({
+						oauth_providers: JSON.stringify(oauth_providers)
+					});
+
+					const { response, success } = await triggerApi({
+						url: `/api/v1/apps/${appId}/oauth-providers/`,
+						type: 'PUT',
+						loader: true,
+						payload: oauthFormData,
+					});
+					oauthSuccess = success;
+				}
+
+				if (authConfigSuccess && oauthSuccess) {
 					dispatch(toggleRerenderPage());
 					window.location.reload();
 				}
@@ -408,7 +448,7 @@ const AuthConfigurationForm = () => {
 	];
 
 	// Show loading state while data is being fetched
-	if (!appConfigurationData || !auth_config) {
+	if (!appConfigurationData || !auth_config || isLoading) {
 		return (
 			<div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] flex items-center justify-center">
 				<div className="text-center">
@@ -490,7 +530,7 @@ const AuthConfigurationForm = () => {
 				{/* Content Area */}
 				<div className="flex-1 p-[40px]">
 					<Formik
-						initialValues={auth_config}
+						initialValues={getInitialValues()}
 						validationSchema={validationSchema}
 						onSubmit={onSubmit}
 						enableReinitialize={true}
@@ -848,86 +888,6 @@ const AuthConfigurationForm = () => {
 																	placeholder="Enter Google Client Secret"
 																/>
 															</div>
-															<InputField
-																name="oauth_providers.google.redirect_uri"
-																label="Redirect URI"
-																type="url"
-																value={values?.oauth_providers?.google?.redirect_uri || ""}
-																onChange={(e) => setFieldValue("oauth_providers.google.redirect_uri", e.target.value)}
-																placeholder="Enter Google Redirect URI"
-															/>
-														</ToggleCard>
-														
-														{/* GitHub OAuth */}
-														<ToggleCard
-															title="GitHub OAuth"
-															description="Allow users to sign in with their GitHub account"
-															name="oauth_providers.github.enabled"
-															value={values?.oauth_providers?.github?.enabled || false}
-															onChange={(e) => setFieldValue("oauth_providers.github.enabled", e.target.checked)}
-														>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-																<InputField
-																	name="oauth_providers.github.client_id"
-																	label="Client ID"
-																	type="text"
-																	value={values?.oauth_providers?.github?.client_id || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.github.client_id", e.target.value)}
-																	placeholder="Enter GitHub Client ID"
-																/>
-																<InputField
-																	name="oauth_providers.github.client_secret"
-																	label="Client Secret"
-																	type="password"
-																	value={values?.oauth_providers?.github?.client_secret || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.github.client_secret", e.target.value)}
-																	placeholder="Enter GitHub Client Secret"
-																/>
-															</div>
-															<InputField
-																name="oauth_providers.github.redirect_uri"
-																label="Redirect URI"
-																type="url"
-																value={values?.oauth_providers?.github?.redirect_uri || ""}
-																onChange={(e) => setFieldValue("oauth_providers.github.redirect_uri", e.target.value)}
-																placeholder="Enter GitHub Redirect URI"
-															/>
-														</ToggleCard>
-														
-														{/* Microsoft OAuth */}
-														<ToggleCard
-															title="Microsoft OAuth"
-															description="Allow users to sign in with their Microsoft account"
-															name="oauth_providers.microsoft.enabled"
-															value={values?.oauth_providers?.microsoft?.enabled || false}
-															onChange={(e) => setFieldValue("oauth_providers.microsoft.enabled", e.target.checked)}
-														>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-																<InputField
-																	name="oauth_providers.microsoft.client_id"
-																	label="Client ID"
-																	type="text"
-																	value={values?.oauth_providers?.microsoft?.client_id || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.microsoft.client_id", e.target.value)}
-																	placeholder="Enter Microsoft Client ID"
-																/>
-																<InputField
-																	name="oauth_providers.microsoft.client_secret"
-																	label="Client Secret"
-																	type="password"
-																	value={values?.oauth_providers?.microsoft?.client_secret || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.microsoft.client_secret", e.target.value)}
-																	placeholder="Enter Microsoft Client Secret"
-																/>
-															</div>
-															<InputField
-																name="oauth_providers.microsoft.redirect_uri"
-																label="Redirect URI"
-																type="url"
-																value={values?.oauth_providers?.microsoft?.redirect_uri || ""}
-																onChange={(e) => setFieldValue("oauth_providers.microsoft.redirect_uri", e.target.value)}
-																placeholder="Enter Microsoft Redirect URI"
-															/>
 														</ToggleCard>
 													</div>
 												</div>
