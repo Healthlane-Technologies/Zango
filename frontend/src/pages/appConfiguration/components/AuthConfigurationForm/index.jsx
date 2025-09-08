@@ -44,7 +44,8 @@ const AuthConfigurationForm = () => {
 					google: {
 						enabled: false,
 						client_id: '',
-						client_secret: ''
+						client_secret: '',
+						redirect_url: ''
 					}
 				});
 			} finally {
@@ -66,7 +67,8 @@ const AuthConfigurationForm = () => {
 			google: {
 				enabled: false,
 				client_id: '',
-				client_secret: ''
+				client_secret: '',
+				redirect_url: ''
 			}
 		};
 		
@@ -128,6 +130,11 @@ const AuthConfigurationForm = () => {
 				client_secret: Yup.string().when('enabled', {
 					is: true,
 					then: Yup.string().required('Client Secret is required when Google OAuth is enabled'),
+					otherwise: Yup.string()
+				}),
+				redirect_url: Yup.string().when('enabled', {
+					is: true,
+					then: Yup.string().required('Redirect URL is required when Google OAuth is enabled'),
 					otherwise: Yup.string()
 				}),
 			}),
@@ -888,6 +895,16 @@ const AuthConfigurationForm = () => {
 																	placeholder="Enter Google Client Secret"
 																/>
 															</div>
+															<div className="grid grid-cols-1 gap-[16px]">
+																<InputField
+																	name="oauth_providers.google.redirect_url"
+																	label="Redirect URL"
+																	type="text"
+																	value={values?.oauth_providers?.google?.redirect_url || ""}
+																	onChange={(e) => setFieldValue("oauth_providers.google.redirect_url", e.target.value)}
+																	placeholder="/oauth/callback/"
+																/>
+															</div>
 														</ToggleCard>
 													</div>
 												</div>
@@ -1084,6 +1101,39 @@ const AuthConfigurationForm = () => {
 																		
 																		<div className="max-w-2xl">
 																			<InputField
+																				name="two_factor_auth.email_content"
+																				label="Email Content"
+																				type="text"
+																				placeholder="Enter the email content for 2FA"
+																				value={values?.two_factor_auth?.email_content || ""}
+																				onChange={(e) => setFieldValue("two_factor_auth.email_content", e.target.value)}
+																			/>
+																		</div>
+																		
+																		<div className="max-w-2xl">
+																			<InputField
+																				name="two_factor_auth.email_subject"
+																				label="Email Subject"
+																				type="text"
+																				placeholder="Enter the email subject for 2FA"
+																				value={values?.two_factor_auth?.email_subject || ""}
+																				onChange={(e) => setFieldValue("two_factor_auth.email_subject", e.target.value)}
+																			/>
+																		</div>
+																		
+																		<div className="max-w-2xl">
+																			<InputField
+																				name="two_factor_auth.email_config_key"
+																				label="Email Config Key"
+																				type="text"
+																				placeholder="Enter email configuration key for 2FA"
+																				value={values?.two_factor_auth?.email_config_key || ""}
+																				onChange={(e) => setFieldValue("two_factor_auth.email_config_key", e.target.value)}
+																			/>
+																		</div>
+																		
+																		<div className="max-w-2xl">
+																			<InputField
 																				name="two_factor_auth.sms_hook"
 																				label="SMS Hook URL"
 																				description="Webhook URL for SMS-based two-factor authentication"
@@ -1091,6 +1141,27 @@ const AuthConfigurationForm = () => {
 																				placeholder="https://your-domain.com/sms-2fa-hook"
 																				value={values?.two_factor_auth?.sms_hook || ""}
 																				onChange={(e) => setFieldValue("two_factor_auth.sms_hook", e.target.value)}
+																			/>
+																		</div>
+																		
+																		<div className="max-w-2xl">
+																			<InputField
+																				name="two_factor_auth.sms_config_key"
+																				label="SMS Config Key"
+																				type="text"
+																				placeholder="Enter SMS configuration key for 2FA"
+																				value={values?.two_factor_auth?.sms_config_key || ""}
+																				onChange={(e) => setFieldValue("two_factor_auth.sms_config_key", e.target.value)}
+																			/>
+																		</div>
+																		
+																		<div className="max-w-2xl">
+																			<KeyValuePairs
+																				name="two_factor_auth.sms_extra_data"
+																				label="SMS Extra Data"
+																				description="Additional key-value pairs to include in the SMS payload"
+																				value={values?.two_factor_auth?.sms_extra_data || {}}
+																				onChange={(value) => setFieldValue("two_factor_auth.sms_extra_data", value)}
 																			/>
 																		</div>
 																	</div>

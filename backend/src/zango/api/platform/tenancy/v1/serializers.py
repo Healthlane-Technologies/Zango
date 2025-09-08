@@ -241,5 +241,5 @@ class SocialAppSerializer(serializers.ModelSerializer):
             "key",
             "settings",
             "enabled",
+            "redirect_url",
         ]
-        extra_kwargs = {"secret": {"write_only": True}}

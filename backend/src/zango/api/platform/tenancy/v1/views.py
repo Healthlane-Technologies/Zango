@@ -723,7 +723,8 @@ class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
                 oauth_providers[provider_name] = {
                     "enabled": provider_data.get("enabled", False),
                     "client_id": provider_data.get("client_id", ""),
-                    "client_secret": "",  # Don't send secret in GET response
+                    "client_secret": provider_data.get("secret", ""),
+                    "redirect_url": provider_data.get("redirect_url", ""),
                 }
 
             success = True
@@ -761,6 +762,7 @@ class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
                     enabled = provider_config.get("enabled", False)
                     client_id = provider_config.get("client_id", "")
                     client_secret = provider_config.get("client_secret", "")
+                    redirect_url = provider_config.get("redirect_url", "")
 
                     if enabled and client_id and client_secret:
                         # Create or update the provider
@@ -770,6 +772,7 @@ class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
                                 "name": f"{provider_name.title()}",
                                 "client_id": client_id,
                                 "secret": client_secret,
+                                "redirect_url": redirect_url,
                                 "enabled": True,
                                 "settings": {},
                             },
@@ -801,6 +804,7 @@ class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
                                         name=f"{provider_name.title()}",
                                         client_id=client_id,
                                         secret=client_secret,
+                                        redirect_url=redirect_url,
                                         enabled=False,
                                         settings={},
                                     )

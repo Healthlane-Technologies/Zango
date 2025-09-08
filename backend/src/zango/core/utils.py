@@ -379,6 +379,7 @@ def get_auth_priority(
                     "id": provider.id,
                     "name": provider.name,
                     "provider": provider.provider,
+                    "enabled": provider.enabled,
                 }
             )
         else:
@@ -387,6 +388,8 @@ def get_auth_priority(
                     "id": provider.id,
                     "name": provider.name,
                     "provider": provider.provider,
+                    "enabled": provider.enabled,
+                    "redirect_url": provider.redirect_url,
                 }
             ]
 
