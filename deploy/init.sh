@@ -1,9 +1,8 @@
 #!/bin/bash
 
 set -a
-source /zango/secrets/.env
+source /zango/.env
 set +a
-cp /zango/secrets/.env /zango/.env
 
 PROJECT_NAME=zango_project
 

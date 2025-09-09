@@ -595,7 +595,13 @@ def create_workspace(tenant_obj, project_root):
     help="App Name(s)",
     default=[],
 )
-def update_apps(app_name):
+@click.option(
+    "--pull",
+    is_flag=True,
+    default=False,
+    help="Pull latest code from git repository",
+)
+def update_apps(app_name, pull):
     project_name = find_project_name()
     project_root = os.getcwd()
     click.echo("Initializing project setup")
@@ -630,8 +636,19 @@ def update_apps(app_name):
         try:
             app_directory = os.path.join(project_root, "workspaces", tenant)
             if not os.path.exists(app_directory):
-                click.echo(f"Creating workspace for {tenant}")
-                create_workspace(tenant_obj, project_root)
+                if pull:
+                    # If pull flag is set, create workspace from git
+                    click.echo(f"Creating workspace for {tenant}")
+                    create_workspace(tenant_obj, project_root)
+                else:
+                    # In Docker image, workspaces should already exist
+                    error_message = click.style(
+                        f"Workspace not found for {tenant}. Expected at: {app_directory}. Use --pull flag to create from git.",
+                        fg="red",
+                        bold=True,
+                    )
+                    click.echo(error_message, err=True)
+                    continue
             else:
                 click.echo(f"Workspace for {tenant} already exists")
             app_settings = json.loads(
@@ -656,6 +673,8 @@ def update_apps(app_name):
 
                 branch = git_settings["branch"].get(settings.ENV, "main")
 
+            if not pull:
+                git_mode=False
             update_allowed, message = is_update_allowed(
                 tenant, app_settings, git_mode, repo_url, branch
             )
@@ -669,19 +688,48 @@ def update_apps(app_name):
                 continue
 
             commit_sha = None
-            # Pull latest code
-            if git_mode:
-                pull_status, message, commit_sha = setup_and_pull(
-                    app_directory, repo_url, branch
-                )
-                if not pull_status:
-                    error_message = click.style(
-                        f"An error occurred while pulling code: {message}",
-                        fg="red",
-                        bold=True,
+            # Pull latest code only if --pull flag is set
+            if git_mode and pull:
+                # Check if we should checkout a specific SHA from last release
+                last_release = get_last_release()
+                if last_release and last_release.last_git_hash:
+                    # Checkout specific commit from last release
+                    click.echo(f"Checking out commit {last_release.last_git_hash} for {tenant}")
+                    try:
+                        repo = Repo(app_directory)
+                        repo.git.checkout(last_release.last_git_hash)
+                        commit_sha = last_release.last_git_hash
+                    except Exception as e:
+                        # If checkout fails, try pulling latest
+                        click.echo(f"Checkout failed, pulling latest code for {tenant}")
+                        pull_status, message, commit_sha = setup_and_pull(
+                            app_directory, repo_url, branch
+                        )
+                        if not pull_status:
+                            error_message = click.style(
+                                f"An error occurred while pulling code: {message}",
+                                fg="red",
+                                bold=True,
+                            )
+                            click.echo(error_message, err=True)
+                            continue
+                else:
+                    # No last release, pull latest from branch
+                    pull_status, message, commit_sha = setup_and_pull(
+                        app_directory, repo_url, branch
                     )
-                    click.echo(error_message, err=True)
-                    continue
+                    if not pull_status:
+                        error_message = click.style(
+                            f"An error occurred while pulling code: {message}",
+                            fg="red",
+                            bold=True,
+                        )
+                        click.echo(error_message, err=True)
+                        continue
+            elif git_mode and not pull:
+                click.echo(f"Using existing workspace from Docker image for {tenant}")
+                # Get commit SHA from settings.json if available
+                commit_sha = app_settings.get("last_release_sha", None)
 
             app_settings = json.loads(
                 open(os.path.join(app_directory, "settings.json")).read()
