@@ -106,10 +106,10 @@ const AddNewUserForm = ({ closeModal }) => {
 			{(formik) => {
 				return (
 					<form
-						className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto"
+						className="flex flex-col"
 						onSubmit={formik.handleSubmit}
 					>
-						<div className="flex grow flex-col gap-[16px]">
+						<div className="flex flex-col gap-5 p-6">
 							<InputField
 								key="name"
 								label="Full Name"
@@ -183,7 +183,14 @@ const AddNewUserForm = ({ closeModal }) => {
 								formik={formik}
 							/>
 						</div>
-						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
+						<div className="flex items-center justify-end gap-3 border-t bg-gray-50 px-6 py-4">
+							<button
+								type="button"
+								onClick={closeModal}
+								className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+							>
+								Cancel
+							</button>
 							<SubmitButton label={'Add User'} formik={formik} />
 						</div>
 					</form>

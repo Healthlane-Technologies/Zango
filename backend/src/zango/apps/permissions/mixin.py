@@ -110,6 +110,8 @@ class PermissionMixin:
                 permissions = policy.statement.get("permissions")
                 for permission in permissions:
                     if self.has_view_access(permission, view_name):
+                        request.policy = policy
+                        request.permission = permission
                         return True
         return False
 

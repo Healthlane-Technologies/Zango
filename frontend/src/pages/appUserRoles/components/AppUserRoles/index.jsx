@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { ReactComponent as AddUserIcon } from '../../../../assets/images/svg/add-user-icon.svg';
@@ -75,6 +75,26 @@ export default function AppUserRoles() {
 		makeApiCall();
 	}, [rerenderPage, appUserRolesTableData]);
 
+	// Separate roles into reserved and user-defined
+	const { reservedRoles, userDefinedRoles } = useMemo(() => {
+		if (!appUserRolesData?.roles?.records) {
+			return { reservedRoles: [], userDefinedRoles: [] };
+		}
+
+		const reserved = [];
+		const userDefined = [];
+
+		appUserRolesData.roles.records.forEach(role => {
+			if (role.name === 'AnonymousUsers' || role.name === 'SystemUsers') {
+				reserved.push(role);
+			} else {
+				userDefined.push(role);
+			}
+		});
+
+		return { reservedRoles: reserved, userDefinedRoles: userDefined };
+	}, [appUserRolesData]);
+
 	if (!appUserRolesData) {
 		return null;
 	}
@@ -118,7 +138,41 @@ export default function AppUserRoles() {
 							</button>
 						</div>
 					) : appUserRolesData ? (
-						<AppTable tableData={appUserRolesData?.users} />
+						<div className="flex flex-col gap-[32px] px-[40px]">
+							{/* Reserved Roles Section */}
+							{reservedRoles.length > 0 && (
+								<div>
+									<h3 className="mb-[16px] font-source-sans-pro text-[20px] font-[600] leading-[28px] text-[#212429]">
+										Reserved
+									</h3>
+									<AppTable 
+										tableData={{
+											...appUserRolesData,
+											roles: {
+												...appUserRolesData.roles,
+												records: reservedRoles
+											}
+										}}
+									/>
+								</div>
+							)}
+
+							{/* User Defined Roles Section */}
+							<div>
+								<h3 className="mb-[16px] font-source-sans-pro text-[20px] font-[600] leading-[28px] text-[#212429]">
+									User Defined
+								</h3>
+								<AppTable 
+									tableData={{
+										...appUserRolesData,
+										roles: {
+											...appUserRolesData.roles,
+											records: userDefinedRoles
+										}
+									}}
+								/>
+							</div>
+						</div>
 					) : null}
 				</div>
 			</div>

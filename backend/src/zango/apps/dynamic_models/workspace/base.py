@@ -126,7 +126,9 @@ class Workspace:
                     if path not in modules:
                         modules.append(path)
             if item["type"] == "module":
-                path = self.path + item["path"]
+                # Convert nested module path (e.g., "test_mod.test_sub") to filesystem path
+                fs_path = item["path"].replace(".", "/")
+                path = self.path + fs_path
                 if path not in modules:
                     modules.append(path)
         return modules
@@ -346,7 +348,18 @@ class Workspace:
 
     def get_root_urls(self) -> list[dict]:
         _settings = self.get_workspace_settings()
-        routes = _settings["app_routes"]
+        routes = _settings["app_routes"].copy()
+
+        # Create a mapping of module names to their actual paths
+        module_path_map = {
+            module["name"]: module["path"] for module in _settings["modules"]
+        }
+
+        # Update routes to use actual module paths instead of just names
+        for route in routes:
+            if route["module"] in module_path_map:
+                route["module"] = module_path_map[route["module"]]
+
         package_routes = _settings["package_routes"]
         for route in package_routes:
             pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
@@ -436,6 +449,7 @@ class Workspace:
         )
         policy_roles = defaultdict(list)
         modules = self.get_all_module_paths()
+        print(modules)
         for module in modules:
             policy_file = f"{module}/policies.json"
             if os.path.isfile(policy_file):
@@ -445,8 +459,14 @@ class Workspace:
                 model_module = model_module.lstrip("/").replace("/", ".")
                 if "packages" in model_module:
                     policy_path = ".".join(model_module.split(".")[2:5])
+                    print(policy_path)
                 else:
-                    policy_path = model_module.split(".")[2]
+                    # For nested modules, take all parts except the last one (which is "policies")
+                    # This handles both simple modules (auth) and nested modules (test_mod.test_sub)
+                    module_parts = model_module.split(".")[
+                        2:-1
+                    ]  # Remove workspace prefix and "policies" suffix
+                    policy_path = ".".join(module_parts)
                 with open(policy_file) as f:
                     try:
                         policy = json.load(f)
@@ -510,10 +530,12 @@ class Workspace:
             if policy.path and "packages" in policy.path:
                 continue
             roles = policy.role_policies.all()
-            with open(f"{self.path}/{policy.path}/policies.json", "r") as f:
+            # Convert dotted path (test_mod.test_sub) to filesystem path (test_mod/test_sub)
+            fs_path = policy.path.replace(".", "/")
+            with open(f"{self.path}/{fs_path}/policies.json", "r") as f:
                 policies = json.load(f)
                 for policy_details in policies["policies"]:
                     if policy_details["name"] == policy.name:
                         policy_details["roles"] = [role.name for role in roles]
-            with open(f"{self.path}/{policy.path}/policies.json", "w") as f:
+            with open(f"{self.path}/{fs_path}/policies.json", "w") as f:
                 json.dump(policies, f, indent=4)

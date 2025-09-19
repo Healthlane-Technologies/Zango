@@ -11,7 +11,7 @@ class PolicySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PolicyModel
-        fields = ["id", "name", "statement", "roles", "description", "type"]
+        fields = ["id", "name", "statement", "roles", "description", "type", "path"]
 
     def get_roles(self, obj):
         return list(UserRoleModel.objects.filter(policies=obj).values("id", "name"))

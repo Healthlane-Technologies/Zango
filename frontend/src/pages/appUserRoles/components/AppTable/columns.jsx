@@ -11,7 +11,7 @@ function columns({ debounceSearch, localTableData }) {
 		columnHelper.accessor((row) => row.name, {
 			id: 'name',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] py-[12px] pl-[32px] pr-[20px] text-start">
+				<div className="flex h-full items-start justify-start py-[12px] pl-[32px] pr-[20px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Role
 					</span>
@@ -27,21 +27,30 @@ function columns({ debounceSearch, localTableData }) {
 				);
 			},
 		}),
-		columnHelper.accessor((row) => row.attached_policies, {
-			id: 'attached_policies',
+		columnHelper.accessor((row) => row.policies_count, {
+			id: 'policies_count',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full items-start justify-start px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Policy(s)
+						Policies
 					</span>
 				</div>
 			),
-			cell: (info) => <ListCell data={info.getValue()} />,
+			cell: (info) => {
+				const policyCount = info.getValue();
+				return (
+					<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
+						<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
+							{policyCount?.total || policyCount?.policies || 0}
+						</span>
+					</div>
+				);
+			},
 		}),
 		columnHelper.accessor((row) => row.is_active, {
 			id: 'is_active',
 			header: () => (
-				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full items-start justify-start gap-[16px] px-[20px] py-[12px] text-start">
 					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
 						Active/Inactive
 					</span>
@@ -89,19 +98,19 @@ function columns({ debounceSearch, localTableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.no_of_users, {
-			id: 'no_of_users',
+		columnHelper.accessor((row) => row.users_count, {
+			id: 'users_count',
 			header: () => (
-				<div className="flex h-full items-start justify-start border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
+				<div className="flex h-full items-start justify-start px-[20px] py-[12px] text-start">
 					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						No. of Users
+						Active Users
 					</span>
 				</div>
 			),
 			cell: (info) => (
 				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
 					<span className="text-start font-lato text-[14px] font-normal leading-[20px] tracking-[0.2px]">
-						{info.getValue()}
+						{info.getValue() || 0}
 					</span>
 				</div>
 			),

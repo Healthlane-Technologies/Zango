@@ -32,6 +32,7 @@ from .serializers import (
     TenantSerializerModel,
     ThemeModelSerializer,
     UserRoleSerializerModel,
+    UserRoleListSerializerModel,
 )
 from .utils import extract_app_details_from_zip
 
@@ -225,7 +226,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def get_dropdown_options(self):
         options = {}
         options["policies"] = [
-            {"id": t.id, "label": t.name}
+            {"id": t.id, "label": t.name,  "type": t.type, "path": t.path}
             for t in PolicyModel.objects.all().order_by("-modified_at")
         ]
         return options
@@ -261,7 +262,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             columns = get_search_columns(request)
             roles = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(roles, request, view=self)
-            serializer = UserRoleSerializerModel(paginated_roles, many=True)
+            serializer = UserRoleListSerializerModel(paginated_roles, many=True)
             paginated_roles_data = self.get_paginated_response_data(serializer.data)
 
             success = True
@@ -320,12 +321,21 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
         obj = UserRoleModel.objects.get(id=kwargs.get("role_id"))
         return obj
 
+    def get_dropdown_options(self):
+        options = {}
+        options["all_policies"] = [
+            {"id": p.id, "label": p.name}
+            for p in PolicyModel.objects.all().order_by("-modified_at")
+        ]
+        return options
+
     def get(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
             serializer = UserRoleSerializerModel(obj)
             success = True
             response = {"role": serializer.data}
+            response.update(self.get_dropdown_options())
             status = 200
         except Exception as e:
             success = False

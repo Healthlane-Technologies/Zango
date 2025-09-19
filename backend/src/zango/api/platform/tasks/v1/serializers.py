@@ -24,7 +24,7 @@ class CronTabSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     attached_policies = PolicySerializer(many=True)
-    crontab = CronTabSerializer()
+    crontab = serializers.SerializerMethodField()
     schedule = serializers.SerializerMethodField()
     code = serializers.SerializerMethodField()
     run_history = serializers.SerializerMethodField()
@@ -44,8 +44,21 @@ class TaskSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Invalid cron expression")
         return super(TaskSerializer, self).update(instance, validated_data)
 
+    def get_crontab(self, obj):
+        try:
+            if obj.crontab:
+                return CronTabSerializer(obj.crontab).data
+        except CrontabSchedule.DoesNotExist:
+            pass
+        return None
+
     def get_schedule(self, obj):
-        return str(obj.crontab)[:-18]
+        try:
+            if obj.crontab:
+                return str(obj.crontab)[:-18]
+        except CrontabSchedule.DoesNotExist:
+            pass
+        return ""
 
     def get_code(self, obj):
         try:
@@ -61,14 +74,19 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_run_history(self, obj):
         if not self.context.get("history"):
             return []
-        ptask = PeriodicTask.objects.get(id=obj.master_task_id)
-        serializer = TaskResultSerializer(
-            TaskResult.objects.filter(periodic_task_name=ptask.name).order_by(
-                "-date_done"
-            ),
-            many=True,
-        )
-        return serializer.data
+        try:
+            if obj.master_task_id:
+                ptask = PeriodicTask.objects.get(id=obj.master_task_id)
+                serializer = TaskResultSerializer(
+                    TaskResult.objects.filter(periodic_task_name=ptask.name).order_by(
+                        "-date_done"
+                    ),
+                    many=True,
+                )
+                return serializer.data
+        except PeriodicTask.DoesNotExist:
+            pass
+        return []
 
 
 class TaskResultSerializer(serializers.ModelSerializer):

@@ -24,6 +24,9 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 
     const triggerApi = useApi();
 
+    // Check if this is a reserved role
+    const isReservedRole = appUserRolesFormData?.name === 'AnonymousUsers' || appUserRolesFormData?.name === 'SystemUsers';
+
     // Get two-factor method options from the dropdown data or use defaults
     const twoFactorMethodOptions = appUserRolesData?.dropdown_options?.two_factor_methods ?? [
         { id: "email", label: "Email" },
@@ -160,9 +163,9 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
     const validationConstraints = getValidationConstraints();
 
     let validationSchema = Yup.object({
-        name: Yup.string().required('Required'),
+        name: isReservedRole ? Yup.string() : Yup.string().required('Required'),
         auth_config: Yup.object({
-            redirect_url: Yup.string().required('Required'),
+            redirect_url: isReservedRole ? Yup.string() : Yup.string().required('Required'),
             two_factor_auth: Yup.object({
                 required: Yup.boolean(),
                 allowedMethods: Yup.array().when('required', {
@@ -317,45 +320,60 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                         onSubmit={formik.handleSubmit}
                     >
                         <div className="flex grow flex-col gap-[16px]">
-                            <InputField
-                                key="name"
-                                label="Role Name"
-                                name="name"
-                                id="name"
-                                placeholder="Enter role name"
-                                value={get(formik.values, 'name', '')}
-                                onChange={formik.handleChange}
-                                formik={formik}
-                            />
-
-                            <InputField
-                                key="auth_config.redirect_url"
-                                label="Redirect URL"
-                                name="auth_config.redirect_url"
-                                id="auth_config.redirect_url"
-                                placeholder="Enter redirect URL"
-                                value={get(formik.values, 'auth_config.redirect_url', '')}
-                                onChange={formik.handleChange}
-                                formik={formik}
-                            />
+                            {isReservedRole ? (
+                                <div className="bg-[#F3F4F6] rounded-[8px] p-[16px] border border-[#E5E7EB]">
+                                    <div className="flex items-center gap-[8px] mb-[8px]">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <path d="M8 2v6m0 2v4m-6-6h4m2 0h4" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round"/>
+                                        </svg>
+                                        <span className="font-lato text-[12px] font-semibold uppercase tracking-[0.5px] text-[#6B7280]">Reserved Role</span>
+                                    </div>
+                                    <h3 className="font-lato text-[16px] font-semibold text-[#111827] mb-[4px]">{appUserRolesFormData?.name}</h3>
+                                    <p className="font-lato text-[12px] text-[#6B7280]">This is a system role. You can only modify its policies.</p>
+                                </div>
+                            ) : (
+                                <InputField
+                                    key="name"
+                                    label="Role Name"
+                                    name="name"
+                                    id="name"
+                                    placeholder="Enter role name"
+                                    value={get(formik.values, 'name', '')}
+                                    onChange={formik.handleChange}
+                                    formik={formik}
+                                />
+                            )}
 
                             <MultiSelectField
                                 key="policies"
-                                label="Policy"
+                                label="Attached Policies"
                                 name="policies"
                                 id="policies"
-                                placeholder="Select policies"
+                                placeholder="Select policies to attach"
                                 value={get(formik.values, 'policies', [])}
                                 optionsDataName="policies"
                                 optionsData={appUserRolesData?.dropdown_options?.policies ?? []}
                                 formik={formik}
                             />
 
-                            {/* Two-Factor Authentication Section */}
-                            <div className="space-y-[12px]">
-                                <h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
-                                    Two-Factor Authentication
-                                </h3>
+                            {!isReservedRole && (
+                                <>
+                                    <InputField
+                                        key="auth_config.redirect_url"
+                                        label="Redirect URL"
+                                        name="auth_config.redirect_url"
+                                        id="auth_config.redirect_url"
+                                        placeholder="Enter redirect URL"
+                                        value={get(formik.values, 'auth_config.redirect_url', '')}
+                                        onChange={formik.handleChange}
+                                        formik={formik}
+                                    />
+
+                                    {/* Two-Factor Authentication Section */}
+                                    <div className="space-y-[12px]">
+                                        <h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
+                                            Two-Factor Authentication
+                                        </h3>
                                 <ToggleCard
                                     title="Require Two-Factor Authentication"
                                     description="Make 2FA mandatory for users with this role"
@@ -447,6 +465,8 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                                     formik={formik}
                                 />
                             </div>
+                                </>
+                            )}
                         </div>
                         <div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
                             <SubmitButton

@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import Modal from '../../../../../components/Modal';
+import StandardModal from '../../../../../components/StandardModal';
 import {
 	closeIsEditUserDetailModalOpen,
 	selectIsEditUserDetailModalOpen,
@@ -17,10 +17,11 @@ function EditUserDetailsModal() {
 	}
 
 	return (
-		<Modal
+		<StandardModal
 			label="Edit User Details"
 			show={isEditUserDetailModalOpen}
 			closeModal={closeModal}
+			size="lg"
 			ModalBody={<EditUserDetailsForm closeModal={closeModal} />}
 		/>
 	);

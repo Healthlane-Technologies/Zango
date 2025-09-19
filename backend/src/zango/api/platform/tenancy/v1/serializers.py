@@ -96,6 +96,8 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
 class UserRoleSerializerModel(serializers.ModelSerializer):
     attached_policies = serializers.SerializerMethodField()
+    policies_count = serializers.SerializerMethodField()
+    users_count = serializers.SerializerMethodField()
 
     class Meta:
         model = UserRoleModel
@@ -105,6 +107,16 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         policies = obj.policies.all()
         policy_serializer = PolicySerializer(policies, many=True)
         return policy_serializer.data
+
+    def get_policies_count(self, obj):
+        return {
+            'policies': obj.policies.count(),
+            'policy_groups': obj.policy_groups.count(),
+            'total': obj.policies.count() + obj.policy_groups.count()
+        }
+    
+    def get_users_count(self, obj):
+        return obj.users.filter(is_active=True).count()
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
         tenant = self.context.get("tenant")
@@ -125,6 +137,25 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         if not validated_data.get("policies"):
             validated_data["policies"] = []
         return super(UserRoleSerializerModel, self).update(instance, validated_data)
+
+
+class UserRoleListSerializerModel(serializers.ModelSerializer):
+    policies_count = serializers.SerializerMethodField()
+    users_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserRoleModel
+        exclude = ['policies', 'policy_groups']
+
+    def get_policies_count(self, obj):
+        return {
+            'policies': obj.policies.count(),
+            'policy_groups': obj.policy_groups.count(),
+            'total': obj.policies.count() + obj.policy_groups.count()
+        }
+    
+    def get_users_count(self, obj):
+        return obj.users.filter(is_active=True).count()
 
 
 class AppUserModelSerializerModel(serializers.ModelSerializer):
