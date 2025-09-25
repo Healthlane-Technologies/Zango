@@ -1,6 +1,8 @@
 import json
 
+from copy import deepcopy
 from importlib import import_module
+from typing import Any, Dict, Literal, Optional, Union
 
 import phonenumbers
 import pytz
@@ -119,7 +121,35 @@ def get_search_columns(request):
 
 
 def generate_lockout_response(request, credentials):
+    from .api.utils import get_api_response
+
     cooloff_time = settings.AXES_COOLOFF_TIME
+
+    if "/api/v1/appauth/" in request.path:
+        cooloff_seconds = (
+            int(cooloff_time.total_seconds())
+            if hasattr(cooloff_time, "total_seconds")
+            else cooloff_time
+        )
+        cooloff_minutes = cooloff_seconds // 60
+
+        # Determine time unit for message
+        if cooloff_seconds < 60:
+            time_message = f"{cooloff_seconds} seconds"
+        else:
+            time_message = f"{cooloff_minutes} minutes"
+
+        return get_api_response(
+            success=False,
+            response_content={
+                "message": f"Account locked due to too many failed login attempts. Please try again after {time_message}.",
+                "cooloff_time_seconds": cooloff_seconds,
+                "cooloff_time_minutes": cooloff_minutes,
+                "error_code": "ACCOUNT_LOCKED",
+            },
+            status=403,
+        )
+
     if connection.tenant.tenant_type == "app":
         return render(
             request,
@@ -232,3 +262,183 @@ def get_app_secret(key=None, id=None):
         raise ValueError(f"Secret {sec.key} is inactive.")
 
     return sec.get_unencrypted_val()
+
+
+AuthLevel = Literal["user", "user_role", "tenant"]
+
+
+def deep_merge(target: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recursively merge two dictionaries, with source values taking precedence.
+
+    Args:
+        target: The target dictionary to merge into
+        source: The source dictionary to merge from
+
+    Returns:
+        A new dictionary with deeply merged values
+    """
+    result = deepcopy(target)
+
+    for key, value in source.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = deepcopy(value)
+    return result
+
+
+def filter_user_auth_config(user_auth_config, user_role_auth_config):
+    if user_role_auth_config.get("two_factor_auth", {}).get("required"):
+        if user_auth_config.get("two_factor_auth", {}):
+            user_auth_config["two_factor_auth"]["required"] = True
+        else:
+            user_auth_config["two_factor_auth"] = {
+                "required": True,
+            }
+    return user_auth_config
+
+
+def filter_user_role_auth_config(user_role_auth_config, tenant_auth_config):
+    if tenant_auth_config.get("two_factor_auth", {}).get("required"):
+        if user_role_auth_config.get("two_factor_auth", {}):
+            user_role_auth_config["two_factor_auth"]["required"] = True
+        else:
+            user_role_auth_config["two_factor_auth"] = {
+                "required": True,
+            }
+    return user_role_auth_config
+
+
+def get_auth_priority(
+    config_key: Optional[str] = None,
+    policy: Optional[str] = None,
+    request: Any = None,
+    user: Any = None,
+    user_role: Any = None,
+    tenant: Any = None,
+) -> Dict[str, Dict[str, Any]] | Union[str, int, bool, float]:
+    """
+    Check authentication priority for a configuration key across user, role, and tenant levels.
+    When policy is specified, merges the policy configurations across all levels.
+
+    Args:
+        config_key: The configuration key to check
+        policy: Optional policy name to check within auth configs
+        request: HTTP request object (auto-resolved if None)
+        user: User object (auto-resolved from request if None)
+        user_role: User role object (auto-resolved if None)
+        tenant: Tenant object (auto-resolved from request if None)
+
+    Returns:
+        If policy is specified:
+            - The merged policy configuration across all levels
+        If policy is not specified:
+            - The value of the configuration key from the first level that has it,
+              or an empty string if not found at any level
+    """
+
+    from zango.apps.appauth.models import UserRoleModel
+
+    if request is None:
+        request = get_current_request()
+    if user is None:
+        user = request.user if request else None
+        if user and user.is_anonymous:
+            from allauth.account.internal.stagekit import unstash_login
+
+            login = unstash_login(request, peek=True)
+            if login:
+                user = login.user
+            else:
+                user = None
+    if user_role is None:
+        if getattr(request, "session", None):
+            if request.session.get("role_id"):
+                user_role = UserRoleModel.objects.get(id=request.session["role_id"])
+        else:
+            user_role = get_current_role()
+        if user_role is None:
+            try:
+                if user and not user.is_anonymous:
+                    roles = user.roles.filter(is_active=True)
+                    if roles.count() == 1:
+                        user_role = roles.first()
+            except Exception:
+                pass
+    if tenant is None:
+        tenant = request.tenant if request else None
+    try:
+        tenant_auth_config = getattr(tenant, "auth_config", {}) if tenant else {}
+    except Exception:
+        from zango.apps.shared.tenancy.schema import DEFAULT_AUTH_CONFIG
+
+        tenant_auth_config = DEFAULT_AUTH_CONFIG
+    user_role_auth_config = filter_user_role_auth_config(
+        getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
+    )
+    user_auth_config = filter_user_auth_config(
+        getattr(user, "auth_config", {}) if user and not user.is_anonymous else {},
+        user_role_auth_config,
+    )
+
+    if not config_key and not policy:
+        merged_policy = {}
+
+        merged_policy = deep_merge(merged_policy, tenant_auth_config)
+        merged_policy = deep_merge(merged_policy, user_role_auth_config)
+        merged_policy = deep_merge(merged_policy, user_auth_config)
+        return merged_policy
+
+    if policy:
+        merged_policy = {}
+
+        tenant_policy = tenant_auth_config.get(policy, {})
+        if tenant_policy:
+            merged_policy = deep_merge(merged_policy, tenant_policy)
+        user_role_policy = user_role_auth_config.get(policy, {})
+        if user_role_policy:
+            merged_policy = deep_merge(merged_policy, user_role_policy)
+        user_policy = user_auth_config.get(policy, {})
+        if user_policy:
+            merged_policy = deep_merge(merged_policy, user_policy)
+        return merged_policy
+    else:
+        auth_levels = [
+            ("user", user_auth_config),
+            ("user_role", user_role_auth_config),
+            ("tenant", tenant_auth_config),
+        ]
+
+        for level, config in auth_levels:
+            if config.get(config_key) is not None:
+                return config.get(config_key)
+
+        return ""
+
+
+def mask_email(email):
+    """Masks an email address, showing only the first and last character before the '@' and the domain."""
+    if "@" not in email:
+        return email
+
+    parts = email.split("@")
+    local_part = parts[0]
+    domain_part = parts[1]
+
+    if len(local_part) <= 2:
+        masked_local = "*" * len(local_part)
+    else:
+        masked_local = local_part[0] + "*" * (len(local_part) - 2) + local_part[-1]
+
+    return f"{masked_local}@{domain_part}"
+
+
+def mask_phone_number(phone_number):
+    """Masks a phone number, showing only the last four digits."""
+    digits_only = "".join(filter(str.isdigit, phone_number))
+
+    if len(digits_only) <= 4:
+        return "*" * len(digits_only)
+    else:
+        return "*" * (len(digits_only) - 4) + digits_only[-4:]
