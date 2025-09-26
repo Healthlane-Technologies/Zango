@@ -420,9 +420,6 @@ class Workspace:
 
         return all_urls
 
-    def get_dynamic_models_schema(self):
-        pass
-
     def generate_er_diagram(self):
         pass
 
