@@ -306,7 +306,9 @@ class DynamicModelGraph:
                 )
 
             if relation is not None and self.use_model(relation["target"]):
-                context["relations"].append(relation)
+                # Filter out common audit fields and DynamicModelBase inheritance by default
+                if not self._should_skip_relation(relation):
+                    context["relations"].append(relation)
 
         # Process many-to-many fields
         for field in model._meta.local_many_to_many:
@@ -337,7 +339,9 @@ class DynamicModelGraph:
                 )
 
             if relation is not None and self.use_model(relation["target"]):
-                context["relations"].append(relation)
+                # Filter out common audit fields and DynamicModelBase inheritance by default
+                if not self._should_skip_relation(relation):
+                    context["relations"].append(relation)
 
         # Process inheritance
         if self.inheritance:
@@ -365,7 +369,9 @@ class DynamicModelGraph:
                     if inheritance_rel not in context["relations"] and self.use_model(
                         inheritance_rel["target"]
                     ):
-                        context["relations"].append(inheritance_rel)
+                        # Filter out common audit fields and DynamicModelBase inheritance by default
+                        if not self._should_skip_relation(inheritance_rel):
+                            context["relations"].append(inheritance_rel)
 
         return context
 
@@ -435,6 +441,25 @@ class DynamicModelGraph:
                 abstract_fields.extend(base._meta.fields)
                 abstract_fields.extend(self.get_bases_abstract_fields(base))
         return abstract_fields
+
+    def _should_skip_relation(self, relation):
+        """
+        Determine if a relation should be skipped based on default filtering rules.
+        Skip common audit fields and DynamicModelBase inheritance by default.
+        """
+        target = relation.get("target", "")
+        name = relation.get("name", "")
+        relation_type = relation.get("type", "")
+
+        # Skip DynamicModelBase inheritance (common to all dynamic models)
+        if relation_type == "inheritance" and target == "DynamicModelBase":
+            return True
+
+        # Skip common audit fields (created_by, modified_by to AppUserModel)
+        if target == "AppUserModel" and name in ("created_by", "modified_by"):
+            return True
+
+        return False
 
     def add_relation(self, field, extras="", color=None):
         """Add relation information for a field"""
@@ -874,6 +899,7 @@ class Command(BaseCommand):
             for model in graph.get("models", []):
                 for relation in model.get("relations", []):
                     if relation.get("external_target", False):
+                        # Only add external targets that weren't filtered out
                         external_targets.add(relation.get("target"))
 
             for external_target in sorted(external_targets):
