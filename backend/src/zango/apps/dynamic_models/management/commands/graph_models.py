@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 
+from zango.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
 from zango.apps.dynamic_models.models import DynamicModelBase
 from zango.core.custom_pluginbase import get_plugin_source
 
@@ -193,6 +194,11 @@ class DynamicModelGraph:
                     if relation is not None:
                         if relation["target"] in nodes:
                             relation["needs_node"] = False
+                        else:
+                            # For external models (like AppUserModel, DynamicModelBase),
+                            # allow the relationship but mark as external
+                            relation["needs_node"] = False
+                            relation["external_target"] = True
 
     def get_model_context(self, model):
         """Get context data for a single model"""
@@ -274,7 +280,7 @@ class DynamicModelGraph:
             color = None
 
             if self.color_code_deletions and isinstance(
-                field, (OneToOneField, ForeignKey)
+                field, (OneToOneField, ForeignKey, ZOneToOneField, ZForeignKey)
             ):
                 field_on_delete = getattr(field.remote_field, "on_delete", None)
                 on_delete_colors = {
@@ -288,11 +294,11 @@ class DynamicModelGraph:
                 }
                 color = on_delete_colors.get(field_on_delete)
 
-            if isinstance(field, OneToOneField):
+            if isinstance(field, (OneToOneField, ZOneToOneField)):
                 relation = self.add_relation(
                     field, "[arrowhead=none, arrowtail=none, dir=both]", color
                 )
-            elif isinstance(field, ForeignKey):
+            elif isinstance(field, (ForeignKey, ZForeignKey)):
                 relation = self.add_relation(
                     field,
                     f"[arrowhead=none, arrowtail={self.arrow_shape}, dir=both]",
@@ -380,7 +386,7 @@ class DynamicModelGraph:
             label = field.name
 
         t = type(field).__name__
-        if isinstance(field, (OneToOneField, ForeignKey)):
+        if isinstance(field, (OneToOneField, ForeignKey, ZOneToOneField, ZForeignKey)):
             try:
                 if hasattr(field, "remote_field") and hasattr(
                     field.remote_field, "field_name"
@@ -462,7 +468,28 @@ class DynamicModelGraph:
                 else:
                     app_label = field.model._meta.app_label
                     model_name = field.remote_field.model
-                target_model = apps.get_model(app_label, model_name)
+
+                # For ZForeignKey and ZOneToOneField, try to resolve from dynamic models first
+                if isinstance(field, (ZForeignKey, ZOneToOneField)):
+                    try:
+                        # Get all dynamic models for this tenant
+                        dynamic_models = self.get_workspace_dynamic_models()
+                        # Find the model by name
+                        target_model = None
+                        for model in dynamic_models:
+                            if model.__name__ == model_name:
+                                target_model = model
+                                break
+
+                        if target_model is None:
+                            # Fallback to Django's apps registry
+                            target_model = apps.get_model(app_label, model_name)
+                    except Exception:
+                        # Fallback to Django's apps registry
+                        # Fallback to Django's apps registry
+                        target_model = apps.get_model(app_label, model_name)
+                else:
+                    target_model = apps.get_model(app_label, model_name)
         else:
             target_model = field.remote_field.model
 
@@ -527,6 +554,8 @@ class DynamicModelGraph:
                     RelatedField,
                     OneToOneRel,
                     ManyToOneRel,
+                    ZForeignKey,
+                    ZOneToOneField,
                 ),
             ):
                 return True
@@ -840,13 +869,38 @@ class Command(BaseCommand):
 
             dot_lines.append("")
 
+            # Add external model nodes (for models referenced but not included in the graph)
+            external_targets = set()
+            for model in graph.get("models", []):
+                for relation in model.get("relations", []):
+                    if relation.get("external_target", False):
+                        external_targets.add(relation.get("target"))
+
+            for external_target in sorted(external_targets):
+                # Create a simple external node with different styling
+                node_attrs = [
+                    'shape = "ellipse"',
+                    f'label = "{external_target}"',
+                    'fontname = "Helvetica"',
+                    "fontsize = 8",
+                    'style = "filled"',
+                    'fillcolor = "#f0f0f0"',
+                    'color = "#999999"',
+                ]
+                dot_lines.append(
+                    f"{indent}{external_target} [{', '.join(node_attrs)}];"
+                )
+
+            if external_targets:
+                dot_lines.append("")
+
             # Add relationships
             for model in graph.get("models", []):
                 model_name = model.get("name", "Model")
 
                 for relation in model.get("relations", []):
                     target = relation.get("target")
-                    if not target or not relation.get("needs_node", True):
+                    if not target or relation.get("needs_node", True):
                         continue
 
                     label = relation.get("label", "")
