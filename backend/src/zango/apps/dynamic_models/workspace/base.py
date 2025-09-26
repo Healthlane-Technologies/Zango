@@ -65,6 +65,8 @@ class Workspace:
         self.path = str(settings.BASE_DIR) + f"/workspaces/{wobj.name}/"
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
+        self.dyn_models_schema = self.get_dynamic_models_schema()
+        self.routes = self.get_all_view_urls()
         self.models = []  # sorted with bfs
 
     @classmethod
@@ -375,6 +377,54 @@ class Workspace:
                     }
                 )
         return routes
+
+    def get_all_view_urls(self) -> list[dict]:
+        """
+        Returns URLs of all views in the workspace by examining urlpatterns
+        from each module defined in get_root_urls()
+        """
+        all_urls = []
+        root_urls = self.get_root_urls()
+
+        for root_url in root_urls:
+            try:
+                module_path = root_url["module"] + "." + root_url["url"]
+                module = self.plugin_source.load_plugin(module_path)
+                urlpatterns = getattr(module, "urlpatterns", [])
+
+                for pattern in urlpatterns:
+                    # Construct full URL by combining root path and pattern
+                    root_path = root_url["re_path"].strip("^$")
+                    pattern_str = str(pattern.pattern).strip("^$")
+                    full_url = "/" + root_path.strip("/") + "/" + pattern_str.strip("/")
+                    full_url = re.sub(r"/+", "/", full_url)  # Remove duplicate slashes
+
+                    url_info = {
+                        "root_path": root_url["re_path"],
+                        "module": root_url["module"],
+                        "pattern": str(pattern.pattern),
+                        "full_url": full_url,
+                        "name": getattr(pattern, "name", None),
+                        "callback": getattr(
+                            pattern.callback, "__name__", str(pattern.callback)
+                        )
+                        if pattern.callback
+                        else None,
+                        "full_module_path": module_path,
+                    }
+                    all_urls.append(url_info)
+
+            except Exception:
+                # Skip modules that can't be loaded or don't have urlpatterns
+                continue
+
+        return all_urls
+
+    def get_dynamic_models_schema(self):
+        pass
+
+    def generate_er_diagram(self):
+        pass
 
     def match_view(self, request) -> object:
         routes = self.get_root_urls()

@@ -12,6 +12,7 @@ import TextareaField from '../../../../components/Form/TextareaField';
 import FileUpload from '../../../../components/Form/FileUpload';
 import SelectField from '../../../../components/Form/SelectField';
 import InputFieldArray from '../../../../components/Form/InputFieldArray';
+import DomainFieldArray from '../../../../components/Form/DomainFieldArray';
 import CheckboxField from '../../../../components/Form/CheckboxField';
 import { ReactComponent as EachAppIcon } from '../../../../assets/images/svg/each-app-icon.svg';
 import { ReactComponent as SingleFileIcon } from '../../../../assets/images/svg/single-file.svg';
@@ -45,7 +46,20 @@ const ModernAppConfiguration = () => {
 		description: appData?.description ?? '',
 		logo: '',
 		fav_icon: '',
-		domains: appData?.domains?.map((eachDomain) => eachDomain.domain) ?? [''],
+		domains: appData?.domains?.length > 0 
+			? (() => {
+				const domainObjs = appData.domains.map((eachDomain) => ({
+					domain: eachDomain.domain,
+					is_primary: eachDomain.is_primary || false
+				}));
+				// If no domain is marked as primary, mark the first one as primary
+				const hasPrimary = domainObjs.some(d => d.is_primary);
+				if (!hasPrimary && domainObjs.length > 0) {
+					domainObjs[0].is_primary = true;
+				}
+				return domainObjs;
+			})()
+			: [{ domain: '', is_primary: true }],
 		timezone: appData?.timezone ?? '',
 		date_format: appData?.date_format ?? '',
 		datetime_format: appData?.datetime_format ?? '',
@@ -60,7 +74,19 @@ const ModernAppConfiguration = () => {
 	const validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		description: Yup.string().required('Required'),
-		domains: Yup.array().of(Yup.string().required('Required')),
+		domains: Yup.array()
+			.of(
+				Yup.object({
+					domain: Yup.string().required('Domain is required'),
+					is_primary: Yup.boolean()
+				})
+			)
+			.min(1, 'At least one domain is required')
+			.test('has-primary', 'Exactly one domain must be marked as primary', function(domains) {
+				if (!domains || domains.length === 0) return false;
+				const primaryCount = domains.filter(d => d.is_primary).length;
+				return primaryCount === 1;
+			}),
 		repo_url: Yup.string().url('Must be a valid URL').nullable().when(['dev', 'prod', 'staging'], {
 			is: (dev, prod, staging) => dev || prod || staging,
 			then: Yup.string().required('Required'),
@@ -83,6 +109,16 @@ const ModernAppConfiguration = () => {
 
 		if (!tempValues['fav_icon']) {
 			delete tempValues['fav_icon'];
+		}
+
+		// Transform domains back to the expected format for the API
+		if (tempValues.domains && Array.isArray(tempValues.domains)) {
+			tempValues.domains = tempValues.domains
+				.filter(domainObj => domainObj.domain && domainObj.domain.trim() !== '')
+				.map(domainObj => ({
+					domain: domainObj.domain,
+					is_primary: domainObj.is_primary || false
+				}));
 		}
 
 		let extra_config = {
@@ -202,7 +238,7 @@ const ModernAppConfiguration = () => {
 					enableReinitialize={true}
 				>
 					{(formik) => {
-						const { values, setFieldValue, handleSubmit, errors, touched } = formik;
+						const { values, handleSubmit } = formik;
 						
 						return (
 							<form onSubmit={handleSubmit} className="space-y-[24px]">
@@ -287,13 +323,13 @@ const ModernAppConfiguration = () => {
 									}
 								>
 									<div className="space-y-[16px]">
-										<InputFieldArray
+										<DomainFieldArray
 											key="domains"
 											label="Domains"
 											name="domains"
 											id="domains"
 											placeholder="Enter domain"
-											value={get(formik.values, 'domains', '')}
+											value={get(formik.values, 'domains', [])}
 											onChange={formik.handleChange}
 											formik={formik}
 										/>
@@ -507,15 +543,21 @@ const ModernAppConfiguration = () => {
 								value={
 									<div className="flex flex-col gap-[8px]">
 										{appData?.domains?.map((eachDomain, key) => (
-											<a
-												href={`http://${eachDomain?.domain}`}
-												target="_blank"
-												rel="noopener noreferrer"
-												key={key}
-												className="text-[14px] font-medium text-[#5048ED] hover:underline"
-											>
-												{eachDomain.domain}
-											</a>
+											<div key={key} className="flex items-center gap-[8px]">
+												<a
+													href={`http://${eachDomain?.domain}`}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-[14px] font-medium text-[#5048ED] hover:underline"
+												>
+													{eachDomain.domain}
+												</a>
+												{eachDomain.is_primary && (
+													<span className="inline-flex items-center px-[8px] py-[2px] rounded-[12px] bg-[#10B981] text-white text-[11px] font-medium">
+														Primary
+													</span>
+												)}
+											</div>
 										))}
 									</div>
 								} 

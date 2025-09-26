@@ -7,6 +7,7 @@ from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel
 from zango.core.api import (
+    TenantMixin,
     ZangoGenericPlatformAPIView,
     get_api_response,
 )
@@ -19,7 +20,7 @@ from .serializers import PolicySerializer
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
+class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin):
     pagination_class = ZangoAPIPagination
     permission_classes = (IsPlatformUserAllowedApp,)
 
@@ -50,11 +51,14 @@ class PolicyViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
     def get(self, request, *args, **kwargs):
         try:
+            tenant = self.get_tenant(**kwargs)
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             policies = self.get_queryset(search, columns)
             paginated_roles = self.paginate_queryset(policies, request, view=self)
-            serializer = PolicySerializer(paginated_roles, many=True)
+            serializer = PolicySerializer(
+                paginated_roles, many=True, context={"tenant": tenant}
+            )
             paginated_roles_data = self.get_paginated_response_data(serializer.data)
 
             success = True

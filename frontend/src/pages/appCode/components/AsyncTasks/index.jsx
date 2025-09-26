@@ -25,8 +25,13 @@ export default function AsyncTasks() {
 			day_of_week: '*',
 			day_of_month: '*',
 			month_of_year: '*'
-		}
+		},
+		kwargs: '{}'
 	});
+	const [historyModalOpen, setHistoryModalOpen] = useState(false);
+	const [selectedTaskHistory, setSelectedTaskHistory] = useState(null);
+	const [taskHistory, setTaskHistory] = useState([]);
+	const [historyLoading, setHistoryLoading] = useState(false);
 
 	// Fetch tasks
 	const fetchTasks = async () => {
@@ -40,7 +45,7 @@ export default function AsyncTasks() {
 			});
 
 			if (filters.is_enabled !== null) {
-				queryParams.append('is_enabled', filters.is_enabled.toString());
+				queryParams.append('search_is_enabled', filters.is_enabled.toString());
 			}
 
 			const { response, success } = await triggerApi({
@@ -124,7 +129,8 @@ export default function AsyncTasks() {
 				day_of_week: '*',
 				day_of_month: '*',
 				month_of_year: '*'
-			}
+			},
+			kwargs: task.kwargs ? JSON.stringify(task.kwargs, null, 2) : '{}'
 		});
 		setEditModalOpen(true);
 	};
@@ -137,21 +143,44 @@ export default function AsyncTasks() {
 
 	// Update task
 	const updateTask = async () => {
+		console.log("updating task");
+		console.log("editFormData:", editFormData);
+
 		if (!editingTask) return;
 
-		const { response, success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/tasks/${editingTask.id}/`,
-			type: 'POST',
-			loader: true,
-			data: {
-				is_enabled: editFormData.is_enabled,
-				crontab_exp: JSON.stringify(editFormData.crontab_exp)
-			}
-		});
+		console.log("No returns");
 
-		if (success) {
-			closeEditModal();
-			fetchTasks();
+		try {
+			// Parse kwargs to ensure it's valid JSON
+			const parsedKwargs = JSON.parse(editFormData.kwargs);
+			
+			// Create FormData
+			const formData = new FormData();
+			formData.append('crontab_exp', JSON.stringify(editFormData.crontab_exp));
+			formData.append('is_enabled', editFormData.is_enabled);
+			formData.append('kwargs', JSON.stringify(parsedKwargs));
+			
+			console.log("FormData contents:");
+			for (let [key, value] of formData.entries()) {
+				console.log(key, value);
+			}
+			
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/tasks/${editingTask.id}/`,
+				type: 'POST',
+				loader: true,
+				payload: formData
+			});
+
+			console.log("API response:", { response, success });
+
+			if (success) {
+				closeEditModal();
+				fetchTasks();
+			}
+		} catch (error) {
+			console.error('Invalid JSON in kwargs:', error);
+			// You could add user feedback here for invalid JSON
 		}
 	};
 
@@ -164,6 +193,41 @@ export default function AsyncTasks() {
 				[field]: value
 			}
 		}));
+	};
+
+	// Fetch task execution history
+	const fetchTaskHistory = async (taskId) => {
+		setHistoryLoading(true);
+		try {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/tasks/${taskId}/`,
+				type: 'GET',
+				loader: false,
+			});
+
+			if (success && response?.task) {
+				setTaskHistory(response.task.run_history || []);
+			}
+		} catch (error) {
+			console.error('Error fetching task history:', error);
+			setTaskHistory([]);
+		} finally {
+			setHistoryLoading(false);
+		}
+	};
+
+	// Open history modal
+	const openHistoryModal = (task) => {
+		setSelectedTaskHistory(task);
+		setHistoryModalOpen(true);
+		fetchTaskHistory(task.id);
+	};
+
+	// Close history modal
+	const closeHistoryModal = () => {
+		setHistoryModalOpen(false);
+		setSelectedTaskHistory(null);
+		setTaskHistory([]);
 	};
 
 	return (
@@ -283,12 +347,6 @@ export default function AsyncTasks() {
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Schedule
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Policies
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Actions
-										</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200">
@@ -313,13 +371,32 @@ export default function AsyncTasks() {
 																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
 																</svg>
 															</button>
-															<div>
+															<div className="flex-1">
 																<div className="text-sm font-medium text-gray-900">
 																	{task.name}
 																</div>
 																<div className="text-sm text-gray-500">
 																	ID: {task.id}
 																</div>
+															</div>
+															<div className="flex items-center gap-2">
+																<button 
+																	onClick={() => openEditModal(task)}
+																	className="px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors font-medium"
+																>
+																	Edit
+																</button>
+																<button 
+																	onClick={() => openHistoryModal(task)}
+																	className="px-3 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 rounded-md transition-colors font-medium"
+																	title="View execution history"
+																>
+																	<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="mr-1">
+																		<path d="M8 0C3.584 0 0 3.584 0 8s3.584 8 8 8 8-3.584 8-8-3.584-8-8-8zm0 14.4c-3.536 0-6.4-2.864-6.4-6.4S4.464 1.6 8 1.6s6.4 2.864 6.4 6.4-2.864 6.4-6.4 6.4z"/>
+																		<path d="M8 4.8c-.44 0-.8.36-.8.8v2.4l2.08 1.248c.368.22.848.104 1.068-.264.22-.368.104-.848-.264-1.068L8.8 7.2V5.6c0-.44-.36-.8-.8-.8z"/>
+																	</svg>
+																	History
+																</button>
 															</div>
 														</div>
 													</td>
@@ -331,24 +408,11 @@ export default function AsyncTasks() {
 															{formatSchedule(task)}
 														</code>
 													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														<span className="text-sm text-gray-900">
-															{task.attached_policies?.length || 0} policies
-														</span>
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														<button 
-															onClick={() => openEditModal(task)}
-															className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-														>
-															Edit
-														</button>
-													</td>
 												</tr>
 
 												{isExpanded && (
 													<tr>
-														<td colSpan="5" className="p-0">
+														<td colSpan="3" className="p-0">
 															<div className="bg-blue-50 border-t border-b border-blue-100">
 																<div className="px-6 py-4">
 																	<div className="space-y-4">
@@ -360,13 +424,13 @@ export default function AsyncTasks() {
 																					<div className="flex items-start gap-2">
 																						<span className="text-xs text-gray-500 font-medium min-w-[80px]">Created:</span>
 																						<span className="text-xs text-gray-700">
-																							{new Date(task.created_date).toLocaleString()}
+																							{task.created_at}
 																						</span>
 																					</div>
 																					<div className="flex items-start gap-2">
 																						<span className="text-xs text-gray-500 font-medium min-w-[80px]">Modified:</span>
 																						<span className="text-xs text-gray-700">
-																							{new Date(task.modified_date).toLocaleString()}
+																							{task.modified_at}
 																						</span>
 																					</div>
 																					{task.kwargs && (
@@ -402,8 +466,8 @@ export default function AsyncTasks() {
 																		{task.code && (
 																			<div>
 																				<h5 className="text-sm font-medium text-gray-900 mb-2">Task Code</h5>
-																				<pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs">
-																					<code>{task.code}</code>
+																				<pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-xs max-w-full whitespace-pre-wrap break-words">
+																					<code className="block max-w-full">{task.code}</code>
 																				</pre>
 																			</div>
 																		)}
@@ -499,7 +563,7 @@ export default function AsyncTasks() {
 						></div>
 
 						{/* Modal panel */}
-						<div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+						<div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
 							{/* Modal header */}
 							<div className="bg-white px-6 pt-6 pb-4">
 								<div className="flex items-center justify-between">
@@ -525,18 +589,30 @@ export default function AsyncTasks() {
 										<label className="text-sm font-medium text-gray-700">
 											Task Status
 										</label>
-										<button
-											onClick={() => setEditFormData(prev => ({ ...prev, is_enabled: !prev.is_enabled }))}
-											className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-												editFormData.is_enabled ? 'bg-blue-600' : 'bg-gray-200'
-											}`}
-										>
-											<span
-												className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-													editFormData.is_enabled ? 'translate-x-6' : 'translate-x-1'
+										<div className="flex items-center gap-3">
+											<span className={`text-sm font-medium ${
+												editFormData.is_enabled ? 'text-gray-400' : 'text-gray-900'
+											}`}>
+												Disabled
+											</span>
+											<button
+												onClick={() => setEditFormData(prev => ({ ...prev, is_enabled: !prev.is_enabled }))}
+												className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+													editFormData.is_enabled ? 'bg-blue-600' : 'bg-gray-200'
 												}`}
-											/>
-										</button>
+											>
+												<span
+													className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+														editFormData.is_enabled ? 'translate-x-6' : 'translate-x-1'
+													}`}
+												/>
+											</button>
+											<span className={`text-sm font-medium ${
+												editFormData.is_enabled ? 'text-gray-900' : 'text-gray-400'
+											}`}>
+												Enabled
+											</span>
+										</div>
 									</div>
 
 									{/* Crontab Schedule */}
@@ -636,6 +712,23 @@ export default function AsyncTasks() {
 											</button>
 										</div>
 									</div>
+
+									{/* Kwargs Field */}
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-2">
+											Task Arguments (JSON)
+										</label>
+										<textarea
+											value={editFormData.kwargs}
+											onChange={(e) => setEditFormData(prev => ({ ...prev, kwargs: e.target.value }))}
+											className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+											rows={4}
+											placeholder='{"key": "value"}'
+										/>
+										<p className="mt-1 text-xs text-gray-500">
+											Enter valid JSON format for task arguments
+										</p>
+									</div>
 								</div>
 							</div>
 
@@ -652,6 +745,147 @@ export default function AsyncTasks() {
 									className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
 								>
 									Save Changes
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* History Modal */}
+			{historyModalOpen && selectedTaskHistory && (
+				<div className="fixed inset-0 z-50 overflow-y-auto">
+					<div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+						{/* Background overlay */}
+						<div 
+							className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+							onClick={closeHistoryModal}
+						></div>
+
+						{/* Modal panel */}
+						<div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+							{/* Modal header */}
+							<div className="bg-white px-6 pt-6 pb-4">
+								<div className="flex items-center justify-between">
+									<h3 className="text-lg font-semibold text-gray-900">
+										Execution History: {selectedTaskHistory.name}
+									</h3>
+									<button
+										onClick={closeHistoryModal}
+										className="text-gray-400 hover:text-gray-500"
+									>
+										<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+										</svg>
+									</button>
+								</div>
+							</div>
+
+							{/* Modal body */}
+							<div className="px-6 pb-6 max-h-96 overflow-y-auto">
+								{historyLoading ? (
+									<div className="flex items-center justify-center py-12">
+										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+										<span className="ml-3 text-gray-600">Loading execution history...</span>
+									</div>
+								) : taskHistory.length === 0 ? (
+									<div className="text-center py-12">
+										<svg
+											className="mx-auto h-12 w-12 text-gray-300"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={1.5}
+												d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+											/>
+										</svg>
+										<p className="mt-2 text-sm text-gray-500">No execution history found</p>
+										<p className="text-xs text-gray-400">This task hasn't been executed yet</p>
+									</div>
+								) : (
+									<div className="space-y-4">
+										{taskHistory.map((execution, idx) => (
+											<div key={execution.id || idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+												<div className="flex items-start justify-between mb-3">
+													<div>
+														<div className="flex items-center gap-2 mb-1">
+															<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+																execution.status === 'SUCCESS' 
+																	? 'bg-green-100 text-green-800'
+																	: execution.status === 'FAILURE'
+																	? 'bg-red-100 text-red-800'
+																	: 'bg-yellow-100 text-yellow-800'
+															}`}>
+																{execution.status || 'PENDING'}
+															</span>
+															<span className="text-sm font-medium text-gray-900">
+																Execution #{idx + 1}
+															</span>
+														</div>
+														<div className="space-y-1 text-xs text-gray-600">
+															{execution.date_started && (
+																<div><span className="font-medium">Started:</span> {execution.date_started}</div>
+															)}
+															{execution.date_done && (
+																<div><span className="font-medium">Completed:</span> {execution.date_done}</div>
+															)}
+														</div>
+													</div>
+													<div className="flex flex-col gap-1">
+														{execution.worker && (
+															<span className="text-xs text-gray-500">
+																<span className="font-medium">Worker:</span> {execution.worker}
+															</span>
+														)}
+														{execution.task_args && (
+															<span className="text-xs text-gray-500">
+																<span className="font-medium">Args:</span> {execution.task_args}
+															</span>
+														)}
+														{execution.task_kwargs && execution.task_kwargs !== '"{}"' && (
+															<span className="text-xs text-gray-500">
+																<span className="font-medium">Kwargs:</span> {execution.task_kwargs}
+															</span>
+														)}
+													</div>
+												</div>
+
+												{/* Result */}
+												{execution.result && execution.result !== 'null' && (
+													<div className="mt-3">
+														<h5 className="text-xs font-medium text-gray-700 mb-1">Result</h5>
+														<pre className="bg-green-50 border border-green-200 rounded p-2 text-xs text-green-800 overflow-x-auto">
+															{execution.result}
+														</pre>
+													</div>
+												)}
+
+
+												{execution.traceback && (
+													<div className="mt-3">
+														<h5 className="text-xs font-medium text-red-700 mb-1">Traceback</h5>
+														<pre className="bg-red-50 border border-red-200 rounded p-2 text-xs text-red-800 overflow-x-auto whitespace-pre-wrap">
+															{execution.traceback}
+														</pre>
+													</div>
+												)}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+
+							{/* Modal footer */}
+							<div className="bg-gray-50 px-6 py-3 flex justify-end">
+								<button
+									onClick={closeHistoryModal}
+									className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+								>
+									Close
 								</button>
 							</div>
 						</div>

@@ -4,14 +4,25 @@ from rest_framework import serializers
 
 from zango.apps.appauth.models import UserRoleModel
 from zango.apps.permissions.models import PolicyModel
+from zango.core.utils import get_datetime_str_in_tenant_timezone
 
 
 class PolicySerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = PolicyModel
-        fields = ["id", "name", "statement", "roles", "description", "type", "path"]
+        fields = [
+            "id",
+            "name",
+            "statement",
+            "roles",
+            "description",
+            "type",
+            "path",
+            "created_at",
+        ]
 
     def get_roles(self, obj):
         return list(UserRoleModel.objects.filter(policies=obj).values("id", "name"))
@@ -49,3 +60,8 @@ class PolicySerializer(serializers.ModelSerializer):
             role_obj.policies.add(instance.id)
 
         return super(PolicySerializer, self).update(instance, validated_data)
+
+    def get_created_at(self, obj):
+        return get_datetime_str_in_tenant_timezone(
+            obj.created_at, self.context["tenant"]
+        )

@@ -40,8 +40,8 @@ export default function Policies({ data }) {
 			if (success && response?.policies) {
 				setPolicies(response.policies.records || []);
 				setTotalPages(response.policies.total_pages || 1);
-				if (response.dropdown_options?.user_roles) {
-					setAvailableRoles(response.dropdown_options.user_roles);
+				if (response.dropdown_options?.roles) {
+					setAvailableRoles(response.dropdown_options.roles);
 				}
 			}
 		} catch (error) {
@@ -97,7 +97,9 @@ export default function Policies({ data }) {
 
 		const formData = new FormData();
 		formData.append('id', editingPolicy.id);
-		formData.append('attached_roles', JSON.stringify(selectedRoles.map(r => r.id)));
+		selectedRoles.forEach(role => {
+			formData.append('roles', role.id);
+		});
 
 		const { response, success } = await triggerApi({
 			url: `/api/v1/apps/${appId}/policies/${editingPolicy.id}/`,
@@ -242,12 +244,6 @@ export default function Policies({ data }) {
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Roles
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Status
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Actions
-										</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200">
@@ -291,48 +287,39 @@ export default function Policies({ data }) {
 														</button>
 													</td>
 													<td className="px-6 py-4">
-														<div className="flex flex-wrap gap-1">
-															{policy.roles?.slice(0, 3).map((role, idx) => (
-																<span
-																	key={idx}
-																	className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-																>
-																	{role.name}
-																</span>
-															))}
-															{policy.roles?.length > 3 && (
-																<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-																	+{policy.roles.length - 3} more
-																</span>
-															)}
+														<div className="flex items-center justify-between">
+															<div className="flex flex-wrap gap-1">
+																{policy.roles?.slice(0, 3).map((role, idx) => (
+																	<span
+																		key={idx}
+																		className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+																	>
+																		{role.name}
+																	</span>
+																))}
+																{policy.roles?.length > 3 && (
+																	<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+																		+{policy.roles.length - 3} more
+																	</span>
+																)}
+															</div>
+															<button
+																onClick={() => openEditModal(policy)}
+																className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
+															>
+																<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+																	<path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61z" />
+																	<path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61z" />
+																</svg>
+																Edit
+															</button>
 														</div>
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														{policy.is_active ? (
-															<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-																<span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
-																Active
-															</span>
-														) : (
-															<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-																<span className="w-1.5 h-1.5 bg-gray-600 rounded-full"></span>
-																Inactive
-															</span>
-														)}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														<button
-															onClick={() => openEditModal(policy)}
-															className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-														>
-															Edit Roles
-														</button>
 													</td>
 												</tr>
 
 												{isExpanded && (
 													<tr>
-														<td colSpan="5" className="p-0">
+														<td colSpan="3" className="p-0">
 															<div className="bg-blue-50 border-t border-b border-blue-100">
 																<div className="px-6 py-4">
 																	<div className="space-y-4">
@@ -488,7 +475,7 @@ export default function Policies({ data }) {
 															)}
 														</div>
 														<div>
-															<p className="text-sm font-medium text-gray-900">{role.name}</p>
+															<p className="text-sm font-medium text-gray-900">{role.label}</p>
 															{role.is_reserved && (
 																<span className="text-xs text-gray-500">System Role</span>
 															)}
@@ -558,7 +545,7 @@ export default function Policies({ data }) {
 								<div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
 									<pre className="text-gray-100 text-sm">
 										<code>
-											{JSON.stringify(viewingPolicy?.configuration || {}, null, 2)}
+											{JSON.stringify(viewingPolicy?.statement || {}, null, 2)}
 										</code>
 									</pre>
 								</div>

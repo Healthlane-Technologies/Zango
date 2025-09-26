@@ -18,7 +18,10 @@ export default function Routes({ data }) {
 				route.re_path?.toLowerCase().includes(searchLower) ||
 				route.module?.toLowerCase().includes(searchLower) ||
 				route.package?.toLowerCase().includes(searchLower) ||
-				route.url?.toLowerCase().includes(searchLower)
+				route.url?.toLowerCase().includes(searchLower) ||
+				route.pattern?.toLowerCase().includes(searchLower) ||
+				route.name?.toLowerCase().includes(searchLower) ||
+				route.full_url?.toLowerCase().includes(searchLower)
 			);
 		});
 	};
@@ -28,28 +31,14 @@ export default function Routes({ data }) {
 
 	// Get sub-routes for a given route from the route tree
 	const getSubRoutes = (route) => {
-		if (!data.route_tree || !data.route_tree.children) return [];
+		if (!data.route_tree || !Array.isArray(data.route_tree)) return [];
 		
-		// Find the matching route in the tree
-		const findRouteInTree = (node) => {
-			if (node.pattern === route.re_path) {
-				return node.children || [];
-			}
-			if (node.children) {
-				for (let child of node.children) {
-					const result = findRouteInTree(child);
-					if (result) return result;
-				}
-			}
-			return null;
-		};
-		
-		for (let child of data.route_tree.children) {
-			const subRoutes = findRouteInTree(child);
-			if (subRoutes) return subRoutes;
-		}
-		
-		return [];
+		// Find routes that share the same root_path as the current route
+		const currentRootPath = route.re_path;
+		return data.route_tree.filter(treeRoute => 
+			treeRoute.root_path === currentRootPath && 
+			treeRoute !== route
+		);
 	};
 
 	// Toggle expanded state for a route
@@ -139,10 +128,7 @@ export default function Routes({ data }) {
 													Module
 												</th>
 												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-													URL File
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-													View
+													Module Path
 												</th>
 											</tr>
 										</thead>
@@ -179,23 +165,20 @@ export default function Routes({ data }) {
 																{route.module}
 															</td>
 															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-																{route.url}
-															</td>
-															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-																—
+																{route.full_module_path || route.module}
 															</td>
 														</tr>
 														
 														{isExpanded && subRoutes.length > 0 && (
 															<tr>
-																<td colSpan="4" className="p-0">
+																<td colSpan="3" className="p-0">
 																	<div className="bg-blue-50 border-t border-b border-blue-100">
 																		<div className="px-4 py-3">
 																			<h5 className="text-sm font-medium text-blue-900 mb-3">Sub Routes</h5>
 																			<div className="space-y-2">
 																				{subRoutes.map((subRoute, subIndex) => (
 																					<div key={subIndex} className="bg-white rounded-lg border border-blue-200 p-3">
-																						<div className="grid grid-cols-2 gap-4">
+																						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 																							<div>
 																								<span className="text-xs text-gray-500 block mb-1">Pattern</span>
 																								<code className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
@@ -203,9 +186,15 @@ export default function Routes({ data }) {
 																								</code>
 																							</div>
 																							<div>
-																								<span className="text-xs text-gray-500 block mb-1">View</span>
+																								<span className="text-xs text-gray-500 block mb-1">Name</span>
 																								<code className="text-sm text-gray-700">
-																									{subRoute.view || 'No view specified'}
+																									{subRoute.name || 'N/A'}
+																								</code>
+																							</div>
+																							<div>
+																								<span className="text-xs text-gray-500 block mb-1">Full URL</span>
+																								<code className="text-sm text-gray-700">
+																									{subRoute.full_url || 'N/A'}
 																								</code>
 																							</div>
 																						</div>
@@ -253,79 +242,21 @@ export default function Routes({ data }) {
 											</tr>
 										</thead>
 										<tbody className="bg-white divide-y divide-gray-200">
-											{filteredPackageRoutes.map((route, index) => {
-												const subRoutes = getSubRoutes(route);
-												const routeKey = `pkg-${index}`;
-												const isExpanded = expandedRoutes[routeKey];
-												
-												return (
-													<React.Fragment key={index}>
-														<tr 
-															className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-gray-50' : ''}`}
-															onClick={() => subRoutes.length > 0 && toggleRouteExpansion(routeKey)}
-														>
-															<td className="px-4 py-3 whitespace-nowrap">
-																<div className="flex items-center gap-2">
-																	{subRoutes.length > 0 && (
-																		<svg 
-																			className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
-																			fill="none" 
-																			viewBox="0 0 24 24" 
-																			stroke="currentColor"
-																		>
-																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-																		</svg>
-																	)}
-																	<code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-																		{route.re_path}
-																	</code>
-																</div>
-															</td>
-															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-																{route.package}
-															</td>
-															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-																{route.url}
-															</td>
-															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-																—
-															</td>
-														</tr>
-														
-														{isExpanded && subRoutes.length > 0 && (
-															<tr>
-																<td colSpan="4" className="p-0">
-																	<div className="bg-purple-50 border-t border-b border-purple-100">
-																		<div className="px-4 py-3">
-																			<h5 className="text-sm font-medium text-purple-900 mb-3">Sub Routes</h5>
-																			<div className="space-y-2">
-																				{subRoutes.map((subRoute, subIndex) => (
-																					<div key={subIndex} className="bg-white rounded-lg border border-purple-200 p-3">
-																						<div className="grid grid-cols-2 gap-4">
-																							<div>
-																								<span className="text-xs text-gray-500 block mb-1">Pattern</span>
-																								<code className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">
-																									{subRoute.pattern}
-																								</code>
-																							</div>
-																							<div>
-																								<span className="text-xs text-gray-500 block mb-1">View</span>
-																								<code className="text-sm text-gray-700">
-																									{subRoute.view || 'No view specified'}
-																								</code>
-																							</div>
-																						</div>
-																					</div>
-																				))}
-																			</div>
-																		</div>
-																	</div>
-																</td>
-															</tr>
-														)}
-													</React.Fragment>
-												);
-											})}
+											{filteredPackageRoutes.map((route, index) => (
+												<tr key={index} className="hover:bg-gray-50">
+													<td className="px-4 py-3 whitespace-nowrap">
+														<code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+															{route.re_path}
+														</code>
+													</td>
+													<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+														{route.package}
+													</td>
+													<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+														{route.full_module_path || route.package}
+													</td>
+												</tr>
+											))}
 										</tbody>
 									</table>
 								</div>

@@ -20,7 +20,6 @@ from .models import AppUserAuthToken, AppUserModel
 
 
 class AppUserModelBackend(ModelBackend):
-
     def authenticate(
         self, request, username=None, password=None, email=None, phone=None
     ):
@@ -31,6 +30,8 @@ class AppUserModelBackend(ModelBackend):
                     query = query | Q(email=email)
                 if phone:
                     query = query | Q(mobile=phone)
+                if username:
+                    query = query | Q(email=username) | Q(mobile=username)
                 user = AppUserModel.objects.get(query)
                 pwd_valid = user.check_password(password)
                 if pwd_valid and user.is_active:

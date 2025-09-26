@@ -8,6 +8,7 @@ from rest_framework import serializers
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.tasks.models import AppTask
 from zango.apps.tasks.utils import get_crontab_obj
+from zango.core.utils import get_datetime_str_in_tenant_timezone
 
 
 class CronTabSerializer(serializers.ModelSerializer):
@@ -28,6 +29,8 @@ class TaskSerializer(serializers.ModelSerializer):
     schedule = serializers.SerializerMethodField()
     code = serializers.SerializerMethodField()
     run_history = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+    modified_at = serializers.SerializerMethodField()
 
     class Meta:
         model = AppTask
@@ -88,6 +91,16 @@ class TaskSerializer(serializers.ModelSerializer):
             pass
         return []
 
+    def get_created_at(self, obj):
+        return get_datetime_str_in_tenant_timezone(
+            obj.created_at, self.context.get("tenant")
+        )
+
+    def get_modified_at(self, obj):
+        return get_datetime_str_in_tenant_timezone(
+            obj.modified_at, self.context.get("tenant")
+        )
+
 
 class TaskResultSerializer(serializers.ModelSerializer):
     date_started = serializers.SerializerMethodField()
@@ -95,7 +108,16 @@ class TaskResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskResult
-        fields = ["date_started", "date_done", "result", "traceback"]
+        fields = [
+            "date_started",
+            "date_done",
+            "result",
+            "traceback",
+            "status",
+            "task_args",
+            "task_kwargs",
+            "worker",
+        ]
 
     def get_date_started(self, obj):
         return obj.date_done.strftime("%Y-%m-%d %H:%M:%S")
