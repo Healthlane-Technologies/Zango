@@ -446,6 +446,7 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             with connection.cursor() as c:
                 ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                 view_urls = ws.get_all_view_urls()
+                print(ws.generate_dot_diagram())
             app_name = tenant.schema_name
 
             # Construct workspace path

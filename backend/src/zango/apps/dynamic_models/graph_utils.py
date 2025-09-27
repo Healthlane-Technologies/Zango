@@ -1,14 +1,19 @@
+"""
+Graph utilities for generating DOT diagrams from Zango dynamic models.
+This module provides functionality to generate GraphViz DOT format output
+for dynamic models in a workspace.
+"""
+
 import fnmatch
 import inspect
 import json
 import os
-import sys
 import tempfile
 
 from collections import OrderedDict
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
+from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
 
 from zango.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
@@ -32,27 +37,10 @@ try:
 except ImportError:
     HAS_PYDOT = False
 
-DEFAULT_APP_STYLE_NAME = ".app-style.json"
 
-
-def retheme(graph_data: dict, app_style_filename: str):
-    with open(app_style_filename, "rt") as f:
-        app_style = json.load(f, object_pairs_hook=OrderedDict)
-
-    for gc in graph_data["graphs"]:
-        for g in gc:
-            if "name" in g:
-                for m in g["models"]:
-                    app_name = g["app_name"]
-                    for pattern, style in app_style.items():
-                        if fnmatch.fnmatchcase(app_name, pattern):
-                            m["style"] = dict(style)
-    return graph_data
-
-
-class DynamicModelGraph:
+class DynamicModelGraphGenerator:
     """
-    ModelGraph adapted for Zango's dynamic models system.
+    Graph generator for Zango's dynamic models system.
     Replaces Django's apps.get_models() with dynamic model discovery.
     """
 
@@ -63,8 +51,8 @@ class DynamicModelGraph:
         )
 
         if not self.tenant_name:
-            raise CommandError(
-                "No tenant specified. Use --tenant option or ensure tenant is set."
+            raise ValueError(
+                "No tenant specified. Provide tenant_name or ensure tenant is set in connection."
             )
 
         self.cli_options = kwargs.get("cli_options", None)
@@ -109,14 +97,14 @@ class DynamicModelGraph:
 
         # Check if workspace exists
         if not os.path.exists(workspace_path):
-            raise CommandError(
+            raise ValueError(
                 f"Workspace '{self.tenant_name}' not found at {workspace_path}"
             )
 
         # Check if settings.json exists
         settings_file = os.path.join(workspace_path, "settings.json")
         if not os.path.exists(settings_file):
-            raise CommandError(
+            raise ValueError(
                 f"settings.json not found in workspace '{self.tenant_name}'"
             )
 
@@ -160,7 +148,7 @@ class DynamicModelGraph:
         dynamic_models = self.get_workspace_dynamic_models()
 
         if not dynamic_models:
-            raise CommandError(
+            raise ValueError(
                 f"No dynamic models found in workspace '{self.tenant_name}'"
             )
 
@@ -318,13 +306,12 @@ class DynamicModelGraph:
             relation = None
             if isinstance(field, ManyToManyField):
                 try:
+                    remote_field = getattr(field, "remote_field", None)
                     if (
-                        hasattr(field, "remote_field")
-                        and hasattr(field.remote_field, "through")
-                        and hasattr(field.remote_field.through, "_meta")
-                        and getattr(
-                            field.remote_field.through._meta, "auto_created", False
-                        )
+                        remote_field
+                        and hasattr(remote_field, "through")
+                        and hasattr(remote_field.through, "_meta")
+                        and getattr(remote_field.through._meta, "auto_created", False)
                     ):
                         relation = self.add_relation(
                             field,
@@ -394,10 +381,11 @@ class DynamicModelGraph:
         t = type(field).__name__
         if isinstance(field, (OneToOneField, ForeignKey, ZOneToOneField, ZForeignKey)):
             try:
-                if hasattr(field, "remote_field") and hasattr(
-                    field.remote_field, "field_name"
-                ):
-                    t += f" ({field.remote_field.field_name})"
+                remote_field = getattr(field, "remote_field", None)
+                if remote_field and hasattr(remote_field, "field_name"):
+                    field_name = getattr(remote_field, "field_name", None)
+                    if field_name:
+                        t += f" ({field_name})"
             except AttributeError:
                 pass  # Skip if remote_field access fails
         if self.display_field_choices and hasattr(field, "choices") and field.choices:
@@ -426,7 +414,8 @@ class DynamicModelGraph:
                     == getattr(abstract_field, "creation_counter", None)
                 )
                 for abstract_field in abstract_fields
-                if hasattr(field, "creation_counter")
+                if abstract_field
+                and hasattr(field, "creation_counter")
                 and hasattr(abstract_field, "creation_counter")
             ),
             "relation": isinstance(field, RelatedField),
@@ -510,7 +499,6 @@ class DynamicModelGraph:
                             # Fallback to Django's apps registry
                             target_model = apps.get_model(app_label, model_name)
                     except Exception:
-                        # Fallback to Django's apps registry
                         # Fallback to Django's apps registry
                         target_model = apps.get_model(app_label, model_name)
                 else:
@@ -627,440 +615,250 @@ class DynamicModelGraph:
         return graph_data
 
 
-class Command(BaseCommand):
-    help = "Creates a GraphViz dot file for dynamic models in the current tenant workspace."
+def generate_dot_from_data(graph_data):
+    """Generate DOT format data from graph data without external templates"""
+    dot_lines = [
+        "digraph model_graph {",
+        "  // Zango Dynamic Models Graph",
+        '  fontname = "Helvetica"',
+        "  fontsize = 8",
+        "  splines = true",
+        "  nodesep = 0.4",
+        "  ranksep = 0.3",
+        "",
+    ]
 
-    can_import_settings = True
+    # Add rankdir if specified
+    if graph_data.get("rankdir"):
+        dot_lines.append(f"  rankdir = {graph_data['rankdir']}")
 
-    def __init__(self, *args, **kwargs):
-        # Simplified arguments for dynamic models
-        self.arguments = {
-            "--tenant": {
-                "action": "store",
-                "help": "Tenant name to generate graph for",
-                "dest": "tenant",
-                "required": False,
-            },
-            "--pygraphviz": {
-                "action": "store_true",
-                "default": False,
-                "dest": "pygraphviz",
-                "help": "Output graph data as image using PyGraphViz.",
-            },
-            "--pydot": {
-                "action": "store_true",
-                "default": False,
-                "dest": "pydot",
-                "help": "Output graph data as image using PyDot(Plus).",
-            },
-            "--dot": {
-                "action": "store_true",
-                "default": False,
-                "dest": "dot",
-                "help": "Output graph data as raw DOT text data.",
-            },
-            "--json": {
-                "action": "store_true",
-                "default": False,
-                "dest": "json",
-                "help": "Output graph data as JSON",
-            },
-            "--disable-fields -d": {
-                "action": "store_true",
-                "default": False,
-                "dest": "disable_fields",
-                "help": "Do not show the class member fields",
-            },
-            "--group-models -g": {
-                "action": "store_true",
-                "default": False,
-                "dest": "group_models",
-                "help": "Group models together respective to their application",
-            },
-            "--output -o": {
-                "action": "store",
-                "dest": "outputfile",
-                "help": "Render output file. Type of output dependent on file extensions.",
-            },
-            "--layout -l": {
-                "action": "store",
-                "dest": "layout",
-                "default": "dot",
-                "help": "Layout to be used by GraphViz for visualization.",
-            },
-            "--verbose-names -n": {
-                "action": "store_true",
-                "default": False,
-                "dest": "verbose_names",
-                "help": "Use verbose_name of models and fields",
-            },
-            "--exclude-models -X": {
-                "action": "store",
-                "dest": "exclude_models",
-                "help": "Exclude specific model(s) from the graph. Wildcards (*) are allowed.",
-            },
-            "--include-models -I": {
-                "action": "store",
-                "dest": "include_models",
-                "help": "Restrict the graph to specified models. Wildcards (*) are allowed.",
-            },
-            "--inheritance -e": {
-                "action": "store_true",
-                "default": True,
-                "dest": "inheritance",
-                "help": "Include inheritance arrows (default)",
-            },
-            "--no-inheritance -E": {
-                "action": "store_false",
-                "default": False,
-                "dest": "inheritance",
-                "help": "Do not include inheritance arrows",
-            },
-            "--hide-edge-labels": {
-                "action": "store_true",
-                "default": False,
-                "dest": "hide_edge_labels",
-                "help": "Do not show relations labels in the graph.",
-            },
-        }
+    # Add ordering if specified
+    if graph_data.get("ordering"):
+        dot_lines.append(f"  ordering = {graph_data['ordering']}")
 
-        defaults = getattr(settings, "GRAPH_MODELS", None)
-        if defaults:
-            for argument in self.arguments:
-                arg_split = argument.split(" ")
-                setting_opt = arg_split[0].lstrip("-").replace("-", "_")
-                if setting_opt in defaults:
-                    self.arguments[argument]["default"] = defaults[setting_opt]
+    dot_lines.append("")
 
-        super().__init__(*args, **kwargs)
-
-    def add_arguments(self, parser):
-        """Add command arguments"""
-        for argument in self.arguments:
-            parser.add_argument(*argument.split(" "), **self.arguments[argument])
-
-    def handle(self, *args, **options):
-        # args is unused but required by Django command interface
-        _ = args
-        tenant_name = options.get("tenant")
-
-        # If no tenant specified, try to use current connection tenant
-        if not tenant_name:
-            if connection.tenant:
-                tenant_name = connection.tenant.name
-            else:
-                raise CommandError(
-                    "No tenant specified. Use --tenant option or ensure tenant is set in connection."
-                )
-
-        # Determine output format
-        outputfile = options.get("outputfile") or ""
-        _, outputfile_ext = os.path.splitext(outputfile)
-        outputfile_ext = outputfile_ext.lower()
-        output_opts_names = ["pydot", "pygraphviz", "json", "dot"]
-        output_opts = {k: v for k, v in options.items() if k in output_opts_names}
-        output_opts_count = sum(output_opts.values())
-
-        if output_opts_count > 1:
-            raise CommandError(
-                f"Only one of {', '.join(['--' + opt for opt in output_opts_names])} can be set."
+    # Process each graph (app)
+    for graph in graph_data.get("graphs", []):
+        if graph_data.get("use_subgraph"):
+            # Create subgraph for grouped models
+            cluster_name = graph.get("cluster_app_name", "cluster_app")
+            dot_lines.extend(
+                [
+                    f"  subgraph {cluster_name} {{",
+                    f"    label = {graph.get('name', 'App')}",
+                    '    style = "rounded,filled"',
+                    '    fillcolor = "#eeeeee"',
+                    '    color = "#cccccc"',
+                    "",
+                ]
             )
-
-        if output_opts_count == 1:
-            output = next(key for key, val in output_opts.items() if val)
-        elif not outputfile:
-            output = "dot"
-        elif outputfile_ext == ".dot":
-            output = "dot"
-        elif outputfile_ext == ".json":
-            output = "json"
-        elif HAS_PYGRAPHVIZ:
-            output = "pygraphviz"
-        elif HAS_PYDOT:
-            output = "pydot"
+            indent = "    "
         else:
-            raise CommandError(
-                "Neither pygraphviz nor pydotplus could be found to generate the image."
-            )
+            indent = "  "
 
-        if output in ["pydot", "pygraphviz"] and not outputfile:
-            raise CommandError(
-                "An output file (--output) must be specified when --pydot or --pygraphviz are set."
-            )
+        # Add model nodes
+        for model in graph.get("models", []):
+            model_name = model.get("name", "Model")
+            label_parts = [f"{model_name}"]
 
-        cli_options = " ".join(sys.argv[2:])
-        graph_models = DynamicModelGraph(
-            tenant_name=tenant_name, cli_options=cli_options, **options
-        )
-        graph_models.generate_graph_data()
+            # Add fields if not disabled
+            if not graph_data.get("disable_fields") and model.get("fields"):
+                field_lines = []
+                for field in model["fields"]:
+                    field_name = field.get("label", field.get("name", "field"))
+                    field_type = field.get("type", "")
 
-        if output == "json":
-            graph_data = graph_models.get_graph_data(as_json=True)
-            return self.render_output_json(graph_data, outputfile)
+                    # Mark primary key fields
+                    if field.get("primary_key"):
+                        field_name = f"*{field_name}"
 
-        graph_data = graph_models.get_graph_data(as_json=False)
+                    # Mark abstract fields
+                    if field.get("abstract") and not graph_data.get(
+                        "disable_abstract_fields"
+                    ):
+                        field_name = f"({field_name})"
 
-        # Use built-in DOT template instead of django_extensions template
-        dotdata = self.generate_dot_from_data(graph_data)
+                    field_line = f"{field_name}: {field_type}"
+                    field_lines.append(field_line)
 
-        if output == "pygraphviz":
-            return self.render_output_pygraphviz(dotdata, **options)
-        if output == "pydot":
-            return self.render_output_pydot(dotdata, **options)
-        self.print_output(dotdata, outputfile)
+                if field_lines:
+                    label_parts.append("|" + "\\l".join(field_lines) + "\\l")
 
-    def generate_dot_from_data(self, graph_data):
-        """Generate DOT format data from graph data without external templates"""
-        dot_lines = [
-            "digraph model_graph {",
-            "  // Zango Dynamic Models Graph",
-            '  fontname = "Helvetica"',
-            "  fontsize = 8",
-            "  splines = true",
-            "  nodesep = 0.4",
-            "  ranksep = 0.3",
-            "",
-        ]
+            # Create node label
+            label = "{" + "".join(label_parts) + "}"
 
-        # Add rankdir if specified
-        if graph_data.get("rankdir"):
-            dot_lines.append(f"  rankdir = {graph_data['rankdir']}")
+            # Node styling
+            node_attrs = [
+                'shape = "record"',
+                f'label = "{label}"',
+                'fontname = "Helvetica"',
+                "fontsize = 8",
+            ]
 
-        # Add ordering if specified
-        if graph_data.get("ordering"):
-            dot_lines.append(f"  ordering = {graph_data['ordering']}")
+            dot_lines.append(f"{indent}{model_name} [{', '.join(node_attrs)}];")
 
         dot_lines.append("")
 
-        # Process each graph (app)
-        for graph in graph_data.get("graphs", []):
-            if graph_data.get("use_subgraph"):
-                # Create subgraph for grouped models
-                cluster_name = graph.get("cluster_app_name", "cluster_app")
-                dot_lines.extend(
-                    [
-                        f"  subgraph {cluster_name} {{",
-                        f"    label = {graph.get('name', 'App')}",
-                        '    style = "rounded,filled"',
-                        '    fillcolor = "#eeeeee"',
-                        '    color = "#cccccc"',
-                        "",
-                    ]
-                )
-                indent = "    "
-            else:
-                indent = "  "
+        # Add external model nodes (for models referenced but not included in the graph)
+        external_targets = set()
+        for model in graph.get("models", []):
+            for relation in model.get("relations", []):
+                if relation.get("external_target", False):
+                    # Only add external targets that weren't filtered out
+                    external_targets.add(relation.get("target"))
 
-            # Add model nodes
-            for model in graph.get("models", []):
-                model_name = model.get("name", "Model")
-                label_parts = [f"{model_name}"]
+        for external_target in sorted(external_targets):
+            # Create a simple external node with different styling
+            node_attrs = [
+                'shape = "ellipse"',
+                f'label = "{external_target}"',
+                'fontname = "Helvetica"',
+                "fontsize = 8",
+                'style = "filled"',
+                'fillcolor = "#f0f0f0"',
+                'color = "#999999"',
+            ]
+            dot_lines.append(f"{indent}{external_target} [{', '.join(node_attrs)}];")
 
-                # Add fields if not disabled
-                if not graph_data.get("disable_fields") and model.get("fields"):
-                    field_lines = []
-                    for field in model["fields"]:
-                        field_name = field.get("label", field.get("name", "field"))
-                        field_type = field.get("type", "")
-
-                        # Mark primary key fields
-                        if field.get("primary_key"):
-                            field_name = f"*{field_name}"
-
-                        # Mark abstract fields
-                        if field.get("abstract") and not graph_data.get(
-                            "disable_abstract_fields"
-                        ):
-                            field_name = f"({field_name})"
-
-                        field_line = f"{field_name}: {field_type}"
-                        field_lines.append(field_line)
-
-                    if field_lines:
-                        label_parts.append("|" + "\\l".join(field_lines) + "\\l")
-
-                # Create node label
-                label = "{" + "".join(label_parts) + "}"
-
-                # Node styling
-                node_attrs = [
-                    'shape = "record"',
-                    f'label = "{label}"',
-                    'fontname = "Helvetica"',
-                    "fontsize = 8",
-                ]
-
-                dot_lines.append(f"{indent}{model_name} [{', '.join(node_attrs)}];")
-
+        if external_targets:
             dot_lines.append("")
 
-            # Add external model nodes (for models referenced but not included in the graph)
-            external_targets = set()
-            for model in graph.get("models", []):
-                for relation in model.get("relations", []):
-                    if relation.get("external_target", False):
-                        # Only add external targets that weren't filtered out
-                        external_targets.add(relation.get("target"))
+        # Add relationships
+        for model in graph.get("models", []):
+            model_name = model.get("name", "Model")
 
-            for external_target in sorted(external_targets):
-                # Create a simple external node with different styling
-                node_attrs = [
-                    'shape = "ellipse"',
-                    f'label = "{external_target}"',
-                    'fontname = "Helvetica"',
-                    "fontsize = 8",
-                    'style = "filled"',
-                    'fillcolor = "#f0f0f0"',
-                    'color = "#999999"',
-                ]
-                dot_lines.append(
-                    f"{indent}{external_target} [{', '.join(node_attrs)}];"
-                )
+            for relation in model.get("relations", []):
+                target = relation.get("target")
+                if not target or relation.get("needs_node", True):
+                    continue
 
-            if external_targets:
-                dot_lines.append("")
+                label = relation.get("label", "")
+                arrows = relation.get("arrows", "")
 
-            # Add relationships
-            for model in graph.get("models", []):
-                model_name = model.get("name", "Model")
+                # Clean up arrows format
+                if arrows.startswith("[") and arrows.endswith("]"):
+                    arrows = arrows[1:-1]
 
-                for relation in model.get("relations", []):
-                    target = relation.get("target")
-                    if not target or relation.get("needs_node", True):
-                        continue
+                edge_attrs = []
+                if arrows:
+                    edge_attrs.append(arrows)
+                if label and not graph_data.get("hide_edge_labels", False):
+                    edge_attrs.append(f'label = "{label}"')
+                edge_attrs.append("fontsize = 7")
 
-                    label = relation.get("label", "")
-                    arrows = relation.get("arrows", "")
+                edge_attr_str = f" [{', '.join(edge_attrs)}]" if edge_attrs else ""
+                dot_lines.append(f"{indent}{model_name} -> {target}{edge_attr_str};")
 
-                    # Clean up arrows format
-                    if arrows.startswith("[") and arrows.endswith("]"):
-                        arrows = arrows[1:-1]
+        if graph_data.get("use_subgraph"):
+            dot_lines.append("  }")
 
-                    edge_attrs = []
-                    if arrows:
-                        edge_attrs.append(arrows)
-                    if label and not graph_data.get("hide_edge_labels", False):
-                        edge_attrs.append(f'label = "{label}"')
-                    edge_attrs.append("fontsize = 7")
+        dot_lines.append("")
 
-                    edge_attr_str = f" [{', '.join(edge_attrs)}]" if edge_attrs else ""
-                    dot_lines.append(
-                        f"{indent}{model_name} -> {target}{edge_attr_str};"
-                    )
+    dot_lines.append("}")
+    return "\n".join(dot_lines)
 
-            if graph_data.get("use_subgraph"):
-                dot_lines.append("  }")
 
-            dot_lines.append("")
+def render_output_pygraphviz(dotdata, output_file, layout="dot"):
+    """Render model data as image using pygraphviz"""
+    if not HAS_PYGRAPHVIZ:
+        raise ImproperlyConfigured("You need to install pygraphviz python module")
 
-        dot_lines.append("}")
-        return "\n".join(dot_lines)
+    version = pygraphviz.__version__.rstrip("-svn")
+    try:
+        if tuple(int(v) for v in version.split(".")) < (0, 36):
+            tmpfile = tempfile.NamedTemporaryFile()
+            tmpfile.write(dotdata.encode())
+            tmpfile.seek(0)
+            dotdata = tmpfile.name
+    except ValueError:
+        pass
 
-    def print_output(self, dotdata, output_file=None):
-        """Write model data to file or stdout in DOT format"""
-        if isinstance(dotdata, bytes):
-            dotdata = dotdata.decode()
+    graph = pygraphviz.AGraph(dotdata)
+    graph.layout(prog=layout)
+    graph.draw(output_file)
 
-        if output_file:
-            with open(output_file, "wt") as dot_output_f:
-                dot_output_f.write(dotdata)
-        else:
-            self.stdout.write(dotdata)
 
-    def render_output_json(self, graph_data, output_file=None):
-        """Write model data to file or stdout in JSON format"""
-        if output_file:
-            with open(output_file, "wt") as json_output_f:
-                json.dump(graph_data, json_output_f)
-        else:
-            self.stdout.write(json.dumps(graph_data))
+def render_output_pydot(dotdata, output_file):
+    """Render model data as image using pydot"""
+    if not HAS_PYDOT:
+        raise ImproperlyConfigured("You need to install pydot python module")
 
-    def render_output_pygraphviz(self, dotdata, **kwargs):
-        """Render model data as image using pygraphviz"""
-        if not HAS_PYGRAPHVIZ:
-            raise CommandError("You need to install pygraphviz python module")
+    graph = pydot.graph_from_dot_data(dotdata)
+    if not graph:
+        raise ValueError("pydot returned an error")
+    if isinstance(graph, (list, tuple)) and len(graph) > 0:
+        if len(graph) > 1:
+            print("Found more than one graph, rendering only the first one.")
+        graph = graph[0]
+    elif isinstance(graph, (list, tuple)) and len(graph) == 0:
+        raise ValueError("pydot returned an empty graph list")
 
-        version = pygraphviz.__version__.rstrip("-svn")
-        try:
-            if tuple(int(v) for v in version.split(".")) < (0, 36):
-                tmpfile = tempfile.NamedTemporaryFile()
-                tmpfile.write(dotdata)
-                tmpfile.seek(0)
-                dotdata = tmpfile.name
-        except ValueError:
-            pass
+    formats = [
+        "bmp",
+        "canon",
+        "cmap",
+        "cmapx",
+        "cmapx_np",
+        "dot",
+        "dia",
+        "emf",
+        "em",
+        "fplus",
+        "eps",
+        "fig",
+        "gd",
+        "gd2",
+        "gif",
+        "gv",
+        "imap",
+        "imap_np",
+        "ismap",
+        "jpe",
+        "jpeg",
+        "jpg",
+        "metafile",
+        "pdf",
+        "pic",
+        "plain",
+        "plain-ext",
+        "png",
+        "pov",
+        "ps",
+        "ps2",
+        "svg",
+        "svgz",
+        "tif",
+        "tiff",
+        "tk",
+        "vml",
+        "vmlz",
+        "vrml",
+        "wbmp",
+        "webp",
+        "xdot",
+    ]
+    ext = output_file[output_file.rfind(".") + 1 :]
+    format_ = ext if ext in formats else "raw"
 
-        graph = pygraphviz.AGraph(dotdata)
-        graph.layout(prog=kwargs["layout"])
-        graph.draw(kwargs["outputfile"])
+    # Ensure we have a valid graph object before calling write
+    if hasattr(graph, "write") and callable(getattr(graph, "write", None)):
+        graph.write(output_file, format=format_)  # type: ignore
+    else:
+        raise ValueError("Invalid graph object returned by pydot")
 
-    def render_output_pydot(self, dotdata, **kwargs):
-        """Render model data as image using pydot"""
-        if not HAS_PYDOT:
-            raise CommandError("You need to install pydot python module")
 
-        graph = pydot.graph_from_dot_data(dotdata)
-        if not graph:
-            raise CommandError("pydot returned an error")
-        if isinstance(graph, (list, tuple)) and len(graph) > 0:
-            if len(graph) > 1:
-                sys.stderr.write(
-                    "Found more then one graph, rendering only the first one.\n"
-                )
-            graph = graph[0]
-        elif isinstance(graph, (list, tuple)) and len(graph) == 0:
-            raise CommandError("pydot returned an empty graph list")
+def retheme(graph_data: dict, app_style_filename: str):
+    """Apply custom theming to graph data"""
+    with open(app_style_filename, "rt") as f:
+        app_style = json.load(f, object_pairs_hook=OrderedDict)
 
-        output_file = kwargs["outputfile"]
-        formats = [
-            "bmp",
-            "canon",
-            "cmap",
-            "cmapx",
-            "cmapx_np",
-            "dot",
-            "dia",
-            "emf",
-            "em",
-            "fplus",
-            "eps",
-            "fig",
-            "gd",
-            "gd2",
-            "gif",
-            "gv",
-            "imap",
-            "imap_np",
-            "ismap",
-            "jpe",
-            "jpeg",
-            "jpg",
-            "metafile",
-            "pdf",
-            "pic",
-            "plain",
-            "plain-ext",
-            "png",
-            "pov",
-            "ps",
-            "ps2",
-            "svg",
-            "svgz",
-            "tif",
-            "tiff",
-            "tk",
-            "vml",
-            "vmlz",
-            "vrml",
-            "wbmp",
-            "webp",
-            "xdot",
-        ]
-        ext = output_file[output_file.rfind(".") + 1 :]
-        format_ = ext if ext in formats else "raw"
-
-        # Ensure we have a valid graph object before calling write
-        if hasattr(graph, "write") and callable(getattr(graph, "write", None)):
-            graph.write(output_file, format=format_)  # type: ignore
-        else:
-            raise CommandError("Invalid graph object returned by pydot")
+    for gc in graph_data["graphs"]:
+        for g in gc:
+            if "name" in g:
+                for m in g["models"]:
+                    app_name = g["app_name"]
+                    for pattern, style in app_style.items():
+                        if fnmatch.fnmatchcase(app_name, pattern):
+                            m["style"] = dict(style)
+    return graph_data

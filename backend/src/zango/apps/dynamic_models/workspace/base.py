@@ -65,7 +65,6 @@ class Workspace:
         self.path = str(settings.BASE_DIR) + f"/workspaces/{wobj.name}/"
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
-        self.dyn_models_schema = self.get_dynamic_models_schema()
         self.routes = self.get_all_view_urls()
         self.models = []  # sorted with bfs
 
@@ -420,8 +419,104 @@ class Workspace:
 
         return all_urls
 
-    def generate_er_diagram(self):
-        pass
+    def generate_dot_diagram(self, **options):
+        """
+        Generate a DOT diagram for the dynamic models in this workspace.
+
+        Args:
+            **options: Configuration options for the graph generation
+                - disable_fields (bool): Don't show model fields
+                - group_models (bool): Group models in subgraphs
+                - verbose_names (bool): Use verbose field names
+                - include_models (str/list): Models to include (supports wildcards)
+                - exclude_models (str/list): Models to exclude (supports wildcards)
+                - inheritance (bool): Show inheritance relationships
+                - hide_edge_labels (bool): Hide relationship labels
+                - rankdir (str): Graph layout direction
+                - output_format (str): Output format ('dot', 'png', 'svg', 'json')
+                - output_file (str): Output file path (for image formats)
+                - layout (str): GraphViz layout algorithm ('dot', 'neato', 'fdp', etc.)
+
+        Returns:
+            str: DOT format string if output_format is 'dot' or None
+            dict: JSON data if output_format is 'json'
+            None: If output is written to file
+        """
+        from ..graph_utils import (
+            DynamicModelGraphGenerator,
+            generate_dot_from_data,
+            render_output_pydot,
+            render_output_pygraphviz,
+        )
+
+        # Set default options
+        default_options = {
+            "disable_fields": False,
+            "group_models": False,
+            "verbose_names": False,
+            "inheritance": True,
+            "hide_edge_labels": False,
+            "output_format": "dot",
+            "layout": "dot",
+        }
+        default_options.update(options)
+
+        # Create graph generator
+        graph_generator = DynamicModelGraphGenerator(
+            tenant_name=self.wobj.name, **default_options
+        )
+
+        # Generate graph data
+        graph_generator.generate_graph_data()
+
+        output_format = default_options.get("output_format", "dot")
+        output_file = default_options.get("output_file")
+
+        if output_format == "json":
+            graph_data = graph_generator.get_graph_data(as_json=True)
+            if output_file:
+                import json
+
+                with open(output_file, "w") as f:
+                    json.dump(graph_data, f, indent=2)
+                return None
+            return graph_data
+
+        # Generate DOT data
+        graph_data = graph_generator.get_graph_data(as_json=False)
+        dotdata = generate_dot_from_data(graph_data)
+
+        if output_format == "dot":
+            if output_file:
+                with open(output_file, "w") as f:
+                    f.write(dotdata)
+                return None
+            return dotdata
+
+        # For image formats, we need an output file
+        if not output_file:
+            raise ValueError("output_file is required for image formats")
+
+        if output_format in ["png", "svg", "pdf"] or output_file.endswith(
+            (".png", ".svg", ".pdf")
+        ):
+            # Try pygraphviz first, then pydot
+            try:
+                render_output_pygraphviz(
+                    dotdata, output_file, layout=default_options.get("layout", "dot")
+                )
+            except ImportError:
+                try:
+                    render_output_pydot(dotdata, output_file)
+                except ImportError:
+                    raise ImportError(
+                        "Neither pygraphviz nor pydot is available. "
+                        "Install one of them to generate image output."
+                    )
+            return None
+
+        # For any other format, return the DOT data
+        return dotdata
 
     def match_view(self, request) -> object:
         routes = self.get_root_urls()
