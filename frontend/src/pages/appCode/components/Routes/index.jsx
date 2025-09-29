@@ -127,9 +127,6 @@ export default function Routes({ data }) {
 												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 													Module
 												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-													Module Path
-												</th>
 											</tr>
 										</thead>
 										<tbody className="bg-white divide-y divide-gray-200">
@@ -164,14 +161,11 @@ export default function Routes({ data }) {
 															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
 																{route.module}
 															</td>
-															<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-																{route.full_module_path || route.module}
-															</td>
 														</tr>
 														
 														{isExpanded && subRoutes.length > 0 && (
 															<tr>
-																<td colSpan="3" className="p-0">
+																<td colSpan="2" className="p-0">
 																	<div className="bg-blue-50 border-t border-b border-blue-100">
 																		<div className="px-4 py-3">
 																			<h5 className="text-sm font-medium text-blue-900 mb-3">Sub Routes</h5>
@@ -233,12 +227,6 @@ export default function Routes({ data }) {
 												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 													Package
 												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-													URL File
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-													View
-												</th>
 											</tr>
 										</thead>
 										<tbody className="bg-white divide-y divide-gray-200">
@@ -251,9 +239,6 @@ export default function Routes({ data }) {
 													</td>
 													<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
 														{route.package}
-													</td>
-													<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-														{route.full_module_path || route.package}
 													</td>
 												</tr>
 											))}

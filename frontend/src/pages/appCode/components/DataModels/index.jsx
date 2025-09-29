@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import TableVisualization from './TableVisualization';
+import GraphVisualization from './GraphVisualization';
 import ModelDetailsModal from './ModelDetailsModal';
 
 export default function DataModels({ data }) {
 	const [searchTerm, setSearchTerm] = useState('');
 	const [selectedModule, setSelectedModule] = useState('all');
-	const [viewMode, setViewMode] = useState('list'); // 'list' or 'diagram'
+	const [viewMode, setViewMode] = useState('list'); // 'list' or 'graph'
 	const [selectedModel, setSelectedModel] = useState(null);
 	const [showModelDetails, setShowModelDetails] = useState(false);
 
@@ -73,17 +73,17 @@ export default function DataModels({ data }) {
 								List
 							</button>
 							<button
-								onClick={() => setViewMode('diagram')}
-								className={`px-4 py-2 text-sm font-medium rounded-r-lg border-t border-r border-b ${
-									viewMode === 'diagram'
+								onClick={() => setViewMode('graph')}
+								className={`px-4 py-2 text-sm font-medium rounded-r-lg border ${
+									viewMode === 'graph'
 										? 'bg-blue-500 text-white border-blue-500'
 										: 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
 								}`}
 							>
 								<svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
 								</svg>
-								Diagram
+								Graph
 							</button>
 						</div>
 						
@@ -94,7 +94,12 @@ export default function DataModels({ data }) {
 								placeholder="Search models..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
-								className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
+								disabled={viewMode === 'graph'}
+								className={`pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 ${
+									viewMode === 'graph'
+										? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+										: 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+								}`}
 							/>
 							<svg
 								className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -115,7 +120,12 @@ export default function DataModels({ data }) {
 						<select
 							value={selectedModule}
 							onChange={(e) => setSelectedModule(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							disabled={viewMode === 'graph'}
+							className={`px-4 py-2 border rounded-lg ${
+								viewMode === 'graph'
+									? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+									: 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+							}`}
 						>
 							<option value="all">All Modules</option>
 							{modulesWithModels.map((module) => (
@@ -253,8 +263,9 @@ export default function DataModels({ data }) {
 					)}
 				</div>
 			) : (
-				<TableVisualization 
-					models={filteredModels} 
+				<GraphVisualization
+					dotDiagram={data?.dot_diagram}
+					models={filteredModels}
 					onModelClick={handleModelClick}
 				/>
 			)}

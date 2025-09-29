@@ -30,13 +30,13 @@ export default function AppUserManagement() {
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [filters, setFilters] = useState({
-		is_active: '',
-		role: ''
+		is_active: ''
 	});
 	const [page, setPage] = useState(1);
 	const [pageSize] = useState(20);
 	const [totalPages, setTotalPages] = useState(1);
 	const [expandedRows, setExpandedRows] = useState({});
+	const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
 
 	const handleAddNewUser = () => {
 		dispatch(openIsAddNewUserModalOpen());
@@ -60,9 +60,6 @@ export default function AppUserManagement() {
 			// Add filters
 			if (filters.is_active !== '') {
 				queryParams.append('search_is_active', filters.is_active);
-			}
-			if (filters.role) {
-				queryParams.append('search_role', filters.role);
 			}
 
 			const { response, success } = await triggerApi({
@@ -110,7 +107,9 @@ export default function AppUserManagement() {
 	};
 
 	const users = appUserManagementData?.users?.records || [];
-	const roles = appUserManagementData?.dropdown_options?.role || [];
+	const totalUsers = appUserManagementData?.users?.total_records || 0;
+	const activeUsersCount = appUserManagementData?.users?.active_count || users.filter(user => user.is_active).length;
+	const inactiveUsersCount = appUserManagementData?.users?.inactive_count || users.filter(user => !user.is_active).length;
 
 	return (
 		<>
@@ -143,12 +142,12 @@ export default function AppUserManagement() {
 				<div className="flex-1 px-[40px] py-[32px] bg-[#F8FAFC] overflow-y-auto">
 					<div className="space-y-6">
 							{/* Stats Cards */}
-							<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div className="rounded-lg border bg-card p-6 transition-colors hover:bg-accent/5">
 								<div className="flex items-center justify-between">
 									<div>
 										<p className="text-sm font-medium text-muted-foreground">Total Users</p>
-										<p className="text-2xl font-medium tracking-tight mt-1">{users.length}</p>
+										<p className="text-2xl font-medium tracking-tight mt-1">{totalUsers}</p>
 									</div>
 									<div className="p-3 bg-primary/10 rounded-md">
 										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
@@ -163,7 +162,7 @@ export default function AppUserManagement() {
 									<div>
 										<p className="text-sm font-medium text-muted-foreground">Active Users</p>
 										<p className="text-2xl font-medium tracking-tight text-emerald-600 dark:text-emerald-400 mt-1">
-											{users.filter(user => user.is_active).length}
+											{activeUsersCount}
 										</p>
 									</div>
 									<div className="p-3 bg-emerald-500/10 rounded-md">
@@ -180,7 +179,7 @@ export default function AppUserManagement() {
 									<div>
 										<p className="text-sm font-medium text-muted-foreground">Inactive Users</p>
 										<p className="text-2xl font-medium tracking-tight text-red-600 dark:text-red-400 mt-1">
-											{users.filter(user => !user.is_active).length}
+											{inactiveUsersCount}
 										</p>
 									</div>
 									<div className="p-3 bg-red-500/10 rounded-md">
@@ -192,22 +191,6 @@ export default function AppUserManagement() {
 								</div>
 							</div>
 
-							<div className="rounded-lg border bg-card p-6 transition-colors hover:bg-accent/5">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">Roles Assigned</p>
-										<p className="text-2xl font-medium tracking-tight text-purple-600 dark:text-purple-400 mt-1">
-											{roles.length}
-										</p>
-									</div>
-									<div className="p-3 bg-purple-500/10 rounded-md">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-purple-600 dark:text-purple-400">
-											<path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-											<path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-										</svg>
-									</div>
-								</div>
-							</div>
 							</div>
 
 							{/* Filters and Search */}
@@ -248,17 +231,36 @@ export default function AppUserManagement() {
 										<option value="false">Inactive</option>
 									</select>
 
-									{/* Role Filter */}
-									<select
-								value={filters.role}
-								onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-								className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-										<option value="">All Roles</option>
-										{roles.map(role => (
-											<option key={role.id} value={role.id}>{role.label}</option>
-										))}
-									</select>
+
+									{/* View Toggle */}
+									<div className="flex items-center gap-1 border rounded-md p-1">
+										<button
+											onClick={() => setViewMode('card')}
+											className={`h-7 px-3 rounded-sm text-xs font-medium transition-colors ${
+												viewMode === 'card'
+													? 'bg-primary text-primary-foreground'
+													: 'hover:bg-accent hover:text-accent-foreground'
+											}`}
+											title="Card View"
+										>
+											<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+												<path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3A1.5 1.5 0 0115 10.5v3A1.5 1.5 0 0113.5 15h-3A1.5 1.5 0 019 13.5v-3z"/>
+											</svg>
+										</button>
+										<button
+											onClick={() => setViewMode('list')}
+											className={`h-7 px-3 rounded-sm text-xs font-medium transition-colors ${
+												viewMode === 'list'
+													? 'bg-primary text-primary-foreground'
+													: 'hover:bg-accent hover:text-accent-foreground'
+											}`}
+											title="List View"
+										>
+											<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+												<path fillRule="evenodd" d="M2.5 12a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5z"/>
+											</svg>
+										</button>
+									</div>
 
 									{/* Add User Button */}
 									<button
@@ -307,11 +309,16 @@ export default function AppUserManagement() {
 								Create First User
 							</button>
 						</div>
-					) : (
+					) : viewMode === 'card' ? (
 						<UsersList
 							users={users}
 							expandedRows={expandedRows}
 							toggleRowExpansion={toggleRowExpansion}
+							formatDate={formatDate}
+						/>
+					) : (
+						<UsersTable
+							users={users}
 							formatDate={formatDate}
 						/>
 					)}
@@ -344,7 +351,7 @@ export default function AppUserManagement() {
 							</button>
 						</div>
 						<span className="text-sm text-muted-foreground">
-							Showing {users.length} of {totalPages * pageSize} users
+							Showing {users.length} of {totalUsers} users
 						</span>
 								</div>
 							)}
@@ -473,43 +480,25 @@ function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
 						<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 							<button
 								onClick={handleEdit}
-								className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-								title="Edit User"
+								className="px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors text-sm"
 							>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-									<path d="M15.502 1.94a.5.5 0 010 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 01.707 0l1.293 1.293zm-1.75 2.456l-2-2L4.939 9.21a.5.5 0 00-.121.196l-.805 2.414a.25.25 0 00.316.316l2.414-.805a.5.5 0 00.196-.12l6.813-6.814z"/>
-								</svg>
+								Edit
 							</button>
 							<button
 								onClick={handleResetPassword}
-								className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-								title="Reset Password"
+								className="px-3 py-1 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors text-sm"
 							>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-									<path d="M3 5v6h6a4 4 0 000-8 3.99 3.99 0 00-2.906 1.258l-.094.101V2a5.972 5.972 0 011.416-.81A5.967 5.967 0 019 1a6 6 0 016 6 6 6 0 01-6 6H3V5z"/>
-									<path d="M1.5 5.5a.5.5 0 10-1 0v3a.5.5 0 001 0v-3zm1.5 0a.5.5 0 10-1 0v3a.5.5 0 001 0v-3z"/>
-								</svg>
+								Reset Password
 							</button>
 							<button
 								onClick={handleToggleStatus}
-								className={`p-2 rounded-md transition-colors ${
+								className={`px-3 py-1 rounded-md text-white transition-colors text-sm ${
 									user.is_active
-										? 'hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400'
-										: 'hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400'
+										? 'bg-red-500 hover:bg-red-600'
+										: 'bg-emerald-500 hover:bg-emerald-600'
 								}`}
-								title={user.is_active ? 'Deactivate User' : 'Activate User'}
 							>
-								{user.is_active ? (
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-										<path d="M8 15A7 7 0 118 1a7 7 0 010 14zm0 1A8 8 0 108 0a8 8 0 000 16z"/>
-										<path d="M4.646 4.646a.5.5 0 01.708 0L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 010-.708z"/>
-									</svg>
-								) : (
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-										<path d="M8 15A7 7 0 118 1a7 7 0 010 14zm0 1A8 8 0 108 0a8 8 0 000 16z"/>
-										<path d="M10.97 4.97a.235.235 0 00-.02.022L7.477 9.417 5.384 7.323a.75.75 0 00-1.06 1.06L6.97 11.03a.75.75 0 001.079-.02l3.992-4.99a.75.75 0 00-1.071-1.05z"/>
-									</svg>
-								)}
+								{user.is_active ? 'Deactivate' : 'Activate'}
 							</button>
 						</div>
 
@@ -533,10 +522,6 @@ function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
 						<div>
 							<h4 className="text-sm font-medium mb-3">Access Information</h4>
 							<div className="space-y-2">
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Last Login:</span>
-									<span>{formatDate(user.last_login)}</span>
-								</div>
 								<div className="flex justify-between text-sm">
 									<span className="text-muted-foreground">Date Joined:</span>
 									<span>{formatDate(user.created_at)}</span>
@@ -566,6 +551,116 @@ function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
 					</div>
 				</div>
 			)}
+		</div>
+	);
+}
+
+// Users Table Component for List View
+function UsersTable({ users, formatDate }) {
+	const dispatch = useDispatch();
+
+	const handleEdit = (user) => {
+		dispatch(openIsEditUserDetailModalOpen(user));
+	};
+
+	const handleToggleStatus = (user) => {
+		if (user.is_active) {
+			dispatch(openIsDeactivateUserModalOpen(user));
+		} else {
+			dispatch(openIsActivateUserModalOpen(user));
+		}
+	};
+
+	const handleResetPassword = (user) => {
+		dispatch(openIsResetPasswordModalOpen(user));
+	};
+
+	return (
+		<div className="rounded-lg border bg-card overflow-hidden">
+			<div className="overflow-x-auto">
+				<table className="w-full">
+					<thead className="bg-muted/50 border-b">
+						<tr>
+							<th className="text-left p-4 font-medium text-sm">User</th>
+							<th className="text-left p-4 font-medium text-sm">Status</th>
+							<th className="text-left p-4 font-medium text-sm">Roles</th>
+							<th className="text-left p-4 font-medium text-sm">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{users.map((user, index) => (
+							<tr key={user.id} className={`border-b hover:bg-muted/50 transition-colors ${index === users.length - 1 ? 'border-b-0' : ''}`}>
+								<td className="p-4">
+									<div className="flex items-center gap-3">
+										<div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
+											{user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+										</div>
+										<div>
+											<div className="font-medium">{user.name}</div>
+											<div className="text-sm text-muted-foreground">{user.email}</div>
+											{user.mobile && (
+												<div className="text-sm text-muted-foreground">{user.mobile}</div>
+											)}
+										</div>
+									</div>
+								</td>
+								<td className="p-4">
+									<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+										user.is_active
+											? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+											: 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20'
+									}`}>
+										<span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-emerald-600' : 'bg-red-600'}`}></span>
+										{user.is_active ? 'Active' : 'Inactive'}
+									</span>
+								</td>
+								<td className="p-4">
+									{user.roles && user.roles.length > 0 ? (
+										<div className="flex flex-wrap gap-1">
+											{user.roles.slice(0, 2).map((role, idx) => (
+												<span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+													{role.name || role}
+												</span>
+											))}
+											{user.roles.length > 2 && (
+												<span className="text-xs text-muted-foreground">+{user.roles.length - 2} more</span>
+											)}
+										</div>
+									) : (
+										<span className="text-sm text-muted-foreground">No roles</span>
+									)}
+								</td>
+								<td className="p-4">
+									<div className="flex gap-1">
+										<button
+											onClick={() => handleEdit(user)}
+											className="px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors text-sm"
+										>
+											Edit
+										</button>
+										<button
+											onClick={() => handleResetPassword(user)}
+											className="px-3 py-1 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors text-sm"
+										>
+											Reset Password
+										</button>
+										<button
+											onClick={() => handleToggleStatus(user)}
+											className={`px-3 py-1 rounded-md text-white transition-colors text-sm ${
+												user.is_active
+													? 'bg-red-500 hover:bg-red-600'
+													: 'bg-emerald-500 hover:bg-emerald-600'
+											}`}
+										>
+											{user.is_active ? 'Deactivate' : 'Activate'}
+										</button>
+									</div>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 }

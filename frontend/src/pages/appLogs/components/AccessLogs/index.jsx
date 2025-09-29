@@ -15,15 +15,15 @@ export default function AccessLogs() {
 	const [filters, setFilters] = useState({
 		attempt_type: '',
 		is_login_successful: '',
-		date_range: 'today'
+		date_range: ''
 	});
+	const [activeQuickFilter, setActiveQuickFilter] = useState('');
 
 	// Quick filter options
 	const quickFilters = [
 		{ id: 'today', label: 'Today', icon: '📅' },
 		{ id: 'week', label: 'This Week', icon: '📆' },
 		{ id: 'failed', label: 'Failed Attempts', icon: '❌' },
-		{ id: 'active', label: 'Active Sessions', icon: '🟢' },
 	];
 
 	// Fetch logs
@@ -42,7 +42,10 @@ export default function AccessLogs() {
 				queryParams.append('search_attempt_type', filters.attempt_type);
 			}
 			if (filters.is_login_successful !== '') {
-				queryParams.append('search_is_login_successful', filters.is_login_successful);
+				queryParams.append('search_is_login_successful', filters.is_login_successful === 'true' ? 'successful' : 'failed');
+			}
+			if (filters.date_range) {
+				queryParams.append('date_range', filters.date_range);
 			}
 
 			const { response, success } = await triggerApi({
@@ -105,32 +108,38 @@ export default function AccessLogs() {
 
 	// Apply quick filter
 	const applyQuickFilter = (filterId) => {
-		switch (filterId) {
-			case 'today':
-				setFilters({ ...filters, date_range: 'today' });
-				break;
-			case 'week':
-				setFilters({ ...filters, date_range: 'week' });
-				break;
-			case 'failed':
-				setFilters({ ...filters, is_login_successful: 'false' });
-				break;
-			case 'active':
-				setFilters({ ...filters, session_expired_at: null });
-				break;
+		if (activeQuickFilter === filterId) {
+			// If clicking the same filter, clear it
+			setActiveQuickFilter('');
+			setFilters({ attempt_type: '', is_login_successful: '', date_range: '' });
+		} else {
+			setActiveQuickFilter(filterId);
+			switch (filterId) {
+				case 'today':
+					setFilters({ ...filters, date_range: 'today', is_login_successful: '' });
+					break;
+				case 'week':
+					setFilters({ ...filters, date_range: 'week', is_login_successful: '' });
+					break;
+				case 'failed':
+					setFilters({ ...filters, is_login_successful: 'false', date_range: '' });
+					break;
+			}
 		}
+		setPage(1); // Reset to first page when filtering
 	};
 
 	return (
 		<div className="space-y-4">
 			{/* Header with Stats */}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<div className="card p-6">
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Total Logins Today</p>
 							<p className="text-2xl font-medium tracking-tight mt-1">
-								{logs.filter(log => log.is_login_successful && log.attempt_type === 'login').length}
+								{logs.filter(log => log.is_login_successful && log.attempt_type === 'login' && 
+									new Date(log.attempt_time).toDateString() === new Date().toDateString()).length}
 							</p>
 						</div>
 						<div className="p-3 bg-blue-500/10 rounded-md">
@@ -158,29 +167,13 @@ export default function AccessLogs() {
 					</div>
 				</div>
 
-				<div className="card p-6">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-sm font-medium text-muted-foreground">Active Sessions</p>
-							<p className="text-2xl font-medium tracking-tight text-emerald-600 dark:text-emerald-400 mt-1">
-								{logs.filter(log => log.is_login_successful && !log.session_expired_at).length}
-							</p>
-						</div>
-						<div className="p-3 bg-emerald-500/10 rounded-md">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-emerald-600 dark:text-emerald-400">
-								<circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-								<circle cx="12" cy="12" r="3" fill="currentColor"/>
-							</svg>
-						</div>
-					</div>
-				</div>
 
 				<div className="card p-6">
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Unique Users</p>
 							<p className="text-2xl font-medium tracking-tight text-purple-600 dark:text-purple-400 mt-1">
-								{[...new Set(logs.map(log => log.user))].length}
+								{[...new Set(logs.map(log => log.user).filter(user => user && user !== 'NA'))].length}
 							</p>
 						</div>
 						<div className="p-3 bg-purple-500/10 rounded-md">
@@ -202,7 +195,11 @@ export default function AccessLogs() {
 								<button
 									key={filter.id}
 									onClick={() => applyQuickFilter(filter.id)}
-									className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-md transition-colors"
+									className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+										activeQuickFilter === filter.id 
+											? 'bg-primary text-primary-foreground' 
+											: 'bg-muted hover:bg-muted/80'
+									}`}
 								>
 									<span>{filter.icon}</span>
 									<span>{filter.label}</span>
@@ -217,7 +214,10 @@ export default function AccessLogs() {
 								type="text"
 								placeholder="Search by user, IP, or browser..."
 								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
+								onChange={(e) => {
+									setSearchTerm(e.target.value);
+									setPage(1);
+								}}
 								className="h-9 w-full sm:w-64 rounded-md border bg-background px-3 py-1 text-sm pl-9 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							/>
 							<svg
@@ -238,24 +238,53 @@ export default function AccessLogs() {
 						{/* Attempt Type Filter */}
 						<select
 							value={filters.attempt_type}
-							onChange={(e) => setFilters({ ...filters, attempt_type: e.target.value })}
+							onChange={(e) => {
+								setFilters({ ...filters, attempt_type: e.target.value });
+								setActiveQuickFilter(''); // Clear quick filter when using dropdown
+								setPage(1);
+							}}
 							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							<option value="">All Types</option>
 							<option value="login">Login</option>
 							<option value="logout">Logout</option>
+							<option value="switch_role">Switch Role</option>
 						</select>
 
 						{/* Success Filter */}
 						<select
 							value={filters.is_login_successful}
-							onChange={(e) => setFilters({ ...filters, is_login_successful: e.target.value })}
+							onChange={(e) => {
+								setFilters({ ...filters, is_login_successful: e.target.value });
+								setActiveQuickFilter(''); // Clear quick filter when using dropdown
+								setPage(1);
+							}}
 							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							<option value="">All Status</option>
 							<option value="true">Successful</option>
 							<option value="false">Failed</option>
 						</select>
+
+						{/* Clear Filters Button */}
+						{(filters.attempt_type || filters.is_login_successful || filters.date_range || searchTerm || activeQuickFilter) && (
+							<button
+								onClick={() => {
+									setFilters({ attempt_type: '', is_login_successful: '', date_range: '' });
+									setActiveQuickFilter('');
+									setSearchTerm('');
+									setPage(1);
+								}}
+								className="h-9 px-3 py-1 text-sm bg-muted hover:bg-muted/80 rounded-md transition-colors inline-flex items-center gap-2"
+							>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+									<line x1="10" y1="11" x2="10" y2="17"/>
+									<line x1="14" y1="11" x2="14" y2="17"/>
+								</svg>
+								Clear Filters
+							</button>
+						)}
 					</div>
 				</div>
 			</div>
@@ -388,7 +417,7 @@ export default function AccessLogs() {
 																{new Date(log.attempt_time).toLocaleString()}
 															</span>
 														</div>
-														{log.session_expired_at && (
+														{log.session_expired_at && log.session_expired_at !== 'NA' && (
 															<div className="flex justify-between text-sm">
 																<span className="text-muted-foreground">Logout Time:</span>
 																<span>
@@ -396,7 +425,7 @@ export default function AccessLogs() {
 																</span>
 															</div>
 														)}
-														{log.session_expired_at && (
+														{log.session_expired_at && log.session_expired_at !== 'NA' && (
 															<div className="flex justify-between text-sm">
 																<span className="text-muted-foreground">Session Duration:</span>
 																<span>

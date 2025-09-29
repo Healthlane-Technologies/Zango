@@ -18,7 +18,7 @@ const tabs = [
 	},
 	{
 		id: 'application',
-		label: 'Application Logs',
+		label: 'Application Audit Logs',
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<rect x="2" y="2" width="5" height="5" rx="1" fillOpacity="0.3"/>
@@ -31,7 +31,7 @@ const tabs = [
 	},
 	{
 		id: 'framework',
-		label: 'Framework Logs',
+		label: 'Framework Audit Logs',
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<path d="M8 1L2 4V8L8 11L14 8V4L8 1Z" fillOpacity="0.3"/>
@@ -85,7 +85,7 @@ export default function AppLogs() {
 							</div>
 							<div>
 								<h1 className="font-source-sans-pro text-[24px] font-semibold leading-[32px] text-[#111827]">
-									Logs
+									Audit Logs
 								</h1>
 								<p className="font-lato text-[14px] leading-[20px] text-[#6B7280]">
 									Monitor application activities and system changes

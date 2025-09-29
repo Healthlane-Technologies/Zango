@@ -31,7 +31,7 @@ class RouteSerializer(serializers.Serializer):
 class ModuleSerializer(serializers.Serializer):
     name = serializers.CharField()
     path = serializers.CharField()
-    
+
     # Additional fields that will be populated from analyzing the module
     models_count = serializers.IntegerField(required=False)
     views_count = serializers.IntegerField(required=False)
@@ -61,12 +61,15 @@ class AppCodebaseSerializer(serializers.Serializer):
     package_routes = PackageRouteSerializer(many=True)
     app_routes = AppRouteSerializer(many=True)
     route_tree = serializers.JSONField(required=False)
-    
+    dot_diagram = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
+
     # Summary statistics
     total_modules = serializers.IntegerField()
     total_packages = serializers.IntegerField()
     total_routes = serializers.IntegerField()
-    
+
     # Workspace info
     workspace_path = serializers.CharField()
     settings_file_exists = serializers.BooleanField()

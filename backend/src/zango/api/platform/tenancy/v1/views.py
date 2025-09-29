@@ -31,8 +31,8 @@ from .serializers import (
     AppUserModelSerializerModel,
     TenantSerializerModel,
     ThemeModelSerializer,
-    UserRoleSerializerModel,
     UserRoleListSerializerModel,
+    UserRoleSerializerModel,
 )
 from .utils import extract_app_details_from_zip
 
@@ -226,7 +226,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def get_dropdown_options(self):
         options = {}
         options["policies"] = [
-            {"id": t.id, "label": t.name,  "type": t.type, "path": t.path}
+            {"id": t.id, "label": t.name, "type": t.type, "path": t.path}
             for t in PolicyModel.objects.all().order_by("-modified_at")
         ]
         return options
@@ -332,7 +332,8 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
     def get(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
-            serializer = UserRoleSerializerModel(obj)
+            tenant = self.get_tenant(**kwargs)
+            serializer = UserRoleSerializerModel(obj, context={"tenant": tenant})
             success = True
             response = {"role": serializer.data}
             response.update(self.get_dropdown_options())
@@ -435,14 +436,16 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
 
     def get(self, request, *args, **kwargs):
         try:
+            app_tenant = self.get_tenant(**kwargs)
             include_dropdown_options = request.GET.get("include_dropdown_options")
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             app_users = self.get_queryset(search, columns)
             app_users = self.paginate_queryset(app_users, request, view=self)
-            serializer = AppUserModelSerializerModel(app_users, many=True)
+            serializer = AppUserModelSerializerModel(
+                app_users, many=True, context={"request": request, "tenant": app_tenant}
+            )
             app_users_data = self.get_paginated_response_data(serializer.data)
-            app_tenant = self.get_tenant(**kwargs)
             success = True
             response = {
                 "users": app_users_data,
@@ -455,6 +458,9 @@ class UserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin
 
         except Exception as e:
             success = False
+            import traceback
+
+            traceback.print_exc()
             response = {"message": str(e)}
             status = 500
 

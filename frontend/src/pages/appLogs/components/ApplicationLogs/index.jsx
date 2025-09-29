@@ -14,9 +14,11 @@ export default function ApplicationLogs() {
 	const [pageSize] = useState(20);
 	const [filters, setFilters] = useState({
 		action: '',
-		model: '',
-		user: ''
+		object_type: '',
+		actor: '',
+		date_range: null
 	});
+	const [dropdownOptions, setDropdownOptions] = useState({});
 
 	// Fetch logs
 	const fetchLogs = async () => {
@@ -34,11 +36,17 @@ export default function ApplicationLogs() {
 			if (filters.action) {
 				queryParams.append('search_action', filters.action);
 			}
-			if (filters.model) {
-				queryParams.append('search_table', filters.model);
+			if (filters.object_type) {
+				queryParams.append('search_object_type', filters.object_type);
 			}
-			if (filters.user) {
-				queryParams.append('search_actor', filters.user);
+			if (filters.actor) {
+				queryParams.append('search_actor', filters.actor);
+			}
+			if (filters.date_range && filters.date_range.start && filters.date_range.end) {
+				queryParams.append('search_timestamp', JSON.stringify({
+					start: filters.date_range.start,
+					end: filters.date_range.end
+				}));
 			}
 
 			const { response, success } = await triggerApi({
@@ -50,9 +58,12 @@ export default function ApplicationLogs() {
 			if (success && response?.audit_logs) {
 				setLogs(response.audit_logs.records || []);
 				setTotalPages(response.audit_logs.total_pages || 1);
+				if (response.dropdown_options) {
+					setDropdownOptions(response.dropdown_options);
+				}
 			}
 		} catch (error) {
-			console.error('Error fetching application logs:', error);
+			console.error('Error fetching application audit logs:', error);
 		} finally {
 			setLoading(false);
 		}
@@ -137,16 +148,19 @@ export default function ApplicationLogs() {
 
 	// Format field changes
 	const formatFieldChanges = (changes) => {
-		if (!changes) return [];
+		if (!changes || (typeof changes === 'object' && Object.keys(changes).length === 0)) return [];
 		
 		try {
 			const parsed = typeof changes === 'string' ? JSON.parse(changes) : changes;
+			if (!parsed || typeof parsed !== 'object') return [];
+			
 			return Object.entries(parsed).map(([field, values]) => ({
 				field,
-				oldValue: values[0],
-				newValue: values[1]
+				oldValue: Array.isArray(values) ? values[0] : values,
+				newValue: Array.isArray(values) ? values[1] : values
 			}));
 		} catch (error) {
+			console.warn('Error parsing field changes:', error);
 			return [];
 		}
 	};
@@ -163,49 +177,68 @@ export default function ApplicationLogs() {
 		
 		if (typeof value === 'object') {
 			try {
-				return JSON.stringify(value, null, 2);
+				const jsonString = JSON.stringify(value, null, 2);
+				// Truncate very long JSON
+				return jsonString.length > 500 ? jsonString.substring(0, 500) + '...' : jsonString;
 			} catch (error) {
 				return String(value);
 			}
 		}
 		
-		if (typeof value === 'string' && value.length === 0) {
-			return '(empty string)';
+		if (typeof value === 'string') {
+			if (value.length === 0) {
+				return '(empty string)';
+			}
+			// Truncate very long strings but preserve structure for HTML/code
+			if (value.length > 1000) {
+				return value.substring(0, 1000) + '...';
+			}
 		}
 		
 		return String(value);
 	};
 
+	// Reset all filters
+	const resetFilters = () => {
+		setFilters({
+			action: '',
+			object_type: '',
+			actor: '',
+			date_range: null
+		});
+		setSearchTerm('');
+		setPage(1);
+	};
+
 	return (
-		<div className="space-y-4">
+		<div className="space-y-6">
 			{/* Stats Overview */}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-				<div className="rounded-lg border bg-card p-6 transition-colors hover:bg-accent/5">
+			<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-colors hover:shadow-md">
 					<div className="flex items-center justify-between">
 						<div>
-							<p className="text-sm font-medium text-muted-foreground">Total Changes</p>
-							<p className="text-2xl font-medium tracking-tight mt-1">{logs.length}</p>
+							<p className="text-sm font-medium text-gray-600">Total Changes</p>
+							<p className="text-2xl font-semibold text-gray-900 mt-1">{logs.length}</p>
 						</div>
-						<div className="p-3 bg-muted/50 rounded-md">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-muted-foreground">
+						<div className="p-3 bg-gray-100 rounded-lg">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-gray-600">
 								<path d="M12 2L2 7V12C2 16.5 4.23 20.68 8 21.93C11.77 20.68 14 16.5 14 12V7L12 2Z" fill="currentColor" fillOpacity="0.2"/>
 								<path d="M12 2L2 7V12C2 16.5 4.23 20.68 8 21.93C11.77 20.68 14 16.5 14 12V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-								<path d="M18 9V15M21 12H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 							</svg>
 						</div>
 					</div>
 				</div>
 
-				<div className="rounded-lg border bg-card p-6 transition-colors hover:bg-accent/5">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-colors hover:shadow-md">
 					<div className="flex items-center justify-between">
 						<div>
-							<p className="text-sm font-medium text-muted-foreground">Created</p>
-							<p className="text-2xl font-medium tracking-tight text-emerald-600 dark:text-emerald-400 mt-1">
+							<p className="text-sm font-medium text-gray-600">Created</p>
+							<p className="text-2xl font-semibold text-emerald-600 mt-1">
 								{logs.filter(log => log.action?.toLowerCase() === 'create').length}
 							</p>
 						</div>
-						<div className="p-3 bg-emerald-500/10 rounded-md">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-emerald-600 dark:text-emerald-400">
+						<div className="p-3 bg-emerald-100 rounded-lg">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-emerald-600">
 								<circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
 								<path d="M12 8V16M8 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
 							</svg>
@@ -213,16 +246,16 @@ export default function ApplicationLogs() {
 					</div>
 				</div>
 
-				<div className="rounded-lg border bg-card p-6 transition-colors hover:bg-accent/5">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-colors hover:shadow-md">
 					<div className="flex items-center justify-between">
 						<div>
-							<p className="text-sm font-medium text-muted-foreground">Updated</p>
-							<p className="text-2xl font-medium tracking-tight text-blue-600 dark:text-blue-400 mt-1">
+							<p className="text-sm font-medium text-gray-600">Updated</p>
+							<p className="text-2xl font-semibold text-blue-600 mt-1">
 								{logs.filter(log => log.action?.toLowerCase() === 'update').length}
 							</p>
 						</div>
-						<div className="p-3 bg-blue-500/10 rounded-md">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-blue-600 dark:text-blue-400">
+						<div className="p-3 bg-blue-100 rounded-lg">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-blue-600">
 								<path d="M11 4H4C2.89543 4 2 4.89543 2 6V20C2 21.1046 2.89543 22 4 22H18C19.1046 22 20 21.1046 20 20V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 								<path d="M18.5 2.50001C19.3284 1.67158 20.6716 1.67158 21.5 2.50001C22.3284 3.32844 22.3284 4.67158 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 							</svg>
@@ -230,16 +263,16 @@ export default function ApplicationLogs() {
 					</div>
 				</div>
 
-				<div className="rounded-lg border bg-card p-6 transition-colors hover:bg-accent/5">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-colors hover:shadow-md">
 					<div className="flex items-center justify-between">
 						<div>
-							<p className="text-sm font-medium text-muted-foreground">Deleted</p>
-							<p className="text-2xl font-medium tracking-tight text-red-600 dark:text-red-400 mt-1">
+							<p className="text-sm font-medium text-gray-600">Deleted</p>
+							<p className="text-2xl font-semibold text-red-600 mt-1">
 								{logs.filter(log => log.action?.toLowerCase() === 'delete').length}
 							</p>
 						</div>
-						<div className="p-3 bg-red-500/10 rounded-md">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-600 dark:text-red-400">
+						<div className="p-3 bg-red-100 rounded-lg">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-600">
 								<path d="M3 6H21M8 6V4C8 2.89543 8.89543 2 10 2H14C15.1046 2 16 2.89543 16 4V6M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
 							</svg>
 						</div>
@@ -248,24 +281,24 @@ export default function ApplicationLogs() {
 			</div>
 
 			{/* Filters and Search */}
-			<div className="rounded-lg border bg-card p-6">
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
 				<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 					<div>
-						<h2 className="text-lg font-medium tracking-tight">Application Change Log</h2>
-						<p className="text-sm text-muted-foreground mt-1">Track changes to your application data</p>
+						<h2 className="text-lg font-semibold text-gray-900">Application Audit Log</h2>
+						<p className="text-sm text-gray-600 mt-1">Track changes to your application data</p>
 					</div>
-					<div className="flex flex-wrap gap-2">
+					<div className="flex flex-wrap gap-3">
 						{/* Search */}
 						<div className="relative">
 							<input
 								type="text"
-								placeholder="Search logs..."
+								placeholder="Search audit logs by ID, actor, changes..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
-								className="h-9 w-full sm:w-64 rounded-md border bg-background px-3 py-1 text-sm pl-9 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+								className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80"
 							/>
 							<svg
-								className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground"
+								className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
@@ -283,29 +316,125 @@ export default function ApplicationLogs() {
 						<select
 							value={filters.action}
 							onChange={(e) => setFilters({ ...filters, action: e.target.value })}
-							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						>
 							<option value="">All Actions</option>
-							<option value="create">Create</option>
-							<option value="update">Update</option>
-							<option value="delete">Delete</option>
+							{dropdownOptions.action?.map((action) => (
+								<option key={action.id} value={action.id}>
+									{action.label}
+								</option>
+							))}
 						</select>
+
+						{/* Object Type Filter */}
+						<select
+							value={filters.object_type}
+							onChange={(e) => setFilters({ ...filters, object_type: e.target.value })}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						>
+							<option value="">All Models</option>
+							{dropdownOptions.object_type?.map((type) => (
+								<option key={type.id} value={type.id}>
+									{type.label}
+								</option>
+							))}
+						</select>
+
+						{/* Date Range Filter */}
+						<input
+							type="date"
+							value={filters.date_range?.start || ''}
+							onChange={(e) => setFilters({ 
+								...filters, 
+								date_range: { 
+									...filters.date_range, 
+									start: e.target.value 
+								} 
+							})}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							placeholder="Start Date"
+						/>
+						<input
+							type="date"
+							value={filters.date_range?.end || ''}
+							onChange={(e) => setFilters({ 
+								...filters, 
+								date_range: { 
+									...filters.date_range, 
+									end: e.target.value 
+								} 
+							})}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							placeholder="End Date"
+						/>
+
+						{/* Reset Filters Button */}
+						{(filters.action || filters.object_type || filters.date_range?.start || filters.date_range?.end || searchTerm) && (
+							<button
+								onClick={resetFilters}
+								className="px-4 py-2 text-sm bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+							>
+								Clear Filters
+							</button>
+						)}
 					</div>
 				</div>
 			</div>
 
+			{/* Active Filters Indicator */}
+			{(filters.action || filters.object_type || filters.date_range?.start || filters.date_range?.end) && (
+				<div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-blue-600">
+								<path d="M6 10.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5zM2 6a2 2 0 012-2h8a2 2 0 012 2v1a2 2 0 01-.586 1.414L11 10.828V14.5a.5.5 0 01-.5.5h-5a.5.5 0 01-.5-.5v-3.672L2.586 8.414A2 2 0 012 7V6z"/>
+							</svg>
+							<span className="text-sm font-medium text-blue-800">Active Filters:</span>
+							<div className="flex flex-wrap gap-1">
+								{filters.action && (
+									<span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+										Action: {dropdownOptions.action?.find(a => a.id === filters.action)?.label || filters.action}
+									</span>
+								)}
+								{filters.object_type && (
+									<span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+										Model: {dropdownOptions.object_type?.find(t => t.id === filters.object_type)?.label || filters.object_type}
+									</span>
+								)}
+								{filters.date_range?.start && (
+									<span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+										From: {filters.date_range.start}
+									</span>
+								)}
+								{filters.date_range?.end && (
+									<span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+										To: {filters.date_range.end}
+									</span>
+								)}
+							</div>
+						</div>
+						<button
+							onClick={resetFilters}
+							className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+						>
+							Clear All
+						</button>
+					</div>
+				</div>
+			)}
+
 			{/* Logs Timeline */}
 			<div className="space-y-4">
 				{loading ? (
-					<div className="rounded-lg border bg-card p-12">
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
 						<div className="flex items-center justify-center">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
 						</div>
 					</div>
 				) : logs.length === 0 ? (
-					<div className="rounded-lg border bg-card p-12 text-center">
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
 						<svg
-							className="mx-auto h-12 w-12 text-muted-foreground/50"
+							className="mx-auto h-12 w-12 text-gray-300"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"
@@ -317,209 +446,197 @@ export default function ApplicationLogs() {
 								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 							/>
 						</svg>
-						<p className="mt-2 text-sm text-muted-foreground">No application logs found</p>
+						<p className="mt-2 text-sm text-gray-500">No application audit logs found</p>
 					</div>
 				) : (
-					<div className="relative">
-						{/* Timeline line */}
-						<div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border"></div>
-
-						{logs.map((log, index) => {
+					<>
+						{logs.map((log) => {
 							const isExpanded = expandedLogs[log.id];
-							const changes = formatFieldChanges(log.field_changes);
+							const changes = formatFieldChanges(log.changes);
 							
 							return (
-								<div key={log.id} className="relative">
-									{/* Timeline dot */}
-									<div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-background ${
-										log.action?.toLowerCase() === 'create' ? 'bg-emerald-500' :
-										log.action?.toLowerCase() === 'update' ? 'bg-blue-500' :
-										log.action?.toLowerCase() === 'delete' ? 'bg-red-500' :
-										'bg-muted-foreground'
-									}`}></div>
-
-									{/* Log card */}
-									<div className="ml-16 mb-4">
-										<div className="rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
-											<div
-												className="p-6 cursor-pointer"
-												onClick={() => toggleLogExpansion(log.id)}
-											>
-												<div className="flex items-start justify-between">
-													<div className="flex-1">
-														{/* Header */}
-														<div className="flex items-center gap-3 mb-2">
-															<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getActionBadgeColor(log.action)}`}>
-																{getActionIcon(log.action)}
-																{log.action}
-															</span>
-															<span className="text-sm text-muted-foreground">
-																{formatTimestamp(log.action_time)}
-															</span>
-														</div>
-
-														{/* Content */}
-														<div className="space-y-2">
-															<div className="flex items-center gap-2 text-foreground">
-																<span className="font-medium">{log.actor || 'System'}</span>
-																<span className="text-muted-foreground">{log.action?.toLowerCase()}d</span>
-																<span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary/10 text-primary rounded-md font-medium text-sm border border-primary/20">
-																	<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="opacity-60">
-																		<path d="M8.186 1.113a.5.5 0 00-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 011.114 0l7.129 2.852A.5.5 0 0116 3.5v8.662a1 1 0 01-.629.928l-7.185 2.874a.5.5 0 01-.372 0L.63 13.09a1 1 0 01-.63-.928V3.5a.5.5 0 01.314-.464L7.443.184z"/>
-																	</svg>
-																	{log.table}
-																</span>
-																{log.object_repr && (
-																	<>
-																		<span className="text-muted-foreground">•</span>
-																		<span className="font-medium">{log.object_repr}</span>
-																	</>
-																)}
-															</div>
-
-															{/* Preview of changes with field names */}
-															{changes.length > 0 && !isExpanded && (
-																<div className="mt-2 flex flex-wrap gap-2">
-																	<span className="text-sm text-muted-foreground">Modified:</span>
-																	{changes.slice(0, 3).map((change, idx) => (
-																		<span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-																			{change.field}
-																		</span>
-																	))}
-																	{changes.length > 3 && (
-																		<span className="text-sm text-muted-foreground">+{changes.length - 3} more</span>
-																	)}
-																</div>
-															)}
-														</div>
-													</div>
-
-													{/* Expand Icon */}
-													<svg
-														className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke="currentColor"
-													>
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-													</svg>
+								<div
+									key={log.id}
+									className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md"
+								>
+									<div
+										className="p-6 cursor-pointer"
+										onClick={() => toggleLogExpansion(log.id)}
+									>
+										<div className="flex items-start justify-between">
+											<div className="flex-1">
+												{/* Header */}
+												<div className="flex items-center gap-3 mb-2">
+													<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getActionBadgeColor(log.action)}`}>
+														{getActionIcon(log.action)}
+														{log.action}
+													</span>
+													<span className="text-sm text-muted-foreground">
+														{formatTimestamp(log.timestamp)}
+													</span>
 												</div>
+
+												{/* Content */}
+												<div className="flex items-center gap-2 text-gray-900">
+													<span className="font-medium">{log.actor || (log.actor_type ? `${log.actor_type}` : 'System')}</span>
+													<span className="text-gray-600">{log.action?.toLowerCase()}d</span>
+													<span className="font-mono text-sm bg-gray-100 px-2 py-0.5 rounded">
+														{log.object_type}
+													</span>
+													{log.object_uuid && (
+														<>
+															<span className="text-gray-600">•</span>
+															<span className="text-gray-700 font-mono text-xs">{log.object_uuid.substring(0, 8)}...</span>
+														</>
+													)}
+												</div>
+
+												{/* Preview of changes with field names */}
+												{changes.length > 0 && !isExpanded && (
+													<div className="mt-2 flex flex-wrap gap-2">
+														<span className="text-sm text-muted-foreground">Modified:</span>
+														{changes.slice(0, 3).map((change, idx) => (
+															<span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+																{change.field}
+															</span>
+														))}
+														{changes.length > 3 && (
+															<span className="text-sm text-muted-foreground">+{changes.length - 3} more</span>
+														)}
+													</div>
+												)}
 											</div>
 
-											{/* Expanded Details */}
-											{isExpanded && (
-												<div className="border-t bg-muted/50 p-6">
-													<div className="space-y-4">
-														{/* Metadata */}
-														<div className="rounded-lg border bg-card p-4 mb-4">
-															<div className="grid grid-cols-2 gap-4 text-sm">
-																<div>
-																	<span className="text-muted-foreground">Object Type:</span>
-																	<span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
-																		{log.table}
-																	</span>
-																</div>
-																<div>
-																	<span className="text-muted-foreground">Object ID:</span>
-																	<span className="ml-2 font-mono">{log.object_id}</span>
-																</div>
-																<div>
-																	<span className="text-muted-foreground">User Role:</span>
-																	<span className="ml-2">{log.actor_role || 'N/A'}</span>
-																</div>
-																<div>
-																	<span className="text-muted-foreground">Timestamp:</span>
-																	<span className="ml-2">{new Date(log.action_time).toLocaleString()}</span>
-																</div>
-															</div>
-														</div>
+											{/* Expand Icon */}
+											<svg
+												className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+											</svg>
+										</div>
+									</div>
 
-														{/* Field Changes */}
-														{changes.length > 0 && (
-															<div>
-																<h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-																	<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-muted-foreground">
-																		<path d="M15.502 1.94a.5.5 0 010 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 01.707 0l1.293 1.293zm-1.75 2.456l-2-2L4.939 9.21a.5.5 0 00-.121.196l-.805 2.414a.25.25 0 00.316.316l2.414-.805a.5.5 0 00.196-.12l6.813-6.814z"/>
-																	</svg>
-																	Modified Fields ({changes.length})
-																</h4>
-																<div className="space-y-3">
-																	{changes.map((change, idx) => (
-																		<div key={idx} className="rounded-lg border bg-card overflow-hidden">
-																			<div className="bg-muted px-4 py-2 border-b">
-																				<span className="font-medium text-sm">{change.field}</span>
+									{/* Expanded Details */}
+									{isExpanded && (
+										<div className="border-t border-gray-200 bg-gray-50 p-6">
+											<div className="space-y-4">
+												{/* Metadata */}
+												<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+													<div>
+														<span className="text-gray-600">Object Type:</span>
+														<span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
+															{log.object_type}
+														</span>
+													</div>
+													<div>
+														<span className="text-gray-600">Object ID:</span>
+														<span className="ml-2 font-mono text-gray-900">{log.object_id}</span>
+													</div>
+													<div>
+														<span className="text-gray-600">Object UUID:</span>
+														<span className="ml-2 font-mono text-gray-900 text-xs">{log.object_uuid}</span>
+													</div>
+													{log.actor_type && (
+														<div>
+															<span className="text-gray-600">Actor Type:</span>
+															<span className="ml-2 text-gray-900">{log.actor_type}</span>
+														</div>
+													)}
+													<div>
+														<span className="text-gray-600">Timestamp:</span>
+														<span className="ml-2 text-gray-900">
+															{new Date(log.timestamp).toLocaleString()}
+														</span>
+													</div>
+												</div>
+
+												{/* Field Changes */}
+												{changes.length > 0 && (
+													<div>
+														<h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+															<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-gray-600">
+																<path d="M15.502 1.94a.5.5 0 010 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 01.707 0l1.293 1.293zm-1.75 2.456l-2-2L4.939 9.21a.5.5 0 00-.121.196l-.805 2.414a.25.25 0 00.316.316l2.414-.805a.5.5 0 00.196-.12l6.813-6.814z"/>
+															</svg>
+															Modified Fields ({changes.length})
+														</h4>
+														<div className="space-y-3">
+															{changes.map((change, idx) => (
+																<div key={idx} className="rounded-lg border bg-card overflow-hidden">
+																	<div className="bg-muted px-4 py-2 border-b">
+																		<span className="font-medium text-sm">{change.field}</span>
+																	</div>
+																	<div className="p-4">
+																		<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+																			<div>
+																				<div className="flex items-center gap-2 mb-2">
+																					<span className="w-2 h-2 bg-red-500 rounded-full"></span>
+																					<span className="text-sm font-medium text-gray-600">Previous Value</span>
+																				</div>
+																				<div className="rounded-md bg-red-500/10 border border-red-500/20 p-3">
+																					<pre className="font-mono text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-all">
+																						{formatValue(change.oldValue)}
+																					</pre>
+																				</div>
 																			</div>
-																			<div className="p-4">
-																				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-																					<div>
-																						<div className="flex items-center gap-2 mb-2">
-																							<span className="w-2 h-2 bg-red-500 rounded-full"></span>
-																							<span className="text-sm font-medium text-muted-foreground">Previous Value</span>
-																						</div>
-																						<div className="rounded-md bg-red-500/10 border border-red-500/20 p-3">
-																							<pre className="font-mono text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-all">
-																								{formatValue(change.oldValue)}
-																							</pre>
-																						</div>
-																					</div>
-																					<div>
-																						<div className="flex items-center gap-2 mb-2">
-																							<span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-																							<span className="text-sm font-medium text-muted-foreground">New Value</span>
-																						</div>
-																						<div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 p-3">
-																							<pre className="font-mono text-xs text-emerald-700 dark:text-emerald-400 whitespace-pre-wrap break-all">
-																								{formatValue(change.newValue)}
-																							</pre>
-																						</div>
-																					</div>
+																			<div>
+																				<div className="flex items-center gap-2 mb-2">
+																					<span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+																					<span className="text-sm font-medium text-gray-600">New Value</span>
+																				</div>
+																				<div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 p-3">
+																					<pre className="font-mono text-xs text-emerald-700 dark:text-emerald-400 whitespace-pre-wrap break-all">
+																						{formatValue(change.newValue)}
+																					</pre>
 																				</div>
 																			</div>
 																		</div>
-																	))}
+																	</div>
 																</div>
-															</div>
-														)}
+															))}
+														</div>
 													</div>
-												</div>
-											)}
+												)}
+											</div>
 										</div>
-									</div>
+									)}
 								</div>
 							);
 						})}
-					</div>
+					</>
 				)}
 			</div>
 
 			{/* Pagination */}
 			{totalPages > 1 && (
-				<div className="rounded-lg border bg-card px-6 py-3 flex items-center justify-between">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-3 flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<button
 							onClick={() => setPage(p => Math.max(1, p - 1))}
 							disabled={page === 1}
-							className="h-8 w-8 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
+							className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
 								<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 							</svg>
 						</button>
-						<span className="text-sm text-muted-foreground">
+						<span className="text-sm text-gray-700">
 							Page {page} of {totalPages}
 						</span>
 						<button
 							onClick={() => setPage(p => Math.min(totalPages, p + 1))}
 							disabled={page === totalPages}
-							className="h-8 w-8 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
+							className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
 								<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 							</svg>
 						</button>
 					</div>
-					<span className="text-sm text-muted-foreground">
-						Showing {logs.length} of {totalPages * pageSize} logs
+					<span className="text-sm text-gray-600">
+						Showing {logs.length} of {totalPages * pageSize} audit logs
 					</span>
 				</div>
 			)}

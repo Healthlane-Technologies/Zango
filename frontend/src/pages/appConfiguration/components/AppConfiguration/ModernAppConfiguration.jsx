@@ -152,7 +152,16 @@ const ModernAppConfiguration = () => {
 		
 		tempValues.extra_config = JSON.stringify(extra_config);
 		
+		// Handle domains separately for proper submission
+		const domainsData = tempValues.domains;
+		delete tempValues.domains;
+		
 		let dynamicFormData = transformToFormData(tempValues);
+		
+		// Add domains as JSON string for proper backend processing
+		if (domainsData && Array.isArray(domainsData)) {
+			dynamicFormData.append('domains', JSON.stringify(domainsData));
+		}
 
 		try {
 			const { response, success } = await triggerApi({
@@ -617,10 +626,26 @@ const ModernAppConfiguration = () => {
 								label="Package Sync" 
 								value={appData?.extra_config?.sync_packages ? 'Enabled' : 'Disabled'} 
 							/>
-							<InfoItem 
-								label="Template" 
-								value={
-									appData?.app_template ? (
+						</div>
+					</SectionCard>
+
+					{/* Template Configuration */}
+					{appData?.app_template && (
+						<SectionCard
+							title="Template Configuration"
+							icon={
+								<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+									<path d="M4 4C4 2.89543 4.89543 2 6 2H14C15.1046 2 16 2.89543 16 4V16C16 17.1046 15.1046 18 14 18H6C4.89543 18 4 17.1046 4 16V4Z" fill="#E0E7FF"/>
+									<path d="M4 4C4 2.89543 4.89543 2 6 2H14C15.1046 2 16 2.89543 16 4V16C16 17.1046 15.1046 18 14 18H6C4.89543 18 4 17.1046 4 16V4Z" stroke="#5048ED" strokeWidth="1.5"/>
+									<path d="M7 6H13M7 9H13M7 12H10" stroke="#5048ED" strokeWidth="1.5" strokeLinecap="round"/>
+									<circle cx="10" cy="14" r="1.5" fill="#5048ED"/>
+								</svg>
+							}
+						>
+							<div>
+								<InfoItem 
+									label="Template File" 
+									value={
 										<a 
 											href={appData.app_template} 
 											target="_blank"
@@ -628,13 +653,119 @@ const ModernAppConfiguration = () => {
 											className="inline-flex items-center gap-[8px] text-[#5048ED] hover:underline"
 										>
 											<SingleFileIcon className="w-[16px] h-[16px]" />
-											<span>View Template</span>
+											<span>Download Template</span>
 										</a>
-									) : (
-										'No template found'
-									)
-								} 
-							/>
+									} 
+								/>
+								<InfoItem 
+									label="Template Status" 
+									value={
+										<span className="inline-flex items-center px-[8px] py-[2px] rounded-[12px] text-[11px] font-medium bg-[#10B981] text-white">
+											Configured
+										</span>
+									} 
+								/>
+								<InfoItem 
+									label="File Type" 
+									value={
+										<span className="inline-flex items-center gap-[4px]">
+											<span className="text-[14px] font-mono bg-[#F3F4F6] px-[6px] py-[1px] rounded-[4px] text-[#374151]">
+												{appData.app_template?.split('.').pop()?.toUpperCase() || 'ZIP'}
+											</span>
+										</span>
+									} 
+								/>
+								<InfoItem 
+									label="Template URL" 
+									value={
+										<span className="text-[12px] font-mono text-[#6B7280] break-all">
+											{appData.app_template}
+										</span>
+									} 
+								/>
+							</div>
+						</SectionCard>
+					)}
+
+					{/* Deployment Config */}
+					<SectionCard
+						title="Deployment Config"
+						icon={
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+								<path d="M10 2L13 9H20L14.5 13.5L17 20L10 16L3 20L5.5 13.5L0 9H7L10 2Z" fill="#E0E7FF"/>
+								<path d="M10 2L13 9H20L14.5 13.5L17 20L10 16L3 20L5.5 13.5L0 9H7L10 2Z" stroke="#5048ED" strokeWidth="1.5" strokeLinejoin="round"/>
+								<circle cx="10" cy="10" r="2" fill="#5048ED"/>
+							</svg>
+						}
+					>
+						<div>
+							{/* Environment Configurations */}
+							{appData?.deployment_config && Object.keys(appData.deployment_config).length > 0 ? (
+								<InfoItem 
+									label="Environment Configurations" 
+									value={
+										<div className="space-y-[12px]">
+											{Object.entries(appData.deployment_config).map(([environment, config]) => (
+												<div key={environment} className="bg-[#F9FAFB] rounded-[8px] p-[12px] border border-[#E5E7EB]">
+													<div className="flex items-center justify-between mb-[8px]">
+														<span className="text-[12px] font-semibold text-[#374151] uppercase tracking-wide">
+															{environment}
+														</span>
+														<span className={`inline-flex items-center px-[6px] py-[1px] rounded-[6px] text-[10px] font-medium ${
+															environment === 'main' ? 'bg-[#10B981] text-white' :
+															environment === 'staging' ? 'bg-[#F59E0B] text-white' :
+															environment === 'notifications' ? 'bg-[#8B5CF6] text-white' :
+															'bg-[#6B7280] text-white'
+														}`}>
+															{environment === 'main' ? 'PROD' : 
+															 environment === 'staging' ? 'STAGE' :
+															 environment === 'notifications' ? 'NOTIFY' : 
+															 'DEV'}
+														</span>
+													</div>
+													{typeof config === 'object' && config !== null ? (
+														<div className="space-y-[4px]">
+															{Object.entries(config).map(([key, value]) => (
+																<div key={key} className="flex items-center justify-between text-[12px]">
+																	<span className="text-[#6B7280] font-medium capitalize">{key}:</span>
+																	<span className="text-[#111827] font-mono bg-[#F3F4F6] px-[6px] py-[1px] rounded-[4px]">
+																		{String(value)}
+																	</span>
+																</div>
+															))}
+														</div>
+													) : (
+														<div className="text-[12px]">
+															<span className="text-[#6B7280] font-medium">Value:</span>
+															<span className="text-[#111827] font-mono bg-[#F3F4F6] px-[6px] py-[1px] rounded-[4px] ml-[8px]">
+																{String(config)}
+															</span>
+														</div>
+													)}
+												</div>
+											))}
+										</div>
+									} 
+								/>
+							) : (
+								<InfoItem 
+									label="Environment Configurations" 
+									value="No deployment configuration available" 
+								/>
+							)}
+
+							{appData?.suspended_on && (
+								<InfoItem 
+									label="Suspended On" 
+									value={new Date(appData.suspended_on).toLocaleString()} 
+								/>
+							)}
+							{appData?.deleted_on && (
+								<InfoItem 
+									label="Deleted On" 
+									value={new Date(appData.deleted_on).toLocaleString()} 
+								/>
+							)}
 						</div>
 					</SectionCard>
 				</div>

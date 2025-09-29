@@ -6,9 +6,6 @@ import RoleDetailsModalWrapper from './RoleDetailsModalWrapper';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
 import {
-	openIsEditUserRolesDetailModalOpen,
-	openIsDeactivateUserRolesModalOpen,
-	openIsActivateUserRolesModalOpen,
 	toggleRerenderPage,
 } from '../../../slice';
 
@@ -37,6 +34,9 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [policySearchTerm, setPolicySearchTerm] = useState('');
 	const [tempSelectedPolicies, setTempSelectedPolicies] = useState([]); // Temporary selection in modal
+	const [bulkSelectMode, setBulkSelectMode] = useState(false);
+	const [selectAllChecked, setSelectAllChecked] = useState(false);
+	const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
 	// Check if this is a reserved role
 	const isReservedRole = (roleDetails?.name || role?.name) === 'AnonymousUsers' || 
@@ -44,6 +44,41 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 		
 	// Check if this is add mode
 	const isAddMode = mode === 'add';
+
+	// Helper functions for bulk operations
+	const handleSelectAll = () => {
+		if (selectAllChecked) {
+			// Deselect all
+			setSelectedPoliciesForRemoval([]);
+			setSelectAllChecked(false);
+		} else {
+			// Select all visible policies
+			const visiblePolicyIds = filteredPolicies.map(p => p.id);
+			setSelectedPoliciesForRemoval(visiblePolicyIds);
+			setSelectAllChecked(true);
+		}
+		setHasUnsavedChanges(true);
+	};
+
+	const handleBulkRemove = () => {
+		if (selectedPoliciesForRemoval.length > 0) {
+			setShowDeleteConfirmation(true);
+		}
+	};
+
+	const confirmBulkRemove = () => {
+		setShowDeleteConfirmation(false);
+		setHasUnsavedChanges(true);
+		setBulkSelectMode(false);
+		setSelectAllChecked(false);
+	};
+
+	const cancelBulkRemove = () => {
+		setSelectedPoliciesForRemoval([]);
+		setShowDeleteConfirmation(false);
+		setBulkSelectMode(false);
+		setSelectAllChecked(false);
+	};
 
 	// Filter policies based on search term
 	const filteredPolicies = useMemo(() => {
@@ -59,6 +94,17 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 			);
 		});
 	}, [attachedPolicies, searchTerm]);
+
+	// Update select all state when policies change
+	useEffect(() => {
+		if (filteredPolicies.length > 0) {
+			const visiblePolicyIds = filteredPolicies.map(p => p.id);
+			const selectedVisible = selectedPoliciesForRemoval.filter(id => visiblePolicyIds.includes(id));
+			setSelectAllChecked(selectedVisible.length === visiblePolicyIds.length && visiblePolicyIds.length > 0);
+		} else {
+			setSelectAllChecked(false);
+		}
+	}, [filteredPolicies, selectedPoliciesForRemoval]);
 
 	// Initialize expanded sections when policies change
 	useEffect(() => {
@@ -91,7 +137,6 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 			fetchRoleDetails();
 			// Reset edit mode when modal opens (only for view mode)
 			setIsEditMode(false);
-			setEditedRole(null);
 			setSelectedPoliciesForRemoval([]);
 			setHasUnsavedChanges(false);
 		} else if (isOpen && isAddMode) {
@@ -113,8 +158,10 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 			if (success && response) {
 				const roleData = response.role || response;
 				setRoleDetails(roleData);
-				setAttachedPolicies(roleData.attached_policies || []);
-				setEditedRole(roleData); // Initialize edited role
+				// Set attached policies from API response
+				const attachedPolicies = roleData.attached_policies || [];
+				setAttachedPolicies(attachedPolicies);
+				setEditedRole(roleData);
 			}
 		} catch (error) {
 			console.error('Error fetching role details:', error);
@@ -135,6 +182,9 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 			setSelectedPoliciesForRemoval([]);
 			setSelectedPoliciesForAddition([]);
 			setHasUnsavedChanges(false);
+			setBulkSelectMode(false);
+			setSelectAllChecked(false);
+			setShowDeleteConfirmation(false);
 			// Reset attachedPolicies to original
 			setAttachedPolicies(roleDetails?.attached_policies || []);
 		} else {
@@ -203,7 +253,7 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 			const formData = transformToFormData(payload);
 
 			// API call
-			const { response, success } = await triggerApi({
+			const { success } = await triggerApi({
 				url: isAddMode ? `/api/v1/apps/${appId}/roles/` : `/api/v1/apps/${appId}/roles/${roleDetails.id}/`,
 				type: isAddMode ? 'POST' : 'PUT',
 				loader: true,
@@ -216,12 +266,15 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 					closeModal();
 					dispatch(toggleRerenderPage());
 				} else {
-					// For edit mode, refresh the data
+					// For edit mode, refresh the role details and exit edit mode
 					await fetchRoleDetails();
 					setIsEditMode(false);
 					setSelectedPoliciesForRemoval([]);
 					setSelectedPoliciesForAddition([]);
 					setHasUnsavedChanges(false);
+					setBulkSelectMode(false);
+					setSelectAllChecked(false);
+					setShowDeleteConfirmation(false);
 					dispatch(toggleRerenderPage());
 				}
 			}
@@ -248,13 +301,23 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 		
 		if (viewMode === 'list') {
 			return (
-				<tr key={policy.id} className={`border-b border-[#E5E7EB] ${isMarkedForRemoval ? 'opacity-50' : ''} ${isNewlyAdded ? 'bg-[#D1FAE5]' : ''} ${isEditMode ? 'hover:bg-[#F9FAFB]' : ''}`}>
-					{isEditMode && (
+				<tr key={policy.id} className={`border-b border-[#E5E7EB] ${isMarkedForRemoval ? 'opacity-50 line-through' : ''} ${isNewlyAdded ? 'bg-[#D1FAE5]' : ''} ${isEditMode && bulkSelectMode ? 'hover:bg-[#F9FAFB] cursor-pointer' : ''}`}
+					onClick={isEditMode && bulkSelectMode ? () => {
+						if (isMarkedForRemoval) {
+							setSelectedPoliciesForRemoval(prev => prev.filter(id => id !== policy.id));
+						} else {
+							setSelectedPoliciesForRemoval(prev => [...prev, policy.id]);
+						}
+						setHasUnsavedChanges(true);
+					} : undefined}
+				>
+					{isEditMode && bulkSelectMode && (
 						<td className="py-[8px] px-[12px] w-[40px]">
 							<input
 								type="checkbox"
-								checked={!isMarkedForRemoval}
-								onChange={() => {
+								checked={isMarkedForRemoval}
+								onChange={(e) => {
+									e.stopPropagation();
 									if (isMarkedForRemoval) {
 										setSelectedPoliciesForRemoval(prev => prev.filter(id => id !== policy.id));
 									} else {
@@ -262,7 +325,7 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 									}
 									setHasUnsavedChanges(true);
 								}}
-								className="w-[16px] h-[16px] text-[#5048ED] rounded border-[#D1D5DB] focus:ring-[#5048ED]"
+								className="w-[16px] h-[16px] text-[#EF4444] rounded border-[#D1D5DB] focus:ring-[#EF4444]"
 							/>
 						</td>
 					)}
@@ -294,8 +357,8 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 		return (
 			<div
 				key={policy.id}
-				className={`p-[12px] rounded-[6px] border ${bg} ${border} ${isMarkedForRemoval ? 'opacity-50' : ''} ${isNewlyAdded ? 'ring-2 ring-[#10B981] ring-offset-2' : ''} ${isEditMode ? 'cursor-pointer' : ''} relative`}
-				onClick={isEditMode ? () => {
+				className={`p-[12px] rounded-[6px] border ${bg} ${border} ${isMarkedForRemoval ? 'opacity-50 ring-2 ring-[#EF4444] ring-offset-1' : ''} ${isNewlyAdded ? 'ring-2 ring-[#10B981] ring-offset-2' : ''} ${isEditMode && bulkSelectMode ? 'cursor-pointer hover:shadow-md' : ''} relative transition-all`}
+				onClick={isEditMode && bulkSelectMode ? () => {
 					if (isMarkedForRemoval) {
 						setSelectedPoliciesForRemoval(prev => prev.filter(id => id !== policy.id));
 					} else {
@@ -304,11 +367,11 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 					setHasUnsavedChanges(true);
 				} : undefined}
 			>
-				{isEditMode && (
-					<div className="flex items-start gap-[8px]">
+				{isEditMode && bulkSelectMode && (
+					<div className="absolute top-[8px] right-[8px]">
 						<input
 							type="checkbox"
-							checked={!isMarkedForRemoval}
+							checked={isMarkedForRemoval}
 							onChange={(e) => {
 								e.stopPropagation();
 								if (isMarkedForRemoval) {
@@ -318,40 +381,35 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 								}
 								setHasUnsavedChanges(true);
 							}}
-							className="mt-[2px] w-[16px] h-[16px] text-[#5048ED] rounded border-[#D1D5DB] focus:ring-[#5048ED]"
+							className="w-[16px] h-[16px] text-[#EF4444] rounded border-[#D1D5DB] focus:ring-[#EF4444]"
 						/>
-						<div className="flex-1">
-							<div className="flex items-center gap-[8px] mb-[2px]">
-								<p className="text-[14px] font-medium text-[#111827]">{policy.name || policy.label}</p>
-								{isNewlyAdded && (
-									<span className="px-[6px] py-[1px] bg-[#10B981] text-white text-[10px] font-medium rounded-[4px]">NEW</span>
-								)}
-								{isMarkedForRemoval && (
-									<span className="px-[6px] py-[1px] bg-[#EF4444] text-white text-[10px] font-medium rounded-[4px]">REMOVING</span>
-								)}
-							</div>
-							{policy.description && (
-								<p className="text-[12px] text-[#6B7280]">{policy.description}</p>
-							)}
-						</div>
 					</div>
 				)}
-				{!isEditMode && (
-					<>
-						<div className="flex items-center gap-[8px] mb-[2px]">
-							<p className="text-[14px] font-medium text-[#111827]">{policy.name || policy.label}</p>
-							{isNewlyAdded && (
-								<span className="px-[6px] py-[1px] bg-[#10B981] text-white text-[10px] font-medium rounded-[4px]">NEW</span>
-							)}
-							{isMarkedForRemoval && (
-								<span className="px-[6px] py-[1px] bg-[#EF4444] text-white text-[10px] font-medium rounded-[4px]">REMOVING</span>
-							)}
-						</div>
-						{policy.description && (
-							<p className="text-[12px] text-[#6B7280]">{policy.description}</p>
+				<div className={`${isEditMode && bulkSelectMode ? 'pr-[24px]' : ''}`}>
+					<div className="flex items-center gap-[8px] mb-[2px]">
+						<p className={`text-[14px] font-medium text-[#111827] ${isMarkedForRemoval ? 'line-through' : ''}`}>
+							{policy.name || policy.label}
+						</p>
+						{isNewlyAdded && (
+							<span className="px-[6px] py-[1px] bg-[#10B981] text-white text-[10px] font-medium rounded-[4px]">NEW</span>
 						)}
-					</>
-				)}
+						{isMarkedForRemoval && !bulkSelectMode && (
+							<span className="px-[6px] py-[1px] bg-[#EF4444] text-white text-[10px] font-medium rounded-[4px]">REMOVING</span>
+						)}
+					</div>
+					{policy.description && (
+						<p className={`text-[12px] text-[#6B7280] ${isMarkedForRemoval ? 'line-through' : ''}`}>
+							{policy.description}
+						</p>
+					)}
+					<div className="mt-[8px]">
+						<span className={`text-[11px] ${text} px-[6px] py-[2px] rounded-[4px] ${bg}`}>
+							{policy.type === 'system' ? 'System' : 
+							 policy.path?.startsWith('packages.') ? `Package: ${policy.path.split('.')[1]}` : 
+							 policy.path ? `Module: ${policy.path}` : 'User Policy'}
+						</span>
+					</div>
+				</div>
 			</div>
 		);
 	};
@@ -363,7 +421,7 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 				<table className="w-full">
 					<thead>
 						<tr className="border-b border-[#E5E7EB]">
-							{isEditMode && <th className="text-left py-[8px] px-[12px] w-[40px]"></th>}
+							{isEditMode && bulkSelectMode && <th className="text-left py-[8px] px-[12px] w-[40px]"></th>}
 							<th className="text-left py-[8px] px-[12px] text-[12px] font-medium text-[#6B7280]">Policy Name</th>
 							<th className="text-left py-[8px] px-[12px] text-[12px] font-medium text-[#6B7280]">Description</th>
 							<th className="text-left py-[8px] px-[12px] text-[12px] font-medium text-[#6B7280]">Type</th>
@@ -547,22 +605,74 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 
 											{!isAddMode && (
 												<div>
-													<h3 className="text-[16px] font-semibold text-[#111827] mb-[16px]">Summary</h3>
-													<div className="space-y-[12px]">
-														<div className="bg-[#F9FAFB] rounded-[8px] p-[16px]">
-															<p className="text-[24px] font-bold text-[#111827]">
-																{roleDetails?.policies_count?.policies || attachedPolicies.length || 0}
-															</p>
-															<p className="text-[14px] text-[#6B7280]">Total Policies</p>
+													<h3 className="text-[16px] font-semibold text-[#111827] mb-[16px]">Quick Stats</h3>
+													<div className="grid grid-cols-1 gap-[12px]">
+														{/* Policies Summary */}
+														<div className="bg-gradient-to-br from-[#EBF8FF] to-[#DBEAFE] rounded-[12px] p-[16px] border border-[#BFDBFE]">
+															<div className="flex items-center gap-[12px] mb-[8px]">
+																<div className="w-[32px] h-[32px] bg-[#3B82F6] rounded-[8px] flex items-center justify-center">
+																	<svg className="w-[16px] h-[16px] text-white" fill="currentColor" viewBox="0 0 20 20">
+																		<path d="M4 3a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2V5a2 2 0 00-2-2H4zM4 9a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 00-2-2H4zM12 3a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2V5a2 2 0 00-2-2h-1zM12 9a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 00-2-2h-1z" />
+																	</svg>
+																</div>
+																<div>
+																	<p className="text-[20px] font-bold text-[#1E40AF]">
+																		{roleDetails?.policies_count?.policies || attachedPolicies.length || 0}
+																	</p>
+																	<p className="text-[12px] text-[#3B82F6] font-medium">Total Policies Attached</p>
+																</div>
+															</div>
+															{(roleDetails?.policies_count?.policies || 0) > 0 && (
+																<div className="text-[11px] text-[#64748B]">
+																	{attachedPolicies.filter(p => p.type === 'system').length} System • {' '}
+																	{attachedPolicies.filter(p => p.path?.startsWith('packages.')).length} Package • {' '}
+																	{attachedPolicies.filter(p => p.path && !p.path.startsWith('packages.') && p.type !== 'system').length} Module
+																</div>
+															)}
 														</div>
+
+														{/* Users Summary (only for non-reserved roles) */}
 														{!isReservedRole && (
-															<div className="bg-[#F9FAFB] rounded-[8px] p-[16px]">
-																<p className="text-[24px] font-bold text-[#111827]">
-																	{roleDetails?.users_count || 0}
-																</p>
-																<p className="text-[14px] text-[#6B7280]">Active Users</p>
+															<div className="bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7] rounded-[12px] p-[16px] border border-[#BBF7D0]">
+																<div className="flex items-center gap-[12px] mb-[8px]">
+																	<div className="w-[32px] h-[32px] bg-[#10B981] rounded-[8px] flex items-center justify-center">
+																		<svg className="w-[16px] h-[16px] text-white" fill="currentColor" viewBox="0 0 20 20">
+																			<path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+																		</svg>
+																	</div>
+																	<div>
+																		<p className="text-[20px] font-bold text-[#059669]">
+																			{roleDetails?.users_count || 0}
+																		</p>
+																		<p className="text-[12px] text-[#10B981] font-medium">Users Assigned</p>
+																	</div>
+																</div>
+																<div className="text-[11px] text-[#64748B]">
+																	{roleDetails?.is_default ? 'Default role for new users' : 'Custom role assignment'}
+																</div>
 															</div>
 														)}
+
+														{/* Last Modified */}
+														<div className="bg-gradient-to-br from-[#FEF3F2] to-[#FEE2E2] rounded-[12px] p-[16px] border border-[#FECACA]">
+															<div className="flex items-center gap-[12px]">
+																<div className="w-[32px] h-[32px] bg-[#EF4444] rounded-[8px] flex items-center justify-center">
+																	<svg className="w-[16px] h-[16px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+																	</svg>
+																</div>
+																<div>
+																	<p className="text-[14px] font-bold text-[#DC2626]">
+																		{roleDetails?.modified_at ? new Date(roleDetails.modified_at).toLocaleDateString('en-US', {
+																			year: 'numeric',
+																			month: 'short',
+																			day: 'numeric'
+																		}) : 'Never'}
+																	</p>
+																	<p className="text-[12px] text-[#EF4444] font-medium">Last Modified</p>
+																</div>
+															</div>
+														</div>
 													</div>
 												</div>
 											)}
@@ -575,9 +685,62 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 								{activeTab === 'policies' && (
 									<div className="p-[24px]">
 										<div className="flex justify-between items-center mb-[16px]">
-											<h3 className="text-[16px] font-semibold text-[#111827]">
-												Attached Policies ({attachedPolicies.filter(p => !selectedPoliciesForRemoval.includes(p.id)).length})
-											</h3>
+											<div className="flex items-center gap-[12px]">
+												<h3 className="text-[16px] font-semibold text-[#111827]">
+													Attached Policies ({attachedPolicies.filter(p => !selectedPoliciesForRemoval.includes(p.id)).length})
+												</h3>
+												{isEditMode && attachedPolicies.length > 0 && (
+													<div className="flex items-center gap-[8px]">
+														{!bulkSelectMode ? (
+															<button
+																onClick={() => setBulkSelectMode(true)}
+																className="px-[8px] py-[4px] text-[#6B7280] hover:text-[#111827] text-[12px] font-medium transition-colors flex items-center gap-[4px]"
+															>
+																<svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+																</svg>
+																Bulk Select
+															</button>
+														) : (
+															<div className="flex items-center gap-[8px] px-[12px] py-[4px] bg-[#F9FAFB] border border-[#E5E7EB] rounded-[6px]">
+																<button
+																	onClick={handleSelectAll}
+																	className="text-[12px] font-medium text-[#5048ED] hover:text-[#4338CA] transition-colors flex items-center gap-[4px]"
+																>
+																	<input
+																		type="checkbox"
+																		checked={selectAllChecked}
+																		onChange={handleSelectAll}
+																		className="w-[14px] h-[14px] text-[#5048ED] rounded border-[#D1D5DB] focus:ring-[#5048ED]"
+																	/>
+																	Select All ({filteredPolicies.length})
+																</button>
+																{selectedPoliciesForRemoval.length > 0 && (
+																	<button
+																		onClick={handleBulkRemove}
+																		className="px-[8px] py-[2px] bg-[#EF4444] text-white text-[11px] font-medium rounded-[4px] hover:bg-[#DC2626] transition-colors flex items-center gap-[4px]"
+																	>
+																		<svg className="w-[12px] h-[12px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+																		</svg>
+																		Remove {selectedPoliciesForRemoval.length}
+																	</button>
+																)}
+																<button
+																	onClick={() => {
+																		setBulkSelectMode(false);
+																		setSelectedPoliciesForRemoval([]);
+																		setSelectAllChecked(false);
+																	}}
+																	className="text-[#6B7280] hover:text-[#111827] text-[11px] font-medium transition-colors"
+																>
+																	Cancel
+																</button>
+															</div>
+														)}
+													</div>
+												)}
+											</div>
 											{/* View Mode Toggle and Add Policy Button */}
 											<div className="flex items-center gap-[8px]">
 												{isEditMode && (
@@ -623,48 +786,107 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 											</div>
 										</div>
 										
-										{/* Pending Changes Summary */}
-										{isEditMode && (selectedPoliciesForRemoval.length > 0 || selectedPoliciesForAddition.length > 0) && (
-											<div className="mb-[16px] p-[12px] bg-[#F9FAFB] rounded-[8px] border border-[#E5E7EB]">
-												<div className="space-y-[8px]">
-													{selectedPoliciesForRemoval.length > 0 && (
-														<div>
-															<p className="text-[12px] font-medium text-[#EF4444] mb-[4px] flex items-center gap-[4px]">
-																<svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-																</svg>
-																Removing {selectedPoliciesForRemoval.length} {selectedPoliciesForRemoval.length === 1 ? 'policy' : 'policies'}:
-															</p>
-															<div className="flex flex-wrap gap-[6px]">
-																{attachedPolicies
-																	.filter(p => selectedPoliciesForRemoval.includes(p.id))
-																	.map(policy => (
-																		<span key={policy.id} className="px-[8px] py-[2px] bg-[#FEE2E2] text-[#EF4444] text-[11px] rounded-[4px]">
-																			{policy.name}
-																		</span>
-																	))}
-															</div>
+										{/* Unsaved Changes Summary */}
+										{isEditMode && hasUnsavedChanges && (
+											<div className="mb-[16px] p-[16px] bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] rounded-[12px] border-l-4 border-[#F59E0B] shadow-sm">
+												<div className="flex items-start gap-[12px]">
+													<div className="w-[32px] h-[32px] bg-[#F59E0B] rounded-[8px] flex items-center justify-center flex-shrink-0">
+														<svg className="w-[16px] h-[16px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+														</svg>
+													</div>
+													<div className="flex-1">
+														<h4 className="text-[14px] font-semibold text-[#92400E] mb-[8px]">Pending Changes</h4>
+														<div className="space-y-[8px]">
+															{selectedPoliciesForRemoval.length > 0 && (
+																<div>
+																	<p className="text-[12px] font-medium text-[#EF4444] mb-[4px] flex items-center gap-[4px]">
+																		<svg className="w-[12px] h-[12px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+																		</svg>
+																		Removing {selectedPoliciesForRemoval.length} {selectedPoliciesForRemoval.length === 1 ? 'policy' : 'policies'}
+																	</p>
+																	<div className="flex flex-wrap gap-[4px] pl-[16px]">
+																		{attachedPolicies
+																			.filter(p => selectedPoliciesForRemoval.includes(p.id))
+																			.slice(0, 3)
+																			.map(policy => (
+																				<span key={policy.id} className="px-[6px] py-[1px] bg-[#FEE2E2] text-[#EF4444] text-[10px] rounded-[3px] font-medium">
+																					{policy.name}
+																				</span>
+																			))}
+																		{selectedPoliciesForRemoval.length > 3 && (
+																			<span className="px-[6px] py-[1px] bg-[#F3F4F6] text-[#6B7280] text-[10px] rounded-[3px] font-medium">
+																				+{selectedPoliciesForRemoval.length - 3} more
+																			</span>
+																		)}
+																	</div>
+																</div>
+															)}
+															{selectedPoliciesForAddition.length > 0 && (
+																<div>
+																	<p className="text-[12px] font-medium text-[#10B981] mb-[4px] flex items-center gap-[4px]">
+																		<svg className="w-[12px] h-[12px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+																		</svg>
+																		Adding {selectedPoliciesForAddition.length} {selectedPoliciesForAddition.length === 1 ? 'policy' : 'policies'}
+																	</p>
+																	<div className="flex flex-wrap gap-[4px] pl-[16px]">
+																		{attachedPolicies
+																			.filter(p => selectedPoliciesForAddition.includes(p.id))
+																			.slice(0, 3)
+																			.map(policy => (
+																				<span key={policy.id} className="px-[6px] py-[1px] bg-[#D1FAE5] text-[#10B981] text-[10px] rounded-[3px] font-medium">
+																					{policy.name || policy.label}
+																				</span>
+																			))}
+																		{selectedPoliciesForAddition.length > 3 && (
+																			<span className="px-[6px] py-[1px] bg-[#F3F4F6] text-[#6B7280] text-[10px] rounded-[3px] font-medium">
+																				+{selectedPoliciesForAddition.length - 3} more
+																			</span>
+																		)}
+																	</div>
+																</div>
+															)}
 														</div>
-													)}
-													{selectedPoliciesForAddition.length > 0 && (
-														<div>
-															<p className="text-[12px] font-medium text-[#10B981] mb-[4px] flex items-center gap-[4px]">
-																<svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-																</svg>
-																Adding {selectedPoliciesForAddition.length} {selectedPoliciesForAddition.length === 1 ? 'policy' : 'policies'}:
-															</p>
-															<div className="flex flex-wrap gap-[6px]">
-																{attachedPolicies
-																	.filter(p => selectedPoliciesForAddition.includes(p.id))
-																	.map(policy => (
-																		<span key={policy.id} className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#10B981] text-[11px] rounded-[4px]">
-																			{policy.name || policy.label}
-																		</span>
-																	))}
-															</div>
+														<div className="flex items-center gap-[8px] mt-[12px]">
+															<button
+																onClick={handleSaveChanges}
+																disabled={isSaving}
+																className="px-[12px] py-[4px] bg-[#F59E0B] text-white rounded-[6px] text-[11px] font-medium hover:bg-[#D97706] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-[4px]"
+															>
+																{isSaving ? (
+																	<>
+																		<svg className="animate-spin w-[12px] h-[12px]" fill="none" viewBox="0 0 24 24">
+																			<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+																			<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+																		</svg>
+																		Saving...
+																	</>
+																) : (
+																	<>
+																		<svg className="w-[12px] h-[12px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+																		</svg>
+																		Save Changes
+																	</>
+																)}
+															</button>
+															<button
+																onClick={() => {
+																	setSelectedPoliciesForRemoval([]);
+																	setSelectedPoliciesForAddition([]);
+																	setHasUnsavedChanges(false);
+																	setBulkSelectMode(false);
+																	setSelectAllChecked(false);
+																	setAttachedPolicies(roleDetails?.attached_policies || []);
+																}}
+																className="px-[12px] py-[4px] bg-[#F3F4F6] text-[#6B7280] rounded-[6px] text-[11px] font-medium hover:bg-[#E5E7EB] transition-colors"
+															>
+																Discard
+															</button>
 														</div>
-													)}
+													</div>
 												</div>
 											</div>
 										)}
@@ -1119,6 +1341,67 @@ function RoleDetailsModal({ isOpen, closeModal, role, mode = 'view' }) {
 									Add Selected
 								</button>
 							</div>
+						</div>
+					</div>
+				</div>
+			)}
+			
+			{/* Delete Confirmation Modal */}
+			{showDeleteConfirmation && (
+				<div className="fixed inset-0 z-[70] flex items-center justify-center">
+					<div 
+						className="fixed inset-0 bg-black bg-opacity-50"
+						onClick={() => setShowDeleteConfirmation(false)}
+					/>
+					<div className="relative bg-white rounded-[12px] w-[400px] overflow-hidden shadow-xl">
+						{/* Header */}
+						<div className="px-[24px] py-[16px] border-b border-[#E5E7EB]">
+							<h3 className="text-[18px] font-semibold text-[#111827] flex items-center gap-[8px]">
+								<svg className="w-[20px] h-[20px] text-[#EF4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+								</svg>
+								Confirm Removal
+							</h3>
+						</div>
+						
+						{/* Content */}
+						<div className="px-[24px] py-[20px]">
+							<p className="text-[14px] text-[#6B7280] mb-[16px]">
+								Are you sure you want to remove {selectedPoliciesForRemoval.length} {selectedPoliciesForRemoval.length === 1 ? 'policy' : 'policies'} from this role?
+							</p>
+							<div className="max-h-[150px] overflow-y-auto">
+								<div className="space-y-[4px]">
+									{attachedPolicies
+										.filter(p => selectedPoliciesForRemoval.includes(p.id))
+										.map(policy => (
+											<div key={policy.id} className="flex items-center gap-[8px] px-[12px] py-[6px] bg-[#FEF2F2] border border-[#FECACA] rounded-[6px]">
+												<svg className="w-[14px] h-[14px] text-[#EF4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+												</svg>
+												<span className="text-[13px] text-[#111827] font-medium">{policy.name || policy.label}</span>
+											</div>
+										))}
+								</div>
+							</div>
+						</div>
+						
+						{/* Footer */}
+						<div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#E5E7EB] bg-[#F9FAFB]">
+							<button
+								onClick={() => setShowDeleteConfirmation(false)}
+								className="px-[16px] py-[6px] bg-[#F3F4F6] text-[#6B7280] rounded-[6px] text-[13px] font-medium hover:bg-[#E5E7EB] transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								onClick={confirmBulkRemove}
+								className="px-[16px] py-[6px] bg-[#EF4444] text-white rounded-[6px] text-[13px] font-medium hover:bg-[#DC2626] transition-colors flex items-center gap-[6px]"
+							>
+								<svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								</svg>
+								Remove {selectedPoliciesForRemoval.length} {selectedPoliciesForRemoval.length === 1 ? 'Policy' : 'Policies'}
+							</button>
 						</div>
 					</div>
 				</div>

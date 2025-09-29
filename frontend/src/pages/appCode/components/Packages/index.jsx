@@ -8,6 +8,9 @@ export default function Packages() {
 	const [packagesData, setPackagesData] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
+	const [page, setPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [pageSize] = useState(10);
 	const [configModalOpen, setConfigModalOpen] = useState(false);
 	const [configUrl, setConfigUrl] = useState('');
 	const [installModalOpen, setInstallModalOpen] = useState(false);
@@ -19,14 +22,21 @@ export default function Packages() {
 	const fetchPackages = async () => {
 		setLoading(true);
 		try {
+			const queryParams = new URLSearchParams({
+				page: page.toString(),
+				page_size: pageSize.toString(),
+				search: searchTerm,
+			});
+
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/packages/`,
+				url: `/api/v1/apps/${appId}/packages/?${queryParams.toString()}`,
 				type: 'GET',
 				loader: false,
 			});
 
 			if (success && response?.packages) {
 				setPackagesData(response.packages);
+				setTotalPages(response.packages.total_pages || 1);
 			}
 		} catch (error) {
 			console.error('Error fetching packages:', error);
@@ -74,16 +84,11 @@ export default function Packages() {
 
 	useEffect(() => {
 		fetchPackages();
-	}, [appId]);
+	}, [appId, page, searchTerm]);
 
 	if (!packagesData && !loading) return null;
 
 	const packages = packagesData?.records || [];
-	
-	// Filter packages based on search
-	const filteredPackages = packages.filter(pkg => 
-		pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
-	);
 
 	return (
 		<div className="space-y-6">
@@ -158,9 +163,9 @@ export default function Packages() {
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
 					<p className="text-sm text-gray-500 mt-2">Loading packages...</p>
 				</div>
-			) : filteredPackages.length > 0 ? (
+			) : packages.length > 0 ? (
 				<div className="space-y-4">
-					{filteredPackages.map((pkg, index) => {
+					{packages.map((pkg, index) => {
 						return (
 							<div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 								<div className="p-6 border-b border-gray-200">
@@ -242,6 +247,38 @@ export default function Packages() {
 							</div>
 						);
 					})}
+
+					{/* Pagination */}
+					{totalPages > 1 && (
+						<div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200 rounded-lg">
+							<div className="flex items-center gap-2">
+								<button
+									onClick={() => setPage(p => Math.max(1, p - 1))}
+									disabled={page === 1}
+									className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+										<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+									</svg>
+								</button>
+								<span className="text-sm text-gray-700">
+									Page {page} of {totalPages}
+								</span>
+								<button
+									onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+									disabled={page === totalPages}
+									className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+										<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+									</svg>
+								</button>
+							</div>
+							<span className="text-sm text-gray-600">
+								Showing {packages.length} packages
+							</span>
+						</div>
+					)}
 				</div>
 			) : (
 				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">

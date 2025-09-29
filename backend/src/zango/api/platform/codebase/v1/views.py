@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db import connection
 from django.utils.decorators import method_decorator
 
+from zango.apps.dynamic_models.graph_utils import DynamicModelGraphGenerator
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.core.api import (
     TenantMixin,
@@ -77,91 +78,187 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
         return module_info
 
     def extract_model_details(self, models_file):
-        """Extract model details from a models.py file"""
+        """Extract model details using DynamicModelGraphGenerator"""
         models = []
 
         try:
-            with open(models_file, "r", encoding="utf-8") as f:
-                content = f.read()
+            # Check if models file actually exists
+            if not models_file.exists():
+                return models
 
-            # Parse the Python file
-            tree = ast.parse(content)
+            # Get tenant name from connection
+            tenant_name = connection.tenant.name if connection.tenant else None
+            if not tenant_name:
+                print(
+                    f"Warning: No tenant context available for extracting models from {models_file}"
+                )
+                return models
 
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    # Check if it's a Django model (inherits from models.Model or similar)
-                    is_model = False
-                    for base in node.bases:
-                        base_name = ""
-                        if isinstance(base, ast.Name):
-                            base_name = base.id
-                        elif isinstance(base, ast.Attribute):
-                            base_name = base.attr
+            # Create graph generator to get dynamic models
+            graph_generator = DynamicModelGraphGenerator(tenant_name=tenant_name)
 
-                        if (
-                            "Model" in base_name
-                            or "AbstractModel" in base_name
-                            or "Mixin" in base_name
-                        ):
-                            is_model = True
-                            break
+            # Get all dynamic models for this workspace
+            try:
+                dynamic_models = graph_generator.get_workspace_dynamic_models()
+            except Exception as e:
+                print(
+                    f"Warning: Could not load dynamic models for tenant {tenant_name}: {e}"
+                )
+                return models
 
-                    if is_model:
-                        model_info = {
-                            "name": node.name,
-                            "fields": [],
-                            "relationships": [],
-                            "meta": {},
-                        }
+            # Filter models that belong to the specific module we're analyzing
+            # Get the module path from the models_file path
+            workspace_path = f"{settings.BASE_DIR}/workspaces/{tenant_name}/"
+            relative_path = str(models_file.parent.relative_to(workspace_path))
+            module_path = relative_path.replace("/", ".")
 
-                        # Extract fields and relationships
-                        for item in node.body:
-                            if isinstance(item, ast.Assign):
-                                for target in item.targets:
-                                    if isinstance(target, ast.Name):
-                                        field_info = self.analyze_field(
-                                            target.id, item.value
+            # Convert dynamic models to the expected format
+            for model in dynamic_models:
+                try:
+                    # Check if this model belongs to the current module being analyzed
+                    # Models have a __module__ attribute that tells us which module they're from
+                    if hasattr(model, "__module__"):
+                        model_module = model.__module__
+                        # Extract the module path after the workspace part
+                        # Format is usually like "workspace_name.module_path.models"
+                        if f".{module_path}.models" not in model_module:
+                            continue
+
+                    model_context = graph_generator.get_model_context(model)
+
+                    # Convert to the format expected by the API
+                    model_info = {
+                        "name": model_context["name"],
+                        "fields": [],
+                        "relationships": [],
+                        "meta": {},
+                    }
+
+                    # Add verbose name to meta if available
+                    if (
+                        hasattr(model._meta, "verbose_name")
+                        and model._meta.verbose_name
+                    ):
+                        model_info["meta"]["verbose_name"] = str(
+                            model._meta.verbose_name
+                        )
+
+                    # Add db_table to meta if available
+                    if hasattr(model._meta, "db_table") and model._meta.db_table:
+                        model_info["meta"]["db_table"] = model._meta.db_table
+
+                    # Process fields
+                    for field_data in model_context["fields"]:
+                        if field_data.get("relation", False):
+                            # This is a relationship field
+                            relationship_info = {
+                                "name": field_data["name"],
+                                "type": field_data["type"],
+                                "attributes": {},
+                            }
+
+                            # Add field attributes
+                            if field_data.get("blank"):
+                                relationship_info["attributes"]["blank"] = field_data[
+                                    "blank"
+                                ]
+
+                            # Try to get related model from field
+                            field = field_data.get("field")
+                            if (
+                                field
+                                and hasattr(field, "remote_field")
+                                and field.remote_field
+                            ):
+                                if hasattr(field.remote_field, "model"):
+                                    related_model = field.remote_field.model
+                                    if hasattr(related_model, "__name__"):
+                                        relationship_info["related_model"] = (
+                                            related_model.__name__
                                         )
-                                        if field_info:
-                                            if field_info["type"] in [
-                                                "ForeignKey",
-                                                "OneToOneField",
-                                                "ManyToManyField",
-                                                "ZForeignKey",
-                                                "ZOneToOneField",
-                                                "ZManyToManyField",
-                                            ]:
-                                                model_info["relationships"].append(
-                                                    field_info
-                                                )
-                                            else:
-                                                model_info["fields"].append(field_info)
+                                    elif isinstance(related_model, str):
+                                        relationship_info["related_model"] = (
+                                            related_model
+                                        )
 
-                            # Extract Meta class info
-                            elif isinstance(item, ast.ClassDef) and item.name == "Meta":
-                                for meta_item in item.body:
-                                    if isinstance(meta_item, ast.Assign):
-                                        for target in meta_item.targets:
-                                            if isinstance(target, ast.Name):
-                                                if target.id == "db_table":
-                                                    if isinstance(
-                                                        meta_item.value, ast.Constant
-                                                    ):
-                                                        model_info["meta"][
-                                                            "db_table"
-                                                        ] = meta_item.value.value
-                                                elif target.id == "verbose_name":
-                                                    if isinstance(
-                                                        meta_item.value, ast.Constant
-                                                    ):
-                                                        model_info["meta"][
-                                                            "verbose_name"
-                                                        ] = meta_item.value.value
+                                # Add on_delete info if available
+                                if hasattr(field.remote_field, "on_delete"):
+                                    on_delete = field.remote_field.on_delete
+                                    if hasattr(on_delete, "__name__"):
+                                        relationship_info["attributes"]["on_delete"] = (
+                                            on_delete.__name__
+                                        )
 
-                        models.append(model_info)
+                                # Add related_name if available
+                                if (
+                                    hasattr(field.remote_field, "related_name")
+                                    and field.remote_field.related_name
+                                ):
+                                    relationship_info["attributes"]["related_name"] = (
+                                        field.remote_field.related_name
+                                    )
+
+                            model_info["relationships"].append(relationship_info)
+                        else:
+                            # This is a regular field
+                            field_info = {
+                                "name": field_data["name"],
+                                "type": field_data["type"],
+                                "attributes": {},
+                            }
+
+                            # Add field attributes
+                            if field_data.get("blank"):
+                                field_info["attributes"]["blank"] = field_data["blank"]
+
+                            # Get additional attributes from the actual field
+                            field = field_data.get("field")
+                            if field:
+                                if hasattr(field, "null"):
+                                    field_info["attributes"]["null"] = field.null
+                                if hasattr(field, "max_length") and field.max_length:
+                                    field_info["attributes"]["max_length"] = (
+                                        field.max_length
+                                    )
+                                if (
+                                    hasattr(field, "default")
+                                    and field.default is not None
+                                ):
+                                    # Convert default to string representation for JSON serialization
+                                    try:
+                                        field_info["attributes"]["default"] = str(
+                                            field.default
+                                        )
+                                    except Exception:
+                                        pass
+
+                            model_info["fields"].append(field_info)
+
+                    # Process relationships from model context
+                    for relation in model_context["relations"]:
+                        # Skip if this relation is already captured as a field
+                        relation_name = relation.get("name", "")
+                        if not any(
+                            rel["name"] == relation_name
+                            for rel in model_info["relationships"]
+                        ):
+                            relationship_info = {
+                                "name": relation_name,
+                                "type": relation.get("type", "Unknown"),
+                                "related_model": relation.get("target", ""),
+                                "attributes": {},
+                            }
+                            model_info["relationships"].append(relationship_info)
+
+                    models.append(model_info)
+
+                except Exception as e:
+                    print(f"Warning: Could not process model {model.__name__}: {e}")
+                    continue
 
         except Exception as e:
-            print(f"Error parsing models file {models_file}: {str(e)}")
+            print(f"Error extracting model details from {models_file}: {str(e)}")
+            return models
 
         return models
 
@@ -446,7 +543,13 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             with connection.cursor() as c:
                 ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                 view_urls = ws.get_all_view_urls()
-                print(ws.generate_dot_diagram())
+
+                # Generate DOT diagram with error handling
+                try:
+                    dot_diagram = ws.generate_dot_diagram()
+                except Exception as e:
+                    print(f"Warning: Could not generate DOT diagram: {e}")
+                    dot_diagram = None
             app_name = tenant.schema_name
 
             # Construct workspace path
@@ -464,6 +567,7 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
                 "app_name": app_name,
                 "workspace_path": str(workspace_path),
                 "settings_file_exists": settings_file_path.exists(),
+                "dot_diagram": dot_diagram,
             }
 
             if settings_file_path.exists():

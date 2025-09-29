@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import SelectField from '../../../../../components/Form/SelectField';
+import FontFamilySelectField from '../../../../../components/Form/FontFamilySelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { getFontFamily } from '../../../../../utils/fonts';
@@ -151,7 +152,7 @@ const AddThemeForm = ({ closeModal }) => {
 								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 									Typography
 								</h4>
-								<SelectField
+								<FontFamilySelectField
 									key="config.typography.font_family"
 									label="Font Family"
 									name="config.typography.font_family"

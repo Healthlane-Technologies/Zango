@@ -138,7 +138,6 @@ const ModernAuthConfig = () => {
 							...authData,
 							login_methods: {
 								...authData.login_methods,
-								allowed_usernames: ["email", "phone"], // Default allowed usernames
 								password: {
 									...authData.login_methods.password,
 									password_reset_link_expiry_hours: 24, // Default reset link expiry
@@ -1112,7 +1111,6 @@ const ModernAuthConfig = () => {
 							...authData,
 							login_methods: {
 								...authData.login_methods,
-								allowed_usernames: authConfig?.login_methods?.allowed_usernames || ["email", "phone"],
 								password: {
 									...authData.login_methods.password,
 									password_reset_link_expiry_hours: authConfig?.login_methods?.password?.password_reset_link_expiry_hours || 24,

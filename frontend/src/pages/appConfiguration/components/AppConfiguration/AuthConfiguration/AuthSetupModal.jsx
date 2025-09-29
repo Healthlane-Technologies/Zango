@@ -1227,60 +1227,127 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				</div>
 
-				{/* Password Policy (if enabled) */}
-				{setupData.login_methods.password.enabled && (
-					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
-						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Password Policy</h4>
+				{/* Password Policy - Always show, even if password auth is disabled */}
+				<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+					<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Password Policy</h4>
+					{setupData.login_methods.password.enabled ? (
 						<div className="space-y-[8px] text-[14px] text-[#111827]">
 							<div>Minimum length: {setupData.password_policy.min_length} characters</div>
 							<div>Expires every: {setupData.password_policy.password_expiry_days} days</div>
-							<div className="flex items-center gap-[8px]">
-								Requirements:
-								{setupData.password_policy.require_uppercase && <span className="text-[#10B981]">Uppercase</span>}
-								{setupData.password_policy.require_lowercase && <span className="text-[#10B981]">Lowercase</span>}
-								{setupData.password_policy.require_numbers && <span className="text-[#10B981]">Numbers</span>}
-								{setupData.password_policy.require_special_chars && <span className="text-[#10B981]">Special chars</span>}
+							<div>Password history: {setupData.password_policy.password_history_count} previous passwords</div>
+							<div>Allow password change: {setupData.password_policy.allow_change ? 'Yes' : 'No'}</div>
+							<div className="flex flex-wrap items-center gap-[8px]">
+								<span>Requirements:</span>
+								{setupData.password_policy.require_uppercase && <span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">Uppercase</span>}
+								{setupData.password_policy.require_lowercase && <span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">Lowercase</span>}
+								{setupData.password_policy.require_numbers && <span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">Numbers</span>}
+								{setupData.password_policy.require_special_chars && <span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">Special chars</span>}
 							</div>
+						</div>
+					) : (
+						<div className="text-[14px] text-[#6B7280]">Password authentication is disabled</div>
+					)}
+				</div>
+
+				{/* Session Policy */}
+				<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+					<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Session Policy</h4>
+					<div className="space-y-[8px] text-[14px] text-[#111827]">
+						<div>Maximum concurrent sessions: {setupData.session_policy.max_concurrent_sessions === 0 ? 'Unlimited' : setupData.session_policy.max_concurrent_sessions}</div>
+						<div>Force logout on password change: {setupData.session_policy.force_logout_on_password_change ? 'Yes' : 'No'}</div>
+					</div>
+				</div>
+
+				{/* Two-Factor Authentication */}
+				<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+					<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Two-Factor Authentication</h4>
+					<div className="space-y-[8px] text-[14px] text-[#111827]">
+						<div>Required: {setupData.two_factor_auth.required ? (
+							<span className="text-[#10B981] font-medium">Yes, for all users</span>
+						) : (
+							<span className="text-[#6B7280]">No</span>
+						)}</div>
+						{setupData.two_factor_auth.required && (
+							<div className="flex flex-wrap items-center gap-[8px]">
+								<span>Available methods:</span>
+								{setupData.two_factor_auth.allowedMethods.map((method) => (
+									<span key={method} className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
+										{method.charAt(0).toUpperCase() + method.slice(1)}
+									</span>
+								))}
+							</div>
+						)}
+					</div>
+				</div>
+
+				{/* OTP Configuration Details */}
+				{setupData.login_methods.otp.enabled && (
+					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">OTP Configuration</h4>
+						<div className="space-y-[8px] text-[14px] text-[#111827]">
+							{setupData.login_methods.otp.sms_webhook && (
+								<div>SMS Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.sms_webhook}</span></div>
+							)}
+							{setupData.login_methods.otp.email_webhook && (
+								<div>Email Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.email_webhook}</span></div>
+							)}
+							<div>SMS Template: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.sms_content}</span></div>
+							<div>Email Subject: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.email_subject}</span></div>
 						</div>
 					</div>
 				)}
 
-				{/* 2FA */}
-				<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
-					<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Two-Factor Authentication</h4>
-					<div className="text-[14px] text-[#111827]">
-						{setupData.two_factor_auth.required ? (
-							<span className="text-[#10B981] font-medium">Required for all users</span>
-						) : (
-							<span className="text-[#6B7280]">Not required</span>
-						)}
+				{/* Password Reset Configuration */}
+				{setupData.login_methods.password.enabled && setupData.login_methods.password.forgot_password_enabled && (
+					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Password Reset Configuration</h4>
+						<div className="space-y-[8px] text-[14px] text-[#111827]">
+							<div>Reset method: {setupData.login_methods.password.reset_method === 'link' ? 'Email link' : 'Verification code'}</div>
+							<div>Reset link expiry: {setupData.login_methods.password.reset_expiry_minutes} minutes</div>
+							<div>Reset via SMS: {setupData.login_methods.password.reset_via_sms ? 'Enabled' : 'Disabled'}</div>
+							<div>Reset via Email: {setupData.login_methods.password.reset_via_email ? 'Enabled' : 'Disabled'}</div>
+							{setupData.login_methods.password.reset_sms_webhook && (
+								<div>SMS Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.password.reset_sms_webhook}</span></div>
+							)}
+							{setupData.login_methods.password.reset_email_webhook && (
+								<div>Email Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.password.reset_email_webhook}</span></div>
+							)}
+						</div>
 					</div>
-				</div>
+				)}
 
 				{/* Role Overrides */}
 				{Object.keys(setupData.role_overrides).length > 0 && (
 					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
 						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Role Overrides</h4>
-						<div className="space-y-[8px]">
+						<div className="space-y-[12px]">
 							{Object.entries(setupData.role_overrides).map(([roleId, override]) => {
 								const role = roles?.find(r => r.id === parseInt(roleId));
 								if (!role) return null;
 								
 								return (
-									<div key={roleId} className="flex items-center justify-between text-[14px]">
-										<span className="font-medium text-[#111827]">{role.name}</span>
-										<div className="flex gap-[8px]">
-											{override.password_policy && (
-												<span className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
-													Custom Password Policy
-												</span>
-											)}
-											{override.two_factor_auth?.required && (
-												<span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">
-													2FA Required
-												</span>
-											)}
+									<div key={roleId} className="border border-[#E5E7EB] rounded-[8px] p-[16px]">
+										<div className="flex items-center justify-between mb-[8px]">
+											<span className="font-medium text-[#111827]">{role.name}</span>
+											<div className="flex gap-[8px]">
+												{override.password_policy && (
+													<span className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
+														Custom Password Policy
+													</span>
+												)}
+												{override.two_factor_auth?.required && (
+													<span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">
+														2FA Required
+													</span>
+												)}
+											</div>
 										</div>
+										{override.password_policy && (
+											<div className="text-[12px] text-[#6B7280] space-y-[4px]">
+												<div>Min length: {override.password_policy.min_length} chars</div>
+												<div>Expiry: {override.password_policy.password_expiry_days} days</div>
+											</div>
+										)}
 									</div>
 								);
 							})}
@@ -1389,17 +1456,29 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 										Back
 									</button>
 
-									<button
-										onClick={handleNext}
-										disabled={!canProceed()}
-										className={`px-[24px] py-[10px] rounded-[8px] font-medium text-[14px] transition-all ${
-											canProceed()
-												? 'bg-[#5048ED] text-white hover:bg-[#4338CA]'
-												: 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed'
-										}`}
-									>
-										{currentStep === totalSteps ? 'Complete Setup' : 'Next'}
-									</button>
+									<div className="flex items-center gap-[12px]">
+										{/* Skip to Review button - show on steps 1-4 when can proceed */}
+										{currentStep < totalSteps && canProceed() && (
+											<button
+												onClick={() => setCurrentStep(totalSteps)}
+												className="px-[16px] py-[10px] rounded-[8px] font-medium text-[14px] text-[#6B7280] border border-[#E5E7EB] hover:bg-[#F9FAFB] transition-all"
+											>
+												{currentStep === 1 ? 'Review Current Config' : 'Skip to Review'}
+											</button>
+										)}
+
+										<button
+											onClick={handleNext}
+											disabled={!canProceed()}
+											className={`px-[24px] py-[10px] rounded-[8px] font-medium text-[14px] transition-all ${
+												canProceed()
+													? 'bg-[#5048ED] text-white hover:bg-[#4338CA]'
+													: 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed'
+											}`}
+										>
+											{currentStep === totalSteps ? 'Complete Setup' : 'Next'}
+										</button>
+									</div>
 								</div>
 							</Dialog.Panel>
 						</Transition.Child>

@@ -14,6 +14,7 @@
 		"@testing-library/react": "^13.0.0",
 		"@testing-library/user-event": "^13.2.1",
 		"@types/react-resizable": "^3.0.5",
+		"@viz-js/viz": "^3.19.0",
 		"browser-image-compression": "^2.0.0",
 		"env-cmd": "^10.1.0",
 		"formik": "^2.2.9",
