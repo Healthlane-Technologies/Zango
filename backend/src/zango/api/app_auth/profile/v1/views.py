@@ -4,7 +4,6 @@ from zango.core.api import (
     ZangoGenericAppAPIView,
     get_api_response,
 )
-from zango.core.utils import get_auth_priority
 
 from .serializers import ProfileSerializer
 
@@ -17,13 +16,9 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
         token_serializer = AppUserAuthTokenSerializer(
             tokens, many=True, context={"request": request, "tenant": request.tenant}
         )
-        password_policy = get_auth_priority(
-            policy="password_policy", user=request.user, request=request
-        )
         response = {
             "message": "success",
             "profile_data": serializer.data,
-            "password_policy": password_policy,
             "tokens": token_serializer.data,
         }
         status = 200

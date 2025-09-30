@@ -127,6 +127,16 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         policy_serializer = PolicySerializer(policies, many=True, context=self.context)
         return policy_serializer.data
 
+    def get_policies_count(self, obj):
+        return {
+            "policies": obj.policies.count(),
+            "policy_groups": obj.policy_groups.count(),
+            "total": obj.policies.count() + obj.policy_groups.count(),
+        }
+
+    def get_users_count(self, obj):
+        return obj.users.filter(is_active=True).count()
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         tenant = self.context.get("tenant")
