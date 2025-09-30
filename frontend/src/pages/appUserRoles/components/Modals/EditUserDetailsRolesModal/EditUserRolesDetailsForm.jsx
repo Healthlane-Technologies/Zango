@@ -33,7 +33,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
         { id: "sms", label: "SMS" },
     ];
 
-    const MultiSelectChips = ({ label, options, value, onChange, description }) => (
+    const MultiSelectChips = ({ label, name, options, value, onChange, description, twoFactorEnabled = false }) => (
         <div className="space-y-[12px]">
             <div>
                 <label className="font-lato text-[12px] font-semibold text-[#A3ABB1] uppercase tracking-[0.5px]">
@@ -48,11 +48,14 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
             <div className="flex flex-wrap gap-[8px]">
                 {options.map((option) => {
                     const isSelected = Array.isArray(value) ? value.includes(option.id) : value === option.id;
+                    const isDisabled = twoFactorEnabled && isSelected;
                     return (
                         <button
                             key={option.id}
                             type="button"
+                            disabled={isDisabled}
                             onClick={() => {
+                                if (isDisabled) return;
                                 const currentValue = Array.isArray(value) ? value : [value];
                                 const newValue = isSelected
                                     ? currentValue.filter(v => v !== option.id)
@@ -61,7 +64,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                             }}
                             className={`px-[12px] py-[6px] rounded-[6px] border font-lato text-[12px] font-medium transition-all duration-200 flex items-center gap-[6px] ${
                                 isSelected
-                                    ? 'border-[#5048ED] bg-[#5048ED] text-white'
+                                    ? `border-[#5048ED] bg-[#5048ED] text-white ${isDisabled ? 'opacity-75 cursor-not-allowed' : ''}`
                                     : 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC]'
                             }`}
                         >
@@ -425,7 +428,15 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                                     description="Make 2FA mandatory for users with this role"
                                     name="auth_config.two_factor_auth.required"
                                     value={get(formik.values, 'auth_config.two_factor_auth.required', false)}
-                                    onChange={(e) => formik.setFieldValue('auth_config.two_factor_auth.required', e.target.checked)}
+                                    onChange={(e) => {
+                                        const isEnabled = e.target.checked;
+                                        formik.setFieldValue('auth_config.two_factor_auth.required', isEnabled);
+                                        if (isEnabled) {
+                                            formik.setFieldValue('auth_config.two_factor_auth.allowedMethods', ['email', 'sms']);
+                                        } else {
+                                            formik.setFieldValue('auth_config.two_factor_auth.allowedMethods', []);
+                                        }
+                                    }}
                                 >
                                     <MultiSelectChips
                                         name="auth_config.two_factor_auth.allowedMethods"
@@ -434,6 +445,7 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                                         options={twoFactorMethodOptions}
                                         value={get(formik.values, 'auth_config.two_factor_auth.allowedMethods', [])}
                                         onChange={(value) => formik.setFieldValue('auth_config.two_factor_auth.allowedMethods', value)}
+                                        twoFactorEnabled={get(formik.values, 'auth_config.two_factor_auth.required', false)}
                                     />
                                 </ToggleCard>
                             </div>

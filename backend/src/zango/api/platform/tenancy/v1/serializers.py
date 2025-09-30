@@ -3,10 +3,12 @@ import json
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
+from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
-from zango.apps.appauth.utils import UserRoleAuthConfig
+from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
-from zango.apps.shared.tenancy.utils import AuthConfigSchema as TenantAuthConfigSchema
+from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
+from zango.core.utils import get_auth_priority
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -114,6 +116,7 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
     attached_policies = serializers.SerializerMethodField()
     policies_count = serializers.SerializerMethodField()
     users_count = serializers.SerializerMethodField()
+    auth_config = serializers.JSONField(required=False)
 
     class Meta:
         model = UserRoleModel
@@ -124,15 +127,11 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         policy_serializer = PolicySerializer(policies, many=True, context=self.context)
         return policy_serializer.data
 
-    def get_policies_count(self, obj):
-        return {
-            "policies": obj.policies.count(),
-            "policy_groups": obj.policy_groups.count(),
-            "total": obj.policies.count() + obj.policy_groups.count(),
-        }
-
-    def get_users_count(self, obj):
-        return obj.users.filter(is_active=True).count()
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        tenant = self.context.get("tenant")
+        data["auth_config"] = get_auth_priority(tenant=tenant, user_role=instance)
+        return data
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
         tenant = self.context.get("tenant")
@@ -158,28 +157,12 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         return super(UserRoleSerializerModel, self).update(instance, validated_data)
 
 
-class UserRoleListSerializerModel(serializers.ModelSerializer):
-    policies_count = serializers.SerializerMethodField()
-    users_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = UserRoleModel
-        exclude = ["policies", "policy_groups"]
-
-    def get_policies_count(self, obj):
-        return {
-            "policies": obj.policies.count(),
-            "policy_groups": obj.policy_groups.count(),
-            "total": obj.policies.count() + obj.policy_groups.count(),
-        }
-
-    def get_users_count(self, obj):
-        return obj.users.filter(is_active=True).count()
-
-
-class AppUserModelSerializerModel(serializers.ModelSerializer):
-    roles = serializers.SerializerMethodField()
+class AppUserModelSerializerModel(
+    serializers.ModelSerializer, UserAuthConfigValidationMixin
+):
+    roles = UserRoleSerializerModel(many=True)
     pn_country_code = serializers.SerializerMethodField()
+    auth_config = serializers.JSONField(required=False)
 
     class Meta:
         model = AppUserModel
@@ -196,23 +179,31 @@ class AppUserModelSerializerModel(serializers.ModelSerializer):
             return f"+{obj.mobile.country_code}"
         return None
 
-    def validate_user_role_two_factor_not_overridden(self, auth_config, roles):
-        user_two_factor_auth_enabled = auth_config.get("two_factor_auth", {}).get(
-            "required"
-        )
-        for role in roles:
-            if role.auth_config.get("two_factor_auth", {}):
-                two_factor_auth = auth_config["two_factor_auth"]
-                if two_factor_auth.get("required") and not user_two_factor_auth_enabled:
-                    raise serializers.ValidationError(
-                        "Two-factor authentication is required for this user role."
-                    )
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        tenant = self.context.get("tenant")
+        auth_config = get_auth_priority(tenant=tenant, user=instance)
+        twofa_enabled = auth_config.get("two_factor_auth", {}).get("required", False)
+        for role in instance.roles.all():
+            role_twofa_config = get_auth_priority(
+                tenant=tenant, user_role=role, policy="two_factor_auth"
+            )
+            if role_twofa_config.get("required", False):
+                twofa_enabled = True
+                break
+        auth_config["two_factor_auth"]["required"] = twofa_enabled
+        data["auth_config"] = auth_config
+        return data
 
     def validate(self, attrs):
         auth_config = attrs.get("auth_config", {})
         if auth_config:
+            # For partial updates, if roles are not in attrs, use the instance's roles
+            roles = attrs.get("roles")
+            if roles is None and self.instance:
+                roles = self.instance.roles.all()
             self.validate_user_role_two_factor_not_overridden(
-                auth_config, attrs.get("roles")
+                auth_config, self.instance, roles
             )
         return attrs
 

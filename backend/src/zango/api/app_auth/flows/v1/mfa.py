@@ -20,8 +20,12 @@ class GetMFACodeViewAPIV1(APIView):
             return None
 
     def get(self, request, *args, **kwargs):
-        print("request session is ", request.session.items())
-        policy = get_auth_priority(policy="two_factor_auth", request=request)
+        from allauth.account.internal.stagekit import unstash_login
+
+        login = unstash_login(request, peek=True)
+        policy = get_auth_priority(
+            policy="two_factor_auth", request=request, user=login.user
+        )
         if not policy.get("required"):
             return get_api_response(
                 success=False,
@@ -71,7 +75,7 @@ class GetMFACodeViewAPIV1(APIView):
                         tenant_id=request.tenant.id,
                         request_data=request_data,
                         user_role_id=request.session.get("role_id"),
-                        message="Your 2FA code is",
+                        message="Your 2FA code is {code}",
                     )
                 else:
                     user = self.get_user(latest_auth_method.get("phone"))

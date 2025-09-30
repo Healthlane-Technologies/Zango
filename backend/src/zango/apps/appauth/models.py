@@ -1,3 +1,4 @@
+import json
 import secrets
 
 from datetime import date, timedelta
@@ -7,10 +8,10 @@ from knox.settings import knox_settings
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
-from django.db import models
-from django.db.models import Q
+from django.db import connection, models
 from django.utils import timezone
 
+from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.auditlogs.registry import auditlog
 from zango.apps.object_store.models import ObjectStore
 from zango.apps.shared.platformauth.abstract_model import (
@@ -24,7 +25,7 @@ from ..permissions.mixin import PermissionMixin
 
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.models import PolicyGroupModel, PolicyModel
-from .utils import get_default_app_user_auth_config, get_default_user_role_auth_config
+from .schema import get_default_app_user_auth_config, get_default_user_role_auth_config
 
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
@@ -61,7 +62,9 @@ class UserRoleModel(FullAuditMixin, PermissionMixin):
         super().delete(*args, **kwargs)
 
 
-class AppUserModel(AbstractZangoUserModel, PermissionMixin):
+class AppUserModel(
+    AbstractZangoUserModel, PermissionMixin, UserAuthConfigValidationMixin
+):
     roles = models.ManyToManyField(UserRoleModel, related_name="users")
     policies = models.ManyToManyField(PolicyModel, related_name="user_policies")
     policy_groups = models.ManyToManyField(
@@ -186,129 +189,222 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
     def create_user(
         cls,
         name,
-        email,
-        mobile,
+        email=None,
+        mobile=None,
         password=None,
         role_ids=[],
         force_password_reset=True,
         require_verification=True,
         app_objects=None,
+        auth_config=None,
+        tenant=None,
     ):
         """ """
         success = False
         app_user = None
+
+        # Validate all inputs before creating user
         if not email and not mobile:
             message = "Email and mobile both cannot be empty"
-        else:
-            try:
-                user_query = Q()
-                if email:
-                    user_query = user_query | Q(email=email)
-                if mobile:
-                    user_query = user_query | Q(mobile=mobile)
+            return {"success": success, "message": message, "app_user": app_user}
 
-                user = cls.objects.filter(user_query)
-                if user.exists():
-                    message = (
-                        "Another user already exists matching the provided credentials"
-                    )
-                else:
-                    if password:
-                        if not cls.validate_password(password):
-                            message = """
-                                Invalid password. Password must follow rules
-                                1. Must have at least 8 characters
-                                2. Must have at least one uppercase letter
-                                3. Must have at least one lowercase letter
-                                4. Must have at least one number
-                                5. Must have at least one special character
-                                """
-                            return {
-                                "success": success,
-                                "message": message,
-                                "app_user": app_user,
-                            }
+        try:
+            # Check for existing user with same email or mobile
+            existing_fields = []
+            if email and cls.objects.filter(email=email).exists():
+                existing_fields.append("email")
+            if mobile and cls.objects.filter(mobile=mobile).exists():
+                existing_fields.append("mobile")
 
-                    app_user = cls.objects.create(
-                        name=name,
-                        email=email,
-                        mobile=mobile,
-                    )
-                    app_user.add_roles(role_ids)
+            if existing_fields:
+                field_text = " and ".join(existing_fields)
+                message = f"User with the same {field_text} already exists"
+                return {"success": success, "message": message, "app_user": app_user}
 
-                    if password:
-                        app_user.set_password(password)
-                    else:
-                        app_user.set_unusable_password()
+            # Validate password if provided
+            if password:
+                if not cls.validate_password(password):
+                    message = """
+                        Invalid password. Password must follow rules
+                        1. Must have at least 8 characters
+                        2. Must have at least one uppercase letter
+                        3. Must have at least one lowercase letter
+                        4. Must have at least one number
+                        5. Must have at least one special character
+                        """
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
 
-                    if require_verification:
-                        app_user.is_active = False
-                    else:
-                        app_user.is_active = True
+            # Validate roles exist
+            existing_roles = None
+            if role_ids:
+                existing_roles = UserRoleModel.objects.filter(id__in=role_ids)
+                if len(role_ids) != existing_roles.count():
+                    message = "One or more specified role IDs do not exist"
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
 
-                    if password and not force_password_reset:
-                        old_password_obj = OldPasswords.objects.create(user=app_user)
-                        old_password_obj.setPasswords(app_user.password)
-                        old_password_obj.save()
+            # All basic validations passed, now create the user
+            app_user = cls.objects.create(
+                name=name,
+                email=email,
+                mobile=mobile,
+            )
 
-                    if app_objects:
-                        app_user.app_objects = app_objects
+            # Add roles first so they're available for auth_config validation
+            if role_ids:
+                app_user.add_roles(role_ids)
 
-                    app_user.save()
-                    success = True
-                    message = "App User created successfully."
-            except Exception as e:
-                message = str(e)
+            # Set auth_config and validate it with the actual user and roles
+            final_auth_config = (
+                auth_config if auth_config else get_default_app_user_auth_config()
+            )
+            app_user.auth_config = final_auth_config
+
+            # Validate auth_config with the saved user and roles
+            app_user.validate_auth_config(
+                final_auth_config,
+                app_user,
+                existing_roles or UserRoleModel.objects.none(),
+                tenant or connection.tenant,
+            )
+
+            # Set password
+            if password:
+                app_user.set_password(password)
+            else:
+                app_user.set_unusable_password()
+
+            # Set active status
+            if require_verification:
+                app_user.is_active = False
+            else:
+                app_user.is_active = True
+
+            # Handle old password tracking
+            if password and not force_password_reset:
+                old_password_obj = OldPasswords.objects.create(user=app_user)
+                old_password_obj.setPasswords(app_user.password)
+                old_password_obj.save()
+
+            # Set app_objects
+            if app_objects:
+                app_user.app_objects = app_objects
+
+            app_user.save()
+            success = True
+            message = "App User created successfully."
+
+        except Exception as e:
+            import traceback
+
+            message = traceback.format_exc()
+            # If user was created but validation failed later, clean up
+            if app_user and app_user.pk:
+                try:
+                    app_user.delete()
+                except Exception:
+                    pass
+                app_user = None
+
         return {"success": success, "message": message, "app_user": app_user}
 
-    def update_user(self, data):
+    def update_user(self, data, profile_image=None, tenant=None):
         success = False
+
         try:
-            user_query = Q()
+            # Extract and validate all inputs first
             email = data.get("email")
             mobile = data.get("mobile")
-            if email:
-                user_query = user_query | Q(email=email)
-            if mobile:
-                user_query = user_query | Q(mobile=mobile)
-            if user_query:
-                user = AppUserModel.objects.filter(user_query).exclude(id=self.id)
-                if user.exists():
-                    message = "Another user already exists matching the provided email or mobile"
-                    return {"success": False, "message": message}
-
             password = data.get("password")
+            name = data.get("name")
+            role_ids = data.getlist("roles", [])
+            is_active = data.get("is_active", self.is_active)
+            auth_config = json.loads(data.get("auth_config", "{}"))
+
+            # Validate email/mobile uniqueness
+            existing_fields = []
+            if (
+                email
+                and AppUserModel.objects.filter(email=email)
+                .exclude(id=self.id)
+                .exists()
+            ):
+                existing_fields.append("email")
+            if (
+                mobile
+                and AppUserModel.objects.filter(mobile=mobile)
+                .exclude(id=self.id)
+                .exists()
+            ):
+                existing_fields.append("mobile")
+
+            if existing_fields:
+                field_text = " and ".join(existing_fields)
+                message = f"User with the same {field_text} already exists"
+                return {"success": False, "message": message}
+
+            # Validate password if provided
             if password:
                 if not self.validate_password(password):
                     message = "Invalid password. Password must follow rules xyz"
                     return {"success": False, "message": message}
 
-                self.set_password(password)
+            # Validate roles exist if provided
+            new_roles = None
+            if role_ids:
+                new_roles = UserRoleModel.objects.filter(id__in=role_ids)
+                if len(role_ids) != new_roles.count():
+                    message = "One or more specified role IDs do not exist"
+                    return {"success": False, "message": message}
 
+            # Validate is_active format
+            if isinstance(is_active, str):
+                is_active = True if is_active == "true" else False
+
+            # All basic validations passed, now apply changes
             if email:
                 self.email = email
             if mobile:
                 self.mobile = mobile
-
-            name = data.get("name")
             if name:
                 self.name = name
-
-            role_ids = data.getlist("roles", [])
+            if password:
+                self.set_password(password)
             if role_ids:
                 self.add_roles(role_ids)
 
-            is_active = data.get("is_active", self.is_active)
-            if isinstance(is_active, str):
-                is_active = True if is_active == "true" else False
-
             self.is_active = is_active
+
+            # Set auth_config after roles are updated and validate
+            if auth_config:
+                self.auth_config = auth_config
+                # Use the updated roles or existing roles for validation
+                roles_for_validation = new_roles if role_ids else self.roles.all()
+                self.validate_auth_config(
+                    auth_config, self, roles_for_validation, tenant
+                )
+
+            # Handle profile picture update
+            if profile_image:
+                # Delete old profile pic if exists
+                if self.profile_pic:
+                    self.profile_pic.delete(save=False)
+                self.profile_pic = profile_image
 
             self.save()
             success = True
             message = "App User updated successfully."
+
         except Exception as e:
             message = str(e)
+
         return {"success": success, "message": message}
 
     def has_role_step(self, request):
@@ -340,92 +436,95 @@ class AppUserModel(AbstractZangoUserModel, PermissionMixin):
         """
         Returns active sessions and tokens for the user with detailed information
         including generated_at, location (IP), browser_agent, etc.
-        
+
         Returns:
             dict: Contains 'sessions' and 'tokens' with their respective details
         """
         from zango.apps.accesslogs.models import AppAccessLog
-        
-        result = {
-            'sessions': [],
-            'tokens': []
-        }
-        
+
+        result = {"sessions": [], "tokens": []}
+
         # Get active sessions from AppAccessLog
         active_sessions = AppAccessLog.objects.filter(
-            user=self,
-            is_login_successful=True,
-            session_expired_at__isnull=True
-        ).order_by('-attempt_time')
-        
+            user=self, is_login_successful=True, session_expired_at__isnull=True
+        ).order_by("-attempt_time")
+
         for session in active_sessions:
             session_data = {
-                'id': session.id,
-                'generated_at': timezone.localtime(session.attempt_time).strftime('%Y-%m-%d %H:%M:%S %Z'),
+                "id": session.id,
+                "generated_at": timezone.localtime(session.attempt_time).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
                 # 'generated_at_raw': session.attempt_time,
-                'location': session.ip_address,
-                'browser_agent': session.user_agent,
-                'http_accept': session.http_accept,
-                'path_info': session.path_info,
-                'role': session.role.name if session.role else None,
-                'role_id': session.role.id if session.role else None,
-                'username': session.username,
-                'type': 'session'
+                "location": session.ip_address,
+                "browser_agent": session.user_agent,
+                "http_accept": session.http_accept,
+                "path_info": session.path_info,
+                "role": session.role.name if session.role else None,
+                "role_id": session.role.id if session.role else None,
+                "username": session.username,
+                "type": "session",
             }
-            result['sessions'].append(session_data)
-        
+            result["sessions"].append(session_data)
+
         # Get active auth tokens
         active_tokens = self.auth_token_set.filter(
             expiry__gt=timezone.now()
-        ).select_related('role')
-        
+        ).select_related("role")
+
         for token in active_tokens:
             token_data = {
-                'digest': token.digest[:8] + '...',  # Show partial digest for security
-                'created': timezone.localtime(token.created).strftime('%Y-%m-%d %H:%M:%S %Z'),
-                'created_raw': token.created,
-                'expiry': timezone.localtime(token.expiry).strftime('%Y-%m-%d %H:%M:%S %Z'),
-                'expiry_raw': token.expiry,
-                'role': token.role.name if token.role else None,
-                'role_id': token.role.id if token.role else None,
-                'extra_data': token.extra_data,
-                'type': 'token'
+                "digest": token.digest[:8] + "...",  # Show partial digest for security
+                "created": timezone.localtime(token.created).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                "created_raw": token.created,
+                "expiry": timezone.localtime(token.expiry).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                "expiry_raw": token.expiry,
+                "role": token.role.name if token.role else None,
+                "role_id": token.role.id if token.role else None,
+                "extra_data": token.extra_data,
+                "type": "token",
             }
-            result['tokens'].append(token_data)
-        
+            result["tokens"].append(token_data)
+
         return result
 
     def get_last_password_change_date(self):
         """
         Returns the date when the password was last changed
-        
+
         Returns:
             datetime: Last password change date or None if no password history exists
         """
-        last_password = self.oldpasswords_set.all().order_by('-password_date').first()
+        last_password = self.oldpasswords_set.all().order_by("-password_date").first()
         if last_password:
             return last_password.password_date
         return None
-    
+
     def get_password_change_history(self, limit=10):
         """
         Returns the password change history for the user
-        
+
         Args:
             limit (int): Maximum number of records to return
-            
+
         Returns:
             list: List of password change dates
         """
         history = []
-        old_passwords = self.oldpasswords_set.all().order_by('-password_date')[:limit]
-        
+        old_passwords = self.oldpasswords_set.all().order_by("-password_date")[:limit]
+
         for old_pwd in old_passwords:
-            history.append({
-                # 'changed_at': timezone.localtime(old_pwd.password_date).strftime('%Y-%m-%d %H:%M:%S %Z'),
-                'days_ago': (date.today() - old_pwd.password_date).days
-            })
-        
+            history.append(
+                {
+                    # 'changed_at': timezone.localtime(old_pwd.password_date).strftime('%Y-%m-%d %H:%M:%S %Z'),
+                    "days_ago": (date.today() - old_pwd.password_date).days
+                }
+            )
+
         return history
 
 

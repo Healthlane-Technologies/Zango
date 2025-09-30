@@ -132,3 +132,13 @@ package-lock.json
 **/plugins/
 
 .docusaurus
+
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Local tfvars terraform.tfvars
+**/*.tfvars
+
+# tf lock file
+**/.terraform.lock.hcl

@@ -15,8 +15,6 @@ import {
 import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelector';
 import { useState , useLayoutEffect} from 'react';
 import { countryCodeList } from '../../../../../utils/countryCodes';
-import toast from 'react-hot-toast';
-import Notifications from '../../../../../components/Notifications';
 
 const AddNewUserForm = ({ closeModal }) => {
 	const [countryCode,setCountryCode] = useState({
@@ -29,6 +27,8 @@ const AddNewUserForm = ({ closeModal }) => {
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const triggerApi = useApi();
+
+
 	let pn_country_code = appUserManagementData?.pn_country_code ?? '+91'
 	useLayoutEffect(()=>{
 		let countryCodeObj = countryCodeList.find((c)=>c.dial_code===pn_country_code)
@@ -76,10 +76,11 @@ const AddNewUserForm = ({ closeModal }) => {
 		if(values.mobile){
 			tempValues = {...values,mobile:countryCode?.dial_code+values.mobile}
 		}
+
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
-			const { response, success } = await triggerApi({
+			const { success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/users/`,
 				type: 'POST',
 				loader: true,
@@ -182,6 +183,7 @@ const AddNewUserForm = ({ closeModal }) => {
 								}
 								formik={formik}
 							/>
+
 						</div>
 						<div className="flex items-center justify-end gap-3 border-t bg-gray-50 px-6 py-4">
 							<button

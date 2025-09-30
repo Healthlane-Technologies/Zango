@@ -122,6 +122,19 @@ class SetPasswordViewAPIV1(APIView):
 
 class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
     def post(self, request, *args, **kwargs):
+        auth_config = request.tenant.auth_config
+        if (
+            not auth_config.get("password_policy", {})
+            .get("reset", {})
+            .get("enabled", False)
+        ):
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": "Password reset is not enabled, please contact support"
+                },
+                status=400,
+            )
         resp = super().post(request, *args, **kwargs)
         data = json.loads(resp.content.decode("utf-8"))
         password_policy = get_auth_priority(policy="password_policy", request=request)
@@ -155,6 +168,19 @@ class ResetPasswordViewAPIV1(ResetPasswordView, PasswordValidationMixin):
         )
 
     def post(self, request, *args, **kwargs):
+        auth_config = request.tenant.auth_config
+        if (
+            not auth_config.get("password_policy", {})
+            .get("reset", {})
+            .get("enabled", False)
+        ):
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": "Password reset is not enabled, please contact support"
+                },
+                status=400,
+            )
         resp = super().post(request, *args, **kwargs)
         resp_data = json.loads(resp.content.decode("utf-8"))
         if not resp_data.get("data"):

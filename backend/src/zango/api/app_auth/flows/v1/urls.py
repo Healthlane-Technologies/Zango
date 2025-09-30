@@ -11,6 +11,7 @@ from .password import (
     SetPasswordViewAPIV1,
 )
 from .role import SwitchRoleAPIV1, UserRoleViewAPIV1
+from .session import AppSessionsViewAPIV1
 
 
 urlpatterns = [
@@ -70,7 +71,16 @@ urlpatterns = [
         MFAVerifyViewAPIV1.as_api_view(client="browser"),
         name="mfa-verify-view",
     ),
-    path("password/set/", SetPasswordViewAPIV1.as_view(), name="account_set_password"),
+    path(
+        "password/set/",
+        SetPasswordViewAPIV1.as_api_view(client="browser"),
+        name="account_set_password",
+    ),
+    path(
+        "app/password/set/",
+        SetPasswordViewAPIV1.as_api_view(client="app"),
+        name="app-account_set_password",
+    ),
     path(
         "app/password/reset/request/",
         RequestResetPasswordViewAPIV1.as_api_view(client="app"),
@@ -90,5 +100,15 @@ urlpatterns = [
         "password/reset/",
         ResetPasswordViewAPIV1.as_api_view(client="browser"),
         name="reset-password-from-key",
+    ),
+    path(
+        "app/sessions/",
+        AppSessionsViewAPIV1.as_api_view(client="app"),
+        name="app-sessions",
+    ),
+    path(
+        "sessions/",
+        AppSessionsViewAPIV1.as_api_view(client="browser"),
+        name="sessions",
     ),
 ]
