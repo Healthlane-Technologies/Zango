@@ -11,7 +11,9 @@ from .serializers import ProfileSerializer
 
 class ProfileViewAPIV1(ZangoGenericAppAPIView):
     def get(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(request.user, context={"request": request})
+        serializer = ProfileSerializer(
+            request.user, context={"request": request, "tenant": request.tenant}
+        )
         success = True
         tokens = AppUserAuthToken.objects.filter(user=request.user)
         token_serializer = AppUserAuthTokenSerializer(

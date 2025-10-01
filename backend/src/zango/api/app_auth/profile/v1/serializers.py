@@ -2,17 +2,45 @@ from rest_framework import serializers
 
 from zango.apps.appauth.models import AppUserModel
 from zango.apps.appauth.serializers import UserRoleSerializerModel
-from zango.core.utils import get_auth_priority
+from zango.core.utils import get_auth_priority, get_datetime_str_in_tenant_timezone
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     profile_pic = serializers.SerializerMethodField()
     roles = UserRoleSerializerModel(many=True)
     auth_config = serializers.JSONField(required=False)
+    last_password_changed = serializers.SerializerMethodField()
 
     class Meta:
         model = AppUserModel
-        fields = ["name", "email", "mobile", "profile_pic", "roles", "auth_config"]
+        fields = [
+            "name",
+            "email",
+            "mobile",
+            "profile_pic",
+            "roles",
+            "auth_config",
+            "last_password_changed",
+        ]
+
+    def get_last_password_changed(self, obj):
+        try:
+            from django_tenants.utils import schema_context
+
+            with schema_context(self.context.get("tenant").schema_name):
+                from zango.apps.appauth.models import OldPasswords
+
+                return get_datetime_str_in_tenant_timezone(
+                    OldPasswords.objects.filter(user=obj)
+                    .latest("password_datetime")
+                    .password_datetime,
+                    tenant=self.context.get("tenant"),
+                )
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+            return None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
