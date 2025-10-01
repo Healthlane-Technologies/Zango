@@ -643,11 +643,11 @@ const ModernAppConfiguration = () => {
 							}
 						>
 							<div>
-								<InfoItem 
-									label="Template File" 
+								<InfoItem
+									label="Template File"
 									value={
-										<a 
-											href={appData.app_template} 
+										<a
+											href={appData.app_template}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="inline-flex items-center gap-[8px] text-[#5048ED] hover:underline"
@@ -655,33 +655,15 @@ const ModernAppConfiguration = () => {
 											<SingleFileIcon className="w-[16px] h-[16px]" />
 											<span>Download Template</span>
 										</a>
-									} 
+									}
 								/>
-								<InfoItem 
-									label="Template Status" 
+								<InfoItem
+									label="Template Status"
 									value={
 										<span className="inline-flex items-center px-[8px] py-[2px] rounded-[12px] text-[11px] font-medium bg-[#10B981] text-white">
 											Configured
 										</span>
-									} 
-								/>
-								<InfoItem 
-									label="File Type" 
-									value={
-										<span className="inline-flex items-center gap-[4px]">
-											<span className="text-[14px] font-mono bg-[#F3F4F6] px-[6px] py-[1px] rounded-[4px] text-[#374151]">
-												{appData.app_template?.split('.').pop()?.toUpperCase() || 'ZIP'}
-											</span>
-										</span>
-									} 
-								/>
-								<InfoItem 
-									label="Template URL" 
-									value={
-										<span className="text-[12px] font-mono text-[#6B7280] break-all">
-											{appData.app_template}
-										</span>
-									} 
+									}
 								/>
 							</div>
 						</SectionCard>
@@ -700,12 +682,14 @@ const ModernAppConfiguration = () => {
 					>
 						<div>
 							{/* Environment Configurations */}
-							{appData?.deployment_config && Object.keys(appData.deployment_config).length > 0 ? (
-								<InfoItem 
-									label="Environment Configurations" 
+							{appData?.deployment_config && Object.keys(appData.deployment_config).filter(env => env !== 'notifications').length > 0 ? (
+								<InfoItem
+									label="Environment Configurations"
 									value={
 										<div className="space-y-[12px]">
-											{Object.entries(appData.deployment_config).map(([environment, config]) => (
+											{Object.entries(appData.deployment_config)
+												.filter(([environment]) => environment !== 'notifications')
+												.map(([environment, config]) => (
 												<div key={environment} className="bg-[#F9FAFB] rounded-[8px] p-[12px] border border-[#E5E7EB]">
 													<div className="flex items-center justify-between mb-[8px]">
 														<span className="text-[12px] font-semibold text-[#374151] uppercase tracking-wide">
@@ -714,12 +698,10 @@ const ModernAppConfiguration = () => {
 														<span className={`inline-flex items-center px-[6px] py-[1px] rounded-[6px] text-[10px] font-medium ${
 															environment === 'main' ? 'bg-[#10B981] text-white' :
 															environment === 'staging' ? 'bg-[#F59E0B] text-white' :
-															environment === 'notifications' ? 'bg-[#8B5CF6] text-white' :
 															'bg-[#6B7280] text-white'
 														}`}>
-															{environment === 'main' ? 'PROD' : 
+															{environment === 'main' ? 'PROD' :
 															 environment === 'staging' ? 'STAGE' :
-															 environment === 'notifications' ? 'NOTIFY' : 
 															 'DEV'}
 														</span>
 													</div>
@@ -745,25 +727,50 @@ const ModernAppConfiguration = () => {
 												</div>
 											))}
 										</div>
-									} 
+									}
 								/>
 							) : (
-								<InfoItem 
-									label="Environment Configurations" 
-									value="No deployment configuration available" 
+								<InfoItem
+									label="Environment Configurations"
+									value="No deployment configuration available"
+								/>
+							)}
+
+							{/* Slack Notifications */}
+							{appData?.deployment_config?.notifications && (
+								<InfoItem
+									label="Slack Notifications"
+									value={
+										<div className="bg-[#F9FAFB] rounded-[8px] p-[12px] border border-[#E5E7EB]">
+											<div className="flex items-center justify-between mb-[8px]">
+												<span className="text-[12px] font-semibold text-[#374151] uppercase tracking-wide">
+													Slack Channel
+												</span>
+												<span className="inline-flex items-center px-[6px] py-[1px] rounded-[6px] text-[10px] font-medium bg-[#8B5CF6] text-white">
+													SLACK
+												</span>
+											</div>
+											<div className="text-[12px]">
+												<span className="text-[#6B7280] font-medium">Channel:</span>
+												<span className="text-[#111827] font-mono bg-[#F3F4F6] px-[6px] py-[1px] rounded-[4px] ml-[8px]">
+													{appData.deployment_config.notifications.channel || appData.deployment_config.notifications}
+												</span>
+											</div>
+										</div>
+									}
 								/>
 							)}
 
 							{appData?.suspended_on && (
-								<InfoItem 
-									label="Suspended On" 
-									value={new Date(appData.suspended_on).toLocaleString()} 
+								<InfoItem
+									label="Suspended On"
+									value={new Date(appData.suspended_on).toLocaleString()}
 								/>
 							)}
 							{appData?.deleted_on && (
-								<InfoItem 
-									label="Deleted On" 
-									value={new Date(appData.deleted_on).toLocaleString()} 
+								<InfoItem
+									label="Deleted On"
+									value={new Date(appData.deleted_on).toLocaleString()}
 								/>
 							)}
 						</div>

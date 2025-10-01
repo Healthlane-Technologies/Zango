@@ -34,7 +34,6 @@ class TenantSerializerModel(serializers.ModelSerializer):
             from django_tenants.utils import schema_context
 
             with schema_context(obj.schema_name):
-                print("current schema is", obj.schema_name)
                 from zango.apps.release.models import AppRelease
 
                 latest_release = (
