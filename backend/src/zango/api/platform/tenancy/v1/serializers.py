@@ -25,6 +25,32 @@ class TenantSerializerModel(serializers.ModelSerializer):
     )
     date_format_display = serializers.SerializerMethodField("get_date_format_display")
     deployment_config = serializers.SerializerMethodField("get_deployment_config")
+    last_released_version = serializers.SerializerMethodField(
+        "get_last_released_version"
+    )
+
+    def get_last_released_version(self, obj):
+        try:
+            from django_tenants.utils import schema_context
+
+            with schema_context(obj.schema_name):
+                print("current schema is", obj.schema_name)
+                from zango.apps.release.models import AppRelease
+
+                latest_release = (
+                    AppRelease.objects.filter(
+                        status="released",
+                    )
+                    .order_by("-created_at")
+                    .first()
+                    .version
+                )
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+            latest_release = None
+        return latest_release
 
     def get_deployment_config(self, obj):
         try:
