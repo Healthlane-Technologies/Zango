@@ -125,7 +125,7 @@ class Workspace:
                 for mod in item["modules"]:
                     path = self.get_package_path(item["name"]) + mod["path"]
                     if path not in modules:
-                        modules.append(path)
+                        modules.append(path.replace(".", "/"))
             if item["type"] == "module":
                 # Convert nested module path (e.g., "test_mod.test_sub") to filesystem path
                 fs_path = item["path"].replace(".", "/")
@@ -363,6 +363,10 @@ class Workspace:
 
         package_routes = _settings["package_routes"]
         for route in package_routes:
+            pkg_module_paths = {
+                module["name"]: module["path"]
+                for module in self.get_package_modules(route["package"])
+            }
             pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
             for pkg_route in pkg_app_routes:
                 routes.append(
@@ -371,7 +375,7 @@ class Workspace:
                         "module": "packages."
                         + route["package"]
                         + "."
-                        + pkg_route["module"],
+                        + pkg_module_paths[pkg_route["module"]],
                         "url": pkg_route["url"],
                     }
                 )
@@ -601,7 +605,6 @@ class Workspace:
                 model_module = model_module.lstrip("/").replace("/", ".")
                 if "packages" in model_module:
                     policy_path = ".".join(model_module.split(".")[2:5])
-                    print(policy_path)
                 else:
                     # For nested modules, take all parts except the last one (which is "policies")
                     # This handles both simple modules (auth) and nested modules (test_mod.test_sub)
