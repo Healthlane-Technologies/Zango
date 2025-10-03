@@ -49,15 +49,12 @@ class ProfileSerializer(serializers.ModelSerializer):
         tenant = self.context.get("tenant")
         auth_config = get_auth_priority(tenant=tenant, user=instance)
         twofa_enabled = auth_config.get("two_factor_auth", {}).get("required", False)
-        print("### twofa_enabled: ", twofa_enabled)
-        twofa_enforced_at_app_or_role_level = False
         for role in instance.roles.all():
             role_twofa_config = get_auth_priority(
                 tenant=tenant, user_role=role, policy="two_factor_auth"
             )
             if role_twofa_config.get("required", False):
                 twofa_enabled = True
-                twofa_enforced_at_app_or_role_level = True
                 break
         auth_config["two_factor_auth"]["required"] = twofa_enabled
         if not twofa_enabled:
