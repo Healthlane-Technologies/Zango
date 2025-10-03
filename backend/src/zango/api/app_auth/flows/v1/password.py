@@ -28,6 +28,10 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
         """
         try:
             user = authenticate(request=request, username=email, password=password)
+            if user is None:
+                raise ValidationError(
+                    "The current password you have entered is wrong. Please try again!"
+                )
         except Exception:
             import traceback
 
@@ -53,14 +57,24 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
             "allow_change", True
         ):
             try:
-                self.clean_password(
-                    request,
-                    request.user.email,
-                    self.input.cleaned_data["current_password"],
-                )
+                # Check if user has an unusable password (e.g., OAuth users)
+                has_usable_password = request.user.has_usable_password()
+
+                if has_usable_password:
+                    # Validate current password for users with usable passwords
+                    self.clean_password(
+                        request,
+                        request.user.email,
+                        self.input.cleaned_data["current_password"],
+                    )
+                    current_password = self.input.cleaned_data["current_password"]
+                else:
+                    # Skip current password validation for users with unusable passwords
+                    current_password = None
+
                 self.clean_password2(
                     request.user,
-                    self.input.cleaned_data["current_password"],
+                    current_password,
                     self.input.cleaned_data["new_password"],
                 )
                 resp = super().post(request, *args, **kwargs)

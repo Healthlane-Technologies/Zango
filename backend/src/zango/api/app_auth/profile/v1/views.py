@@ -4,26 +4,30 @@ from zango.core.api import (
     ZangoGenericAppAPIView,
     get_api_response,
 )
-from zango.core.utils import get_auth_priority
+from zango.core.utils import get_current_role
 
 from .serializers import ProfileSerializer
 
 
 class ProfileViewAPIV1(ZangoGenericAppAPIView):
     def get(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(request.user, context={"request": request})
+        serializer = ProfileSerializer(
+            request.user, context={"request": request, "tenant": request.tenant}
+        )
         success = True
         tokens = AppUserAuthToken.objects.filter(user=request.user)
         token_serializer = AppUserAuthTokenSerializer(
             tokens, many=True, context={"request": request, "tenant": request.tenant}
         )
-        password_policy = get_auth_priority(
-            policy="password_policy", user=request.user, request=request
-        )
+        role = get_current_role()
         response = {
             "message": "success",
             "profile_data": serializer.data,
-            "password_policy": password_policy,
+            "should_set_password": request.user.has_usable_password() is False,
+            "current_role": {
+                "id": role.id,
+                "name": role.name,
+            },
             "tokens": token_serializer.data,
         }
         status = 200
