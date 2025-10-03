@@ -289,6 +289,8 @@ def deep_merge(target: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]
 
 
 def filter_user_auth_config(user_auth_config, user_role_auth_config):
+    if user_auth_config.get("two_factor_auth", {}).get("required"):
+        return user_auth_config
     if user_role_auth_config.get("two_factor_auth", {}).get("required"):
         if user_auth_config.get("two_factor_auth", {}):
             user_auth_config["two_factor_auth"]["required"] = True

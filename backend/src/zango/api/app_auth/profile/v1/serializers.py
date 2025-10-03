@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from django.core.exceptions import ValidationError
+
 from zango.apps.appauth.models import AppUserModel
 from zango.apps.appauth.serializers import UserRoleSerializerModel
 from zango.core.utils import get_auth_priority, get_datetime_str_in_tenant_timezone
@@ -47,12 +49,15 @@ class ProfileSerializer(serializers.ModelSerializer):
         tenant = self.context.get("tenant")
         auth_config = get_auth_priority(tenant=tenant, user=instance)
         twofa_enabled = auth_config.get("two_factor_auth", {}).get("required", False)
+        print("### twofa_enabled: ", twofa_enabled)
+        twofa_enforced_at_app_or_role_level = False
         for role in instance.roles.all():
             role_twofa_config = get_auth_priority(
                 tenant=tenant, user_role=role, policy="two_factor_auth"
             )
             if role_twofa_config.get("required", False):
                 twofa_enabled = True
+                twofa_enforced_at_app_or_role_level = True
                 break
         auth_config["two_factor_auth"]["required"] = twofa_enabled
         if not twofa_enabled:
@@ -63,7 +68,23 @@ class ProfileSerializer(serializers.ModelSerializer):
                 )
             else:
                 auth_config["two_factor_auth"]["can_enable"] = True
+        else:
+            can_disable_twofa = True
+            try:
+                self.instance.validate_auth_config(
+                    {"two_factor_auth": {"required": False}},
+                    self.instance,
+                    self.instance.roles.all(),
+                    tenant,
+                )
+            except ValidationError:
+                can_disable_twofa = False
+
+            # Check if user can disable two_factor_auth
+            auth_config["two_factor_auth"]["can_disable"] = can_disable_twofa
+
         data["auth_config"] = auth_config
+
         return data
 
     def get_profile_pic(self, obj):
