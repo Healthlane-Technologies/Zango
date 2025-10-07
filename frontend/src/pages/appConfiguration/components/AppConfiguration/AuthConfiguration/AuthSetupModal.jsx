@@ -10,8 +10,8 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	const defaultSetupData = {
 		login_methods: {
 			allowed_usernames: ['email'], // Default to email
-			password: { 
-				enabled: false, 
+			password: {
+				enabled: false,
 				forgot_password_enabled: false,
 				reset_method: 'link', // 'link' or 'code'
 				reset_expiry_minutes: 15,
@@ -22,16 +22,18 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				reset_sms_content: 'Your password reset code is: {{code}}. Valid for {{expiry}} minutes.',
 				reset_email_subject: 'Password Reset Request',
 				reset_email_content: 'Click the following link to reset your password: {{link}}. This link is valid for {{expiry}} minutes.',
+				allowed_usernames: ['email', 'phone'],
 			},
 			sso: { enabled: false },
 			oidc: { enabled: false },
-			otp: { 
+			otp: {
 				enabled: false,
 				sms_webhook: '',
 				email_webhook: '',
 				sms_content: 'Your OTP code is: {{otp}}. Valid for 10 minutes.',
 				email_subject: 'Your OTP Verification Code',
 				email_content: 'Your OTP code is: {{otp}}. This code is valid for 10 minutes.',
+				allowed_methods: ['email', 'sms'],
 			},
 		},
 		password_policy: {
@@ -43,6 +45,11 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			password_history_count: 3,
 			password_expiry_days: 90,
 			allow_change: true,
+			reset: {
+				expiry: 7200, // 2 hours in seconds
+				enabled: true,
+				allowed_methods: ['email'],
+			},
 		},
 		two_factor_auth: {
 			required: false,

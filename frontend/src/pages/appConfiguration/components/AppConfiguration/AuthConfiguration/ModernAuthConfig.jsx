@@ -136,24 +136,73 @@ const ModernAuthConfig = () => {
 					onClose={() => setShowAuthSetupModal(false)}
 					roles={roles}
 					onComplete={async (authData) => {
-						// Prepare the auth configuration data
+						// Transform to expected format
 						const authConfig = {
-							...authData,
 							login_methods: {
-								...authData.login_methods,
 								password: {
-									...authData.login_methods.password,
-									password_reset_link_expiry_hours: 24, // Default reset link expiry
-								}
-							}
+									enabled: authData.login_methods.password.enabled,
+									forgot_password_enabled: authData.login_methods.password.forgot_password_enabled,
+									password_reset_link_expiry_hours: 24, // Default
+									allowed_usernames: authData.login_methods.allowed_usernames,
+									reset_method: authData.login_methods.password.reset_method,
+									reset_via_sms: authData.login_methods.password.reset_via_sms,
+									reset_via_email: authData.login_methods.password.reset_via_email,
+									reset_sms_content: authData.login_methods.password.reset_sms_content,
+									reset_sms_webhook: authData.login_methods.password.reset_sms_webhook,
+									reset_email_content: authData.login_methods.password.reset_email_content,
+									reset_email_subject: authData.login_methods.password.reset_email_subject,
+									reset_email_webhook: authData.login_methods.password.reset_email_webhook,
+									reset_expiry_minutes: authData.login_methods.password.reset_expiry_minutes,
+								},
+								otp: {
+									enabled: authData.login_methods.otp.enabled,
+									sms_content: authData.login_methods.otp.sms_content,
+									sms_webhook: authData.login_methods.otp.sms_webhook,
+									email_content: authData.login_methods.otp.email_content,
+									email_subject: authData.login_methods.otp.email_subject,
+									email_webhook: authData.login_methods.otp.email_webhook,
+									allowed_methods: authData.login_methods.otp.allowed_methods || ['email', 'sms'],
+								},
+								sso: { enabled: authData.login_methods.sso.enabled },
+								oidc: { enabled: authData.login_methods.oidc.enabled },
+								allowed_usernames: authData.login_methods.allowed_usernames,
+							},
+							session_policy: {
+								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
+								force_logout_on_password_change: authData.session_policy.force_logout_on_password_change,
+							},
+							password_policy: {
+								reset: {
+									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
+									enabled: authData.login_methods.password.forgot_password_enabled,
+									allowed_methods: (() => {
+										const methods = [];
+										if (authData.login_methods.password.reset_via_email) methods.push('email');
+										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
+										return methods.length > 0 ? methods : ['email'];
+									})(),
+								},
+								min_length: authData.password_policy.min_length,
+								allow_change: authData.password_policy.allow_change,
+								require_numbers: authData.password_policy.require_numbers,
+								require_lowercase: authData.password_policy.require_lowercase,
+								require_uppercase: authData.password_policy.require_uppercase,
+								password_expiry_days: authData.password_policy.password_expiry_days,
+								require_special_chars: authData.password_policy.require_special_chars,
+								password_history_count: authData.password_policy.password_history_count,
+							},
+							two_factor_auth: {
+								required: authData.two_factor_auth.required,
+								allowedMethods: authData.two_factor_auth.allowedMethods,
+							},
 						};
-						
+
 						// Save the configuration
 						const tempValues = {
 							auth_config: JSON.stringify(authConfig)
 						};
 						const dynamicFormData = transformToFormData(tempValues);
-						
+
 						try {
 							const { response, success } = await triggerApi({
 								url: `/api/v1/apps/${appId}/`,
@@ -1282,16 +1331,65 @@ const ModernAuthConfig = () => {
 					initialData={authConfig}
 					roles={roles}
 					onComplete={async (authData) => {
-						// Prepare the auth configuration data
+						// Transform to expected format
 						const updatedAuthConfig = {
-							...authData,
 							login_methods: {
-								...authData.login_methods,
 								password: {
-									...authData.login_methods.password,
+									enabled: authData.login_methods.password.enabled,
+									forgot_password_enabled: authData.login_methods.password.forgot_password_enabled,
 									password_reset_link_expiry_hours: authConfig?.login_methods?.password?.password_reset_link_expiry_hours || 24,
-								}
-							}
+									allowed_usernames: authData.login_methods.allowed_usernames,
+									reset_method: authData.login_methods.password.reset_method,
+									reset_via_sms: authData.login_methods.password.reset_via_sms,
+									reset_via_email: authData.login_methods.password.reset_via_email,
+									reset_sms_content: authData.login_methods.password.reset_sms_content,
+									reset_sms_webhook: authData.login_methods.password.reset_sms_webhook,
+									reset_email_content: authData.login_methods.password.reset_email_content,
+									reset_email_subject: authData.login_methods.password.reset_email_subject,
+									reset_email_webhook: authData.login_methods.password.reset_email_webhook,
+									reset_expiry_minutes: authData.login_methods.password.reset_expiry_minutes,
+								},
+								otp: {
+									enabled: authData.login_methods.otp.enabled,
+									sms_content: authData.login_methods.otp.sms_content,
+									sms_webhook: authData.login_methods.otp.sms_webhook,
+									email_content: authData.login_methods.otp.email_content,
+									email_subject: authData.login_methods.otp.email_subject,
+									email_webhook: authData.login_methods.otp.email_webhook,
+									allowed_methods: authData.login_methods.otp.allowed_methods || ['email', 'sms'],
+								},
+								sso: { enabled: authData.login_methods.sso.enabled },
+								oidc: { enabled: authData.login_methods.oidc.enabled },
+								allowed_usernames: authData.login_methods.allowed_usernames,
+							},
+							session_policy: {
+								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
+								force_logout_on_password_change: authData.session_policy.force_logout_on_password_change,
+							},
+							password_policy: {
+								reset: {
+									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
+									enabled: authData.login_methods.password.forgot_password_enabled,
+									allowed_methods: (() => {
+										const methods = [];
+										if (authData.login_methods.password.reset_via_email) methods.push('email');
+										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
+										return methods.length > 0 ? methods : ['email'];
+									})(),
+								},
+								min_length: authData.password_policy.min_length,
+								allow_change: authData.password_policy.allow_change,
+								require_numbers: authData.password_policy.require_numbers,
+								require_lowercase: authData.password_policy.require_lowercase,
+								require_uppercase: authData.password_policy.require_uppercase,
+								password_expiry_days: authData.password_policy.password_expiry_days,
+								require_special_chars: authData.password_policy.require_special_chars,
+								password_history_count: authData.password_policy.password_history_count,
+							},
+							two_factor_auth: {
+								required: authData.two_factor_auth.required,
+								allowedMethods: authData.two_factor_auth.allowedMethods,
+							},
 						};
 
 						// Save the configuration
