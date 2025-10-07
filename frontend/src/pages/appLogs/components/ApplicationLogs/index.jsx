@@ -88,6 +88,11 @@ export default function ApplicationLogs() {
 		fetchLogs();
 	}, [appId, page, pageSize, searchTerm, filters]);
 
+	// Reset page to 1 when search term or filters change
+	useEffect(() => {
+		setPage(1);
+	}, [searchTerm, filters]);
+
 	// Toggle log expansion
 	const toggleLogExpansion = (logId) => {
 		setExpandedLogs(prev => ({
@@ -96,21 +101,10 @@ export default function ApplicationLogs() {
 		}));
 	};
 
-	// Format timestamp
+	// Format timestamp - removed relative formatting, show actual timestamp
 	const formatTimestamp = (timestamp) => {
-		const date = new Date(timestamp);
-		const now = new Date();
-		const diffMs = now - date;
-		const diffMins = Math.floor(diffMs / 60000);
-		const diffHours = Math.floor(diffMs / 3600000);
-		const diffDays = Math.floor(diffMs / 86400000);
-
-		if (diffMins < 1) return 'Just now';
-		if (diffMins < 60) return `${diffMins} minutes ago`;
-		if (diffHours < 24) return `${diffHours} hours ago`;
-		if (diffDays < 7) return `${diffDays} days ago`;
-		
-		return date.toLocaleString();
+		// Return the timestamp as received from the API
+		return timestamp;
 	};
 
 	// Get action badge color
@@ -563,7 +557,7 @@ export default function ApplicationLogs() {
 													<div>
 														<span className="text-gray-600">Timestamp:</span>
 														<span className="ml-2 text-gray-900">
-															{new Date(log.timestamp).toLocaleString()}
+															{log.timestamp}
 														</span>
 													</div>
 												</div>

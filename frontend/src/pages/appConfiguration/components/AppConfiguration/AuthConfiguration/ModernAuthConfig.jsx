@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -751,61 +751,225 @@ const ModernAuthConfig = () => {
 						<div className="space-y-[24px]">
 							{/* Quick Stats */}
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[16px]">
-								<QuickStat 
-									label="Active Login Methods" 
-									value={activeLoginMethods.length} 
+								<QuickStat
+									label="Active Login Methods"
+									value={activeLoginMethods.length}
 									color="blue"
 								/>
-								<QuickStat 
-									label="Two-Factor Auth" 
-									value={authConfig.two_factor_auth?.required ? 'Required' : 'Optional'} 
+								<QuickStat
+									label="Two-Factor Auth"
+									value={authConfig.two_factor_auth?.required ? 'Required' : 'Optional'}
 									color="green"
 								/>
-								<QuickStat 
-									label="Max Sessions" 
-									value={authConfig.session_policy?.max_concurrent_sessions || 'Unlimited'} 
+								<QuickStat
+									label="Max Sessions"
+									value={authConfig.session_policy?.max_concurrent_sessions || 'Unlimited'}
 									color="purple"
 								/>
-								<QuickStat 
-									label="Password Expiry" 
-									value={`${authConfig.password_policy?.password_expiry_days || 90} days`} 
+								<QuickStat
+									label="Password Expiry"
+									value={`${authConfig.password_policy?.password_expiry_days || 90} days`}
 									color="amber"
 								/>
 							</div>
 
-							{/* Visual Overview */}
-							<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[32px]">
-								<h3 className="text-[16px] font-semibold text-[#111827] mb-[24px]">Authentication Flow</h3>
-								<div className="flex items-center justify-center gap-[24px] flex-wrap">
-									{activeLoginMethods.map((method, index) => (
-										<React.Fragment key={method}>
-											{index > 0 && <span className="text-[#E5E7EB]">→</span>}
-											<div className="flex flex-col items-center gap-[8px]">
-												<div className="w-[60px] h-[60px] bg-[#EFF6FF] rounded-full flex items-center justify-center">
-													<span className="text-[24px]">
-														{method === 'Password' && '🔑'}
-														{method === 'OTP' && '📱'}
-														{method === 'SSO' && '🔗'}
-														{method === 'OIDC' && '🌐'}
+							{/* Authentication Overview */}
+							<div className="grid grid-cols-1 lg:grid-cols-2 gap-[24px]">
+								{/* Login Methods Overview */}
+								<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
+									<div className="flex items-center gap-[12px] mb-[20px]">
+										<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] rounded-[12px] flex items-center justify-center">
+											<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+												<path d="M10 11.667C11.8409 11.667 13.3333 10.1743 13.3333 8.33333C13.3333 6.49238 11.8409 5 10 5C8.15905 5 6.66667 6.49238 6.66667 8.33333C6.66667 10.1743 8.15905 11.667 10 11.667Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+												<path d="M10 15C13.3333 15 16.6667 13.3333 16.6667 11.6667C16.6667 10 10 10 10 10C10 10 3.33333 10 3.33333 11.6667C3.33333 13.3333 6.66667 15 10 15Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+										</div>
+										<div>
+											<h3 className="text-[16px] font-semibold text-[#111827]">Login Methods</h3>
+											<p className="text-[12px] text-[#6B7280]">{activeLoginMethods.length} method{activeLoginMethods.length !== 1 ? 's' : ''} enabled</p>
+										</div>
+									</div>
+									<div className="space-y-[12px]">
+										{authConfig.login_methods?.password?.enabled && (
+											<div className="flex items-start gap-[12px] p-[12px] bg-[#F9FAFB] rounded-[8px]">
+												<div className="flex-shrink-0 w-[32px] h-[32px] bg-[#EFF6FF] rounded-[8px] flex items-center justify-center">
+													<span className="text-[18px]">🔑</span>
+												</div>
+												<div className="flex-1">
+													<p className="text-[14px] font-medium text-[#111827]">Password Authentication</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">
+														{authConfig.login_methods?.allowed_usernames?.map(type => type.charAt(0).toUpperCase() + type.slice(1)).join(', ')}
+														{authConfig.login_methods?.password?.forgot_password_enabled && ' • Forgot password enabled'}
+													</p>
+												</div>
+											</div>
+										)}
+										{authConfig.login_methods?.otp?.enabled && (
+											<div className="flex items-start gap-[12px] p-[12px] bg-[#F9FAFB] rounded-[8px]">
+												<div className="flex-shrink-0 w-[32px] h-[32px] bg-[#EFF6FF] rounded-[8px] flex items-center justify-center">
+													<span className="text-[18px]">📱</span>
+												</div>
+												<div className="flex-1">
+													<p className="text-[14px] font-medium text-[#111827]">One-Time Password (OTP)</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">SMS or email verification codes</p>
+												</div>
+											</div>
+										)}
+										{authConfig.login_methods?.sso?.enabled && (
+											<div className="flex items-start gap-[12px] p-[12px] bg-[#F9FAFB] rounded-[8px]">
+												<div className="flex-shrink-0 w-[32px] h-[32px] bg-[#EFF6FF] rounded-[8px] flex items-center justify-center">
+													<span className="text-[18px]">🔗</span>
+												</div>
+												<div className="flex-1">
+													<p className="text-[14px] font-medium text-[#111827]">Single Sign-On (SSO)</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">Enterprise SSO integration</p>
+												</div>
+											</div>
+										)}
+										{authConfig.login_methods?.oidc?.enabled && (
+											<div className="flex items-start gap-[12px] p-[12px] bg-[#F9FAFB] rounded-[8px]">
+												<div className="flex-shrink-0 w-[32px] h-[32px] bg-[#EFF6FF] rounded-[8px] flex items-center justify-center">
+													<span className="text-[18px]">🌐</span>
+												</div>
+												<div className="flex-1">
+													<p className="text-[14px] font-medium text-[#111827]">OpenID Connect (OIDC)</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">OAuth 2.0 based authentication</p>
+												</div>
+											</div>
+										)}
+									</div>
+								</div>
+
+								{/* Security Overview */}
+								<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
+									<div className="flex items-center gap-[12px] mb-[20px]">
+										<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#10B981] to-[#059669] rounded-[12px] flex items-center justify-center">
+											<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+												<path d="M10 1.667L3.33333 4.16699V9.16699C3.33333 13.5003 6.21667 17.5337 10 18.3337C13.7833 17.5337 16.6667 13.5003 16.6667 9.16699V4.16699L10 1.667Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+												<path d="M10 10.833V10.8413" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+										</div>
+										<div>
+											<h3 className="text-[16px] font-semibold text-[#111827]">Security Settings</h3>
+											<p className="text-[12px] text-[#6B7280]">Protection & policies</p>
+										</div>
+									</div>
+									<div className="space-y-[16px]">
+										{/* Two-Factor Auth */}
+										<div className="p-[12px] bg-[#F9FAFB] rounded-[8px]">
+											<div className="flex items-center justify-between mb-[4px]">
+												<p className="text-[13px] font-medium text-[#111827]">Two-Factor Authentication</p>
+												<span className={`px-[8px] py-[2px] rounded-[6px] text-[11px] font-medium ${
+													authConfig.two_factor_auth?.required
+														? 'bg-[#D1FAE5] text-[#065F46]'
+														: 'bg-[#FEF3C7] text-[#92400E]'
+												}`}>
+													{authConfig.two_factor_auth?.required ? 'Required' : 'Optional'}
+												</span>
+											</div>
+											{authConfig.two_factor_auth?.allowedMethods?.length > 0 && (
+												<p className="text-[12px] text-[#6B7280]">
+													Methods: {authConfig.two_factor_auth.allowedMethods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+												</p>
+											)}
+										</div>
+
+										{/* Session Policy */}
+										<div className="p-[12px] bg-[#F9FAFB] rounded-[8px]">
+											<div className="flex items-center justify-between mb-[4px]">
+												<p className="text-[13px] font-medium text-[#111827]">Concurrent Sessions</p>
+												<span className="px-[8px] py-[2px] bg-[#EDE9FE] text-[#6B21A8] rounded-[6px] text-[11px] font-medium">
+													{authConfig.session_policy?.max_concurrent_sessions || 'Unlimited'}
+												</span>
+											</div>
+											<p className="text-[12px] text-[#6B7280]">
+												{authConfig.session_policy?.force_logout_on_password_change
+													? 'Force logout on password change'
+													: 'Sessions maintained on password change'}
+											</p>
+										</div>
+
+										{/* Password Policy Summary */}
+										<div className="p-[12px] bg-[#F9FAFB] rounded-[8px]">
+											<p className="text-[13px] font-medium text-[#111827] mb-[4px]">Password Policy</p>
+											<div className="flex flex-wrap gap-[6px]">
+												<span className="px-[6px] py-[2px] bg-white border border-[#E5E7EB] rounded-[4px] text-[11px] text-[#6B7280]">
+													Min {authConfig.password_policy?.min_length || 8} chars
+												</span>
+												{authConfig.password_policy?.require_uppercase && (
+													<span className="px-[6px] py-[2px] bg-white border border-[#E5E7EB] rounded-[4px] text-[11px] text-[#6B7280]">
+														Uppercase
 													</span>
-												</div>
-												<span className="text-[12px] font-medium text-[#111827]">{method}</span>
+												)}
+												{authConfig.password_policy?.require_lowercase && (
+													<span className="px-[6px] py-[2px] bg-white border border-[#E5E7EB] rounded-[4px] text-[11px] text-[#6B7280]">
+														Lowercase
+													</span>
+												)}
+												{authConfig.password_policy?.require_numbers && (
+													<span className="px-[6px] py-[2px] bg-white border border-[#E5E7EB] rounded-[4px] text-[11px] text-[#6B7280]">
+														Numbers
+													</span>
+												)}
+												{authConfig.password_policy?.require_special_chars && (
+													<span className="px-[6px] py-[2px] bg-white border border-[#E5E7EB] rounded-[4px] text-[11px] text-[#6B7280]">
+														Special chars
+													</span>
+												)}
 											</div>
-										</React.Fragment>
-									))}
-									{authConfig.two_factor_auth?.required && (
-										<>
-											<span className="text-[#E5E7EB]">→</span>
-											<div className="flex flex-col items-center gap-[8px]">
-												<div className="w-[60px] h-[60px] bg-[#D1FAE5] rounded-full flex items-center justify-center">
-													<span className="text-[24px]">🛡️</span>
-												</div>
-												<span className="text-[12px] font-medium text-[#111827]">2FA</span>
-											</div>
-										</>
-									)}
+										</div>
+									</div>
 								</div>
 							</div>
+
+							{/* Role Overrides Summary */}
+							{roles.some(role => role.auth_config?.override_applied === true) && (
+								<div className="bg-gradient-to-br from-[#F8FAFC] to-[#EFF6FF] rounded-[16px] border border-[#E5E7EB] p-[24px]">
+									<div className="flex items-center gap-[12px] mb-[16px]">
+										<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-[12px] flex items-center justify-center">
+											<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+												<path d="M10 5V10L13.3333 11.6667M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+										</div>
+										<div>
+											<h3 className="text-[16px] font-semibold text-[#111827]">Role-Specific Policies</h3>
+											<p className="text-[12px] text-[#6B7280]">Custom authentication rules for specific roles</p>
+										</div>
+									</div>
+									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[12px]">
+										{roles.filter(role => role.auth_config?.override_applied === true).map(role => (
+											<div key={role.id} className="bg-white rounded-[10px] border border-[#E5E7EB] p-[12px]">
+												<div className="flex items-center gap-[8px] mb-[8px]">
+													<div className="w-[24px] h-[24px] bg-[#5048ED] rounded-[6px] flex items-center justify-center">
+														<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+															<path d="M6 6C7.24264 6 8.25 4.99264 8.25 3.75C8.25 2.50736 7.24264 1.5 6 1.5C4.75736 1.5 3.75 2.50736 3.75 3.75C3.75 4.99264 4.75736 6 6 6Z" stroke="white" strokeLinecap="round" strokeLinejoin="round"/>
+															<path d="M1.5 10.5C1.5 8.84315 2.84315 7.5 4.5 7.5H7.5C9.15685 7.5 10.5 8.84315 10.5 10.5" stroke="white" strokeLinecap="round" strokeLinejoin="round"/>
+														</svg>
+													</div>
+													<p className="text-[13px] font-semibold text-[#111827]">{role.name}</p>
+												</div>
+												<div className="flex flex-wrap gap-[4px]">
+													{role.auth_config.password_policy && (
+														<span className="px-[6px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[10px] font-medium">
+															Password
+														</span>
+													)}
+													{role.auth_config.two_factor_auth?.required && (
+														<span className="px-[6px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[10px] font-medium">
+															2FA Required
+														</span>
+													)}
+													{role.auth_config.session_policy && (
+														<span className="px-[6px] py-[2px] bg-[#FEF3C7] text-[#92400E] rounded-[4px] text-[10px] font-medium">
+															Session
+														</span>
+													)}
+												</div>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
 						</div>
 					)}
 

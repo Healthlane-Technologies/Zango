@@ -157,7 +157,7 @@ export default function Packages() {
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-sm font-medium text-gray-600">Installed Packages</p>
-							<p className="text-2xl font-semibold text-purple-600 mt-1">{packages.length}</p>
+							<p className="text-2xl font-semibold text-purple-600 mt-1">{packagesData?.installed_count || 0}</p>
 						</div>
 						<svg width="32" height="32" viewBox="0 0 32 32" fill="none">
 							<path d="M6 16H26" className="stroke-purple-600" strokeWidth="2" strokeLinecap="round"/>

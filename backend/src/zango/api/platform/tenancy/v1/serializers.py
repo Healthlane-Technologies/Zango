@@ -8,7 +8,7 @@ from zango.apps.appauth.models import AppUserModel, UserRoleModel
 from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
-from zango.core.utils import get_auth_priority
+from zango.core.utils import get_auth_priority, get_datetime_str_in_tenant_timezone
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -195,10 +195,24 @@ class AppUserModelSerializerModel(
     roles = UserRoleSerializerModel(many=True)
     pn_country_code = serializers.SerializerMethodField()
     auth_config = serializers.JSONField(required=False)
+    date_joined = serializers.SerializerMethodField()
+    last_login = serializers.SerializerMethodField()
 
     class Meta:
         model = AppUserModel
         fields = "__all__"
+
+    def get_date_joined(self, obj):
+        return get_datetime_str_in_tenant_timezone(
+            obj.date_joined, self.context["tenant"]
+        )
+
+    def get_last_login(self, obj):
+        if not obj.last_login:
+            return None
+        return get_datetime_str_in_tenant_timezone(
+            obj.last_login, self.context["tenant"]
+        )
 
     def get_roles(self, obj):
         roles_serializer = UserRoleSerializerModel(

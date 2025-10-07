@@ -102,21 +102,6 @@ export default function AppUserManagement() {
 		}));
 	};
 
-	// Format date
-	const formatDate = (dateString) => {
-		if (!dateString) return '-';
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffMs = now - date;
-		const diffDays = Math.floor(diffMs / 86400000);
-		
-		if (diffDays === 0) return 'Today';
-		if (diffDays === 1) return 'Yesterday';
-		if (diffDays < 7) return `${diffDays} days ago`;
-		
-		return date.toLocaleDateString();
-	};
-
 	const users = appUserManagementData?.users?.records || [];
 	const totalUsers = appUserManagementData?.users?.total_records || 0;
 	const activeUsersCount = appUserManagementData?.users?.active_count || users.filter(user => user.is_active).length;
@@ -325,12 +310,10 @@ export default function AppUserManagement() {
 							users={users}
 							expandedRows={expandedRows}
 							toggleRowExpansion={toggleRowExpansion}
-							formatDate={formatDate}
 						/>
 					) : (
 						<UsersTable
 							users={users}
-							formatDate={formatDate}
 						/>
 					)}
 				</div>
@@ -404,19 +387,18 @@ export default function AppUserManagement() {
 }
 
 // Users List Component
-function UsersList({ users, expandedRows, toggleRowExpansion, formatDate }) {
+function UsersList({ users, expandedRows, toggleRowExpansion }) {
 	return (
 		<>
 			{users.map((user) => {
 				const isExpanded = expandedRows[user.id];
-				
+
 				return (
 					<UserCard
 						key={user.id}
 						user={user}
 						isExpanded={isExpanded}
 						toggleExpansion={toggleRowExpansion}
-						formatDate={formatDate}
 					/>
 				);
 			})}
@@ -425,7 +407,7 @@ function UsersList({ users, expandedRows, toggleRowExpansion, formatDate }) {
 }
 
 // User Card Component
-function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
+function UserCard({ user, isExpanded, toggleExpansion }) {
 	const dispatch = useDispatch();
 
 	const handleEdit = () => {
@@ -552,33 +534,74 @@ function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
 			{/* Expanded Details */}
 			{isExpanded && (
 				<div className="border-t bg-muted/50 p-6">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+						{/* User Details */}
 						<div>
-							<h4 className="text-sm font-medium mb-3">Access Information</h4>
+							<h4 className="text-sm font-medium mb-3">User Information</h4>
 							<div className="space-y-2">
 								<div className="text-sm">
-									<span className="text-muted-foreground">Date Joined: </span>
-									<span>{formatDate(user.created_at)}</span>
+									<span className="text-muted-foreground">User ID: </span>
+									<span className="font-mono">#{user.id}</span>
+								</div>
+								<div className="text-sm">
+									<span className="text-muted-foreground">Status: </span>
+									<span className={user.is_active ? 'text-emerald-600 font-medium' : 'text-red-600 font-medium'}>
+										{user.is_active ? 'Active' : 'Inactive'}
+									</span>
 								</div>
 							</div>
 						</div>
 
+						{/* Contact Details */}
 						<div>
 							<h4 className="text-sm font-medium mb-3">Contact Details</h4>
 							<div className="space-y-2">
 								<div className="text-sm">
-									<span className="text-muted-foreground block mb-1">Email Address:</span>
-									<span className="font-mono">{user.email}</span>
+									<span className="text-muted-foreground block mb-1">Email:</span>
+									<span className="font-mono">{user.email || '-'}</span>
 								</div>
-								{user.mobile && (
+								<div className="text-sm">
+									<span className="text-muted-foreground block mb-1">Mobile:</span>
+									<span className="font-mono">{user.mobile || '-'}</span>
+								</div>
+							</div>
+						</div>
+
+						{/* Access Information */}
+						<div>
+							<h4 className="text-sm font-medium mb-3">Access Information</h4>
+							<div className="space-y-2">
+								{user.last_login ? (
 									<div className="text-sm">
-										<span className="text-muted-foreground block mb-1">Mobile Number:</span>
-										<span className="font-mono">{user.mobile}</span>
+										<span className="text-muted-foreground">Last Login: </span>
+										<span>{user.last_login}</span>
+									</div>
+								) : (
+									<div className="text-sm">
+										<span className="text-muted-foreground">Never logged in</span>
 									</div>
 								)}
+								<div className="text-sm">
+									<span className="text-muted-foreground">Date Joined: </span>
+									<span>{user.date_joined || user.created_at}</span>
+								</div>
 							</div>
 						</div>
 					</div>
+
+					{/* Roles Section */}
+					{user.roles && user.roles.length > 0 && (
+						<div className="mt-6">
+							<h4 className="text-sm font-medium mb-3">Assigned Roles</h4>
+							<div className="flex flex-wrap gap-2">
+								{user.roles.map((role, idx) => (
+									<span key={idx} className="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-primary/10 text-primary border border-primary/20">
+										{role.name || role}
+									</span>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 		</div>
@@ -586,7 +609,7 @@ function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
 }
 
 // Users Table Component for List View
-function UsersTable({ users, formatDate }) {
+function UsersTable({ users }) {
 	const dispatch = useDispatch();
 
 	const handleEdit = (user) => {
@@ -611,29 +634,35 @@ function UsersTable({ users, formatDate }) {
 				<table className="w-full">
 					<thead className="bg-muted/50 border-b">
 						<tr>
-							<th className="text-left p-4 font-medium text-sm">User</th>
+							<th className="text-left p-4 font-medium text-sm">User ID</th>
+							<th className="text-left p-4 font-medium text-sm">User Name</th>
 							<th className="text-left p-4 font-medium text-sm">Status</th>
+							<th className="text-left p-4 font-medium text-sm">Mobile</th>
+							<th className="text-left p-4 font-medium text-sm">Email</th>
 							<th className="text-left p-4 font-medium text-sm">Roles</th>
+							<th className="text-left p-4 font-medium text-sm">Last Login / Date Joined</th>
 							<th className="text-left p-4 font-medium text-sm">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
 						{users.map((user, index) => (
 							<tr key={user.id} className={`border-b hover:bg-muted/50 transition-colors ${index === users.length - 1 ? 'border-b-0' : ''}`}>
+								{/* User ID */}
+								<td className="p-4">
+									<div className="text-sm font-mono text-muted-foreground">#{user.id}</div>
+								</td>
+
+								{/* User Name with Avatar */}
 								<td className="p-4">
 									<div className="flex items-center gap-3">
 										<div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
 											{user.name ? user.name.charAt(0).toUpperCase() : 'U'}
 										</div>
-										<div>
-											<div className="font-medium">{user.name}</div>
-											<div className="text-sm text-muted-foreground">{user.email}</div>
-											{user.mobile && (
-												<div className="text-sm text-muted-foreground">{user.mobile}</div>
-											)}
-										</div>
+										<div className="font-medium">{user.name || '-'}</div>
 									</div>
 								</td>
+
+								{/* Status */}
 								<td className="p-4">
 									<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
 										user.is_active
@@ -644,6 +673,18 @@ function UsersTable({ users, formatDate }) {
 										{user.is_active ? 'Active' : 'Inactive'}
 									</span>
 								</td>
+
+								{/* Mobile */}
+								<td className="p-4">
+									<div className="text-sm font-mono">{user.mobile || '-'}</div>
+								</td>
+
+								{/* Email */}
+								<td className="p-4">
+									<div className="text-sm font-mono">{user.email || '-'}</div>
+								</td>
+
+								{/* Roles */}
 								<td className="p-4">
 									{user.roles && user.roles.length > 0 ? (
 										<div className="flex flex-wrap gap-1">
@@ -660,6 +701,25 @@ function UsersTable({ users, formatDate }) {
 										<span className="text-sm text-muted-foreground">No roles</span>
 									)}
 								</td>
+
+								{/* Last Login / Date Joined */}
+								<td className="p-4">
+									<div className="text-sm">
+										{user.last_login ? (
+											<>
+												<div className="font-medium">Last Login</div>
+												<div className="text-muted-foreground">{user.last_login}</div>
+											</>
+										) : (
+											<>
+												<div className="font-medium">Joined</div>
+												<div className="text-muted-foreground">{user.date_joined || user.created_at}</div>
+											</>
+										)}
+									</div>
+								</td>
+
+								{/* Actions */}
 								<td className="p-4">
 									<div className="flex gap-1">
 										<button
@@ -672,7 +732,7 @@ function UsersTable({ users, formatDate }) {
 											onClick={() => handleResetPassword(user)}
 											className="px-3 py-1 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition-colors text-sm"
 										>
-											Reset Password
+											Reset
 										</button>
 										<button
 											onClick={() => handleToggleStatus(user)}

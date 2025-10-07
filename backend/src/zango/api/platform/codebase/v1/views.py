@@ -18,6 +18,7 @@ from zango.core.api import (
     get_api_response,
 )
 from zango.core.common_utils import set_app_schema_path
+from zango.core.package_utils import get_installed_packages
 from zango.core.permissions import IsPlatformUserAllowedApp
 
 from .serializers import AppCodebaseSerializer
@@ -601,12 +602,8 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
 
                 # Calculate statistics
                 response_data["total_modules"] = len(modules)
-                response_data["total_packages"] = len(
-                    set(
-                        route["package"]
-                        for route in settings_data.get("package_routes", [])
-                    )
-                )
+                installed_packages = get_installed_packages(app_name)
+                response_data["total_packages"] = len(installed_packages)
                 response_data["total_routes"] = len(
                     settings_data.get("package_routes", [])
                 ) + len(settings_data.get("app_routes", []))

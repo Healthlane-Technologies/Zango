@@ -19,6 +19,8 @@ export default function AccessLogs() {
 		date_range: null
 	});
 	const [dropdownOptions, setDropdownOptions] = useState({});
+	const [totalRecords, setTotalRecords] = useState(0);
+	const [totalFailedAttempts, setTotalFailedAttempts] = useState(0);
 
 	// Fetch logs
 	const fetchLogs = async () => {
@@ -57,6 +59,8 @@ export default function AccessLogs() {
 			if (success && response?.access_logs) {
 				setLogs(response.access_logs.records || []);
 				setTotalPages(response.access_logs.total_pages || 1);
+				setTotalRecords(response.access_logs.total_records || 0);
+				setTotalFailedAttempts(response.total_failed_attempts || 0);
 				if (response.dropdown_options) {
 					setDropdownOptions(response.dropdown_options);
 				}
@@ -71,6 +75,11 @@ export default function AccessLogs() {
 	useEffect(() => {
 		fetchLogs();
 	}, [appId, page, searchTerm, filters]);
+
+	// Reset page to 1 when search term or filters change
+	useEffect(() => {
+		setPage(1);
+	}, [searchTerm, filters]);
 
 	// Toggle log expansion
 	const toggleLogExpansion = (logId) => {
@@ -101,7 +110,7 @@ export default function AccessLogs() {
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Total Access Logs</p>
 							<p className="text-2xl font-medium tracking-tight mt-1">
-								{logs.length}
+								{totalRecords}
 							</p>
 						</div>
 						<div className="p-3 bg-blue-500/10 rounded-md">
@@ -117,7 +126,7 @@ export default function AccessLogs() {
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Failed Attempts</p>
 							<p className="text-2xl font-medium tracking-tight text-red-600 dark:text-red-400 mt-1">
-								{logs.filter(log => !log.is_login_successful).length}
+								{totalFailedAttempts}
 							</p>
 						</div>
 						<div className="p-3 bg-red-500/10 rounded-md">
@@ -377,40 +386,46 @@ export default function AccessLogs() {
 												<div>
 													<h4 className="text-sm font-medium mb-3">Session Information</h4>
 													<div className="space-y-2">
-														<div className="flex justify-between text-sm">
-															<span className="text-muted-foreground">Session ID:</span>
-															<span className="font-mono">#{log.id}</span>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">ID:</span>
+															<span className="font-mono">{log.id}</span>
 														</div>
-														<div className="flex justify-between text-sm">
-															<span className="text-muted-foreground">Login Time:</span>
-															<span>
-																{new Date(log.attempt_time).toLocaleString()}
-															</span>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">User:</span>
+															<span>{log.user}</span>
 														</div>
-														{log.session_expired_at && log.session_expired_at !== 'NA' && (
-															<div className="flex justify-between text-sm">
-																<span className="text-muted-foreground">Logout Time:</span>
-																<span>
-																	{new Date(log.session_expired_at).toLocaleString()}
-																</span>
-															</div>
-														)}
-														{log.session_expired_at && log.session_expired_at !== 'NA' && (
-															<div className="flex justify-between text-sm">
-																<span className="text-muted-foreground">Session Duration:</span>
-																<span>
-																	{Math.floor((new Date(log.session_expired_at) - new Date(log.attempt_time)) / 60000)} minutes
-																</span>
-															</div>
-														)}
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">Username:</span>
+															<span>{log.username}</span>
+														</div>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">Attempt Time:</span>
+															<span>{log.attempt_time}</span>
+														</div>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">Attempt Type:</span>
+															<span>{log.attempt_type}</span>
+														</div>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">Login Successful:</span>
+															<span>{log.is_login_successful ? 'Yes' : 'No'}</span>
+														</div>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">Role:</span>
+															<span>{log.role}</span>
+														</div>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[160px] flex-shrink-0">Session Expired At:</span>
+															<span>{log.session_expired_at}</span>
+														</div>
 													</div>
 												</div>
 
 												<div>
 													<h4 className="text-sm font-medium mb-3">Device Information</h4>
 													<div className="space-y-2">
-														<div className="flex justify-between text-sm">
-															<span className="text-muted-foreground">IP Address:</span>
+														<div className="flex text-sm">
+															<span className="text-muted-foreground w-[100px] flex-shrink-0">IP Address:</span>
 															<span className="font-mono">{log.ip_address}</span>
 														</div>
 														<div className="text-sm">
