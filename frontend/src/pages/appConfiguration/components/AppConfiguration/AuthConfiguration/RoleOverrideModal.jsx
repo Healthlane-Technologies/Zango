@@ -536,7 +536,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 															<input
 																name="redirect_url"
 																type="text"
-																value={overrideConfig.redirect_url || '/frame/router/'}
+																value={overrideConfig.redirect_url ?? ''}
 																onChange={(e) => setOverrideConfig(prev => ({
 																	...prev,
 																	redirect_url: e.target.value
