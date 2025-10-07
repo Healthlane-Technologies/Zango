@@ -369,16 +369,30 @@ class Workspace:
             }
             pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
             for pkg_route in pkg_app_routes:
-                routes.append(
-                    {
-                        "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": "packages."
-                        + route["package"]
-                        + "."
-                        + pkg_module_paths[pkg_route["module"]],
-                        "url": pkg_route["url"],
-                    }
-                )
+                try:
+                    routes.append(
+                        {
+                            "re_path": route["re_path"]
+                            + pkg_route["re_path"].strip("^"),
+                            "module": "packages."
+                            + route["package"]
+                            + "."
+                            + pkg_module_paths[pkg_route["module"]],
+                            "url": pkg_route["url"],
+                        }
+                    )
+                except KeyError:
+                    routes.append(
+                        {
+                            "re_path": route["re_path"]
+                            + pkg_route["re_path"].strip("^"),
+                            "module": "packages."
+                            + route["package"]
+                            + "."
+                            + pkg_route["module"],
+                            "url": pkg_route["url"],
+                        }
+                    )
         return routes
 
     def get_all_view_urls(self) -> list[dict]:

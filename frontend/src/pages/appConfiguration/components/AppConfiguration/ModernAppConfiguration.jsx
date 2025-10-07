@@ -247,8 +247,8 @@ const ModernAppConfiguration = () => {
 					enableReinitialize={true}
 				>
 					{(formik) => {
-						const { values, handleSubmit } = formik;
-						
+						const { handleSubmit } = formik;
+
 						return (
 							<form onSubmit={handleSubmit} className="space-y-[24px]">
 								{/* Basic Information */}
@@ -404,40 +404,38 @@ const ModernAppConfiguration = () => {
 											onChange={formik.handleChange}
 											formik={formik}
 										/>
-										{values.repo_url && (
-											<div className="grid grid-cols-1 md:grid-cols-3 gap-[16px]">
-												<InputField
-													key="dev"
-													label="Development Branch"
-													name="dev"
-													id="dev"
-													placeholder="dev"
-													value={get(formik.values, 'dev', '')}
-													onChange={formik.handleChange}
-													formik={formik}
-												/>
-												<InputField
-													key="staging"
-													label="Staging Branch"
-													name="staging"
-													id="staging"
-													placeholder="staging"
-													value={get(formik.values, 'staging', '')}
-													onChange={formik.handleChange}
-													formik={formik}
-												/>
-												<InputField
-													key="prod"
-													label="Production Branch"
-													name="prod"
-													id="prod"
-													placeholder="main"
-													value={get(formik.values, 'prod', '')}
-													onChange={formik.handleChange}
-													formik={formik}
-												/>
-											</div>
-										)}
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-[16px]">
+											<InputField
+												key="dev"
+												label="Development Branch"
+												name="dev"
+												id="dev"
+												placeholder="dev"
+												value={get(formik.values, 'dev', '')}
+												onChange={formik.handleChange}
+												formik={formik}
+											/>
+											<InputField
+												key="staging"
+												label="Staging Branch"
+												name="staging"
+												id="staging"
+												placeholder="staging"
+												value={get(formik.values, 'staging', '')}
+												onChange={formik.handleChange}
+												formik={formik}
+											/>
+											<InputField
+												key="prod"
+												label="Production Branch"
+												name="prod"
+												id="prod"
+												placeholder="main"
+												value={get(formik.values, 'prod', '')}
+												onChange={formik.handleChange}
+												formik={formik}
+											/>
+										</div>
 										<div className="pt-[8px]">
 											<CheckboxField
 												key="sync_packages"
@@ -648,8 +646,7 @@ const ModernAppConfiguration = () => {
 									value={
 										<a
 											href={appData.app_template}
-											target="_blank"
-											rel="noopener noreferrer"
+											download
 											className="inline-flex items-center gap-[8px] text-[#5048ED] hover:underline"
 										>
 											<SingleFileIcon className="w-[16px] h-[16px]" />

@@ -71,8 +71,6 @@ const ModernUserRolesConfiguration = () => {
 	const totalRoles = rolesData.length;
 	const activeRoles = rolesData.filter(role => role.is_active).length;
 	const inactiveRoles = totalRoles - activeRoles;
-	const totalPolicies = rolesData.reduce((sum, role) => sum + (role.policies_count?.total || role.policies_count?.policies || 0), 0);
-	const totalUsers = rolesData.reduce((sum, role) => sum + (role.users_count || 0), 0);
 	
 	// Helper function to format date
 	const formatDate = (dateString) => {
@@ -148,9 +146,6 @@ const ModernUserRolesConfiguration = () => {
 	// Reserved role card component
 	const ReservedRoleCard = ({ role }) => {
 		const isRecent = new Date(role.modified_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-		const totalPolicies = role.policies_count?.total || role.policies_count?.policies || 0;
-		const userPolicies = role.policies_count?.policies || 0;
-		const policyGroups = role.policies_count?.policy_groups || 0;
 		
 		return (
 			<div 
@@ -190,23 +185,6 @@ const ModernUserRolesConfiguration = () => {
 					</div>
 
 					<div>
-						<p className="text-[12px] text-[#6B7280] mb-[2px]">Attached Policies</p>
-						<div className="flex items-center gap-[8px]">
-							<p className="text-[14px] text-[#111827] font-semibold">{totalPolicies}</p>
-							<span className="text-[12px] text-[#6B7280]">
-								({userPolicies} user • {policyGroups} groups)
-							</span>
-						</div>
-					</div>
-
-					<div>
-						<p className="text-[12px] text-[#6B7280] mb-[2px]">Users Assigned</p>
-						<p className="text-[13px] text-[#111827]">
-							{role.users_count || 0} {role.users_count === 1 ? 'user' : 'users'}
-						</p>
-					</div>
-
-					<div>
 						<p className="text-[12px] text-[#6B7280] mb-[2px]">Last Modified</p>
 						<div className="flex items-center gap-[6px]">
 							<p className="text-[13px] text-[#111827]">
@@ -225,9 +203,6 @@ const ModernUserRolesConfiguration = () => {
 	// Role card component
 	const RoleCard = ({ role }) => {
 		const isRecent = new Date(role.modified_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-		const totalPolicies = role.policies_count?.total || role.policies_count?.policies || 0;
-		const userPolicies = role.policies_count?.policies || 0;
-		const policyGroups = role.policies_count?.policy_groups || 0;
 		const isDefault = role.is_default;
 		
 		return (
@@ -261,7 +236,7 @@ const ModernUserRolesConfiguration = () => {
 				{/* Header */}
 				<div className="mb-[16px] mt-[8px]">
 					<h4 className="text-[16px] font-semibold text-[#111827] mb-[4px]">{role.name}</h4>
-					<p className="text-[13px] text-[#6B7280]">{role.email || 'No email specified'}</p>
+					{role.email && <p className="text-[13px] text-[#6B7280]">{role.email}</p>}
 				</div>
 
 				{/* Role Info */}
@@ -269,23 +244,6 @@ const ModernUserRolesConfiguration = () => {
 					<div>
 						<p className="text-[12px] text-[#6B7280] mb-[2px]">Role ID</p>
 						<p className="text-[13px] text-[#111827] font-mono">#{role.id}</p>
-					</div>
-
-					<div>
-						<p className="text-[12px] text-[#6B7280] mb-[2px]">Attached Policies</p>
-						<div className="flex items-center gap-[8px]">
-							<p className="text-[14px] text-[#111827] font-semibold">{totalPolicies}</p>
-							<span className="text-[12px] text-[#6B7280]">
-								({userPolicies} user • {policyGroups} groups)
-							</span>
-						</div>
-					</div>
-
-					<div>
-						<p className="text-[12px] text-[#6B7280] mb-[2px]">Users Assigned</p>
-						<p className="text-[13px] text-[#111827]">
-							{role.users_count || 0} {role.users_count === 1 ? 'user' : 'users'}
-						</p>
 					</div>
 
 					{role.mobile && (
@@ -322,9 +280,6 @@ const ModernUserRolesConfiguration = () => {
 	// List view components
 	const ReservedRoleListItem = ({ role }) => {
 		const isRecent = new Date(role.modified_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-		const totalPolicies = role.policies_count?.total || role.policies_count?.policies || 0;
-		const userPolicies = role.policies_count?.policies || 0;
-		const policyGroups = role.policies_count?.policy_groups || 0;
 		
 		return (
 			<div 
@@ -352,15 +307,6 @@ const ModernUserRolesConfiguration = () => {
 						{/* Stats */}
 						<div className="flex items-center gap-[32px] text-[13px]">
 							<div className="text-center">
-								<p className="text-[#6B7280] text-[11px] uppercase tracking-[0.5px] mb-[2px]">Policies</p>
-								<p className="font-semibold text-[#111827]">{totalPolicies}</p>
-								<p className="text-[10px] text-[#6B7280]">{userPolicies}u • {policyGroups}g</p>
-							</div>
-							<div className="text-center">
-								<p className="text-[#6B7280] text-[11px] uppercase tracking-[0.5px] mb-[2px]">Users</p>
-								<p className="font-semibold text-[#111827]">{role.users_count || 0}</p>
-							</div>
-							<div className="text-center">
 								<p className="text-[#6B7280] text-[11px] uppercase tracking-[0.5px] mb-[2px]">Modified</p>
 								<p className="font-semibold text-[#111827]">{formatDate(role.modified_at)}</p>
 								{isRecent && (
@@ -383,9 +329,6 @@ const ModernUserRolesConfiguration = () => {
 
 	const RoleListItem = ({ role }) => {
 		const isRecent = new Date(role.modified_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-		const totalPolicies = role.policies_count?.total || role.policies_count?.policies || 0;
-		const userPolicies = role.policies_count?.policies || 0;
-		const policyGroups = role.policies_count?.policy_groups || 0;
 		const isDefault = role.is_default;
 		
 		return (
@@ -417,20 +360,11 @@ const ModernUserRolesConfiguration = () => {
 									<span className="w-[6px] h-[6px] bg-[#10B981] rounded-full"></span>
 								)}
 							</div>
-							<p className="text-[13px] text-[#6B7280]">{role.email || 'No email specified'}</p>
+							{role.email && <p className="text-[13px] text-[#6B7280]">{role.email}</p>}
 						</div>
 
 						{/* Stats */}
 						<div className="flex items-center gap-[32px] text-[13px]">
-							<div className="text-center">
-								<p className="text-[#6B7280] text-[11px] uppercase tracking-[0.5px] mb-[2px]">Policies</p>
-								<p className="font-semibold text-[#111827]">{totalPolicies}</p>
-								<p className="text-[10px] text-[#6B7280]">{userPolicies}u • {policyGroups}g</p>
-							</div>
-							<div className="text-center">
-								<p className="text-[#6B7280] text-[11px] uppercase tracking-[0.5px] mb-[2px]">Users</p>
-								<p className="font-semibold text-[#111827]">{role.users_count || 0}</p>
-							</div>
 							<div className="text-center">
 								<p className="text-[#6B7280] text-[11px] uppercase tracking-[0.5px] mb-[2px]">Created</p>
 								<p className="font-semibold text-[#111827]">{formatDate(role.created_at)}</p>
@@ -476,7 +410,7 @@ const ModernUserRolesConfiguration = () => {
 			</div>
 
 			{/* Stats Dashboard */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-[16px] mb-[32px]">
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px] mb-[32px]">
 				<div className="bg-white border border-[#E5E7EB] rounded-[12px] p-[20px]">
 					<div className="flex items-center gap-[12px] mb-[12px]">
 						<div className="w-[40px] h-[40px] bg-[#EDE9FE] rounded-[8px] flex items-center justify-center">
@@ -515,34 +449,6 @@ const ModernUserRolesConfiguration = () => {
 						<div>
 							<p className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-[0.5px]">Inactive</p>
 							<p className="text-[24px] font-bold text-[#111827]">{inactiveRoles}</p>
-						</div>
-					</div>
-				</div>
-
-				<div className="bg-white border border-[#E5E7EB] rounded-[12px] p-[20px]">
-					<div className="flex items-center gap-[12px] mb-[12px]">
-						<div className="w-[40px] h-[40px] bg-[#DBEAFE] rounded-[8px] flex items-center justify-center">
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-[#3B82F6]">
-								<path d="M4 3a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2V5a2 2 0 00-2-2H4zM9 3a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2V5a2 2 0 00-2-2H9zM4 9a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 00-2-2H4zM9 9a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 00-2-2H9z" fill="currentColor"/>
-							</svg>
-						</div>
-						<div>
-							<p className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-[0.5px]">Policies</p>
-							<p className="text-[24px] font-bold text-[#111827]">{totalPolicies}</p>
-						</div>
-					</div>
-				</div>
-
-				<div className="bg-white border border-[#E5E7EB] rounded-[12px] p-[20px]">
-					<div className="flex items-center gap-[12px] mb-[12px]">
-						<div className="w-[40px] h-[40px] bg-[#FEF3C7] rounded-[8px] flex items-center justify-center">
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-[#F59E0B]">
-								<path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" fill="currentColor"/>
-							</svg>
-						</div>
-						<div>
-							<p className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-[0.5px]">Users</p>
-							<p className="text-[24px] font-bold text-[#111827]">{totalUsers}</p>
 						</div>
 					</div>
 				</div>

@@ -8,6 +8,7 @@ import { transformToFormData } from '../../../../../utils/form';
 import { useParams, useNavigate } from 'react-router-dom';
 import InputField from '../../../../../components/Form/InputField';
 import AuthSetupModal from './AuthSetupModal';
+import RoleOverrideModal from './RoleOverrideModal';
 
 // Default auth configuration that matches backend defaults
 const DEFAULT_AUTH_CONFIG = {
@@ -42,6 +43,8 @@ const ModernAuthConfig = () => {
 	const [roles, setRoles] = useState([]);
 	const [loadingRoles, setLoadingRoles] = useState(true);
 	const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
+	const [showRoleOverrideModal, setShowRoleOverrideModal] = useState(false);
+	const [selectedRoleForOverride, setSelectedRoleForOverride] = useState(null);
 	const dispatch = useDispatch();
 	const triggerApi = useApi();
 	const { appId } = useParams();
@@ -967,18 +970,11 @@ const ModernAuthConfig = () => {
 					{activeSection === 'role-overrides' && (
 						<div className="space-y-[24px]">
 							<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
-								<div className="flex items-center justify-between mb-[24px]">
-									<div>
-										<h3 className="text-[16px] font-semibold text-[#111827]">User Role Overrides</h3>
-										<p className="text-[13px] text-[#6B7280] mt-[4px]">
-											Define stricter authentication policies for specific user roles
-										</p>
-									</div>
-									{Object.keys(authConfig.role_overrides || {}).length > 0 && (
-										<span className="px-[12px] py-[4px] bg-[#EFF6FF] text-[#5048ED] rounded-[8px] text-[12px] font-medium">
-											{Object.keys(authConfig.role_overrides).length} Active Overrides
-										</span>
-									)}
+								<div className="mb-[24px]">
+									<h3 className="text-[16px] font-semibold text-[#111827]">User Role Overrides</h3>
+									<p className="text-[13px] text-[#6B7280] mt-[4px]">
+										Define stricter authentication policies for specific user roles
+									</p>
 								</div>
 
 								{/* Info Banner */}
@@ -994,9 +990,11 @@ const ModernAuthConfig = () => {
 								{roles && roles.length > 0 ? (
 									<div className="space-y-[16px]">
 										{roles.map((role) => {
-											const roleOverride = authConfig.role_overrides?.[role.id];
-											const hasOverride = !!roleOverride;
-											
+											// Check for overrides in the role's own auth_config
+											const roleAuthConfig = role.auth_config;
+											// Use override_applied flag to determine if role has custom policies
+											const hasOverride = roleAuthConfig?.override_applied === true;
+
 											return (
 												<div key={role.id} className={`border rounded-[12px] ${hasOverride ? 'border-[#5048ED]' : 'border-[#E5E7EB]'}`}>
 													<div className={`p-[16px] ${hasOverride ? 'bg-[#F8FAFC]' : 'bg-white'}`}>
@@ -1017,20 +1015,34 @@ const ModernAuthConfig = () => {
 																	</p>
 																</div>
 															</div>
-															{hasOverride && (
-																<div className="flex gap-[8px]">
-																	{roleOverride.password_policy && (
-																		<span className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
-																			Password Policy
-																		</span>
-																	)}
-																	{roleOverride.two_factor_auth?.required && (
-																		<span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">
-																			2FA Required
-																		</span>
-																	)}
-																</div>
-															)}
+															<div className="flex items-center gap-[8px]">
+																{hasOverride && (
+																	<div className="flex gap-[8px]">
+																		{roleAuthConfig.password_policy && (
+																			<span className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
+																				Password Policy
+																			</span>
+																		)}
+																		{roleAuthConfig.two_factor_auth?.required && (
+																			<span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">
+																				2FA Required
+																			</span>
+																		)}
+																	</div>
+																)}
+																<button
+																	onClick={() => {
+																		setSelectedRoleForOverride(role.id);
+																		setShowRoleOverrideModal(true);
+																	}}
+																	className="flex items-center gap-[6px] px-[12px] py-[6px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors text-[13px] font-medium"
+																>
+																	<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+																		<path d="M9.917 1.75004C10.0696 1.59743 10.2514 1.47608 10.4517 1.39308C10.652 1.31008 10.8672 1.26709 11.0845 1.26709C11.3017 1.26709 11.517 1.31008 11.7173 1.39308C11.9176 1.47608 12.0994 1.59743 12.252 1.75004C12.4046 1.90265 12.5259 2.08445 12.6089 2.28475C12.6919 2.48505 12.7349 2.70029 12.7349 2.91754C12.7349 3.13479 12.6919 3.35003 12.6089 3.55033C12.5259 3.75064 12.4046 3.93243 12.252 4.08504L4.37557 11.9617L1.16699 12.8334L2.03866 9.62504L9.917 1.75004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+																	</svg>
+																	Configure
+																</button>
+															</div>
 														</div>
 													</div>
 													
@@ -1038,29 +1050,29 @@ const ModernAuthConfig = () => {
 														<div className="p-[16px] border-t border-[#E5E7EB] bg-[#FAFBFC]">
 															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
 																{/* Password Policy Overrides */}
-																{roleOverride.password_policy && (
+																{roleAuthConfig.password_policy && (
 																	<div>
 																		<h5 className="text-[12px] font-medium text-[#6B7280] mb-[8px]">Password Policy</h5>
 																		<div className="space-y-[4px]">
-																			{roleOverride.password_policy.min_length > (authConfig.password_policy?.min_length || 8) && (
+																			{roleAuthConfig.password_policy.min_length > (authConfig.password_policy?.min_length || 8) && (
 																				<div className="flex items-center gap-[6px] text-[11px]">
 																					<span className="text-[#10B981]">↑</span>
-																					<span className="text-[#111827]">Min length: {roleOverride.password_policy.min_length} chars</span>
+																					<span className="text-[#111827]">Min length: {roleAuthConfig.password_policy.min_length} chars</span>
 																				</div>
 																			)}
-																			{roleOverride.password_policy.password_expiry_days < (authConfig.password_policy?.password_expiry_days || 90) && (
+																			{roleAuthConfig.password_policy.password_expiry_days < (authConfig.password_policy?.password_expiry_days || 90) && (
 																				<div className="flex items-center gap-[6px] text-[11px]">
 																					<span className="text-[#10B981]">↑</span>
-																					<span className="text-[#111827]">Expires in: {roleOverride.password_policy.password_expiry_days} days</span>
+																					<span className="text-[#111827]">Expires in: {roleAuthConfig.password_policy.password_expiry_days} days</span>
 																				</div>
 																			)}
-																			{roleOverride.password_policy.require_uppercase && !authConfig.password_policy?.require_uppercase && (
+																			{roleAuthConfig.password_policy.require_uppercase && !authConfig.password_policy?.require_uppercase && (
 																				<div className="flex items-center gap-[6px] text-[11px]">
 																					<span className="text-[#10B981]">✓</span>
 																					<span className="text-[#111827]">Requires uppercase</span>
 																				</div>
 																			)}
-																			{roleOverride.password_policy.require_special_chars && !authConfig.password_policy?.require_special_chars && (
+																			{roleAuthConfig.password_policy.require_special_chars && !authConfig.password_policy?.require_special_chars && (
 																				<div className="flex items-center gap-[6px] text-[11px]">
 																					<span className="text-[#10B981]">✓</span>
 																					<span className="text-[#111827]">Requires special chars</span>
@@ -1069,9 +1081,9 @@ const ModernAuthConfig = () => {
 																		</div>
 																	</div>
 																)}
-																
+
 																{/* 2FA Override */}
-																{roleOverride.two_factor_auth?.required && !authConfig.two_factor_auth?.required && (
+																{roleAuthConfig.two_factor_auth?.required && !authConfig.two_factor_auth?.required && (
 																	<div>
 																		<h5 className="text-[12px] font-medium text-[#6B7280] mb-[8px]">Two-Factor Auth</h5>
 																		<div className="flex items-center gap-[6px] text-[11px]">
@@ -1117,13 +1129,13 @@ const ModernAuthConfig = () => {
 								}
 							}
 						};
-						
+
 						// Save the configuration
 						const tempValues = {
 							auth_config: JSON.stringify(updatedAuthConfig)
 						};
 						const dynamicFormData = transformToFormData(tempValues);
-						
+
 						try {
 							const { response, success } = await triggerApi({
 								url: `/api/v1/apps/${appId}/`,
@@ -1138,6 +1150,52 @@ const ModernAuthConfig = () => {
 							}
 						} catch (error) {
 							console.error('Error saving authentication configuration:', error);
+						}
+					}}
+				/>
+			)}
+
+			{/* Role Override Modal */}
+			{isAuthConfigured() && (
+				<RoleOverrideModal
+					show={showRoleOverrideModal}
+					onClose={() => {
+						setShowRoleOverrideModal(false);
+						setSelectedRoleForOverride(null);
+					}}
+					roles={roles}
+					globalAuthConfig={authConfig}
+					currentOverrides={roles.reduce((acc, role) => {
+						if (role.auth_config) {
+							acc[role.id] = role.auth_config;
+						}
+						return acc;
+					}, {})}
+					initialSelectedRoleId={selectedRoleForOverride}
+					onSave={async (roleId, overrideConfig) => {
+						// Prepare auth_config JSON as form data
+						const tempValues = {
+							auth_config: JSON.stringify(overrideConfig || {})
+						};
+						const dynamicFormData = transformToFormData(tempValues);
+
+						try {
+							const { response, success } = await triggerApi({
+								url: `/api/v1/apps/${appId}/roles/${roleId}/`,
+								type: 'PUT',
+								loader: true,
+								payload: dynamicFormData,
+							});
+
+							if (success && response) {
+								dispatch(toggleRerenderPage());
+								setShowRoleOverrideModal(false);
+								setSelectedRoleForOverride(null);
+								// Redirect to role overrides section after save
+								setActiveSection('role-overrides');
+							}
+						} catch (error) {
+							console.error('Error saving role override configuration:', error);
 						}
 					}}
 				/>

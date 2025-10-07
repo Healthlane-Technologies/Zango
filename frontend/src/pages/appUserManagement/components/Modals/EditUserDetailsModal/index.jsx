@@ -21,7 +21,7 @@ function EditUserDetailsModal() {
 			label="Edit User Details"
 			show={isEditUserDetailModalOpen}
 			closeModal={closeModal}
-			size="lg"
+			size="2xl"
 			ModalBody={<EditUserDetailsForm closeModal={closeModal} />}
 		/>
 	);

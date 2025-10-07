@@ -90,14 +90,6 @@ export default function CodeSummary({ data }) {
 							{data.settings_file_exists ? 'Found' : 'Not Found'}
 						</span>
 					</div>
-					{data.last_modified && (
-						<div className="flex items-center justify-between">
-							<span className="text-sm text-gray-600">Last Modified</span>
-							<span className="text-sm text-gray-900">
-								{new Date(data.last_modified).toLocaleString()}
-							</span>
-						</div>
-					)}
 				</div>
 			</div>
 

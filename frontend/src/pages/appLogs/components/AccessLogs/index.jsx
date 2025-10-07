@@ -15,16 +15,10 @@ export default function AccessLogs() {
 	const [filters, setFilters] = useState({
 		attempt_type: '',
 		is_login_successful: '',
-		date_range: ''
+		role: '',
+		date_range: null
 	});
-	const [activeQuickFilter, setActiveQuickFilter] = useState('');
-
-	// Quick filter options
-	const quickFilters = [
-		{ id: 'today', label: 'Today', icon: '📅' },
-		{ id: 'week', label: 'This Week', icon: '📆' },
-		{ id: 'failed', label: 'Failed Attempts', icon: '❌' },
-	];
+	const [dropdownOptions, setDropdownOptions] = useState({});
 
 	// Fetch logs
 	const fetchLogs = async () => {
@@ -44,8 +38,14 @@ export default function AccessLogs() {
 			if (filters.is_login_successful !== '') {
 				queryParams.append('search_is_login_successful', filters.is_login_successful === 'true' ? 'successful' : 'failed');
 			}
-			if (filters.date_range) {
-				queryParams.append('date_range', filters.date_range);
+			if (filters.role) {
+				queryParams.append('search_role', filters.role);
+			}
+			if (filters.date_range && filters.date_range.start && filters.date_range.end) {
+				queryParams.append('search_attempt_time', JSON.stringify({
+					start: filters.date_range.start,
+					end: filters.date_range.end
+				}));
 			}
 
 			const { response, success } = await triggerApi({
@@ -57,6 +57,9 @@ export default function AccessLogs() {
 			if (success && response?.access_logs) {
 				setLogs(response.access_logs.records || []);
 				setTotalPages(response.access_logs.total_pages || 1);
+				if (response.dropdown_options) {
+					setDropdownOptions(response.dropdown_options);
+				}
 			}
 		} catch (error) {
 			console.error('Error fetching access logs:', error);
@@ -77,69 +80,28 @@ export default function AccessLogs() {
 		}));
 	};
 
-	// Format timestamp
-	const formatTimestamp = (timestamp) => {
-		const date = new Date(timestamp);
-		const now = new Date();
-		const diffMs = now - date;
-		const diffMins = Math.floor(diffMs / 60000);
-		const diffHours = Math.floor(diffMs / 3600000);
-		const diffDays = Math.floor(diffMs / 86400000);
-
-		if (diffMins < 1) return 'Just now';
-		if (diffMins < 60) return `${diffMins} minutes ago`;
-		if (diffHours < 24) return `${diffHours} hours ago`;
-		if (diffDays < 7) return `${diffDays} days ago`;
-		
-		return date.toLocaleString();
-	};
-
-	// Get browser info from user agent
-	const getBrowserInfo = (userAgent) => {
-		if (!userAgent) return { name: 'Unknown', icon: '🌐' };
-		
-		if (userAgent.includes('Chrome')) return { name: 'Chrome', icon: '🔵' };
-		if (userAgent.includes('Firefox')) return { name: 'Firefox', icon: '🦊' };
-		if (userAgent.includes('Safari')) return { name: 'Safari', icon: '🧭' };
-		if (userAgent.includes('Edge')) return { name: 'Edge', icon: '🔷' };
-		
-		return { name: 'Other', icon: '🌐' };
-	};
-
-	// Apply quick filter
-	const applyQuickFilter = (filterId) => {
-		if (activeQuickFilter === filterId) {
-			// If clicking the same filter, clear it
-			setActiveQuickFilter('');
-			setFilters({ attempt_type: '', is_login_successful: '', date_range: '' });
-		} else {
-			setActiveQuickFilter(filterId);
-			switch (filterId) {
-				case 'today':
-					setFilters({ ...filters, date_range: 'today', is_login_successful: '' });
-					break;
-				case 'week':
-					setFilters({ ...filters, date_range: 'week', is_login_successful: '' });
-					break;
-				case 'failed':
-					setFilters({ ...filters, is_login_successful: 'false', date_range: '' });
-					break;
-			}
-		}
-		setPage(1); // Reset to first page when filtering
+	// Reset all filters
+	const resetFilters = () => {
+		setFilters({
+			attempt_type: '',
+			is_login_successful: '',
+			role: '',
+			date_range: null
+		});
+		setSearchTerm('');
+		setPage(1);
 	};
 
 	return (
 		<div className="space-y-4">
 			{/* Header with Stats */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div className="card p-6">
 					<div className="flex items-center justify-between">
 						<div>
-							<p className="text-sm font-medium text-muted-foreground">Total Logins Today</p>
+							<p className="text-sm font-medium text-muted-foreground">Total Access Logs</p>
 							<p className="text-2xl font-medium tracking-tight mt-1">
-								{logs.filter(log => log.is_login_successful && log.attempt_type === 'login' && 
-									new Date(log.attempt_time).toDateString() === new Date().toDateString()).length}
+								{logs.length}
 							</p>
 						</div>
 						<div className="p-3 bg-blue-500/10 rounded-md">
@@ -166,23 +128,6 @@ export default function AccessLogs() {
 						</div>
 					</div>
 				</div>
-
-
-				<div className="card p-6">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-sm font-medium text-muted-foreground">Unique Users</p>
-							<p className="text-2xl font-medium tracking-tight text-purple-600 dark:text-purple-400 mt-1">
-								{[...new Set(logs.map(log => log.user).filter(user => user && user !== 'NA'))].length}
-							</p>
-						</div>
-						<div className="p-3 bg-purple-500/10 rounded-md">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-purple-600 dark:text-purple-400">
-								<path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21M13 7C13 9.20914 11.2091 11 9 11C6.79086 11 5 9.20914 5 7C5 4.79086 6.79086 3 9 3C11.2091 3 13 4.79086 13 7ZM23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13M16 3.13C16.8604 3.3503 17.623 3.8507 18.1676 4.55231C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-							</svg>
-						</div>
-					</div>
-				</div>
 			</div>
 
 			{/* Filters and Search */}
@@ -190,29 +135,14 @@ export default function AccessLogs() {
 				<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 					<div>
 						<h2 className="text-lg font-medium tracking-tight">Access Log Activity</h2>
-						<div className="flex gap-2 mt-3">
-							{quickFilters.map(filter => (
-								<button
-									key={filter.id}
-									onClick={() => applyQuickFilter(filter.id)}
-									className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-										activeQuickFilter === filter.id 
-											? 'bg-primary text-primary-foreground' 
-											: 'bg-muted hover:bg-muted/80'
-									}`}
-								>
-									<span>{filter.icon}</span>
-									<span>{filter.label}</span>
-								</button>
-							))}
-						</div>
+						<p className="text-sm text-muted-foreground mt-1">Track user authentication and access events</p>
 					</div>
 					<div className="flex flex-wrap gap-3">
 						{/* Search */}
 						<div className="relative">
 							<input
 								type="text"
-								placeholder="Search by user, IP, or browser..."
+								placeholder="Search by user, IP, or user agent..."
 								value={searchTerm}
 								onChange={(e) => {
 									setSearchTerm(e.target.value);
@@ -240,7 +170,6 @@ export default function AccessLogs() {
 							value={filters.attempt_type}
 							onChange={(e) => {
 								setFilters({ ...filters, attempt_type: e.target.value });
-								setActiveQuickFilter(''); // Clear quick filter when using dropdown
 								setPage(1);
 							}}
 							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -256,7 +185,6 @@ export default function AccessLogs() {
 							value={filters.is_login_successful}
 							onChange={(e) => {
 								setFilters({ ...filters, is_login_successful: e.target.value });
-								setActiveQuickFilter(''); // Clear quick filter when using dropdown
 								setPage(1);
 							}}
 							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -266,15 +194,55 @@ export default function AccessLogs() {
 							<option value="false">Failed</option>
 						</select>
 
+						{/* Role Filter */}
+						<select
+							value={filters.role}
+							onChange={(e) => {
+								setFilters({ ...filters, role: e.target.value });
+								setPage(1);
+							}}
+							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							<option value="">All Roles</option>
+							{dropdownOptions.role?.map((role) => (
+								<option key={role.id} value={role.id}>
+									{role.label}
+								</option>
+							))}
+						</select>
+
+						{/* Date Range Filter */}
+						<input
+							type="date"
+							value={filters.date_range?.start || ''}
+							onChange={(e) => setFilters({
+								...filters,
+								date_range: {
+									...filters.date_range,
+									start: e.target.value
+								}
+							})}
+							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							placeholder="Start Date"
+						/>
+						<input
+							type="date"
+							value={filters.date_range?.end || ''}
+							onChange={(e) => setFilters({
+								...filters,
+								date_range: {
+									...filters.date_range,
+									end: e.target.value
+								}
+							})}
+							className="h-9 rounded-md border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							placeholder="End Date"
+						/>
+
 						{/* Clear Filters Button */}
-						{(filters.attempt_type || filters.is_login_successful || filters.date_range || searchTerm || activeQuickFilter) && (
+						{(filters.attempt_type || filters.is_login_successful || filters.role || filters.date_range?.start || filters.date_range?.end || searchTerm) && (
 							<button
-								onClick={() => {
-									setFilters({ attempt_type: '', is_login_successful: '', date_range: '' });
-									setActiveQuickFilter('');
-									setSearchTerm('');
-									setPage(1);
-								}}
+								onClick={resetFilters}
 								className="h-9 px-3 py-1 text-sm bg-muted hover:bg-muted/80 rounded-md transition-colors inline-flex items-center gap-2"
 							>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -318,8 +286,7 @@ export default function AccessLogs() {
 					<>
 						{logs.map((log) => {
 							const isExpanded = expandedLogs[log.id];
-							const browserInfo = getBrowserInfo(log.user_agent);
-							
+
 							return (
 								<div
 									key={log.id}
@@ -337,7 +304,7 @@ export default function AccessLogs() {
 												</div>
 
 												{/* Log Info */}
-												<div>
+												<div className="flex-1">
 													<div className="flex items-center gap-3">
 														<h3 className="font-medium">
 															{log.user || log.username || 'Unknown User'}
@@ -363,7 +330,7 @@ export default function AccessLogs() {
 																<path d="M8 3.5a.5.5 0 00-1 0V9a.5.5 0 00.252.434l3.5 2a.5.5 0 00.496-.868L8 8.71V3.5z"/>
 																<path d="M8 16A8 8 0 108 0a8 8 0 000 16zm7-8A7 7 0 111 8a7 7 0 0114 0z"/>
 															</svg>
-															{formatTimestamp(log.attempt_time)}
+															{new Date(log.attempt_time).toLocaleString()}
 														</span>
 														<span className="flex items-center gap-1">
 															<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="opacity-50">
@@ -371,9 +338,6 @@ export default function AccessLogs() {
 																<path d="M8 8a2 2 0 110-4 2 2 0 010 4zm0 1a3 3 0 100-6 3 3 0 000 6z"/>
 															</svg>
 															{log.ip_address}
-														</span>
-														<span className="flex items-center gap-1">
-															{browserInfo.icon} {browserInfo.name}
 														</span>
 														{log.role && (
 															<span className="flex items-center gap-1">
@@ -385,6 +349,12 @@ export default function AccessLogs() {
 															</span>
 														)}
 													</div>
+													{/* User Agent */}
+													{log.user_agent && (
+														<div className="mt-2 text-xs text-muted-foreground font-mono">
+															{log.user_agent}
+														</div>
+													)}
 												</div>
 											</div>
 

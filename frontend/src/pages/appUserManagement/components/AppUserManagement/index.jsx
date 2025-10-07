@@ -33,8 +33,9 @@ export default function AppUserManagement() {
 		is_active: ''
 	});
 	const [page, setPage] = useState(1);
-	const [pageSize] = useState(20);
+	const [pageSize, setPageSize] = useState(20);
 	const [totalPages, setTotalPages] = useState(1);
+	const [totalRecords, setTotalRecords] = useState(0);
 	const [expandedRows, setExpandedRows] = useState({});
 	const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
 
@@ -71,6 +72,7 @@ export default function AppUserManagement() {
 			if (success && response) {
 				updateAppUserManagementData(response);
 				setTotalPages(response.users?.total_pages || 1);
+				setTotalRecords(response.users?.total_records || 0);
 			}
 		} catch (error) {
 			console.error('Error fetching users:', error);
@@ -80,8 +82,17 @@ export default function AppUserManagement() {
 	};
 
 	useEffect(() => {
+		setPage(1); // Reset to page 1 when pageSize changes
+	}, [pageSize]);
+
+	useEffect(() => {
 		fetchUsers();
-	}, [appId, page, searchTerm, filters, rerenderPage]);
+	}, [appId, page, pageSize, searchTerm, filters, rerenderPage]);
+
+	// Reset page to 1 when search term or filters change
+	useEffect(() => {
+		setPage(1);
+	}, [searchTerm, filters]);
 
 	// Toggle row expansion
 	const toggleRowExpansion = (userId) => {
@@ -325,34 +336,57 @@ export default function AppUserManagement() {
 				</div>
 
 							{/* Pagination */}
-							{totalPages > 1 && (
-								<div className="rounded-lg border bg-card px-6 py-3 flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<button
-								onClick={() => setPage(p => Math.max(1, p - 1))}
-								disabled={page === 1}
-								className="h-8 w-8 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
-							>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-									<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-								</svg>
-							</button>
-							<span className="text-sm text-muted-foreground">
-								Page {page} of {totalPages}
-							</span>
-							<button
-								onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-								disabled={page === totalPages}
-								className="h-8 w-8 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
-							>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-									<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-								</svg>
-							</button>
-						</div>
-						<span className="text-sm text-muted-foreground">
-							Showing {users.length} of {totalUsers} users
-						</span>
+							{totalRecords > 0 && (
+								<div className="rounded-lg border bg-card px-6 py-3">
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+										{/* Page Navigation */}
+										<div className="flex items-center gap-2">
+											<button
+												onClick={() => setPage(p => Math.max(1, p - 1))}
+												disabled={page === 1}
+												className="h-8 w-8 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
+											>
+												<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+													<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+												</svg>
+											</button>
+											<span className="text-sm text-muted-foreground">
+												Page {page} of {totalPages}
+											</span>
+											<button
+												onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+												disabled={page === totalPages}
+												className="h-8 w-8 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center"
+											>
+												<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+													<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+												</svg>
+											</button>
+										</div>
+
+										{/* Page Info and Size Selector */}
+										<div className="flex items-center gap-4">
+											<span className="text-sm text-muted-foreground">
+												Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalRecords)} of {totalRecords} users
+											</span>
+											<div className="flex items-center gap-2">
+												<label htmlFor="usersPageSize" className="text-sm text-muted-foreground">
+													Rows:
+												</label>
+												<select
+													id="usersPageSize"
+													value={pageSize}
+													onChange={(e) => setPageSize(Number(e.target.value))}
+													className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+												>
+													<option value={10}>10</option>
+													<option value={20}>20</option>
+													<option value={50}>50</option>
+													<option value={100}>100</option>
+												</select>
+											</div>
+										</div>
+									</div>
 								</div>
 							)}
 						</div>
@@ -522,13 +556,9 @@ function UserCard({ user, isExpanded, toggleExpansion, formatDate }) {
 						<div>
 							<h4 className="text-sm font-medium mb-3">Access Information</h4>
 							<div className="space-y-2">
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Date Joined:</span>
+								<div className="text-sm">
+									<span className="text-muted-foreground">Date Joined: </span>
 									<span>{formatDate(user.created_at)}</span>
-								</div>
-								<div className="flex justify-between text-sm">
-									<span className="text-muted-foreground">Password Changed:</span>
-									<span>{formatDate(user.password_change_at)}</span>
 								</div>
 							</div>
 						</div>

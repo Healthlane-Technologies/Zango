@@ -395,7 +395,7 @@ function ReleaseCard({ release, formatDate }) {
 						{/* Release Info */}
 						<div className="space-y-2">
 							<div className="flex items-center gap-3">
-								<h3 className="font-medium text-lg">Release {release.id}</h3>
+								<h3 className="font-medium text-lg">Release {release.version}</h3>
 								<span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(release.status)}`}>
 									<span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(release.status)}`}></span>
 									{release.status}
@@ -498,7 +498,7 @@ function ReleasesTable({ releases, formatDate }) {
 											</svg>
 										</div>
 										<div>
-											<div className="font-medium">Release {release.id}</div>
+											<div className="font-medium">Release {release.version}</div>
 											{release.description && (
 												<div className="text-sm text-muted-foreground truncate max-w-xs">{release.description}</div>
 											)}

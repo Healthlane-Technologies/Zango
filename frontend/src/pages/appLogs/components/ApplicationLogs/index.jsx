@@ -11,7 +11,8 @@ export default function ApplicationLogs() {
 	const [expandedLogs, setExpandedLogs] = useState({});
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
-	const [pageSize] = useState(20);
+	const [totalRecords, setTotalRecords] = useState(0);
+	const [pageSize, setPageSize] = useState(20);
 	const [filters, setFilters] = useState({
 		action: '',
 		object_type: '',
@@ -19,6 +20,12 @@ export default function ApplicationLogs() {
 		date_range: null
 	});
 	const [dropdownOptions, setDropdownOptions] = useState({});
+	const [totalStats, setTotalStats] = useState({
+		total_changes: 0,
+		total_created: 0,
+		total_updated: 0,
+		total_deleted: 0
+	});
 
 	// Fetch logs
 	const fetchLogs = async () => {
@@ -58,8 +65,12 @@ export default function ApplicationLogs() {
 			if (success && response?.audit_logs) {
 				setLogs(response.audit_logs.records || []);
 				setTotalPages(response.audit_logs.total_pages || 1);
+				setTotalRecords(response.audit_logs.total_records || 0);
 				if (response.dropdown_options) {
 					setDropdownOptions(response.dropdown_options);
+				}
+				if (response.total_stats) {
+					setTotalStats(response.total_stats);
 				}
 			}
 		} catch (error) {
@@ -70,8 +81,12 @@ export default function ApplicationLogs() {
 	};
 
 	useEffect(() => {
+		setPage(1); // Reset to page 1 when pageSize changes
+	}, [pageSize]);
+
+	useEffect(() => {
 		fetchLogs();
-	}, [appId, page, searchTerm, filters]);
+	}, [appId, page, pageSize, searchTerm, filters]);
 
 	// Toggle log expansion
 	const toggleLogExpansion = (logId) => {
@@ -218,7 +233,7 @@ export default function ApplicationLogs() {
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-sm font-medium text-gray-600">Total Changes</p>
-							<p className="text-2xl font-semibold text-gray-900 mt-1">{logs.length}</p>
+							<p className="text-2xl font-semibold text-gray-900 mt-1">{totalStats.total_changes}</p>
 						</div>
 						<div className="p-3 bg-gray-100 rounded-lg">
 							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-gray-600">
@@ -234,7 +249,7 @@ export default function ApplicationLogs() {
 						<div>
 							<p className="text-sm font-medium text-gray-600">Created</p>
 							<p className="text-2xl font-semibold text-emerald-600 mt-1">
-								{logs.filter(log => log.action?.toLowerCase() === 'create').length}
+								{totalStats.total_created}
 							</p>
 						</div>
 						<div className="p-3 bg-emerald-100 rounded-lg">
@@ -251,7 +266,7 @@ export default function ApplicationLogs() {
 						<div>
 							<p className="text-sm font-medium text-gray-600">Updated</p>
 							<p className="text-2xl font-semibold text-blue-600 mt-1">
-								{logs.filter(log => log.action?.toLowerCase() === 'update').length}
+								{totalStats.total_updated}
 							</p>
 						</div>
 						<div className="p-3 bg-blue-100 rounded-lg">
@@ -268,7 +283,7 @@ export default function ApplicationLogs() {
 						<div>
 							<p className="text-sm font-medium text-gray-600">Deleted</p>
 							<p className="text-2xl font-semibold text-red-600 mt-1">
-								{logs.filter(log => log.action?.toLowerCase() === 'delete').length}
+								{totalStats.total_deleted}
 							</p>
 						</div>
 						<div className="p-3 bg-red-100 rounded-lg">
@@ -610,34 +625,57 @@ export default function ApplicationLogs() {
 			</div>
 
 			{/* Pagination */}
-			{totalPages > 1 && (
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-3 flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<button
-							onClick={() => setPage(p => Math.max(1, p - 1))}
-							disabled={page === 1}
-							className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-								<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-							</svg>
-						</button>
-						<span className="text-sm text-gray-700">
-							Page {page} of {totalPages}
-						</span>
-						<button
-							onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-							disabled={page === totalPages}
-							className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-								<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-							</svg>
-						</button>
+			{totalRecords > 0 && (
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-3">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						{/* Page Navigation */}
+						<div className="flex items-center gap-2">
+							<button
+								onClick={() => setPage(p => Math.max(1, p - 1))}
+								disabled={page === 1}
+								className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+									<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+								</svg>
+							</button>
+							<span className="text-sm text-gray-700">
+								Page {page} of {totalPages}
+							</span>
+							<button
+								onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+								disabled={page === totalPages}
+								className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+									<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+								</svg>
+							</button>
+						</div>
+
+						{/* Page Info and Size Selector */}
+						<div className="flex items-center gap-4">
+							<span className="text-sm text-gray-600">
+								Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalRecords)} of {totalRecords} logs
+							</span>
+							<div className="flex items-center gap-2">
+								<label htmlFor="pageSize" className="text-sm text-gray-600">
+									Rows:
+								</label>
+								<select
+									id="pageSize"
+									value={pageSize}
+									onChange={(e) => setPageSize(Number(e.target.value))}
+									className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+								>
+									<option value={10}>10</option>
+									<option value={20}>20</option>
+									<option value={50}>50</option>
+									<option value={100}>100</option>
+								</select>
+							</div>
+						</div>
 					</div>
-					<span className="text-sm text-gray-600">
-						Showing {logs.length} of {totalPages * pageSize} audit logs
-					</span>
 				</div>
 			)}
 		</div>

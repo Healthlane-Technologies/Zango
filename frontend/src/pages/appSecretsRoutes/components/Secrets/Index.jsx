@@ -3,14 +3,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
 import BreadCrumbs from '../../../app/components/BreadCrumbs';
-import { setAddSecretModalOpen } from '../../slice/Index';
-import AddSecretModal from '../Modals/AddSecretModal';
-import EditSecretModal from '../Modals/EditSecretModal';
 import {
+	setAddSecretModalOpen,
+	setEditSecretModalOpen,
+	setAppSecretsFormData,
 	selectRerenderPage,
 	selectAppSecretsData,
-	setAppSecretsData 
+	setAppSecretsData
 } from '../../slice/Index';
+import AddSecretModal from '../Modals/AddSecretModal';
+import EditSecretModal from '../Modals/EditSecretModal';
 
 export default function Secrets() {
 	const { appId } = useParams();
@@ -98,9 +100,11 @@ export default function Secrets() {
 	};
 
 	const handleEditSecret = (secret) => {
-		// Set the secret to be edited and open the edit modal
-		// This will need to be connected to your edit modal state management
-		console.log('Edit secret:', secret);
+		// Set the secret data for editing
+		dispatch(setAppSecretsFormData(secret));
+
+		// Open the edit modal
+		dispatch(setEditSecretModalOpen(true));
 	};
 
 	const handleViewSecret = async (secret, event) => {
@@ -534,15 +538,9 @@ function SecretCard({ secret, formatDate, onEdit, onView, visibleSecrets, loadin
 											<span className="text-muted-foreground">Loading secret value...</span>
 										</div>
 									) : visibleSecrets[secret.id] ? (
-										<>
-											<span className="text-foreground break-all select-all bg-background/50 px-2 py-1 rounded border animate-in fade-in duration-300">{visibleSecrets[secret.id]}</span>
-											<span className="text-xs text-emerald-600 dark:text-emerald-400 ml-2 font-medium animate-in fade-in duration-500">(visible)</span>
-										</>
+										<span className="text-foreground break-all select-all bg-background/50 px-2 py-1 rounded border animate-in fade-in duration-300">{visibleSecrets[secret.id]}</span>
 									) : (
-										<div className="flex items-center justify-between">
-											<span className="text-slate-600 dark:text-slate-300 tracking-wider select-none">••••••••••••••••••••</span>
-											<span className="text-xs text-muted-foreground font-medium">(hidden)</span>
-										</div>
+										<span className="text-slate-600 dark:text-slate-300 tracking-wider select-none">••••••••••••••••••••</span>
 									)}
 								</div>
 							</div>
@@ -654,15 +652,9 @@ function SecretsTable({ secrets, formatDate, onEdit, onView, visibleSecrets, loa
 												<span className="text-muted-foreground">Loading...</span>
 											</div>
 										) : visibleSecrets[secret.id] ? (
-											<>
-												<span className="text-foreground break-all select-all bg-background/50 px-1 py-0.5 rounded animate-in fade-in duration-300">{visibleSecrets[secret.id]}</span>
-												<span className="text-xs text-emerald-600 dark:text-emerald-400 ml-2 font-medium animate-in fade-in duration-500">(visible)</span>
-											</>
+											<span className="text-foreground break-all select-all bg-background/50 px-1 py-0.5 rounded animate-in fade-in duration-300">{visibleSecrets[secret.id]}</span>
 										) : (
-											<div className="flex items-center justify-between">
-												<span className="text-slate-600 dark:text-slate-300 tracking-wider select-none">••••••••••••••••</span>
-												<span className="text-xs text-muted-foreground font-medium">(hidden)</span>
-											</div>
+											<span className="text-slate-600 dark:text-slate-300 tracking-wider select-none">••••••••••••••••</span>
 										)}
 									</div>
 								</td>

@@ -10,7 +10,8 @@ export default function Packages() {
 	const [searchTerm, setSearchTerm] = useState('');
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
-	const [pageSize] = useState(10);
+	const [totalRecords, setTotalRecords] = useState(0);
+	const [pageSize, setPageSize] = useState(10);
 	const [configModalOpen, setConfigModalOpen] = useState(false);
 	const [configUrl, setConfigUrl] = useState('');
 	const [installModalOpen, setInstallModalOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function Packages() {
 			if (success && response?.packages) {
 				setPackagesData(response.packages);
 				setTotalPages(response.packages.total_pages || 1);
+				setTotalRecords(response.packages.total_records || 0);
 			}
 		} catch (error) {
 			console.error('Error fetching packages:', error);
@@ -83,8 +85,17 @@ export default function Packages() {
 	};
 
 	useEffect(() => {
+		setPage(1); // Reset to page 1 when pageSize changes
+	}, [pageSize]);
+
+	useEffect(() => {
 		fetchPackages();
-	}, [appId, page, searchTerm]);
+	}, [appId, page, pageSize, searchTerm]);
+
+	// Reset page to 1 when search term changes
+	useEffect(() => {
+		setPage(1);
+	}, [searchTerm]);
 
 	if (!packagesData && !loading) return null;
 
@@ -186,9 +197,11 @@ export default function Packages() {
 											</div>
 										</div>
 										<div className="flex items-center gap-2">
-											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-												v{pkg.installed_version}
-											</span>
+											{pkg.installed_version && (
+												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+													v{pkg.installed_version}
+												</span>
+											)}
 											{pkg.status === 'Installed' ? (
 												pkg.config_url && (
 													<button
@@ -249,34 +262,57 @@ export default function Packages() {
 					})}
 
 					{/* Pagination */}
-					{totalPages > 1 && (
-						<div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200 rounded-lg">
-							<div className="flex items-center gap-2">
-								<button
-									onClick={() => setPage(p => Math.max(1, p - 1))}
-									disabled={page === 1}
-									className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-										<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-									</svg>
-								</button>
-								<span className="text-sm text-gray-700">
-									Page {page} of {totalPages}
-								</span>
-								<button
-									onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-									disabled={page === totalPages}
-									className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-										<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-									</svg>
-								</button>
+					{totalRecords > 0 && (
+						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 rounded-lg">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+								{/* Page Navigation */}
+								<div className="flex items-center gap-2">
+									<button
+										onClick={() => setPage(p => Math.max(1, p - 1))}
+										disabled={page === 1}
+										className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+											<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+										</svg>
+									</button>
+									<span className="text-sm text-gray-700">
+										Page {page} of {totalPages}
+									</span>
+									<button
+										onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+										disabled={page === totalPages}
+										className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+											<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+										</svg>
+									</button>
+								</div>
+
+								{/* Page Info and Size Selector */}
+								<div className="flex items-center gap-4">
+									<span className="text-sm text-gray-600">
+										Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalRecords)} of {totalRecords} packages
+									</span>
+									<div className="flex items-center gap-2">
+										<label htmlFor="packagesPageSize" className="text-sm text-gray-600">
+											Rows:
+										</label>
+										<select
+											id="packagesPageSize"
+											value={pageSize}
+											onChange={(e) => setPageSize(Number(e.target.value))}
+											className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+										>
+											<option value={10}>10</option>
+											<option value={20}>20</option>
+											<option value={50}>50</option>
+											<option value={100}>100</option>
+										</select>
+									</div>
+								</div>
 							</div>
-							<span className="text-sm text-gray-600">
-								Showing {packages.length} packages
-							</span>
 						</div>
 					)}
 				</div>
@@ -306,52 +342,38 @@ export default function Packages() {
 
 			{/* Configuration Modal */}
 			{configModalOpen && (
-				<div className="fixed inset-0 z-40 overflow-hidden">
+				<div className="fixed inset-0 z-40 overflow-hidden" style={{ left: '102px', top: '56px' }}>
 					{/* Background overlay */}
 					<div 
 						className="absolute inset-0 bg-gray-500 bg-opacity-75"
 						onClick={() => setConfigModalOpen(false)}
 					></div>
 
-					{/* Modal panel - Positioned within content area */}
-					<div className="absolute inset-0">
-						<div className="h-full w-full flex">
-							{/* Sidebar spacer */}
-							<div className="w-64 flex-shrink-0"></div>
-							
-							{/* Main content area */}
-							<div className="flex-1 flex flex-col">
-								{/* Header spacer */}
-								<div className="h-16 flex-shrink-0"></div>
-								
-								{/* Modal content */}
-								<div className="flex-1 flex flex-col bg-white shadow-xl">
-									{/* Modal header */}
-									<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
-										<h3 className="text-lg font-semibold text-gray-900">
-											Package Configuration
-										</h3>
-										<button
-											onClick={() => setConfigModalOpen(false)}
-											className="text-gray-400 hover:text-gray-500 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-										>
-											<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-											</svg>
-										</button>
-									</div>
+					{/* Modal panel */}
+					<div className="absolute inset-0 flex flex-col bg-white shadow-xl">
+						{/* Modal header */}
+						<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
+							<h3 className="text-lg font-semibold text-gray-900">
+								Package Configuration
+							</h3>
+							<button
+								onClick={() => setConfigModalOpen(false)}
+								className="text-gray-400 hover:text-gray-500 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+							>
+								<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
 
-									{/* Modal body - Takes remaining space */}
-									<div className="flex-1 overflow-hidden">
-										<iframe
-											src={configUrl}
-											className="w-full h-full border-0"
-											title="Package Configuration"
-											allow="fullscreen"
-										></iframe>
-									</div>
-								</div>
-							</div>
+						{/* Modal body - Takes remaining space */}
+						<div className="flex-1 overflow-hidden">
+							<iframe
+								src={configUrl}
+								className="w-full h-full border-0"
+								title="Package Configuration"
+								allow="fullscreen"
+							></iframe>
 						</div>
 					</div>
 				</div>

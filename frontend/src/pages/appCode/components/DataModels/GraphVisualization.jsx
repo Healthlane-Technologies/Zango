@@ -309,7 +309,7 @@ export default function GraphVisualization({ dotDiagram, models, onModelClick })
 								</span>
 							)}
 						</div>
-						
+
 						{/* Export Button */}
 						<button
 							onClick={exportAsJpg}
@@ -342,10 +342,10 @@ export default function GraphVisualization({ dotDiagram, models, onModelClick })
 				</div>
 			</div>
 			<div className="p-4 bg-gray-50">
-				<div 
+				<div
 					ref={containerRef}
 					className="bg-white border border-gray-200 rounded-md overflow-auto"
-					style={{ 
+					style={{
 						minHeight: '400px',
 						maxHeight: '600px'
 					}}

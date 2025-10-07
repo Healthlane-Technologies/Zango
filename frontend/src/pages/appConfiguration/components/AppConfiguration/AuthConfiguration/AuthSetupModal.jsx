@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
 
 const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles = [] }) => {
 	const [currentStep, setCurrentStep] = useState(1);
-	const totalSteps = 5; // Added role overrides step
+	const totalSteps = 4;
 
 	// Default setup data
 	const defaultSetupData = {
@@ -54,7 +52,6 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			max_concurrent_sessions: 0,
 			force_logout_on_password_change: false,
 		},
-		role_overrides: {}, // { roleId: { password_policy: {...}, two_factor_auth: {...} } }
 	};
 
 	// Use initial data if provided (editing mode), otherwise use defaults
@@ -94,7 +91,6 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				allowedMethods: initialData.two_factor_auth?.allowedMethods || ['email'],
 			},
 			session_policy: initialData.session_policy || defaultSetupData.session_policy,
-			role_overrides: initialData.role_overrides || {},
 		};
 	};
 
@@ -133,7 +129,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	// Step components
 	const StepIndicator = () => (
 		<div className="flex items-center justify-center mb-[32px]">
-			{[1, 2, 3, 4, 5].map((step) => (
+			{[1, 2, 3, 4].map((step) => (
 				<div key={step} className="flex items-center">
 					<div
 						className={`w-[40px] h-[40px] rounded-full flex items-center justify-center font-medium text-[14px] transition-all ${
@@ -152,7 +148,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							step
 						)}
 					</div>
-					{step < 5 && (
+					{step < 4 && (
 						<div className={`w-[60px] h-[2px] mx-[8px] transition-all ${
 							step < currentStep ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'
 						}`} />
@@ -716,7 +712,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	);
 
 	// Step 2: Password Policy (only if password is enabled)
-	const Step2PasswordPolicy = () => (
+	const Step2PasswordPolicy = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Password Policy</h3>
@@ -734,9 +730,12 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 						min="4"
 						max="128"
 						value={setupData.password_policy.min_length}
-						onChange={(e) => updateSetupData('password_policy', {
-							min_length: parseInt(e.target.value) || 8
-						})}
+						onChange={(e) => {
+							const value = e.target.value === '' ? '' : Number(e.target.value);
+							updateSetupData('password_policy', {
+								min_length: value
+							});
+						}}
 						className="w-[120px] px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
 					/>
 				</div>
@@ -804,15 +803,18 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 						min="1"
 						max="365"
 						value={setupData.password_policy.password_expiry_days}
-						onChange={(e) => updateSetupData('password_policy', {
-							password_expiry_days: parseInt(e.target.value) || 90
-						})}
+						onChange={(e) => {
+							const value = e.target.value === '' ? '' : Number(e.target.value);
+							updateSetupData('password_policy', {
+								password_expiry_days: value
+							});
+						}}
 						className="w-[120px] px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
 					/>
 				</div>
 			</div>
 		</div>
-	);
+	), [setupData.password_policy]);
 
 	// Step 3: Two-Factor Authentication
 	const Step3TwoFactor = () => (
@@ -877,297 +879,8 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		</div>
 	);
 
-	// Step 4: Role Overrides
-	const Step4RoleOverrides = () => (
-		<div className="space-y-[24px]">
-			<div>
-				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">User Role Overrides</h3>
-				<p className="text-[14px] text-[#6B7280]">Define stricter password and 2FA policies for specific user roles</p>
-				<div className="mt-[8px] p-[12px] bg-[#FEF3C7] rounded-[8px] flex gap-[8px]">
-					<svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#D97706] flex-shrink-0 mt-[2px]">
-						<path d="M8 4V8M8 12H8.01M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-					</svg>
-					<p className="text-[12px] text-[#92400E]">
-						Role overrides can only enforce stricter policies than the global settings. You cannot relax security requirements for specific roles.
-					</p>
-				</div>
-			</div>
-
-			{roles && roles.length > 0 ? (
-				<div className="space-y-[16px]">
-					{roles.map((role) => {
-						const roleOverride = setupData.role_overrides[role.id] || {};
-						const hasOverride = !!setupData.role_overrides[role.id];
-						
-						return (
-							<div key={role.id} className="border-2 border-[#E5E7EB] rounded-[12px] overflow-hidden">
-								<div className="p-[20px] bg-[#F9FAFB]">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-[12px]">
-											<div className={`w-[40px] h-[40px] rounded-[8px] flex items-center justify-center ${
-												hasOverride ? 'bg-[#5048ED] text-white' : 'bg-[#E5E7EB] text-[#6B7280]'
-											}`}>
-												<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-													<path d="M10 10C12.2091 10 14 8.20914 14 6C14 3.79086 12.2091 2 10 2C7.79086 2 6 3.79086 6 6C6 8.20914 7.79086 10 10 10Z" stroke="currentColor" strokeWidth="2"/>
-													<path d="M2 18C2 14.6863 4.68629 12 8 12H12C15.3137 12 18 14.6863 18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-												</svg>
-											</div>
-											<div>
-												<h4 className="text-[16px] font-medium text-[#111827]">{role.name}</h4>
-												<p className="text-[12px] text-[#6B7280]">
-													{hasOverride ? 'Custom policies applied' : 'Using default policies'}
-												</p>
-											</div>
-										</div>
-										<label className="flex items-center gap-[8px]">
-											<input
-												type="checkbox"
-												checked={hasOverride}
-												onChange={(e) => {
-													if (e.target.checked) {
-														// Initialize with current global settings
-														updateSetupData('role_overrides', {
-															[role.id]: {
-																password_policy: { ...setupData.password_policy },
-																two_factor_auth: { ...setupData.two_factor_auth }
-															}
-														});
-													} else {
-														// Remove override
-														const newOverrides = { ...setupData.role_overrides };
-														delete newOverrides[role.id];
-														setSetupData(prev => ({
-															...prev,
-															role_overrides: newOverrides
-														}));
-													}
-												}}
-												className="w-[20px] h-[20px] rounded border-[#D1D5DB] text-[#5048ED]"
-											/>
-											<span className="text-[14px] font-medium text-[#111827]">Enable Overrides</span>
-										</label>
-									</div>
-								</div>
-								
-								{hasOverride && (
-									<div className="p-[20px] space-y-[20px] border-t border-[#E5E7EB]">
-										{/* Password Policy Override */}
-										<div>
-											<h5 className="text-[14px] font-medium text-[#111827] mb-[12px] flex items-center gap-[6px]">
-												<svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#5048ED]">
-													<path d="M12 7V5C12 2.79086 10.2091 1 8 1C5.79086 1 4 2.79086 4 5V7M3 7H13C13.5523 7 14 7.44772 14 8V14C14 14.5523 13.5523 15 13 15H3C2.44772 15 2 14.5523 2 14V8C2 7.44772 2.44772 7 3 7Z" stroke="currentColor" strokeWidth="1.5"/>
-												</svg>
-												Password Policy
-											</h5>
-											<div className="grid grid-cols-2 gap-[12px]">
-												<div>
-													<label className="block text-[12px] text-[#6B7280] mb-[4px]">Min Length</label>
-													<input
-														type="number"
-														min={setupData.password_policy.min_length}
-														max="128"
-														value={roleOverride.password_policy?.min_length || setupData.password_policy.min_length}
-														onChange={(e) => {
-															const newValue = parseInt(e.target.value) || setupData.password_policy.min_length;
-															// Ensure it's not less than global setting
-															if (newValue >= setupData.password_policy.min_length) {
-																updateSetupData('role_overrides', {
-																	[role.id]: {
-																		...roleOverride,
-																		password_policy: {
-																			...roleOverride.password_policy,
-																			min_length: newValue
-																		}
-																	}
-																});
-															}
-														}}
-														className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px]"
-													/>
-												</div>
-												<div>
-													<label className="block text-[12px] text-[#6B7280] mb-[4px]">Expiry (days)</label>
-													<input
-														type="number"
-														min="0"
-														max={setupData.password_policy.password_expiry_days || 365}
-														value={roleOverride.password_policy?.password_expiry_days || setupData.password_policy.password_expiry_days}
-														onChange={(e) => {
-															const newValue = parseInt(e.target.value) || 0;
-															// Ensure it's not greater than global setting (shorter expiry is stricter)
-															if (newValue <= setupData.password_policy.password_expiry_days) {
-																updateSetupData('role_overrides', {
-																	[role.id]: {
-																		...roleOverride,
-																		password_policy: {
-																			...roleOverride.password_policy,
-																			password_expiry_days: newValue
-																		}
-																	}
-																});
-															}
-														}}
-														className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px]"
-													/>
-												</div>
-											</div>
-											<div className="mt-[8px] space-y-[6px]">
-												<label className="flex items-center gap-[6px]">
-													<input
-														type="checkbox"
-														checked={roleOverride.password_policy?.require_uppercase ?? setupData.password_policy.require_uppercase}
-														disabled={setupData.password_policy.require_uppercase} // Can't disable if globally required
-														onChange={(e) => {
-															// Only allow enabling, not disabling if globally enabled
-															if (!setupData.password_policy.require_uppercase || e.target.checked) {
-																updateSetupData('role_overrides', {
-																	[role.id]: {
-																		...roleOverride,
-																		password_policy: {
-																			...roleOverride.password_policy,
-																			require_uppercase: e.target.checked
-																		}
-																	}
-																});
-															}
-														}}
-														className="w-[14px] h-[14px] rounded border-[#D1D5DB] text-[#5048ED] disabled:opacity-50"
-													/>
-													<span className="text-[12px] text-[#111827]">Require uppercase</span>
-													{setupData.password_policy.require_uppercase && (
-														<span className="text-[10px] text-[#6B7280]">(globally required)</span>
-													)}
-												</label>
-												<label className="flex items-center gap-[6px]">
-													<input
-														type="checkbox"
-														checked={roleOverride.password_policy?.require_lowercase ?? setupData.password_policy.require_lowercase}
-														disabled={setupData.password_policy.require_lowercase}
-														onChange={(e) => {
-															if (!setupData.password_policy.require_lowercase || e.target.checked) {
-																updateSetupData('role_overrides', {
-																	[role.id]: {
-																		...roleOverride,
-																		password_policy: {
-																			...roleOverride.password_policy,
-																			require_lowercase: e.target.checked
-																		}
-																	}
-																});
-															}
-														}}
-														className="w-[14px] h-[14px] rounded border-[#D1D5DB] text-[#5048ED] disabled:opacity-50"
-													/>
-													<span className="text-[12px] text-[#111827]">Require lowercase</span>
-													{setupData.password_policy.require_lowercase && (
-														<span className="text-[10px] text-[#6B7280]">(globally required)</span>
-													)}
-												</label>
-												<label className="flex items-center gap-[6px]">
-													<input
-														type="checkbox"
-														checked={roleOverride.password_policy?.require_numbers ?? setupData.password_policy.require_numbers}
-														disabled={setupData.password_policy.require_numbers}
-														onChange={(e) => {
-															if (!setupData.password_policy.require_numbers || e.target.checked) {
-																updateSetupData('role_overrides', {
-																	[role.id]: {
-																		...roleOverride,
-																		password_policy: {
-																			...roleOverride.password_policy,
-																			require_numbers: e.target.checked
-																		}
-																	}
-																});
-															}
-														}}
-														className="w-[14px] h-[14px] rounded border-[#D1D5DB] text-[#5048ED] disabled:opacity-50"
-													/>
-													<span className="text-[12px] text-[#111827]">Require numbers</span>
-													{setupData.password_policy.require_numbers && (
-														<span className="text-[10px] text-[#6B7280]">(globally required)</span>
-													)}
-												</label>
-												<label className="flex items-center gap-[6px]">
-													<input
-														type="checkbox"
-														checked={roleOverride.password_policy?.require_special_chars ?? setupData.password_policy.require_special_chars}
-														disabled={setupData.password_policy.require_special_chars}
-														onChange={(e) => {
-															if (!setupData.password_policy.require_special_chars || e.target.checked) {
-																updateSetupData('role_overrides', {
-																	[role.id]: {
-																		...roleOverride,
-																		password_policy: {
-																			...roleOverride.password_policy,
-																			require_special_chars: e.target.checked
-																		}
-																	}
-																});
-															}
-														}}
-														className="w-[14px] h-[14px] rounded border-[#D1D5DB] text-[#5048ED] disabled:opacity-50"
-													/>
-													<span className="text-[12px] text-[#111827]">Require special characters</span>
-													{setupData.password_policy.require_special_chars && (
-														<span className="text-[10px] text-[#6B7280]">(globally required)</span>
-													)}
-												</label>
-											</div>
-										</div>
-										
-										{/* 2FA Override */}
-										<div>
-											<h5 className="text-[14px] font-medium text-[#111827] mb-[12px] flex items-center gap-[6px]">
-												<svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#5048ED]">
-													<path d="M8 1L10 3H14V7L12 9L14 11V15H10L8 13L6 15H2V11L4 9L2 7V3H6L8 1Z" stroke="currentColor" strokeWidth="1.5"/>
-													<circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
-												</svg>
-												Two-Factor Authentication
-											</h5>
-											<label className="flex items-center gap-[8px]">
-												<input
-													type="checkbox"
-													checked={roleOverride.two_factor_auth?.required ?? setupData.two_factor_auth.required}
-													disabled={setupData.two_factor_auth.required} // Can't disable if globally required
-													onChange={(e) => {
-														// Only allow enabling 2FA, not disabling if globally enabled
-														if (!setupData.two_factor_auth.required || e.target.checked) {
-															updateSetupData('role_overrides', {
-																[role.id]: {
-																	...roleOverride,
-																	two_factor_auth: {
-																		...roleOverride.two_factor_auth,
-																		required: e.target.checked
-																	}
-																}
-															});
-														}
-													}}
-													className="w-[16px] h-[16px] rounded border-[#D1D5DB] text-[#5048ED] disabled:opacity-50"
-												/>
-												<span className="text-[13px] text-[#111827]">Require 2FA for this role</span>
-												{setupData.two_factor_auth.required && (
-													<span className="text-[10px] text-[#6B7280] ml-[4px]">(globally required)</span>
-												)}
-											</label>
-										</div>
-									</div>
-								)}
-							</div>
-						);
-					})}
-				</div>
-			) : (
-				<div className="bg-[#F9FAFB] rounded-[12px] p-[32px] text-center">
-					<p className="text-[14px] text-[#6B7280]">No user roles available for overrides</p>
-				</div>
-			)}
-		</div>
-	);
-
-	// Step 5: Review
-	const Step5Review = () => (
+	// Step 4: Review
+	const Step4Review = () => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Review Configuration</h3>
@@ -1316,44 +1029,6 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				)}
 
-				{/* Role Overrides */}
-				{Object.keys(setupData.role_overrides).length > 0 && (
-					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
-						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">Role Overrides</h4>
-						<div className="space-y-[12px]">
-							{Object.entries(setupData.role_overrides).map(([roleId, override]) => {
-								const role = roles?.find(r => r.id === parseInt(roleId));
-								if (!role) return null;
-								
-								return (
-									<div key={roleId} className="border border-[#E5E7EB] rounded-[8px] p-[16px]">
-										<div className="flex items-center justify-between mb-[8px]">
-											<span className="font-medium text-[#111827]">{role.name}</span>
-											<div className="flex gap-[8px]">
-												{override.password_policy && (
-													<span className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
-														Custom Password Policy
-													</span>
-												)}
-												{override.two_factor_auth?.required && (
-													<span className="px-[8px] py-[2px] bg-[#D1FAE5] text-[#065F46] rounded-[4px] text-[11px] font-medium">
-														2FA Required
-													</span>
-												)}
-											</div>
-										</div>
-										{override.password_policy && (
-											<div className="text-[12px] text-[#6B7280] space-y-[4px]">
-												<div>Min length: {override.password_policy.min_length} chars</div>
-												<div>Expiry: {override.password_policy.password_expiry_days} days</div>
-											</div>
-										)}
-									</div>
-								);
-							})}
-						</div>
-					</div>
-				)}
 			</div>
 		</div>
 	);
@@ -1369,13 +1044,11 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					setCurrentStep(3);
 					return null;
 				}
-				return <Step2PasswordPolicy />;
+				return Step2PasswordPolicy;
 			case 3:
 				return <Step3TwoFactor />;
 			case 4:
-				return <Step4RoleOverrides />;
-			case 5:
-				return <Step5Review />;
+				return <Step4Review />;
 			default:
 				return null;
 		}

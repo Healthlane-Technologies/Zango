@@ -45,9 +45,6 @@ class TenantSerializerModel(serializers.ModelSerializer):
                     .version
                 )
         except Exception:
-            import traceback
-
-            traceback.print_exc()
             latest_release = None
         return latest_release
 

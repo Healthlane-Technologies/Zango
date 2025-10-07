@@ -1,6 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table';
 import { find } from 'lodash';
-import ListCell from '../../../../components/Table/ListCell';
 import TableDropdownFilter from '../../../../components/Table/TableDropdownFilter';
 import { handleColumnSearch } from '../../../../utils/table';
 
@@ -51,34 +50,6 @@ function columns({ debounceSearch, localTableData }) {
 						</div>
 						<span className="text-start font-lato text-[12px] text-[#6C747D] leading-[16px]">
 							ID: {row.id} • Created: {formatDate(row.created_at)}
-						</span>
-					</div>
-				);
-			},
-		}),
-		columnHelper.accessor((row) => row.policies_count, {
-			id: 'policies_count',
-			header: () => (
-				<div className="flex h-full items-start justify-start px-[20px] py-[12px] text-start">
-					<span className="font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Policies
-					</span>
-				</div>
-			),
-			cell: (info) => {
-				const policyCount = info.getValue();
-				const row = info.row.original;
-				const totalPolicies = policyCount?.total || policyCount?.policies || 0;
-				const userPolicies = policyCount?.policies || 0;
-				const policyGroups = policyCount?.policy_groups || 0;
-				
-				return (
-					<div className="flex h-full flex-col gap-[4px] border-b border-[#F0F3F4] px-[20px] py-[14px]">
-						<span className="text-start font-lato text-[14px] font-semibold leading-[20px] tracking-[0.2px]">
-							{totalPolicies} Total
-						</span>
-						<span className="text-start font-lato text-[12px] text-[#6C747D] leading-[16px]">
-							{userPolicies} User • {policyGroups} Groups
 						</span>
 					</div>
 				);
@@ -135,32 +106,6 @@ function columns({ debounceSearch, localTableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.users_count, {
-			id: 'users_count',
-			header: () => (
-				<div className="flex h-full items-start justify-start px-[20px] py-[12px] text-start">
-					<span className="min-w-max font-lato text-[11px] font-bold uppercase leading-[16px] tracking-[0.6px] text-[#6C747D]">
-						Users
-					</span>
-				</div>
-			),
-			cell: (info) => {
-				const userCount = info.getValue() || 0;
-				
-				return (
-					<div className="flex h-full flex-col gap-[4px] border-b border-[#F0F3F4] px-[20px] py-[14px]">
-						<span className="text-start font-lato text-[14px] font-semibold leading-[20px] tracking-[0.2px]">
-							{userCount}
-						</span>
-						<span className="text-start font-lato text-[12px] text-[#6C747D] leading-[16px]">
-							{userCount === 1 ? 'User assigned' : 'Users assigned'}
-						</span>
-					</div>
-				);
-			},
-		}),
-		
-		// New column for Last Modified
 		columnHelper.accessor((row) => row.modified_at, {
 			id: 'modified_at',
 			header: () => (

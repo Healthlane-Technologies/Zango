@@ -11,7 +11,8 @@ export default function Policies({ data }) {
 	const [expandedPolicies, setExpandedPolicies] = useState({});
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
-	const [pageSize] = useState(10);
+	const [totalRecords, setTotalRecords] = useState(0);
+	const [pageSize, setPageSize] = useState(10);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [viewConfigModalOpen, setViewConfigModalOpen] = useState(false);
 	const [editingPolicy, setEditingPolicy] = useState(null);
@@ -40,6 +41,7 @@ export default function Policies({ data }) {
 			if (success && response?.policies) {
 				setPolicies(response.policies.records || []);
 				setTotalPages(response.policies.total_pages || 1);
+				setTotalRecords(response.policies.total_records || 0);
 				if (response.dropdown_options?.roles) {
 					setAvailableRoles(response.dropdown_options.roles);
 				}
@@ -52,8 +54,17 @@ export default function Policies({ data }) {
 	};
 
 	useEffect(() => {
+		setPage(1); // Reset to page 1 when pageSize changes
+	}, [pageSize]);
+
+	useEffect(() => {
 		fetchPolicies();
-	}, [appId, page, searchTerm]);
+	}, [appId, page, pageSize, searchTerm]);
+
+	// Reset page to 1 when search term changes
+	useEffect(() => {
+		setPage(1);
+	}, [searchTerm]);
 
 	// Toggle policy expansion
 	const togglePolicyExpansion = (policyId) => {
@@ -379,34 +390,57 @@ export default function Policies({ data }) {
 						</div>
 
 						{/* Pagination */}
-						{totalPages > 1 && (
-							<div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-								<div className="flex items-center gap-2">
-									<button
-										onClick={() => setPage(p => Math.max(1, p - 1))}
-										disabled={page === 1}
-										className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-									>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-											<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-										</svg>
-									</button>
-									<span className="text-sm text-gray-700">
-										Page {page} of {totalPages}
-									</span>
-									<button
-										onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-										disabled={page === totalPages}
-										className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-									>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-											<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-										</svg>
-									</button>
+						{totalRecords > 0 && (
+							<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+									{/* Page Navigation */}
+									<div className="flex items-center gap-2">
+										<button
+											onClick={() => setPage(p => Math.max(1, p - 1))}
+											disabled={page === 1}
+											className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+												<path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+											</svg>
+										</button>
+										<span className="text-sm text-gray-700">
+											Page {page} of {totalPages}
+										</span>
+										<button
+											onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+											disabled={page === totalPages}
+											className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+												<path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+											</svg>
+										</button>
+									</div>
+
+									{/* Page Info and Size Selector */}
+									<div className="flex items-center gap-4">
+										<span className="text-sm text-gray-600">
+											Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalRecords)} of {totalRecords} policies
+										</span>
+										<div className="flex items-center gap-2">
+											<label htmlFor="policiesPageSize" className="text-sm text-gray-600">
+												Rows:
+											</label>
+											<select
+												id="policiesPageSize"
+												value={pageSize}
+												onChange={(e) => setPageSize(Number(e.target.value))}
+												className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+											>
+												<option value={10}>10</option>
+												<option value={20}>20</option>
+												<option value={50}>50</option>
+												<option value={100}>100</option>
+											</select>
+										</div>
+									</div>
 								</div>
-								<span className="text-sm text-gray-600">
-									Showing {policies.length} policies
-								</span>
 							</div>
 						)}
 					</>

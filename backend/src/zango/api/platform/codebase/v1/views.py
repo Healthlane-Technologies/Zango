@@ -585,7 +585,7 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
                 # Process modules with additional analysis
                 modules = settings_data.get("modules", [])
                 for module in modules:
-                    module_path = workspace_path / module["path"]
+                    module_path = workspace_path / module["path"].replace(".", "/")
                     if module_path.exists():
                         module_analysis = self.analyze_module(module_path)
                         module.update(module_analysis)
