@@ -112,6 +112,41 @@ def get_datetime_str_in_tenant_timezone(datetime_val, tenant):
     return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")
 
 
+def get_datetime_in_current_timezone(datetime_val, tenant):
+    """
+    Convert datetime to currently activated timezone.
+    Priority: X-Client-Timezone header (from request) > task timezone (from connection) > tenant timezone > settings.TIME_ZONE
+    """
+    from django.db import connection
+
+    request = get_current_request()
+
+    # Priority 1: Request timezone (set by middleware from X-Client-Timezone header)
+    if request and hasattr(request, "tzname") and request.tzname:
+        tzname = request.tzname
+    # Priority 2: Task timezone (set on connection in task executor)
+    elif hasattr(connection, "tzname") and connection.tzname:
+        tzname = connection.tzname
+    # Priority 3: Tenant timezone
+    elif tenant.timezone:
+        tzname = tenant.timezone
+    # Priority 4: Default timezone
+    else:
+        tzname = settings.TIME_ZONE
+
+    tz = pytz.timezone(tzname)
+    return datetime_val.astimezone(tz)
+
+
+def get_datetime_str_in_current_timezone(datetime_val, tenant):
+    """
+    Convert datetime to currently activated timezone and format using tenant's format.
+    Uses X-Client-Timezone header if set, otherwise tenant timezone.
+    """
+    datetime_val = get_datetime_in_current_timezone(datetime_val, tenant)
+    return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")
+
+
 def get_search_columns(request):
     search_columns = {}
     for key, value in request.GET.items():
