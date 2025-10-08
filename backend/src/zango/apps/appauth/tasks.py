@@ -171,8 +171,8 @@ class OTPService:
 
         # Add extra_data if specified
         if self.config.extra_data:
-            if isinstance(self.config.extra_data, str):
-                self.config.extra_data = json.loads(self.config.extra_data)
+            if isinstance(self.config.extra_data, dict):
+                self.config.extra_data = json.dumps(self.config.extra_data)
             payload["extra_data"] = self.config.extra_data
 
         try:

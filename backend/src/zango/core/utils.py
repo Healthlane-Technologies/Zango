@@ -338,6 +338,8 @@ def get_auth_priority(
               or an empty string if not found at any level
     """
 
+    from allauth.socialaccount.models import SocialApp
+
     from zango.apps.appauth.models import UserRoleModel
 
     if request is None:
@@ -374,6 +376,28 @@ def get_auth_priority(
         from zango.apps.shared.tenancy.schema import DEFAULT_AUTH_CONFIG
 
         tenant_auth_config = DEFAULT_AUTH_CONFIG
+    tenant_auth_config = getattr(tenant, "auth_config", {})
+
+    for provider in SocialApp.objects.all():
+        if tenant_auth_config["login_methods"]["oidc"].get("providers"):
+            tenant_auth_config["login_methods"]["oidc"]["providers"].append(
+                {
+                    "id": provider.id,
+                    "name": provider.name,
+                    "provider": provider.provider,
+                    "enabled": provider.enabled,
+                }
+            )
+        else:
+            tenant_auth_config["login_methods"]["oidc"]["providers"] = [
+                {
+                    "id": provider.id,
+                    "name": provider.name,
+                    "provider": provider.provider,
+                    "enabled": provider.enabled,
+                    "redirect_url": provider.redirect_url,
+                }
+            ]
     user_role_auth_config = filter_user_role_auth_config(
         getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
     )

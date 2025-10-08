@@ -1,3 +1,4 @@
+from allauth.socialaccount.models import SocialApp
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -24,7 +25,10 @@ class AppAuthConfigViewAPIV1(APIView):
         return []
 
     def get(self, request):
-        response = {"auth_config": get_auth_priority(request=request)}
+        auth_config = get_auth_priority(request=request)
+        oauth_apps = SocialApp.objects.all().values_list("provider", flat=True)
+        auth_config["oauth"] = list(oauth_apps)
+        response = {"auth_config": auth_config}
         status = 200
         success = True
         return get_api_response(success, response, status)

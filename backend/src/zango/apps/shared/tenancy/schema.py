@@ -48,8 +48,15 @@ class SSOLoginMethod(TypedDict):
     enabled: bool
 
 
+class Provider(TypedDict):
+    name: str
+    enabled: bool
+    redirect_url: str
+
+
 class OIDCLoginMethod(TypedDict):
     enabled: bool
+    providers: List[Provider]
 
 
 class OTPLoginMethod(TypedDict, total=False):
@@ -80,6 +87,11 @@ class TwoFactorAuth(TypedDict, total=False):
     skip_for_sso: Optional[bool]
     email_hook: str
     sms_hook: str
+    email_content: str
+    email_subject: str
+    email_config_key: str
+    sms_config_key: str
+    sms_extra_data: str
 
 
 class SessionPolicy(TypedDict):

@@ -75,6 +75,8 @@ TENANT_APPS = [
     "allauth.headless",
     "allauth.mfa",
     "allauth.usersessions",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "django.contrib.humanize",
 ]
 
@@ -287,6 +289,15 @@ AWS_MEDIA_STORAGE_LOCATION = "media"  # Prefix added to all the files uploaded
 AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
 TENANT_LIMIT_SET_CALLS = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+    }
+}
 
 
 def setup_settings(settings, BASE_DIR):
