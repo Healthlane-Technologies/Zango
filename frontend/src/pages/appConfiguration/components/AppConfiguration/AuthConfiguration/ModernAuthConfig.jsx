@@ -26,10 +26,14 @@ const DEFAULT_AUTH_CONFIG = {
 		password: {
 			enabled: true,
 			forgot_password_enabled: false,
+			allowed_usernames: ['email', 'phone'],
 		},
 		sso: { enabled: false },
 		oidc: { enabled: false },
-		otp: { enabled: false },
+		otp: {
+			enabled: false,
+			allowed_methods: []
+		},
 	},
 	two_factor_auth: {
 		required: false,
@@ -136,7 +140,7 @@ const ModernAuthConfig = () => {
 					onClose={() => setShowAuthSetupModal(false)}
 					roles={roles}
 					onComplete={async (authData) => {
-						// Transform to expected format
+						// Transform to expected format matching the schema
 						const authConfig = {
 							login_methods: {
 								password: {
@@ -144,44 +148,26 @@ const ModernAuthConfig = () => {
 									forgot_password_enabled: authData.login_methods.password.forgot_password_enabled,
 									password_reset_link_expiry_hours: 24, // Default
 									allowed_usernames: authData.login_methods.allowed_usernames,
-									reset_method: authData.login_methods.password.reset_method,
-									reset_via_sms: authData.login_methods.password.reset_via_sms,
-									reset_via_email: authData.login_methods.password.reset_via_email,
-									reset_sms_content: authData.login_methods.password.reset_sms_content,
-									reset_sms_webhook: authData.login_methods.password.reset_sms_webhook,
-									reset_email_content: authData.login_methods.password.reset_email_content,
-									reset_email_subject: authData.login_methods.password.reset_email_subject,
-									reset_email_webhook: authData.login_methods.password.reset_email_webhook,
-									reset_expiry_minutes: authData.login_methods.password.reset_expiry_minutes,
 								},
 								otp: {
 									enabled: authData.login_methods.otp.enabled,
-									sms_content: authData.login_methods.otp.sms_content,
-									sms_webhook: authData.login_methods.otp.sms_webhook,
-									email_content: authData.login_methods.otp.email_content,
-									email_subject: authData.login_methods.otp.email_subject,
-									email_webhook: authData.login_methods.otp.email_webhook,
-									allowed_methods: authData.login_methods.otp.allowed_methods || ['email', 'sms'],
+									allowed_methods: authData.login_methods.otp.allowed_methods || [],
+									email_content: authData.login_methods.otp.email_content || '',
+									email_subject: authData.login_methods.otp.email_subject || '',
+									email_hook: authData.login_methods.otp.email_webhook || '',
+									email_config_key: authData.login_methods.otp.email_config_key || '',
+									sms_hook: authData.login_methods.otp.sms_webhook || '',
+									sms_template_id: authData.login_methods.otp.sms_content || '',
+									sms_config_key: authData.login_methods.otp.sms_config_key || '',
+									sms_extra_data: authData.login_methods.otp.sms_extra_data || '',
 								},
 								sso: { enabled: authData.login_methods.sso.enabled },
 								oidc: { enabled: authData.login_methods.oidc.enabled },
-								allowed_usernames: authData.login_methods.allowed_usernames,
 							},
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
-								force_logout_on_password_change: authData.session_policy.force_logout_on_password_change,
 							},
 							password_policy: {
-								reset: {
-									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
-									enabled: authData.login_methods.password.forgot_password_enabled,
-									allowed_methods: (() => {
-										const methods = [];
-										if (authData.login_methods.password.reset_via_email) methods.push('email');
-										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
-										return methods.length > 0 ? methods : ['email'];
-									})(),
-								},
 								min_length: authData.password_policy.min_length,
 								allow_change: authData.password_policy.allow_change,
 								require_numbers: authData.password_policy.require_numbers,
@@ -190,10 +176,37 @@ const ModernAuthConfig = () => {
 								password_expiry_days: authData.password_policy.password_expiry_days,
 								require_special_chars: authData.password_policy.require_special_chars,
 								password_history_count: authData.password_policy.password_history_count,
+								reset: {
+									enabled: authData.login_methods.password.forgot_password_enabled,
+									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
+									allowed_methods: (() => {
+										const methods = [];
+										if (authData.login_methods.password.reset_via_email) methods.push('email');
+										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
+										return methods.length > 0 ? methods : ['email'];
+									})(),
+									by_code: authData.login_methods.password.reset_method === 'code',
+									by_email: authData.login_methods.password.reset_via_email || false,
+									login_after_reset: false,
+									max_attempts: 3,
+									email_hook: authData.login_methods.password.reset_email_webhook || '',
+									email_content: authData.login_methods.password.reset_email_content || '',
+									email_subject: authData.login_methods.password.reset_email_subject || '',
+									email_config_key: authData.login_methods.password.reset_email_config_key || '',
+									sms_hook: authData.login_methods.password.reset_sms_webhook || '',
+									sms_template_id: authData.login_methods.password.reset_sms_content || '',
+									sms_config_key: authData.login_methods.password.reset_sms_config_key || '',
+									sms_extra_data: authData.login_methods.password.reset_sms_extra_data || '',
+								},
 							},
 							two_factor_auth: {
 								required: authData.two_factor_auth.required,
-								allowedMethods: authData.two_factor_auth.allowedMethods,
+								allowed_methods: authData.two_factor_auth.allowedMethods || [],
+								enforced_from: null,
+								grace_period_days: null,
+								skip_for_sso: false,
+								email_hook: authData.two_factor_auth.email_hook || '',
+								sms_hook: authData.two_factor_auth.sms_hook || '',
 							},
 						};
 
@@ -242,9 +255,15 @@ const ModernAuthConfig = () => {
 				password_reset_link_expiry_hours: Yup.number()
 					.min(1, "Must be at least 1 hour")
 					.max(168, "Must be less than 168 hours (7 days)"),
+				allowed_usernames: Yup.array().min(1, "At least one username type is required"),
 			}),
 			otp: Yup.object({
 				enabled: Yup.boolean(),
+				allowed_methods: Yup.array().when('enabled', {
+					is: true,
+					then: (schema) => schema.min(1, "At least one OTP method is required when OTP is enabled"),
+					otherwise: (schema) => schema
+				}),
 			}),
 			sso: Yup.object({
 				enabled: Yup.boolean(),
@@ -252,11 +271,9 @@ const ModernAuthConfig = () => {
 			oidc: Yup.object({
 				enabled: Yup.boolean(),
 			}),
-			allowed_usernames: Yup.array().min(1, "At least one username type is required"),
 		}),
 		session_policy: Yup.object({
 			max_concurrent_sessions: Yup.number().min(0, "Cannot be negative"),
-			force_logout_on_password_change: Yup.boolean(),
 		}),
 		password_policy: Yup.object({
 			min_length: Yup.number().min(4, "Minimum length must be at least 4").max(128, "Maximum length is 128"),
@@ -270,7 +287,7 @@ const ModernAuthConfig = () => {
 		}),
 		two_factor_auth: Yup.object({
 			required: Yup.boolean(),
-			allowedMethods: Yup.array().min(1, "At least one method is required"),
+			allowed_methods: Yup.array().min(1, "At least one method is required"),
 		}),
 	});
 
@@ -540,8 +557,8 @@ const ModernAuthConfig = () => {
 															label="Allowed Username Types"
 															description="Select what users can use to log in"
 															options={usernameOptions}
-															value={values?.login_methods?.allowed_usernames || []}
-															onChange={(value) => setFieldValue("login_methods.allowed_usernames", value)}
+															value={values?.login_methods?.password?.allowed_usernames || []}
+															onChange={(value) => setFieldValue("login_methods.password.allowed_usernames", value)}
 														/>
 														
 														<div className="flex items-center justify-between">
@@ -570,9 +587,9 @@ const ModernAuthConfig = () => {
 												)}
 											</div>
 
-											{/* Other Login Methods */}
-											<div className="space-y-[16px]">
-												<div className="flex items-center justify-between">
+											{/* OTP Authentication */}
+											<div className="mb-[24px] pb-[24px] border-b border-[#F3F4F6]">
+												<div className="flex items-center justify-between mb-[16px]">
 													<div>
 														<h4 className="text-[14px] font-medium text-[#111827]">One-Time Password (OTP)</h4>
 														<p className="text-[12px] text-[#6B7280] mt-[2px]">SMS or email based verification codes</p>
@@ -583,6 +600,24 @@ const ModernAuthConfig = () => {
 													/>
 												</div>
 
+												{values?.login_methods?.otp?.enabled && (
+													<div className="ml-[24px] space-y-[16px]">
+														<MultiSelectChips
+															label="Allowed OTP Methods"
+															description="Select delivery methods for one-time passwords"
+															options={[
+																{ id: "email", label: "Email" },
+																{ id: "sms", label: "SMS" }
+															]}
+															value={values?.login_methods?.otp?.allowed_methods || []}
+															onChange={(value) => setFieldValue("login_methods.otp.allowed_methods", value)}
+														/>
+													</div>
+												)}
+											</div>
+
+											{/* Other Login Methods */}
+											<div className="space-y-[16px]">
 												<div className="flex items-center justify-between">
 													<div>
 														<h4 className="text-[14px] font-medium text-[#111827]">Single Sign-On (SSO)</h4>
@@ -650,9 +685,10 @@ const ModernAuthConfig = () => {
 														options={[
 															{ id: "email", label: "Email" },
 															{ id: "sms", label: "SMS" },
+															{ id: "totp", label: "Authenticator App (TOTP)" },
 														]}
-														value={values?.two_factor_auth?.allowedMethods || []}
-														onChange={(value) => setFieldValue("two_factor_auth.allowedMethods", value)}
+														value={values?.two_factor_auth?.allowed_methods || []}
+														onChange={(value) => setFieldValue("two_factor_auth.allowed_methods", value)}
 													/>
 												</div>
 											)}
@@ -847,7 +883,7 @@ const ModernAuthConfig = () => {
 												<div className="flex-1">
 													<p className="text-[14px] font-medium text-[#111827]">Password Authentication</p>
 													<p className="text-[12px] text-[#6B7280] mt-[2px]">
-														{authConfig.login_methods?.allowed_usernames?.map(type => type.charAt(0).toUpperCase() + type.slice(1)).join(', ')}
+														{authConfig.login_methods?.password?.allowed_usernames?.map(type => type.charAt(0).toUpperCase() + type.slice(1)).join(', ')}
 														{authConfig.login_methods?.password?.forgot_password_enabled && ' • Forgot password enabled'}
 													</p>
 												</div>
@@ -860,7 +896,11 @@ const ModernAuthConfig = () => {
 												</div>
 												<div className="flex-1">
 													<p className="text-[14px] font-medium text-[#111827]">One-Time Password (OTP)</p>
-													<p className="text-[12px] text-[#6B7280] mt-[2px]">SMS or email verification codes</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">
+														{authConfig.login_methods?.otp?.allowed_methods?.length > 0
+															? authConfig.login_methods.otp.allowed_methods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')
+															: 'SMS or email verification codes'}
+													</p>
 												</div>
 											</div>
 										)}
@@ -916,9 +956,9 @@ const ModernAuthConfig = () => {
 													{authConfig.two_factor_auth?.required ? 'Required' : 'Optional'}
 												</span>
 											</div>
-											{authConfig.two_factor_auth?.allowedMethods?.length > 0 && (
+											{authConfig.two_factor_auth?.allowed_methods?.length > 0 && (
 												<p className="text-[12px] text-[#6B7280]">
-													Methods: {authConfig.two_factor_auth.allowedMethods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+													Methods: {authConfig.two_factor_auth.allowed_methods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
 												</p>
 											)}
 										</div>
@@ -1057,7 +1097,7 @@ const ModernAuthConfig = () => {
 								<div className="space-y-[12px]">
 									<p className="text-[13px] text-[#6B7280]">Allowed username types:</p>
 									<div className="flex flex-wrap gap-[8px]">
-										{authConfig.login_methods?.allowed_usernames?.map(type => (
+										{authConfig.login_methods?.password?.allowed_usernames?.map(type => (
 											<span key={type} className="px-[12px] py-[6px] bg-[#EFF6FF] text-[#1E40AF] rounded-[8px] text-[13px] font-medium">
 												{type.charAt(0).toUpperCase() + type.slice(1)}
 											</span>
@@ -1087,11 +1127,11 @@ const ModernAuthConfig = () => {
 									enabled={authConfig.two_factor_auth?.required}
 									description="Additional security layer for user accounts"
 								/>
-								{authConfig.two_factor_auth?.allowedMethods?.length > 0 && (
+								{authConfig.two_factor_auth?.allowed_methods?.length > 0 && (
 									<div className="mt-[20px] pt-[20px] border-t border-[#F3F4F6]">
 										<p className="text-[13px] text-[#6B7280] mb-[12px]">Available 2FA methods:</p>
 										<div className="flex flex-wrap gap-[8px]">
-											{authConfig.two_factor_auth.allowedMethods.map(method => (
+											{authConfig.two_factor_auth.allowed_methods.map(method => (
 												<span key={method} className="px-[12px] py-[6px] bg-[#D1FAE5] text-[#065F46] rounded-[8px] text-[13px] font-medium">
 													{method}
 												</span>
@@ -1331,7 +1371,7 @@ const ModernAuthConfig = () => {
 					initialData={authConfig}
 					roles={roles}
 					onComplete={async (authData) => {
-						// Transform to expected format
+						// Transform to expected format matching the schema
 						const updatedAuthConfig = {
 							login_methods: {
 								password: {
@@ -1339,44 +1379,26 @@ const ModernAuthConfig = () => {
 									forgot_password_enabled: authData.login_methods.password.forgot_password_enabled,
 									password_reset_link_expiry_hours: authConfig?.login_methods?.password?.password_reset_link_expiry_hours || 24,
 									allowed_usernames: authData.login_methods.allowed_usernames,
-									reset_method: authData.login_methods.password.reset_method,
-									reset_via_sms: authData.login_methods.password.reset_via_sms,
-									reset_via_email: authData.login_methods.password.reset_via_email,
-									reset_sms_content: authData.login_methods.password.reset_sms_content,
-									reset_sms_webhook: authData.login_methods.password.reset_sms_webhook,
-									reset_email_content: authData.login_methods.password.reset_email_content,
-									reset_email_subject: authData.login_methods.password.reset_email_subject,
-									reset_email_webhook: authData.login_methods.password.reset_email_webhook,
-									reset_expiry_minutes: authData.login_methods.password.reset_expiry_minutes,
 								},
 								otp: {
 									enabled: authData.login_methods.otp.enabled,
-									sms_content: authData.login_methods.otp.sms_content,
-									sms_webhook: authData.login_methods.otp.sms_webhook,
-									email_content: authData.login_methods.otp.email_content,
-									email_subject: authData.login_methods.otp.email_subject,
-									email_webhook: authData.login_methods.otp.email_webhook,
-									allowed_methods: authData.login_methods.otp.allowed_methods || ['email', 'sms'],
+									allowed_methods: authData.login_methods.otp.allowed_methods || [],
+									email_content: authData.login_methods.otp.email_content || '',
+									email_subject: authData.login_methods.otp.email_subject || '',
+									email_hook: authData.login_methods.otp.email_webhook || '',
+									email_config_key: authData.login_methods.otp.email_config_key || '',
+									sms_hook: authData.login_methods.otp.sms_webhook || '',
+									sms_template_id: authData.login_methods.otp.sms_content || '',
+									sms_config_key: authData.login_methods.otp.sms_config_key || '',
+									sms_extra_data: authData.login_methods.otp.sms_extra_data || '',
 								},
 								sso: { enabled: authData.login_methods.sso.enabled },
 								oidc: { enabled: authData.login_methods.oidc.enabled },
-								allowed_usernames: authData.login_methods.allowed_usernames,
 							},
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
-								force_logout_on_password_change: authData.session_policy.force_logout_on_password_change,
 							},
 							password_policy: {
-								reset: {
-									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
-									enabled: authData.login_methods.password.forgot_password_enabled,
-									allowed_methods: (() => {
-										const methods = [];
-										if (authData.login_methods.password.reset_via_email) methods.push('email');
-										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
-										return methods.length > 0 ? methods : ['email'];
-									})(),
-								},
 								min_length: authData.password_policy.min_length,
 								allow_change: authData.password_policy.allow_change,
 								require_numbers: authData.password_policy.require_numbers,
@@ -1385,10 +1407,37 @@ const ModernAuthConfig = () => {
 								password_expiry_days: authData.password_policy.password_expiry_days,
 								require_special_chars: authData.password_policy.require_special_chars,
 								password_history_count: authData.password_policy.password_history_count,
+								reset: {
+									enabled: authData.login_methods.password.forgot_password_enabled,
+									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
+									allowed_methods: (() => {
+										const methods = [];
+										if (authData.login_methods.password.reset_via_email) methods.push('email');
+										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
+										return methods.length > 0 ? methods : ['email'];
+									})(),
+									by_code: authData.login_methods.password.reset_method === 'code',
+									by_email: authData.login_methods.password.reset_via_email || false,
+									login_after_reset: false,
+									max_attempts: 3,
+									email_hook: authData.login_methods.password.reset_email_webhook || '',
+									email_content: authData.login_methods.password.reset_email_content || '',
+									email_subject: authData.login_methods.password.reset_email_subject || '',
+									email_config_key: authData.login_methods.password.reset_email_config_key || '',
+									sms_hook: authData.login_methods.password.reset_sms_webhook || '',
+									sms_template_id: authData.login_methods.password.reset_sms_content || '',
+									sms_config_key: authData.login_methods.password.reset_sms_config_key || '',
+									sms_extra_data: authData.login_methods.password.reset_sms_extra_data || '',
+								},
 							},
 							two_factor_auth: {
 								required: authData.two_factor_auth.required,
-								allowedMethods: authData.two_factor_auth.allowedMethods,
+								allowed_methods: authData.two_factor_auth.allowedMethods || [],
+								enforced_from: null,
+								grace_period_days: null,
+								skip_for_sso: false,
+								email_hook: authData.two_factor_auth.email_hook || '',
+								sms_hook: authData.two_factor_auth.sms_hook || '',
 							},
 						};
 
