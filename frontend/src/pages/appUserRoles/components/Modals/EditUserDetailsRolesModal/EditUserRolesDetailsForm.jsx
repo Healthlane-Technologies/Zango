@@ -213,67 +213,41 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
         }),
     });
 
-    // Helper function to remove empty/default values from auth_config
+    // Helper function to build complete auth_config with all values (including false)
     const cleanAuthConfig = (authConfig) => {
         const cleanedConfig = {};
-        
+
         // Always include redirect_url
         cleanedConfig.redirect_url = authConfig.redirect_url;
-        
-        // Handle two_factor_auth
-        if (authConfig.two_factor_auth.required || authConfig.two_factor_auth.allowedMethods.length > 0) {
-            cleanedConfig.two_factor_auth = {};
-            if (authConfig.two_factor_auth.required) {
-                cleanedConfig.two_factor_auth.required = true;
-            }
-            if (authConfig.two_factor_auth.allowedMethods.length > 0) {
-                cleanedConfig.two_factor_auth.allowedMethods = authConfig.two_factor_auth.allowedMethods;
-            }
-        }
-        
-        // Handle password_policy
-        const passwordPolicyConfig = {};
-        let hasPasswordPolicy = false;
-        
+
+        // Always include two_factor_auth (explicitly send false values)
+        cleanedConfig.two_factor_auth = {
+            required: authConfig.two_factor_auth.required,
+            allowedMethods: authConfig.two_factor_auth.allowedMethods,
+        };
+
+        // Always include password_policy (explicitly send false values)
+        cleanedConfig.password_policy = {};
+
+        // Include numeric fields only if they have values
         if (authConfig.password_policy.min_length !== '' && authConfig.password_policy.min_length !== null) {
-            passwordPolicyConfig.min_length = authConfig.password_policy.min_length;
-            hasPasswordPolicy = true;
+            cleanedConfig.password_policy.min_length = authConfig.password_policy.min_length;
         }
-        
-        if (authConfig.password_policy.require_numbers) {
-            passwordPolicyConfig.require_numbers = true;
-            hasPasswordPolicy = true;
-        }
-        
-        if (authConfig.password_policy.require_lowercase) {
-            passwordPolicyConfig.require_lowercase = true;
-            hasPasswordPolicy = true;
-        }
-        
-        if (authConfig.password_policy.require_uppercase) {
-            passwordPolicyConfig.require_uppercase = true;
-            hasPasswordPolicy = true;
-        }
-        
-        if (authConfig.password_policy.require_special_chars) {
-            passwordPolicyConfig.require_special_chars = true;
-            hasPasswordPolicy = true;
-        }
-        
+
         if (authConfig.password_policy.password_expiry_days !== '' && authConfig.password_policy.password_expiry_days !== null) {
-            passwordPolicyConfig.password_expiry_days = authConfig.password_policy.password_expiry_days;
-            hasPasswordPolicy = true;
+            cleanedConfig.password_policy.password_expiry_days = authConfig.password_policy.password_expiry_days;
         }
-        
+
         if (authConfig.password_policy.password_history_count !== '' && authConfig.password_policy.password_history_count !== null) {
-            passwordPolicyConfig.password_history_count = authConfig.password_policy.password_history_count;
-            hasPasswordPolicy = true;
+            cleanedConfig.password_policy.password_history_count = authConfig.password_policy.password_history_count;
         }
-        
-        if (hasPasswordPolicy) {
-            cleanedConfig.password_policy = passwordPolicyConfig;
-        }
-        
+
+        // Always include boolean fields (even if false)
+        cleanedConfig.password_policy.require_numbers = authConfig.password_policy.require_numbers;
+        cleanedConfig.password_policy.require_lowercase = authConfig.password_policy.require_lowercase;
+        cleanedConfig.password_policy.require_uppercase = authConfig.password_policy.require_uppercase;
+        cleanedConfig.password_policy.require_special_chars = authConfig.password_policy.require_special_chars;
+
         return cleanedConfig;
     };
 
