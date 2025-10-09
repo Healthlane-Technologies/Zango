@@ -4,7 +4,7 @@ import { Fragment } from 'react';
 
 const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles = [] }) => {
 	const [currentStep, setCurrentStep] = useState(1);
-	const totalSteps = 4;
+	const totalSteps = 5;
 
 	// Default setup data
 	const defaultSetupData = {
@@ -59,12 +59,20 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			max_concurrent_sessions: 0,
 			force_logout_on_password_change: false,
 		},
+		oauth_providers: {
+			google: {
+				enabled: false,
+				client_id: '',
+				client_secret: '',
+				redirect_url: '',
+			},
+		},
 	};
 
 	// Use initial data if provided (editing mode), otherwise use defaults
 	const getInitialData = () => {
 		if (!initialData) return defaultSetupData;
-		
+
 		return {
 			login_methods: {
 				allowed_usernames: initialData.login_methods?.allowed_usernames || ['email'],
@@ -83,7 +91,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				},
 				sso: { enabled: initialData.login_methods?.sso?.enabled || false },
 				oidc: { enabled: initialData.login_methods?.oidc?.enabled || false },
-				otp: { 
+				otp: {
 					enabled: initialData.login_methods?.otp?.enabled || false,
 					sms_webhook: initialData.login_methods?.otp?.sms_webhook || '',
 					email_webhook: initialData.login_methods?.otp?.email_webhook || '',
@@ -98,6 +106,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				allowedMethods: initialData.two_factor_auth?.allowedMethods || ['email'],
 			},
 			session_policy: initialData.session_policy || defaultSetupData.session_policy,
+			oauth_providers: initialData.oauth_providers || defaultSetupData.oauth_providers,
 		};
 	};
 
@@ -136,7 +145,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	// Step components
 	const StepIndicator = () => (
 		<div className="flex items-center justify-center mb-[32px]">
-			{[1, 2, 3, 4].map((step) => (
+			{[1, 2, 3, 4, 5].map((step) => (
 				<div key={step} className="flex items-center">
 					<div
 						className={`w-[40px] h-[40px] rounded-full flex items-center justify-center font-medium text-[14px] transition-all ${
@@ -155,7 +164,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							step
 						)}
 					</div>
-					{step < 4 && (
+					{step < 5 && (
 						<div className={`w-[60px] h-[2px] mx-[8px] transition-all ${
 							step < currentStep ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'
 						}`} />
@@ -886,8 +895,109 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		</div>
 	);
 
-	// Step 4: Review
-	const Step4Review = () => (
+	// Step 4: OAuth Providers
+	const Step4OAuthProviders = useMemo(() => (
+		<div className="space-y-[24px]">
+			<div>
+				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">OAuth Providers</h3>
+				<p className="text-[14px] text-[#6B7280]">Configure social login providers for your application</p>
+			</div>
+
+			<div className="space-y-[20px]">
+				{/* Google OAuth */}
+				<div className={`border-2 rounded-[12px] p-[20px] transition-all ${
+					setupData.oauth_providers?.google?.enabled
+						? 'border-[#5048ED] bg-[#F8FAFC]'
+						: 'border-[#E5E7EB]'
+				}`}>
+					<div className="flex items-start gap-[16px]">
+						<input
+							type="checkbox"
+							checked={setupData.oauth_providers?.google?.enabled || false}
+							onChange={(e) => updateSetupData('oauth_providers', {
+								google: { ...setupData.oauth_providers.google, enabled: e.target.checked }
+							})}
+							className="mt-[2px] w-[20px] h-[20px] rounded border-[#D1D5DB] text-[#5048ED] focus:ring-[#5048ED]"
+						/>
+						<div className="flex-1">
+							<div className="flex items-center gap-[12px] mb-[4px]">
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path d="M21.8055 10.0415H21V10H12V14H17.6515C16.827 16.3285 14.6115 18 12 18C8.6865 18 6 15.3135 6 12C6 8.6865 8.6865 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C6.4775 2 2 6.4775 2 12C2 17.5225 6.4775 22 12 22C17.5225 22 22 17.5225 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#FFC107"/>
+									<path d="M3.15295 7.3455L6.43845 9.755C7.32745 7.554 9.48045 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C8.15895 2 4.82795 4.1685 3.15295 7.3455Z" fill="#FF3D00"/>
+									<path d="M12 22C14.583 22 16.93 21.0115 18.7045 19.404L15.6095 16.785C14.5718 17.5742 13.3038 18.001 12 18C9.39903 18 7.19053 16.3415 6.35853 14.027L3.09753 16.5395C4.75253 19.778 8.11353 22 12 22Z" fill="#4CAF50"/>
+									<path d="M21.8055 10.0415H21V10H12V14H17.6515C17.2571 15.1082 16.5467 16.0766 15.608 16.7855L15.6095 16.7845L18.7045 19.4035C18.4855 19.6025 22 17 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#1976D2"/>
+								</svg>
+								<h4 className="text-[16px] font-medium text-[#111827]">Google</h4>
+							</div>
+							<p className="text-[13px] text-[#6B7280] mb-[12px]">Allow users to sign in with their Google account</p>
+
+							{setupData.oauth_providers?.google?.enabled && (
+								<div className="space-y-[12px] pt-[12px] border-t border-[#E5E7EB]">
+									<div>
+										<label className="block text-[13px] font-medium text-[#111827] mb-[6px]">
+											Client ID
+										</label>
+										<input
+											type="text"
+											placeholder="Enter Google Client ID"
+											value={setupData.oauth_providers.google.client_id}
+											onChange={(e) => {
+												e.stopPropagation();
+												updateSetupData('oauth_providers', {
+													google: { ...setupData.oauth_providers.google, client_id: e.target.value }
+												});
+											}}
+											onClick={(e) => e.stopPropagation()}
+											className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+										/>
+									</div>
+									<div>
+										<label className="block text-[13px] font-medium text-[#111827] mb-[6px]">
+											Client Secret
+										</label>
+										<input
+											type="password"
+											placeholder="Enter Google Client Secret"
+											value={setupData.oauth_providers.google.client_secret}
+											onChange={(e) => {
+												e.stopPropagation();
+												updateSetupData('oauth_providers', {
+													google: { ...setupData.oauth_providers.google, client_secret: e.target.value }
+												});
+											}}
+											onClick={(e) => e.stopPropagation()}
+											className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+										/>
+									</div>
+									<div>
+										<label className="block text-[13px] font-medium text-[#111827] mb-[6px]">
+											Redirect URL
+										</label>
+										<input
+											type="url"
+											placeholder="Enter Redirect URL"
+											value={setupData.oauth_providers.google.redirect_url}
+											onChange={(e) => {
+												e.stopPropagation();
+												updateSetupData('oauth_providers', {
+													google: { ...setupData.oauth_providers.google, redirect_url: e.target.value }
+												});
+											}}
+											onClick={(e) => e.stopPropagation()}
+											className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	), [setupData.oauth_providers]);
+
+	// Step 5: Review
+	const Step5Review = () => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Review Configuration</h3>
@@ -1036,6 +1146,27 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				)}
 
+				{/* OAuth Providers Configuration */}
+				{setupData.oauth_providers?.google?.enabled && (
+					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">OAuth Providers</h4>
+						<div className="space-y-[8px] text-[14px] text-[#111827]">
+							<div className="flex items-center gap-[8px]">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#10B981]">
+									<path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								</svg>
+								Google OAuth
+							</div>
+							{setupData.oauth_providers.google.client_id && (
+								<div>Client ID: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.oauth_providers.google.client_id}</span></div>
+							)}
+							{setupData.oauth_providers.google.redirect_url && (
+								<div>Redirect URL: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.oauth_providers.google.redirect_url}</span></div>
+							)}
+						</div>
+					</div>
+				)}
+
 			</div>
 		</div>
 	);
@@ -1055,7 +1186,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			case 3:
 				return <Step3TwoFactor />;
 			case 4:
-				return <Step4Review />;
+				return Step4OAuthProviders;
+			case 5:
+				return <Step5Review />;
 			default:
 				return null;
 		}

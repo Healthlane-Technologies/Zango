@@ -45,11 +45,13 @@ const ModernAuthConfig = () => {
 	const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
 	const [showRoleOverrideModal, setShowRoleOverrideModal] = useState(false);
 	const [selectedRoleForOverride, setSelectedRoleForOverride] = useState(null);
+	const [oauthProviders, setOauthProviders] = useState(null);
+	const [loadingOAuth, setLoadingOAuth] = useState(false);
 	const dispatch = useDispatch();
 	const triggerApi = useApi();
 	const { appId } = useParams();
 	const navigate = useNavigate();
-	
+
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 	
 	// Fetch roles data
@@ -66,7 +68,7 @@ const ModernAuthConfig = () => {
 					// Filter out system/reserved roles to get only user-defined roles
 					const reservedRoleNames = ['AnonymousUsers', 'SystemUsers'];
 					const allRoles = response?.roles?.records || [];
-					const userDefinedRoles = allRoles.filter(role => 
+					const userDefinedRoles = allRoles.filter(role =>
 						!reservedRoleNames.includes(role.name)
 					);
 					setRoles(userDefinedRoles);
@@ -80,6 +82,32 @@ const ModernAuthConfig = () => {
 
 		if (appId) {
 			fetchRoles();
+		}
+	}, [appId, triggerApi]);
+
+	// Fetch OAuth providers data
+	useEffect(() => {
+		const fetchOAuthProviders = async () => {
+			setLoadingOAuth(true);
+			try {
+				const { response, success } = await triggerApi({
+					url: `/api/v1/apps/${appId}/oauth-providers/`,
+					type: 'GET',
+					loader: false,
+				});
+				if (success && response) {
+					setOauthProviders(response.oauth_providers || {});
+				}
+			} catch (error) {
+				console.error('Error fetching OAuth providers:', error);
+				setOauthProviders({});
+			} finally {
+				setLoadingOAuth(false);
+			}
+		};
+
+		if (appId) {
+			fetchOAuthProviders();
 		}
 	}, [appId, triggerApi]);
 	
@@ -212,6 +240,24 @@ const ModernAuthConfig = () => {
 							});
 
 							if (success && response) {
+								// Save OAuth providers if configured
+								if (authData.oauth_providers) {
+									const oauthFormData = transformToFormData({
+										oauth_providers: JSON.stringify(authData.oauth_providers)
+									});
+
+									try {
+										await triggerApi({
+											url: `/api/v1/apps/${appId}/oauth-providers/`,
+											type: 'PUT',
+											loader: false,
+											payload: oauthFormData,
+										});
+									} catch (oauthError) {
+										console.error('Error saving OAuth providers:', oauthError);
+									}
+								}
+
 								dispatch(toggleRerenderPage());
 								setShowAuthSetupModal(false);
 							}
@@ -823,7 +869,7 @@ const ModernAuthConfig = () => {
 							</div>
 
 							{/* Authentication Overview */}
-							<div className="grid grid-cols-1 lg:grid-cols-2 gap-[24px]">
+							<div className="grid grid-cols-1 lg:grid-cols-3 gap-[24px]">
 								{/* Login Methods Overview */}
 								<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
 									<div className="flex items-center gap-[12px] mb-[20px]">
@@ -969,6 +1015,41 @@ const ModernAuthConfig = () => {
 										</div>
 									</div>
 								</div>
+
+								{/* OAuth Providers Overview */}
+								{oauthProviders && Object.values(oauthProviders).some(p => p.enabled) && (
+									<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
+										<div className="flex items-center gap-[12px] mb-[20px]">
+											<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-[12px] flex items-center justify-center">
+												<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+													<path d="M13.3333 10V7.5C13.3333 4.73858 11.0948 2.5 8.33333 2.5C5.57191 2.5 3.33333 4.73858 3.33333 7.5V10M3.33333 10H15C15.9205 10 16.6667 10.7462 16.6667 11.6667V16.6667C16.6667 17.5871 15.9205 18.3333 15 18.3333H3.33333C2.41286 18.3333 1.66667 17.5871 1.66667 16.6667V11.6667C1.66667 10.7462 2.41286 10 3.33333 10Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+												</svg>
+											</div>
+											<div>
+												<h3 className="text-[16px] font-semibold text-[#111827]">OAuth Providers</h3>
+												<p className="text-[12px] text-[#6B7280]">Social login options</p>
+											</div>
+										</div>
+										<div className="space-y-[12px]">
+											{oauthProviders?.google?.enabled && (
+												<div className="flex items-start gap-[12px] p-[12px] bg-[#F9FAFB] rounded-[8px]">
+													<div className="flex-shrink-0 w-[32px] h-[32px] bg-[#EFF6FF] rounded-[8px] flex items-center justify-center">
+														<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+															<path d="M16.3541 7.53124H15.75V7.5H9V10.5H13.2386C12.6203 12.2463 10.9586 13.5 9 13.5C6.51472 13.5 4.5 11.4853 4.5 9C4.5 6.51472 6.51472 4.5 9 4.5C10.1471 4.5 11.1907 4.93275 11.9854 5.63962L14.1068 3.51825C12.7673 2.26987 10.9755 1.5 9 1.5C4.85775 1.5 1.5 4.85775 1.5 9C1.5 13.1423 4.85775 16.5 9 16.5C13.1423 16.5 16.5 13.1423 16.5 9C16.5 8.49713 16.4483 8.00625 16.3541 7.53124Z" fill="#FFC107"/>
+															<path d="M2.36475 5.50913L4.82884 7.31625C5.49559 5.65912 7.11784 4.5 9 4.5C10.1471 4.5 11.1907 4.93275 11.9854 5.63962L14.1068 3.51825C12.7673 2.26987 10.9755 1.5 9 1.5C6.11921 1.5 3.62096 3.12637 2.36475 5.50913Z" fill="#FF3D00"/>
+															<path d="M9 16.5C10.9373 16.5 12.6975 15.7586 14.0284 14.553L11.7071 12.5887C10.9289 13.1807 9.97284 13.5008 9 13.5C7.04927 13.5 5.39289 12.2561 4.7689 10.5203L2.32318 12.4046C3.56439 14.8335 6.08509 16.5 9 16.5Z" fill="#4CAF50"/>
+															<path d="M16.3541 7.53124H15.75V7.5H9V10.5H13.2386C12.9428 11.3311 12.4100 12.0574 11.706 12.5891L11.7071 12.5884L14.0284 14.5526C13.8642 14.7019 16.5 12.75 16.5 9C16.5 8.49713 16.4483 8.00625 16.3541 7.53124Z" fill="#1976D2"/>
+														</svg>
+													</div>
+													<div className="flex-1">
+														<p className="text-[14px] font-medium text-[#111827]">Google</p>
+														<p className="text-[12px] text-[#6B7280] mt-[2px]">Sign in with Google account</p>
+													</div>
+												</div>
+											)}
+										</div>
+									</div>
+								)}
 							</div>
 
 							{/* Role Overrides Summary */}
@@ -1328,7 +1409,7 @@ const ModernAuthConfig = () => {
 				<AuthSetupModal
 					show={showAuthSetupModal}
 					onClose={() => setShowAuthSetupModal(false)}
-					initialData={authConfig}
+					initialData={{...authConfig, oauth_providers: oauthProviders}}
 					roles={roles}
 					onComplete={async (authData) => {
 						// Transform to expected format
@@ -1407,6 +1488,24 @@ const ModernAuthConfig = () => {
 							});
 
 							if (success && response) {
+								// Save OAuth providers if configured
+								if (authData.oauth_providers) {
+									const oauthFormData = transformToFormData({
+										oauth_providers: JSON.stringify(authData.oauth_providers)
+									});
+
+									try {
+										await triggerApi({
+											url: `/api/v1/apps/${appId}/oauth-providers/`,
+											type: 'PUT',
+											loader: false,
+											payload: oauthFormData,
+										});
+									} catch (oauthError) {
+										console.error('Error saving OAuth providers:', oauthError);
+									}
+								}
+
 								dispatch(toggleRerenderPage());
 								setShowAuthSetupModal(false);
 							}
