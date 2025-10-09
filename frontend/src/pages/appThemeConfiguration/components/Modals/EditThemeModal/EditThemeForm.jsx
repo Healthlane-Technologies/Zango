@@ -24,22 +24,26 @@ const EditThemeForm = ({ closeModal }) => {
 	);
 	const triggerApi = useApi();
 	console.log('appThemeConfigurationFormData', appThemeConfigurationFormData);
+
+	// Handle both 'colors' and 'color' (singular) from API response
+	const themeColors = appThemeConfigurationFormData?.config?.colors || appThemeConfigurationFormData?.config?.color || {};
+
 	let initialValues = {
 		name: appThemeConfigurationFormData?.name ?? '',
 		config: {
 			colors: {
 				primary:
-					appThemeConfigurationFormData?.config?.colors?.primary ?? '#000000',
+					themeColors?.primary ?? '#000000',
 				gray:
-					appThemeConfigurationFormData?.config?.colors?.gray ?? '#717680',
+					themeColors?.gray ?? '#717680',
 				success:
-					appThemeConfigurationFormData?.config?.colors?.success ?? '#52c41a',
+					themeColors?.success ?? '#52c41a',
 				warning:
-					appThemeConfigurationFormData?.config?.colors?.warning ?? '#faad14',
+					themeColors?.warning ?? '#faad14',
 				error:
-					appThemeConfigurationFormData?.config?.colors?.error ?? '#AA4A44',
+					themeColors?.error ?? '#AA4A44',
 				info:
-					appThemeConfigurationFormData?.config?.colors?.info ?? '#1890ff',
+					themeColors?.info ?? '#1890ff',
 			},
 			typography: {
 				font_family:

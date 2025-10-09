@@ -452,14 +452,24 @@ class UserViewAPIV1(
             include_dropdown_options = request.GET.get("include_dropdown_options")
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
-            app_users = self.get_queryset(search, columns)
-            app_users = self.paginate_queryset(app_users, request, view=self)
+            app_users_queryset = self.get_queryset(search, columns)
+
+            # Calculate active and inactive counts from the filtered queryset
+            active_count = app_users_queryset.filter(is_active=True).count()
+            inactive_count = app_users_queryset.filter(is_active=False).count()
+
+            app_users = self.paginate_queryset(app_users_queryset, request, view=self)
             serializer = AppUserModelSerializerModel(
                 app_users,
                 many=True,
                 context={"request": request, "tenant": self.get_tenant(**kwargs)},
             )
             app_users_data = self.get_paginated_response_data(serializer.data)
+
+            # Add active and inactive counts to the response
+            app_users_data["active_count"] = active_count
+            app_users_data["inactive_count"] = inactive_count
+
             success = True
             response = {
                 "users": app_users_data,
