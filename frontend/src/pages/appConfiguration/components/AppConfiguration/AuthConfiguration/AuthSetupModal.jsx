@@ -1,23 +1,52 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
-const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles = [] }) => {
-	const [currentStep, setCurrentStep] = useState(1);
-	const totalSteps = 4;
-
-	// JSON Key-Value Pair Input Component
-	const JsonKeyValueInput = ({ value, onChange, placeholder = "Add key-value pairs" }) => {
+// JSON Key-Value Pair Input Component (moved outside to prevent recreation on every render)
+const JsonKeyValueInput = React.memo(({ value, onChange, placeholder = "Add key-value pairs" }) => {
 		const [pairs, setPairs] = useState(() => {
 			try {
 				const parsed = typeof value === 'string' ? JSON.parse(value || '{}') : (value || {});
-				return Object.entries(parsed).map(([key, val]) => ({ key, value: val }));
+				return Object.entries(parsed).map(([key, val]) => ({ key, value: val, id: Math.random().toString(36).substr(2, 9) }));
 			} catch {
 				return [];
 			}
 		});
 
+		const [isInternalUpdate, setIsInternalUpdate] = useState(false);
+
+		// Sync internal state when value prop changes from outside (not from our own updates)
+		useEffect(() => {
+			if (isInternalUpdate) {
+				setIsInternalUpdate(false);
+				return;
+			}
+
+			try {
+				const parsed = typeof value === 'string' ? JSON.parse(value || '{}') : (value || {});
+				const currentObj = {};
+				pairs.forEach(pair => {
+					if (pair.key.trim()) {
+						currentObj[pair.key.trim()] = pair.value;
+					}
+				});
+
+				// Only update if the content has actually changed
+				if (JSON.stringify(parsed) !== JSON.stringify(currentObj)) {
+					const newPairs = Object.entries(parsed).map(([key, val]) => {
+						// Try to preserve existing IDs if the key matches
+						const existingPair = pairs.find(p => p.key === key);
+						return { key, value: val, id: existingPair?.id || Math.random().toString(36).substr(2, 9) };
+					});
+					setPairs(newPairs);
+				}
+			} catch {
+				// Ignore parse errors
+			}
+		}, [value]);
+
 		const updateParent = (newPairs) => {
+			setIsInternalUpdate(true);
 			const obj = {};
 			newPairs.forEach(pair => {
 				if (pair.key.trim()) {
@@ -28,7 +57,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		};
 
 		const addPair = () => {
-			const newPairs = [...pairs, { key: '', value: '' }];
+			const newPairs = [...pairs, { key: '', value: '', id: Math.random().toString(36).substr(2, 9) }];
 			setPairs(newPairs);
 		};
 
@@ -49,7 +78,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		return (
 			<div className="space-y-[8px]">
 				{pairs.map((pair, index) => (
-					<div key={index} className="flex gap-[8px] items-center">
+					<div key={pair.id} className="flex gap-[8px] items-center">
 						<input
 							type="text"
 							placeholder="Key"
@@ -101,7 +130,11 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				</button>
 			</div>
 		);
-	};
+});
+
+const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles = [] }) => {
+	const [currentStep, setCurrentStep] = useState(1);
+	const totalSteps = 4;
 
 	// Default setup data
 	const defaultSetupData = {
@@ -118,7 +151,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				reset_email_webhook: '',
 				reset_sms_content: 'Your password reset code is: {{code}}. Valid for {{expiry}} minutes.',
 				reset_email_subject: 'Password Reset Request',
-				reset_email_content: 'Click the following link to reset your password: {{link}}. This link is valid for {{expiry}} minutes.',
+				reset_email_content: 'Click the following link to reset your password: {reset_url}',
 				reset_sms_config_key: '',
 				reset_email_config_key: '',
 				reset_sms_extra_data: '{}',
@@ -280,7 +313,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	);
 
 	// Step 1: Login Methods
-	const Step1LoginMethods = () => (
+	const Step1LoginMethods = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Choose Login Methods</h3>
@@ -424,6 +457,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 								type="checkbox"
 								checked={setupData.login_methods.password.enabled}
 								onChange={(e) => updateSetupData('login_methods', {
+									...setupData.login_methods,
 									password: { ...setupData.login_methods.password, enabled: e.target.checked }
 								})}
 								className="mt-[2px] w-[20px] h-[20px] rounded border-[#D1D5DB] text-[#5048ED] focus:ring-[#5048ED]"
@@ -439,6 +473,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 												type="checkbox"
 												checked={setupData.login_methods.password.forgot_password_enabled}
 												onChange={(e) => updateSetupData('login_methods', {
+													...setupData.login_methods,
 													password: { ...setupData.login_methods.password, forgot_password_enabled: e.target.checked }
 												})}
 												className="w-[16px] h-[16px] rounded border-[#D1D5DB] text-[#5048ED]"
@@ -461,8 +496,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 																value="link"
 																checked={setupData.login_methods.password.reset_method === 'link'}
 																onChange={(e) => updateSetupData('login_methods', {
-																	password: { 
-																		...setupData.login_methods.password, 
+																	...setupData.login_methods,
+																	password: {
+																		...setupData.login_methods.password,
 																		reset_method: e.target.value,
 																		// Auto-enable email and disable SMS for link method
 																		reset_via_email: true,
@@ -500,7 +536,8 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 														max="1440"
 														value={setupData.login_methods.password.reset_expiry_minutes}
 														onChange={(e) => updateSetupData('login_methods', {
-															password: { ...setupData.login_methods.password, reset_expiry_minutes: parseInt(e.target.value) || 15 }
+															...setupData.login_methods,
+															password: { ...setupData.login_methods.password, reset_expiry_minutes: e.target.value === '' ? '' : parseInt(e.target.value) }
 														})}
 														onClick={(e) => e.stopPropagation()}
 														className="w-[100px] px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
@@ -560,6 +597,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_webhook: e.target.value }
 																});
 															}}
@@ -576,6 +614,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_config_key: e.target.value }
 																});
 															}}
@@ -592,6 +631,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_subject: e.target.value }
 																});
 															}}
@@ -603,12 +643,13 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 														</label>
 														<textarea
 															placeholder={setupData.login_methods.password.reset_method === 'link'
-																? "Click here to reset your password: {{link}}"
-																: "Your password reset code is: {{code}}"}
+																? "Click here to reset your password: {reset_url}"
+																: "Your password reset code is: {code}"}
 															value={setupData.login_methods.password.reset_email_content}
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_content: e.target.value }
 																});
 															}}
@@ -617,7 +658,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
 														/>
 														<p className="text-[10px] text-[#6B7280]">
-															Use {setupData.login_methods.password.reset_method === 'link' ? '{{link}}' : '{{code}}'} and {'{{expiry}}'} as placeholders
+															Use {setupData.login_methods.password.reset_method === 'link' ? '{reset_url}' : '{code}'} as placeholder
 														</p>
 													</div>
 												)}
@@ -635,6 +676,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_sms_webhook: e.target.value }
 																});
 															}}
@@ -651,6 +693,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_sms_config_key: e.target.value }
 																});
 															}}
@@ -668,6 +711,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_sms_content: e.target.value }
 																});
 															}}
@@ -685,6 +729,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															value={setupData.login_methods.password.reset_sms_extra_data}
 															onChange={(value) => {
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_sms_extra_data: value }
 																});
 															}}
@@ -847,6 +892,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													value={setupData.login_methods.otp.sms_extra_data}
 													onChange={(value) => {
 														updateSetupData('login_methods', {
+															...setupData.login_methods,
 															otp: { ...setupData.login_methods.otp, sms_extra_data: value }
 														});
 													}}
@@ -983,7 +1029,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				
 			</div>
 		</div>
-	);
+	), [setupData.login_methods]);
 
 	// Step 2: Password Policy (only if password is enabled)
 	const Step2PasswordPolicy = useMemo(() => (
@@ -1091,7 +1137,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	), [setupData.password_policy]);
 
 	// Step 3: Two-Factor Authentication
-	const Step3TwoFactor = () => (
+	const Step3TwoFactor = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Two-Factor Authentication</h3>
@@ -1151,10 +1197,10 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				)}
 			</div>
 		</div>
-	);
+	), [setupData.two_factor_auth]);
 
 	// Step 4: Review
-	const Step4Review = () => (
+	const Step4Review = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Review Configuration</h3>
@@ -1317,13 +1363,13 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 
 			</div>
 		</div>
-	);
+	), [setupData]);
 
 	// Render current step
 	const renderStep = () => {
 		switch (currentStep) {
 			case 1:
-				return <Step1LoginMethods />;
+				return Step1LoginMethods;
 			case 2:
 				// Skip to step 3 if password is not enabled
 				if (!setupData.login_methods.password.enabled && currentStep === 2) {
@@ -1332,9 +1378,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				}
 				return Step2PasswordPolicy;
 			case 3:
-				return <Step3TwoFactor />;
+				return Step3TwoFactor;
 			case 4:
-				return <Step4Review />;
+				return Step4Review;
 			default:
 				return null;
 		}
