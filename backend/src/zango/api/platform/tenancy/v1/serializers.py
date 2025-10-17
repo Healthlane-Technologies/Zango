@@ -3,8 +3,12 @@ import json
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
+from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
+from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
+from zango.core.utils import get_auth_priority
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -38,6 +42,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
     def get_date_format_display(self, obj):
         return obj.get_date_format_display()
 
+    def validate_auth_config(self, value: TenantAuthConfigSchema):
+        return value
+
     def update(self, instance, validated_data):
         request = self.context["request"]
         extra_config_str = request.data.get("extra_config")
@@ -70,6 +77,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
         request = self.context["request"]
         domains = request.data.getlist("domains")
 
+        if not domains:
+            return instance
+
         # Removing existing domains
         domains_to_be_removed = instance.domains.all().exclude(domain__in=domains)
         domains_to_be_removed.delete()
@@ -88,28 +98,37 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
 class UserRoleSerializerModel(serializers.ModelSerializer):
     attached_policies = serializers.SerializerMethodField()
+    auth_config = serializers.JSONField(required=False)
 
     class Meta:
         model = UserRoleModel
-        fields = [
-            "id",
-            "name",
-            "is_active",
-            "is_default",
-            "no_of_users",
-            "policies",
-            "attached_policies",
-            "policy_groups",
-            "created_at",
-            "created_by",
-            "modified_at",
-            "modified_by",
-        ]
+        fields = "__all__"
 
     def get_attached_policies(self, obj):
         policies = obj.policies.all()
         policy_serializer = PolicySerializer(policies, many=True)
         return policy_serializer.data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        tenant = self.context.get("tenant")
+        data["auth_config"] = get_auth_priority(tenant=tenant, user_role=instance)
+        return data
+
+    def validate_auth_config(self, value: UserRoleAuthConfig):
+        tenant = self.context.get("tenant")
+        tenant_auth_config = tenant.auth_config
+
+        # Validate two_factor_auth config not overridden by role
+        if tenant_auth_config.get("two_factor_auth", {}).get("required", False):
+            if value.get("two_factor_auth", {}).get("required", False) is False:
+                raise serializers.ValidationError(
+                    "Two-factor authentication is required for this user role as it is enabled for the tenant."
+                )
+        return value
+
+    def validate(self, attrs):
+        return attrs
 
     def update(self, instance, validated_data):
         if not validated_data.get("policies"):
@@ -117,28 +136,52 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         return super(UserRoleSerializerModel, self).update(instance, validated_data)
 
 
-class AppUserModelSerializerModel(serializers.ModelSerializer):
+class AppUserModelSerializerModel(
+    serializers.ModelSerializer, UserAuthConfigValidationMixin
+):
     roles = UserRoleSerializerModel(many=True)
     pn_country_code = serializers.SerializerMethodField()
+    auth_config = serializers.JSONField(required=False)
 
     class Meta:
         model = AppUserModel
-        fields = [
-            "id",
-            "name",
-            "email",
-            "mobile",
-            "roles",
-            "is_active",
-            "last_login",
-            "created_at",
-            "pn_country_code",
-        ]
+        fields = "__all__"
 
     def get_pn_country_code(self, obj):
         if obj.mobile:
             return f"+{obj.mobile.country_code}"
         return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        tenant = self.context.get("tenant")
+        auth_config = get_auth_priority(tenant=tenant, user=instance)
+        twofa_enabled = auth_config.get("two_factor_auth", {}).get("required", False)
+        for role in instance.roles.all():
+            role_twofa_config = get_auth_priority(
+                tenant=tenant, user_role=role, policy="two_factor_auth"
+            )
+            if role_twofa_config.get("required", False):
+                twofa_enabled = True
+                break
+        auth_config["two_factor_auth"]["required"] = twofa_enabled
+        data["auth_config"] = auth_config
+        return data
+
+    def validate(self, attrs):
+        auth_config = attrs.get("auth_config", {})
+        if auth_config:
+            # For partial updates, if roles are not in attrs, use the instance's roles
+            roles = attrs.get("roles")
+            if roles is None and self.instance:
+                roles = self.instance.roles.all()
+            self.validate_user_role_two_factor_not_overridden(
+                auth_config, self.instance, roles
+            )
+        return attrs
+
+    def validate_auth_config(self, value):
+        return value
 
 
 class ThemeModelSerializer(serializers.ModelSerializer):

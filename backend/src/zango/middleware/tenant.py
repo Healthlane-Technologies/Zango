@@ -163,15 +163,39 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
 class TimezoneMiddleware(MiddlewareMixin):
     def __call__(self, request):
         """
-        Sets the timezone for the request based on the tenant's timezone.
+        Sets the timezone for the request based on the X-Client-Timezone header first,
+        falling back to the tenant's timezone.
         It then sets the default region for phone_numbers based on the timezone_country mapping.
         If timezone is not set, timezone is deactivated.
         """
         try:
-            tzname = request.tenant.timezone
-            timezone.activate(pytz.timezone(tzname))
-            region = get_region_from_timezone(tzname)
-            settings.PHONENUMBER_DEFAULT_REGION = region
+            # Priority 1: X-Client-Timezone header
+            tzname = request.headers.get("X-Client-Timezone")
+
+            # Priority 2: Tenant's timezone
+            if not tzname:
+                tzname = request.tenant.timezone
+
+            if tzname:
+                request.tzname = tzname
+                timezone.activate(pytz.timezone(tzname))
+            else:
+                request.tzname = None
+                timezone.deactivate()
         except Exception:
+            request.tzname = None
             timezone.deactivate()
+
+        # Set default region for phone number
+        phonenumber_region = None
+        try:
+            # Always use tenant timezone for phone number region
+            if request.tenant.timezone:
+                phonenumber_region = get_region_from_timezone(request.tenant.timezone)
+        except Exception:
+            phonenumber_region = None
+
+        if phonenumber_region:
+            settings.PHONENUMBER_DEFAULT_REGION = phonenumber_region
+
         return self.get_response(request)

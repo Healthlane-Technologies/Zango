@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from zango.apps.auditlogs.models import LogEntry
-from zango.core.utils import get_datetime_str_in_tenant_timezone
+from zango.core.utils import get_datetime_str_in_current_timezone
 
 
 class AuditLogSerializerModel(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         return obj.get_action_display().capitalize()
 
     def get_timestamp(self, obj):
-        return get_datetime_str_in_tenant_timezone(
+        return get_datetime_str_in_current_timezone(
             obj.timestamp, self.context["tenant"]
         )
 

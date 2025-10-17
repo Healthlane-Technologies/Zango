@@ -1,75 +1,42 @@
-from django.contrib.auth import authenticate
-from django.core.exceptions import ValidationError
-
-from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
-from zango.apps.appauth.models import OldPasswords
+from zango.apps.appauth.models import AppUserAuthToken
+from zango.apps.appauth.serializers import AppUserAuthTokenSerializer
 from zango.core.api import (
     ZangoGenericAppAPIView,
-    ZangoSessionAppAPIView,
     get_api_response,
 )
+from zango.core.utils import get_current_role
 
 from .serializers import ProfileSerializer
 
 
 class ProfileViewAPIV1(ZangoGenericAppAPIView):
     def get(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(request.user)
+        serializer = ProfileSerializer(
+            request.user, context={"request": request, "tenant": request.tenant}
+        )
         success = True
-        response = {"message": "success", "profile_data": serializer.data}
+        tokens = AppUserAuthToken.objects.filter(user=request.user)
+        token_serializer = AppUserAuthTokenSerializer(
+            tokens, many=True, context={"request": request, "tenant": request.tenant}
+        )
+        role = get_current_role()
+        response = {
+            "message": "success",
+            "profile_data": serializer.data,
+            "should_set_password": request.user.has_usable_password() is False,
+            "current_role": {
+                "id": role.id,
+                "name": role.name,
+            },
+            "tokens": token_serializer.data,
+        }
         status = 200
         return get_api_response(success, response, status)
 
     def put(self, request, *args, **kwargs):
-        response = request.user.update_user(request.data)
+        profile_image = request.FILES.get("profile_pic")
+        response = request.user.update_user(request.data, profile_image=profile_image)
         success = response.pop("success")
-        if success:
-            status = 200
-        else:
-            status = 400
-        return get_api_response(success, response, status)
-
-
-class PasswordChangeViewAPIV1(ZangoSessionAppAPIView, PasswordValidationMixin):
-    def clean_password(self, email, password):
-        """
-        Validates that the email is not already in use.
-        """
-        try:
-            user = authenticate(username=email, password=password)
-        except Exception:
-            raise ValidationError(
-                "The current password you have entered is wrong. Please try again!"
-            )
-
-    def clean_password2(self, user, current_password, new_password):
-        """method to validate password"""
-        password2 = new_password
-        validation = self.run_all_validations(
-            user, new_password, password2, current_password
-        )
-        if not validation.get("validation"):
-            raise ValidationError(validation.get("msg"))
-        return True
-
-    def put(self, request, *args, **kwargs):
-        current_password = request.data.get("current_password")
-        new_password = request.data.get("new_password")
-        success = False
-        try:
-            self.clean_password(request.user.email, current_password)
-            self.clean_password2(request.user, current_password, new_password)
-            request.user.set_password(new_password)
-            request.user.save()
-            obj = OldPasswords.objects.create(user=request.user)
-            obj.setPasswords(request.user.password)
-            obj.save()
-            success = True
-            response = {}
-            status = 200
-            return get_api_response(success, response, status)
-        except ValidationError as e:
-            response = {"message": e.message}
         if success:
             status = 200
         else:

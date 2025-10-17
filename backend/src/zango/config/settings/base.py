@@ -70,6 +70,12 @@ TENANT_APPS = [
     # "cachalot",
     "axes",
     "django_recaptcha",
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
+    "allauth.mfa",
+    "allauth.usersessions",
+    "django.contrib.humanize",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -103,6 +109,8 @@ MIDDLEWARE = [
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
     "axes.middleware.AxesMiddleware",
     "zango.middleware.telemetry.OtelZangoContextMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "allauth.usersessions.middleware.UserSessionsMiddleware",
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -337,6 +345,13 @@ def setup_settings(settings, BASE_DIR):
         RECAPTCHA_PUBLIC_KEY=(str, ""),
         RECAPTCHA_PRIVATE_KEY=(str, ""),
         HEALTH_CHECK_URL=(str, ""),
+        MEDIA_STORAGE_BACKEND=(str, "django.core.files.storage.FileSystemStorage"),
+        STATIC_STORAGE_BACKEND=(
+            str,
+            "django.contrib.staticfiles.storage.StaticFilesStorage",
+        ),
+        SECURE_PROXY_SSL_HEADER=(list, []),
+        SENTRY_DSN=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -449,6 +464,11 @@ def setup_settings(settings, BASE_DIR):
         "AUTH_HEADER_PREFIX": "Bearer",
     }
 
+    settings.STORAGES = {
+        "default": {"BACKEND": env("MEDIA_STORAGE_BACKEND")},
+        "staticfiles": {"BACKEND": env("STATIC_STORAGE_BACKEND")},
+    }
+
     log_folder = os.path.join(BASE_DIR, "log")
     log_file = os.path.join(log_folder, "zango.log")
 
@@ -509,8 +529,21 @@ def setup_settings(settings, BASE_DIR):
 
     settings.HEALTH_CHECK_URL = env("HEALTH_CHECK_URL")
 
+    settings.SECURE_PROXY_SSL_HEADER = tuple(env("SECURE_PROXY_SSL_HEADER"))
+    settings.SENTRY_DSN = env("SENTRY_DSN")
+
+    if settings.SENTRY_DSN:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            enable_tracing=True,
+        )
+
     if settings.HEALTH_CHECK_URL:
         CELERY_BEAT_SCHEDULE["health_check_task"]["enabled"] = True
+
+    settings.HEADLESS_ONLY = True
 
     settings_result = {"env": env}
 

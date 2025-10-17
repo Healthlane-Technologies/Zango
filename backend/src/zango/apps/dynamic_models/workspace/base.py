@@ -122,11 +122,17 @@ class Workspace:
         for item in bfs:
             if item["type"] == "package":
                 for mod in item["modules"]:
-                    path = self.get_package_path(item["name"]) + mod["path"]
+                    # Convert dotted module path to filesystem path (e.g., "parent.child" -> "parent/child")
+                    # This allows packages to have nested module structures just like app modules
+                    fs_path = mod["path"].replace(".", "/")
+                    path = self.get_package_path(item["name"]) + fs_path
                     if path not in modules:
                         modules.append(path)
             if item["type"] == "module":
-                path = self.path + item["path"]
+                # Convert dotted module path to filesystem path (e.g., "parent.child" -> "parent/child")
+                # This allows app modules to have nested structures
+                fs_path = item["path"].replace(".", "/")
+                path = self.path + fs_path
                 if path not in modules:
                     modules.append(path)
         return modules
@@ -346,18 +352,38 @@ class Workspace:
 
     def get_root_urls(self) -> list[dict]:
         _settings = self.get_workspace_settings()
-        routes = _settings["app_routes"]
+        routes = _settings["app_routes"].copy()
+
+        # Create a mapping of module names to their actual paths
+        module_path_map = {
+            module["name"]: module["path"] for module in _settings["modules"]
+        }
+
+        # Update routes to use actual module paths instead of just names
+        for route in routes:
+            if route["module"] in module_path_map:
+                route["module"] = module_path_map[route["module"]]
+
         package_routes = _settings["package_routes"]
         for route in package_routes:
-            pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
+            pkg_settings = self.get_package_settings(route["package"])
+            pkg_app_routes = pkg_settings["app_routes"]
+
+            # Create a mapping of module names to their actual paths for this package
+            pkg_module_path_map = {
+                module["name"]: module["path"] for module in pkg_settings["modules"]
+            }
+
             for pkg_route in pkg_app_routes:
+                # Map module name to actual path if it exists in the mapping
+                module_path = pkg_module_path_map.get(
+                    pkg_route["module"], pkg_route["module"]
+                )
+
                 routes.append(
                     {
                         "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": "packages."
-                        + route["package"]
-                        + "."
-                        + pkg_route["module"],
+                        "module": "packages." + route["package"] + "." + module_path,
                         "url": pkg_route["url"],
                     }
                 )
@@ -446,7 +472,12 @@ class Workspace:
                 if "packages" in model_module:
                     policy_path = ".".join(model_module.split(".")[2:5])
                 else:
-                    policy_path = model_module.split(".")[2]
+                    # For nested modules, take all parts except the last one (which is "policies")
+                    # This handles both simple modules (auth) and nested modules (test_mod.test_sub)
+                    module_parts = model_module.split(".")[
+                        2:-1
+                    ]  # Remove workspace prefix and "policies" suffix
+                    policy_path = ".".join(module_parts)
                 with open(policy_file) as f:
                     try:
                         policy = json.load(f)
@@ -510,10 +541,12 @@ class Workspace:
             if policy.path and "packages" in policy.path:
                 continue
             roles = policy.role_policies.all()
-            with open(f"{self.path}/{policy.path}/policies.json", "r") as f:
+            # Convert dotted path (test_mod.test_sub) to filesystem path (test_mod/test_sub)
+            fs_path = policy.path.replace(".", "/")
+            with open(f"{self.path}/{fs_path}/policies.json", "r") as f:
                 policies = json.load(f)
                 for policy_details in policies["policies"]:
                     if policy_details["name"] == policy.name:
                         policy_details["roles"] = [role.name for role in roles]
-            with open(f"{self.path}/{policy.path}/policies.json", "w") as f:
+            with open(f"{self.path}/{fs_path}/policies.json", "w") as f:
                 json.dump(policies, f, indent=4)
