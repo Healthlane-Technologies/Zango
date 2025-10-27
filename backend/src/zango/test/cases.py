@@ -30,7 +30,6 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
     initialize_workspace = False
     parent = None
     module = None
-    _workspace_initialized = False
 
     def setUp(self):
         super().setUp()
@@ -147,8 +146,6 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
         super().tearDownClass()
         if cls.initialize_workspace:
             cls.clean_workspaces()
-            # Reset flag so it can be initialized again in a new test run
-            ZangoAppBaseTestCase._workspace_initialized = False
         connection.set_schema_to_public()
         ThemesModel.objects.filter(tenant=cls.tenant).delete()
         cls.domain.delete()
