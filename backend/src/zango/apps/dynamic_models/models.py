@@ -329,7 +329,6 @@ class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceMo
         null=True,
         editable=False,
         on_delete=models.PROTECT,
-        related_name="creator",
     )
     modified_at = models.DateTimeField(auto_now=True)
     modified_by = models.ForeignKey(
@@ -337,7 +336,6 @@ class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceMo
         null=True,
         editable=False,
         on_delete=models.PROTECT,
-        related_name="modifier",
     )
     object_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
