@@ -95,9 +95,12 @@ class PermissionMixin:
     def has_perm(self, request, perm_type, view_name=None):
         """
         checks if the role or user has the permission
+        Also attaches view features to request for view permissions
         """
         policies = self.get_policies(perm_type, view_name)
         if not policies.exists():
+            if perm_type == "view":
+                request.view_features = set()  # No policies = no features
             return False
         if perm_type == "userAccess":
             for policy in policies:
@@ -106,11 +109,23 @@ class PermissionMixin:
                     if self.is_ip_valid(request, permission):
                         return True
         elif perm_type == "view":
+            # Collect all features for this view from all matching policies
+            view_features = set()
+            has_access = False
+
             for policy in policies:
                 permissions = policy.statement.get("permissions")
                 for permission in permissions:
                     if self.has_view_access(permission, view_name):
-                        return True
+                        has_access = True
+                        # Collect features from this permission
+                        perm_features = permission.get("features", [])
+                        if perm_features:
+                            view_features.update(perm_features)
+                            # Attach features to request for CRUD views to use
+                            request.view_features = view_features
+
+                        return has_access
         return False
 
     def get_model_perms(self, model):
