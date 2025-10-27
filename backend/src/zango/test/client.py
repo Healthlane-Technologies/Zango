@@ -182,7 +182,7 @@ class ZangoClient(BaseZangoRequestFactory, Client):
 
     def login(self, username: str, password: str) -> bool:
         """Authenticate and log in a user with the given credentials."""
-        request = get_mock_request(session=self.session)
+        request = get_mock_request(session=self.session, tenant=self.tenant)
         user = authenticate(request, username=username, password=password)
 
         if user:
@@ -229,6 +229,7 @@ class AuthenticatedTestClient(ZangoClient):
         """
         super().__init__(tenant)
         self._password = password
+        self.tenant = tenant
 
         if user is not None:
             self.authenticate(user, role_name=role_name, password=password)
