@@ -17,7 +17,8 @@ def setup_logging():
         if settings.ENV == "dev":
             logger.add(sys.stderr, format=get_loguru_format, level="DEBUG")
         else:
-            # Write to the log file
+            # Write to both console (for CloudWatch) and file (for debugging)
+            logger.add(sys.stderr, format=get_loguru_format, level="INFO")
             logger.add(
                 "log/zango.log",
                 format=get_loguru_format,
