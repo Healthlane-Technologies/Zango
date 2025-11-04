@@ -75,13 +75,13 @@ def get_package_url(request, path, package_name):
     return ""
 
 
-def get_mock_request(**kwargs):
+def get_mock_request(tenant=None, **kwargs):
     from django.db import connection
     from django.http import HttpRequest
 
     request = HttpRequest()
     request.path = kwargs.get("path")
-    request.tenant = connection.tenant
+    request.tenant = tenant or connection.tenant
     request.method = kwargs.get("method", "GET")
     request.META = kwargs.get("META", {})
     request.header = kwargs.get("header", {})
@@ -420,7 +420,10 @@ def get_auth_priority(
     if user_role is None:
         if getattr(request, "session", None):
             if request.session.get("role_id"):
-                user_role = UserRoleModel.objects.get(id=request.session["role_id"])
+                try:
+                    user_role = UserRoleModel.objects.get(id=request.session["role_id"])
+                except Exception:
+                    pass
         else:
             user_role = get_current_role()
         if user_role is None:

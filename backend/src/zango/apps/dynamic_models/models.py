@@ -325,11 +325,17 @@ class RestrictedManager(models.Manager):
 class DynamicModelBase(models.Model, DynamicModelMixin, metaclass=RegisterOnceModeMeta):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        AppUserModel, null=True, editable=False, on_delete=models.PROTECT
+        AppUserModel,
+        null=True,
+        editable=False,
+        on_delete=models.PROTECT,
     )
     modified_at = models.DateTimeField(auto_now=True)
     modified_by = models.ForeignKey(
-        AppUserModel, null=True, editable=False, on_delete=models.PROTECT
+        AppUserModel,
+        null=True,
+        editable=False,
+        on_delete=models.PROTECT,
     )
     object_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 

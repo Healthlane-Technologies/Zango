@@ -1,30 +1,29 @@
 import os
-from django.core.management import call_command
-from django.test import override_settings
-from zango.apps.dynamic_models.workspace.base import Workspace
+
 from decimal import Decimal
+
 from django_tenants.utils import schema_context
+
 from django.core.exceptions import FieldError
-from django.db import  models
+from django.db import models
+
 from zango.apps.dynamic_models.fields import ZForeignKey
 from zango.apps.dynamic_models.models import DynamicModelBase
-
-
+from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.test.cases import ZangoAppBaseTestCase
+
 
 class ZangoForeignKeyTest(ZangoAppBaseTestCase):
     initialize_workspace = True
-    
+
     @classmethod
     def get_test_module_path(self):
-        return os.path.join(
-            "apps/dynamic_models/zango_fields/test_foreign_key"
-        )
+        return os.path.join("apps/dynamic_models/zango_fields/test_foreign_key")
 
     @classmethod
     def setUpClass(self):
         super().setUpClass()
-        self.syn_db()
+        self.sync_database()
         self.ws = Workspace(self.tenant, request=None, as_systemuser=True)
         self.ws.ready()
         self.zforeignkey = self.ws.plugin_source.load_plugin("zforeignkey.models")
@@ -42,14 +41,6 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
                 question="What's the second question?", creator=jim
             )
 
-    @classmethod
-    @override_settings(TEST_MIGRATION_RUNNING=True)
-    def syn_db(self):
-        call_command(
-            'ws_migrate',
-            'testapp'
-        )
-
     def test_callable_default(self):
         """A lazy callable may be used for ForeignKey.default."""
         with schema_context(self.tenant.schema_name):
@@ -61,7 +52,7 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
         with schema_context(self.tenant.schema_name):
             rel_name = self.Bar._meta.get_field("a").remote_field.related_name
             self.assertIsInstance(rel_name, str)
-    
+
     def test_non_local_to_field(self):
         class Parent(DynamicModelBase):
             key = models.IntegerField(unique=True)
@@ -72,17 +63,20 @@ class ZangoForeignKeyTest(ZangoAppBaseTestCase):
         class Related(DynamicModelBase):
             child = ZForeignKey(Child, on_delete=models.CASCADE, to_field="key")
 
-        
         with self.assertRaises(FieldError):
             Related._meta.get_field("child").related_fields
-    
+
     def test_reverse_by_field(self):
         with schema_context(self.tenant.schema_name):
-            u1 = self.FKUser.objects.get(poll__question__exact="What's the first question?")
+            u1 = self.FKUser.objects.get(
+                poll__question__exact="What's the first question?"
+            )
             self.assertEqual(u1.name, "John Doe")
 
-            u2 = self.FKUser.objects.get(poll__question__exact="What's the second question?")
-            self.assertEqual(u2.name, "Jim Bo") 
+            u2 = self.FKUser.objects.get(
+                poll__question__exact="What's the second question?"
+            )
+            self.assertEqual(u2.name, "Jim Bo")
 
     def test_reverse_field_name_disallowed(self):
         """

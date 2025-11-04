@@ -1,14 +1,9 @@
 import os
-import json
 
-from django_tenants.utils import schema_context
-from zango.test.cases import ZangoAppBaseTestCase
 from django.test import override_settings
-from django.db import connection
-from zango.apps.dynamic_models.workspace.base import Workspace
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
+
+from zango.test.cases import ZangoAppBaseTestCase
 from zango.test.client import ZangoClient
-from django.http import HttpResponseRedirect
 
 
 @override_settings(ROOT_URLCONF="src.test_project.test_project.url_tenants")
@@ -17,17 +12,8 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
     @classmethod
     def get_test_module_path(self):
-        return os.path.join(
-            "apps/internal_requests/test_internal_requests"
-        )
-    
-    @classmethod
-    def sync_policies(self):
-        with connection.cursor() as c:
-            ws = Workspace(connection.tenant, as_systemuser=True)
-            ws.ready()
-            ws.sync_policies()
-    
+        return os.path.join("apps/internal_requests/test_internal_requests")
+
     def test_internal_request_headers(self):
         self.sync_policies()
         self.client = ZangoClient(self.tenant)
@@ -43,7 +29,6 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
         res = self.client.post("/app/view/?action=delete_headers")
         self.assertEqual(res.status_code, 200)
-
 
     def test_internal_request_query_params(self):
         self.sync_policies()
@@ -131,7 +116,7 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
         res = self.client.post("/app/view/?action=post_form_data_multipart")
         self.assertEqual(res.status_code, 200)
-        
+
         res = self.client.post("/app/view/?action=put_form_data_multipart")
         self.assertEqual(res.status_code, 200)
 
@@ -152,7 +137,7 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
         res = self.client.post("/app/view/?action=delete_cookie")
         self.assertEqual(res.status_code, 200)
-    
+
     def test_internal_request_response_cookies(self):
         self.sync_policies()
         self.client = ZangoClient(self.tenant)
@@ -167,7 +152,7 @@ class ZangoAppLoginTest(ZangoAppBaseTestCase):
 
         res = self.client.post("/app/view/?action=put_response_cookie")
         self.assertEqual(res.status_code, 200)
-    
+
     def test_internal_request_json_data_api_view(self):
         self.sync_policies()
         self.client = ZangoClient(self.tenant)

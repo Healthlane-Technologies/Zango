@@ -56,6 +56,7 @@ class Workspace:
         if key in cls._instances:
             return cls._instances[key]
         instance = super().__new__(cls)
+        connection.set_tenant(wobj)
         instance.plugin_source = cls.get_plugin_source()
         cls._instances[key] = instance
         return instance
