@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.appauth.models import AppUserModel, SAMLModel, UserRoleModel
 from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
@@ -227,3 +227,9 @@ class ThemeModelSerializer(serializers.ModelSerializer):
             validated_data["config"] = statement
 
         return super(ThemeModelSerializer, self).update(instance, validated_data)
+
+
+class SAMLProviderModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SAMLModel
+        fields = "__all__"

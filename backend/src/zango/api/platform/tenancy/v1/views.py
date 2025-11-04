@@ -9,7 +9,11 @@ from django.db.models import Q
 from django.utils.decorators import method_decorator
 
 from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.appauth.models import (
+    AppUserModel,
+    SAMLModel,
+    UserRoleModel,
+)
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
@@ -30,6 +34,7 @@ from zango.core.utils import (
 
 from .serializers import (
     AppUserModelSerializerModel,
+    SAMLProviderModelSerializer,
     TenantSerializerModel,
     ThemeModelSerializer,
     UserRoleSerializerModel,
@@ -696,6 +701,140 @@ class ThemeDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
                 result = {"message": error_message}
         except Exception as e:
+            success = False
+            result = {"message": str(e)}
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class SAMLProvidersViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            app_tenant = self.get_tenant(**kwargs)
+            saml_providers = SAMLModel.objects.all().order_by("-id")
+
+            serializer = SAMLProviderModelSerializer(saml_providers, many=True)
+
+            success = True
+            response = {
+                "saml_providers": serializer.data,
+                "message": "All SAML providers fetched successfully",
+            }
+            status = 200
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            app_tenant = self.get_tenant(**kwargs)
+            data = request.data
+
+            serializer = SAMLProviderModelSerializer(data=data)
+            if serializer.is_valid():
+                saml_provider = serializer.save()
+                success = True
+                status_code = 200
+                result = {
+                    "message": "SAML Provider created successfully",
+                    "saml_provider_id": saml_provider.id,
+                }
+            else:
+                success = False
+                status_code = 400
+                if serializer.errors:
+                    error_messages = [
+                        error[0] for field_name, error in serializer.errors.items()
+                    ]
+                    error_message = ", ".join(error_messages)
+                else:
+                    error_message = "Invalid data"
+
+                result = {"message": error_message}
+
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            result = {"message": str(e)}
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class SAMLProviderDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
+    permission_classes = (IsPlatformUserAllowedApp,)
+
+    def get_obj(self, **kwargs):
+        try:
+            obj = SAMLModel.objects.get(id=kwargs.get("saml_provider_id"))
+            return obj
+        except SAMLModel.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        try:
+            obj = self.get_obj(**kwargs)
+            if not obj:
+                return get_api_response(
+                    False, {"message": "SAML Provider not found"}, 404
+                )
+
+            serializer = SAMLProviderModelSerializer(obj)
+            success = True
+            response = {"saml_provider": serializer.data}
+            status = 200
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            response = {"message": str(e)}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def put(self, request, *args, **kwargs):
+        try:
+            obj = self.get_obj(**kwargs)
+            if not obj:
+                return get_api_response(
+                    False, {"message": "SAML Provider not found"}, 404
+                )
+
+            serializer = SAMLProviderModelSerializer(
+                instance=obj, data=request.data, partial=True
+            )
+
+            if serializer.is_valid():
+                serializer.save()
+                success = True
+                status_code = 200
+                result = {
+                    "message": "SAML Provider updated successfully",
+                    "saml_provider_id": obj.id,
+                }
+            else:
+                success = False
+                status_code = 400
+                if serializer.errors:
+                    error_messages = [
+                        error[0] for field_name, error in serializer.errors.items()
+                    ]
+                    error_message = ", ".join(error_messages)
+                else:
+                    error_message = "Invalid data"
+
+                result = {"message": error_message}
+
+        except Exception as e:
+            traceback.print_exc()
             success = False
             result = {"message": str(e)}
             status_code = 500

@@ -545,6 +545,263 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digi
         return ""
 
 
+singatureAlgoChoices = (
+    (
+        "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+        "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+    ),
+    (
+        "http://www.w3.org/2000/09/xmldsig#dsa-sha1",
+        "http://www.w3.org/2000/09/xmldsig#dsa-sha1",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+    ),
+)
+
+digestAlgorithm = (
+    (
+        "http://www.w3.org/2000/09/xmldsig#sha1",
+        "http://www.w3.org/2000/09/xmldsig#sha1",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmlenc#sha256",
+        "http://www.w3.org/2001/04/xmlenc#sha256",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#sha384",
+        "http://www.w3.org/2001/04/xmldsig-more#sha384",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmlenc#sha512",
+        "http://www.w3.org/2001/04/xmlenc#sha512",
+    ),
+)
+
+
+class SAMLModel(models.Model):
+    """
+    Model to define SAML Configuration for a Company Client
+    """
+
+    label = models.CharField("Label for SAML Option", max_length=200)
+    is_strict = models.BooleanField(
+        verbose_name="If strict is True, then unsigned or unencrypted messages are  rejected if they are expected to be signed/encrypted",
+        default=True,
+    )
+    is_debug_true = models.BooleanField(
+        verbose_name="Enable debug mode (outputs errors)", default=False
+    )
+    sp_entityId = models.URLField(
+        verbose_name="Service Provider Entity ID E.g. tenant.zelthy.in/metadata/2/",
+    )
+    sp_acsURL = models.URLField(
+        verbose_name="Service Provider ACS URL E.g. http://tenant.zelthy.in/acs/2/",
+    )
+    sp_slo = models.URLField(
+        verbose_name="Service Provider Single Log Out. Not Implemented Yet", blank=True
+    )
+    sp_x509cert = models.TextField(
+        "Service Provider Public Key x509 Certificate", max_length=2000, blank=True
+    )
+    sp_privatekey = models.TextField(
+        "Service Provider Private Key", max_length=2000, blank=True
+    )
+    idp_entityId = models.URLField(
+        verbose_name="IDP Entity ID . Eg. https://app.onelogin.com/saml/metadata/ace2ffad-66f5-4d43-ae51-bddef851f997",
+    )
+    idp_sso = models.URLField(
+        verbose_name="IDP Single Sing On.  Eg. https://zelthy1.onelogin.com/trust/saml2/http-post/sso/881614",
+    )
+    idp_slo = models.URLField(
+        verbose_name="IDP Single Log On. E.g https://app.onelogin.com/trust/saml2/http-redirect/slo/<onelogin_connector_id>",
+        blank=True,
+    )
+    idp_x509cert = models.TextField(
+        "IdP Public Key x509 Certificate",
+        max_length=2000,
+    )
+    security_nameIdEncrypted = models.BooleanField(
+        verbose_name="security_nameIdEncrypted. Indicates that the nameID of the <samlp:logoutRequest> sent by this SP will be encrypted",
+        default=False,
+    )
+    security_authnRequestsSigned = models.BooleanField(
+        verbose_name="Indicates whether the <samlp:AuthnRequest> messages sent by this SP will be signed",
+        default=False,
+    )
+    security_logoutRequestSigned = models.BooleanField(
+        verbose_name="I Indicates whether the <samlp:logoutResponse> messages sent by this SP will be signed",
+        default=False,
+    )
+    security_logoutResponseSigned = models.BooleanField(
+        verbose_name="Indicates whether the <samlp:logoutResponse> messages sent by this SP will be signed",
+        default=False,
+    )
+    security_signMetadata = models.BooleanField(
+        verbose_name="Sign the Metadata", default=False
+    )
+    security_wantMessagesSigned = models.BooleanField(
+        verbose_name="Indicates a requirement for the <samlp:Response>, <samlp:LogoutRequest> and <samlp:LogoutResponse> elements received by this SP to be signed",
+        default=False,
+    )
+    security_wantAssertionsSigned = models.BooleanField(
+        verbose_name="Indicates a requirement for the <saml:Assertion> elements received by this SP to be signed",
+        default=False,
+    )
+    security_wantAssertionsEncrypted = models.BooleanField(
+        verbose_name="Indicates a requirement for the <saml:Assertion> elements received by this SP to be encrypted.",
+        default=False,
+    )
+    security_wantNameId = models.BooleanField(
+        verbose_name="Indicates a requirement for the NameID element on the SAMLResponse received by this SP to be present.",
+        default=True,
+    )
+    security_wantNameIdEncrypted = models.BooleanField(
+        verbose_name="Indicates a requirement for the NameID received by this SP to be encrypted",
+        default=False,
+    )
+    security_wantAttributeStatement = models.BooleanField(
+        verbose_name="Indicates a requirement for the AttributeStatement element",
+        default=True,
+    )
+    security_rejectUnsolicitedResponsesWithInResponseTo = models.BooleanField(
+        verbose_name=" Rejects SAML responses with a InResponseTo attribute when request_id not provided in the process_response method that later call the response is_valid method with that parameter.",
+        default=False,
+    )
+    security_requestedAuthnContext = models.BooleanField(
+        verbose_name="Authentication context", default=True
+    )
+    security_requestedAuthnContextComparison = models.CharField(
+        max_length=10,
+        verbose_name="Indicates whether the <samlp:AuthnRequest> messages sent by this SP will be signed",
+        default="exact",
+    )
+    security_signatureAlgorithm = models.CharField(
+        max_length=200,
+        choices=singatureAlgoChoices,
+        default="http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+    )
+    security_digestAlgorithm = models.CharField(
+        max_length=200,
+        choices=digestAlgorithm,
+        default="http://www.w3.org/2000/09/xmldsig#sha1",
+    )
+    name_id_format = models.CharField(
+        max_length=200,
+        default="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
+    )
+
+    def __str__(self):
+        return self.label
+
+    def get_settings_dict(self):
+        result = self.get_basic_settings()
+        result["security"] = self.get_security_settings()
+        result["contactPerson"] = self.get_contact_settings()
+        result["organization"] = self.get_organization()
+        return result
+
+    def get_basic_settings(self):
+        result = {}
+        result["strict"] = self.is_strict
+        result["debug"] = self.is_debug_true
+        result["sp"] = {}
+        result["sp"]["entityId"] = self.sp_entityId
+        result["sp"]["assertionConsumerService"] = {
+            "url": self.sp_acsURL,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
+        }
+        result["sp"]["attributeConsumingService"] = {}
+        result["sp"]["singleLogoutService"] = {
+            "url": self.sp_slo,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+        }
+        result["sp"]["NameIDFormat"] = self.name_id_format
+        result["sp"]["x509cert"] = self.sp_x509cert
+        result["sp"]["privateKey"] = self.sp_privatekey
+        result["idp"] = {}
+        result["idp"]["entityId"] = self.idp_entityId
+        result["idp"]["singleSignOnService"] = {
+            "url": self.idp_sso,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+        }
+        result["idp"]["singleLogoutService"] = {
+            "url": self.idp_slo,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+        }
+        result["idp"]["x509cert"] = self.idp_x509cert
+        return result
+
+    def get_security_settings(self):
+        result = {}
+        result["nameIdEncrypted"] = self.security_nameIdEncrypted
+        result["authnRequestsSigned"] = self.security_authnRequestsSigned
+        result["logoutRequestSigned"] = self.security_logoutRequestSigned
+        result["logoutResponseSigned"] = self.security_logoutResponseSigned
+        result["signMetadata"] = self.security_signMetadata
+        result["wantMessagesSigned"] = self.security_wantMessagesSigned
+        result["wantAssertionsSigned"] = self.security_wantAssertionsSigned
+        result["wantAssertionsEncrypted"] = self.security_wantAssertionsEncrypted
+        result["wantNameId"] = self.security_wantNameId
+        result["wantNameIdEncrypted"] = self.security_wantNameIdEncrypted
+        result["wantAttributeStatement"] = self.security_wantAttributeStatement
+        result["rejectUnsolicitedResponsesWithInResponseTo"] = (
+            self.security_rejectUnsolicitedResponsesWithInResponseTo
+        )
+        result["requestedAuthnContext"] = self.security_requestedAuthnContext
+        result["requestedAuthnContextComparison"] = (
+            self.security_requestedAuthnContextComparison
+        )
+        result["metadataValidUntil"] = None
+        result["metadataCacheDuration"] = None
+        result["signatureAlgorithm"] = self.security_signatureAlgorithm
+        result["digestAlgorithm"] = self.security_digestAlgorithm
+        return result
+
+    def get_contact_settings(self):
+        result = {}
+        result["technical"] = {
+            "givenName": "Technical Support",
+            "emailAddress": "support@zelthy.com",
+        }
+        result["support"] = {
+            "givenName": "Technical Support",
+            "emailAddress": "support@zelthy.com",
+        }
+        return result
+
+    def get_organization(self):
+        result = {
+            "en-US": {
+                "name": "Healthlane Technologies",
+                "displayname": "Zelthy",
+                "url": "https://www.zelthy.com",
+            }
+        }
+        return result
+
+
+class SAMLRequestId(models.Model):
+    """
+    Stores Request ID of
+    """
+
+    request_id = models.CharField("SAML Request ID", max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.request_id
+
+
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
