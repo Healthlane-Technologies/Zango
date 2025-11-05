@@ -1,7 +1,7 @@
 # Base Production Project Image for Zango
 # Creates a complete project structure at build time for ECS deployment
 
-FROM kczelthy/zango:0.6.2-beta
+FROM kczelthy/zango:latest
 
 # Create non-root user
 RUN apt update && \
