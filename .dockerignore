@@ -9,3 +9,6 @@ frontend/
 LICENSE
 MANIFEST.in
 README.md
+__pycache__/
+backend/src/zango.egg-info/
+Zango/build/
