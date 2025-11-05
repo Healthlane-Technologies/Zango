@@ -2,6 +2,7 @@
 Module containing custom template filters
 """
 
+import json
 import os
 import re
 
@@ -70,3 +71,12 @@ def use_latest(build_path):
                 if re.match(filep, filename):
                     return os.path.join(buildir, filename)
     return build_path
+
+
+@register.filter
+def parse_json(value):
+    """Parse JSON string and return dictionary"""
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return {}
