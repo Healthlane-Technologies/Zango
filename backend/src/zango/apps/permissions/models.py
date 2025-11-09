@@ -14,6 +14,8 @@ class PermissionsModel(FullAuditMixin):
         choices=(
             ("view", "View"),
             ("datamodel", "DataModel"),
+            ("dataModel", "DataModel"),
+            ("model", "Model"),
             ("user_access", "User Access"),
             ("custom", "Custom"),
         ),
