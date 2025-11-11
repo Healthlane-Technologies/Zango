@@ -17,6 +17,7 @@ def get_requirements(env):
 
 
 install_requires = get_requirements("base")
+dev_requires = get_requirements("dev")
 
 
 setup(
@@ -40,6 +41,9 @@ setup(
         ],
     },
     install_requires=install_requires,
+    extras_require={                   
+        "dev": dev_requires,           
+    },                                 
     classifiers=[
         "Framework :: Django",
         "Programming Language :: Python",
