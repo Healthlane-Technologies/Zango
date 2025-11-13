@@ -2,6 +2,7 @@ from threading import local
 
 from rest_framework import exceptions
 
+from django.contrib.auth.models import AnonymousUser
 from django.http import JsonResponse
 
 
@@ -63,14 +64,20 @@ class UserRoleAndAppObjectAssignmentMiddleware:
             _request_local.META = request.META
             _request_local.headers = request.headers
             user_role = _request_local.user_role
-            if user_role and not user_role.name == "AnonymousUsers":
+            if (
+                user_role
+                and not user_role.name == "AnonymousUsers"
+                and not isinstance(user, AnonymousUser)
+            ):
                 _request_local.app_object = user.get_app_object(
                     _request_local.user_role.id
                 )
             else:
                 _request_local.app_object = None
         except Exception as e:
-            print(str(e))
+            import traceback
+
+            traceback.print_exc()
             _request_local.app_object = None
         response = self.get_response(request)
         return response

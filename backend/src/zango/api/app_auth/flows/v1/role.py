@@ -6,8 +6,11 @@ from allauth.headless.base.views import APIView
 
 from zango.apps.appauth.models import UserRoleModel
 from zango.core.api import ZangoGenericAppAPIView, get_api_response
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserRoleViewAPIV1(APIView):
     stage_class = RoleSelectionStage
 

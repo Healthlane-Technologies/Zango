@@ -66,8 +66,7 @@ module.exports = {
 				3: 3,
 			},
 			colors: {
-				primary: '#5048ED',
-				secondary: '#E1D6AE',
+				// Existing colors (keeping for backward compatibility)
 				error: '#FBE0DD',
 				'primary-light': '#bcb9f8',
 				'danger-red': '#AA2113',
@@ -77,6 +76,40 @@ module.exports = {
 				'off-white': '#f7f7f7',
 				'on-hold': '#FFEFD4',
 				'error-text': '#55100A',
+				// shadcn/ui semantic colors
+				border: 'hsl(var(--border))',
+				input: 'hsl(var(--input))',
+				ring: 'hsl(var(--ring))',
+				background: 'hsl(var(--background))',
+				foreground: 'hsl(var(--foreground))',
+				primary: {
+					DEFAULT: 'hsl(var(--primary))',
+					foreground: 'hsl(var(--primary-foreground))',
+				},
+				secondary: {
+					DEFAULT: 'hsl(var(--secondary))',
+					foreground: 'hsl(var(--secondary-foreground))',
+				},
+				destructive: {
+					DEFAULT: 'hsl(var(--destructive))',
+					foreground: 'hsl(var(--destructive-foreground))',
+				},
+				muted: {
+					DEFAULT: 'hsl(var(--muted))',
+					foreground: 'hsl(var(--muted-foreground))',
+				},
+				accent: {
+					DEFAULT: 'hsl(var(--accent))',
+					foreground: 'hsl(var(--accent-foreground))',
+				},
+				popover: {
+					DEFAULT: 'hsl(var(--popover))',
+					foreground: 'hsl(var(--popover-foreground))',
+				},
+				card: {
+					DEFAULT: 'hsl(var(--card))',
+					foreground: 'hsl(var(--card-foreground))',
+				},
 			},
 			spacing: {
 				0.5: '0.125',
@@ -86,6 +119,11 @@ module.exports = {
 				21: '5.25rem',
 				'7/2': '0.875rem',
 				13: '3.25rem',
+			},
+			borderRadius: {
+				lg: 'var(--radius)',
+				md: 'calc(var(--radius) - 2px)',
+				sm: 'calc(var(--radius) - 4px)',
 			},
 			boxShadow: {
 				dropdown: '0px 0px 12px rgba(0, 0, 0, 0.16)',

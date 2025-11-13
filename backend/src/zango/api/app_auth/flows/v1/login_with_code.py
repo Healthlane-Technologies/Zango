@@ -7,7 +7,6 @@ from zango.core.api import get_api_response
 
 class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
     def post(self, request, *args, **kwargs):
-        resp = super().post(request, *args, **kwargs)
         auth_config = request.tenant.auth_config
         if (
             not auth_config.get("login_methods", {})
@@ -19,9 +18,13 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
                 response_content={"message": "OTP login is not enabled"},
                 status=400,
             )
+        resp = super().post(request, *args, **kwargs)
+        resp_data = json.loads(resp.content.decode("utf-8"))
+        if resp.status_code == 401:
+            resp_data["data"]["message"] = "Login code sent successfully"
         return get_api_response(
             success=True,
-            response_content=json.loads(resp.content.decode("utf-8")),
+            response_content=resp_data,
             status=resp.status_code,
         )
 

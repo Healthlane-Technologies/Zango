@@ -26,6 +26,9 @@ export default function RowMenu({ rowData }) {
 
 	const dispatch = useDispatch();
 
+	// Check if this is a reserved role
+	const isReservedRole = rowData?.name === 'AnonymousUsers' || rowData?.name === 'SystemUsers';
+
 	const handleEditUserDetails = () => {
 		dispatch(openIsEditUserRolesDetailModalOpen(rowData));
 	};
@@ -56,7 +59,18 @@ export default function RowMenu({ rowData }) {
 			>
 				<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-white shadow-table-menu focus:outline-none">
 					<div className="p-[4px]">
-						{rowData?.is_active ? (
+						{isReservedRole ? (
+							<Menu.Item disabled>
+								<div className="flex w-full flex-col rounded-[2px] px-[12px] py-[8px] opacity-50 cursor-not-allowed">
+									<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#6C747D]">
+										Reserved Role
+									</span>
+									<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+										Cannot modify system roles
+									</span>
+								</div>
+							</Menu.Item>
+						) : rowData?.is_active ? (
 							<>
 								<Menu.Item>
 									{({ active }) => (

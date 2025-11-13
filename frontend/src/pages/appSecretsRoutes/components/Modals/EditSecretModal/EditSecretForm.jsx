@@ -25,17 +25,14 @@ const EditSecretForm = ({ closeModal }) => {
 		key: Yup.string()
 			.required('Required')
 			.matches(/^[A-Z][a-z0-9_]*$/, 'Key must start with uppercase letter and can contain lowercase letters, numbers and underscores'),
-		value: Yup.string().optional(),
+		value: Yup.string().required('Required'),
 	});
 
 	let onSubmit = (values) => {
-		if (!values.value) {
-			delete values.value;
-		}
 		let dynamicFormData = transformToFormData(values);
 
 		const makeApiCall = async () => {
-			const { response, success } = await triggerApi({
+			const { success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/secrets/?secret_id=${appSecretsFormData?.id}`,
 				type: 'PUT',
 				loader: true,

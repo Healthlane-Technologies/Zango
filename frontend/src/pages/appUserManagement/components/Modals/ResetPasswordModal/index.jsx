@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import Modal from '../../../../../components/Modal';
+import StandardModal from '../../../../../components/StandardModal';
 import {
 	closeIsResetPasswordModalOpen,
 	selectIsResetPasswordModalOpen,
@@ -15,10 +15,11 @@ function ResetPasswordModal() {
 	}
 
 	return (
-		<Modal
+		<StandardModal
 			label="Reset Password"
 			show={isResetPasswordModalOpen}
 			closeModal={closeModal}
+			size="default"
 			ModalBody={<ResetPasswordForm closeModal={closeModal} />}
 		/>
 	);
