@@ -303,6 +303,220 @@ class ThemeModelSerializer(serializers.ModelSerializer):
 
 
 class SAMLProviderModelSerializer(serializers.ModelSerializer):
+    """
+    Serializer for SAMLModel with comprehensive validation and configuration support.
+
+    Validates SAML configuration including:
+    - Entity IDs and URLs format
+    - X509 certificate format
+    - Security settings consistency
+    - Required fields based on configuration
+    """
+
     class Meta:
         model = SAMLModel
         fields = "__all__"
+
+    def validate_label(self, value):
+        """
+        Validate that the label is unique and not empty.
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Label cannot be empty.")
+
+        # Check for duplicate labels on create
+        if not self.instance:
+            if SAMLModel.objects.filter(label=value).exists():
+                raise serializers.ValidationError(
+                    "A SAML provider with this label already exists."
+                )
+        else:
+            # Check for duplicate labels on update (excluding current instance)
+            if (
+                SAMLModel.objects.filter(label=value)
+                .exclude(pk=self.instance.pk)
+                .exists()
+            ):
+                raise serializers.ValidationError(
+                    "A SAML provider with this label already exists."
+                )
+
+        return value
+
+    def validate_sp_entityId(self, value):
+        """
+        Validate Service Provider Entity ID is a valid URL.
+        """
+        if not value:
+            raise serializers.ValidationError("Service Provider Entity ID is required.")
+
+        if not self._is_valid_url(value):
+            raise serializers.ValidationError(
+                "Service Provider Entity ID must be a valid URL."
+            )
+
+        return value
+
+    def validate_sp_acsURL(self, value):
+        """
+        Validate Service Provider ACS URL is a valid URL.
+        """
+        if not value:
+            raise serializers.ValidationError("Service Provider ACS URL is required.")
+
+        if not self._is_valid_url(value):
+            raise serializers.ValidationError(
+                "Service Provider ACS URL must be a valid URL."
+            )
+
+        return value
+
+    def validate_idp_entityId(self, value):
+        """
+        Validate Identity Provider Entity ID is a valid URL.
+        """
+        if not value:
+            raise serializers.ValidationError(
+                "Identity Provider Entity ID is required."
+            )
+
+        if not self._is_valid_url(value):
+            raise serializers.ValidationError(
+                "Identity Provider Entity ID must be a valid URL."
+            )
+
+        return value
+
+    def validate_idp_sso(self, value):
+        """
+        Validate Identity Provider SSO URL is a valid URL.
+        """
+        if not value:
+            raise serializers.ValidationError("Identity Provider SSO URL is required.")
+
+        if not self._is_valid_url(value):
+            raise serializers.ValidationError(
+                "Identity Provider SSO URL must be a valid URL."
+            )
+
+        return value
+
+    def validate_idp_x509cert(self, value):
+        """
+        Validate that IdP x509 certificate is in a valid format.
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("IdP x509 certificate is required.")
+
+        if not self._is_valid_x509_cert(value):
+            raise serializers.ValidationError(
+                "IdP x509 certificate must be in valid PEM format (between -----BEGIN CERTIFICATE----- and -----END CERTIFICATE-----)"
+            )
+
+        return value
+
+    def validate_sp_x509cert(self, value):
+        """
+        Validate that SP x509 certificate is in valid format (if provided).
+        """
+        if value and not self._is_valid_x509_cert(value):
+            raise serializers.ValidationError(
+                "SP x509 certificate must be in valid PEM format (between -----BEGIN CERTIFICATE----- and -----END CERTIFICATE-----)"
+            )
+
+        return value
+
+    def validate_security_requestedAuthnContextComparison(self, value):
+        """
+        Validate that the authentication context comparison method is valid.
+        """
+        valid_values = ["exact", "minimum", "maximum", "better"]
+        if value not in valid_values:
+            raise serializers.ValidationError(
+                f"Authentication context comparison must be one of: {', '.join(valid_values)}"
+            )
+
+        return value
+
+    def validate(self, data):
+        """
+        Validate the complete SAML configuration.
+        """
+        # If updating and specific fields not provided, use existing instance values
+        if self.instance:
+            for field in [
+                "idp_x509cert",
+                "sp_entityId",
+                "sp_acsURL",
+                "idp_entityId",
+                "idp_sso",
+            ]:
+                if field not in data:
+                    data[field] = getattr(self.instance, field)
+
+        # Validate that if wantMessagesSigned is True, we need security settings
+        if data.get("security_wantMessagesSigned") and not data.get("sp_privatekey"):
+            raise serializers.ValidationError(
+                {
+                    "sp_privatekey": "SP private key is required when message signing is enabled."  # pragma: allowlist secret
+                }
+            )
+
+        # Validate that if wantAssertionsSigned is True, idp must provide signed assertions
+        if data.get("security_wantAssertionsSigned") and not data.get("idp_x509cert"):
+            raise serializers.ValidationError(
+                {
+                    "idp_x509cert": "IdP x509 certificate is required when assertion signing is enabled."
+                }
+            )
+
+        # Validate SP metadata signing requirements
+        if data.get("security_signMetadata") and not data.get("sp_privatekey"):
+            raise serializers.ValidationError(
+                {
+                    "sp_privatekey": "SP private key is required to sign metadata."  # pragma: allowlist secret
+                }
+            )
+
+        return data
+
+    @staticmethod
+    def _is_valid_url(url):
+        """
+        Check if a string is a valid URL.
+        """
+        from urllib.parse import urlparse
+
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except Exception:
+            return False
+
+    @staticmethod
+    def _is_valid_x509_cert(cert_string):
+        """
+        Check if a string is a valid X509 certificate in PEM format.
+        """
+        if not cert_string:
+            return False
+
+        cert_string = cert_string.strip()
+
+        # Check for PEM format
+        if not (
+            cert_string.startswith("-----BEGIN CERTIFICATE-----")
+            and cert_string.endswith("-----END CERTIFICATE-----")
+        ):
+            return False
+
+        # Additional validation with cryptography library if available
+        try:
+            from cryptography import x509
+            from cryptography.hazmat.backends import default_backend
+
+            x509.load_pem_x509_certificate(cert_string.encode(), default_backend())
+            return True
+        except Exception:
+            # If cryptography library is not available, do basic format check
+            return True

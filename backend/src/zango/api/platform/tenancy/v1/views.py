@@ -732,9 +732,23 @@ class ThemeDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class SAMLProvidersViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
+    """
+    API endpoint for managing SAML providers.
+
+    GET: List all SAML providers for the application
+    POST: Create a new SAML provider with comprehensive validation
+    """
+
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get(self, request, *args, **kwargs):
+        """
+        Retrieve all SAML providers for the application.
+
+        Returns:
+            - saml_providers: List of all configured SAML providers
+            - message: Success message
+        """
         try:
             app_tenant = self.get_tenant(**kwargs)
             saml_providers = SAMLModel.objects.all().order_by("-id")
@@ -745,17 +759,39 @@ class SAMLProvidersViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             response = {
                 "saml_providers": serializer.data,
                 "message": "All SAML providers fetched successfully",
+                "count": saml_providers.count(),
             }
             status = 200
         except Exception as e:
             traceback.print_exc()
             success = False
-            response = {"message": str(e)}
+            response = {"message": f"Error fetching SAML providers: {str(e)}"}
             status = 500
 
         return get_api_response(success, response, status)
 
     def post(self, request, *args, **kwargs):
+        """
+        Create a new SAML provider with validation.
+
+        Required fields:
+            - label: Unique label for the SAML provider
+            - sp_entityId: Service Provider Entity ID (URL)
+            - sp_acsURL: Service Provider ACS URL
+            - idp_entityId: Identity Provider Entity ID (URL)
+            - idp_sso: Identity Provider SSO URL
+            - idp_x509cert: IdP x509 certificate in PEM format
+
+        Optional fields:
+            - sp_x509cert: SP x509 certificate
+            - sp_privatekey: SP private key for signing
+            - And various security configuration fields
+
+        Returns:
+            - saml_provider_id: ID of the newly created provider
+            - message: Success message
+            - errors: Validation errors (if any)
+        """
         try:
             app_tenant = self.get_tenant(**kwargs)
             data = request.data
@@ -764,28 +800,32 @@ class SAMLProvidersViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             if serializer.is_valid():
                 saml_provider = serializer.save()
                 success = True
-                status_code = 200
+                status_code = 201
                 result = {
                     "message": "SAML Provider created successfully",
                     "saml_provider_id": saml_provider.id,
+                    "saml_provider": SAMLProviderModelSerializer(saml_provider).data,
                 }
             else:
                 success = False
                 status_code = 400
-                if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
-                    error_message = ", ".join(error_messages)
-                else:
-                    error_message = "Invalid data"
+                # Format error messages for better readability
+                error_details = {}
+                for field, errors in serializer.errors.items():
+                    error_details[field] = [str(error) for error in errors]
 
-                result = {"message": error_message}
+                result = {
+                    "message": "SAML Provider creation failed due to validation errors",
+                    "errors": error_details,
+                }
 
         except Exception as e:
             traceback.print_exc()
             success = False
-            result = {"message": str(e)}
+            result = {
+                "message": f"Error creating SAML Provider: {str(e)}",
+                "errors": {"general": [str(e)]},
+            }
             status_code = 500
 
         return get_api_response(success, result, status_code)
@@ -793,9 +833,26 @@ class SAMLProvidersViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class SAMLProviderDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
+    """
+    API endpoint for managing a specific SAML provider.
+
+    GET: Retrieve SAML provider configuration
+    PUT: Update SAML provider configuration
+    DELETE: Delete a SAML provider
+    """
+
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get_obj(self, **kwargs):
+        """
+        Retrieve a SAML provider by ID.
+
+        Args:
+            saml_provider_id: ID of the SAML provider
+
+        Returns:
+            SAMLModel instance or None if not found
+        """
         try:
             obj = SAMLModel.objects.get(id=kwargs.get("saml_provider_id"))
             return obj
@@ -803,31 +860,59 @@ class SAMLProviderDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             return None
 
     def get(self, request, *args, **kwargs):
+        """
+        Retrieve a specific SAML provider configuration.
+
+        Returns:
+            - saml_provider: Complete SAML provider configuration
+        """
         try:
             obj = self.get_obj(**kwargs)
             if not obj:
                 return get_api_response(
-                    False, {"message": "SAML Provider not found"}, 404
+                    False,
+                    {
+                        "message": f"SAML Provider with ID '{kwargs.get('saml_provider_id')}' not found"
+                    },
+                    404,
                 )
 
             serializer = SAMLProviderModelSerializer(obj)
             success = True
-            response = {"saml_provider": serializer.data}
+            response = {
+                "saml_provider": serializer.data,
+                "message": "SAML Provider fetched successfully",
+            }
             status = 200
         except Exception as e:
             traceback.print_exc()
             success = False
-            response = {"message": str(e)}
+            response = {"message": f"Error fetching SAML Provider: {str(e)}"}
             status = 500
 
         return get_api_response(success, response, status)
 
     def put(self, request, *args, **kwargs):
+        """
+        Update an existing SAML provider configuration.
+
+        Supports partial updates. Any fields not provided will retain their current values.
+
+        Returns:
+            - saml_provider_id: ID of the updated provider
+            - saml_provider: Updated SAML provider configuration
+            - message: Success message
+            - errors: Validation errors (if any)
+        """
         try:
             obj = self.get_obj(**kwargs)
             if not obj:
                 return get_api_response(
-                    False, {"message": "SAML Provider not found"}, 404
+                    False,
+                    {
+                        "message": f"SAML Provider with ID '{kwargs.get('saml_provider_id')}' not found"
+                    },
+                    404,
                 )
 
             serializer = SAMLProviderModelSerializer(
@@ -835,30 +920,72 @@ class SAMLProviderDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             )
 
             if serializer.is_valid():
-                serializer.save()
+                updated_provider = serializer.save()
                 success = True
                 status_code = 200
                 result = {
                     "message": "SAML Provider updated successfully",
                     "saml_provider_id": obj.id,
+                    "saml_provider": SAMLProviderModelSerializer(updated_provider).data,
                 }
             else:
                 success = False
                 status_code = 400
-                if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
-                    error_message = ", ".join(error_messages)
-                else:
-                    error_message = "Invalid data"
+                # Format error messages for better readability
+                error_details = {}
+                for field, errors in serializer.errors.items():
+                    error_details[field] = [str(error) for error in errors]
 
-                result = {"message": error_message}
+                result = {
+                    "message": "SAML Provider update failed due to validation errors",
+                    "errors": error_details,
+                }
 
         except Exception as e:
             traceback.print_exc()
             success = False
-            result = {"message": str(e)}
+            result = {
+                "message": f"Error updating SAML Provider: {str(e)}",
+                "errors": {"general": [str(e)]},
+            }
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Delete a SAML provider.
+
+        Returns:
+            - message: Success message
+        """
+        try:
+            obj = self.get_obj(**kwargs)
+            if not obj:
+                return get_api_response(
+                    False,
+                    {
+                        "message": f"SAML Provider with ID '{kwargs.get('saml_provider_id')}' not found"
+                    },
+                    404,
+                )
+
+            provider_label = obj.label
+            obj.delete()
+            success = True
+            status_code = 200
+            result = {
+                "message": f"SAML Provider '{provider_label}' deleted successfully",
+                "saml_provider_id": kwargs.get("saml_provider_id"),
+            }
+
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            result = {
+                "message": f"Error deleting SAML Provider: {str(e)}",
+                "errors": {"general": [str(e)]},
+            }
             status_code = 500
 
         return get_api_response(success, result, status_code)

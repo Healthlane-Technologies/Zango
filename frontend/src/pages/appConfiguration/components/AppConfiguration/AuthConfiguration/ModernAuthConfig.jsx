@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import InputField from '../../../../../components/Form/InputField';
 import AuthSetupModal from './AuthSetupModal';
 import RoleOverrideModal from './RoleOverrideModal';
+import SAMLProviderModal from './SAMLProviderModal';
 
 // Default auth configuration that matches backend defaults
 const DEFAULT_AUTH_CONFIG = {
@@ -49,6 +50,10 @@ const ModernAuthConfig = () => {
 	const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
 	const [showRoleOverrideModal, setShowRoleOverrideModal] = useState(false);
 	const [selectedRoleForOverride, setSelectedRoleForOverride] = useState(null);
+	const [showSAMLModal, setShowSAMLModal] = useState(false);
+	const [samlProviders, setSAMLProviders] = useState([]);
+	const [loadingSAML, setLoadingSAML] = useState(false);
+	const [editingSAMLProvider, setEditingSAMLProvider] = useState(null);
 	const dispatch = useDispatch();
 	const triggerApi = useApi();
 	const { appId } = useParams();
@@ -70,7 +75,7 @@ const ModernAuthConfig = () => {
 					// Filter out system/reserved roles to get only user-defined roles
 					const reservedRoleNames = ['AnonymousUsers', 'SystemUsers'];
 					const allRoles = response?.roles?.records || [];
-					const userDefinedRoles = allRoles.filter(role => 
+					const userDefinedRoles = allRoles.filter(role =>
 						!reservedRoleNames.includes(role.name)
 					);
 					setRoles(userDefinedRoles);
@@ -84,6 +89,31 @@ const ModernAuthConfig = () => {
 
 		if (appId) {
 			fetchRoles();
+		}
+	}, [appId, triggerApi]);
+
+	// Fetch SAML providers
+	useEffect(() => {
+		const fetchSAMLProviders = async () => {
+			setLoadingSAML(true);
+			try {
+				const { response, success } = await triggerApi({
+					url: `/api/v1/apps/${appId}/saml-providers/`,
+					type: 'GET',
+					loader: false,
+				});
+				if (success && response) {
+					setSAMLProviders(response.saml_providers || []);
+				}
+			} catch (error) {
+				console.error('Error fetching SAML providers:', error);
+			} finally {
+				setLoadingSAML(false);
+			}
+		};
+
+		if (appId) {
+			fetchSAMLProviders();
 		}
 	}, [appId, triggerApi]);
 	
@@ -243,6 +273,7 @@ const ModernAuthConfig = () => {
 		{ id: 'login', label: 'Login Methods', icon: '🔐' },
 		{ id: 'security', label: 'Security', icon: '🛡️' },
 		{ id: 'policies', label: 'Policies', icon: '📋' },
+		{ id: 'saml', label: 'SAML Providers', icon: '🔗' },
 		{ id: 'role-overrides', label: 'Role Overrides', icon: '👥' }
 	];
 
@@ -1360,9 +1391,117 @@ const ModernAuthConfig = () => {
 							</div>
 						</div>
 					)}
+
+					{activeSection === 'saml' && (
+						<div className="space-y-[24px]">
+							<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
+								<div className="mb-[24px] flex items-center justify-between">
+									<div>
+										<h3 className="text-[16px] font-semibold text-[#111827]">SAML Providers</h3>
+										<p className="text-[13px] text-[#6B7280] mt-[4px]">
+											Configure SAML-based single sign-on providers
+										</p>
+									</div>
+									<button
+										onClick={() => setShowSAMLModal(true)}
+										className="flex items-center gap-[8px] px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors"
+									>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+											<path d="M8 1V15M1 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+										</svg>
+										<span className="font-medium text-[14px]">Add Provider</span>
+									</button>
+								</div>
+
+								{loadingSAML ? (
+									<div className="flex items-center justify-center py-[32px]">
+										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5048ED]"></div>
+									</div>
+								) : samlProviders && samlProviders.length > 0 ? (
+									<div className="space-y-[12px]">
+										{samlProviders.map((provider) => (
+											<div key={provider.id} className="border border-[#E5E7EB] rounded-[12px] p-[16px] hover:bg-[#F9FAFB] transition-colors">
+												<div className="flex items-center justify-between">
+													<div className="flex items-center gap-[12px]">
+														<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] rounded-[10px] flex items-center justify-center">
+															<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+																<path d="M10 2C5.58 2 2 4.69 2 8c0 2.25 1.38 4.21 3.5 5.27V17c0 .55.45 1 1 1h7c.55 0 1-.45 1-1v-3.73c2.12-1.06 3.5-3.02 3.5-5.27 0-3.31-3.58-6-8-6z" fill="currentColor"/>
+															</svg>
+														</div>
+														<div>
+															<h4 className="text-[14px] font-semibold text-[#111827]">{provider.label}</h4>
+															<p className="text-[12px] text-[#6B7280]">Entity ID: {provider.sp_entityId}</p>
+														</div>
+													</div>
+													<div className="flex items-center gap-[8px]">
+														<button
+															onClick={() => {
+																setEditingSAMLProvider(provider);
+																setShowSAMLModal(true);
+															}}
+															className="flex items-center gap-[6px] px-[12px] py-[6px] text-[#5048ED] hover:bg-[#EFF6FF] rounded-[8px] transition-colors text-[13px] font-medium"
+														>
+															<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+																<path d="M9.917 1.75004C10.0696 1.59743 10.2514 1.47608 10.4517 1.39308C10.652 1.31008 10.8672 1.26709 11.0845 1.26709C11.3017 1.26709 11.517 1.31008 11.7173 1.39308C11.9176 1.47608 12.0994 1.59743 12.252 1.75004C12.4046 1.90265 12.5259 2.08445 12.6089 2.28475C12.6919 2.48505 12.7349 2.70029 12.7349 2.91754C12.7349 3.13479 12.6919 3.35003 12.6089 3.55033C12.5259 3.75064 12.4046 3.93243 12.252 4.08504L4.37557 11.9617L1.16699 12.8334L2.03866 9.62504L9.917 1.75004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+															</svg>
+															Edit
+														</button>
+														<button
+															onClick={async () => {
+																if (window.confirm(`Are you sure you want to delete "${provider.label}"?`)) {
+																	try {
+																		const { success } = await triggerApi({
+																			url: `/api/v1/apps/${appId}/saml-providers/${provider.id}/`,
+																			type: 'DELETE',
+																			loader: true,
+																		});
+																		if (success) {
+																			setSAMLProviders(samlProviders.filter(p => p.id !== provider.id));
+																			dispatch(toggleRerenderPage());
+																		}
+																	} catch (error) {
+																		console.error('Error deleting SAML provider:', error);
+																	}
+																}
+															}}
+															className="flex items-center gap-[6px] px-[12px] py-[6px] text-[#DC2626] hover:bg-[#FEE2E2] rounded-[8px] transition-colors text-[13px] font-medium"
+														>
+															<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+																<path d="M1 3h12M5.5 5.5v5M8.5 5.5v5M2 3l0.5 9c0 0.55 0.45 1 1 1h7c0.55 0 1-0.45 1-1l0.5-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+															</svg>
+															Delete
+														</button>
+													</div>
+												</div>
+											</div>
+										))}
+									</div>
+								) : (
+									<div className="text-center py-[32px]">
+										<div className="w-[80px] h-[80px] bg-[#F3F4F6] rounded-full flex items-center justify-center mx-auto mb-[16px]">
+											<svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+												<path d="M20 4C11.1634 4 4 11.1634 4 20C4 28.8366 11.1634 36 20 36C28.8366 36 36 28.8366 36 20C36 11.1634 28.8366 4 20 4Z" stroke="#D1D5DB" strokeWidth="1.5"/>
+												<path d="M20 12V28M12 20H28" stroke="#D1D5DB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+										</div>
+										<p className="text-[14px] text-[#6B7280] mb-[16px]">No SAML providers configured yet</p>
+										<button
+											onClick={() => setShowSAMLModal(true)}
+											className="inline-flex items-center gap-[8px] px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors"
+										>
+											<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+												<path d="M8 1V15M1 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+											<span className="font-medium text-[14px]">Add First Provider</span>
+										</button>
+									</div>
+								)}
+							</div>
+						</div>
+					)}
 				</>
 			) : null}
-			
+
 			{/* Auth Setup Modal - Also shown when editing existing config */}
 			{isAuthConfigured() && (
 				<AuthSetupModal
@@ -1511,6 +1650,50 @@ const ModernAuthConfig = () => {
 					}}
 				/>
 			)}
+
+			{/* SAML Provider Modal */}
+			<SAMLProviderModal
+				isOpen={showSAMLModal}
+				initialData={editingSAMLProvider}
+				onClose={() => {
+					setShowSAMLModal(false);
+					setEditingSAMLProvider(null);
+				}}
+				onSave={async (formData) => {
+					try {
+						// Convert form data to FormData object for API
+						const dynamicFormData = transformToFormData(formData);
+
+						const isUpdate = editingSAMLProvider !== null;
+						const url = isUpdate
+							? `/api/v1/apps/${appId}/saml-providers/${editingSAMLProvider.id}/`
+							: `/api/v1/apps/${appId}/saml-providers/`;
+						const method = isUpdate ? 'PUT' : 'POST';
+
+						const { response, success } = await triggerApi({
+							url,
+							type: method,
+							loader: true,
+							payload: dynamicFormData,
+						});
+
+						if (success && response) {
+							if (isUpdate) {
+								// Update existing provider in list
+								setSAMLProviders(samlProviders.map(p => p.id === editingSAMLProvider.id ? response : p));
+							} else {
+								// Add new provider to list
+								setSAMLProviders([...samlProviders, response]);
+							}
+							setShowSAMLModal(false);
+							setEditingSAMLProvider(null);
+							dispatch(toggleRerenderPage());
+						}
+					} catch (error) {
+						console.error('Error saving SAML provider:', error);
+					}
+				}}
+			/>
 		</div>
 	);
 };
