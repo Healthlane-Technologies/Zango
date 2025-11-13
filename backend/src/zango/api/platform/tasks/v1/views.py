@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.shared.tenancy.models import TenantModel
 from zango.apps.tasks.models import AppTask
-from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
+from zango.core.api import TenantMixin, ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
 from zango.core.utils import get_search_columns
@@ -16,7 +16,7 @@ from .serializers import TaskSerializer
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
+class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantMixin):
     pagination_class = ZangoAPIPagination
 
     def get_queryset(self, search, columns={}):
@@ -46,18 +46,18 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
     def get(self, request, app_uuid, task_uuid=None, *args, **kwargs):
         try:
+            tenant = self.get_tenant(app_uuid=app_uuid)
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             app_tasks = self.get_queryset(search, columns)
             paginated_tasks = self.paginate_queryset(app_tasks, request, view=self)
-            tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
             with connection.cursor() as c:
                 ws = Workspace.get_plugin_source()
                 serializer = TaskSerializer(
                     paginated_tasks,
                     many=True,
-                    context={"plugin_source": ws},
+                    context={"plugin_source": ws, "tenant": tenant},
                 )
             paginated_app_tasks = self.get_paginated_response_data(serializer.data)
             success = True
@@ -92,16 +92,17 @@ class AppTaskView(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class AppTaskDetailView(ZangoGenericPlatformAPIView):
+class AppTaskDetailView(ZangoGenericPlatformAPIView, TenantMixin):
     def get(self, request, app_uuid, task_id, *args, **kwargs):
         try:
+            tenant = self.get_tenant(app_uuid=app_uuid)
             app_task = AppTask.objects.get(id=task_id)
             tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
             with connection.cursor() as c:
                 serializer = TaskSerializer(
                     instance=app_task,
-                    context={"history": True},
+                    context={"history": True, "tenant": tenant},
                 )
             response = {"task": serializer.data}
             status = 200

@@ -8,6 +8,7 @@ from rest_framework import serializers
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.tasks.models import AppTask
 from zango.apps.tasks.utils import get_crontab_obj
+from zango.core.utils import get_datetime_str_in_tenant_timezone
 
 
 class CronTabSerializer(serializers.ModelSerializer):
@@ -24,10 +25,12 @@ class CronTabSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     attached_policies = PolicySerializer(many=True)
-    crontab = CronTabSerializer()
+    crontab = serializers.SerializerMethodField()
     schedule = serializers.SerializerMethodField()
     code = serializers.SerializerMethodField()
     run_history = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+    modified_at = serializers.SerializerMethodField()
 
     class Meta:
         model = AppTask
@@ -44,8 +47,21 @@ class TaskSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Invalid cron expression")
         return super(TaskSerializer, self).update(instance, validated_data)
 
+    def get_crontab(self, obj):
+        try:
+            if obj.crontab:
+                return CronTabSerializer(obj.crontab).data
+        except CrontabSchedule.DoesNotExist:
+            pass
+        return None
+
     def get_schedule(self, obj):
-        return str(obj.crontab)[:-18]
+        try:
+            if obj.crontab:
+                return str(obj.crontab)[:-18]
+        except CrontabSchedule.DoesNotExist:
+            pass
+        return ""
 
     def get_code(self, obj):
         try:
@@ -61,14 +77,29 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_run_history(self, obj):
         if not self.context.get("history"):
             return []
-        ptask = PeriodicTask.objects.get(id=obj.master_task_id)
-        serializer = TaskResultSerializer(
-            TaskResult.objects.filter(periodic_task_name=ptask.name).order_by(
-                "-date_done"
-            ),
-            many=True,
+        try:
+            if obj.master_task_id:
+                ptask = PeriodicTask.objects.get(id=obj.master_task_id)
+                serializer = TaskResultSerializer(
+                    TaskResult.objects.filter(periodic_task_name=ptask.name).order_by(
+                        "-date_done"
+                    ),
+                    many=True,
+                )
+                return serializer.data
+        except PeriodicTask.DoesNotExist:
+            pass
+        return []
+
+    def get_created_at(self, obj):
+        return get_datetime_str_in_tenant_timezone(
+            obj.created_at, self.context.get("tenant")
         )
-        return serializer.data
+
+    def get_modified_at(self, obj):
+        return get_datetime_str_in_tenant_timezone(
+            obj.modified_at, self.context.get("tenant")
+        )
 
 
 class TaskResultSerializer(serializers.ModelSerializer):
@@ -77,7 +108,16 @@ class TaskResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskResult
-        fields = ["date_started", "date_done", "result", "traceback"]
+        fields = [
+            "date_started",
+            "date_done",
+            "result",
+            "traceback",
+            "status",
+            "task_args",
+            "task_kwargs",
+            "worker",
+        ]
 
     def get_date_started(self, obj):
         return obj.date_done.strftime("%Y-%m-%d %H:%M:%S")

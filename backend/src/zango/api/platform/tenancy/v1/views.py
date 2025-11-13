@@ -227,7 +227,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantM
     def get_dropdown_options(self):
         options = {}
         options["policies"] = [
-            {"id": t.id, "label": t.name}
+            {"id": t.id, "label": t.name, "type": t.type, "path": t.path}
             for t in PolicyModel.objects.all().order_by("-modified_at")
         ]
         return options
@@ -330,6 +330,14 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
         obj = UserRoleModel.objects.get(id=kwargs.get("role_id"))
         return obj
 
+    def get_dropdown_options(self):
+        options = {}
+        options["all_policies"] = [
+            {"id": p.id, "label": p.name}
+            for p in PolicyModel.objects.all().order_by("-modified_at")
+        ]
+        return options
+
     def get(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
@@ -340,6 +348,7 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             )
             success = True
             response = {"role": serializer.data}
+            response.update(self.get_dropdown_options())
             status = 200
         except Exception as e:
             success = False
@@ -444,18 +453,28 @@ class UserViewAPIV1(
 
     def get(self, request, *args, **kwargs):
         try:
+            app_tenant = self.get_tenant(**kwargs)
             include_dropdown_options = request.GET.get("include_dropdown_options")
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
-            app_users = self.get_queryset(search, columns)
-            app_users = self.paginate_queryset(app_users, request, view=self)
+            app_users_queryset = self.get_queryset(search, columns)
+
+            # Calculate active and inactive counts from the filtered queryset
+            active_count = app_users_queryset.filter(is_active=True).count()
+            inactive_count = app_users_queryset.filter(is_active=False).count()
+
+            app_users = self.paginate_queryset(app_users_queryset, request, view=self)
             serializer = AppUserModelSerializerModel(
                 app_users,
                 many=True,
                 context={"request": request, "tenant": self.get_tenant(**kwargs)},
             )
             app_users_data = self.get_paginated_response_data(serializer.data)
-            app_tenant = self.get_tenant(**kwargs)
+
+            # Add active and inactive counts to the response
+            app_users_data["active_count"] = active_count
+            app_users_data["inactive_count"] = inactive_count
+
             success = True
             response = {
                 "users": app_users_data,
@@ -468,6 +487,9 @@ class UserViewAPIV1(
 
         except Exception as e:
             success = False
+            import traceback
+
+            traceback.print_exc()
             response = {"message": str(e)}
             status = 500
 

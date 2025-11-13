@@ -432,6 +432,101 @@ class AppUserModel(
             return False
         return True
 
+    def get_active_sessions(self):
+        """
+        Returns active sessions and tokens for the user with detailed information
+        including generated_at, location (IP), browser_agent, etc.
+
+        Returns:
+            dict: Contains 'sessions' and 'tokens' with their respective details
+        """
+        from zango.apps.accesslogs.models import AppAccessLog
+
+        result = {"sessions": [], "tokens": []}
+
+        # Get active sessions from AppAccessLog
+        active_sessions = AppAccessLog.objects.filter(
+            user=self, is_login_successful=True, session_expired_at__isnull=True
+        ).order_by("-attempt_time")
+
+        for session in active_sessions:
+            session_data = {
+                "id": session.id,
+                "generated_at": timezone.localtime(session.attempt_time).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                # 'generated_at_raw': session.attempt_time,
+                "location": session.ip_address,
+                "browser_agent": session.user_agent,
+                "http_accept": session.http_accept,
+                "path_info": session.path_info,
+                "role": session.role.name if session.role else None,
+                "role_id": session.role.id if session.role else None,
+                "username": session.username,
+                "type": "session",
+            }
+            result["sessions"].append(session_data)
+
+        # Get active auth tokens
+        active_tokens = self.auth_token_set.filter(
+            expiry__gt=timezone.now()
+        ).select_related("role")
+
+        for token in active_tokens:
+            token_data = {
+                "digest": token.digest[:8] + "...",  # Show partial digest for security
+                "created": timezone.localtime(token.created).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                "created_raw": token.created,
+                "expiry": timezone.localtime(token.expiry).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                "expiry_raw": token.expiry,
+                "role": token.role.name if token.role else None,
+                "role_id": token.role.id if token.role else None,
+                "extra_data": token.extra_data,
+                "type": "token",
+            }
+            result["tokens"].append(token_data)
+
+        return result
+
+    def get_last_password_change_date(self):
+        """
+        Returns the date when the password was last changed
+
+        Returns:
+            datetime: Last password change date or None if no password history exists
+        """
+        last_password = self.oldpasswords_set.all().order_by("-password_date").first()
+        if last_password:
+            return last_password.password_date
+        return None
+
+    def get_password_change_history(self, limit=10):
+        """
+        Returns the password change history for the user
+
+        Args:
+            limit (int): Maximum number of records to return
+
+        Returns:
+            list: List of password change dates
+        """
+        history = []
+        old_passwords = self.oldpasswords_set.all().order_by("-password_date")[:limit]
+
+        for old_pwd in old_passwords:
+            history.append(
+                {
+                    # 'changed_at': timezone.localtime(old_pwd.password_date).strftime('%Y-%m-%d %H:%M:%S %Z'),
+                    "days_ago": (date.today() - old_pwd.password_date).days
+                }
+            )
+
+        return history
+
 
 class OldPasswords(AbstractOldPasswords):
     user = models.ForeignKey(AppUserModel, on_delete=models.PROTECT)
