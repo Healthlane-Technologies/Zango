@@ -447,6 +447,19 @@ def get_auth_priority(
         user_role_auth_config,
     )
 
+    from zango.apps.appauth.models import SAMLModel
+
+    for saml in SAMLModel.objects.filter(is_active=True):
+        if (
+            not tenant_auth_config.get("login_methods", {})
+            .get("sso", {})
+            .get("providers")
+        ):
+            tenant_auth_config["login_methods"]["sso"]["providers"] = []
+        tenant_auth_config["login_methods"]["sso"]["providers"].append(
+            {"id": saml.id, "label": saml.label}
+        )
+
     if not config_key and not policy:
         merged_policy = {}
 

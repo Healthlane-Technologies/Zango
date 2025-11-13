@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from .login import AppLoginViewAPIV1
 from .login_with_code import ConfirmLoginCodeViewAPIV1, RequestLoginCodeViewAPIV1
@@ -11,6 +11,7 @@ from .password import (
     SetPasswordViewAPIV1,
 )
 from .role import SwitchRoleAPIV1, UserRoleViewAPIV1
+from .saml import SAMLLoginInitViewV1, SAMLOpsApi, acs, metadata
 from .session import AppSessionsViewAPIV1
 
 
@@ -111,4 +112,8 @@ urlpatterns = [
         AppSessionsViewAPIV1.as_api_view(client="browser"),
         name="sessions",
     ),
+    re_path(r"saml/metadata/(?P<saml_client_id>\d+)/$", metadata, name="saml-metadata"),
+    re_path(r"saml/acs/(?P<saml_client_id>\d+)/", acs, name="saml-acs"),
+    re_path(r"saml/init/", SAMLLoginInitViewV1.as_view(), name="fetch_saml_config"),
+    re_path(r"saml/ops/", SAMLOpsApi.as_view(), name="saml-ops"),
 ]

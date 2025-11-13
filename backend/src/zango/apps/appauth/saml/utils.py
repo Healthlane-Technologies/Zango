@@ -2,31 +2,8 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.response import OneLogin_Saml2_Response
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 
-from django.contrib import messages
-from django.core import signing
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
-from django.views.decorators.csrf import csrf_exempt
-
 from zango.apps.appauth.models import SAMLModel, SAMLRequestId
 from zango.core.api import get_api_response
-from zango.core.utils import get_package_url
-
-
-def metadata(request, *args, **kwargs):
-    # saml_client_id is SAMLClientModel id
-    saml_client_id = int(kwargs.get("saml_client_id", 0))
-    _settings = SAMLModel.objects.get(id=saml_client_id).get_settings_dict()
-    saml_settings = OneLogin_Saml2_Settings(
-        settings=_settings, custom_base_path=None, sp_validation_only=True
-    )
-    metadata = saml_settings.get_sp_metadata()
-    errors = saml_settings.validate_metadata(metadata)
-
-    if len(errors) == 0:
-        resp = HttpResponse(content=metadata, content_type="text/xml")
-    else:
-        resp = HttpResponseServerError(content=", ".join(errors))
-    return resp
 
 
 class SAMLLoginMixin(object):
@@ -78,35 +55,3 @@ class SAMLLoginMixin(object):
         url = auth.login()
         SAMLRequestId.objects.create(request_id=auth.get_last_request_id())
         return get_api_response(True, url, 200)
-
-
-@csrf_exempt
-def acs(request, *args, **kwargs):
-    saml_client_id = int(kwargs.get("saml_client_id", 0))
-    s = SAMLLoginMixin()
-    req = s.prepare_request_for_saml(request)
-    auth = s.init_saml_auth(req, saml_client_id)
-    errors = []
-    request_id = None
-    response = auth.login()
-    in_response_to = s.get_in_response_to(request, saml_client_id)
-    if "AuthNRequestID" in request.session:
-        request_id = request.session["AuthNRequestID"]
-    auth.process_response(request_id=request_id)
-    errors = auth.get_errors()
-
-    if not errors and auth.is_authenticated():
-        url = get_package_url(
-            request,
-            f"saml/samllogin/{signing.dumps(auth.get_nameid(), key=in_response_to)}/{in_response_to}/",
-            "sso",
-        )
-        return HttpResponseRedirect(url)
-    else:
-        messages.add_message(
-            request,
-            messages.INFO,
-            "Something went wrong. Please contact support if the problem persists!",
-        )
-        url = "/login/"
-        return HttpResponseRedirect(url)

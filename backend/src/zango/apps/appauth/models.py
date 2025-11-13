@@ -699,6 +699,7 @@ class SAMLModel(models.Model):
         max_length=200,
         default="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
     )
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.label
