@@ -12,6 +12,7 @@ import django
 from django.core.management import call_command
 
 import zango
+import zango.cli
 
 
 def test_db_conection(db_name, db_user, db_password, db_host, db_port):
