@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from zango.apps.appauth.models import AppUserModel, SAMLModel, SAMLRequestId
 from zango.apps.appauth.saml.utils import SAMLLoginMixin
 from zango.core.api import get_api_response
+from zango.core.utils import get_auth_priority
 
 
 logger = logging.getLogger(__name__)
@@ -155,6 +156,9 @@ class SAMLOpsApi(APIView, SAMLLoginMixin):
 
 class SAMLLoginInitViewV1(APIView, SAMLLoginMixin):
     def post(self, request, *args, **kwargs):
+        login_methods = get_auth_priority(policy="login_methods", request=request)
+        if login_methods["sso"]["enabled"] is False:
+            return get_api_response(False, "SAML is not enabled", 400)
         saml_config = SAMLModel.objects.filter(id=self.request.data.get("saml_id", 0))
         if saml_config:
             return self.execute_sso_redirect(request, saml_config.first().id)

@@ -649,15 +649,35 @@ const ModernAuthConfig = () => {
 
 											{/* Other Login Methods */}
 											<div className="space-y-[16px]">
-												<div className="flex items-center justify-between">
-													<div>
-														<h4 className="text-[14px] font-medium text-[#111827]">Single Sign-On (SSO)</h4>
-														<p className="text-[12px] text-[#6B7280] mt-[2px]">Enterprise SSO integration</p>
+												<div>
+													<div className="flex items-center justify-between mb-[16px]">
+														<div>
+															<h4 className="text-[14px] font-medium text-[#111827]">Single Sign-On (SSO)</h4>
+															<p className="text-[12px] text-[#6B7280] mt-[2px]">Enterprise SSO integration</p>
+														</div>
+														<ToggleSwitch
+															checked={values?.login_methods?.sso?.enabled}
+															onChange={(checked) => setFieldValue("login_methods.sso.enabled", checked)}
+														/>
 													</div>
-													<ToggleSwitch
-														checked={values?.login_methods?.sso?.enabled}
-														onChange={(checked) => setFieldValue("login_methods.sso.enabled", checked)}
-													/>
+
+													{values?.login_methods?.sso?.enabled && (
+														<div className="ml-[24px] p-[12px] bg-[#F0F9FF] border border-[#E0F2FE] rounded-[8px]">
+															<p className="text-[12px] text-[#0369A1] mb-[8px]">
+																SAML providers can be configured in the <strong>SAML Providers</strong> section. Click on <strong>Configure SAML Provider</strong> to add or manage providers.
+															</p>
+															<button
+																type="button"
+																onClick={() => setActiveSection('saml')}
+																className="inline-flex items-center gap-[6px] px-[12px] py-[6px] bg-[#0EA5E9] text-white rounded-[6px] hover:bg-[#0284C7] transition-colors text-[12px] font-medium"
+															>
+																<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+																	<path d="M8 1V15M1 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+																</svg>
+																Go to SAML Configuration
+															</button>
+														</div>
+													)}
 												</div>
 
 												<div className="flex items-center justify-between">
@@ -1109,13 +1129,22 @@ const ModernAuthConfig = () => {
 										enabled={authConfig.login_methods?.otp?.enabled}
 										description="SMS or email based verification codes"
 									/>
-									<ConfigToggle 
-										label="Single Sign-On (SSO)" 
-										enabled={authConfig.login_methods?.sso?.enabled}
-										description="Enterprise SSO integration"
-									/>
-									<ConfigToggle 
-										label="OpenID Connect (OIDC)" 
+									<div>
+										<ConfigToggle
+											label="Single Sign-On (SSO)"
+											enabled={authConfig.login_methods?.sso?.enabled}
+											description="Enterprise SSO integration"
+										/>
+										{authConfig.login_methods?.sso?.enabled && (
+											<div className="mt-[12px] ml-[12px] p-[12px] bg-[#F0F9FF] border border-[#E0F2FE] rounded-[8px]">
+												<p className="text-[12px] text-[#0369A1]">
+													✓ SAML providers configured. Visit the <strong>SAML Providers</strong> section to manage them.
+												</p>
+											</div>
+										)}
+									</div>
+									<ConfigToggle
+										label="OpenID Connect (OIDC)"
 										enabled={authConfig.login_methods?.oidc?.enabled}
 										description="OAuth 2.0 based authentication"
 									/>

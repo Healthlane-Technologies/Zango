@@ -978,7 +978,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				</label>
 
-				{/* SSO
+				{/* SSO */}
 				<label className="block">
 					<div className={`relative border-2 rounded-[12px] p-[20px] cursor-pointer transition-all ${
 						setupData.login_methods.sso.enabled
@@ -1000,7 +1000,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							</div>
 						</div>
 					</div>
-				</label> */}
+				</label>
 
 				{/* OIDC */}
 				<label className="block">
