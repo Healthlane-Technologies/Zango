@@ -26,6 +26,7 @@ const SAMLProviderModal = ({ isOpen, onClose, onSave, initialData = null }) => {
         security_wantNameId: true,
         security_wantNameIdEncrypted: false,
         security_wantAttributeStatement: true,
+        security_rejectUnsolicitedResponsesWithInResponseTo: false,
         security_requestedAuthnContext: true,
         security_requestedAuthnContextComparison: "exact",
         security_signatureAlgorithm: "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
@@ -360,6 +361,11 @@ const SAMLProviderModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                                     { name: "security_wantMessagesSigned", label: "Want Messages Signed" },
                                     { name: "security_wantAssertionsSigned", label: "Want Assertions Signed" },
                                     { name: "security_wantAssertionsEncrypted", label: "Want Assertions Encrypted" },
+                                    { name: "security_wantNameId", label: "Want NameID" },
+                                    { name: "security_wantNameIdEncrypted", label: "Want NameID Encrypted" },
+                                    { name: "security_wantAttributeStatement", label: "Want Attribute Statement" },
+                                    { name: "security_requestedAuthnContext", label: "Requested AuthN Context" },
+                                    { name: "security_rejectUnsolicitedResponsesWithInResponseTo", label: "Reject Unsolicited Responses" },
                                 ].map(({ name, label }) => (
                                     <label key={name} className="flex items-center gap-[8px] cursor-pointer">
                                         <input
@@ -385,6 +391,7 @@ const SAMLProviderModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                                     className="w-full px-[12px] py-[10px] rounded-[8px] border border-[#E5E7EB] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
                                 >
                                     <option value="http://www.w3.org/2000/09/xmldsig#rsa-sha1">RSA-SHA1</option>
+                                    <option value="http://www.w3.org/2000/09/xmldsig#dsa-sha1">DSA-SHA1</option>
                                     <option value="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256">RSA-SHA256</option>
                                     <option value="http://www.w3.org/2001/04/xmldsig-more#rsa-sha384">RSA-SHA384</option>
                                     <option value="http://www.w3.org/2001/04/xmldsig-more#rsa-sha512">RSA-SHA512</option>
@@ -423,6 +430,20 @@ const SAMLProviderModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                                     <option value="maximum">Maximum</option>
                                     <option value="better">Better</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="block font-lato text-[13px] font-semibold text-[#111827] mb-[6px]">
+                                    NameID Format
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name_id_format"
+                                    value={formData.name_id_format}
+                                    onChange={handleInputChange}
+                                    placeholder="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+                                    className="w-full px-[12px] py-[10px] rounded-[8px] border border-[#E5E7EB] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] font-mono"
+                                />
                             </div>
                         </div>
                     )}
