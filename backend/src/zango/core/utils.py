@@ -34,6 +34,34 @@ def get_app_object():
     return getattr(_request_local, "app_object", None)
 
 
+def has_view_feature(request, feature_name):
+    """
+    Check if a specific feature is enabled for the current view based on user's permissions.
+
+    Features are automatically attached to the request during view permission checks
+    by the DynamicView's PermissionMixin.has_perm() method.
+
+    Args:
+        request: HttpRequest object (must have view_features attached by permission check)
+        feature_name (str): The feature to check (e.g., 'add', 'export', 'upload', 'delete')
+
+    Returns:
+        bool: True if the feature is enabled for the current user and view, False otherwise
+
+    Note:
+        Features must be defined in the policies.json file:
+        ```json
+        {
+            "name": "backend.myapp.views.MyView",
+            "type": "view",
+            "features": ["add", "export", "upload"]
+        }
+        ```
+    """
+    view_features = getattr(request, "view_features", set())
+    return feature_name in view_features
+
+
 def get_package_url(request, path, package_name):
     if not request:
         request = get_mock_request()
