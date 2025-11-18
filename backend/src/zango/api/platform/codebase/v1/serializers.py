@@ -15,19 +15,6 @@ class ModelSerializer(serializers.Serializer):
     meta = serializers.JSONField(required=False)
 
 
-class RouteSerializer(serializers.Serializer):
-    pattern = serializers.CharField(required=False, allow_blank=True)
-    view = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    type = serializers.CharField(required=False, allow_blank=True)
-    includes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    full_pattern = serializers.CharField(required=False, allow_blank=True)
-    module = serializers.CharField(required=False, allow_blank=True)
-    package = serializers.CharField(required=False, allow_blank=True)
-    url_file = serializers.CharField(required=False, allow_blank=True)
-    children = serializers.ListField(required=False)
-
-
 class ModuleSerializer(serializers.Serializer):
     name = serializers.CharField()
     path = serializers.CharField()
@@ -39,7 +26,6 @@ class ModuleSerializer(serializers.Serializer):
     has_urls = serializers.BooleanField(required=False)
     has_policies = serializers.BooleanField(required=False)
     models = ModelSerializer(many=True, required=False)
-    routes = RouteSerializer(many=True, required=False)
 
 
 class PackageRouteSerializer(serializers.Serializer):

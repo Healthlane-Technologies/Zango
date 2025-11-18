@@ -417,16 +417,17 @@ class Workspace:
                         "pattern": str(pattern.pattern),
                         "full_url": full_url,
                         "name": getattr(pattern, "name", None),
-                        "callback": getattr(
-                            pattern.callback, "__name__", str(pattern.callback)
-                        )
-                        if pattern.callback
+                        "callback": pattern.view_class[3:]
+                        if getattr(pattern, "view_class", None)
                         else None,
                         "full_module_path": module_path,
                     }
                     all_urls.append(url_info)
 
             except Exception:
+                import traceback
+
+                traceback.print_exc()
                 # Skip modules that can't be loaded or don't have urlpatterns
                 continue
 

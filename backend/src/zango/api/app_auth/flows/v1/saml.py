@@ -1,5 +1,3 @@
-import logging
-
 from datetime import timedelta
 
 from allauth.account.internal import flows
@@ -17,9 +15,6 @@ from zango.apps.appauth.models import AppUserModel, SAMLModel, SAMLRequestId
 from zango.apps.appauth.saml.utils import SAMLLoginMixin
 from zango.core.api import get_api_response
 from zango.core.utils import get_auth_priority
-
-
-logger = logging.getLogger(__name__)
 
 
 def metadata(request, *args, **kwargs):
