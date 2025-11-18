@@ -142,6 +142,50 @@ class DynamicModelGraphGenerator:
 
         return dynamic_models
 
+    def get_module_dynamic_models(self, module_path):
+        """
+        Get dynamic models for a specific module only.
+        More efficient when you need models from a single module.
+
+        Args:
+            module_path (str): Relative module path (e.g., "base_forms", "form_views")
+
+        Returns:
+            list: List of DynamicModelBase subclasses from the module
+        """
+        workspace_path = f"{settings.BASE_DIR}/workspaces/{self.tenant_name}/"
+        plugin_source = get_plugin_source(self.tenant_name)
+
+        # Check if workspace exists
+        if not os.path.exists(workspace_path):
+            raise ValueError(
+                f"Workspace '{self.tenant_name}' not found at {workspace_path}"
+            )
+
+        dynamic_models = []
+        models_file = os.path.join(
+            workspace_path, module_path.replace(".", "/"), "models.py"
+        )
+
+        # Return empty list if models.py doesn't exist
+        if not os.path.exists(models_file):
+            return dynamic_models
+
+        try:
+            module = plugin_source.load_plugin(f"{module_path}.models")
+
+            for _, obj in inspect.getmembers(module):
+                if (
+                    isinstance(obj, type)
+                    and issubclass(obj, DynamicModelBase)
+                    and obj != DynamicModelBase
+                ):
+                    dynamic_models.append(obj)
+        except Exception as e:
+            print(f"Warning: Could not load module {module_path}.models: {e}")
+
+        return dynamic_models
+
     def generate_graph_data(self):
         """Generate graph data for dynamic models"""
         # Get all dynamic models

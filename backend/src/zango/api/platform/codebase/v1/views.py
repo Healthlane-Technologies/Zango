@@ -91,36 +91,27 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
                 )
                 return models
 
-            # Create graph generator to get dynamic models
-            graph_generator = DynamicModelGraphGenerator(tenant_name=tenant_name)
-
-            # Get all dynamic models for this workspace
-            try:
-                dynamic_models = graph_generator.get_workspace_dynamic_models()
-            except Exception as e:
-                print(
-                    f"Warning: Could not load dynamic models for tenant {tenant_name}: {e}"
-                )
-                return models
-
-            # Filter models that belong to the specific module we're analyzing
             # Get the module path from the models_file path
             workspace_path = f"{settings.BASE_DIR}/workspaces/{tenant_name}/"
             relative_path = str(models_file.parent.relative_to(workspace_path))
             module_path = relative_path.replace("/", ".")
 
+            # Create graph generator and get only models from this specific module
+            graph_generator = DynamicModelGraphGenerator(tenant_name=tenant_name)
+
+            # Get only dynamic models for this specific module (optimized)
+            try:
+                dynamic_models = graph_generator.get_module_dynamic_models(module_path)
+            except Exception as e:
+                print(
+                    f"Warning: Could not load dynamic models for module {module_path}: {e}"
+                )
+                return models
+
             # Convert dynamic models to the expected format
+            # Note: dynamic_models already contains only models from the specified module
             for model in dynamic_models:
                 try:
-                    # Check if this model belongs to the current module being analyzed
-                    # Models have a __module__ attribute that tells us which module they're from
-                    if hasattr(model, "__module__"):
-                        model_module = model.__module__
-                        # Extract the module path after the workspace part
-                        # Format is usually like "workspace_name.module_path.models"
-                        if f".{module_path}.models" not in model_module:
-                            continue
-
                     model_context = graph_generator.get_model_context(model)
 
                     # Convert to the format expected by the API

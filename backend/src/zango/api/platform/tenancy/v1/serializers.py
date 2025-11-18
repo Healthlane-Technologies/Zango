@@ -28,6 +28,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
     last_released_version = serializers.SerializerMethodField(
         "get_last_released_version"
     )
+    auth_config = serializers.JSONField(required=False)
 
     def get_last_released_version(self, obj):
         try:

@@ -605,7 +605,6 @@ class Workspace:
         )
         policy_roles = defaultdict(list)
         modules = self.get_all_module_paths()
-        print(modules)
         for module in modules:
             policy_file = f"{module}/policies.json"
             if os.path.isfile(policy_file):

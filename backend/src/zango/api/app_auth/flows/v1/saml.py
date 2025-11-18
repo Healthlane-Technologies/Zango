@@ -19,6 +19,14 @@ from zango.core.utils import get_auth_priority
 
 def metadata(request, *args, **kwargs):
     saml_client_id = int(kwargs.get("saml_client_id", 0))
+    try:
+        saml_config = SAMLModel.objects.get(id=saml_client_id)
+        if not saml_config.is_active:
+            return get_api_response(False, "SAML is not active for this provider", 400)
+    except SAMLModel.DoesNotExist:
+        return get_api_response(
+            False, "No saml config found for the given client ID", 400
+        )
     _settings = SAMLModel.objects.get(id=saml_client_id).get_settings_dict()
     saml_settings = OneLogin_Saml2_Settings(
         settings=_settings, custom_base_path=None, sp_validation_only=True
@@ -36,6 +44,14 @@ def metadata(request, *args, **kwargs):
 @csrf_exempt
 def acs(request, *args, **kwargs):
     saml_client_id = int(kwargs.get("saml_client_id", 0))
+    try:
+        saml_config = SAMLModel.objects.get(id=saml_client_id)
+        if not saml_config.is_active:
+            return get_api_response(False, "SAML is not active for this provider", 400)
+    except SAMLModel.DoesNotExist:
+        return get_api_response(
+            False, "No saml config found for the given client ID", 400
+        )
     s = SAMLLoginMixin()
     req = s.prepare_request_for_saml(request)
     auth = s.init_saml_auth(req, saml_client_id)
@@ -154,8 +170,17 @@ class SAMLLoginInitViewV1(APIView, SAMLLoginMixin):
         login_methods = get_auth_priority(policy="login_methods", request=request)
         if login_methods["sso"]["enabled"] is False:
             return get_api_response(False, "SAML is not enabled", 400)
-        saml_config = SAMLModel.objects.filter(id=self.request.data.get("saml_id", 0))
-        if saml_config:
-            return self.execute_sso_redirect(request, saml_config.first().id)
-        else:
-            return get_api_response(False, "No saml config", 400)
+        saml_id = self.request.data.get("saml_id", None)
+        if not saml_id:
+            return get_api_response(False, "SAML ID is required", 400)
+        try:
+            saml_config = SAMLModel.objects.get(id=saml_id)
+            if not saml_config.is_active:
+                return get_api_response(
+                    False, "SAML is not active for this provider", 400
+                )
+            return self.execute_sso_redirect(request, saml_config.id)
+        except SAMLModel.DoesNotExist:
+            return get_api_response(
+                False, "No saml config found for the given client ID", 400
+            )
