@@ -1670,8 +1670,10 @@ const ModernAuthConfig = () => {
 								dispatch(toggleRerenderPage());
 								setShowRoleOverrideModal(false);
 								setSelectedRoleForOverride(null);
-								// Redirect to role overrides section after save
-								setActiveSection('role-overrides');
+								// Reload page after saving role override
+								setTimeout(() => {
+									window.location.reload();
+								}, 500);
 							}
 						} catch (error) {
 							console.error('Error saving role override configuration:', error);

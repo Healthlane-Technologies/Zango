@@ -17,7 +17,6 @@ class TwoFactorAuth(TypedDict, total=False):
 class UserRoleAuthConfig(TypedDict, total=False):
     password_policy: PasswordPolicy
     two_factor_auth: TwoFactorAuth
-    redirect_url: Required[str]
     enforce_sso: bool
 
 
@@ -32,7 +31,6 @@ class AppUserAuthConfig(TypedDict, total=False):
 
 
 USER_ROLE_AUTH_CONFIG: UserRoleAuthConfig = {
-    "redirect_url": "/frame/router/",
     "enforce_sso": False,
 }
 APP_USER_AUTH_CONFIG: AppUserAuthConfig = {}
