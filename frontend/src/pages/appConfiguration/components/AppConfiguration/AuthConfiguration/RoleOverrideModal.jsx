@@ -10,6 +10,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 		two_factor_auth: null,
 		session_policy: null,
 		redirect_url: '/frame/router/',
+		enforce_sso: false,
 	});
 
 	// Initialize role override states from currentOverrides
@@ -36,6 +37,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 				two_factor_auth: null,
 				session_policy: null,
 				redirect_url: '/frame/router/',
+				enforce_sso: false,
 			});
 		}
 	}, [show, initialSelectedRoleId]);
@@ -47,6 +49,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			setOverrideConfig({
 				...override,
 				redirect_url: override.redirect_url || '/frame/router/',
+				enforce_sso: override.enforce_sso ?? false,
 			});
 		} else if (selectedRoleId) {
 			// Initialize with null values for new override
@@ -55,6 +58,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 				two_factor_auth: null,
 				session_policy: null,
 				redirect_url: '/frame/router/',
+				enforce_sso: false,
 			});
 		}
 	}, [selectedRoleId, currentOverrides]);
@@ -84,12 +88,15 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			if (overrideConfig.session_policy) {
 				cleanedOverride.session_policy = overrideConfig.session_policy;
 			}
-			// Include redirect_url
+			// Include redirect_url and enforce_sso
 			cleanedOverride.redirect_url = redirectUrl;
+			cleanedOverride.enforce_sso = overrideConfig.enforce_sso ?? false;
 		} else {
 			// If role override is disabled, only send redirect_url with override_applied: false
 			cleanedOverride.override_applied = false;
 			cleanedOverride.redirect_url = redirectUrl;
+			// Always include enforce_sso, even when override is disabled
+			cleanedOverride.enforce_sso = overrideConfig.enforce_sso ?? false;
 		}
 
 		onSave(selectedRoleId, cleanedOverride);
@@ -116,13 +123,14 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			[roleId]: enabled
 		}));
 
-		// When disabling override, clear all policy configs but keep redirect_url
+		// When disabling override, clear all policy configs but keep redirect_url and enforce_sso
 		if (!enabled && roleId === selectedRoleId) {
 			setOverrideConfig(prev => ({
 				password_policy: null,
 				two_factor_auth: null,
 				session_policy: null,
 				redirect_url: prev.redirect_url || '/frame/router/',
+				enforce_sso: prev.enforce_sso ?? false,
 			}));
 		}
 	};
@@ -149,6 +157,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 	const enablePasswordPolicyOverride = !!overrideConfig.password_policy;
 	const enableTwoFactorOverride = !!overrideConfig.two_factor_auth;
 	const enableSessionPolicyOverride = !!overrideConfig.session_policy;
+	const enforceSSO = overrideConfig.enforce_sso ?? false;
 
 	const togglePasswordPolicy = (enabled) => {
 		if (enabled) {
@@ -481,6 +490,31 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 													)}
 												</div>
 												)}
+
+												{/* Enforce SSO Override */}
+												<div className="mb-[24px] bg-[#F8FAFC] rounded-[12px] p-[20px]">
+													<div className="flex items-center justify-between">
+														<div>
+															<h5 className="text-[14px] font-medium text-[#111827]">Enforce SSO</h5>
+															<p className="text-[12px] text-[#6B7280] mt-[2px]">Require SSO authentication for this role</p>
+														</div>
+														<ToggleSwitch
+															checked={enforceSSO}
+															onChange={(checked) => setOverrideConfig(prev => ({
+																...prev,
+																enforce_sso: checked
+															}))}
+														/>
+													</div>
+
+													{enforceSSO && (
+														<div className="mt-[16px] bg-white rounded-[8px] p-[16px]">
+															<p className="text-[13px] text-[#6B7280]">
+																Users with this role will be required to authenticate using Single Sign-On (SSO).
+															</p>
+														</div>
+													)}
+												</div>
 
 												{/* Session Policy Override - Only show when override is enabled */}
 												{roleOverrideStates[selectedRoleId] && (

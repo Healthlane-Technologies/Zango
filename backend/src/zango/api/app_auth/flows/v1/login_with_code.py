@@ -2,6 +2,9 @@ import json
 
 from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCodeView
 
+from django.db.models import Q
+
+from zango.apps.appauth.models import AppUserModel
 from zango.core.api import get_api_response
 
 
@@ -16,6 +19,23 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
             return get_api_response(
                 success=False,
                 response_content={"message": "OTP login is not enabled"},
+                status=400,
+            )
+        query = Q()
+        data = json.loads(request.body)
+        email = data.get("email")
+        phone = data.get("phone")
+        if email:
+            query = query | Q(email=email)
+        if phone:
+            query = query | Q(mobile=phone)
+        user = AppUserModel.objects.get(query)
+        if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": "OTP login cannot be used when SSO is enforced"
+                },
                 status=400,
             )
         resp = super().post(request, *args, **kwargs)

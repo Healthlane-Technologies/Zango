@@ -328,6 +328,16 @@ class AppUserModel(
             is_active = data.get("is_active", self.is_active)
             auth_config = json.loads(data.get("auth_config", "{}"))
 
+            if password:
+                if any(
+                    role.auth_config.get("enforce_sso", False)
+                    for role in self.roles.all()
+                ):
+                    return {
+                        "success": False,
+                        "message": "User password cannot be updated when SSO is enforced",
+                    }
+
             # Validate email/mobile uniqueness
             existing_fields = []
             if (

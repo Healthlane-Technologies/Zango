@@ -24,6 +24,11 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
             "message": "success",
             "profile_data": serializer.data,
             "should_set_password": request.user.has_usable_password() is False,
+            "can_set_password": any(
+                role.auth_config.get("enforce_sso", False)
+                for role in request.user.roles.all()
+            )
+            is False,
             "current_role": {
                 "id": role.id,
                 "name": role.name,

@@ -11,8 +11,10 @@ from allauth.headless.base.views import APIView
 
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
+from zango.apps.appauth.models import AppUserModel
 from zango.core.api import (
     get_api_response,
 )
@@ -146,6 +148,23 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
                 success=False,
                 response_content={
                     "message": "Password reset is not enabled, please contact support"
+                },
+                status=400,
+            )
+        query = Q()
+        data = json.loads(request.body)
+        email = data.get("email")
+        phone = data.get("phone")
+        if email:
+            query = query | Q(email=email)
+        if phone:
+            query = query | Q(mobile=phone)
+        user = AppUserModel.objects.get(query)
+        if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": "Password cannot be reset when SSO is enforced"
                 },
                 status=400,
             )
