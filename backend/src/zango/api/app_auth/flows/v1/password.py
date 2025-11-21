@@ -46,6 +46,17 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
                     data.get("current_password"),
                 )
                 current_password = data.get("current_password")
+        except ValidationError as e:
+            # Handle ValidationError which may contain a list of messages
+            if hasattr(e, "message"):
+                message = e.message
+            elif hasattr(e, "messages") and e.messages:
+                message = "; ".join(str(msg) for msg in e.messages)
+            else:
+                message = str(e)
+            return get_api_response(
+                success=False, response_content={"message": message}, status=400
+            )
         except Exception as e:
             return get_api_response(
                 success=False, response_content={"message": str(e)}, status=400
