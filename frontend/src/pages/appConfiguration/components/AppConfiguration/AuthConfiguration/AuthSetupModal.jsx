@@ -180,6 +180,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			require_special_chars: false,
 			password_history_count: 3,
 			password_expiry_days: 90,
+			password_repeat_days: 0,
 			allow_change: true,
 			reset: {
 				expiry: 7200, // 2 hours in seconds
@@ -1113,6 +1114,48 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				</div>
 
+				{/* Password History Count */}
+				<div>
+					<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
+						Password History Count
+					</label>
+					<p className="text-[12px] text-[#6B7280] mb-[8px]">Number of previous passwords to remember (users cannot reuse these passwords)</p>
+					<input
+						type="number"
+						min="0"
+						max="24"
+						value={setupData.password_policy.password_history_count}
+						onChange={(e) => {
+							const value = e.target.value === '' ? '' : Number(e.target.value);
+							updateSetupData('password_policy', {
+								password_history_count: value
+							});
+						}}
+						className="w-[120px] px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+					/>
+				</div>
+
+				{/* Password Repeat Days */}
+				<div>
+					<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
+						Password Repeat Days
+					</label>
+					<p className="text-[12px] text-[#6B7280] mb-[8px]">Number of days old passwords cannot be reused</p>
+					<input
+						type="number"
+						min="0"
+						max="365"
+						value={setupData.password_policy.password_repeat_days}
+						onChange={(e) => {
+							const value = e.target.value === '' ? '' : Number(e.target.value);
+							updateSetupData('password_policy', {
+								password_repeat_days: value
+							});
+						}}
+						className="w-[120px] px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+					/>
+				</div>
+
 				{/* Expiry */}
 				<div>
 					<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
@@ -1268,6 +1311,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							<div>Minimum length: {setupData.password_policy.min_length} characters</div>
 							<div>Expires every: {setupData.password_policy.password_expiry_days} days</div>
 							<div>Password history: {setupData.password_policy.password_history_count} previous passwords</div>
+							<div>Password repeat days: {setupData.password_policy.password_repeat_days} days</div>
 							<div>Allow password change: {setupData.password_policy.allow_change ? 'Yes' : 'No'}</div>
 							<div className="flex flex-wrap items-center gap-[8px]">
 								<span>Requirements:</span>

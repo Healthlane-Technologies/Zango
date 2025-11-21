@@ -204,6 +204,7 @@ const ModernAuthConfig = () => {
 								require_lowercase: authData.password_policy.require_lowercase,
 								require_uppercase: authData.password_policy.require_uppercase,
 								password_expiry_days: authData.password_policy.password_expiry_days,
+								password_repeat_days: authData.password_policy.password_repeat_days,
 								require_special_chars: authData.password_policy.require_special_chars,
 								password_history_count: authData.password_policy.password_history_count,
 								reset: {
@@ -1573,6 +1574,7 @@ const ModernAuthConfig = () => {
 								require_lowercase: authData.password_policy.require_lowercase,
 								require_uppercase: authData.password_policy.require_uppercase,
 								password_expiry_days: authData.password_policy.password_expiry_days,
+								password_repeat_days: authData.password_policy.password_repeat_days,
 								require_special_chars: authData.password_policy.require_special_chars,
 								password_history_count: authData.password_policy.password_history_count,
 								reset: {
@@ -1670,8 +1672,10 @@ const ModernAuthConfig = () => {
 								dispatch(toggleRerenderPage());
 								setShowRoleOverrideModal(false);
 								setSelectedRoleForOverride(null);
-								// Redirect to role overrides section after save
-								setActiveSection('role-overrides');
+								// Reload page after saving role override
+								setTimeout(() => {
+									window.location.reload();
+								}, 500);
 							}
 						} catch (error) {
 							console.error('Error saving role override configuration:', error);

@@ -35,7 +35,6 @@ class PasswordValidationMixin:
 
     def check_password_length(self, password, user=None):
         policy = self.get_password_policy(user)
-        print("policy ", policy)
         if isinstance(policy, dict):
             min_length = policy.get("min_length", self.MIN_LENGTH) or self.MIN_LENGTH
         else:
@@ -128,18 +127,8 @@ class PasswordValidationMixin:
 
     @staticmethod
     def match_old_password(user, password):
-        validation = True
-        if user.check_password_validity(password):
-            msg = (
-                "Sorry, but your new password must not match one of your \
-        old passwords from the previous %s days. Please try \
-        again!"
-                % (settings.PASSWORD_NO_REPEAT_DAYS)
-            )
-            validation = False
-        else:
-            msg = ""
-        return {"validation": validation, "msg": msg}
+        res = user.check_password_validity(password)
+        return {"validation": res["validation"], "msg": res["message"]}
 
     @staticmethod
     def match_password_username(user, password):

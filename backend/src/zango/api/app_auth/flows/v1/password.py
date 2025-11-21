@@ -11,8 +11,10 @@ from allauth.headless.base.views import APIView
 
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
+from zango.apps.appauth.models import AppUserModel
 from zango.core.api import (
     get_api_response,
 )
@@ -22,6 +24,34 @@ from .forms import PasswordSetForm
 
 
 class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
+    def handle(self, request, *args, **kwargs):
+        if not request.tenant.auth_config.get("password_policy", {}).get(
+            "allow_change", True
+        ):
+            return get_api_response(
+                success=False,
+                response_content={"message": "Password change is disabled"},
+                status=400,
+            )
+        try:
+            # Load data from request body
+            data = json.loads(request.body) if request.body else {}
+
+            has_usable_password = request.user.has_usable_password()
+            if has_usable_password:
+                # Validate current password for users with usable passwords
+                self.clean_password(
+                    request,
+                    request.user.email,
+                    data.get("current_password"),
+                )
+                current_password = data.get("current_password")
+        except Exception as e:
+            return get_api_response(
+                success=False, response_content={"message": str(e)}, status=400
+            )
+        return super().handle(request, *args, **kwargs)
+
     def clean_password(self, request, email, password):
         """
         Validates that the current password is correct
@@ -51,55 +81,34 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
         return True
 
     def put(self, request, *args, **kwargs):
+        # Validate password policy
+
         success = False
+        response = {}
 
-        if request.tenant.auth_config.get("password_policy", {}).get(
-            "allow_change", True
-        ):
-            try:
-                # Check if user has an unusable password (e.g., OAuth users)
-                has_usable_password = request.user.has_usable_password()
-
-                if has_usable_password:
-                    # Validate current password for users with usable passwords
-                    self.clean_password(
-                        request,
-                        request.user.email,
-                        self.input.cleaned_data["current_password"],
-                    )
-                    current_password = self.input.cleaned_data["current_password"]
-                else:
-                    # Skip current password validation for users with unusable passwords
-                    current_password = None
-
-                self.clean_password2(
-                    request.user,
-                    current_password,
-                    self.input.cleaned_data["new_password"],
+        try:
+            # Data is already validated in handle() method
+            # Now validate new password against policies
+            self.clean_password2(
+                request.user,
+                None,  # current_password already validated in handle()
+                self.input.cleaned_data["new_password"],
+            )
+            resp = super().post(request, *args, **kwargs)
+            resp_data = json.loads(resp.content.decode("utf-8"))
+            if resp.status_code == 401:
+                resp_data["message"] = "Successfully changed password"
+            if resp.status_code != 401:
+                return get_api_response(
+                    success=False,
+                    response_content=resp_data,
+                    status=resp.status_code,
                 )
-                resp = super().post(request, *args, **kwargs)
-                resp_data = json.loads(resp.content.decode("utf-8"))
-                if resp.status_code == 401:
-                    resp_data["message"] = "Successfully changed password"
-                if resp.status_code != 401:
-                    return get_api_response(
-                        success=False,
-                        response_content=resp_data,
-                        status=resp.status_code,
-                    )
-                success = True
-                status = 200
-                return get_api_response(success, resp_data, status)
-            except ValidationError as e:
-                response = {"message": e.message}
-            if success:
-                status = 200
-            else:
-                status = 400
-            return get_api_response(success, response, status)
-        else:
-            response = {"message": "Password change is disabled"}
-            success = False
+            success = True
+            status = 200
+            return get_api_response(success, resp_data, status)
+        except ValidationError as e:
+            response = {"message": e.message}
             status = 400
             return get_api_response(success, response, status)
 
@@ -125,17 +134,26 @@ class SetPasswordViewAPIV1(APIView):
         return {"user": self.stage.login.user}
 
     def post(self, request, *args, **kwargs):
-        self.input.save()
-        response = self.respond_next_stage()
-        return get_api_response(
-            success=True,
-            response_content=json.loads(response.content.decode("utf-8")),
-            status=response.status_code,
-        )
+        try:
+            self.input.save()
+            response = self.respond_next_stage()
+            return get_api_response(
+                success=True,
+                response_content=json.loads(response.content.decode("utf-8")),
+                status=response.status_code,
+            )
+        except ValidationError as e:
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": str(e.message) if hasattr(e, "message") else str(e)
+                },
+                status=400,
+            )
 
 
 class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
-    def post(self, request, *args, **kwargs):
+    def handle(self, request, *args, **kwargs):
         auth_config = request.tenant.auth_config
         if (
             not auth_config.get("password_policy", {})
@@ -149,6 +167,26 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
                 },
                 status=400,
             )
+        query = Q()
+        data = json.loads(request.body)
+        email = data.get("email")
+        phone = data.get("phone")
+        if email:
+            query = query | Q(email=email)
+        if phone:
+            query = query | Q(mobile=phone)
+        user = AppUserModel.objects.get(query)
+        if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": "Password cannot be reset when SSO is enforced"
+                },
+                status=400,
+            )
+        return super().handle(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         data = json.loads(resp.content.decode("utf-8"))
         password_policy = get_auth_priority(policy="password_policy", request=request)

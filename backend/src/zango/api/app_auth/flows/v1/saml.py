@@ -75,7 +75,9 @@ def acs(request, *args, **kwargs):
         try:
             user = AppUserModel.objects.get(email=email)
         except AppUserModel.DoesNotExist:
-            return HttpResponseServerError("User does not exist")
+            return HttpResponseRedirect(
+                redirect_to="/app/login/?auth_error=user_not_found"
+            )
         request.session["saml"] = True
         login = Login(
             user=user,

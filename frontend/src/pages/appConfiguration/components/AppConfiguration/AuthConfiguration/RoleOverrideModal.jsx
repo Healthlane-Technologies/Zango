@@ -9,7 +9,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 		password_policy: null,
 		two_factor_auth: null,
 		session_policy: null,
-		redirect_url: '/frame/router/',
+		enforce_sso: false,
 	});
 
 	// Initialize role override states from currentOverrides
@@ -35,7 +35,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 				password_policy: null,
 				two_factor_auth: null,
 				session_policy: null,
-				redirect_url: '/frame/router/',
+				enforce_sso: false,
 			});
 		}
 	}, [show, initialSelectedRoleId]);
@@ -46,7 +46,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			const override = currentOverrides[selectedRoleId];
 			setOverrideConfig({
 				...override,
-				redirect_url: override.redirect_url || '/frame/router/',
+				enforce_sso: override.enforce_sso ?? false,
 			});
 		} else if (selectedRoleId) {
 			// Initialize with null values for new override
@@ -54,7 +54,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 				password_policy: null,
 				two_factor_auth: null,
 				session_policy: null,
-				redirect_url: '/frame/router/',
+				enforce_sso: false,
 			});
 		}
 	}, [selectedRoleId, currentOverrides]);
@@ -67,9 +67,6 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 
 		const roleOverrideEnabled = roleOverrideStates[selectedRoleId];
 		let cleanedOverride = {};
-
-		// Always ensure we have a redirect_url value
-		const redirectUrl = overrideConfig.redirect_url || '/frame/router/';
 
 		if (roleOverrideEnabled) {
 			// If role override is enabled, send the entire auth_config with override_applied flag
@@ -84,12 +81,13 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			if (overrideConfig.session_policy) {
 				cleanedOverride.session_policy = overrideConfig.session_policy;
 			}
-			// Include redirect_url
-			cleanedOverride.redirect_url = redirectUrl;
+			// Include enforce_sso
+			cleanedOverride.enforce_sso = overrideConfig.enforce_sso ?? false;
 		} else {
-			// If role override is disabled, only send redirect_url with override_applied: false
+			// If role override is disabled, send override_applied: false
 			cleanedOverride.override_applied = false;
-			cleanedOverride.redirect_url = redirectUrl;
+			// Always include enforce_sso, even when override is disabled
+			cleanedOverride.enforce_sso = overrideConfig.enforce_sso ?? false;
 		}
 
 		onSave(selectedRoleId, cleanedOverride);
@@ -100,10 +98,9 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 		if (!selectedRoleId) return;
 
 		if (window.confirm('Are you sure you want to remove this role override?')) {
-			// When removing override, send empty auth_config with override_applied: false and redirect_url
+			// When removing override, send empty auth_config with override_applied: false
 			const emptyConfig = {
 				override_applied: false,
-				redirect_url: overrideConfig.redirect_url || '/frame/router/'
 			};
 			onSave(selectedRoleId, emptyConfig);
 			onClose();
@@ -116,13 +113,13 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			[roleId]: enabled
 		}));
 
-		// When disabling override, clear all policy configs but keep redirect_url
+		// When disabling override, clear all policy configs but keep enforce_sso
 		if (!enabled && roleId === selectedRoleId) {
 			setOverrideConfig(prev => ({
 				password_policy: null,
 				two_factor_auth: null,
 				session_policy: null,
-				redirect_url: prev.redirect_url || '/frame/router/',
+				enforce_sso: prev.enforce_sso ?? false,
 			}));
 		}
 	};
@@ -149,20 +146,23 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 	const enablePasswordPolicyOverride = !!overrideConfig.password_policy;
 	const enableTwoFactorOverride = !!overrideConfig.two_factor_auth;
 	const enableSessionPolicyOverride = !!overrideConfig.session_policy;
+	const enforceSSO = overrideConfig.enforce_sso ?? false;
 
 	const togglePasswordPolicy = (enabled) => {
 		if (enabled) {
+			// Initialize with empty values - let user set their own
 			setOverrideConfig(prev => ({
 				...prev,
 				password_policy: {
-					min_length: globalAuthConfig.password_policy?.min_length || 8,
-					require_uppercase: globalAuthConfig.password_policy?.require_uppercase || false,
-					require_lowercase: globalAuthConfig.password_policy?.require_lowercase || false,
-					require_numbers: globalAuthConfig.password_policy?.require_numbers || false,
-					require_special_chars: globalAuthConfig.password_policy?.require_special_chars || false,
-					password_history_count: globalAuthConfig.password_policy?.password_history_count || 3,
-					password_expiry_days: globalAuthConfig.password_policy?.password_expiry_days || 90,
-					allow_change: globalAuthConfig.password_policy?.allow_change ?? true,
+					min_length: 8,
+					require_uppercase: false,
+					require_lowercase: false,
+					require_numbers: false,
+					require_special_chars: false,
+					password_history_count: 0,
+					password_expiry_days: 0,
+					password_repeat_days: 0,
+					allow_change: true,
 				}
 			}));
 		} else {
@@ -172,11 +172,12 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 
 	const toggleTwoFactorAuth = (enabled) => {
 		if (enabled) {
+			// Initialize with minimal values - let user set their own
 			setOverrideConfig(prev => ({
 				...prev,
 				two_factor_auth: {
 					required: true,
-					allowedMethods: globalAuthConfig.two_factor_auth?.allowedMethods || ['email'],
+					allowedMethods: [],
 				}
 			}));
 		} else {
@@ -186,11 +187,12 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 
 	const toggleSessionPolicy = (enabled) => {
 		if (enabled) {
+			// Initialize with minimal values - let user set their own
 			setOverrideConfig(prev => ({
 				...prev,
 				session_policy: {
-					max_concurrent_sessions: globalAuthConfig.session_policy?.max_concurrent_sessions || 0,
-					force_logout_on_password_change: globalAuthConfig.session_policy?.force_logout_on_password_change || false,
+					max_concurrent_sessions: 0,
+					force_logout_on_password_change: false,
 				}
 			}));
 		} else {
@@ -365,7 +367,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 															<div>
 																<h5 className="text-[15px] font-semibold text-[#111827] mb-[4px]">Enable Role Override</h5>
 																<p className="text-[13px] text-[#6B7280]">
-																	Enable to configure custom authentication policies for this role. When disabled, only redirect URL will be saved.
+																	Enable to configure custom authentication policies for this role.
 																</p>
 															</div>
 															<ToggleSwitch
@@ -387,12 +389,13 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 															<ToggleSwitch
 																checked={enablePasswordPolicyOverride}
 																onChange={togglePasswordPolicy}
+																disabled={!roleOverrideStates[selectedRoleId]}
 															/>
 														</div>
 
 													{enablePasswordPolicyOverride && (
 														<div className="mt-[20px] space-y-[16px] bg-white rounded-[8px] p-[16px]">
-															<div className="grid grid-cols-2 gap-[16px]">
+															<div className="grid grid-cols-3 gap-[16px]">
 																<div>
 																	<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
 																		Minimum Password Length
@@ -424,6 +427,24 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																			password_policy: {
 																				...prev.password_policy,
 																				password_expiry_days: e.target.value === '' ? '' : parseInt(e.target.value)
+																			}
+																		}))}
+																		className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
+																		Password Repeat Days
+																	</label>
+																	<input
+																		name="password_repeat_days"
+																		type="number"
+																		value={overrideConfig.password_policy?.password_repeat_days ?? 0}
+																		onChange={(e) => setOverrideConfig(prev => ({
+																			...prev,
+																			password_policy: {
+																				...prev.password_policy,
+																				password_repeat_days: e.target.value === '' ? '' : parseInt(e.target.value)
 																			}
 																		}))}
 																		className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
@@ -469,6 +490,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 															<ToggleSwitch
 																checked={enableTwoFactorOverride}
 																onChange={toggleTwoFactorAuth}
+																disabled={!roleOverrideStates[selectedRoleId]}
 															/>
 														</div>
 
@@ -482,6 +504,33 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 												</div>
 												)}
 
+												{/* Enforce SSO Override - Only show when override is enabled */}
+												{roleOverrideStates[selectedRoleId] && (
+													<div className="mb-[24px] bg-[#F8FAFC] rounded-[12px] p-[20px]">
+														<div className="flex items-center justify-between">
+															<div>
+																<h5 className="text-[14px] font-medium text-[#111827]">Enforce SSO</h5>
+																<p className="text-[12px] text-[#6B7280] mt-[2px]">Require SSO authentication for this role</p>
+															</div>
+															<ToggleSwitch
+																checked={enforceSSO}
+																onChange={(checked) => setOverrideConfig(prev => ({
+																	...prev,
+																	enforce_sso: checked
+																}))}
+															/>
+														</div>
+
+														{enforceSSO && (
+															<div className="mt-[16px] bg-white rounded-[8px] p-[16px]">
+																<p className="text-[13px] text-[#6B7280]">
+																	Users with this role will be required to authenticate using Single Sign-On (SSO).
+																</p>
+															</div>
+														)}
+													</div>
+												)}
+
 												{/* Session Policy Override - Only show when override is enabled */}
 												{roleOverrideStates[selectedRoleId] && (
 													<div className="mb-[24px] bg-[#F8FAFC] rounded-[12px] p-[20px]">
@@ -493,6 +542,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 															<ToggleSwitch
 																checked={enableSessionPolicyOverride}
 																onChange={toggleSessionPolicy}
+																disabled={!roleOverrideStates[selectedRoleId]}
 															/>
 														</div>
 
@@ -521,33 +571,6 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 												</div>
 												)}
 
-												{/* Redirect URL */}
-												<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
-													<div className="mb-[16px]">
-														<h5 className="text-[14px] font-medium text-[#111827]">Redirect URL</h5>
-														<p className="text-[12px] text-[#6B7280] mt-[2px]">URL to redirect users after successful login</p>
-													</div>
-
-													<div className="bg-white rounded-[8px] p-[16px]">
-														<div>
-															<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
-																Redirect URL
-															</label>
-															<input
-																name="redirect_url"
-																type="text"
-																value={overrideConfig.redirect_url ?? ''}
-																onChange={(e) => setOverrideConfig(prev => ({
-																	...prev,
-																	redirect_url: e.target.value
-																}))}
-																placeholder="/frame/router/"
-																className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
-															/>
-															<p className="text-[11px] text-[#6B7280] mt-[4px]">Default: /frame/router/</p>
-														</div>
-													</div>
-												</div>
 											</div>
 										</div>
 									)}

@@ -3,11 +3,13 @@ import { get } from 'lodash';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
+import { useContext } from 'react';
 import InputField from '../../../../../components/Form/InputField';
 import MultiSelectField from '../../../../../components/Form/MultiSelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
+import { ErrorMessageContext } from '../../../../../context/ErrorMessageContextProvider';
 import {
 	selectAppUserManagementData,
 	toggleRerenderPage,
@@ -24,6 +26,7 @@ const AddNewUserForm = ({ closeModal }) => {
 	})
 	let { appId } = useParams();
 	const dispatch = useDispatch();
+	const setErrorMessage = useContext(ErrorMessageContext);
 
 	const appUserManagementData = useSelector(selectAppUserManagementData);
 	const triggerApi = useApi();
@@ -80,18 +83,22 @@ const AddNewUserForm = ({ closeModal }) => {
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
-			const { success } = await triggerApi({
+			const response = await triggerApi({
 				url: `/api/v1/apps/${appId}/users/`,
 				type: 'POST',
 				loader: true,
 				payload: dynamicFormData,
+				showErrorModal: false,
 			});
 
-			if (success) {
+			if (response?.success) {
 				closeModal();
 				dispatch(toggleRerenderPage());
 			}
-			else{
+			else {
+				const errorMessage = response?.response?.message || 'An error occurred while creating the user';
+				setErrorMessage(errorMessage);
+				closeModal();
 			}
 		};
 

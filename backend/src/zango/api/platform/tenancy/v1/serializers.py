@@ -163,7 +163,11 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         tenant = self.context.get("tenant")
-        data["auth_config"] = get_auth_priority(tenant=tenant, user_role=instance)
+        if tenant.auth_config.get("two_factor_auth", {}).get("required", False):
+            if data["auth_config"].get("two_factor_auth"):
+                data["auth_config"]["two_factor_auth"]["required"] = True
+            else:
+                data["auth_config"]["two_factor_auth"] = {"required": True}
         return data
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
@@ -183,11 +187,6 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
 
     def validate(self, attrs):
         return attrs
-
-    def update(self, instance, validated_data):
-        if not validated_data.get("policies"):
-            validated_data["policies"] = []
-        return super(UserRoleSerializerModel, self).update(instance, validated_data)
 
 
 class AppUserModelSerializerModel(
