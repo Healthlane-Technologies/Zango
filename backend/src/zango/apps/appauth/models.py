@@ -6,7 +6,6 @@ from datetime import date, timedelta
 from knox.models import AbstractAuthToken
 from knox.settings import knox_settings
 
-from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import connection, models
 from django.utils import timezone
@@ -174,16 +173,95 @@ class AppUserModel(
 
     def check_password_validity(self, password):
         """
-        Does not allow a password from within PASSWORD_NO_REPEAT_DAYS
+        Validates that the new password doesn't match recent or historical passwords.
+
+        Checks against two policies:
+        1. PASSWORD_NO_REPEAT_DAYS: Password history within N days
+        2. PASSWORD_HISTORY_COUNT: Last N password hashes
+
+        Args:
+            password (str): The new password to validate
+
+        Returns:
+            dict: {"validation": bool, "message": str} if validation fails,
+                  None if validation passes
         """
-        minDate = date.today() - timedelta(settings.PASSWORD_NO_REPEAT_DAYS)
-        old_pwds = self.oldpasswords_set.all().filter(password_date__gte=minDate)
-        matchFound = False
-        for p in old_pwds:
-            if check_password(password, p.getPasswords()):
-                matchFound = True
-                break
-        return matchFound
+        if not password or not isinstance(password, str):
+            return {
+                "validation": False,
+                "message": "Password must be a non-empty string",
+            }
+
+        password_policy = get_auth_priority(policy="password_policy", user=self)
+        history_count = password_policy.get("password_history_count")
+        no_repeat_days = password_policy.get("password_repeat_days")
+
+        # Validate policy values
+        if not isinstance(history_count, int) or history_count < 0:
+            return {
+                "validation": False,
+                "message": "Invalid password history count configuration",
+            }
+        if not isinstance(no_repeat_days, int) or no_repeat_days < 0:
+            return {
+                "validation": False,
+                "message": "Invalid password no-repeat days configuration",
+            }
+
+        # Check password against time-based history (within no_repeat_days)
+        if no_repeat_days > 0:
+            min_date = date.today() - timedelta(days=no_repeat_days)
+            recent_passwords = self.oldpasswords_set.filter(password_date__gte=min_date)
+
+            if self._check_password_in_history(password, recent_passwords):
+                return {
+                    "validation": False,
+                    "message": f"New password must not be the same as any password used in the previous {no_repeat_days} days",
+                }
+
+        # Check password against count-based history (last N passwords)
+        if history_count > 0:
+            historical_passwords = self.oldpasswords_set.all().order_by(
+                "-password_date"
+            )[:history_count]
+
+            if self._check_password_in_history(password, historical_passwords):
+                return {
+                    "validation": False,
+                    "message": f"New password must not be the same as the last {history_count} passwords",
+                }
+
+        # Password is valid
+        return {"validation": True, "message": "Password is valid"}
+
+    def _check_password_in_history(self, password, password_records):
+        """
+        Helper method to check if password matches any in the given records.
+
+        Args:
+            password (str): Plain text password to check
+            password_records: QuerySet of OldPasswords records
+
+        Returns:
+            bool: True if password matches any record, False otherwise
+        """
+        for old_password_record in password_records:
+            try:
+                stored_hash = old_password_record.getPasswords()
+                if check_password(password, stored_hash):
+                    return True
+            except (json.JSONDecodeError, ValueError, TypeError):
+                # Log corrupted password record but continue checking others
+                # Consider marking this record as corrupted for maintenance
+                continue
+        return False
+
+    @classmethod
+    def should_set_password(cls, tenant):
+        login_methods = get_auth_priority(policy="login_methods", tenant=tenant)
+        if login_methods.get("password", {}).get("enabled", False):
+            return True
+        return False
 
     @classmethod
     def create_user(
@@ -199,7 +277,6 @@ class AppUserModel(
         auth_config=None,
         tenant=None,
     ):
-        """ """
         success = False
         app_user = None
 
@@ -235,6 +312,13 @@ class AppUserModel(
                     return {
                         "success": success,
                         "message": message,
+                        "app_user": app_user,
+                    }
+            else:
+                if cls.should_set_password(tenant):
+                    return {
+                        "success": False,
+                        "message": "Password is required",
                         "app_user": app_user,
                     }
 

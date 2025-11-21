@@ -2,11 +2,13 @@ import { Formik } from 'formik';
 import { get } from 'lodash';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
+import { useContext } from 'react';
 import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
+import { ErrorMessageContext } from '../../../../../context/ErrorMessageContextProvider';
 import {
 	selectAppUserManagementFormData,
 	toggleRerenderPage,
@@ -15,6 +17,7 @@ import {
 const ResetPasswordForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
+	const setErrorMessage = useContext(ErrorMessageContext);
 	const appUserManagementFormData = useSelector(
 		selectAppUserManagementFormData
 	);
@@ -34,17 +37,22 @@ const ResetPasswordForm = ({ closeModal }) => {
 		let dynamicFormData = transformToFormData(tempValues);
 
 		const makeApiCall = async () => {
-			const { response, success } = await triggerApi({
+			const response = await triggerApi({
 				url: `/api/v1/apps/${appId}/users/${appUserManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
-				notify: true,
+				notify: false,
+				showErrorModal: false,
 			});
 
-			if (success && response) {
+			if (response?.success) {
 				closeModal();
 				dispatch(toggleRerenderPage());
+			} else {
+				const errorMessage = response?.response?.message || 'Failed to reset password';
+				setErrorMessage(errorMessage);
+				closeModal();
 			}
 		};
 

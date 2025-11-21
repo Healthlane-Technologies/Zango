@@ -127,17 +127,26 @@ class SetPasswordViewAPIV1(APIView):
         return {"user": self.stage.login.user}
 
     def post(self, request, *args, **kwargs):
-        self.input.save()
-        response = self.respond_next_stage()
-        return get_api_response(
-            success=True,
-            response_content=json.loads(response.content.decode("utf-8")),
-            status=response.status_code,
-        )
+        try:
+            self.input.save()
+            response = self.respond_next_stage()
+            return get_api_response(
+                success=True,
+                response_content=json.loads(response.content.decode("utf-8")),
+                status=response.status_code,
+            )
+        except ValidationError as e:
+            return get_api_response(
+                success=False,
+                response_content={
+                    "message": str(e.message) if hasattr(e, "message") else str(e)
+                },
+                status=400,
+            )
 
 
 class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
-    def post(self, request, *args, **kwargs):
+    def handle(self, request, *args, **kwargs):
         auth_config = request.tenant.auth_config
         if (
             not auth_config.get("password_policy", {})
@@ -168,6 +177,9 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
                 },
                 status=400,
             )
+        return super().handle(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         data = json.loads(resp.content.decode("utf-8"))
         password_policy = get_auth_priority(policy="password_policy", request=request)

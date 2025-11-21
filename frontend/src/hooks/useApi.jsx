@@ -128,7 +128,7 @@ export default function useApi() {
 
 					return {
 						response: {
-							message: 'Server Error',
+							message: response.message || 'Server Error',
 						},
 						success: false,
 						responseStatus: apiRequest.status,

@@ -161,6 +161,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 					require_special_chars: false,
 					password_history_count: 0,
 					password_expiry_days: 0,
+					password_repeat_days: 0,
 					allow_change: true,
 				}
 			}));
@@ -366,7 +367,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 															<div>
 																<h5 className="text-[15px] font-semibold text-[#111827] mb-[4px]">Enable Role Override</h5>
 																<p className="text-[13px] text-[#6B7280]">
-																	Enable to configure custom authentication policies for this role. When disabled, only redirect URL will be saved.
+																	Enable to configure custom authentication policies for this role.
 																</p>
 															</div>
 															<ToggleSwitch
@@ -394,7 +395,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 
 													{enablePasswordPolicyOverride && (
 														<div className="mt-[20px] space-y-[16px] bg-white rounded-[8px] p-[16px]">
-															<div className="grid grid-cols-2 gap-[16px]">
+															<div className="grid grid-cols-3 gap-[16px]">
 																<div>
 																	<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
 																		Minimum Password Length
@@ -426,6 +427,24 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																			password_policy: {
 																				...prev.password_policy,
 																				password_expiry_days: e.target.value === '' ? '' : parseInt(e.target.value)
+																			}
+																		}))}
+																		className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
+																		Password Repeat Days
+																	</label>
+																	<input
+																		name="password_repeat_days"
+																		type="number"
+																		value={overrideConfig.password_policy?.password_repeat_days ?? 0}
+																		onChange={(e) => setOverrideConfig(prev => ({
+																			...prev,
+																			password_policy: {
+																				...prev.password_policy,
+																				password_repeat_days: e.target.value === '' ? '' : parseInt(e.target.value)
 																			}
 																		}))}
 																		className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
@@ -485,30 +504,32 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 												</div>
 												)}
 
-												{/* Enforce SSO Override */}
-												<div className="mb-[24px] bg-[#F8FAFC] rounded-[12px] p-[20px]">
-													<div className="flex items-center justify-between">
-														<div>
-															<h5 className="text-[14px] font-medium text-[#111827]">Enforce SSO</h5>
-															<p className="text-[12px] text-[#6B7280] mt-[2px]">Require SSO authentication for this role</p>
+												{/* Enforce SSO Override - Only show when override is enabled */}
+												{roleOverrideStates[selectedRoleId] && (
+													<div className="mb-[24px] bg-[#F8FAFC] rounded-[12px] p-[20px]">
+														<div className="flex items-center justify-between">
+															<div>
+																<h5 className="text-[14px] font-medium text-[#111827]">Enforce SSO</h5>
+																<p className="text-[12px] text-[#6B7280] mt-[2px]">Require SSO authentication for this role</p>
+															</div>
+															<ToggleSwitch
+																checked={enforceSSO}
+																onChange={(checked) => setOverrideConfig(prev => ({
+																	...prev,
+																	enforce_sso: checked
+																}))}
+															/>
 														</div>
-														<ToggleSwitch
-															checked={enforceSSO}
-															onChange={(checked) => setOverrideConfig(prev => ({
-																...prev,
-																enforce_sso: checked
-															}))}
-														/>
-													</div>
 
-													{enforceSSO && (
-														<div className="mt-[16px] bg-white rounded-[8px] p-[16px]">
-															<p className="text-[13px] text-[#6B7280]">
-																Users with this role will be required to authenticate using Single Sign-On (SSO).
-															</p>
-														</div>
-													)}
-												</div>
+														{enforceSSO && (
+															<div className="mt-[16px] bg-white rounded-[8px] p-[16px]">
+																<p className="text-[13px] text-[#6B7280]">
+																	Users with this role will be required to authenticate using Single Sign-On (SSO).
+																</p>
+															</div>
+														)}
+													</div>
+												)}
 
 												{/* Session Policy Override - Only show when override is enabled */}
 												{roleOverrideStates[selectedRoleId] && (

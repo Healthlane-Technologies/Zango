@@ -9,7 +9,7 @@ from zango.core.api import get_api_response
 
 
 class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
-    def post(self, request, *args, **kwargs):
+    def handle(self, request, *args, **kwargs):
         auth_config = request.tenant.auth_config
         if (
             not auth_config.get("login_methods", {})
@@ -18,7 +18,7 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
         ):
             return get_api_response(
                 success=False,
-                response_content={"message": "OTP login is not enabled"},
+                response_content={"message": "OTP/Link login is not enabled"},
                 status=400,
             )
         query = Q()
@@ -34,10 +34,13 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
             return get_api_response(
                 success=False,
                 response_content={
-                    "message": "OTP login cannot be used when SSO is enforced"
+                    "message": "OTP/Link login cannot be used when SSO is enforced"
                 },
                 status=400,
             )
+        return super().handle(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         resp_data = json.loads(resp.content.decode("utf-8"))
         if resp.status_code == 401:

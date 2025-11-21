@@ -4,12 +4,23 @@ from zango.core.api import (
     ZangoGenericAppAPIView,
     get_api_response,
 )
-from zango.core.utils import get_current_role
+from zango.core.utils import get_auth_priority, get_current_role
 
 from .serializers import ProfileSerializer
 
 
 class ProfileViewAPIV1(ZangoGenericAppAPIView):
+    def can_set_password(self, request):
+        login_methods = get_auth_priority(policy="login_methods", request=request)
+        if not login_methods.get("password", {}).get("enabled", False):
+            return False
+        if any(
+            role.auth_config.get("enforce_sso", False)
+            for role in request.user.roles.all()
+        ):
+            return False
+        return True
+
     def get(self, request, *args, **kwargs):
         serializer = ProfileSerializer(
             request.user, context={"request": request, "tenant": request.tenant}
@@ -24,11 +35,7 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
             "message": "success",
             "profile_data": serializer.data,
             "should_set_password": request.user.has_usable_password() is False,
-            "can_set_password": any(
-                role.auth_config.get("enforce_sso", False)
-                for role in request.user.roles.all()
-            )
-            is False,
+            "can_set_password": self.can_set_password(request),
             "current_role": {
                 "id": role.id,
                 "name": role.name,
