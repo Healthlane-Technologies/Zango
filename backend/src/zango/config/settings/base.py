@@ -288,6 +288,8 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
 TENANT_LIMIT_SET_CALLS = True
 
+ACCOUNT_RATE_LIMITS = {"login_failed": False}
+
 
 def setup_settings(settings, BASE_DIR):
     env = environ.Env(

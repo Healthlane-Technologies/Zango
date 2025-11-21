@@ -7,16 +7,16 @@ function SubmitButton({
 	return (
 		<button
 			type="submit"
-			className={`flex w-full items-center justify-center rounded-[4px] ${
+			className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
 				{
-					normal: 'bg-primary',
-					danger: 'bg-danger-red',
-					success: 'bg-[#229470]',
+					normal: 'bg-primary hover:bg-primary/90 focus:ring-primary',
+					danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-600',
+					success: 'bg-green-600 hover:bg-green-700 focus:ring-green-600',
 				}[theme]
-			} px-[16px] py-[10px] font-lato text-[14px] font-bold leading-[20px] text-white disabled:opacity-[0.38]`}
+			}`}
 			disabled={allowDisabled ? !(formik.isValid && formik.dirty) : false}
 		>
-			<span>{label}</span>
+			{label}
 		</button>
 	);
 }

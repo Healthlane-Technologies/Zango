@@ -24,6 +24,9 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
 
     const triggerApi = useApi();
 
+    // Check if this is a reserved role
+    const isReservedRole = appUserRolesFormData?.name === 'AnonymousUsers' || appUserRolesFormData?.name === 'SystemUsers';
+
     // Get two-factor method options from the dropdown data or use defaults
     const twoFactorMethodOptions = appUserRolesData?.dropdown_options?.two_factor_methods ?? [
         { id: "email", label: "Email" },
@@ -163,9 +166,9 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
     const validationConstraints = getValidationConstraints();
 
     let validationSchema = Yup.object({
-        name: Yup.string().required('Required'),
+        name: isReservedRole ? Yup.string() : Yup.string().required('Required'),
         auth_config: Yup.object({
-            redirect_url: Yup.string().required('Required'),
+            redirect_url: isReservedRole ? Yup.string() : Yup.string().required('Required'),
             two_factor_auth: Yup.object({
                 required: Yup.boolean(),
                 allowedMethods: Yup.array().when('required', {
@@ -293,46 +296,107 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                         className="complete-hidden-scroll-style flex grow flex-col gap-4 overflow-y-auto"
                         onSubmit={formik.handleSubmit}
                     >
-                        <div className="flex grow flex-col gap-[16px]">
-                            <InputField
-                                key="name"
-                                label="Role Name"
-                                name="name"
-                                id="name"
-                                placeholder="Enter role name"
-                                value={get(formik.values, 'name', '')}
-                                onChange={formik.handleChange}
-                                formik={formik}
-                            />
-
-                            <InputField
-                                key="auth_config.redirect_url"
-                                label="Redirect URL"
-                                name="auth_config.redirect_url"
-                                id="auth_config.redirect_url"
-                                placeholder="Enter redirect URL"
-                                value={get(formik.values, 'auth_config.redirect_url', '')}
-                                onChange={formik.handleChange}
-                                formik={formik}
-                            />
-
-                            <MultiSelectField
-                                key="policies"
-                                label="Policy"
-                                name="policies"
-                                id="policies"
-                                placeholder="Select policies"
-                                value={get(formik.values, 'policies', [])}
-                                optionsDataName="policies"
-                                optionsData={appUserRolesData?.dropdown_options?.policies ?? []}
-                                formik={formik}
-                            />
-
-                            {/* Two-Factor Authentication Section */}
-                            <div className="space-y-[12px]">
-                                <h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
-                                    Two-Factor Authentication
+                        <div className="flex grow flex-col gap-[24px]">
+                            {/* Role Information Section */}
+                            <div className="space-y-[16px]">
+                                <h3 className="font-lato text-[16px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px] flex items-center gap-[8px]">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#6366F1]">
+                                        <path d="M8 8a3 3 0 100-6 3 3 0 000 6zM8 10c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z" fill="currentColor"/>
+                                    </svg>
+                                    Role Information
                                 </h3>
+
+                                {isReservedRole ? (
+                                    <div className="bg-[#FEF3C7] border border-[#F59E0B] rounded-[8px] p-[16px]">
+                                        <div className="flex items-start gap-[8px]">
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#F59E0B] mt-[2px]">
+                                                <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM8 4a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/>
+                                            </svg>
+                                            <div>
+                                                <p className="font-lato text-[12px] font-semibold text-[#92400E] uppercase tracking-[0.5px]">Reserved Role</p>
+                                                <h3 className="font-lato text-[16px] font-semibold text-[#92400E] mb-[4px]">{appUserRolesFormData?.name}</h3>
+                                                <p className="font-lato text-[12px] text-[#92400E]">This is a system role required for application functionality. You can only modify its policies and authentication settings.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <InputField
+                                        key="name"
+                                        label="Role Name"
+                                        name="name"
+                                        id="name"
+                                        placeholder="Enter role name"
+                                        value={get(formik.values, 'name', '')}
+                                        onChange={formik.handleChange}
+                                        formik={formik}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Policies Section */}
+                            <div className="space-y-[16px]">
+                                <h3 className="font-lato text-[16px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px] flex items-center gap-[8px]">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#10B981]">
+                                        <path d="M4 3a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2V5a2 2 0 00-2-2H4zM9 3a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2V5a2 2 0 00-2-2H9zM4 9a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 00-2-2H4zM9 9a2 2 0 00-2 2v1a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 00-2-2H9z" fill="currentColor"/>
+                                    </svg>
+                                    Access Policies
+                                    <span className="ml-auto text-[12px] font-normal text-[#6B7280] bg-[#F3F4F6] px-[8px] py-[2px] rounded-[12px]">
+                                        {get(formik.values, 'policies', []).length} selected
+                                    </span>
+                                </h3>
+
+                                <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-[8px] p-[12px]">
+                                    <p className="font-lato text-[12px] text-[#6B7280] mb-[2px]">
+                                        <strong>Tip:</strong> Policies control what users in this role can access and do in the application.
+                                    </p>
+                                    <p className="font-lato text-[11px] text-[#6B7280]">
+                                        Select the appropriate policies based on the responsibilities of users in this role.
+                                    </p>
+                                </div>
+
+                                <MultiSelectField
+                                    key="policies"
+                                    label="Available Policies"
+                                    name="policies"
+                                    id="policies"
+                                    placeholder="Select policies to attach"
+                                    value={get(formik.values, 'policies', [])}
+                                    optionsDataName="policies"
+                                    optionsData={appUserRolesData?.dropdown_options?.policies ?? []}
+                                    formik={formik}
+                                />
+                            </div>
+
+                            {/* Authentication Settings Section */}
+                            <div className="space-y-[16px]">
+                                <h3 className="font-lato text-[16px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px] flex items-center gap-[8px]">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#F59E0B]">
+                                        <path d="M3 5a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V5zM8 6a2 2 0 100 4 2 2 0 000-4z" fill="currentColor"/>
+                                    </svg>
+                                    Authentication Settings
+                                </h3>
+
+                                {!isReservedRole && (
+                                    <InputField
+                                        key="auth_config.redirect_url"
+                                        label="Redirect URL"
+                                        name="auth_config.redirect_url"
+                                        id="auth_config.redirect_url"
+                                        placeholder="Enter redirect URL"
+                                        value={get(formik.values, 'auth_config.redirect_url', '')}
+                                        onChange={formik.handleChange}
+                                        formik={formik}
+                                    />
+                                )}
+
+                                {/* Two-Factor Authentication Section */}
+                                <div className="space-y-[12px]">
+                                    <h4 className="font-lato text-[14px] font-semibold text-[#111827] flex items-center gap-[6px]">
+                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-[#6366F1]">
+                                            <path d="M8 2a2 2 0 00-2 2v2H4a1 1 0 00-1 1v6a1 1 0 001 1h8a1 1 0 001-1V7a1 1 0 00-1-1h-2V4a2 2 0 00-2-2z" fill="currentColor"/>
+                                        </svg>
+                                        Two-Factor Authentication
+                                    </h4>
                                 <ToggleCard
                                     title="Require Two-Factor Authentication"
                                     description="Make 2FA mandatory for users with this role"
@@ -360,11 +424,14 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                                 </ToggleCard>
                             </div>
 
-                            {/* Password Policy Section */}
-                            <div className="space-y-[12px]">
-                                <h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
-                                    Password Policy
-                                </h3>
+                                {/* Password Policy Section */}
+                                <div className="space-y-[12px]">
+                                    <h4 className="font-lato text-[14px] font-semibold text-[#111827] flex items-center gap-[6px]">
+                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-[#EF4444]">
+                                            <path d="M3 7a1 1 0 011-1h8a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V7zM5 5a3 3 0 116 0v1H5V5z" fill="currentColor"/>
+                                        </svg>
+                                        Password Policy
+                                    </h4>
                                 <div className="grid grid-cols-2 gap-[12px]">
                                     <InputField
                                         key="auth_config.password_policy.min_length"
@@ -421,17 +488,18 @@ const EditUserRolesDetailsForm = ({ closeModal }) => {
                                         onChange={(e) => formik.setFieldValue('auth_config.password_policy.require_special_chars', e.target.checked)}
                                     />
                                 </div>
-                                <InputField
-                                    key="auth_config.password_policy.password_history_count"
-                                    label="Password History Count"
-                                    name="auth_config.password_policy.password_history_count"
-                                    id="auth_config.password_policy.password_history_count"
-                                    type="number"
-                                    placeholder="Enter history count"
-                                    value={get(formik.values, 'auth_config.password_policy.password_history_count', '')}
-                                    onChange={formik.handleChange}
-                                    formik={formik}
-                                />
+                                    <InputField
+                                        key="auth_config.password_policy.password_history_count"
+                                        label="Password History Count"
+                                        name="auth_config.password_policy.password_history_count"
+                                        id="auth_config.password_policy.password_history_count"
+                                        type="number"
+                                        placeholder="Enter history count"
+                                        value={get(formik.values, 'auth_config.password_policy.password_history_count', '')}
+                                        onChange={formik.handleChange}
+                                        formik={formik}
+                                    />
+                                </div>
                             </div>
                         </div>
                         <div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">

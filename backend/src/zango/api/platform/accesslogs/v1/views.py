@@ -136,6 +136,12 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             access_logs = self.get_queryset(search, tenant, columns)
+
+            # Calculate total failed attempts before pagination
+            total_failed_attempts = access_logs.filter(
+                is_login_successful=False
+            ).count()
+
             paginated_access_logs = self.paginate_queryset(
                 access_logs, request, view=self
             )
@@ -146,6 +152,7 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             success = True
             response = {
                 "access_logs": accesslogs,
+                "total_failed_attempts": total_failed_attempts,
                 "message": "Access logs fetched successfully",
             }
             if include_dropdown_options:

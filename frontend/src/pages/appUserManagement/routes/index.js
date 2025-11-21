@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import AppUserManagement from '../components/AppUserManagement/index.js';
+import AppUserManagement from '../components/AppUserManagement/index.jsx';
 
 const AppUserManagementRoutes = () => {
 	return (

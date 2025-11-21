@@ -31,6 +31,18 @@ export const appConfigurationHandlers = [
 						logo: '',
 						fav_icon: '',
 						extra_config: {"git_config":{"branch":{"dev":"dev","prod":"main","staging":"staging"},"repo_url":"https://github.com/Healthlane-Technologies/Zango"},"sync_packages":true},
+						deployment_config: {
+							"main": {
+								"project": "zango-tw-staging"
+							},
+							"staging": {
+								"project": "zango-deployment-template"
+							},
+							"project_workflow_devel": {
+								"project": "zango-deployment-template"
+							},
+							"notifications": "zango-deployment-test"
+						},
 						domains: [
 							{ domain: 'zel3-neapp.zelthy.in', is_primary: true },
 							{ domain: 'domainame2.com', is_primary: false },

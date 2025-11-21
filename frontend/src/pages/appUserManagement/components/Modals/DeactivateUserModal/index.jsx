@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import Modal from '../../../../../components/Modal';
+import StandardModal from '../../../../../components/StandardModal';
 import {
 	closeIsDeactivateUserModalOpen,
 	selectAppUserManagementFormData,
@@ -21,10 +21,11 @@ function DeactivateUserModal() {
 	}
 
 	return (
-		<Modal
+		<StandardModal
 			label={`Deactivate ${appUserManagementFormData?.name}'s Profile`}
 			show={isDeactivateUserModalOpen}
 			closeModal={closeModal}
+			size="sm"
 			ModalBody={<DeactivateUserForm closeModal={closeModal} />}
 		/>
 	);

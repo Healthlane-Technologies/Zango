@@ -78,7 +78,7 @@ export default function useApi() {
 				setLoading(false);
 			}
 
-			if (apiRequest.status === 200) {
+			if (apiRequest.status === 200 || apiRequest.status === 201) {
 				try {
 					if (!isMockApi()) {
 						if (apiRequest.redirected) {
@@ -128,7 +128,7 @@ export default function useApi() {
 
 					return {
 						response: {
-							message: 'Server Error',
+							message: response.message || 'Server Error',
 						},
 						success: false,
 						responseStatus: apiRequest.status,

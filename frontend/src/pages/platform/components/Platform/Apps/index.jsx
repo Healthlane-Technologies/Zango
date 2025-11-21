@@ -9,7 +9,7 @@ export default function Apps() {
 	const appsData = useSelector(selectAppsData);
 
 	return (
-		<div className="flex grow flex-col gap-[32px] px-[20px] pt-[29px] md:px-[46px]">
+		<div className="flex h-full grow flex-col gap-[32px] px-[20px] pt-[29px] md:px-[46px]">
 			<div className="flex items-center justify-between pr-[18px]">
 				<span className="font-source-sans-pro text-[22px] font-semibold leading-[28px] text-[#000000]">
 					Apps
@@ -18,7 +18,7 @@ export default function Apps() {
 					<LaunchNewAppButton />
 				</div>
 			</div>
-			<div className="flex grow flex-col gap-[16px] overflow-y-auto">
+			<div className="flex min-h-0 grow flex-col gap-[16px]">
 				<div className="flex items-center justify-end gap-[8px] pr-[18px]">
 					<Filters />
 				</div>

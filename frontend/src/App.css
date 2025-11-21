@@ -178,6 +178,12 @@ input[type='number'] {
 	background-color: #555;
 }
 
+/* Firefox specific scrollbar hiding */
+.complete-hidden-scroll-style {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* IE and Edge */
+}
+
 .table-date-range-filter .DateInput_input {
 	border-bottom: 0px !important;
 	border: 0px solid #d5d5d5 !important;
@@ -204,8 +210,8 @@ input[type='number'] {
 .CalendarDay__selected,
 .CalendarDay__selected:active,
 .CalendarDay__selected:hover {
-	background: theme('colors.primary') !important;
-	border: 1px double theme('colors.primary') !important;
+	background: theme('colors.primary.DEFAULT') !important;
+	border: 1px double theme('colors.primary.DEFAULT') !important;
 }
 
 .DateRangePicker_picker {
@@ -335,4 +341,58 @@ input[type='number'] {
 
 .text-wrap {
 	text-wrap: wrap;
+}
+
+/* Page-level loader styles */
+.page-loader {
+	position: absolute;
+	z-index: 1051;
+	overflow: show;
+	margin: auto;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0;
+	width: 50px;
+	height: 50px;
+}
+
+/* Opaque Overlay for page loader */
+.page-loader:before {
+	content: '';
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: #ffffff;
+	pointer-events: all;
+	cursor: not-allowed;
+	z-index: 1050;
+}
+
+/* :not(:required) hides these rules from IE9 and below */
+.page-loader:not(:required) {
+	font: 0/0 a;
+	color: transparent;
+	text-shadow: none;
+	background-color: transparent;
+	border: 0;
+}
+
+.page-loader:not(:required):after {
+	content: '';
+	display: block;
+	font-size: 10px;
+	width: 50px;
+	height: 50px;
+	margin-top: -0.5em;
+	border: 5px solid #5048ed;
+	border-radius: 100%;
+	border-bottom-color: transparent;
+	-webkit-animation: spinner 1s linear 0s infinite;
+	animation: spinner 1s linear 0s infinite;
+	position: relative;
+	z-index: 1052;
 }

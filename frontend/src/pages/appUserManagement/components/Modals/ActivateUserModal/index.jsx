@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import Modal from '../../../../../components/Modal';
+import StandardModal from '../../../../../components/StandardModal';
 import {
 	closeIsActivateUserModalOpen,
 	selectAppUserManagementFormData,
@@ -20,10 +20,11 @@ function ActivateUserModal() {
 
 	return (
 		<>
-			<Modal
+			<StandardModal
 				label={`Activate ${appUserManagementFormData?.name}`}
 				show={isActivateUserModalOpen}
 				closeModal={closeModal}
+				size="sm"
 				ModalBody={<ActivateUserForm closeModal={closeModal} />}
 			/>
 		</>
