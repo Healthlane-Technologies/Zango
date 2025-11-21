@@ -545,6 +545,8 @@ def setup_settings(settings, BASE_DIR):
 
     settings.HEADLESS_ONLY = True
 
+    settings.ACCOUNT_RATE_LIMITS = {"login_failed": False}
+
     settings_result = {"env": env}
 
     return settings_result
