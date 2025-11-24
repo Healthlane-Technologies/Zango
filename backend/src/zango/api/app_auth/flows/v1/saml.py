@@ -1,11 +1,13 @@
+import json
+
 from datetime import timedelta
 
 from allauth.account.internal import flows
 from allauth.account.models import Login
+from allauth.headless.base.response import AuthenticationResponse
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from rest_framework.views import APIView
 
-from django.contrib import messages
 from django.core import signing
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.utils import timezone
@@ -75,8 +77,13 @@ def acs(request, *args, **kwargs):
         try:
             user = AppUserModel.objects.get(email=email)
         except AppUserModel.DoesNotExist:
+            resp = {
+                "message": "User does not exist",
+                "code": "user_not_found",
+                "param": "email",
+            }
             return HttpResponseRedirect(
-                redirect_to="/app/login/?auth_error=user_not_found"
+                redirect_to=f"/app/login/?token={signing.dumps(resp, key=in_response_to)}&request_id={in_response_to}"
             )
         request.session["saml"] = True
         login = Login(
@@ -91,28 +98,14 @@ def acs(request, *args, **kwargs):
 
         resp = flows.login.perform_login(request, login)
         if resp.status_code == 200:
-            return HttpResponseRedirect("/app/login/")
-        if resp.status_code == 302:
-            if resp.url == "/app/login/":
-                request.session.pop("saml", None)
-                return HttpResponseRedirect("/app/login/")
-            if "/role/set" in resp.url:
-                roles = [
-                    {"id": role_id, "name": role_name}
-                    for role_id, role_name in user.roles.all().values_list("id", "name")
-                ]
-                print("Roles", roles)
-                return HttpResponseRedirect(
-                    f"/app/login/?next=role_selection&token={signing.dumps({'roles': roles}, key=in_response_to)}&request_id={in_response_to}"
-                )
-        return resp
-    else:
-        messages.add_message(
-            request,
-            messages.INFO,
-            "Something went wrong. Please contact support if the problem persists!",
+            request.session.pop("saml", None)
+        enhanced_resp = AuthenticationResponse(request)
+        resp_data = json.loads(enhanced_resp.content.decode("utf-8"))
+        return HttpResponseRedirect(
+            f"/app/login/?token={signing.dumps(resp_data, key=in_response_to)}&request_id={in_response_to}"
         )
-        url = "/app/login/"
+    else:
+        url = f"/app/login/?token={signing.dumps({'error': errors}, key=in_response_to)}&request_id={in_response_to}"
         return HttpResponseRedirect(url)
 
 

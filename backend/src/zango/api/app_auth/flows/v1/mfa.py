@@ -114,6 +114,37 @@ class GetMFACodeViewAPIV1(APIView):
                     },
                     status=200,
                 )
+            elif request.session.get("saml", False):
+                preferred_method = "sms"
+                if preferred_method not in allowed_methods:
+                    return get_api_response(
+                        success=False,
+                        response_content={"message": "SMS MFA method not allowed"},
+                        status=400,
+                    )
+                user = self.get_user(login.user.email)
+                request_data = {
+                    "path": request.path,
+                    "params": request.GET,
+                }
+                send_otp.delay(
+                    method=preferred_method,
+                    otp_type="two_factor_auth",
+                    user_id=user.id,
+                    tenant_id=request.tenant.id,
+                    request_data=request_data,
+                    user_role_id=request.session.get("role_id"),
+                    message="Your 2FA code is {code}",
+                    subject="2FA Verification Code",
+                )
+                return get_api_response(
+                    success=True,
+                    response_content={
+                        "message": f"Verification code sent to {preferred_method}",
+                        "masked_destination": mask_phone_number(str(user.mobile)),
+                    },
+                    status=200,
+                )
             else:
                 return get_api_response(
                     success=False,
