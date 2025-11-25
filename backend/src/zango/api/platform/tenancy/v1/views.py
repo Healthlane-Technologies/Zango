@@ -384,14 +384,16 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
-                    error_message = ", ".join(error_messages)
+                    result = {
+                        "message": ", ".join(
+                            [
+                                error[0]
+                                for field_name, error in serializer.errors.items()
+                            ]
+                        )
+                    }
                 else:
-                    error_message = "Invalid data"
-
-                result = {"message": error_message}
+                    result = {"message": "Invalid data"}
         except Exception as e:
             import traceback
 

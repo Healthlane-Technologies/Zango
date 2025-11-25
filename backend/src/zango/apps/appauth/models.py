@@ -115,10 +115,10 @@ class AppUserModel(
             pass
 
     @classmethod
-    def validate_password(cls, password):
+    def validate_password(cls, password, tenant):
         import re
 
-        policy = get_auth_priority(policy="password_policy")
+        policy = get_auth_priority(policy="password_policy", tenant=tenant)
 
         # Default policy if none provided
         default_policy = {
@@ -193,20 +193,8 @@ class AppUserModel(
             }
 
         password_policy = get_auth_priority(policy="password_policy", user=self)
-        history_count = password_policy.get("password_history_count")
-        no_repeat_days = password_policy.get("password_repeat_days")
-
-        # Validate policy values
-        if not isinstance(history_count, int) or history_count < 0:
-            return {
-                "validation": False,
-                "message": "Invalid password history count configuration",
-            }
-        if not isinstance(no_repeat_days, int) or no_repeat_days < 0:
-            return {
-                "validation": False,
-                "message": "Invalid password no-repeat days configuration",
-            }
+        history_count = password_policy.get("password_history_count", 3)
+        no_repeat_days = password_policy.get("password_repeat_days", 180)
 
         # Check password against time-based history (within no_repeat_days)
         if no_repeat_days > 0:
@@ -257,7 +245,10 @@ class AppUserModel(
         return False
 
     @classmethod
-    def should_set_password(cls, tenant):
+    def should_set_password(cls, tenant, role_ids):
+        for role in UserRoleModel.objects.filter(id__in=role_ids):
+            if role.auth_config.get("enforce_sso", False):
+                return False
         login_methods = get_auth_priority(policy="login_methods", tenant=tenant)
         if login_methods.get("password", {}).get("enabled", False):
             return True
@@ -298,36 +289,51 @@ class AppUserModel(
                 message = f"User with the same {field_text} already exists"
                 return {"success": success, "message": message, "app_user": app_user}
 
-            # Validate password if provided
-            if password:
-                if not cls.validate_password(password):
-                    message = """
-                        Invalid password. Password must follow rules
-                        1. Must have at least 8 characters
-                        2. Must have at least one uppercase letter
-                        3. Must have at least one lowercase letter
-                        4. Must have at least one number
-                        5. Must have at least one special character
-                        """
-                    return {
-                        "success": success,
-                        "message": message,
-                        "app_user": app_user,
-                    }
-            else:
-                if cls.should_set_password(tenant):
-                    return {
-                        "success": False,
-                        "message": "Password is required",
-                        "app_user": app_user,
-                    }
-
             # Validate roles exist
             existing_roles = None
             if role_ids:
                 existing_roles = UserRoleModel.objects.filter(id__in=role_ids)
                 if len(role_ids) != existing_roles.count():
                     message = "One or more specified role IDs do not exist"
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
+
+            should_set_password = cls.should_set_password(tenant, role_ids)
+
+            # Validate password if provided
+            if password:
+                if not should_set_password:
+                    message = (
+                        "Password cannot be set for this user since SSO is enforced"
+                    )
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
+                if not cls.validate_password(password, tenant):
+                    password_policy = get_auth_priority(
+                        policy="password_policy", tenant=tenant
+                    )
+                    message = f"""
+                        Password should meet the following requirements: 
+                        Minimum Length: {password_policy.get("min_length", 8)}
+                        Require Numbers: {password_policy.get("require_numbers", True)}
+                        Require Symbols: {password_policy.get("require_symbols", True)}
+                        Require Uppercase: {password_policy.get("require_uppercase", True)}
+                        Require Lowercase: {password_policy.get("require_lowercase", True)}
+                    """
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
+            else:
+                if should_set_password:
+                    message = "Password cannot be empty"
                     return {
                         "success": success,
                         "message": message,
@@ -352,12 +358,17 @@ class AppUserModel(
             app_user.auth_config = final_auth_config
 
             # Validate auth_config with the saved user and roles
-            app_user.validate_auth_config(
-                final_auth_config,
-                app_user,
-                existing_roles or UserRoleModel.objects.none(),
-                tenant or connection.tenant,
-            )
+            try:
+                app_user.validate_auth_config(
+                    final_auth_config,
+                    app_user,
+                    existing_roles or UserRoleModel.objects.none(),
+                    tenant or connection.tenant,
+                )
+            except Exception as e:
+                app_user.delete()
+                message = str(e)
+                return {"success": False, "message": message, "app_user": None}
 
             # Set password
             if password:
@@ -446,8 +457,15 @@ class AppUserModel(
 
             # Validate password if provided
             if password:
-                if not self.validate_password(password):
-                    message = "Invalid password. Password must follow rules xyz"
+                if not self.validate_password(password, tenant):
+                    message = f"""
+                        Password should meet the following requirements: 
+                        Minimum Length: {get_auth_priority(policy="password_policy", tenant=tenant).get("min_length", 8)}
+                        Require Numbers: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_numbers", True)}
+                        Require Symbols: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_symbols", True)}
+                        Require Uppercase: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_uppercase", True)}
+                        Require Lowercase: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_lowercase", True)}
+                    """
                     return {"success": False, "message": message}
 
             # Validate roles exist if provided

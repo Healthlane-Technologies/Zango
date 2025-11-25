@@ -1,5 +1,6 @@
 import json
 
+from django_tenants.utils import schema_context
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
@@ -132,6 +133,19 @@ class TenantSerializerModel(serializers.ModelSerializer):
                     tenant=instance,
                 )
 
+        if "auth_config" in validated_data:
+            auth_config = validated_data["auth_config"]
+            if (
+                not auth_config.get("login_methods", {})
+                .get("sso", {})
+                .get("enabled", False)
+            ):
+                with schema_context(instance.schema_name):
+                    for role in UserRoleModel.objects.all():
+                        print(role.auth_config)
+                        if role.auth_config.get("enforce_sso", False):
+                            role.auth_config["enforce_sso"] = False
+                            role.save()
         return instance
 
 
@@ -183,6 +197,17 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Two-factor authentication is required for this user role as it is enabled for the tenant."
                 )
+
+        sso_enabled = (
+            tenant.auth_config.get("login_methods", {})
+            .get("sso", {})
+            .get("enabled", False)
+        )
+
+        if not sso_enabled and value.get("enforce_sso", False):
+            raise serializers.ValidationError(
+                "Cannot enforce SSO for this user role as SSO is not enabled for the tenant."
+            )
         return value
 
     def validate(self, attrs):
