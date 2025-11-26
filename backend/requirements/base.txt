@@ -32,7 +32,7 @@ docusign-esign==5.2.0
 fido2==2.0.0
 flake8==6.1.0
 flower==2.0.1
-git+https://github.com/Healthlane-Technologies/django-allauth.git@feat/app_auth_flow
+git+https://github.com/Healthlane-Technologies/django-allauth.git@main
 GitPython==3.1.43
 gunicorn==23.0.0
 jsonschema==4.24.0

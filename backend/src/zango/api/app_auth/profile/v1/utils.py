@@ -34,7 +34,6 @@ class PasswordValidationMixin:
 
     def check_password_length(self, password, user=None):
         policy = self.get_password_policy(user)
-        print("policy ", policy)
         if isinstance(policy, dict):
             min_length = policy.get("min_length", self.MIN_LENGTH) or self.MIN_LENGTH
         else:
