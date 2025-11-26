@@ -514,7 +514,8 @@ class OTPCode(FullAuditMixin):
         """
         Marks the OTP code as used.
         """
-        self.delete()
+        self.is_used = True
+        self.save()
 
 
 def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digits=6):
