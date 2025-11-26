@@ -126,12 +126,8 @@ services:
         condition: service_healthy
 
   otel-collector:
-    build:
-      context: .
-      dockerfile: config/otel-collector.dockerfile
-    entrypoint: ["/start_otel.sh"]
-    env_file:
-      - .env
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./config/collector.yml:/etc/otel-collector-config.yaml
     ports:
