@@ -70,6 +70,12 @@ TENANT_APPS = [
     # "cachalot",
     "axes",
     "django_recaptcha",
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
+    "allauth.mfa",
+    "allauth.usersessions",
+    "django.contrib.humanize",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -103,6 +109,8 @@ MIDDLEWARE = [
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
     "axes.middleware.AxesMiddleware",
     "zango.middleware.telemetry.OtelZangoContextMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "allauth.usersessions.middleware.UserSessionsMiddleware",
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -534,6 +542,8 @@ def setup_settings(settings, BASE_DIR):
 
     if settings.HEALTH_CHECK_URL:
         CELERY_BEAT_SCHEDULE["health_check_task"]["enabled"] = True
+
+    settings.HEADLESS_ONLY = True
 
     settings_result = {"env": env}
 

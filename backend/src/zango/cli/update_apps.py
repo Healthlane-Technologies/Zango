@@ -674,7 +674,7 @@ def update_apps(app_name, pull):
                 branch = git_settings["branch"].get(settings.ENV, "main")
 
             if not pull:
-                git_mode = False
+                git_mode=False
             update_allowed, message = is_update_allowed(
                 tenant, app_settings, git_mode, repo_url, branch
             )
@@ -694,9 +694,7 @@ def update_apps(app_name, pull):
                 last_release = get_last_release()
                 if last_release and last_release.last_git_hash:
                     # Checkout specific commit from last release
-                    click.echo(
-                        f"Checking out commit {last_release.last_git_hash} for {tenant}"
-                    )
+                    click.echo(f"Checking out commit {last_release.last_git_hash} for {tenant}")
                     try:
                         repo = Repo(app_directory)
                         repo.git.checkout(last_release.last_git_hash)
