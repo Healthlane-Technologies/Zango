@@ -9,6 +9,7 @@ from django.conf import settings
 from django.db import connection
 
 from zango.apps.shared.tenancy.models import ThemesModel
+from zango.apps.shared.tenancy.schema import DEFAULT_AUTH_CONFIG
 from zango.apps.shared.tenancy.tasks import initialize_workspace
 
 
@@ -36,6 +37,7 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
         """
         tenant.name = "testapp"
         tenant.tenant_type = "app"
+        tenant.auth_config = DEFAULT_AUTH_CONFIG
         return tenant
 
     @classmethod

@@ -248,11 +248,11 @@ class AppUserModel(
     def should_set_password(cls, tenant, role_ids):
         for role in UserRoleModel.objects.filter(id__in=role_ids):
             if role.auth_config.get("enforce_sso", False):
-                return False
+                return False, "Password cannot be set since SSO is enforced"
         login_methods = get_auth_priority(policy="login_methods", tenant=tenant)
         if login_methods.get("password", {}).get("enabled", False):
-            return True
-        return False
+            return True, "Can set password"
+        return False, "Password cannot be set since password based login is not enabled"
 
     @classmethod
     def create_user(
@@ -301,17 +301,14 @@ class AppUserModel(
                         "app_user": app_user,
                     }
 
-            should_set_password = cls.should_set_password(tenant, role_ids)
+            should_set_password, err_msg = cls.should_set_password(tenant, role_ids)
 
             # Validate password if provided
             if password:
                 if not should_set_password:
-                    message = (
-                        "Password cannot be set for this user since SSO is enforced"
-                    )
                     return {
                         "success": success,
-                        "message": message,
+                        "message": err_msg,
                         "app_user": app_user,
                     }
                 if not cls.validate_password(password, tenant):
