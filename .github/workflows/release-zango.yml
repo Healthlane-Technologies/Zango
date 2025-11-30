@@ -66,33 +66,31 @@ jobs:
         context: .
         push: true
         platforms: linux/amd64,linux/arm64
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
-    
-    - name: Build and Push Zango Docker image with tag
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/zango:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/zango:${{ needs.check-publish.outputs.version }}
+
+    - name: Build and Push Zango Project Docker image
       uses: docker/build-push-action@v4
       with:
-        context: .
+        context: ./deploy
+        file: ./deploy/project.base.dockerfile
         push: true
         platforms: linux/amd64,linux/arm64
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango:${{ needs.check-publish.outputs.version }}
-    
-    # - name: Build and Push Zango Project Docker image
-    #   uses: docker/build-push-action@v4
-    #   with:
-    #     context: .
-    #     file: ./deploy/project.base.dockerfile
-    #     push: true
-    #     platforms: linux/amd64,linux/arm64
-    #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango-base-project:latest
-    
-    # - name: Build and Push Zango Project Docker image with tag
-    #   uses: docker/build-push-action@v4
-    #   with:
-    #     context: .
-    #     file: ./deploy/project.base.dockerfile
-    #     push: true
-    #     platforms: linux/amd64,linux/arm64
-    #     tags: ${{ secrets.DOCKERHUB_USERNAME }}/zango-base-project:${{ needs.check-publish.outputs.version }}
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/zango-base-project:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/zango-base-project:${{ needs.check-publish.outputs.version }}
+
+    - name: Build and Push Zango Nginx Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./deploy
+        file: ./deploy/config/nginx.dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/zango-nginx:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/zango-nginx:${{ needs.check-publish.outputs.version }}
 
   build-zango:
     name: Build zango
@@ -187,7 +185,7 @@ jobs:
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       with:
         tag_name: v${{ needs.check-publish.outputs.version }}
         release_name: v${{ needs.check-publish.outputs.version }}
