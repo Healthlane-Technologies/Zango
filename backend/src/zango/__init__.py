@@ -2,4 +2,4 @@ from zango.core import internal_requests
 
 
 __all__ = ["internal_requests"]
-__version__ = "0.6.2"
+__version__ = "0.7.1"
