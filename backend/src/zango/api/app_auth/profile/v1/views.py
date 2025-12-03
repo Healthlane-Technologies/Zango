@@ -31,11 +31,13 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
             tokens, many=True, context={"request": request, "tenant": request.tenant}
         )
         role = get_current_role()
+        can_set_password = self.can_set_password(request)
         response = {
             "message": "success",
             "profile_data": serializer.data,
-            "should_set_password": request.user.has_usable_password() is False,
-            "can_set_password": self.can_set_password(request),
+            "should_set_password": request.user.has_usable_password() is False
+            and can_set_password,
+            "can_set_password": can_set_password,
             "current_role": {
                 "id": role.id,
                 "name": role.name,
