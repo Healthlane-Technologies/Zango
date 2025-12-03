@@ -149,7 +149,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				reset_via_email: true,
 				reset_sms_webhook: '',
 				reset_email_webhook: '',
-				reset_sms_content: 'Your password reset code is: {code}. Valid for {expiry} minutes.',
+				reset_sms_content: 'Your password reset code is: {code}',
 				reset_email_subject: 'Password Reset Request',
 				reset_email_content: 'Click the following link to reset your password: {reset_url}',
 				reset_sms_config_key: '',
@@ -163,9 +163,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				enabled: false,
 				sms_webhook: '',
 				email_webhook: '',
-				sms_content: 'Your OTP code is: {otp}. Valid for 10 minutes.',
+				sms_content: 'Your OTP code is: {code}',
 				email_subject: 'Your OTP Verification Code',
-				email_content: 'Your OTP code is: {otp}. This code is valid for 10 minutes.',
+				email_content: 'Your OTP code is: {code}',
 				sms_config_key: '',
 				email_config_key: '',
 				sms_extra_data: '{}',
@@ -705,9 +705,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															SMS Content
 														</label>
 														<textarea
-															placeholder={setupData.login_methods.password.reset_method === 'link'
-																? "Reset your password: {{link}}"
-																: "Your password reset code is: {{code}}"}
+															placeholder="Your password reset code is: {code}"
 															value={setupData.login_methods.password.reset_sms_content}
 															onChange={(e) => {
 																e.stopPropagation();
@@ -721,7 +719,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
 														/>
 														<p className="text-[10px] text-[#6B7280]">
-															Use {setupData.login_methods.password.reset_method === 'link' ? '{{link}}' : '{{code}}'} and {'{{expiry}}'} as placeholders
+															Use {'{code}'} as placeholder (SMS cannot contain password reset links)
 														</p>
 														<label className="block text-[12px] font-medium text-[#111827] mt-[8px]">
 															SMS Extra Data (JSON)
@@ -873,7 +871,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													SMS Content Template
 												</label>
 												<textarea
-													placeholder="Your OTP code is: {{otp}}"
+													placeholder="Your OTP code is: {code}"
 													value={setupData.login_methods.otp.sms_content}
 													onChange={(e) => {
 														e.stopPropagation();
@@ -885,7 +883,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													rows="2"
 													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent resize-none"
 												/>
-												<p className="text-[11px] text-[#6B7280]">Use {'{{otp}}'} as placeholder for the OTP code</p>
+												<p className="text-[11px] text-[#6B7280]">Use {'{code}'} as placeholder for the OTP code</p>
 												<label className="block text-[13px] font-medium text-[#111827] mt-[12px]">
 													SMS Extra Data (JSON)
 												</label>
@@ -957,7 +955,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													Email Content Template
 												</label>
 												<textarea
-													placeholder="Your OTP code is: {{otp}}"
+													placeholder="Your OTP code is: {code}"
 													value={setupData.login_methods.otp.email_content}
 													onChange={(e) => {
 														e.stopPropagation();
@@ -969,7 +967,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													rows="3"
 													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent resize-none"
 												/>
-												<p className="text-[11px] text-[#6B7280]">Use {'{{otp}}'} as placeholder for the OTP code</p>
+												<p className="text-[11px] text-[#6B7280]">Use {'{code}'} as placeholder for the OTP code</p>
 											</div>
 										)}
 									</div>

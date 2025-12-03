@@ -227,9 +227,9 @@ class OTPService:
 
         if not self.config.code:
             otp = generate_otp(self.config.otp_type, self.user)
-            message = self.config.message.format(otp=otp)
+            message = self.config.message.format(code=otp)
         else:
-            message = self.config.message.format(otp=self.config.code)
+            message = self.config.message.format(code=self.config.code)
 
         if self.config.method == "email":
             email_config = policy.get("email", {})
@@ -248,9 +248,9 @@ class OTPService:
 
         if not self.config.code:
             otp = generate_otp(self.config.otp_type, self.user)
-            message = f"{self.config.message} {otp}"
+            message = self.config.message.format(code=otp)
         else:
-            message = f"{self.config.message} {self.config.code}"
+            message = self.config.message.format(code=self.config.code)
 
         if self.config.method == "email":
             email_config = password_reset_policy.get("email", {})

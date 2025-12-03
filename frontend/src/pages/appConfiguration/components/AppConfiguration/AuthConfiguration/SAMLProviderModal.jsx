@@ -4,7 +4,7 @@ import ReactDOM from "react-dom";
 const SAMLProviderModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     const defaultFormData = {
         label: "",
-        is_strict: true,
+        is_strict: false,
         is_debug_true: false,
         sp_entityId: "",
         sp_acsURL: "",
