@@ -34,14 +34,20 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
         except AppUserModel.DoesNotExist:
             return get_api_response(
                 success=False,
-                response_content={"message": "User not found with provided details"},
+                response_content={
+                    "error": [{"message": "User not found with provided details"}]
+                },
                 status=400,
             )
         if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
             return get_api_response(
                 success=False,
                 response_content={
-                    "message": "OTP/Link login cannot be used when SSO is enforced"
+                    "error": [
+                        {
+                            "message": "OTP/Link login cannot be used when SSO is enforced"
+                        }
+                    ]
                 },
                 status=400,
             )
