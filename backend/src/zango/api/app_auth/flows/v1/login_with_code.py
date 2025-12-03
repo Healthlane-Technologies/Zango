@@ -29,7 +29,14 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
             query = query | Q(email=email)
         if phone:
             query = query | Q(mobile=phone)
-        user = AppUserModel.objects.get(query)
+        try:
+            user = AppUserModel.objects.get(query)
+        except AppUserModel.DoesNotExist:
+            return get_api_response(
+                success=False,
+                response_content={"message": "User not found with provided details"},
+                status=400,
+            )
         if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
             return get_api_response(
                 success=False,
