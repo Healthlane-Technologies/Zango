@@ -289,6 +289,7 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 TENANT_LIMIT_SET_CALLS = True
 
 ACCOUNT_RATE_LIMITS = {"login_failed": False}
+ACCOUNT_LOGIN_BY_CODE_MAX_ATTEMPTS = float("inf")
 
 
 def setup_settings(settings, BASE_DIR):
