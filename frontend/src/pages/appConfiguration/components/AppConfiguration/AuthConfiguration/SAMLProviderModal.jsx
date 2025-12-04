@@ -91,6 +91,8 @@ const SAMLProviderModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                 await onSave(formData);
             }
             onClose();
+            // Refresh the page after successful save
+            window.location.reload();
         } catch (error) {
             setErrors({ general: error.message });
         } finally {

@@ -355,6 +355,7 @@ def setup_settings(settings, BASE_DIR):
         ),
         SECURE_PROXY_SSL_HEADER=(list, []),
         SENTRY_DSN=(str, ""),
+        AWS_S3_CUSTOM_DOMAIN=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -549,6 +550,8 @@ def setup_settings(settings, BASE_DIR):
     settings.HEADLESS_ONLY = True
 
     settings.ACCOUNT_RATE_LIMITS = {"login_failed": False}
+
+    settings.AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN")
 
     settings_result = {"env": env}
 
