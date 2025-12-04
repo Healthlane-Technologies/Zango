@@ -13,6 +13,7 @@ class S3StaticStorage(S3Boto3Storage):
     default_acl = "public-read"
     querystring_auth = False
     bucket_name = getattr(settings, "AWS_STATIC_STORAGE_BUCKET_NAME", "")
+    custom_domain = getattr(settings, "AWS_CLOUDFRONT_DOMAIN", None)
 
 
 class S3MediaStorage(S3Boto3Storage):
