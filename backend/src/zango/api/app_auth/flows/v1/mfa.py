@@ -3,6 +3,8 @@ import json
 from allauth.headless.base.views import APIView
 from allauth.headless.mfa.views import AuthenticateView
 
+from django.http import HttpResponse
+
 from zango.apps.appauth.tasks import send_otp
 from zango.core.api import get_api_response
 from zango.core.utils import get_auth_priority, mask_email, mask_phone_number
@@ -27,19 +29,27 @@ class GetMFACodeViewAPIV1(APIView):
             policy="two_factor_auth", request=request, user=login.user
         )
         if not policy.get("required"):
-            return get_api_response(
-                success=False,
-                response_content={"message": "MFA not required"},
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "MFA not required",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         else:
             allowed_methods = policy.get("allowed_methods", [])
             if len(allowed_methods) == 0:
-                return get_api_response(
-                    success=False,
-                    response_content={"message": "No MFA methods configured"},
-                    status=400,
-                )
+                resp = {
+                    "status": 400,
+                    "errors": [
+                        {
+                            "message": "No MFA methods configured",
+                        }
+                    ],
+                }
+                return HttpResponse(json.dumps(resp), status=400)
 
             if len(request.session.get("account_authentication_methods", [])) > 0:
                 latest_auth_method = request.session["account_authentication_methods"][
@@ -56,18 +66,26 @@ class GetMFACodeViewAPIV1(APIView):
                 if latest_auth_method.get("email"):
                     user = self.get_user(latest_auth_method.get("email"))
                     if user is None:
-                        return get_api_response(
-                            success=False,
-                            response_content={"message": "User not found"},
-                            status=400,
-                        )
+                        resp = {
+                            "status": 400,
+                            "errors": [
+                                {
+                                    "message": "User not found",
+                                }
+                            ],
+                        }
+                        return HttpResponse(json.dumps(resp), status=400)
                     preferred_method = "sms"
                     if preferred_method not in allowed_methods:
-                        return get_api_response(
-                            success=False,
-                            response_content={"message": "SMS MFA method not allowed"},
-                            status=400,
-                        )
+                        resp = {
+                            "status": 400,
+                            "errors": [
+                                {
+                                    "message": "SMS MFA method not allowed",
+                                }
+                            ],
+                        }
+                        return HttpResponse(json.dumps(resp), status=400)
                     send_otp.delay(
                         method=preferred_method,
                         otp_type="two_factor_auth",
@@ -80,20 +98,26 @@ class GetMFACodeViewAPIV1(APIView):
                 else:
                     user = self.get_user(latest_auth_method.get("phone"))
                     if user is None:
-                        return get_api_response(
-                            success=False,
-                            response_content={"message": "User not found"},
-                            status=400,
-                        )
+                        resp = {
+                            "status": 400,
+                            "errors": [
+                                {
+                                    "message": "User not found",
+                                }
+                            ],
+                        }
+                        return HttpResponse(json.dumps(resp), status=400)
                     preferred_method = "email"
                     if preferred_method not in allowed_methods:
-                        return get_api_response(
-                            success=False,
-                            response_content={
-                                "message": "Email MFA method not allowed"
-                            },
-                            status=400,
-                        )
+                        resp = {
+                            "status": 400,
+                            "errors": [
+                                {
+                                    "message": "Email MFA method not allowed",
+                                }
+                            ],
+                        }
+                        return HttpResponse(json.dumps(resp), status=400)
                     send_otp.delay(
                         method=preferred_method,
                         otp_type="two_factor_auth",
@@ -117,11 +141,15 @@ class GetMFACodeViewAPIV1(APIView):
             elif request.session.get("saml", False):
                 preferred_method = "sms"
                 if preferred_method not in allowed_methods:
-                    return get_api_response(
-                        success=False,
-                        response_content={"message": "SMS MFA method not allowed"},
-                        status=400,
-                    )
+                    resp = {
+                        "status": 400,
+                        "errors": [
+                            {
+                                "message": "SMS MFA method not allowed",
+                            }
+                        ],
+                    }
+                    return HttpResponse(json.dumps(resp), status=400)
                 user = self.get_user(login.user.email)
                 request_data = {
                     "path": request.path,
@@ -146,11 +174,15 @@ class GetMFACodeViewAPIV1(APIView):
                     status=200,
                 )
             else:
-                return get_api_response(
-                    success=False,
-                    response_content={"message": "User not authenticated"},
-                    status=400,
-                )
+                resp = {
+                    "status": 400,
+                    "errors": [
+                        {
+                            "message": "User not authenticated",
+                        }
+                    ],
+                }
+                return HttpResponse(json.dumps(resp), status=400)
 
 
 class MFAVerifyViewAPIV1(AuthenticateView):

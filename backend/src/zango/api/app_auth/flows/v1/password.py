@@ -12,6 +12,7 @@ from allauth.headless.base.views import APIView
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.http import HttpResponse
 
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
 from zango.apps.appauth.models import AppUserModel
@@ -28,11 +29,15 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
         if not request.tenant.auth_config.get("password_policy", {}).get(
             "allow_change", True
         ):
-            return get_api_response(
-                success=False,
-                response_content={"message": "Password change is disabled"},
-                status=400,
-            )
+            response = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "Password change is disabled",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(response), status=400)
         try:
             # Load data from request body
             data = json.loads(request.body) if request.body else {}
@@ -54,13 +59,25 @@ class PasswordChangeViewAPIV1(ChangePasswordView, PasswordValidationMixin):
                 message = "; ".join(str(msg) for msg in e.messages)
             else:
                 message = str(e)
-            return get_api_response(
-                success=False, response_content={"message": message}, status=400
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": message,
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         except Exception as e:
-            return get_api_response(
-                success=False, response_content={"message": str(e)}, status=400
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": str(e),
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         return super().handle(request, *args, **kwargs)
 
     def clean_password(self, request, email, password):
@@ -154,13 +171,16 @@ class SetPasswordViewAPIV1(APIView):
                 status=response.status_code,
             )
         except ValidationError as e:
-            return get_api_response(
-                success=False,
-                response_content={
-                    "message": str(e.message) if hasattr(e, "message") else str(e)
-                },
-                status=400,
-            )
+            message = str(e.message) if hasattr(e, "message") else str(e)
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": message,
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
 
 
 class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
@@ -171,13 +191,15 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
             .get("reset", {})
             .get("enabled", False)
         ):
-            return get_api_response(
-                success=False,
-                response_content={
-                    "message": "Password reset is not enabled, please contact support"
-                },
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "Password reset is not enabled, please contact support",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         query = Q()
         data = json.loads(request.body)
         email = data.get("email")
@@ -188,13 +210,15 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
             query = query | Q(mobile=phone)
         user = AppUserModel.objects.get(query)
         if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
-            return get_api_response(
-                success=False,
-                response_content={
-                    "message": "Password cannot be reset when SSO is enforced"
-                },
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "Password cannot be reset when SSO is enforced",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -237,13 +261,15 @@ class ResetPasswordViewAPIV1(ResetPasswordView, PasswordValidationMixin):
             .get("reset", {})
             .get("enabled", False)
         ):
-            return get_api_response(
-                success=False,
-                response_content={
-                    "message": "Password reset is not enabled, please contact support"
-                },
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "Password reset is not enabled, please contact support",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         resp = super().post(request, *args, **kwargs)
         resp_data = json.loads(resp.content.decode("utf-8"))
         if not resp_data.get("data"):

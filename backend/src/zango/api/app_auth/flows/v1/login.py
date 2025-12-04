@@ -2,6 +2,8 @@ import json
 
 from allauth.headless.account.views import LoginView
 
+from django.http import HttpResponse
+
 from zango.core.api import get_api_response
 
 
@@ -13,11 +15,15 @@ class AppLoginViewAPIV1(LoginView):
             .get("password", {})
             .get("enabled", False)
         ):
-            return get_api_response(
-                success=False,
-                response_content={"message": "Password login is not enabled"},
-                status=400,
-            )
+            response = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "Password login is not enabled",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(response), status=400)
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):

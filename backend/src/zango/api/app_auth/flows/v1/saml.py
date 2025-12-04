@@ -24,11 +24,25 @@ def metadata(request, *args, **kwargs):
     try:
         saml_config = SAMLModel.objects.get(id=saml_client_id)
         if not saml_config.is_active:
-            return get_api_response(False, "SAML is not active for this provider", 400)
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "SAML is not active for this provider",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
     except SAMLModel.DoesNotExist:
-        return get_api_response(
-            False, "No saml config found for the given client ID", 400
-        )
+        resp = {
+            "status": 400,
+            "errors": [
+                {
+                    "message": "No saml config found for the given client ID",
+                }
+            ],
+        }
+        return HttpResponse(json.dumps(resp), status=400)
     _settings = SAMLModel.objects.get(id=saml_client_id).get_settings_dict()
     saml_settings = OneLogin_Saml2_Settings(
         settings=_settings, custom_base_path=None, sp_validation_only=True
@@ -49,11 +63,25 @@ def acs(request, *args, **kwargs):
     try:
         saml_config = SAMLModel.objects.get(id=saml_client_id)
         if not saml_config.is_active:
-            return get_api_response(False, "SAML is not active for this provider", 400)
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "SAML is not active for this provider",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
     except SAMLModel.DoesNotExist:
-        return get_api_response(
-            False, "No saml config found for the given client ID", 400
-        )
+        resp = {
+            "status": 400,
+            "errors": [
+                {
+                    "message": "No saml config found for the given client ID",
+                }
+            ],
+        }
+        return HttpResponse(json.dumps(resp), status=400)
     s = SAMLLoginMixin()
     req = s.prepare_request_for_saml(request)
     auth = s.init_saml_auth(req, saml_client_id)
@@ -164,18 +192,46 @@ class SAMLLoginInitViewV1(APIView, SAMLLoginMixin):
     def post(self, request, *args, **kwargs):
         login_methods = get_auth_priority(policy="login_methods", request=request)
         if login_methods["sso"]["enabled"] is False:
-            return get_api_response(False, "SAML is not enabled", 400)
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "SAML is not enabled",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         saml_id = self.request.data.get("saml_id", None)
         if not saml_id:
-            return get_api_response(False, "SAML ID is required", 400)
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "SAML ID is required",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         try:
             saml_config = SAMLModel.objects.get(id=saml_id)
             if not saml_config.is_active:
-                return get_api_response(
-                    False, "SAML is not active for this provider", 400
-                )
+                resp = {
+                    "status": 400,
+                    "errors": [
+                        {
+                            "message": "SAML is not active for this provider",
+                        }
+                    ],
+                }
+                return HttpResponse(json.dumps(resp), status=400)
             return self.execute_sso_redirect(request, saml_config.id)
         except SAMLModel.DoesNotExist:
-            return get_api_response(
-                False, "No saml config found for the given client ID", 400
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "No saml config found for the given client ID",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)

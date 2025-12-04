@@ -3,6 +3,7 @@ import json
 from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCodeView
 
 from django.db.models import Q
+from django.http import HttpResponse
 
 from zango.apps.appauth.models import AppUserModel
 from zango.core.api import get_api_response
@@ -16,11 +17,15 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
             .get("otp", {})
             .get("enabled", False)
         ):
-            return get_api_response(
-                success=False,
-                response_content={"message": "OTP/Link login is not enabled"},
-                status=400,
-            )
+            response = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "OTP/Link login is not enabled",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(response), status=400)
         query = Q()
         data = json.loads(request.body)
         email = data.get("email")
@@ -32,25 +37,23 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
         try:
             user = AppUserModel.objects.get(query)
         except AppUserModel.DoesNotExist:
-            return get_api_response(
-                success=False,
-                response_content={
-                    "error": [{"message": "User not found with provided details"}]
-                },
-                status=400,
-            )
+            response = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "We couldn't find an account with these details.",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(response), status=400)
         if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
-            return get_api_response(
-                success=False,
-                response_content={
-                    "error": [
-                        {
-                            "message": "OTP/Link login cannot be used when SSO is enforced"
-                        }
-                    ]
-                },
-                status=400,
-            )
+            response = {
+                "status": 400,
+                "errors": [
+                    {"message": "OTP/Link login cannot be used when SSO is enforced"}
+                ],
+            }
+            return HttpResponse(json.dumps(response), status=400)
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
