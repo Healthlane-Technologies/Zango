@@ -205,10 +205,21 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
         email = data.get("email")
         phone = data.get("phone")
         if email:
-            query = query | Q(email=email)
+            query = query | Q(email__iexact=email)
         if phone:
             query = query | Q(mobile=phone)
-        user = AppUserModel.objects.get(query)
+        try:
+            user = AppUserModel.objects.get(query)
+        except AppUserModel.DoesNotExist:
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "User does not exist",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
             resp = {
                 "status": 400,
