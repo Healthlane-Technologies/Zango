@@ -4,6 +4,79 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+	:root {
+		--background: 0 0% 100%;
+		--foreground: 222.2 84% 4.9%;
+		
+		--card: 0 0% 100%;
+		--card-foreground: 222.2 84% 4.9%;
+		
+		--popover: 0 0% 100%;
+		--popover-foreground: 222.2 84% 4.9%;
+		
+		--primary: 243 75% 59%; /* Matches existing #5048ED */
+		--primary-foreground: 210 40% 98%;
+		
+		--secondary: 47 31% 79%; /* Matches existing #E1D6AE */
+		--secondary-foreground: 222.2 47.4% 11.2%;
+		
+		--muted: 210 40% 96.1%;
+		--muted-foreground: 215.4 16.3% 46.9%;
+		
+		--accent: 210 40% 96.1%;
+		--accent-foreground: 222.2 47.4% 11.2%;
+		
+		--destructive: 4 84% 60%; /* Based on existing danger-red */
+		--destructive-foreground: 210 40% 98%;
+		
+		--border: 214.3 31.8% 91.4%;
+		--input: 214.3 31.8% 91.4%;
+		--ring: 243 75% 59%; /* Matches primary */
+		
+		--radius: 0.5rem;
+	}
+	
+	.dark {
+		--background: 222.2 84% 4.9%;
+		--foreground: 210 40% 98%;
+		
+		--card: 222.2 84% 4.9%;
+		--card-foreground: 210 40% 98%;
+		
+		--popover: 222.2 84% 4.9%;
+		--popover-foreground: 210 40% 98%;
+		
+		--primary: 243 75% 59%;
+		--primary-foreground: 222.2 47.4% 11.2%;
+		
+		--secondary: 217.2 32.6% 17.5%;
+		--secondary-foreground: 210 40% 98%;
+		
+		--muted: 217.2 32.6% 17.5%;
+		--muted-foreground: 215 20.2% 65.1%;
+		
+		--accent: 217.2 32.6% 17.5%;
+		--accent-foreground: 210 40% 98%;
+		
+		--destructive: 0 62.8% 30.6%;
+		--destructive-foreground: 210 40% 98%;
+		
+		--border: 217.2 32.6% 17.5%;
+		--input: 217.2 32.6% 17.5%;
+		--ring: 243 75% 59%;
+	}
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
 body {
 	display: flex;
 	margin: 0;
@@ -27,5 +100,57 @@ body {
 		border-radius: theme('borderRadius.sm');
 		height: theme('spacing.1');
 		width: theme('spacing.7');
+	}
+	
+	/* shadcn/ui button styles */
+	.btn {
+		@apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
+	}
+	
+	.btn-default {
+		@apply bg-primary text-primary-foreground hover:bg-primary/90;
+	}
+	
+	.btn-secondary {
+		@apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+	}
+	
+	.btn-outline {
+		@apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+	}
+	
+	.btn-ghost {
+		@apply hover:bg-accent hover:text-accent-foreground;
+	}
+	
+	.btn-destructive {
+		@apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+	}
+	
+	/* shadcn/ui input styles */
+	.input {
+		@apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+	}
+	
+	/* shadcn/ui card styles */
+	.card {
+		@apply rounded-lg border bg-card text-card-foreground shadow-sm;
+	}
+	
+	/* shadcn/ui badge styles */
+	.badge {
+		@apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+	}
+	
+	.badge-default {
+		@apply border-transparent bg-primary text-primary-foreground;
+	}
+	
+	.badge-secondary {
+		@apply border-transparent bg-secondary text-secondary-foreground;
+	}
+	
+	.badge-outline {
+		@apply text-foreground;
 	}
 }

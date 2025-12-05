@@ -9,7 +9,7 @@ import {
 import AppLinkButton from './AppLinkButton';
 
 export default function EachApp({ data }) {
-	const { uuid, name, domain_url, description, logo, created_at, modified_at } =
+	const { uuid, name, domain_url, description, logo, created_at, modified_at, last_released_version } =
 		data;
 
 	return (
@@ -59,7 +59,12 @@ export default function EachApp({ data }) {
 				<div data-cy="domain_url" className="flex flex-col gap-[8px]">
 					<span className="font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#000000]">
 						Modified {getTimeFromNow(modified_at)}
-					</span> 
+					</span>
+					{last_released_version ? (
+						<span className="font-lato text-[13px] font-bold leading-[16px] tracking-[0.2px] text-[#8485F6]">
+							Latest Release {last_released_version}
+						</span>
+					) : null}
 					{domain_url ? <AppLinkButton domain_url={domain_url} /> : null}
 				</div>
 			</div>

@@ -15,6 +15,7 @@ import platformReducer from '../pages/platform/slice';
 import platformUserManagementReducer from '../pages/platformUserManagement/slice';
 import appReleasesReducer  from '../pages/appReleasesRoutes/slice/Index';
 import appSecretsReducer from '../pages/appSecretsRoutes/slice/Index';
+import appCodeReducer from '../pages/appCode/slice';
 
 export default configureStore({
 	reducer: {
@@ -34,5 +35,6 @@ export default configureStore({
 		appAccessLogs: appAccessLogsReducer,
 		appReleases : appReleasesReducer, 
 		appSecrets : appSecretsReducer,
+		appCode: appCodeReducer,
 	},
 });

@@ -70,6 +70,12 @@ TENANT_APPS = [
     # "cachalot",
     "axes",
     "django_recaptcha",
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
+    "allauth.mfa",
+    "allauth.usersessions",
+    "django.contrib.humanize",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
@@ -103,6 +109,8 @@ MIDDLEWARE = [
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
     "axes.middleware.AxesMiddleware",
     "zango.middleware.telemetry.OtelZangoContextMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "allauth.usersessions.middleware.UserSessionsMiddleware",
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -280,6 +288,9 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
 TENANT_LIMIT_SET_CALLS = True
 
+ACCOUNT_RATE_LIMITS = {"login_failed": False}
+ACCOUNT_LOGIN_BY_CODE_MAX_ATTEMPTS = float("inf")
+
 
 def setup_settings(settings, BASE_DIR):
     env = environ.Env(
@@ -344,6 +355,7 @@ def setup_settings(settings, BASE_DIR):
         ),
         SECURE_PROXY_SSL_HEADER=(list, []),
         SENTRY_DSN=(str, ""),
+        AWS_CLOUDFRONT_DOMAIN=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -534,6 +546,12 @@ def setup_settings(settings, BASE_DIR):
 
     if settings.HEALTH_CHECK_URL:
         CELERY_BEAT_SCHEDULE["health_check_task"]["enabled"] = True
+
+    settings.HEADLESS_ONLY = True
+
+    settings.ACCOUNT_RATE_LIMITS = {"login_failed": False}
+
+    settings.AWS_CLOUDFRONT_DOMAIN = env("AWS_CLOUDFRONT_DOMAIN")
 
     settings_result = {"env": env}
 

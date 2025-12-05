@@ -1,10 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import AppConfiguration from '../components/AppConfiguration';
+import UnifiedAppSettings from '../components/UnifiedAppSettings';
+import AuthConfigurationForm from '../components/AuthConfigurationForm';
 
 export const AppConfigurationRoutes = () => {
 	return (
 		<Routes>
-			<Route path="" element={<AppConfiguration />} />
+			<Route path="" element={<UnifiedAppSettings />} />
+			<Route path="auth/configure" element={<AuthConfigurationForm />} />
 			<Route path="*" element={<Navigate to="." />} />
 		</Routes>
 	);

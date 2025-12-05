@@ -17,11 +17,25 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
 		placement: 'right-start',
+		strategy: 'fixed',
 		modifiers: [
 			{
 				name: 'offset',
 				options: {
-					offset: [20, 0],
+					offset: [0, 8],
+				},
+			},
+			{
+				name: 'preventOverflow',
+				options: {
+					boundary: 'viewport',
+					padding: 8,
+				},
+			},
+			{
+				name: 'flip',
+				options: {
+					fallbackPlacements: ['right-end', 'left-start', 'left-end'],
 				},
 			},
 		],
@@ -48,12 +62,18 @@ export default function SideMenuDropdown({ label, Icon, sublinks }) {
 				</Menu.Button>
 				<Transition
 					as={Fragment}
-					// @ts-ignore
-					ref={(ref) => setPopperElement(ref)}
-					style={styles['popper']}
-					{...attributes['popper']}
+					enter="transition ease-out duration-100"
+					enterFrom="transform opacity-0 scale-95"
+					enterTo="transform opacity-100 scale-100"
+					leave="transition ease-in duration-75"
+					leaveFrom="transform opacity-100 scale-100"
+					leaveTo="transform opacity-0 scale-95"
 				>
-					<Menu.Items className="absolute right-0 top-[30px] w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
+					<Menu.Items 
+						ref={(ref) => setPopperElement(ref)}
+						style={styles['popper']}
+						{...attributes['popper']}
+						className="z-50 w-[186px] origin-top-right rounded-[4px] bg-[#E1D6AE] shadow-table-menu focus:outline-none">
 						<div className="flex flex-col gap-[6px] px-[20px] py-[12px]">
 							{sublinks?.map(({ url, label, dataCy }) => {
 								return (

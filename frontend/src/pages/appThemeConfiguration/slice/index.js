@@ -26,6 +26,9 @@ export const appThemeConfigurationSlice = createSlice({
 			state.isEditThemeModalOpen = true;
 			state.appThemeConfigurationFormData = action.payload;
 		},
+		setEditThemeData: (state, action) => {
+			state.appThemeConfigurationFormData = action.payload;
+		},
 		closeIsEditThemeModalOpen: (state, action) => {
 			state.isEditThemeModalOpen = false;
 			state.appThemeConfigurationFormData = null;
@@ -46,6 +49,7 @@ export const {
 	toggleIsEditThemeModalOpen,
 	openIsEditThemeModalOpen,
 	closeIsEditThemeModalOpen,
+	setEditThemeData,
 	setAppThemeConfigurationData,
 	toggleRerenderPage,
 } = appThemeConfigurationSlice.actions;

@@ -1,0 +1,155 @@
+import { useState } from 'react';
+
+export default function CodeSummary({ data }) {
+	if (!data) return null;
+
+	const stats = [
+		{
+			label: 'Total Modules',
+			value: data.total_modules || 0,
+			icon: (
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<rect x="3" y="3" width="7" height="7" rx="1" stroke="#346BD4" strokeWidth="2"/>
+					<rect x="14" y="3" width="7" height="7" rx="1" stroke="#346BD4" strokeWidth="2"/>
+					<rect x="3" y="14" width="7" height="7" rx="1" stroke="#346BD4" strokeWidth="2"/>
+					<rect x="14" y="14" width="7" height="7" rx="1" stroke="#346BD4" strokeWidth="2"/>
+				</svg>
+			),
+			bgColor: 'bg-blue-50',
+		},
+		{
+			label: 'Total Packages',
+			value: data.total_packages || 0,
+			icon: (
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M12 2L4 7V12L12 17L20 12V7L12 2Z" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<path d="M12 17V12" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<path d="M4 7L12 12L20 7" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+				</svg>
+			),
+			bgColor: 'bg-green-50',
+		},
+		{
+			label: 'Total Routes',
+			value: data.total_routes || 0,
+			icon: (
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M3 12H21" stroke="#EAB308" strokeWidth="2" strokeLinecap="round"/>
+					<path d="M12 3V21" stroke="#EAB308" strokeWidth="2" strokeLinecap="round"/>
+					<circle cx="12" cy="12" r="3" stroke="#EAB308" strokeWidth="2"/>
+				</svg>
+			),
+			bgColor: 'bg-yellow-50',
+		},
+		{
+			label: 'App Version',
+			value: data.version || 'N/A',
+			icon: (
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M12 2V12L20 8V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V8L12 2Z" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+				</svg>
+			),
+			bgColor: 'bg-purple-50',
+		},
+	];
+
+	return (
+		<div className="space-y-6">
+			{/* Stats Grid */}
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+				{stats.map((stat, index) => (
+					<div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-gray-600">{stat.label}</p>
+								<p className="text-2xl font-semibold text-gray-900 mt-1">{stat.value}</p>
+							</div>
+							<div className={`p-3 rounded-lg ${stat.bgColor}`}>
+								{stat.icon}
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
+
+			{/* Workspace Info */}
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+				<h3 className="text-lg font-semibold text-gray-900 mb-4">Workspace Information</h3>
+				<div className="space-y-3">
+					<div className="flex items-center justify-between">
+						<span className="text-sm text-gray-600">App Name</span>
+						<span className="text-sm font-medium text-gray-900">{data.app_name}</span>
+					</div>
+					<div className="flex items-center justify-between">
+						<span className="text-sm text-gray-600">Workspace Path</span>
+						<span className="text-sm font-mono text-gray-900">{data.workspace_path}</span>
+					</div>
+					<div className="flex items-center justify-between">
+						<span className="text-sm text-gray-600">Settings File</span>
+						<span className={`text-sm font-medium ${data.settings_file_exists ? 'text-green-600' : 'text-red-600'}`}>
+							{data.settings_file_exists ? 'Found' : 'Not Found'}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			{/* Modules Overview */}
+			<ModulesOverview modules={data.modules} />
+		</div>
+	);
+}
+
+function ModulesOverview({ modules }) {
+	const [showAll, setShowAll] = useState(false);
+	const displayedModules = showAll ? modules : modules?.slice(0, 3);
+
+	if (!modules || modules.length === 0) {
+		return (
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+				<h3 className="text-lg font-semibold text-gray-900 mb-4">Modules Overview</h3>
+				<p className="text-sm text-gray-500">No modules found</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+			<div className="flex items-center justify-between mb-4">
+				<h3 className="text-lg font-semibold text-gray-900">Modules Overview</h3>
+				{modules.length > 3 && (
+					<button
+						onClick={() => setShowAll(!showAll)}
+						className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+					>
+						{showAll ? 'Show Less' : `Show All (${modules.length})`}
+					</button>
+				)}
+			</div>
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				{displayedModules?.map((module, index) => (
+					<div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+						<div className="flex items-center gap-2">
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+								<path d="M3 2C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H13C13.5523 14 14 13.5523 14 13V3C14 2.44772 13.5523 2 13 2H3Z" stroke="#6B7280" strokeWidth="1.5" fill="none"/>
+								<path d="M2 5H14" stroke="#6B7280" strokeWidth="1.5"/>
+								<path d="M5 2V5" stroke="#6B7280" strokeWidth="1.5"/>
+								<circle cx="4" cy="3.5" r="0.5" fill="#6B7280"/>
+								<circle cx="6" cy="3.5" r="0.5" fill="#6B7280"/>
+								<circle cx="8" cy="3.5" r="0.5" fill="#6B7280"/>
+							</svg>
+							<span className="text-sm font-medium text-gray-900">{module.name}</span>
+						</div>
+						<div className="flex items-center gap-2 text-xs text-gray-500">
+							{module.has_urls && (
+								<span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">URLs</span>
+							)}
+							{module.has_policies && (
+								<span className="px-2 py-1 bg-green-100 text-green-700 rounded">Policies</span>
+							)}
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
