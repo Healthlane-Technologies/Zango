@@ -103,7 +103,7 @@ def acs(request, *args, **kwargs):
     if not errors and auth.is_authenticated():
         email = auth.get_nameid()
         try:
-            user = AppUserModel.objects.get(email=email)
+            user = AppUserModel.objects.get(email__iexact=email)
         except AppUserModel.DoesNotExist:
             resp = {
                 "message": "User does not exist",
