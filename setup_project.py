@@ -25,7 +25,6 @@ def load_necessary_files(project_dir, project_name, without_db):
     shutil.copy("deploy/prod.dockerfile", f"{project_dir}/prod.dockerfile")
     shutil.copy("deploy/init.sh", f"{project_dir}/init.sh")
     shutil.copy("deploy/start_flower.sh", f"{project_dir}/start_flower.sh")
-    shutil.copy("deploy/start_otel.sh", f"{project_dir}/start_otel.sh")
 
 
 def write_env_file(project_dir, args):
