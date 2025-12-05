@@ -288,6 +288,9 @@ AWS_STATIC_STORAGE_LOCATION = "static"  # Prefix added to all the files uploaded
 
 TENANT_LIMIT_SET_CALLS = True
 
+ACCOUNT_RATE_LIMITS = {"login_failed": False}
+ACCOUNT_LOGIN_BY_CODE_MAX_ATTEMPTS = float("inf")
+
 
 def setup_settings(settings, BASE_DIR):
     env = environ.Env(
@@ -352,6 +355,7 @@ def setup_settings(settings, BASE_DIR):
         ),
         SECURE_PROXY_SSL_HEADER=(list, []),
         SENTRY_DSN=(str, ""),
+        AWS_CLOUDFRONT_DOMAIN=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -544,6 +548,10 @@ def setup_settings(settings, BASE_DIR):
         CELERY_BEAT_SCHEDULE["health_check_task"]["enabled"] = True
 
     settings.HEADLESS_ONLY = True
+
+    settings.ACCOUNT_RATE_LIMITS = {"login_failed": False}
+
+    settings.AWS_CLOUDFRONT_DOMAIN = env("AWS_CLOUDFRONT_DOMAIN")
 
     settings_result = {"env": env}
 

@@ -47,8 +47,14 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 packages = [
                     obj for obj in packages if search.lower() in obj["name"].lower()
                 ]
+            # Count installed packages before pagination
+            installed_count = sum(
+                1 for pkg in packages if pkg.get("status") == "Installed"
+            )
+
             paginated_packages = self.paginate_queryset(packages, request, view=self)
             packages = self.get_paginated_response_data(paginated_packages)
+            packages["installed_count"] = installed_count
             success = True
             response = {"packages": packages}
             status = 200

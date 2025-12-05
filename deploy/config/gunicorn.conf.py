@@ -4,7 +4,7 @@ import os
 
 bind = "0.0.0.0:8000"
 
-workers = int(os.environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
+workers = int(os.environ.get("GUNICORN_WORKERS", multiprocessing.cpu_count() * 2 + 1))
 
 
 # https://opentelemetry-python.readthedocs.io/en/latest/examples/fork-process-model/README.html

@@ -42,41 +42,71 @@ export default function EachTheme({ data }) {
 				</div>
 				<div className="flex flex-col gap-[4px]">
 					<span className="font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
-						Color
+						Colors
 					</span>
-					<div className="flex gap-[8px]">
-						<span
-							className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5] bg-[${config?.color?.primary}]`}
-							style={{ backgroundColor: config?.color?.primary }}
-						></span>
-						<span
-							className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5] bg-[${config?.color?.secondary}]`}
-							style={{ backgroundColor: config?.color?.secondary }}
-						></span>
+					<div className="grid grid-cols-3 gap-[8px]">
+						<div className="flex flex-col items-center gap-[2px]">
+							<span
+								className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5]`}
+								style={{ backgroundColor: config?.colors?.primary }}
+								title="Primary"
+							></span>
+							<span className="font-lato text-[10px] text-[#6C747D]">Primary</span>
+						</div>
+						<div className="flex flex-col items-center gap-[2px]">
+							<span
+								className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5]`}
+								style={{ backgroundColor: config?.colors?.gray }}
+								title="Gray"
+							></span>
+							<span className="font-lato text-[10px] text-[#6C747D]">Gray</span>
+						</div>
+						<div className="flex flex-col items-center gap-[2px]">
+							<span
+								className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5]`}
+								style={{ backgroundColor: config?.colors?.success }}
+								title="Success"
+							></span>
+							<span className="font-lato text-[10px] text-[#6C747D]">Success</span>
+						</div>
+						<div className="flex flex-col items-center gap-[2px]">
+							<span
+								className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5]`}
+								style={{ backgroundColor: config?.colors?.warning }}
+								title="Warning"
+							></span>
+							<span className="font-lato text-[10px] text-[#6C747D]">Warning</span>
+						</div>
+						<div className="flex flex-col items-center gap-[2px]">
+							<span
+								className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5]`}
+								style={{ backgroundColor: config?.colors?.error }}
+								title="Error"
+							></span>
+							<span className="font-lato text-[10px] text-[#6C747D]">Error</span>
+						</div>
+						<div className="flex flex-col items-center gap-[2px]">
+							<span
+								className={`h-[24px] min-h-[24px] w-[24px] min-w-[24px] rounded-[4px] border border-[#DDE2E5]`}
+								style={{ backgroundColor: config?.colors?.info }}
+								title="Info"
+							></span>
+							<span className="font-lato text-[10px] text-[#6C747D]">Info</span>
+						</div>
 					</div>
 				</div>
-				<div className="flex flex-col gap-[8px]">
+				<div className="flex flex-col gap-[4px]">
 					<span className="font-lato text-[14px] leading-[20px] tracking-[0.2px] text-[#212429]">
-						CTA Example
+						Typography Details
 					</span>
-					<button
-						type="button"
-						className={`rounded-[4px] bg-[${config?.button?.background}] cursor-default p-[11px]`}
-						style={{
-							backgroundColor: config?.button?.background,
-							borderRadius: `${config?.button?.border_radius}px`,
-						}}
-					>
-						<span
-							className={`font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[${config?.button?.color}]`}
-							style={{
-								color: config?.button?.color,
-								fontFamily: config?.typography?.font_family,
-							}}
-						>
-							Button/CTA
+					<div className="flex flex-col gap-[2px]">
+						<span className="font-lato text-[12px] text-[#6C747D]">
+							Font Size: {config?.typography?.font_size_base || '14px'}
 						</span>
-					</button>
+						<span className="font-lato text-[12px] text-[#6C747D]">
+							Line Height: {config?.typography?.line_height || 1.5}
+						</span>
+					</div>
 				</div>
 			</div>
 			<div className="absolute right-[12px] top-[12px]">

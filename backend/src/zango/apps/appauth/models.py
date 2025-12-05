@@ -6,7 +6,6 @@ from datetime import date, timedelta
 from knox.models import AbstractAuthToken
 from knox.settings import knox_settings
 
-from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import connection, models
 from django.utils import timezone
@@ -116,10 +115,10 @@ class AppUserModel(
             pass
 
     @classmethod
-    def validate_password(cls, password):
+    def validate_password(cls, password, tenant):
         import re
 
-        policy = get_auth_priority(policy="password_policy")
+        policy = get_auth_priority(policy="password_policy", tenant=tenant)
 
         # Default policy if none provided
         default_policy = {
@@ -174,16 +173,86 @@ class AppUserModel(
 
     def check_password_validity(self, password):
         """
-        Does not allow a password from within PASSWORD_NO_REPEAT_DAYS
+        Validates that the new password doesn't match recent or historical passwords.
+
+        Checks against two policies:
+        1. PASSWORD_NO_REPEAT_DAYS: Password history within N days
+        2. PASSWORD_HISTORY_COUNT: Last N password hashes
+
+        Args:
+            password (str): The new password to validate
+
+        Returns:
+            dict: {"validation": bool, "message": str} if validation fails,
+                  None if validation passes
         """
-        minDate = date.today() - timedelta(settings.PASSWORD_NO_REPEAT_DAYS)
-        old_pwds = self.oldpasswords_set.all().filter(password_date__gte=minDate)
-        matchFound = False
-        for p in old_pwds:
-            if check_password(password, p.getPasswords()):
-                matchFound = True
-                break
-        return matchFound
+        if not password or not isinstance(password, str):
+            return {
+                "validation": False,
+                "message": "Password must be a non-empty string",
+            }
+
+        password_policy = get_auth_priority(policy="password_policy", user=self)
+        history_count = password_policy.get("password_history_count", 3)
+        no_repeat_days = password_policy.get("password_repeat_days", 180)
+
+        # Check password against time-based history (within no_repeat_days)
+        if no_repeat_days > 0:
+            min_date = date.today() - timedelta(days=no_repeat_days)
+            recent_passwords = self.oldpasswords_set.filter(password_date__gte=min_date)
+
+            if self._check_password_in_history(password, recent_passwords):
+                return {
+                    "validation": False,
+                    "message": f"New password must not be the same as any password used in the previous {no_repeat_days} days",
+                }
+
+        # Check password against count-based history (last N passwords)
+        if history_count > 0:
+            historical_passwords = self.oldpasswords_set.all().order_by(
+                "-password_date"
+            )[:history_count]
+
+            if self._check_password_in_history(password, historical_passwords):
+                return {
+                    "validation": False,
+                    "message": f"New password must not be the same as the last {history_count} passwords",
+                }
+
+        # Password is valid
+        return {"validation": True, "message": "Password is valid"}
+
+    def _check_password_in_history(self, password, password_records):
+        """
+        Helper method to check if password matches any in the given records.
+
+        Args:
+            password (str): Plain text password to check
+            password_records: QuerySet of OldPasswords records
+
+        Returns:
+            bool: True if password matches any record, False otherwise
+        """
+        for old_password_record in password_records:
+            try:
+                stored_hash = old_password_record.getPasswords()
+                if check_password(password, stored_hash):
+                    return True
+            except (json.JSONDecodeError, ValueError, TypeError):
+                # Log corrupted password record but continue checking others
+                # Consider marking this record as corrupted for maintenance
+                continue
+        return False
+
+    @classmethod
+    def should_set_password(cls, tenant, role_ids):
+        for role in UserRoleModel.objects.filter(id__in=role_ids):
+            if role.auth_config.get("enforce_sso", False):
+                return False, "Password cannot be set since SSO is enforced"
+        login_methods = get_auth_priority(policy="login_methods", tenant=tenant)
+        if login_methods.get("password", {}).get("enabled", False):
+            return True, "Can set password"
+        return False, "Password cannot be set since password based login is not enabled"
 
     @classmethod
     def create_user(
@@ -199,7 +268,6 @@ class AppUserModel(
         auth_config=None,
         tenant=None,
     ):
-        """ """
         success = False
         app_user = None
 
@@ -221,29 +289,48 @@ class AppUserModel(
                 message = f"User with the same {field_text} already exists"
                 return {"success": success, "message": message, "app_user": app_user}
 
-            # Validate password if provided
-            if password:
-                if not cls.validate_password(password):
-                    message = """
-                        Invalid password. Password must follow rules
-                        1. Must have at least 8 characters
-                        2. Must have at least one uppercase letter
-                        3. Must have at least one lowercase letter
-                        4. Must have at least one number
-                        5. Must have at least one special character
-                        """
-                    return {
-                        "success": success,
-                        "message": message,
-                        "app_user": app_user,
-                    }
-
             # Validate roles exist
             existing_roles = None
             if role_ids:
                 existing_roles = UserRoleModel.objects.filter(id__in=role_ids)
                 if len(role_ids) != existing_roles.count():
                     message = "One or more specified role IDs do not exist"
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
+
+            should_set_password, err_msg = cls.should_set_password(tenant, role_ids)
+
+            # Validate password if provided
+            if password:
+                if not should_set_password:
+                    return {
+                        "success": success,
+                        "message": err_msg,
+                        "app_user": app_user,
+                    }
+                if not cls.validate_password(password, tenant):
+                    password_policy = get_auth_priority(
+                        policy="password_policy", tenant=tenant
+                    )
+                    message = f"""
+                        Password should meet the following requirements: 
+                        Minimum Length: {password_policy.get("min_length", 8)}
+                        Require Numbers: {password_policy.get("require_numbers", True)}
+                        Require Symbols: {password_policy.get("require_symbols", True)}
+                        Require Uppercase: {password_policy.get("require_uppercase", True)}
+                        Require Lowercase: {password_policy.get("require_lowercase", True)}
+                    """
+                    return {
+                        "success": success,
+                        "message": message,
+                        "app_user": app_user,
+                    }
+            else:
+                if should_set_password:
+                    message = "Password cannot be empty"
                     return {
                         "success": success,
                         "message": message,
@@ -268,12 +355,17 @@ class AppUserModel(
             app_user.auth_config = final_auth_config
 
             # Validate auth_config with the saved user and roles
-            app_user.validate_auth_config(
-                final_auth_config,
-                app_user,
-                existing_roles or UserRoleModel.objects.none(),
-                tenant or connection.tenant,
-            )
+            try:
+                app_user.validate_auth_config(
+                    final_auth_config,
+                    app_user,
+                    existing_roles or UserRoleModel.objects.none(),
+                    tenant or connection.tenant,
+                )
+            except Exception as e:
+                app_user.delete()
+                message = str(e)
+                return {"success": False, "message": message, "app_user": None}
 
             # Set password
             if password:
@@ -328,6 +420,16 @@ class AppUserModel(
             is_active = data.get("is_active", self.is_active)
             auth_config = json.loads(data.get("auth_config", "{}"))
 
+            if password:
+                if any(
+                    role.auth_config.get("enforce_sso", False)
+                    for role in self.roles.all()
+                ):
+                    return {
+                        "success": False,
+                        "message": "User password cannot be updated when SSO is enforced",
+                    }
+
             # Validate email/mobile uniqueness
             existing_fields = []
             if (
@@ -352,8 +454,15 @@ class AppUserModel(
 
             # Validate password if provided
             if password:
-                if not self.validate_password(password):
-                    message = "Invalid password. Password must follow rules xyz"
+                if not self.validate_password(password, tenant):
+                    message = f"""
+                        Password should meet the following requirements: 
+                        Minimum Length: {get_auth_priority(policy="password_policy", tenant=tenant).get("min_length", 8)}
+                        Require Numbers: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_numbers", True)}
+                        Require Symbols: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_symbols", True)}
+                        Require Uppercase: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_uppercase", True)}
+                        Require Lowercase: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_lowercase", True)}
+                    """
                     return {"success": False, "message": message}
 
             # Validate roles exist if provided
@@ -431,6 +540,101 @@ class AppUserModel(
         if old_passwords.count() > 0:
             return False
         return True
+
+    def get_active_sessions(self):
+        """
+        Returns active sessions and tokens for the user with detailed information
+        including generated_at, location (IP), browser_agent, etc.
+
+        Returns:
+            dict: Contains 'sessions' and 'tokens' with their respective details
+        """
+        from zango.apps.accesslogs.models import AppAccessLog
+
+        result = {"sessions": [], "tokens": []}
+
+        # Get active sessions from AppAccessLog
+        active_sessions = AppAccessLog.objects.filter(
+            user=self, is_login_successful=True, session_expired_at__isnull=True
+        ).order_by("-attempt_time")
+
+        for session in active_sessions:
+            session_data = {
+                "id": session.id,
+                "generated_at": timezone.localtime(session.attempt_time).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                # 'generated_at_raw': session.attempt_time,
+                "location": session.ip_address,
+                "browser_agent": session.user_agent,
+                "http_accept": session.http_accept,
+                "path_info": session.path_info,
+                "role": session.role.name if session.role else None,
+                "role_id": session.role.id if session.role else None,
+                "username": session.username,
+                "type": "session",
+            }
+            result["sessions"].append(session_data)
+
+        # Get active auth tokens
+        active_tokens = self.auth_token_set.filter(
+            expiry__gt=timezone.now()
+        ).select_related("role")
+
+        for token in active_tokens:
+            token_data = {
+                "digest": token.digest[:8] + "...",  # Show partial digest for security
+                "created": timezone.localtime(token.created).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                "created_raw": token.created,
+                "expiry": timezone.localtime(token.expiry).strftime(
+                    "%Y-%m-%d %H:%M:%S %Z"
+                ),
+                "expiry_raw": token.expiry,
+                "role": token.role.name if token.role else None,
+                "role_id": token.role.id if token.role else None,
+                "extra_data": token.extra_data,
+                "type": "token",
+            }
+            result["tokens"].append(token_data)
+
+        return result
+
+    def get_last_password_change_date(self):
+        """
+        Returns the date when the password was last changed
+
+        Returns:
+            datetime: Last password change date or None if no password history exists
+        """
+        last_password = self.oldpasswords_set.all().order_by("-password_date").first()
+        if last_password:
+            return last_password.password_date
+        return None
+
+    def get_password_change_history(self, limit=10):
+        """
+        Returns the password change history for the user
+
+        Args:
+            limit (int): Maximum number of records to return
+
+        Returns:
+            list: List of password change dates
+        """
+        history = []
+        old_passwords = self.oldpasswords_set.all().order_by("-password_date")[:limit]
+
+        for old_pwd in old_passwords:
+            history.append(
+                {
+                    # 'changed_at': timezone.localtime(old_pwd.password_date).strftime('%Y-%m-%d %H:%M:%S %Z'),
+                    "days_ago": (date.today() - old_pwd.password_date).days
+                }
+            )
+
+        return history
 
 
 class OldPasswords(AbstractOldPasswords):
@@ -514,10 +718,11 @@ class OTPCode(FullAuditMixin):
         """
         Marks the OTP code as used.
         """
-        self.delete()
+        self.is_used = True
+        self.save()
 
 
-def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digits=6):
+def generate_otp(otp_type, user=None, email=None, phone=None, expiry=300, digits=6):
     try:
         if not user:
             if email:
@@ -529,7 +734,7 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digi
         max_value = 10**digits - 1
 
         code = str(secrets.randbelow(max_value - min_value + 1) + min_value)
-        expires_at = timezone.now() + timezone.timedelta(minutes=expires_at)
+        expires_at = timezone.now() + timezone.timedelta(seconds=expiry)
         OTPCode.objects.filter(user=user, otp_type=otp_type).delete()
         return OTPCode.objects.create(
             user=user,
@@ -543,6 +748,264 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digi
 
         traceback.print_exc()
         return ""
+
+
+singatureAlgoChoices = (
+    (
+        "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+        "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+    ),
+    (
+        "http://www.w3.org/2000/09/xmldsig#dsa-sha1",
+        "http://www.w3.org/2000/09/xmldsig#dsa-sha1",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+    ),
+)
+
+digestAlgorithm = (
+    (
+        "http://www.w3.org/2000/09/xmldsig#sha1",
+        "http://www.w3.org/2000/09/xmldsig#sha1",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmlenc#sha256",
+        "http://www.w3.org/2001/04/xmlenc#sha256",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmldsig-more#sha384",
+        "http://www.w3.org/2001/04/xmldsig-more#sha384",
+    ),
+    (
+        "http://www.w3.org/2001/04/xmlenc#sha512",
+        "http://www.w3.org/2001/04/xmlenc#sha512",
+    ),
+)
+
+
+class SAMLModel(models.Model):
+    """
+    Model to define SAML Configuration for a Company Client
+    """
+
+    label = models.CharField("Label for SAML Option", max_length=200)
+    is_strict = models.BooleanField(
+        verbose_name="If strict is True, then unsigned or unencrypted messages are  rejected if they are expected to be signed/encrypted",
+        default=True,
+    )
+    is_debug_true = models.BooleanField(
+        verbose_name="Enable debug mode (outputs errors)", default=False
+    )
+    sp_entityId = models.URLField(
+        verbose_name="Service Provider Entity ID E.g. tenant.zelthy.in/metadata/2/",
+    )
+    sp_acsURL = models.URLField(
+        verbose_name="Service Provider ACS URL E.g. http://tenant.zelthy.in/acs/2/",
+    )
+    sp_slo = models.URLField(
+        verbose_name="Service Provider Single Log Out. Not Implemented Yet", blank=True
+    )
+    sp_x509cert = models.TextField(
+        "Service Provider Public Key x509 Certificate", max_length=2000, blank=True
+    )
+    sp_privatekey = models.TextField(
+        "Service Provider Private Key", max_length=2000, blank=True
+    )
+    idp_entityId = models.URLField(
+        verbose_name="IDP Entity ID . Eg. https://app.onelogin.com/saml/metadata/ace2ffad-66f5-4d43-ae51-bddef851f997",
+    )
+    idp_sso = models.URLField(
+        verbose_name="IDP Single Sing On.  Eg. https://zelthy1.onelogin.com/trust/saml2/http-post/sso/881614",
+    )
+    idp_slo = models.URLField(
+        verbose_name="IDP Single Log On. E.g https://app.onelogin.com/trust/saml2/http-redirect/slo/<onelogin_connector_id>",
+        blank=True,
+    )
+    idp_x509cert = models.TextField(
+        "IdP Public Key x509 Certificate",
+        max_length=2000,
+    )
+    security_nameIdEncrypted = models.BooleanField(
+        verbose_name="security_nameIdEncrypted. Indicates that the nameID of the <samlp:logoutRequest> sent by this SP will be encrypted",
+        default=False,
+    )
+    security_authnRequestsSigned = models.BooleanField(
+        verbose_name="Indicates whether the <samlp:AuthnRequest> messages sent by this SP will be signed",
+        default=False,
+    )
+    security_logoutRequestSigned = models.BooleanField(
+        verbose_name="I Indicates whether the <samlp:logoutResponse> messages sent by this SP will be signed",
+        default=False,
+    )
+    security_logoutResponseSigned = models.BooleanField(
+        verbose_name="Indicates whether the <samlp:logoutResponse> messages sent by this SP will be signed",
+        default=False,
+    )
+    security_signMetadata = models.BooleanField(
+        verbose_name="Sign the Metadata", default=False
+    )
+    security_wantMessagesSigned = models.BooleanField(
+        verbose_name="Indicates a requirement for the <samlp:Response>, <samlp:LogoutRequest> and <samlp:LogoutResponse> elements received by this SP to be signed",
+        default=False,
+    )
+    security_wantAssertionsSigned = models.BooleanField(
+        verbose_name="Indicates a requirement for the <saml:Assertion> elements received by this SP to be signed",
+        default=False,
+    )
+    security_wantAssertionsEncrypted = models.BooleanField(
+        verbose_name="Indicates a requirement for the <saml:Assertion> elements received by this SP to be encrypted.",
+        default=False,
+    )
+    security_wantNameId = models.BooleanField(
+        verbose_name="Indicates a requirement for the NameID element on the SAMLResponse received by this SP to be present.",
+        default=True,
+    )
+    security_wantNameIdEncrypted = models.BooleanField(
+        verbose_name="Indicates a requirement for the NameID received by this SP to be encrypted",
+        default=False,
+    )
+    security_wantAttributeStatement = models.BooleanField(
+        verbose_name="Indicates a requirement for the AttributeStatement element",
+        default=True,
+    )
+    security_rejectUnsolicitedResponsesWithInResponseTo = models.BooleanField(
+        verbose_name=" Rejects SAML responses with a InResponseTo attribute when request_id not provided in the process_response method that later call the response is_valid method with that parameter.",
+        default=False,
+    )
+    security_requestedAuthnContext = models.BooleanField(
+        verbose_name="Authentication context", default=True
+    )
+    security_requestedAuthnContextComparison = models.CharField(
+        max_length=10,
+        verbose_name="Indicates whether the <samlp:AuthnRequest> messages sent by this SP will be signed",
+        default="exact",
+    )
+    security_signatureAlgorithm = models.CharField(
+        max_length=200,
+        choices=singatureAlgoChoices,
+        default="http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+    )
+    security_digestAlgorithm = models.CharField(
+        max_length=200,
+        choices=digestAlgorithm,
+        default="http://www.w3.org/2000/09/xmldsig#sha1",
+    )
+    name_id_format = models.CharField(
+        max_length=200,
+        default="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.label
+
+    def get_settings_dict(self):
+        result = self.get_basic_settings()
+        result["security"] = self.get_security_settings()
+        result["contactPerson"] = self.get_contact_settings()
+        result["organization"] = self.get_organization()
+        return result
+
+    def get_basic_settings(self):
+        result = {}
+        result["strict"] = self.is_strict
+        result["debug"] = self.is_debug_true
+        result["sp"] = {}
+        result["sp"]["entityId"] = self.sp_entityId
+        result["sp"]["assertionConsumerService"] = {
+            "url": self.sp_acsURL,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
+        }
+        result["sp"]["attributeConsumingService"] = {}
+        result["sp"]["singleLogoutService"] = {
+            "url": self.sp_slo,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+        }
+        result["sp"]["NameIDFormat"] = self.name_id_format
+        result["sp"]["x509cert"] = self.sp_x509cert
+        result["sp"]["privateKey"] = self.sp_privatekey
+        result["idp"] = {}
+        result["idp"]["entityId"] = self.idp_entityId
+        result["idp"]["singleSignOnService"] = {
+            "url": self.idp_sso,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+        }
+        result["idp"]["singleLogoutService"] = {
+            "url": self.idp_slo,
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+        }
+        result["idp"]["x509cert"] = self.idp_x509cert
+        return result
+
+    def get_security_settings(self):
+        result = {}
+        result["nameIdEncrypted"] = self.security_nameIdEncrypted
+        result["authnRequestsSigned"] = self.security_authnRequestsSigned
+        result["logoutRequestSigned"] = self.security_logoutRequestSigned
+        result["logoutResponseSigned"] = self.security_logoutResponseSigned
+        result["signMetadata"] = self.security_signMetadata
+        result["wantMessagesSigned"] = self.security_wantMessagesSigned
+        result["wantAssertionsSigned"] = self.security_wantAssertionsSigned
+        result["wantAssertionsEncrypted"] = self.security_wantAssertionsEncrypted
+        result["wantNameId"] = self.security_wantNameId
+        result["wantNameIdEncrypted"] = self.security_wantNameIdEncrypted
+        result["wantAttributeStatement"] = self.security_wantAttributeStatement
+        result["rejectUnsolicitedResponsesWithInResponseTo"] = (
+            self.security_rejectUnsolicitedResponsesWithInResponseTo
+        )
+        result["requestedAuthnContext"] = self.security_requestedAuthnContext
+        result["requestedAuthnContextComparison"] = (
+            self.security_requestedAuthnContextComparison
+        )
+        result["metadataValidUntil"] = None
+        result["metadataCacheDuration"] = None
+        result["signatureAlgorithm"] = self.security_signatureAlgorithm
+        result["digestAlgorithm"] = self.security_digestAlgorithm
+        return result
+
+    def get_contact_settings(self):
+        result = {}
+        result["technical"] = {
+            "givenName": "Technical Support",
+            "emailAddress": "support@zelthy.com",
+        }
+        result["support"] = {
+            "givenName": "Technical Support",
+            "emailAddress": "support@zelthy.com",
+        }
+        return result
+
+    def get_organization(self):
+        result = {
+            "en-US": {
+                "name": "Healthlane Technologies",
+                "displayname": "Zelthy",
+                "url": "https://www.zelthy.com",
+            }
+        }
+        return result
+
+
+class SAMLRequestId(models.Model):
+    """
+    Stores Request ID of
+    """
+
+    request_id = models.CharField("SAML Request ID", max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.request_id
 
 
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
