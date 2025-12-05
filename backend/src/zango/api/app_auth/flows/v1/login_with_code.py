@@ -31,7 +31,7 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
         email = data.get("email")
         phone = data.get("phone")
         if email:
-            query = query | Q(email=email)
+            query = query | Q(email__iexact=email)
         if phone:
             query = query | Q(mobile=phone)
         try:
