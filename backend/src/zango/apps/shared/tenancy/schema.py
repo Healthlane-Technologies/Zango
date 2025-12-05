@@ -77,6 +77,7 @@ class OTPLoginMethod(TypedDict, total=False):
     sms_template_id: str
     sms_config_key: str
     sms_extra_data: str
+    otp_expiry: int
 
 
 class LoginMethods(TypedDict):

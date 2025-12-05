@@ -722,7 +722,7 @@ class OTPCode(FullAuditMixin):
         self.save()
 
 
-def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digits=6):
+def generate_otp(otp_type, user=None, email=None, phone=None, expiry=300, digits=6):
     try:
         if not user:
             if email:
@@ -734,7 +734,7 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expires_at=5, digi
         max_value = 10**digits - 1
 
         code = str(secrets.randbelow(max_value - min_value + 1) + min_value)
-        expires_at = timezone.now() + timezone.timedelta(minutes=expires_at)
+        expires_at = timezone.now() + timezone.timedelta(seconds=expiry)
         OTPCode.objects.filter(user=user, otp_type=otp_type).delete()
         return OTPCode.objects.create(
             user=user,

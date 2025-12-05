@@ -5,7 +5,7 @@ from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCod
 from django.db.models import Q
 from django.http import HttpResponse
 
-from zango.apps.appauth.models import AppUserModel
+from zango.apps.appauth.models import AppUserModel, OTPCode
 from zango.core.api import get_api_response
 
 
@@ -69,6 +69,26 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
 
 
 class ConfirmLoginCodeViewAPIV1(ConfirmLoginCodeView):
+    def dispatch(self, request, *args, **kwargs):
+        data = json.loads(request.body)
+        code = data.get("code")
+        if code:
+            try:
+                otp_code = OTPCode.objects.get(code=code, otp_type="login_code")
+                if not otp_code.is_valid():
+                    response = {
+                        "status": 400,
+                        "errors": [
+                            {
+                                "message": "Login code has expired or has already been used",
+                            }
+                        ],
+                    }
+                    return HttpResponse(json.dumps(response), status=400)
+            except OTPCode.DoesNotExist:
+                return super().dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         return get_api_response(

@@ -11,36 +11,6 @@ import AuthSetupModal from './AuthSetupModal';
 import RoleOverrideModal from './RoleOverrideModal';
 import SAMLProviderModal from './SAMLProviderModal';
 
-// Default auth configuration that matches backend defaults
-const DEFAULT_AUTH_CONFIG = {
-	password_policy: {
-		min_length: 8,
-		require_uppercase: true,
-		require_lowercase: true,
-		require_numbers: true,
-		require_special_chars: false,
-		password_history_count: 3,
-		password_expiry_days: 90,
-		allow_change: true,
-	},
-	login_methods: {
-		password: {
-			enabled: true,
-			forgot_password_enabled: false,
-			allowed_usernames: ['email', 'phone'],
-		},
-		sso: { enabled: false },
-		oidc: { enabled: false },
-		otp: {
-			enabled: false,
-			allowed_methods: []
-		},
-	},
-	two_factor_auth: {
-		required: false,
-	},
-};
-
 const ModernAuthConfig = () => {
 	const [activeSection, setActiveSection] = useState('overview');
 	const [isEditMode, setIsEditMode] = useState(false);
@@ -190,6 +160,7 @@ const ModernAuthConfig = () => {
 									sms_content: authData.login_methods.otp.sms_content || '',
 									sms_config_key: authData.login_methods.otp.sms_config_key || '',
 									sms_extra_data: authData.login_methods.otp.sms_extra_data || '',
+									otp_expiry: authData.login_methods.otp.otp_expiry || 300,
 								},
 								sso: { enabled: authData.login_methods.sso.enabled },
 								oidc: { enabled: authData.login_methods.oidc.enabled },
@@ -296,6 +267,7 @@ const ModernAuthConfig = () => {
 					then: (schema) => schema.min(1, "At least one OTP method is required when OTP is enabled"),
 					otherwise: (schema) => schema
 				}),
+				otp_expiry: Yup.number().min(30, "Expiry must be at least 30 seconds").max(3600, "Expiry cannot exceed 3600 seconds"),
 			}),
 			sso: Yup.object({
 				enabled: Yup.boolean(),
@@ -643,6 +615,14 @@ const ModernAuthConfig = () => {
 															]}
 															value={values?.login_methods?.otp?.allowed_methods || []}
 															onChange={(value) => setFieldValue("login_methods.otp.allowed_methods", value)}
+														/>
+														<InputField
+															name="login_methods.otp.otp_expiry"
+															label="OTP Expiry (seconds)"
+															description="Time in seconds before OTP expires (30-3600 seconds)"
+															type="number"
+															value={values?.login_methods?.otp?.otp_expiry}
+															onChange={(e) => setFieldValue("login_methods.otp.otp_expiry", parseInt(e.target.value) || 300)}
 														/>
 													</div>
 												)}
@@ -1560,6 +1540,7 @@ const ModernAuthConfig = () => {
 									sms_content: authData.login_methods.otp.sms_content || '',
 									sms_config_key: authData.login_methods.otp.sms_config_key || '',
 									sms_extra_data: authData.login_methods.otp.sms_extra_data || '',
+									otp_expiry: authData.login_methods.otp.otp_expiry || 300,
 								},
 								sso: { enabled: authData.login_methods.sso.enabled },
 								oidc: { enabled: authData.login_methods.oidc.enabled },

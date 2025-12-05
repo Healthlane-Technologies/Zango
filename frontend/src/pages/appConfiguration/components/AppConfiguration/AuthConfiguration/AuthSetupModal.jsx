@@ -169,6 +169,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				sms_config_key: '',
 				email_config_key: '',
 				sms_extra_data: '{}',
+				otp_expiry: 300,
 				allowed_methods: ['email', 'sms'],
 			},
 		},
@@ -236,6 +237,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					sms_config_key: initialData.login_methods?.otp?.sms_config_key || '',
 					email_config_key: initialData.login_methods?.otp?.email_config_key || '',
 					sms_extra_data: initialData.login_methods?.otp?.sms_extra_data || '{}',
+					otp_expiry: initialData.login_methods?.otp?.otp_expiry || 300,
 				},
 			},
 			password_policy: initialData.password_policy || defaultSetupData.password_policy,
@@ -832,6 +834,28 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 											)}
 										</div>
 
+										{/* OTP Expiry */}
+										<div className="space-y-[8px]">
+											<label className="block text-[13px] font-medium text-[#111827]">
+												OTP Expiry Time (seconds)
+											</label>
+											<input
+												type="number"
+												min="30"
+												max="3600"
+												value={setupData.login_methods.otp.otp_expiry}
+												onChange={(e) => {
+													const value = e.target.value === '' ? '' : parseInt(e.target.value);
+													updateSetupData('login_methods', {
+														otp: { ...setupData.login_methods.otp, otp_expiry: value }
+													});
+												}}
+												onClick={(e) => e.stopPropagation()}
+												className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+											/>
+											<p className="text-[11px] text-[#6B7280]">Time before OTP expires (30-3600 seconds, default: 300 seconds / 5 minutes)</p>
+										</div>
+
 										{/* SMS Webhook - only show if phone is selected and SMS is in allowed methods */}
 										{setupData.login_methods.allowed_usernames.includes('phone') && setupData.login_methods.otp.allowed_methods.includes('sms') && (
 											<div className="space-y-[8px]">
@@ -1368,6 +1392,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 									</span>
 								))}
 							</div>
+							<div>OTP Expiry: <span className="font-medium text-[#10B981]">{setupData.login_methods.otp.otp_expiry} seconds</span></div>
 							{setupData.login_methods.otp.sms_webhook && (
 								<div>SMS Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.sms_webhook}</span></div>
 							)}
