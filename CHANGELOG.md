@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-12-05
+
+### Added
+* New authentication module with support for password login, OTP-based login, SSO, and 2FA [(#531)](https://github.com/Healthlane-Technologies/Zango/pull/531)
+* App Panel v2 [(#531)](https://github.com/Healthlane-Technologies/Zango/pull/531)
+
+
 ## [0.6.2] - 2025-11-05
 
 ### Added
