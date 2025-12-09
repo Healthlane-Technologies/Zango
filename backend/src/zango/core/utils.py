@@ -404,6 +404,7 @@ def get_auth_priority(
     """
 
     from zango.apps.appauth.models import UserRoleModel
+    from zango.apps.shared.tenancy.schema import DEFAULT_AUTH_CONFIG
 
     if request is None:
         request = get_current_request()
@@ -434,10 +435,10 @@ def get_auth_priority(
     if tenant is None:
         tenant = request.tenant if request else None
     try:
-        tenant_auth_config = getattr(tenant, "auth_config", {}) if tenant else {}
+        tenant_auth_config = (
+            getattr(tenant, "auth_config", {}) if tenant else DEFAULT_AUTH_CONFIG
+        )
     except Exception:
-        from zango.apps.shared.tenancy.schema import DEFAULT_AUTH_CONFIG
-
         tenant_auth_config = DEFAULT_AUTH_CONFIG
     user_role_auth_config = filter_user_role_auth_config(
         getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
