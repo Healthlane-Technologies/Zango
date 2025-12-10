@@ -152,13 +152,13 @@ class SAMLOpsApi(APIView, SAMLLoginMixin):
                 try:
                     email = signing.loads(token, key=request_id, max_age=300)
                     try:
-                        cUser = AppUserModel.objects.get(email__iexact=email)
-                        if cUser.is_active:
+                        user = AppUserModel.objects.get(email__iexact=email)
+                        if user.is_active:
                             result = {"is_valid": True, "message": "", "email": email}
                         else:
                             result = {
                                 "is_valid": False,
-                                "message": "The user account is not active. Please contact support.",
+                                "message": "Your account is currently inactive. Please reach out to support for assistance.",
                                 "email": None,
                             }
 
