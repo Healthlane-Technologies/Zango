@@ -41,7 +41,17 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
                 "status": 400,
                 "errors": [
                     {
-                        "message": "We couldn't find an account with these details.",
+                        "message": "No account found with this email address.",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(response), status=400)
+        if not user.is_active:
+            response = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "Your account is currently inactive. Please reach out to support for assistance.",
                     }
                 ],
             }
@@ -60,7 +70,7 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
         resp = super().post(request, *args, **kwargs)
         resp_data = json.loads(resp.content.decode("utf-8"))
         if resp.status_code == 401:
-            resp_data["data"]["message"] = "Login code sent successfully"
+            resp_data["data"]["message"] = "Verification code sent."
         return get_api_response(
             success=True,
             response_content=resp_data,
