@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-12-11
+
+### Fixed
+* Tenant not found in tests [(#534)](https://github.com/Healthlane-Technologies/Zango/pull/534)
+* use pypi version of allauth in requirements [(#536)](https://github.com/Healthlane-Technologies/Zango/pull/536)
+* add: meta_tile config in app configuration [(#535)](https://github.com/Healthlane-Technologies/Zango/pull/535)
+* fix: disable inactive user login for OTP based login [(#537)](https://github.com/Healthlane-Technologies/Zango/pull/537)
+
 ## [1.0.0] - 2025-12-05
 
 ### Added
