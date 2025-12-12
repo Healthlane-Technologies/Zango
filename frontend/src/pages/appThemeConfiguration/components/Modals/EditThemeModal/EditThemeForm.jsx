@@ -25,15 +25,19 @@ const EditThemeForm = ({ closeModal }) => {
 	const triggerApi = useApi();
 	console.log('appThemeConfigurationFormData', appThemeConfigurationFormData);
 
-	// Handle both 'colors' and 'color' (singular) from API response
-	const themeColors = appThemeConfigurationFormData?.config?.colors || appThemeConfigurationFormData?.config?.color || {};
+	const themeColors = appThemeConfigurationFormData?.config?.color || {};
+	const themeButton = appThemeConfigurationFormData?.config?.button || {};
 
 	let initialValues = {
 		name: appThemeConfigurationFormData?.name ?? '',
 		config: {
-			colors: {
+			color: {
 				primary:
 					themeColors?.primary ?? '#000000',
+				secondary:
+					themeColors?.secondary ?? '#E1D6AE',
+				background:
+					themeColors?.background ?? '#ffffff',
 				gray:
 					themeColors?.gray ?? '#717680',
 				success:
@@ -44,6 +48,12 @@ const EditThemeForm = ({ closeModal }) => {
 					themeColors?.error ?? '#AA4A44',
 				info:
 					themeColors?.info ?? '#1890ff',
+			},
+			button: {
+				color: themeButton?.color ?? '#ffffff',
+				background: themeButton?.background ?? '#5048ED',
+				border_color: themeButton?.border_color ?? '#C7CED3',
+				border_radius: themeButton?.border_radius ?? '10',
 			},
 			typography: {
 				font_family:
@@ -60,13 +70,21 @@ const EditThemeForm = ({ closeModal }) => {
 	let validationSchema = Yup.object({
 		name: Yup.string().required('Required'),
 		config: Yup.object({
-			colors: Yup.object({
+			color: Yup.object({
 				primary: Yup.string().required('Required'),
+				secondary: Yup.string(),
+				background: Yup.string(),
 				gray: Yup.string().required('Required'),
 				success: Yup.string().required('Required'),
 				warning: Yup.string().required('Required'),
 				error: Yup.string().required('Required'),
 				info: Yup.string().required('Required'),
+			}),
+			button: Yup.object({
+				color: Yup.string(),
+				background: Yup.string(),
+				border_color: Yup.string(),
+				border_radius: Yup.string(),
 			}),
 			typography: Yup.object({
 				font_family: Yup.string().required('Required'),
@@ -127,45 +145,95 @@ const EditThemeForm = ({ closeModal }) => {
 								</h4>
 								<ColorPicker
 									data={{
-										id: 'config.colors.primary',
+										id: 'config.color.primary',
 										label: 'Primary Color',
 										formik: formik,
 									}}
 								/>
 								<ColorPicker
 									data={{
-										id: 'config.colors.gray',
+										id: 'config.color.secondary',
+										label: 'Secondary Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.background',
+										label: 'Background Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.gray',
 										label: 'Gray Color',
 										formik: formik,
 									}}
 								/>
 								<ColorPicker
 									data={{
-										id: 'config.colors.success',
+										id: 'config.color.success',
 										label: 'Success Color',
 										formik: formik,
 									}}
 								/>
 								<ColorPicker
 									data={{
-										id: 'config.colors.warning',
+										id: 'config.color.warning',
 										label: 'Warning Color',
 										formik: formik,
 									}}
 								/>
 								<ColorPicker
 									data={{
-										id: 'config.colors.error',
+										id: 'config.color.error',
 										label: 'Error Color',
 										formik: formik,
 									}}
 								/>
 								<ColorPicker
 									data={{
-										id: 'config.colors.info',
+										id: 'config.color.info',
 										label: 'Info Color',
 										formik: formik,
 									}}
+								/>
+							</div>
+							<div className="flex flex-col gap-[16px]">
+								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+									Button
+								</h4>
+								<ColorPicker
+									data={{
+										id: 'config.button.color',
+										label: 'Button Text Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.button.background',
+										label: 'Button Background',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.button.border_color',
+										label: 'Button Border Color',
+										formik: formik,
+									}}
+								/>
+								<InputField
+									key="config.button.border_radius"
+									label="Button Border Radius"
+									name="config.button.border_radius"
+									id="config.button.border_radius"
+									placeholder="e.g., 10"
+									value={get(formik.values, 'config.button.border_radius', '')}
+									onChange={formik.handleChange}
+									formik={formik}
 								/>
 							</div>
 							<div className="flex flex-col gap-[16px]">
