@@ -7,7 +7,7 @@ PROJECT_DIR = os.path.dirname(__file__)
 REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
 README = os.path.join(PROJECT_DIR, "README.md")
 
-PLATFORM_VERSION = "1.0.1"
+PLATFORM_VERSION = "1.0.2"
 
 
 def get_requirements(env):
