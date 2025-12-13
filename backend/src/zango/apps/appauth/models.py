@@ -279,7 +279,7 @@ class AppUserModel(
         try:
             # Check for existing user with same email or mobile
             existing_fields = []
-            if email and cls.objects.filter(email=email).exists():
+            if email and cls.objects.filter(email__iexact=email).exists():
                 existing_fields.append("email")
             if mobile and cls.objects.filter(mobile=mobile).exists():
                 existing_fields.append("mobile")
@@ -434,7 +434,7 @@ class AppUserModel(
             existing_fields = []
             if (
                 email
-                and AppUserModel.objects.filter(email=email)
+                and AppUserModel.objects.filter(email__iexact=email)
                 .exclude(id=self.id)
                 .exists()
             ):
@@ -726,7 +726,7 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expiry=300, digits
     try:
         if not user:
             if email:
-                user = AppUserModel.objects.filter(email=email).first()
+                user = AppUserModel.objects.filter(email__iexact=email).first()
             elif phone:
                 user = AppUserModel.objects.filter(mobile=phone).first()
 
