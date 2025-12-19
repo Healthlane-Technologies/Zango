@@ -7,6 +7,7 @@ from knox.models import AbstractAuthToken
 from knox.settings import knox_settings
 
 from django.contrib.auth.hashers import check_password
+from django.core.exceptions import ValidationError
 from django.db import connection, models
 from django.utils import timezone
 
@@ -315,14 +316,17 @@ class AppUserModel(
                     password_policy = get_auth_priority(
                         policy="password_policy", tenant=tenant
                     )
-                    message = f"""
-                        Password should meet the following requirements: 
-                        Minimum Length: {password_policy.get("min_length", 8)}
-                        Require Numbers: {password_policy.get("require_numbers", True)}
-                        Require Symbols: {password_policy.get("require_symbols", True)}
-                        Require Uppercase: {password_policy.get("require_uppercase", True)}
-                        Require Lowercase: {password_policy.get("require_lowercase", True)}
-                    """
+                    requirements = [
+                        f"Minimum Length: {password_policy.get('min_length', 8)}",
+                        f"Require Uppercase: {password_policy.get('require_uppercase', True)}",
+                        f"Require Lowercase: {password_policy.get('require_lowercase', True)}",
+                        f"Require Numbers: {password_policy.get('require_numbers', True)}",
+                        f"Require Symbols: {password_policy.get('require_symbols', True)}",
+                    ]
+                    message = (
+                        "Password should meet the following requirements:\n• "
+                        + "\n• ".join(requirements)
+                    )
                     return {
                         "success": success,
                         "message": message,
@@ -364,7 +368,14 @@ class AppUserModel(
                 )
             except Exception as e:
                 app_user.delete()
-                message = str(e)
+                if hasattr(e, "messages"):
+                    message = (
+                        ", ".join(e.messages)
+                        if isinstance(e.messages, list)
+                        else str(e.messages)
+                    )
+                else:
+                    message = str(e)
                 return {"success": False, "message": message, "app_user": None}
 
             # Set password
@@ -421,6 +432,12 @@ class AppUserModel(
             auth_config = json.loads(data.get("auth_config", "{}"))
 
             if password:
+                login_config = get_auth_priority(policy="login_methods", tenant=tenant)
+                if not login_config.get("password", {}).get("enabled", False):
+                    return {
+                        "success": False,
+                        "message": "User password cannot be updated since password based login is not enabled",
+                    }
                 if any(
                     role.auth_config.get("enforce_sso", False)
                     for role in self.roles.all()
@@ -455,14 +472,20 @@ class AppUserModel(
             # Validate password if provided
             if password:
                 if not self.validate_password(password, tenant):
-                    message = f"""
-                        Password should meet the following requirements: 
-                        Minimum Length: {get_auth_priority(policy="password_policy", tenant=tenant).get("min_length", 8)}
-                        Require Numbers: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_numbers", True)}
-                        Require Symbols: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_symbols", True)}
-                        Require Uppercase: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_uppercase", True)}
-                        Require Lowercase: {get_auth_priority(policy="password_policy", tenant=tenant).get("require_lowercase", True)}
-                    """
+                    password_policy = get_auth_priority(
+                        policy="password_policy", tenant=tenant
+                    )
+                    requirements = [
+                        f"Minimum Length: {password_policy.get('min_length', 8)}",
+                        f"Require Uppercase: {password_policy.get('require_uppercase', True)}",
+                        f"Require Lowercase: {password_policy.get('require_lowercase', True)}",
+                        f"Require Numbers: {password_policy.get('require_numbers', True)}",
+                        f"Require Symbols: {password_policy.get('require_symbols', True)}",
+                    ]
+                    message = (
+                        "Password should meet the following requirements:\n• "
+                        + "\n• ".join(requirements)
+                    )
                     return {"success": False, "message": message}
 
             # Validate roles exist if provided
@@ -510,6 +533,17 @@ class AppUserModel(
             self.save()
             success = True
             message = "App User updated successfully."
+
+        except ValidationError as e:
+            if hasattr(e, "messages"):
+                message = (
+                    ", ".join(e.messages)
+                    if isinstance(e.messages, list)
+                    else str(e.messages)
+                )
+            else:
+                message = str(e)
+            return {"success": False, "message": message}
 
         except Exception as e:
             message = str(e)
