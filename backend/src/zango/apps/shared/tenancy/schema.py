@@ -20,9 +20,9 @@ class PasswordReset(TypedDict, total=False):
     email_content: str
     email_subject: str
     email_config_key: str
-    sms_template_id: str
     sms_config_key: str
     sms_extra_data: str
+    sms_content: str
 
 
 class PasswordPolicy(TypedDict):
@@ -74,10 +74,10 @@ class OTPLoginMethod(TypedDict, total=False):
     email_content: str
     email_subject: str
     email_config_key: str
-    sms_template_id: str
     sms_config_key: str
     sms_extra_data: str
     otp_expiry: int
+    sms_content: str
 
 
 class LoginMethods(TypedDict):
@@ -93,8 +93,15 @@ class TwoFactorAuth(TypedDict, total=False):
     grace_period_days: Optional[int]
     allowed_methods: Optional[List[Literal["totp", "sms", "email"]]]
     skip_for_sso: Optional[bool]
-    email_hook: str
     sms_hook: str
+    email_hook: str
+    email_content: str
+    email_subject: str
+    email_config_key: str
+    sms_config_key: str
+    sms_extra_data: str
+    sms_content: str
+    expiry: int
 
 
 class SessionPolicy(TypedDict):

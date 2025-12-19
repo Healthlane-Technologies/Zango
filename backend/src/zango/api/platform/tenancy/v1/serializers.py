@@ -142,7 +142,6 @@ class TenantSerializerModel(serializers.ModelSerializer):
             ):
                 with schema_context(instance.schema_name):
                     for role in UserRoleModel.objects.all():
-                        print(role.auth_config)
                         if role.auth_config.get("enforce_sso", False):
                             role.auth_config["enforce_sso"] = False
                             role.save()

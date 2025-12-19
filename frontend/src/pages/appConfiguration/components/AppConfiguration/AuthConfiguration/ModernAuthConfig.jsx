@@ -208,7 +208,14 @@ const ModernAuthConfig = () => {
 								grace_period_days: null,
 								skip_for_sso: false,
 								email_hook: authData.two_factor_auth.email_hook || '',
+								email_subject: authData.two_factor_auth.email_subject || '',
+								email_content: authData.two_factor_auth.email_content || 'Your 2FA code is {code}',
+								email_config_key: authData.two_factor_auth.email_config_key || '',
 								sms_hook: authData.two_factor_auth.sms_hook || '',
+								sms_content: authData.two_factor_auth.sms_content || 'Your 2FA code is {code}',
+								sms_config_key: authData.two_factor_auth.sms_config_key || '',
+								sms_extra_data: authData.two_factor_auth.sms_extra_data || '{}',
+								expiry: authData.two_factor_auth.expiry || 300,
 							},
 						};
 
@@ -1588,7 +1595,14 @@ const ModernAuthConfig = () => {
 								grace_period_days: null,
 								skip_for_sso: false,
 								email_hook: authData.two_factor_auth.email_hook || '',
+								email_subject: authData.two_factor_auth.email_subject || '',
+								email_content: authData.two_factor_auth.email_content || 'Your 2FA code is {code}',
+								email_config_key: authData.two_factor_auth.email_config_key || '',
 								sms_hook: authData.two_factor_auth.sms_hook || '',
+								sms_content: authData.two_factor_auth.sms_content || 'Your 2FA code is {code}',
+								sms_config_key: authData.two_factor_auth.sms_config_key || '',
+								sms_extra_data: authData.two_factor_auth.sms_extra_data || '{}',
+								expiry: authData.two_factor_auth.expiry || 300,
 							},
 						};
 
