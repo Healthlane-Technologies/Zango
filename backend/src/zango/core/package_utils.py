@@ -140,6 +140,8 @@ def get_all_packages(request, tenant=None):
                     package["config_url"] = None
             except Exception:
                 package["config_url"] = None
+        else:
+            package["config_url"] = None
     return resp_data
 
 
