@@ -64,7 +64,7 @@ class ProfileSerializer(serializers.ModelSerializer):
                     "Mobile number and email are required to enable two-factor authentication."
                 )
             else:
-                auth_config["two_factor_auth"]["can_enable"] = True
+                auth_config["two_factor_auth"]["can_enable"] = False
         else:
             can_disable_twofa = True
             try:
