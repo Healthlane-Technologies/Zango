@@ -20,6 +20,7 @@ import SideMenu from '../components/SideMenu';
 import { AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
 import appCodeRoutes from '../../appCode/routes';
 import { AppLogsRoutes } from '../../appLogs/routes';
+import appCodeExecRoutes from '../../appCodeExec/routes/Index';
 
 const PlatformAppRoutes = () => {
 	let { appId } = useParams();
@@ -100,6 +101,9 @@ const PlatformAppRoutes = () => {
 				/>
 				<Route path="/logs/*" element={<AppLogsRoutes />} />
 				<Route path="/Releases//*" element={<AppReleasesRoutes />} />
+				{appCodeExecRoutes.map((route, index) => (
+					<Route key={index} path={route.path.replace(`/app/:appId`, '')} element={route.element} />
+				))}
 				<Route
 					path="*"
 					element={<Navigate to="./dashboard/*" />}

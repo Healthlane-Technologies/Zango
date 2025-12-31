@@ -1,0 +1,74 @@
+.row-menu-container {
+	position: relative;
+	display: inline-block;
+}
+
+.menu-toggle-btn {
+	background: none;
+	border: none;
+	font-size: 18px;
+	cursor: pointer;
+	padding: 5px 8px;
+	border-radius: 4px;
+	color: #666;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.menu-toggle-btn:hover {
+	background-color: #f3f4f6;
+	color: #1a1a1a;
+}
+
+.menu-dropdown {
+	position: fixed;
+	background-color: white;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	z-index: 9999;
+	min-width: 150px;
+	overflow: hidden;
+}
+
+.menu-item {
+	display: block;
+	width: 100%;
+	padding: 10px 16px;
+	text-align: left;
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 13px;
+	color: #1a1a1a;
+	transition: background-color 0.2s ease;
+}
+
+.menu-item:hover {
+	background-color: #f3f4f6;
+}
+
+.menu-item:first-child {
+	border-radius: 6px 6px 0 0;
+}
+
+.menu-item-danger {
+	color: #dc2626;
+}
+
+.menu-item-danger:hover {
+	background-color: #fee2e2;
+}
+
+.menu-item:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.menu-divider {
+	height: 1px;
+	background-color: #e5e7eb;
+	margin: 5px 0;
+}

@@ -61,6 +61,7 @@ TENANT_APPS = [
     "zango.apps.accesslogs",
     "zango.apps.release",
     "zango.apps.secrets",
+    "zango.apps.codeexec",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",

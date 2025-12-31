@@ -1,0 +1,168 @@
+.history-modal-body {
+	max-height: 700px;
+	overflow-y: auto;
+}
+
+.history-info {
+	background-color: #f9fafb;
+	padding: 15px;
+	border-radius: 6px;
+	margin-bottom: 20px;
+}
+
+.history-info p {
+	margin: 0;
+	font-size: 14px;
+	color: #1a1a1a;
+}
+
+.history-info strong {
+	font-weight: 600;
+}
+
+.loading-text,
+.empty-text {
+	text-align: center;
+	color: #666;
+	padding: 40px 20px;
+	font-size: 14px;
+}
+
+.history-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.execution-item {
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.execution-header {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 16px;
+	background-color: #f9fafb;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.execution-header:hover {
+	background-color: #f3f4f6;
+}
+
+.execution-title {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1;
+	text-align: left;
+}
+
+.status-indicator {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 12px;
+	font-size: 12px;
+	font-weight: 600;
+	min-width: 90px;
+	text-align: center;
+}
+
+.status-completed {
+	background-color: #d1fae5;
+	color: #065f46;
+}
+
+.status-failed {
+	background-color: #fee2e2;
+	color: #991b1b;
+}
+
+.status-running {
+	background-color: #fef3c7;
+	color: #92400e;
+}
+
+.status-unknown {
+	background-color: #f3f4f6;
+	color: #4b5563;
+}
+
+.execution-index {
+	font-weight: 500;
+	color: #1a1a1a;
+}
+
+.execution-times {
+	display: flex;
+	gap: 20px;
+	flex: 0.5;
+	font-size: 12px;
+	color: #666;
+}
+
+.execution-time {
+	white-space: nowrap;
+}
+
+.expand-icon {
+	margin-left: 12px;
+	font-size: 12px;
+	color: #666;
+}
+
+.execution-details {
+	padding: 16px;
+	background-color: white;
+	border-top: 1px solid #e5e7eb;
+}
+
+.execution-section {
+	margin-bottom: 16px;
+}
+
+.execution-section:last-child {
+	margin-bottom: 0;
+}
+
+.execution-section h4 {
+	margin: 0 0 8px 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: #1a1a1a;
+}
+
+.logger-output,
+.error-output {
+	background-color: #1e1e1e;
+	color: #d4d4d4;
+	padding: 12px;
+	border-radius: 4px;
+	font-size: 12px;
+	line-height: 1.5;
+	overflow-x: auto;
+	max-height: 250px;
+	margin: 0;
+	font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.error-output {
+	color: #f87171;
+}
+
+.error-section .execution-section h4 {
+	color: #dc2626;
+}
+
+.no-details {
+	color: #666;
+	font-size: 13px;
+	margin: 0;
+}

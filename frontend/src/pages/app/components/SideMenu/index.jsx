@@ -91,6 +91,28 @@ export default function SideMenu() {
 				</span>
 			</NavLink>
 
+			<NavLink
+				data-cy="codeexec"
+				to={`codeexec/`}
+				className={({ isActive, isPending }) =>
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
+					}`
+				}
+			>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M9.125 13.875L7 16L4.875 13.875" stroke="#26210F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<path d="M9.125 10.125L7 8L4.875 10.125" stroke="#26210F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<path d="M20 5C20.5523 5 21 5.44772 21 6V18C21 18.5523 20.5523 19 20 19H4C3.44772 19 3 18.5523 3 18V6C3 5.44772 3.44772 5 4 5H20Z" stroke="#26210F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<path d="M14 8H18" stroke="#26210F" strokeWidth="2" strokeLinecap="round"/>
+					<path d="M14 12H18" stroke="#26210F" strokeWidth="2" strokeLinecap="round"/>
+					<path d="M14 16H18" stroke="#26210F" strokeWidth="2" strokeLinecap="round"/>
+				</svg>
+				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
+					Code Exec
+				</span>
+			</NavLink>
+
 		</div>
 	);
 }

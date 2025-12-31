@@ -1,0 +1,157 @@
+.codeexec-container {
+	padding: 20px;
+	background-color: #f5f5f5;
+	min-height: 100vh;
+}
+
+.codeexec-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 30px;
+	margin-top: 20px;
+}
+
+.codeexec-title-section h1 {
+	font-size: 28px;
+	font-weight: 600;
+	margin: 0;
+	color: #1a1a1a;
+}
+
+.codeexec-title-section p {
+	font-size: 14px;
+	color: #666;
+	margin: 5px 0 0 0;
+}
+
+.btn {
+	padding: 10px 20px;
+	border: none;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.btn-primary {
+	background-color: #2563eb;
+	color: white;
+}
+
+.btn-primary:hover {
+	background-color: #1d4ed8;
+	box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.btn-secondary {
+	background-color: #e5e7eb;
+	color: #1a1a1a;
+}
+
+.btn-secondary:hover {
+	background-color: #d1d5db;
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-icon {
+	font-size: 18px;
+}
+
+.codeexec-search-section {
+	margin-bottom: 20px;
+}
+
+.search-input {
+	width: 100%;
+	max-width: 400px;
+	padding: 10px 15px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 14px;
+	background-color: white;
+}
+
+.search-input:focus {
+	outline: none;
+	border-color: #2563eb;
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.loading-container {
+	text-align: center;
+	padding: 40px 20px;
+	background-color: white;
+	border-radius: 8px;
+}
+
+.loading-container p {
+	color: #666;
+	font-size: 14px;
+}
+
+.empty-state {
+	text-align: center;
+	padding: 60px 20px;
+	background-color: white;
+	border-radius: 8px;
+	border: 2px dashed #d1d5db;
+}
+
+.empty-state p {
+	color: #666;
+	font-size: 16px;
+	margin-bottom: 20px;
+}
+
+.pagination-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 0;
+	padding: 16px 20px;
+	background-color: white;
+	border-top: 1px solid #e5e7eb;
+	border-radius: 0 0 8px 8px;
+}
+
+.pagination-btn {
+	padding: 8px 16px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	color: #1a1a1a;
+	background-color: white;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+	background-color: #f3f4f6;
+	border-color: #9ca3af;
+}
+
+.pagination-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.pagination-info {
+	font-size: 14px;
+	color: #666;
+	font-weight: 500;
+}
+
+.page-num {
+	color: #1a1a1a;
+	font-weight: 600;
+}

@@ -1,0 +1,147 @@
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.modal-content {
+	background-color: white;
+	border-radius: 8px;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+	width: 90%;
+	max-width: 600px;
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: #1a1a1a;
+}
+
+.modal-close-btn {
+	background: none;
+	border: none;
+	font-size: 24px;
+	cursor: pointer;
+	color: #666;
+	padding: 0;
+	transition: color 0.2s ease;
+}
+
+.modal-close-btn:hover {
+	color: #1a1a1a;
+}
+
+.modal-body {
+	padding: 20px;
+}
+
+.form-container {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.form-group label {
+	font-size: 14px;
+	font-weight: 500;
+	color: #1a1a1a;
+}
+
+.required {
+	color: #dc2626;
+}
+
+.form-input,
+.form-textarea {
+	padding: 10px 12px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 14px;
+	font-family: inherit;
+	transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+	outline: none;
+	border-color: #2563eb;
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-input.error,
+.form-textarea.error {
+	border-color: #dc2626;
+}
+
+.form-input.error:focus,
+.form-textarea.error:focus {
+	box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-textarea {
+	resize: vertical;
+	min-height: 100px;
+}
+
+.code-input {
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	line-height: 1.5;
+	background-color: #f9fafb;
+}
+
+.field-error {
+	font-size: 12px;
+	color: #dc2626;
+}
+
+.form-error-message {
+	padding: 10px 12px;
+	background-color: #fee2e2;
+	border: 1px solid #fecaca;
+	border-radius: 6px;
+	color: #991b1b;
+	font-size: 14px;
+}
+
+.form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	padding-top: 20px;
+	border-top: 1px solid #e5e7eb;
+}
+
+.form-success-message {
+	padding: 10px 12px;
+	background-color: #d1fae5;
+	border: 1px solid #a7f3d0;
+	border-radius: 6px;
+	color: #065f46;
+	font-size: 14px;
+}
