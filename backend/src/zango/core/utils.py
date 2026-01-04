@@ -21,7 +21,24 @@ def get_current_request():
 
 
 def get_current_role():
+    from celery import current_task
+
+    from zango.apps.appauth.models import UserRoleModel
+
     from ..middleware.request import _request_local
+
+    if current_task:
+        role_id = current_task.request.kwargs.get("user_role_id")
+        if role_id:
+            user_role = UserRoleModel.objects.get(id=role_id)
+            return user_role
+
+        role_name = current_task.request.kwargs.get("user_role")
+        if role_name:
+            user_role = UserRoleModel.objects.get(name=role_name)
+            return user_role
+        else:
+            return UserRoleModel.objects.get(name="AnonymousUsers")
 
     # model = apps.get_model('appauth', 'UserRoleModel')
     return getattr(_request_local, "user_role", None)
