@@ -236,7 +236,15 @@ def create_django_request(method, url, **kwargs):
             data = json.loads(data)
             content_type = "application/json"
         except Exception:
-            pass
+            # Handle nested dictionaries in form data
+            if isinstance(data, dict):
+                processed_data = {}
+                for key, value in data.items():
+                    if isinstance(value, dict):
+                        processed_data[key] = json.dumps(value)
+                    else:
+                        processed_data[key] = value
+                data = processed_data
         req_args["data"] = data
     if headers:
         req_args["headers"] = headers
