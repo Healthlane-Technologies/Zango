@@ -5,7 +5,7 @@ from .base import (
     ZangoSessionPlatformAPIView,
     ZangoTokenPlatformAPIView,
 )
-from .mixin import TenantMixin
+from .mixin import CaptchaMixin, TenantMixin
 from .utils import get_api_response
 
 
@@ -17,4 +17,5 @@ __all__ = [
     "ZangoTokenPlatformAPIView",
     "get_api_response",
     "TenantMixin",
+    "CaptchaMixin",
 ]

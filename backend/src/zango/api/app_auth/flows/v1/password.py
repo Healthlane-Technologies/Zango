@@ -11,16 +11,16 @@ from allauth.headless.base.views import APIView
 
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.http import HttpResponse
 
 from zango.api.app_auth.profile.v1.utils import PasswordValidationMixin
-from zango.apps.appauth.models import AppUserModel
-from zango.core.api import (
-    get_api_response,
-)
+from zango.core.api import CaptchaMixin, get_api_response
 from zango.core.utils import get_auth_priority
 
+from .auth_utils import (
+    check_user_sso_enforcement,
+    get_user_by_email_or_phone_with_query,
+)
 from .forms import PasswordSetForm
 
 
@@ -183,7 +183,7 @@ class SetPasswordViewAPIV1(APIView):
             return HttpResponse(json.dumps(resp), status=400)
 
 
-class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
+class RequestResetPasswordViewAPIV1(RequestPasswordResetView, CaptchaMixin):
     def handle(self, request, *args, **kwargs):
         auth_config = request.tenant.auth_config
         if (
@@ -200,39 +200,42 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView):
                 ],
             }
             return HttpResponse(json.dumps(resp), status=400)
-        query = Q()
+
         data = json.loads(request.body)
         email = data.get("email")
         phone = data.get("phone")
-        if email:
-            query = query | Q(email__iexact=email)
-        if phone:
-            query = query | Q(mobile=phone)
-        try:
-            user = AppUserModel.objects.get(query)
-        except AppUserModel.DoesNotExist:
-            resp = {
-                "status": 400,
-                "errors": [
-                    {
-                        "message": "User does not exist",
-                    }
-                ],
-            }
-            return HttpResponse(json.dumps(resp), status=400)
-        if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
-            resp = {
-                "status": 400,
-                "errors": [
-                    {
-                        "message": "Password cannot be reset when SSO is enforced",
-                    }
-                ],
-            }
-            return HttpResponse(json.dumps(resp), status=400)
+
+        # Fetch user by email or phone
+        user = get_user_by_email_or_phone_with_query(email=email, phone=phone)
+
+        # If user exists, check if SSO is enforced (return error if it is)
+        if user:
+            sso_error = check_user_sso_enforcement(user, "Password reset")
+            if sso_error:
+                return sso_error
+
+        # If user doesn't exist or is inactive, return generic success response
+        if not user or not user.is_active:
+            """Return a generic success response when user doesn't exist or is inactive"""
+            password_reset_policy = auth_config.get("password_policy", {}).get(
+                "reset", {}
+            )
+
+            if password_reset_policy.get("by_code", False):
+                message = "Password reset code has been sent to your email/phone number"
+            else:
+                message = "Password reset link has been sent to your email address"
+
+            resp = {"status": 200, "success": True, "data": {"message": message}}
+            return HttpResponse(
+                json.dumps(resp), status=200, content_type="application/json"
+            )
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        # catpcha_check, msg = self.verify_captcha(request, *args, **kwargs)
+        # if not catpcha_check:
+        #     return get_api_response(success=False, response_content=msg, status=400)
         resp = super().post(request, *args, **kwargs)
         data = json.loads(resp.content.decode("utf-8"))
         password_policy = get_auth_priority(policy="password_policy", request=request)
