@@ -43,7 +43,7 @@ class SAMLLoginMixin(object):
         }
         return result
 
-    def execute_sso_redirect(self, request, saml_client_id):
+    def execute_sso_redirect(self, request, saml_client_id, next_url=None):
         req = self.prepare_request_for_saml(request)
         auth = self.init_saml_auth(req, saml_client_id)
         errors = []
@@ -52,6 +52,6 @@ class SAMLLoginMixin(object):
         success_slo = False
         attributes = False
         paint_logout = False
-        url = auth.login()
+        url = auth.login(return_to=next_url)
         SAMLRequestId.objects.create(request_id=auth.get_last_request_id())
         return get_api_response(True, url, 200)
