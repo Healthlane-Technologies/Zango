@@ -493,10 +493,10 @@ export default function FrameworkLogs() {
 													<span className="font-mono text-sm bg-gray-100 px-2 py-0.5 rounded">
 														{log.object_type}
 													</span>
-													{log.object_uuid && (
+													{log.object_id && (
 														<>
 															<span className="text-gray-600">•</span>
-															<span className="text-gray-700 font-mono text-xs">{log.object_uuid.length > 8 ? log.object_uuid.substring(0, 8) + '...' : log.object_uuid}</span>
+															<span className="text-gray-700 font-mono text-xs">ID: {log.object_id}</span>
 														</>
 													)}
 												</div>

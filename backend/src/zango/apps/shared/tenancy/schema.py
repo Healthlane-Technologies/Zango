@@ -44,19 +44,26 @@ class PasswordLoginMethod(TypedDict, total=False):
     allowed_usernames: List[Literal["email", "phone"]]
 
 
+class SAMLProvider(TypedDict):
+    id: int
+    label: str
+
+
 class SSOLoginMethod(TypedDict):
     enabled: bool
+    providers: List[SAMLProvider]
 
 
-class Provider(TypedDict):
+class OIDCProvider(TypedDict):
+    id: int
+    provider: str
     name: str
     enabled: bool
-    redirect_url: str
 
 
 class OIDCLoginMethod(TypedDict):
     enabled: bool
-    providers: List[Provider]
+    providers: List[OIDCProvider]
 
 
 class OTPLoginMethod(TypedDict, total=False):
@@ -70,6 +77,7 @@ class OTPLoginMethod(TypedDict, total=False):
     sms_template_id: str
     sms_config_key: str
     sms_extra_data: str
+    otp_expiry: int
 
 
 class LoginMethods(TypedDict):
@@ -87,11 +95,6 @@ class TwoFactorAuth(TypedDict, total=False):
     skip_for_sso: Optional[bool]
     email_hook: str
     sms_hook: str
-    email_content: str
-    email_subject: str
-    email_config_key: str
-    sms_config_key: str
-    sms_extra_data: str
 
 
 class SessionPolicy(TypedDict):
@@ -129,8 +132,9 @@ DEFAULT_AUTH_CONFIG: AuthConfigSchema = {
         },
         "sso": {
             "enabled": False,
+            "providers": [],
         },
-        "oidc": {"enabled": False},
+        "oidc": {"enabled": False, "providers": []},
         "otp": {"enabled": False},
     },
     "two_factor_auth": {

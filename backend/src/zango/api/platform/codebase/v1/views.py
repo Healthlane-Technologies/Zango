@@ -1,4 +1,3 @@
-import ast
 import json
 import os
 import traceback
@@ -37,7 +36,6 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             "has_urls": False,
             "has_policies": False,
             "models": [],
-            "routes": [],
         }
 
         try:
@@ -66,8 +64,6 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             # Check for urls.py and extract routes
             urls_file = module_path / "urls.py"
             module_info["has_urls"] = urls_file.exists()
-            if urls_file.exists():
-                module_info["routes"] = self.extract_routes_from_urls(urls_file)
 
             # Check for policies.json
             policies_file = module_path / "policies.json"
@@ -95,36 +91,27 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
                 )
                 return models
 
-            # Create graph generator to get dynamic models
-            graph_generator = DynamicModelGraphGenerator(tenant_name=tenant_name)
-
-            # Get all dynamic models for this workspace
-            try:
-                dynamic_models = graph_generator.get_workspace_dynamic_models()
-            except Exception as e:
-                print(
-                    f"Warning: Could not load dynamic models for tenant {tenant_name}: {e}"
-                )
-                return models
-
-            # Filter models that belong to the specific module we're analyzing
             # Get the module path from the models_file path
             workspace_path = f"{settings.BASE_DIR}/workspaces/{tenant_name}/"
             relative_path = str(models_file.parent.relative_to(workspace_path))
             module_path = relative_path.replace("/", ".")
 
+            # Create graph generator and get only models from this specific module
+            graph_generator = DynamicModelGraphGenerator(tenant_name=tenant_name)
+
+            # Get only dynamic models for this specific module (optimized)
+            try:
+                dynamic_models = graph_generator.get_module_dynamic_models(module_path)
+            except Exception as e:
+                print(
+                    f"Warning: Could not load dynamic models for module {module_path}: {e}"
+                )
+                return models
+
             # Convert dynamic models to the expected format
+            # Note: dynamic_models already contains only models from the specified module
             for model in dynamic_models:
                 try:
-                    # Check if this model belongs to the current module being analyzed
-                    # Models have a __module__ attribute that tells us which module they're from
-                    if hasattr(model, "__module__"):
-                        model_module = model.__module__
-                        # Extract the module path after the workspace part
-                        # Format is usually like "workspace_name.module_path.models"
-                        if f".{module_path}.models" not in model_module:
-                            continue
-
                     model_context = graph_generator.get_model_context(model)
 
                     # Convert to the format expected by the API
@@ -262,279 +249,6 @@ class AppCodebaseViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             return models
 
         return models
-
-    def extract_routes_from_urls(self, urls_file):
-        """Extract route patterns from a urls.py file"""
-        routes = []
-
-        try:
-            with open(urls_file, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            # Parse the Python file
-            tree = ast.parse(content)
-
-            # Look for urlpatterns list
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Assign):
-                    for target in node.targets:
-                        if isinstance(target, ast.Name) and target.id == "urlpatterns":
-                            # Extract routes from urlpatterns
-                            if isinstance(node.value, ast.List):
-                                for route_item in node.value.elts:
-                                    route_info = self.analyze_route_pattern(route_item)
-                                    if route_info:
-                                        routes.append(route_info)
-                            break
-
-        except Exception as e:
-            print(f"Error parsing urls file {urls_file}: {str(e)}")
-
-        return routes
-
-    def analyze_route_pattern(self, route_node):
-        """Analyze a route pattern node (path() or re_path() call)"""
-        route_info = {
-            "pattern": "",
-            "view": None,
-            "name": None,
-            "includes": None,
-            "type": "path",  # 'path' or 're_path' or 'include'
-        }
-
-        if isinstance(route_node, ast.Call):
-            # Get function name (path, re_path, include)
-            if isinstance(route_node.func, ast.Name):
-                route_info["type"] = route_node.func.id
-
-            # Extract pattern (first argument)
-            if route_node.args:
-                if isinstance(route_node.args[0], ast.Constant):
-                    route_info["pattern"] = route_node.args[0].value
-
-                # Extract view or include (second argument)
-                if len(route_node.args) > 1:
-                    if isinstance(route_node.args[1], ast.Name):
-                        route_info["view"] = route_node.args[1].id
-                    elif isinstance(route_node.args[1], ast.Attribute):
-                        # Handle views.function_name or ViewClass.as_view()
-                        if hasattr(route_node.args[1].value, "id"):
-                            route_info["view"] = (
-                                f"{route_node.args[1].value.id}.{route_node.args[1].attr}"
-                            )
-                        else:
-                            route_info["view"] = route_node.args[1].attr
-                    elif isinstance(route_node.args[1], ast.Call):
-                        # Handle ViewClass.as_view() or include() calls
-                        if isinstance(route_node.args[1].func, ast.Attribute):
-                            if route_node.args[1].func.attr == "as_view":
-                                # This is a class-based view
-                                if isinstance(route_node.args[1].func.value, ast.Name):
-                                    route_info["view"] = (
-                                        f"{route_node.args[1].func.value.id}.as_view()"
-                                    )
-                            else:
-                                route_info["view"] = (
-                                    f"{route_node.args[1].func.value.id}.{route_node.args[1].func.attr}"
-                                )
-                        elif (
-                            isinstance(route_node.args[1].func, ast.Name)
-                            and route_node.args[1].func.id == "include"
-                        ):
-                            if route_node.args[1].args:
-                                if isinstance(route_node.args[1].args[0], ast.Constant):
-                                    route_info["includes"] = (
-                                        route_node.args[1].args[0].value
-                                    )
-                                elif isinstance(
-                                    route_node.args[1].args[0], ast.Attribute
-                                ):
-                                    route_info["includes"] = (
-                                        f"{route_node.args[1].args[0].value.id}.{route_node.args[1].args[0].attr}"
-                                    )
-
-            # Extract name from keyword arguments
-            for keyword in route_node.keywords:
-                if keyword.arg == "name" and isinstance(keyword.value, ast.Constant):
-                    route_info["name"] = keyword.value.value
-
-            return route_info
-
-        return None
-
-    def analyze_field(self, field_name, field_node):
-        """Analyze a field node to extract field information"""
-        field_info = {"name": field_name, "type": "Unknown", "attributes": {}}
-
-        if isinstance(field_node, ast.Call):
-            # Get field type
-            if isinstance(field_node.func, ast.Attribute):
-                field_info["type"] = field_node.func.attr
-            elif isinstance(field_node.func, ast.Name):
-                field_info["type"] = field_node.func.id
-
-            # Extract field attributes
-            for keyword in field_node.keywords:
-                if keyword.arg == "max_length" and isinstance(
-                    keyword.value, ast.Constant
-                ):
-                    field_info["attributes"]["max_length"] = keyword.value.value
-                elif keyword.arg == "null" and isinstance(keyword.value, ast.Constant):
-                    field_info["attributes"]["null"] = keyword.value.value
-                elif keyword.arg == "blank" and isinstance(keyword.value, ast.Constant):
-                    field_info["attributes"]["blank"] = keyword.value.value
-                elif keyword.arg == "default":
-                    if isinstance(keyword.value, ast.Constant):
-                        field_info["attributes"]["default"] = keyword.value.value
-                elif keyword.arg == "related_name" and isinstance(
-                    keyword.value, ast.Constant
-                ):
-                    field_info["attributes"]["related_name"] = keyword.value.value
-                elif keyword.arg == "on_delete":
-                    if isinstance(keyword.value, ast.Attribute):
-                        field_info["attributes"]["on_delete"] = keyword.value.attr
-
-            # For relationship fields, try to get the related model
-            if field_info["type"] in [
-                "ForeignKey",
-                "OneToOneField",
-                "ManyToManyField",
-                "ZForeignKey",
-                "ZOneToOneField",
-                "ZManyToManyField",
-            ]:
-                if field_node.args:
-                    if isinstance(field_node.args[0], ast.Name):
-                        field_info["related_model"] = field_node.args[0].id
-                    elif isinstance(field_node.args[0], ast.Constant):
-                        field_info["related_model"] = field_node.args[0].value
-                    elif isinstance(field_node.args[0], ast.Attribute):
-                        field_info["related_model"] = (
-                            f"{field_node.args[0].value.id}.{field_node.args[0].attr}"
-                        )
-                    elif isinstance(field_node.args[0], ast.Call):
-                        # Handle cases like ForeignKey(to='ModelName') or model references
-                        for keyword in field_node.args[0].keywords:
-                            if keyword.arg == "to" and isinstance(
-                                keyword.value, ast.Constant
-                            ):
-                                field_info["related_model"] = keyword.value.value
-                                break
-
-                # If still no related model found, check 'to' keyword argument
-                if "related_model" not in field_info:
-                    for keyword in field_node.keywords:
-                        if keyword.arg == "to" and isinstance(
-                            keyword.value, ast.Constant
-                        ):
-                            field_info["related_model"] = keyword.value.value
-                            break
-
-            return field_info
-
-        return None
-
-    def build_route_tree(self, workspace_path, app_routes, package_routes, modules):
-        """Build a hierarchical route tree from all available route information"""
-        route_tree = {"root": "/", "children": []}
-
-        # Process app routes
-        for route in app_routes:
-            route_node = {
-                "pattern": route["re_path"],
-                "module": route["module"],
-                "type": "app_route",
-                "url_file": route["url"],
-                "children": [],
-            }
-
-            # Find and process nested routes from the module
-            for module in modules:
-                if module["name"] == route["module"] and module.get("routes"):
-                    for module_route in module["routes"]:
-                        # Combine parent and child patterns
-                        full_pattern = (
-                            route["re_path"].rstrip("/")
-                            + "/"
-                            + module_route["pattern"].lstrip("/")
-                        )
-                        child_node = {
-                            "pattern": module_route["pattern"],
-                            "full_pattern": full_pattern,
-                            "view": module_route.get("view"),
-                            "name": module_route.get("name"),
-                            "type": module_route.get("type", "path"),
-                            "includes": module_route.get("includes"),
-                            "children": [],
-                        }
-
-                        # If this route includes another URL file, try to process it
-                        if module_route.get("includes"):
-                            child_node["children"] = self.process_included_urls(
-                                workspace_path,
-                                route["module"],
-                                module_route["includes"],
-                            )
-
-                        route_node["children"].append(child_node)
-
-            route_tree["children"].append(route_node)
-
-        # Process package routes
-        for route in package_routes:
-            route_node = {
-                "pattern": route["re_path"],
-                "package": route["package"],
-                "type": "package_route",
-                "url_file": route["url"],
-                "children": [],
-            }
-            route_tree["children"].append(route_node)
-
-        return route_tree
-
-    def process_included_urls(self, workspace_path, module_name, includes):
-        """Process included URL patterns from an include() statement"""
-        children = []
-
-        try:
-            # Try to resolve the include path
-            if "." in includes:
-                # It's a module path like 'myapp.views.api_urls'
-                parts = includes.split(".")
-                include_path = (
-                    workspace_path / module_name / "/".join(parts[1:]) + ".py"
-                )
-            else:
-                # It's a simple filename
-                include_path = workspace_path / module_name / includes
-                if not include_path.suffix:
-                    include_path = include_path.with_suffix(".py")
-
-            if include_path.exists():
-                nested_routes = self.extract_routes_from_urls(include_path)
-                for route in nested_routes:
-                    child_node = {
-                        "pattern": route["pattern"],
-                        "view": route.get("view"),
-                        "name": route.get("name"),
-                        "type": route.get("type", "path"),
-                        "includes": route.get("includes"),
-                        "children": [],
-                    }
-
-                    # Recursively process includes
-                    if route.get("includes"):
-                        child_node["children"] = self.process_included_urls(
-                            workspace_path, module_name, route["includes"]
-                        )
-
-                    children.append(child_node)
-
-        except Exception as e:
-            print(f"Error processing included URLs {includes}: {str(e)}")
-
-        return children
 
     def get(self, request, *args, **kwargs):
         try:

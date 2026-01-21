@@ -123,11 +123,15 @@ class Workspace:
         for item in bfs:
             if item["type"] == "package":
                 for mod in item["modules"]:
-                    path = self.get_package_path(item["name"]) + mod["path"]
+                    # Convert dotted module path to filesystem path (e.g., "parent.child" -> "parent/child")
+                    # This allows packages to have nested module structures just like app modules
+                    fs_path = mod["path"].replace(".", "/")
+                    path = self.get_package_path(item["name"]) + fs_path
                     if path not in modules:
                         modules.append(path.replace(".", "/"))
             if item["type"] == "module":
-                # Convert nested module path (e.g., "test_mod.test_sub") to filesystem path
+                # Convert dotted module path to filesystem path (e.g., "parent.child" -> "parent/child")
+                # This allows app modules to have nested structures
                 fs_path = item["path"].replace(".", "/")
                 path = self.path + fs_path
                 if path not in modules:
@@ -363,36 +367,27 @@ class Workspace:
 
         package_routes = _settings["package_routes"]
         for route in package_routes:
-            pkg_module_paths = {
-                module["name"]: module["path"]
-                for module in self.get_package_modules(route["package"])
+            pkg_settings = self.get_package_settings(route["package"])
+            pkg_app_routes = pkg_settings["app_routes"]
+
+            # Create a mapping of module names to their actual paths for this package
+            pkg_module_path_map = {
+                module["name"]: module["path"] for module in pkg_settings["modules"]
             }
-            pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
+
             for pkg_route in pkg_app_routes:
-                try:
-                    routes.append(
-                        {
-                            "re_path": route["re_path"]
-                            + pkg_route["re_path"].strip("^"),
-                            "module": "packages."
-                            + route["package"]
-                            + "."
-                            + pkg_module_paths[pkg_route["module"]],
-                            "url": pkg_route["url"],
-                        }
-                    )
-                except KeyError:
-                    routes.append(
-                        {
-                            "re_path": route["re_path"]
-                            + pkg_route["re_path"].strip("^"),
-                            "module": "packages."
-                            + route["package"]
-                            + "."
-                            + pkg_route["module"],
-                            "url": pkg_route["url"],
-                        }
-                    )
+                # Map module name to actual path if it exists in the mapping
+                module_path = pkg_module_path_map.get(
+                    pkg_route["module"], pkg_route["module"]
+                )
+
+                routes.append(
+                    {
+                        "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
+                        "module": "packages." + route["package"] + "." + module_path,
+                        "url": pkg_route["url"],
+                    }
+                )
         return routes
 
     def get_all_view_urls(self) -> list[dict]:
@@ -422,10 +417,8 @@ class Workspace:
                         "pattern": str(pattern.pattern),
                         "full_url": full_url,
                         "name": getattr(pattern, "name", None),
-                        "callback": getattr(
-                            pattern.callback, "__name__", str(pattern.callback)
-                        )
-                        if pattern.callback
+                        "callback": pattern.view_class[3:]
+                        if getattr(pattern, "view_class", None)
                         else None,
                         "full_module_path": module_path,
                     }

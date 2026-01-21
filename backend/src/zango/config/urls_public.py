@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path, re_path
 
+from zango.api.platform.health.v1 import urls as health_v1_urls
 from zango.core.decorators import internal_access_only
 
 
@@ -12,6 +13,7 @@ urlpatterns = [
         r"^auth/",
         include("zango.apps.shared.platformauth.urls"),
     ),
+    path("api/v1/health/", include(health_v1_urls)),
     re_path(
         r"^api/", decorator_include(internal_access_only, "zango.api.platform.urls")
     ),

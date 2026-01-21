@@ -4,7 +4,11 @@ from django.db import connection
 
 
 @shared_task
-def zango_task_executor(tenant_name, task_name, *args, **kwargs):
+def zango_task_executor(tenant_name, task_name, *args, timezone_name=None, **kwargs):
+    import pytz
+
+    from django.utils import timezone
+
     from zango.apps.dynamic_models.workspace.base import Workspace
     from zango.apps.shared.tenancy.models import TenantModel
     from zango.apps.tasks.models import AppTask
@@ -14,6 +18,16 @@ def zango_task_executor(tenant_name, task_name, *args, **kwargs):
     connection.set_tenant(tenant)
     with connection.cursor() as c:
         task_obj = AppTask.objects.get(name=task_name)
+
+        # Determine timezone: user timezone (if provided) or tenant timezone
+        tzname = timezone_name or tenant.timezone
+
+        # Store timezone on connection for utility functions to access
+        connection.tzname = tzname
+
+        # Activate timezone
+        if tzname:
+            timezone.activate(pytz.timezone(tzname))
 
         ws = Workspace(connection.tenant, request=None, as_systemuser=True)
         ws.ready()

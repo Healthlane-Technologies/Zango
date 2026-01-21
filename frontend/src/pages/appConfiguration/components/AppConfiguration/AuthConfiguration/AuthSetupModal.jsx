@@ -1,10 +1,140 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
+// JSON Key-Value Pair Input Component (moved outside to prevent recreation on every render)
+const JsonKeyValueInput = React.memo(({ value, onChange, placeholder = "Add key-value pairs" }) => {
+		const [pairs, setPairs] = useState(() => {
+			try {
+				const parsed = typeof value === 'string' ? JSON.parse(value || '{}') : (value || {});
+				return Object.entries(parsed).map(([key, val]) => ({ key, value: val, id: Math.random().toString(36).substr(2, 9) }));
+			} catch {
+				return [];
+			}
+		});
+
+		const [isInternalUpdate, setIsInternalUpdate] = useState(false);
+
+		// Sync internal state when value prop changes from outside (not from our own updates)
+		useEffect(() => {
+			if (isInternalUpdate) {
+				setIsInternalUpdate(false);
+				return;
+			}
+
+			try {
+				const parsed = typeof value === 'string' ? JSON.parse(value || '{}') : (value || {});
+				const currentObj = {};
+				pairs.forEach(pair => {
+					if (pair.key.trim()) {
+						currentObj[pair.key.trim()] = pair.value;
+					}
+				});
+
+				// Only update if the content has actually changed
+				if (JSON.stringify(parsed) !== JSON.stringify(currentObj)) {
+					const newPairs = Object.entries(parsed).map(([key, val]) => {
+						// Try to preserve existing IDs if the key matches
+						const existingPair = pairs.find(p => p.key === key);
+						return { key, value: val, id: existingPair?.id || Math.random().toString(36).substr(2, 9) };
+					});
+					setPairs(newPairs);
+				}
+			} catch {
+				// Ignore parse errors
+			}
+		}, [value]);
+
+		const updateParent = (newPairs) => {
+			setIsInternalUpdate(true);
+			const obj = {};
+			newPairs.forEach(pair => {
+				if (pair.key.trim()) {
+					obj[pair.key.trim()] = pair.value;
+				}
+			});
+			onChange(JSON.stringify(obj));
+		};
+
+		const addPair = () => {
+			const newPairs = [...pairs, { key: '', value: '', id: Math.random().toString(36).substr(2, 9) }];
+			setPairs(newPairs);
+		};
+
+		const removePair = (index) => {
+			const newPairs = pairs.filter((_, i) => i !== index);
+			setPairs(newPairs);
+			updateParent(newPairs);
+		};
+
+		const updatePair = (index, field, val) => {
+			const newPairs = pairs.map((pair, i) =>
+				i === index ? { ...pair, [field]: val } : pair
+			);
+			setPairs(newPairs);
+			updateParent(newPairs);
+		};
+
+		return (
+			<div className="space-y-[8px]">
+				{pairs.map((pair, index) => (
+					<div key={pair.id} className="flex gap-[8px] items-center">
+						<input
+							type="text"
+							placeholder="Key"
+							value={pair.key}
+							onChange={(e) => {
+								e.stopPropagation();
+								updatePair(index, 'key', e.target.value);
+							}}
+							onClick={(e) => e.stopPropagation()}
+							className="flex-1 px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+						/>
+						<input
+							type="text"
+							placeholder="Value"
+							value={pair.value}
+							onChange={(e) => {
+								e.stopPropagation();
+								updatePair(index, 'value', e.target.value);
+							}}
+							onClick={(e) => e.stopPropagation()}
+							className="flex-1 px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+						/>
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								removePair(index);
+							}}
+							className="p-[6px] text-[#EF4444] hover:bg-[#FEF2F2] rounded-[6px] transition-colors"
+						>
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+								<path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+							</svg>
+						</button>
+					</div>
+				))}
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						addPair();
+					}}
+					className="flex items-center gap-[6px] px-[12px] py-[6px] text-[12px] text-[#5048ED] hover:bg-[#F8FAFC] rounded-[6px] transition-colors"
+				>
+					<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+						<path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					</svg>
+					Add {pairs.length > 0 ? 'Another' : ''} Key-Value Pair
+				</button>
+			</div>
+		);
+});
+
 const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles = [] }) => {
 	const [currentStep, setCurrentStep] = useState(1);
-	const totalSteps = 5;
+	const totalSteps = 4;
 
 	// Default setup data
 	const defaultSetupData = {
@@ -19,9 +149,12 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				reset_via_email: true,
 				reset_sms_webhook: '',
 				reset_email_webhook: '',
-				reset_sms_content: 'Your password reset code is: {{code}}. Valid for {{expiry}} minutes.',
+				reset_sms_content: 'Your password reset code is: {code}',
 				reset_email_subject: 'Password Reset Request',
-				reset_email_content: 'Click the following link to reset your password: {{link}}. This link is valid for {{expiry}} minutes.',
+				reset_email_content: 'Click the following link to reset your password: {reset_url}',
+				reset_sms_config_key: '',
+				reset_email_config_key: '',
+				reset_sms_extra_data: '{}',
 				allowed_usernames: ['email', 'phone'],
 			},
 			sso: { enabled: false },
@@ -30,9 +163,13 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				enabled: false,
 				sms_webhook: '',
 				email_webhook: '',
-				sms_content: 'Your OTP code is: {{otp}}. Valid for 10 minutes.',
+				sms_content: 'Your OTP code is: {code}',
 				email_subject: 'Your OTP Verification Code',
-				email_content: 'Your OTP code is: {{otp}}. This code is valid for 10 minutes.',
+				email_content: 'Your OTP code is: {code}',
+				sms_config_key: '',
+				email_config_key: '',
+				sms_extra_data: '{}',
+				otp_expiry: 300,
 				allowed_methods: ['email', 'sms'],
 			},
 		},
@@ -44,6 +181,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			require_special_chars: false,
 			password_history_count: 3,
 			password_expiry_days: 90,
+			password_repeat_days: 0,
 			allow_change: true,
 			reset: {
 				expiry: 7200, // 2 hours in seconds
@@ -54,59 +192,62 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		two_factor_auth: {
 			required: false,
 			allowedMethods: ['email'],
+			email_hook: '',
+			sms_hook: '',
 		},
 		session_policy: {
 			max_concurrent_sessions: 0,
 			force_logout_on_password_change: false,
-		},
-		oauth_providers: {
-			google: {
-				enabled: false,
-				client_id: '',
-				client_secret: '',
-				redirect_url: '',
-			},
 		},
 	};
 
 	// Use initial data if provided (editing mode), otherwise use defaults
 	const getInitialData = () => {
 		if (!initialData) return defaultSetupData;
-
+		
 		return {
 			login_methods: {
-				allowed_usernames: initialData.login_methods?.allowed_usernames || ['email'],
+				allowed_usernames: initialData.login_methods?.password?.allowed_usernames || initialData.login_methods?.allowed_usernames || ['email'],
 				password: {
 					enabled: initialData.login_methods?.password?.enabled || false,
 					forgot_password_enabled: initialData.login_methods?.password?.forgot_password_enabled || false,
-					reset_method: initialData.login_methods?.password?.reset_method || 'link',
-					reset_expiry_minutes: initialData.login_methods?.password?.reset_expiry_minutes || 15,
-					reset_via_sms: initialData.login_methods?.password?.reset_via_sms || false,
-					reset_via_email: initialData.login_methods?.password?.reset_via_email || true,
-					reset_sms_webhook: initialData.login_methods?.password?.reset_sms_webhook || '',
-					reset_email_webhook: initialData.login_methods?.password?.reset_email_webhook || '',
-					reset_sms_content: initialData.login_methods?.password?.reset_sms_content || defaultSetupData.login_methods.password.reset_sms_content,
-					reset_email_subject: initialData.login_methods?.password?.reset_email_subject || defaultSetupData.login_methods.password.reset_email_subject,
-					reset_email_content: initialData.login_methods?.password?.reset_email_content || defaultSetupData.login_methods.password.reset_email_content,
+					reset_method: initialData.password_policy?.reset?.by_code ? 'code' : 'link',
+					reset_expiry_minutes: initialData.password_policy?.reset?.expiry ? Math.floor(initialData.password_policy.reset.expiry / 60) : 15,
+					reset_via_sms: initialData.password_policy?.reset?.allowed_methods?.includes('sms') || false,
+					reset_via_email: initialData.password_policy?.reset?.allowed_methods?.includes('email') || true,
+					reset_sms_webhook: initialData.password_policy?.reset?.sms_hook || '',
+					reset_email_webhook: initialData.password_policy?.reset?.email_hook || '',
+					reset_sms_content: initialData.password_policy?.reset?.sms_template_id || defaultSetupData.login_methods.password.reset_sms_content,
+					reset_email_subject: initialData.password_policy?.reset?.email_subject || defaultSetupData.login_methods.password.reset_email_subject,
+					reset_email_content: initialData.password_policy?.reset?.email_content || defaultSetupData.login_methods.password.reset_email_content,
+					reset_sms_config_key: initialData.password_policy?.reset?.sms_config_key || '',
+					reset_email_config_key: initialData.password_policy?.reset?.email_config_key || '',
+					reset_sms_extra_data: initialData.password_policy?.reset?.sms_extra_data || '{}',
 				},
 				sso: { enabled: initialData.login_methods?.sso?.enabled || false },
 				oidc: { enabled: initialData.login_methods?.oidc?.enabled || false },
 				otp: {
 					enabled: initialData.login_methods?.otp?.enabled || false,
-					sms_webhook: initialData.login_methods?.otp?.sms_webhook || '',
-					email_webhook: initialData.login_methods?.otp?.email_webhook || '',
-					sms_content: initialData.login_methods?.otp?.sms_content || defaultSetupData.login_methods.otp.sms_content,
+					allowed_methods: initialData.login_methods?.otp?.allowed_methods || ['email', 'sms'],
+					sms_webhook: initialData.login_methods?.otp?.sms_hook || initialData.login_methods?.otp?.sms_webhook || '',
+					email_webhook: initialData.login_methods?.otp?.email_hook || initialData.login_methods?.otp?.email_webhook || '',
+					sms_content: initialData.login_methods?.otp?.sms_template_id || initialData.login_methods?.otp?.sms_content || defaultSetupData.login_methods.otp.sms_content,
 					email_subject: initialData.login_methods?.otp?.email_subject || defaultSetupData.login_methods.otp.email_subject,
 					email_content: initialData.login_methods?.otp?.email_content || defaultSetupData.login_methods.otp.email_content,
+					sms_config_key: initialData.login_methods?.otp?.sms_config_key || '',
+					email_config_key: initialData.login_methods?.otp?.email_config_key || '',
+					sms_extra_data: initialData.login_methods?.otp?.sms_extra_data || '{}',
+					otp_expiry: initialData.login_methods?.otp?.otp_expiry || 300,
 				},
 			},
 			password_policy: initialData.password_policy || defaultSetupData.password_policy,
 			two_factor_auth: {
 				required: initialData.two_factor_auth?.required || false,
-				allowedMethods: initialData.two_factor_auth?.allowedMethods || ['email'],
+				allowedMethods: initialData.two_factor_auth?.allowedMethods || initialData.two_factor_auth?.allowed_methods || ['email'],
+				email_hook: initialData.two_factor_auth?.email_hook || '',
+				sms_hook: initialData.two_factor_auth?.sms_hook || '',
 			},
 			session_policy: initialData.session_policy || defaultSetupData.session_policy,
-			oauth_providers: initialData.oauth_providers || defaultSetupData.oauth_providers,
 		};
 	};
 
@@ -145,7 +286,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	// Step components
 	const StepIndicator = () => (
 		<div className="flex items-center justify-center mb-[32px]">
-			{[1, 2, 3, 4, 5].map((step) => (
+			{[1, 2, 3, 4].map((step) => (
 				<div key={step} className="flex items-center">
 					<div
 						className={`w-[40px] h-[40px] rounded-full flex items-center justify-center font-medium text-[14px] transition-all ${
@@ -164,7 +305,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							step
 						)}
 					</div>
-					{step < 5 && (
+					{step < 4 && (
 						<div className={`w-[60px] h-[2px] mx-[8px] transition-all ${
 							step < currentStep ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'
 						}`} />
@@ -175,7 +316,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	);
 
 	// Step 1: Login Methods
-	const Step1LoginMethods = () => (
+	const Step1LoginMethods = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Choose Login Methods</h3>
@@ -319,6 +460,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 								type="checkbox"
 								checked={setupData.login_methods.password.enabled}
 								onChange={(e) => updateSetupData('login_methods', {
+									...setupData.login_methods,
 									password: { ...setupData.login_methods.password, enabled: e.target.checked }
 								})}
 								className="mt-[2px] w-[20px] h-[20px] rounded border-[#D1D5DB] text-[#5048ED] focus:ring-[#5048ED]"
@@ -334,6 +476,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 												type="checkbox"
 												checked={setupData.login_methods.password.forgot_password_enabled}
 												onChange={(e) => updateSetupData('login_methods', {
+													...setupData.login_methods,
 													password: { ...setupData.login_methods.password, forgot_password_enabled: e.target.checked }
 												})}
 												className="w-[16px] h-[16px] rounded border-[#D1D5DB] text-[#5048ED]"
@@ -356,8 +499,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 																value="link"
 																checked={setupData.login_methods.password.reset_method === 'link'}
 																onChange={(e) => updateSetupData('login_methods', {
-																	password: { 
-																		...setupData.login_methods.password, 
+																	...setupData.login_methods,
+																	password: {
+																		...setupData.login_methods.password,
 																		reset_method: e.target.value,
 																		// Auto-enable email and disable SMS for link method
 																		reset_via_email: true,
@@ -395,7 +539,8 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 														max="1440"
 														value={setupData.login_methods.password.reset_expiry_minutes}
 														onChange={(e) => updateSetupData('login_methods', {
-															password: { ...setupData.login_methods.password, reset_expiry_minutes: parseInt(e.target.value) || 15 }
+															...setupData.login_methods,
+															password: { ...setupData.login_methods.password, reset_expiry_minutes: e.target.value === '' ? '' : parseInt(e.target.value) }
 														})}
 														onClick={(e) => e.stopPropagation()}
 														className="w-[100px] px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
@@ -455,7 +600,25 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_webhook: e.target.value }
+																});
+															}}
+															onClick={(e) => e.stopPropagation()}
+															className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+														/>
+														<label className="block text-[12px] font-medium text-[#111827] mt-[8px]">
+															Email Config Key (Optional)
+														</label>
+														<input
+															type="text"
+															placeholder="e.g., sendgrid_config"
+															value={setupData.login_methods.password.reset_email_config_key}
+															onChange={(e) => {
+																e.stopPropagation();
+																updateSetupData('login_methods', {
+																	...setupData.login_methods,
+																	password: { ...setupData.login_methods.password, reset_email_config_key: e.target.value }
 																});
 															}}
 															onClick={(e) => e.stopPropagation()}
@@ -471,6 +634,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_subject: e.target.value }
 																});
 															}}
@@ -481,13 +645,14 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															Email Content
 														</label>
 														<textarea
-															placeholder={setupData.login_methods.password.reset_method === 'link' 
-																? "Click here to reset your password: {{link}}" 
-																: "Your password reset code is: {{code}}"}
+															placeholder={setupData.login_methods.password.reset_method === 'link'
+																? "Click here to reset your password: {reset_url}"
+																: "Your password reset code is: {code}"}
 															value={setupData.login_methods.password.reset_email_content}
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_email_content: e.target.value }
 																});
 															}}
@@ -496,7 +661,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
 														/>
 														<p className="text-[10px] text-[#6B7280]">
-															Use {setupData.login_methods.password.reset_method === 'link' ? '{{link}}' : '{{code}}'} and {'{{expiry}}'} as placeholders
+															Use {setupData.login_methods.password.reset_method === 'link' ? '{reset_url}' : '{code}'} as placeholder
 														</p>
 													</div>
 												)}
@@ -514,7 +679,25 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_sms_webhook: e.target.value }
+																});
+															}}
+															onClick={(e) => e.stopPropagation()}
+															className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+														/>
+														<label className="block text-[12px] font-medium text-[#111827] mt-[8px]">
+															SMS Config Key (Optional)
+														</label>
+														<input
+															type="text"
+															placeholder="e.g., twilio_config"
+															value={setupData.login_methods.password.reset_sms_config_key}
+															onChange={(e) => {
+																e.stopPropagation();
+																updateSetupData('login_methods', {
+																	...setupData.login_methods,
+																	password: { ...setupData.login_methods.password, reset_sms_config_key: e.target.value }
 																});
 															}}
 															onClick={(e) => e.stopPropagation()}
@@ -524,13 +707,12 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															SMS Content
 														</label>
 														<textarea
-															placeholder={setupData.login_methods.password.reset_method === 'link' 
-																? "Reset your password: {{link}}" 
-																: "Your password reset code is: {{code}}"}
+															placeholder="Your password reset code is: {code}"
 															value={setupData.login_methods.password.reset_sms_content}
 															onChange={(e) => {
 																e.stopPropagation();
 																updateSetupData('login_methods', {
+																	...setupData.login_methods,
 																	password: { ...setupData.login_methods.password, reset_sms_content: e.target.value }
 																});
 															}}
@@ -539,8 +721,21 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 															className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
 														/>
 														<p className="text-[10px] text-[#6B7280]">
-															Use {setupData.login_methods.password.reset_method === 'link' ? '{{link}}' : '{{code}}'} and {'{{expiry}}'} as placeholders
+															Use {'{code}'} as placeholder (SMS cannot contain password reset links)
 														</p>
+														<label className="block text-[12px] font-medium text-[#111827] mt-[8px]">
+															SMS Extra Data (JSON)
+														</label>
+														<JsonKeyValueInput
+															value={setupData.login_methods.password.reset_sms_extra_data}
+															onChange={(value) => {
+																updateSetupData('login_methods', {
+																	...setupData.login_methods,
+																	password: { ...setupData.login_methods.password, reset_sms_extra_data: value }
+																});
+															}}
+														/>
+														<p className="text-[10px] text-[#6B7280]">Additional data to send with SMS webhook</p>
 													</div>
 												)}
 											</div>
@@ -571,11 +766,98 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							<div className="flex-1">
 								<h4 className="text-[16px] font-medium text-[#111827] mb-[4px]">One-Time Password (OTP)</h4>
 								<p className="text-[13px] text-[#6B7280]">SMS or email based verification codes</p>
-								
+
 								{setupData.login_methods.otp.enabled && (
 									<div className="mt-[16px] space-y-[16px] pt-[16px] border-t border-[#E5E7EB]">
-										{/* SMS Webhook - only show if phone is selected */}
-										{setupData.login_methods.allowed_usernames.includes('phone') && (
+										{/* Allowed OTP Methods Selection */}
+										<div>
+											<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
+												Allowed OTP Delivery Methods
+											</label>
+											<p className="text-[11px] text-[#6B7280] mb-[12px]">Select how OTP codes should be delivered to users</p>
+											<div className="space-y-[8px]">
+												{setupData.login_methods.allowed_usernames.includes('email') && (
+													<label className="flex items-center gap-[8px]">
+														<input
+															type="checkbox"
+															checked={setupData.login_methods.otp.allowed_methods.includes('email')}
+															onChange={(e) => {
+																const currentMethods = [...setupData.login_methods.otp.allowed_methods];
+																if (e.target.checked) {
+																	if (!currentMethods.includes('email')) {
+																		currentMethods.push('email');
+																	}
+																} else {
+																	const index = currentMethods.indexOf('email');
+																	if (index > -1) {
+																		currentMethods.splice(index, 1);
+																	}
+																}
+																updateSetupData('login_methods', {
+																	otp: { ...setupData.login_methods.otp, allowed_methods: currentMethods }
+																});
+															}}
+															className="w-[16px] h-[16px] rounded border-[#D1D5DB] text-[#5048ED]"
+														/>
+														<span className="text-[13px] text-[#111827]">Email</span>
+													</label>
+												)}
+												{setupData.login_methods.allowed_usernames.includes('phone') && (
+													<label className="flex items-center gap-[8px]">
+														<input
+															type="checkbox"
+															checked={setupData.login_methods.otp.allowed_methods.includes('sms')}
+															onChange={(e) => {
+																const currentMethods = [...setupData.login_methods.otp.allowed_methods];
+																if (e.target.checked) {
+																	if (!currentMethods.includes('sms')) {
+																		currentMethods.push('sms');
+																	}
+																} else {
+																	const index = currentMethods.indexOf('sms');
+																	if (index > -1) {
+																		currentMethods.splice(index, 1);
+																	}
+																}
+																updateSetupData('login_methods', {
+																	otp: { ...setupData.login_methods.otp, allowed_methods: currentMethods }
+																});
+															}}
+															className="w-[16px] h-[16px] rounded border-[#D1D5DB] text-[#5048ED]"
+														/>
+														<span className="text-[13px] text-[#111827]">SMS</span>
+													</label>
+												)}
+											</div>
+											{setupData.login_methods.otp.allowed_methods.length === 0 && (
+												<p className="text-[11px] text-[#EF4444] mt-[8px]">At least one OTP delivery method must be selected</p>
+											)}
+										</div>
+
+										{/* OTP Expiry */}
+										<div className="space-y-[8px]">
+											<label className="block text-[13px] font-medium text-[#111827]">
+												OTP Expiry Time (seconds)
+											</label>
+											<input
+												type="number"
+												min="30"
+												max="3600"
+												value={setupData.login_methods.otp.otp_expiry}
+												onChange={(e) => {
+													const value = e.target.value === '' ? '' : parseInt(e.target.value);
+													updateSetupData('login_methods', {
+														otp: { ...setupData.login_methods.otp, otp_expiry: value }
+													});
+												}}
+												onClick={(e) => e.stopPropagation()}
+												className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+											/>
+											<p className="text-[11px] text-[#6B7280]">Time before OTP expires (30-3600 seconds, default: 300 seconds / 5 minutes)</p>
+										</div>
+
+										{/* SMS Webhook - only show if phone is selected and SMS is in allowed methods */}
+										{setupData.login_methods.allowed_usernames.includes('phone') && setupData.login_methods.otp.allowed_methods.includes('sms') && (
 											<div className="space-y-[8px]">
 												<label className="block text-[13px] font-medium text-[#111827]">
 													SMS Webhook URL
@@ -594,10 +876,26 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
 												/>
 												<label className="block text-[13px] font-medium text-[#111827] mt-[12px]">
+													SMS Config Key (Optional)
+												</label>
+												<input
+													type="text"
+													placeholder="e.g., twilio_config"
+													value={setupData.login_methods.otp.sms_config_key}
+													onChange={(e) => {
+														e.stopPropagation();
+														updateSetupData('login_methods', {
+															otp: { ...setupData.login_methods.otp, sms_config_key: e.target.value }
+														});
+													}}
+													onClick={(e) => e.stopPropagation()}
+													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+												/>
+												<label className="block text-[13px] font-medium text-[#111827] mt-[12px]">
 													SMS Content Template
 												</label>
 												<textarea
-													placeholder="Your OTP code is: {{otp}}"
+													placeholder="Your OTP code is: {code}"
 													value={setupData.login_methods.otp.sms_content}
 													onChange={(e) => {
 														e.stopPropagation();
@@ -609,12 +907,25 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													rows="2"
 													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent resize-none"
 												/>
-												<p className="text-[11px] text-[#6B7280]">Use {'{{otp}}'} as placeholder for the OTP code</p>
+												<p className="text-[11px] text-[#6B7280]">Use {'{code}'} as placeholder for the OTP code</p>
+												<label className="block text-[13px] font-medium text-[#111827] mt-[12px]">
+													SMS Extra Data (JSON)
+												</label>
+												<JsonKeyValueInput
+													value={setupData.login_methods.otp.sms_extra_data}
+													onChange={(value) => {
+														updateSetupData('login_methods', {
+															...setupData.login_methods,
+															otp: { ...setupData.login_methods.otp, sms_extra_data: value }
+														});
+													}}
+												/>
+												<p className="text-[11px] text-[#6B7280]">Additional data to send with SMS webhook</p>
 											</div>
 										)}
-										
-										{/* Email Webhook - only show if email is selected */}
-										{setupData.login_methods.allowed_usernames.includes('email') && (
+
+										{/* Email Webhook - only show if email is selected and email is in allowed methods */}
+										{setupData.login_methods.allowed_usernames.includes('email') && setupData.login_methods.otp.allowed_methods.includes('email') && (
 											<div className="space-y-[8px]">
 												<label className="block text-[13px] font-medium text-[#111827]">
 													Email Webhook URL
@@ -627,6 +938,22 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 														e.stopPropagation();
 														updateSetupData('login_methods', {
 															otp: { ...setupData.login_methods.otp, email_webhook: e.target.value }
+														});
+													}}
+													onClick={(e) => e.stopPropagation()}
+													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+												/>
+												<label className="block text-[13px] font-medium text-[#111827] mt-[12px]">
+													Email Config Key (Optional)
+												</label>
+												<input
+													type="text"
+													placeholder="e.g., sendgrid_config"
+													value={setupData.login_methods.otp.email_config_key}
+													onChange={(e) => {
+														e.stopPropagation();
+														updateSetupData('login_methods', {
+															otp: { ...setupData.login_methods.otp, email_config_key: e.target.value }
 														});
 													}}
 													onClick={(e) => e.stopPropagation()}
@@ -652,7 +979,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													Email Content Template
 												</label>
 												<textarea
-													placeholder="Your OTP code is: {{otp}}"
+													placeholder="Your OTP code is: {code}"
 													value={setupData.login_methods.otp.email_content}
 													onChange={(e) => {
 														e.stopPropagation();
@@ -664,7 +991,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 													rows="3"
 													className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent resize-none"
 												/>
-												<p className="text-[11px] text-[#6B7280]">Use {'{{otp}}'} as placeholder for the OTP code</p>
+												<p className="text-[11px] text-[#6B7280]">Use {'{code}'} as placeholder for the OTP code</p>
 											</div>
 										)}
 									</div>
@@ -674,7 +1001,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				</label>
 
-				{/* SSO
+				{/* SSO */}
 				<label className="block">
 					<div className={`relative border-2 rounded-[12px] p-[20px] cursor-pointer transition-all ${
 						setupData.login_methods.sso.enabled
@@ -696,7 +1023,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							</div>
 						</div>
 					</div>
-				</label> */}
+				</label>
 
 				{/* OIDC */}
 				<label className="block">
@@ -725,7 +1052,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				
 			</div>
 		</div>
-	);
+	), [setupData.login_methods]);
 
 	// Step 2: Password Policy (only if password is enabled)
 	const Step2PasswordPolicy = useMemo(() => (
@@ -809,6 +1136,48 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				</div>
 
+				{/* Password History Count */}
+				<div>
+					<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
+						Password History Count
+					</label>
+					<p className="text-[12px] text-[#6B7280] mb-[8px]">Number of previous passwords to remember (users cannot reuse these passwords)</p>
+					<input
+						type="number"
+						min="0"
+						max="24"
+						value={setupData.password_policy.password_history_count}
+						onChange={(e) => {
+							const value = e.target.value === '' ? '' : Number(e.target.value);
+							updateSetupData('password_policy', {
+								password_history_count: value
+							});
+						}}
+						className="w-[120px] px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+					/>
+				</div>
+
+				{/* Password Repeat Days */}
+				<div>
+					<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
+						Password Repeat Days
+					</label>
+					<p className="text-[12px] text-[#6B7280] mb-[8px]">Number of days old passwords cannot be reused</p>
+					<input
+						type="number"
+						min="0"
+						max="365"
+						value={setupData.password_policy.password_repeat_days}
+						onChange={(e) => {
+							const value = e.target.value === '' ? '' : Number(e.target.value);
+							updateSetupData('password_policy', {
+								password_repeat_days: value
+							});
+						}}
+						className="w-[120px] px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+					/>
+				</div>
+
 				{/* Expiry */}
 				<div>
 					<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
@@ -833,7 +1202,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	), [setupData.password_policy]);
 
 	// Step 3: Two-Factor Authentication
-	const Step3TwoFactor = () => (
+	const Step3TwoFactor = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Two-Factor Authentication</h3>
@@ -893,111 +1262,10 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				)}
 			</div>
 		</div>
-	);
+	), [setupData.two_factor_auth]);
 
-	// Step 4: OAuth Providers
-	const Step4OAuthProviders = useMemo(() => (
-		<div className="space-y-[24px]">
-			<div>
-				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">OAuth Providers</h3>
-				<p className="text-[14px] text-[#6B7280]">Configure social login providers for your application</p>
-			</div>
-
-			<div className="space-y-[20px]">
-				{/* Google OAuth */}
-				<div className={`border-2 rounded-[12px] p-[20px] transition-all ${
-					setupData.oauth_providers?.google?.enabled
-						? 'border-[#5048ED] bg-[#F8FAFC]'
-						: 'border-[#E5E7EB]'
-				}`}>
-					<div className="flex items-start gap-[16px]">
-						<input
-							type="checkbox"
-							checked={setupData.oauth_providers?.google?.enabled || false}
-							onChange={(e) => updateSetupData('oauth_providers', {
-								google: { ...setupData.oauth_providers.google, enabled: e.target.checked }
-							})}
-							className="mt-[2px] w-[20px] h-[20px] rounded border-[#D1D5DB] text-[#5048ED] focus:ring-[#5048ED]"
-						/>
-						<div className="flex-1">
-							<div className="flex items-center gap-[12px] mb-[4px]">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M21.8055 10.0415H21V10H12V14H17.6515C16.827 16.3285 14.6115 18 12 18C8.6865 18 6 15.3135 6 12C6 8.6865 8.6865 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C6.4775 2 2 6.4775 2 12C2 17.5225 6.4775 22 12 22C17.5225 22 22 17.5225 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#FFC107"/>
-									<path d="M3.15295 7.3455L6.43845 9.755C7.32745 7.554 9.48045 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C8.15895 2 4.82795 4.1685 3.15295 7.3455Z" fill="#FF3D00"/>
-									<path d="M12 22C14.583 22 16.93 21.0115 18.7045 19.404L15.6095 16.785C14.5718 17.5742 13.3038 18.001 12 18C9.39903 18 7.19053 16.3415 6.35853 14.027L3.09753 16.5395C4.75253 19.778 8.11353 22 12 22Z" fill="#4CAF50"/>
-									<path d="M21.8055 10.0415H21V10H12V14H17.6515C17.2571 15.1082 16.5467 16.0766 15.608 16.7855L15.6095 16.7845L18.7045 19.4035C18.4855 19.6025 22 17 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#1976D2"/>
-								</svg>
-								<h4 className="text-[16px] font-medium text-[#111827]">Google</h4>
-							</div>
-							<p className="text-[13px] text-[#6B7280] mb-[12px]">Allow users to sign in with their Google account</p>
-
-							{setupData.oauth_providers?.google?.enabled && (
-								<div className="space-y-[12px] pt-[12px] border-t border-[#E5E7EB]">
-									<div>
-										<label className="block text-[13px] font-medium text-[#111827] mb-[6px]">
-											Client ID
-										</label>
-										<input
-											type="text"
-											placeholder="Enter Google Client ID"
-											value={setupData.oauth_providers.google.client_id}
-											onChange={(e) => {
-												e.stopPropagation();
-												updateSetupData('oauth_providers', {
-													google: { ...setupData.oauth_providers.google, client_id: e.target.value }
-												});
-											}}
-											onClick={(e) => e.stopPropagation()}
-											className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
-										/>
-									</div>
-									<div>
-										<label className="block text-[13px] font-medium text-[#111827] mb-[6px]">
-											Client Secret
-										</label>
-										<input
-											type="password"
-											placeholder="Enter Google Client Secret"
-											value={setupData.oauth_providers.google.client_secret}
-											onChange={(e) => {
-												e.stopPropagation();
-												updateSetupData('oauth_providers', {
-													google: { ...setupData.oauth_providers.google, client_secret: e.target.value }
-												});
-											}}
-											onClick={(e) => e.stopPropagation()}
-											className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
-										/>
-									</div>
-									<div>
-										<label className="block text-[13px] font-medium text-[#111827] mb-[6px]">
-											Redirect URL
-										</label>
-										<input
-											type="url"
-											placeholder="Enter Redirect URL"
-											value={setupData.oauth_providers.google.redirect_url}
-											onChange={(e) => {
-												e.stopPropagation();
-												updateSetupData('oauth_providers', {
-													google: { ...setupData.oauth_providers.google, redirect_url: e.target.value }
-												});
-											}}
-											onClick={(e) => e.stopPropagation()}
-											className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
-										/>
-									</div>
-								</div>
-							)}
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	), [setupData.oauth_providers]);
-
-	// Step 5: Review
-	const Step5Review = () => (
+	// Step 4: Review
+	const Step4Review = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Review Configuration</h3>
@@ -1065,6 +1333,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							<div>Minimum length: {setupData.password_policy.min_length} characters</div>
 							<div>Expires every: {setupData.password_policy.password_expiry_days} days</div>
 							<div>Password history: {setupData.password_policy.password_history_count} previous passwords</div>
+							<div>Password repeat days: {setupData.password_policy.password_repeat_days} days</div>
 							<div>Allow password change: {setupData.password_policy.allow_change ? 'Yes' : 'No'}</div>
 							<div className="flex flex-wrap items-center gap-[8px]">
 								<span>Requirements:</span>
@@ -1115,14 +1384,27 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
 						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">OTP Configuration</h4>
 						<div className="space-y-[8px] text-[14px] text-[#111827]">
+							<div className="flex flex-wrap items-center gap-[8px]">
+								<span>Allowed methods:</span>
+								{setupData.login_methods.otp.allowed_methods.map((method) => (
+									<span key={method} className="px-[8px] py-[2px] bg-[#EFF6FF] text-[#5048ED] rounded-[4px] text-[11px] font-medium">
+										{method.charAt(0).toUpperCase() + method.slice(1)}
+									</span>
+								))}
+							</div>
+							<div>OTP Expiry: <span className="font-medium text-[#10B981]">{setupData.login_methods.otp.otp_expiry} seconds</span></div>
 							{setupData.login_methods.otp.sms_webhook && (
 								<div>SMS Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.sms_webhook}</span></div>
 							)}
 							{setupData.login_methods.otp.email_webhook && (
 								<div>Email Webhook: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.email_webhook}</span></div>
 							)}
-							<div>SMS Template: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.sms_content}</span></div>
-							<div>Email Subject: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.email_subject}</span></div>
+							{setupData.login_methods.otp.sms_content && (
+								<div>SMS Template: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.sms_content}</span></div>
+							)}
+							{setupData.login_methods.otp.email_subject && (
+								<div>Email Subject: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.login_methods.otp.email_subject}</span></div>
+							)}
 						</div>
 					</div>
 				)}
@@ -1146,36 +1428,15 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					</div>
 				)}
 
-				{/* OAuth Providers Configuration */}
-				{setupData.oauth_providers?.google?.enabled && (
-					<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
-						<h4 className="text-[16px] font-medium text-[#111827] mb-[12px]">OAuth Providers</h4>
-						<div className="space-y-[8px] text-[14px] text-[#111827]">
-							<div className="flex items-center gap-[8px]">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#10B981]">
-									<path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-								</svg>
-								Google OAuth
-							</div>
-							{setupData.oauth_providers.google.client_id && (
-								<div>Client ID: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.oauth_providers.google.client_id}</span></div>
-							)}
-							{setupData.oauth_providers.google.redirect_url && (
-								<div>Redirect URL: <span className="font-mono text-[12px] bg-[#F3F4F6] px-[8px] py-[2px] rounded">{setupData.oauth_providers.google.redirect_url}</span></div>
-							)}
-						</div>
-					</div>
-				)}
-
 			</div>
 		</div>
-	);
+	), [setupData]);
 
 	// Render current step
 	const renderStep = () => {
 		switch (currentStep) {
 			case 1:
-				return <Step1LoginMethods />;
+				return Step1LoginMethods;
 			case 2:
 				// Skip to step 3 if password is not enabled
 				if (!setupData.login_methods.password.enabled && currentStep === 2) {
@@ -1184,11 +1445,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				}
 				return Step2PasswordPolicy;
 			case 3:
-				return <Step3TwoFactor />;
+				return Step3TwoFactor;
 			case 4:
-				return Step4OAuthProviders;
-			case 5:
-				return <Step5Review />;
+				return Step4Review;
 			default:
 				return null;
 		}

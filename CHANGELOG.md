@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2025-12-29
+
+* fix: Users cannot enable TWO-FA from profile (will be enabled once support for email and sms customization is added) [(#545)](https://github.com/Healthlane-Technologies/Zango/pull/545)
+
+## [1.0.3] - 2025-12-13
+
+### Fixed
+* fix: ignore case while generating otp [(#542)](https://github.com/Healthlane-Technologies/Zango/pull/542)
+
+## [1.0.2] - 2025-12-12
+
+### Fixed
+* fix: theme color key & backword compatible [(#540)](https://github.com/Healthlane-Technologies/Zango/pull/540)
+* make healthcheck urls public [(#538)](https://github.com/Healthlane-Technologies/Zango/pull/538)
+
+## [1.0.1] - 2025-12-11
+
+### Fixed
+* Tenant not found in tests [(#534)](https://github.com/Healthlane-Technologies/Zango/pull/534)
+* use pypi version of allauth in requirements [(#536)](https://github.com/Healthlane-Technologies/Zango/pull/536)
+* add: meta_tile config in app configuration [(#535)](https://github.com/Healthlane-Technologies/Zango/pull/535)
+* fix: disable inactive user login for OTP based login [(#537)](https://github.com/Healthlane-Technologies/Zango/pull/537)
+
+## [1.0.0] - 2025-12-05
+
+### Added
+* New authentication module with support for password login, OTP-based login, SSO, and 2FA [(#531)](https://github.com/Healthlane-Technologies/Zango/pull/531)
+* App Panel v2 [(#531)](https://github.com/Healthlane-Technologies/Zango/pull/531)
+
+
+## [0.6.2] - 2025-11-05
+
+### Added
+* ECS deployment changes & nested path support for modules [(#525)](https://github.com/Healthlane-Technologies/Zango/pull/525)
+
 ## [0.6.1] - 2025-06-17
 
 ### Added

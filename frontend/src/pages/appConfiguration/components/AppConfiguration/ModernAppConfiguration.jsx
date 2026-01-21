@@ -44,9 +44,10 @@ const ModernAppConfiguration = () => {
 	const initialValues = {
 		name: appData?.name ?? '',
 		description: appData?.description ?? '',
+		meta_title: appData?.extra_config?.app_metadata?.meta_title ?? '',
 		logo: '',
 		fav_icon: '',
-		domains: appData?.domains?.length > 0 
+		domains: appData?.domains?.length > 0
 			? (() => {
 				const domainObjs = appData.domains.map((eachDomain) => ({
 					domain: eachDomain.domain,
@@ -67,7 +68,7 @@ const ModernAppConfiguration = () => {
 		dev: appData?.extra_config?.git_config?.branch?.dev ?? '',
 		prod: appData?.extra_config?.git_config?.branch?.prod ?? '',
 		staging: appData?.extra_config?.git_config?.branch?.staging ?? '',
-		sync_packages: appData?.extra_config?.sync_packages ?? true 
+		sync_packages: appData?.extra_config?.sync_packages ?? true
 	};
 
 	// Validation schema
@@ -122,6 +123,9 @@ const ModernAppConfiguration = () => {
 		}
 
 		let extra_config = {
+			app_metadata: {
+				meta_title: tempValues.meta_title || null
+			},
 			git_config: {
 				branch: {
 					dev: tempValues.dev || null,
@@ -132,18 +136,19 @@ const ModernAppConfiguration = () => {
 			},
 			sync_packages: tempValues.sync_packages
 		};
-		
+
 		if (!extra_config.git_config.repo_url) {
 			extra_config.git_config.repo_url = null;
 		}
 
-		if (!extra_config.git_config.repo_url && 
-			!extra_config.git_config.branch.dev && 
-			!extra_config.git_config.branch.prod && 
+		if (!extra_config.git_config.repo_url &&
+			!extra_config.git_config.branch.dev &&
+			!extra_config.git_config.branch.prod &&
 			!extra_config.git_config.branch.staging) {
 			extra_config.git_config = {};
 		}
-		
+
+		delete tempValues.meta_title;
 		delete tempValues.dev;
 		delete tempValues.prod;
 		delete tempValues.staging;
@@ -300,19 +305,31 @@ const ModernAppConfiguration = () => {
 										</svg>
 									}
 								>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-										<FileUpload
+									<div className="space-y-[16px]">
+										<InputField
+											key="meta_title"
+											label="Meta Title"
+											name="meta_title"
+											id="meta_title"
+											placeholder="Enter meta title for browser tab"
+											value={get(formik.values, 'meta_title', '')}
+											onChange={formik.handleChange}
 											formik={formik}
-											label={'Logo'}
-											id={'logo'}
-											fileValue={appData?.logo || ''}
 										/>
-										<FileUpload
-											formik={formik}
-											label={'Favicon'}
-											id={'fav_icon'}
-											fileValue={appData?.fav_icon || ''}
-										/>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+											<FileUpload
+												formik={formik}
+												label={'Logo'}
+												id={'logo'}
+												fileValue={appData?.logo || ''}
+											/>
+											<FileUpload
+												formik={formik}
+												label={'Favicon'}
+												id={'fav_icon'}
+												fileValue={appData?.fav_icon || ''}
+											/>
+										</div>
 									</div>
 								</SectionCard>
 
@@ -515,17 +532,23 @@ const ModernAppConfiguration = () => {
 							</svg>
 						}
 					>
-						<div className="grid grid-cols-2 gap-[16px]">
-							<InfoItem 
-								label="Logo" 
-								value={appData?.logo} 
-								isImage={true}
+						<div>
+							<InfoItem
+								label="Meta Title"
+								value={appData?.extra_config?.app_metadata?.meta_title}
 							/>
-							<InfoItem 
-								label="Favicon" 
-								value={appData?.fav_icon} 
-								isImage={true}
-							/>
+							<div className="grid grid-cols-2 gap-[16px]">
+								<InfoItem
+									label="Logo"
+									value={appData?.logo}
+									isImage={true}
+								/>
+								<InfoItem
+									label="Favicon"
+									value={appData?.fav_icon}
+									isImage={true}
+								/>
+							</div>
 						</div>
 					</SectionCard>
 

@@ -12,7 +12,7 @@ services:
     command: chown -R 2048:2048 /tmp/change-app-ownership /tmp/change-static-ownership /tmp/change-media-ownership /tmp/change-logs-ownership
 
   postgres:
-    image: postgres
+    image: postgres:15
     env_file:
       - .env
     ports:

@@ -1,7 +1,7 @@
 # Base Production Project Image for Zango
 # Creates a complete project structure at build time for ECS deployment
 
-FROM 114454670435.dkr.ecr.ap-south-1.amazonaws.com/zango:latest
+FROM kczelthy/zango:latest
 
 # Create non-root user
 RUN apt update && \

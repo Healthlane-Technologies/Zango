@@ -184,10 +184,10 @@ def create_platform_user(platform_username, platform_username_password):
 @click.option("--db_name", help="DB Name")
 @click.option("--db_user", help="DB User")
 @click.option("--db_password", hide_input=True, help="DB Password")
-@click.option("--db_host", help="DB Host", default="127.0.0.1")
-@click.option("--db_port", help="DB Port", default="5432")
-@click.option("--redis_host", help="Redis Host", default="127.0.0.1")
-@click.option("--redis_port", help="Redis Port", default="6379")
+@click.option("--db_host", help="DB Host")
+@click.option("--db_port", help="DB Port")
+@click.option("--redis_host", help="Redis Host")
+@click.option("--redis_port", help="Redis Port")
 @click.option("--platform_username", prompt=False, help="Platform Username")
 @click.option(
     "--platform_domain_url",

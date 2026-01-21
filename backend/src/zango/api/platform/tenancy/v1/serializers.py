@@ -1,11 +1,12 @@
 import json
 
 from allauth.socialaccount.models import SocialApp
+from django_tenants.utils import schema_context
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.appauth.models import AppUserModel, SAMLModel, UserRoleModel
 from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
@@ -29,6 +30,7 @@ class TenantSerializerModel(serializers.ModelSerializer):
     last_released_version = serializers.SerializerMethodField(
         "get_last_released_version"
     )
+    auth_config = serializers.JSONField(required=False)
 
     def get_last_released_version(self, obj):
         try:
@@ -132,6 +134,19 @@ class TenantSerializerModel(serializers.ModelSerializer):
                     tenant=instance,
                 )
 
+        if "auth_config" in validated_data:
+            auth_config = validated_data["auth_config"]
+            if (
+                not auth_config.get("login_methods", {})
+                .get("sso", {})
+                .get("enabled", False)
+            ):
+                with schema_context(instance.schema_name):
+                    for role in UserRoleModel.objects.all():
+                        print(role.auth_config)
+                        if role.auth_config.get("enforce_sso", False):
+                            role.auth_config["enforce_sso"] = False
+                            role.save()
         return instance
 
 
@@ -163,7 +178,11 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         tenant = self.context.get("tenant")
-        data["auth_config"] = get_auth_priority(tenant=tenant, user_role=instance)
+        if tenant.auth_config.get("two_factor_auth", {}).get("required", False):
+            if data["auth_config"].get("two_factor_auth"):
+                data["auth_config"]["two_factor_auth"]["required"] = True
+            else:
+                data["auth_config"]["two_factor_auth"] = {"required": True}
         return data
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
@@ -179,15 +198,21 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Two-factor authentication is required for this user role as it is enabled for the tenant."
                 )
+
+        sso_enabled = (
+            tenant.auth_config.get("login_methods", {})
+            .get("sso", {})
+            .get("enabled", False)
+        )
+
+        if not sso_enabled and value.get("enforce_sso", False):
+            raise serializers.ValidationError(
+                "Cannot enforce SSO for this user role as SSO is not enabled for the tenant."
+            )
         return value
 
     def validate(self, attrs):
         return attrs
-
-    def update(self, instance, validated_data):
-        if not validated_data.get("policies"):
-            validated_data["policies"] = []
-        return super(UserRoleSerializerModel, self).update(instance, validated_data)
 
 
 class AppUserModelSerializerModel(
@@ -316,3 +341,19 @@ class SocialAppSerializer(serializers.ModelSerializer):
             "enabled",
             "redirect_url",
         ]
+
+
+class SAMLProviderModelSerializer(serializers.ModelSerializer):
+    """
+    Serializer for SAMLModel with comprehensive validation and configuration support.
+
+    Validates SAML configuration including:
+    - Entity IDs and URLs format
+    - X509 certificate format
+    - Security settings consistency
+    - Required fields based on configuration
+    """
+
+    class Meta:
+        model = SAMLModel
+        fields = "__all__"

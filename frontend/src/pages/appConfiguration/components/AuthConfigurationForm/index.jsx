@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Formik } from "formik";
@@ -16,70 +16,11 @@ const AuthConfigurationForm = () => {
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [oauthProviders, setOauthProviders] = useState({});
-	const [isLoading, setIsLoading] = useState(true);
 	const triggerApi = useApi();
 
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 	const auth_config = appConfigurationData?.app?.auth_config;
 	const { appId } = useParams();
-
-	// Fetch OAuth providers data separately
-	useEffect(() => {
-		const fetchOAuthProviders = async () => {
-			try {
-				const { response, success } = await triggerApi({
-					url: `/api/v1/apps/${appId}/oauth-providers/`,
-					type: 'GET',
-					loader: false,
-				});
-				
-				if (success && response) {
-					setOauthProviders(response.oauth_providers || {});
-				}
-			} catch (error) {
-				console.error('Error fetching OAuth providers:', error);
-				// Set default structure if fetch fails
-				setOauthProviders({
-					google: {
-						enabled: false,
-						client_id: '',
-						client_secret: '',
-						redirect_url: ''
-					}
-				});
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		if (appId) {
-			fetchOAuthProviders();
-		}
-	}, [appId]);
-
-	// Combine auth_config and oauth_providers for form initial values
-	const getInitialValues = () => {
-		if (!auth_config) return {};
-		
-		// Ensure oauth_providers structure exists with default values
-		const defaultOAuthProviders = {
-			google: {
-				enabled: false,
-				client_id: '',
-				client_secret: '',
-				redirect_url: ''
-			}
-		};
-		
-		return {
-			...auth_config,
-			oauth_providers: {
-				...defaultOAuthProviders,
-				...oauthProviders
-			}
-		};
-	};
 
 	const validationSchema = Yup.object({
 		login_methods: Yup.object({
@@ -119,77 +60,33 @@ const AuthConfigurationForm = () => {
 			required: Yup.boolean(),
 			allowedMethods: Yup.array().min(1, "At least one method is required"),
 		}),
-		oauth_providers: Yup.object({
-			google: Yup.object({
-				enabled: Yup.boolean(),
-				client_id: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Client ID is required when Google OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-				client_secret: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Client Secret is required when Google OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-				redirect_url: Yup.string().when('enabled', {
-					is: true,
-					then: Yup.string().required('Redirect URL is required when Google OAuth is enabled'),
-					otherwise: Yup.string()
-				}),
-			}),
-		}),
 	});
 
 	let onSubmit = (values) => {
-		// Extract OAuth providers data from values
-		const { oauth_providers, ...authConfigWithoutOAuth } = values;
+		const cleanedAuthConfig = values;
 		
-		const cleanedAuthConfig = authConfigWithoutOAuth;
-		
-		if (Object.keys(cleanedAuthConfig).length === 0 && (!oauth_providers || Object.keys(oauth_providers).length === 0)) {
+		if (Object.keys(cleanedAuthConfig).length === 0) {
 			console.warn('No configuration changes to save');
 			return;
 		}
 		
+		const tempValues = {
+			auth_config: JSON.stringify(cleanedAuthConfig)
+		};
+
+		const dynamicFormData = transformToFormData(tempValues);
+
 		const makeApiCall = async () => {
 			setIsSubmitting(true);
 			try {
-				let authConfigSuccess = true;
-				let oauthSuccess = true;
+				const { response, success } = await triggerApi({
+					url: `/api/v1/apps/${appId}/`,
+					type: 'PUT',
+					loader: true,
+					payload: dynamicFormData,
+				});
 
-				// Send auth_config without OAuth providers if there are changes
-				if (Object.keys(cleanedAuthConfig).length > 0) {
-					const tempValues = {
-						auth_config: JSON.stringify(cleanedAuthConfig)
-					};
-					const dynamicFormData = transformToFormData(tempValues);
-
-					const { response, success } = await triggerApi({
-						url: `/api/v1/apps/${appId}/`,
-						type: 'PUT',
-						loader: true,
-						payload: dynamicFormData,
-					});
-					authConfigSuccess = success;
-				}
-
-				// Send OAuth providers data to different endpoint if there are changes
-				if (oauth_providers && Object.keys(oauth_providers).length > 0) {
-					const oauthFormData = transformToFormData({
-						oauth_providers: JSON.stringify(oauth_providers)
-					});
-
-					const { response, success } = await triggerApi({
-						url: `/api/v1/apps/${appId}/oauth-providers/`,
-						type: 'PUT',
-						loader: true,
-						payload: oauthFormData,
-					});
-					oauthSuccess = success;
-				}
-
-				if (authConfigSuccess && oauthSuccess) {
+				if (success && response) {
 					dispatch(toggleRerenderPage());
 					window.location.reload();
 				}
@@ -448,14 +345,13 @@ const AuthConfigurationForm = () => {
 
 	const tabs = [
 		{ id: "login", label: "Login Methods", icon: "🔐" },
-		{ id: "oauth", label: "OAuth Providers", icon: "🔗" },
 		{ id: "session", label: "Session Policy", icon: "⏰" },
 		{ id: "password", label: "Password Policy", icon: "🔒" },
 		{ id: "2fa", label: "Two-Factor Auth", icon: "🛡️" }
 	];
 
 	// Show loading state while data is being fetched
-	if (!appConfigurationData || !auth_config || isLoading) {
+	if (!appConfigurationData || !auth_config) {
 		return (
 			<div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] flex items-center justify-center">
 				<div className="text-center">
@@ -537,7 +433,7 @@ const AuthConfigurationForm = () => {
 				{/* Content Area */}
 				<div className="flex-1 p-[40px]">
 					<Formik
-						initialValues={getInitialValues()}
+						initialValues={auth_config}
 						validationSchema={validationSchema}
 						onSubmit={onSubmit}
 						enableReinitialize={true}
@@ -851,66 +747,6 @@ const AuthConfigurationForm = () => {
 											</div>
 										);
 									
-									case "oauth":
-										return (
-											<div className="space-y-[32px]">
-												<div className="bg-white rounded-[16px] shadow-lg border border-[#E5E7EB] p-[32px]">
-													<div className="flex items-center gap-[16px] mb-[24px]">
-														<div className="flex h-[40px] w-[40px] items-center justify-center rounded-[10px] bg-[#5048ED]">
-															<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-																<path d="M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10Z" stroke="white" strokeWidth="2"/>
-																<path d="M10 7.5V10L12.5 12.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-															</svg>
-														</div>
-														<div>
-															<h2 className="font-source-sans-pro text-[20px] font-bold text-[#111827]">OAuth Providers</h2>
-															<p className="font-lato text-[14px] text-[#6B7280]">Configure third-party authentication providers</p>
-														</div>
-													</div>
-													
-													<div className="space-y-[24px]">
-														{/* Google OAuth */}
-														<ToggleCard
-															title="Google OAuth"
-															description="Allow users to sign in with their Google account"
-															name="oauth_providers.google.enabled"
-															value={values?.oauth_providers?.google?.enabled || false}
-															onChange={(e) => setFieldValue("oauth_providers.google.enabled", e.target.checked)}
-														>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-																<InputField
-																	name="oauth_providers.google.client_id"
-																	label="Client ID"
-																	type="text"
-																	value={values?.oauth_providers?.google?.client_id || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.google.client_id", e.target.value)}
-																	placeholder="Enter Google Client ID"
-																/>
-																<InputField
-																	name="oauth_providers.google.client_secret"
-																	label="Client Secret"
-																	type="password"
-																	value={values?.oauth_providers?.google?.client_secret || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.google.client_secret", e.target.value)}
-																	placeholder="Enter Google Client Secret"
-																/>
-															</div>
-															<div className="grid grid-cols-1 gap-[16px]">
-																<InputField
-																	name="oauth_providers.google.redirect_url"
-																	label="Redirect URL"
-																	type="text"
-																	value={values?.oauth_providers?.google?.redirect_url || ""}
-																	onChange={(e) => setFieldValue("oauth_providers.google.redirect_url", e.target.value)}
-																	placeholder="/oauth/callback/"
-																/>
-															</div>
-														</ToggleCard>
-													</div>
-												</div>
-											</div>
-										);
-									
 									case "session":
 										return (
 											<div className="space-y-[32px]">
@@ -1101,39 +937,6 @@ const AuthConfigurationForm = () => {
 																		
 																		<div className="max-w-2xl">
 																			<InputField
-																				name="two_factor_auth.email_content"
-																				label="Email Content"
-																				type="text"
-																				placeholder="Enter the email content for 2FA"
-																				value={values?.two_factor_auth?.email_content || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_content", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.email_subject"
-																				label="Email Subject"
-																				type="text"
-																				placeholder="Enter the email subject for 2FA"
-																				value={values?.two_factor_auth?.email_subject || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_subject", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.email_config_key"
-																				label="Email Config Key"
-																				type="text"
-																				placeholder="Enter email configuration key for 2FA"
-																				value={values?.two_factor_auth?.email_config_key || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_config_key", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
 																				name="two_factor_auth.sms_hook"
 																				label="SMS Hook URL"
 																				description="Webhook URL for SMS-based two-factor authentication"
@@ -1141,27 +944,6 @@ const AuthConfigurationForm = () => {
 																				placeholder="https://your-domain.com/sms-2fa-hook"
 																				value={values?.two_factor_auth?.sms_hook || ""}
 																				onChange={(e) => setFieldValue("two_factor_auth.sms_hook", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.sms_config_key"
-																				label="SMS Config Key"
-																				type="text"
-																				placeholder="Enter SMS configuration key for 2FA"
-																				value={values?.two_factor_auth?.sms_config_key || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.sms_config_key", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<KeyValuePairs
-																				name="two_factor_auth.sms_extra_data"
-																				label="SMS Extra Data"
-																				description="Additional key-value pairs to include in the SMS payload"
-																				value={values?.two_factor_auth?.sms_extra_data || {}}
-																				onChange={(value) => setFieldValue("two_factor_auth.sms_extra_data", value)}
 																			/>
 																		</div>
 																	</div>

@@ -9,32 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import InputField from '../../../../../components/Form/InputField';
 import AuthSetupModal from './AuthSetupModal';
 import RoleOverrideModal from './RoleOverrideModal';
-
-// Default auth configuration that matches backend defaults
-const DEFAULT_AUTH_CONFIG = {
-	password_policy: {
-		min_length: 8,
-		require_uppercase: true,
-		require_lowercase: true,
-		require_numbers: true,
-		require_special_chars: false,
-		password_history_count: 3,
-		password_expiry_days: 90,
-		allow_change: true,
-	},
-	login_methods: {
-		password: {
-			enabled: true,
-			forgot_password_enabled: false,
-		},
-		sso: { enabled: false },
-		oidc: { enabled: false },
-		otp: { enabled: false },
-	},
-	two_factor_auth: {
-		required: false,
-	},
-};
+import SAMLProviderModal from './SAMLProviderModal';
 
 const ModernAuthConfig = () => {
 	const [activeSection, setActiveSection] = useState('overview');
@@ -45,13 +20,15 @@ const ModernAuthConfig = () => {
 	const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
 	const [showRoleOverrideModal, setShowRoleOverrideModal] = useState(false);
 	const [selectedRoleForOverride, setSelectedRoleForOverride] = useState(null);
-	const [oauthProviders, setOauthProviders] = useState(null);
-	const [loadingOAuth, setLoadingOAuth] = useState(false);
+	const [showSAMLModal, setShowSAMLModal] = useState(false);
+	const [samlProviders, setSAMLProviders] = useState([]);
+	const [loadingSAML, setLoadingSAML] = useState(false);
+	const [editingSAMLProvider, setEditingSAMLProvider] = useState(null);
 	const dispatch = useDispatch();
 	const triggerApi = useApi();
 	const { appId } = useParams();
 	const navigate = useNavigate();
-
+	
 	const appConfigurationData = useSelector(selectAppConfigurationData);
 	
 	// Fetch roles data
@@ -85,29 +62,28 @@ const ModernAuthConfig = () => {
 		}
 	}, [appId, triggerApi]);
 
-	// Fetch OAuth providers data
+	// Fetch SAML providers
 	useEffect(() => {
-		const fetchOAuthProviders = async () => {
-			setLoadingOAuth(true);
+		const fetchSAMLProviders = async () => {
+			setLoadingSAML(true);
 			try {
 				const { response, success } = await triggerApi({
-					url: `/api/v1/apps/${appId}/oauth-providers/`,
+					url: `/api/v1/apps/${appId}/saml-providers/`,
 					type: 'GET',
 					loader: false,
 				});
 				if (success && response) {
-					setOauthProviders(response.oauth_providers || {});
+					setSAMLProviders(response.saml_providers || []);
 				}
 			} catch (error) {
-				console.error('Error fetching OAuth providers:', error);
-				setOauthProviders({});
+				console.error('Error fetching SAML providers:', error);
 			} finally {
-				setLoadingOAuth(false);
+				setLoadingSAML(false);
 			}
 		};
 
 		if (appId) {
-			fetchOAuthProviders();
+			fetchSAMLProviders();
 		}
 	}, [appId, triggerApi]);
 	
@@ -164,7 +140,7 @@ const ModernAuthConfig = () => {
 					onClose={() => setShowAuthSetupModal(false)}
 					roles={roles}
 					onComplete={async (authData) => {
-						// Transform to expected format
+						// Transform to expected format matching the schema
 						const authConfig = {
 							login_methods: {
 								password: {
@@ -172,56 +148,67 @@ const ModernAuthConfig = () => {
 									forgot_password_enabled: authData.login_methods.password.forgot_password_enabled,
 									password_reset_link_expiry_hours: 24, // Default
 									allowed_usernames: authData.login_methods.allowed_usernames,
-									reset_method: authData.login_methods.password.reset_method,
-									reset_via_sms: authData.login_methods.password.reset_via_sms,
-									reset_via_email: authData.login_methods.password.reset_via_email,
-									reset_sms_content: authData.login_methods.password.reset_sms_content,
-									reset_sms_webhook: authData.login_methods.password.reset_sms_webhook,
-									reset_email_content: authData.login_methods.password.reset_email_content,
-									reset_email_subject: authData.login_methods.password.reset_email_subject,
-									reset_email_webhook: authData.login_methods.password.reset_email_webhook,
-									reset_expiry_minutes: authData.login_methods.password.reset_expiry_minutes,
 								},
 								otp: {
 									enabled: authData.login_methods.otp.enabled,
-									sms_content: authData.login_methods.otp.sms_content,
-									sms_webhook: authData.login_methods.otp.sms_webhook,
-									email_content: authData.login_methods.otp.email_content,
-									email_subject: authData.login_methods.otp.email_subject,
-									email_webhook: authData.login_methods.otp.email_webhook,
-									allowed_methods: authData.login_methods.otp.allowed_methods || ['email', 'sms'],
+									allowed_methods: authData.login_methods.otp.allowed_methods || [],
+									email_content: authData.login_methods.otp.email_content || '',
+									email_subject: authData.login_methods.otp.email_subject || '',
+									email_hook: authData.login_methods.otp.email_webhook || '',
+									email_config_key: authData.login_methods.otp.email_config_key || '',
+									sms_hook: authData.login_methods.otp.sms_webhook || '',
+									sms_content: authData.login_methods.otp.sms_content || '',
+									sms_config_key: authData.login_methods.otp.sms_config_key || '',
+									sms_extra_data: authData.login_methods.otp.sms_extra_data || '',
+									otp_expiry: authData.login_methods.otp.otp_expiry || 300,
 								},
 								sso: { enabled: authData.login_methods.sso.enabled },
 								oidc: { enabled: authData.login_methods.oidc.enabled },
-								allowed_usernames: authData.login_methods.allowed_usernames,
 							},
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
-								force_logout_on_password_change: authData.session_policy.force_logout_on_password_change,
 							},
 							password_policy: {
-								reset: {
-									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
-									enabled: authData.login_methods.password.forgot_password_enabled,
-									allowed_methods: (() => {
-										const methods = [];
-										if (authData.login_methods.password.reset_via_email) methods.push('email');
-										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
-										return methods.length > 0 ? methods : ['email'];
-									})(),
-								},
 								min_length: authData.password_policy.min_length,
 								allow_change: authData.password_policy.allow_change,
 								require_numbers: authData.password_policy.require_numbers,
 								require_lowercase: authData.password_policy.require_lowercase,
 								require_uppercase: authData.password_policy.require_uppercase,
 								password_expiry_days: authData.password_policy.password_expiry_days,
+								password_repeat_days: authData.password_policy.password_repeat_days,
 								require_special_chars: authData.password_policy.require_special_chars,
 								password_history_count: authData.password_policy.password_history_count,
+								reset: {
+									enabled: authData.login_methods.password.forgot_password_enabled,
+									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
+									allowed_methods: (() => {
+										const methods = [];
+										if (authData.login_methods.password.reset_via_email) methods.push('email');
+										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
+										return methods.length > 0 ? methods : ['email'];
+									})(),
+									by_code: authData.login_methods.password.reset_method === 'code',
+									by_email: authData.login_methods.password.reset_via_email || false,
+									login_after_reset: false,
+									max_attempts: 3,
+									email_hook: authData.login_methods.password.reset_email_webhook || '',
+									email_content: authData.login_methods.password.reset_email_content || '',
+									email_subject: authData.login_methods.password.reset_email_subject || '',
+									email_config_key: authData.login_methods.password.reset_email_config_key || '',
+									sms_hook: authData.login_methods.password.reset_sms_webhook || '',
+									sms_content: authData.login_methods.password.reset_sms_content || '',
+									sms_config_key: authData.login_methods.password.reset_sms_config_key || '',
+									sms_extra_data: authData.login_methods.password.reset_sms_extra_data || '',
+								},
 							},
 							two_factor_auth: {
 								required: authData.two_factor_auth.required,
-								allowedMethods: authData.two_factor_auth.allowedMethods,
+								allowed_methods: authData.two_factor_auth.allowedMethods || [],
+								enforced_from: null,
+								grace_period_days: null,
+								skip_for_sso: false,
+								email_hook: authData.two_factor_auth.email_hook || '',
+								sms_hook: authData.two_factor_auth.sms_hook || '',
 							},
 						};
 
@@ -240,24 +227,6 @@ const ModernAuthConfig = () => {
 							});
 
 							if (success && response) {
-								// Save OAuth providers if configured
-								if (authData.oauth_providers) {
-									const oauthFormData = transformToFormData({
-										oauth_providers: JSON.stringify(authData.oauth_providers)
-									});
-
-									try {
-										await triggerApi({
-											url: `/api/v1/apps/${appId}/oauth-providers/`,
-											type: 'PUT',
-											loader: false,
-											payload: oauthFormData,
-										});
-									} catch (oauthError) {
-										console.error('Error saving OAuth providers:', oauthError);
-									}
-								}
-
 								dispatch(toggleRerenderPage());
 								setShowAuthSetupModal(false);
 							}
@@ -276,6 +245,7 @@ const ModernAuthConfig = () => {
 		{ id: 'login', label: 'Login Methods', icon: '🔐' },
 		{ id: 'security', label: 'Security', icon: '🛡️' },
 		{ id: 'policies', label: 'Policies', icon: '📋' },
+		{ id: 'saml', label: 'SAML Providers', icon: '🔗' },
 		{ id: 'role-overrides', label: 'Role Overrides', icon: '👥' }
 	];
 
@@ -288,9 +258,16 @@ const ModernAuthConfig = () => {
 				password_reset_link_expiry_hours: Yup.number()
 					.min(1, "Must be at least 1 hour")
 					.max(168, "Must be less than 168 hours (7 days)"),
+				allowed_usernames: Yup.array().min(1, "At least one username type is required"),
 			}),
 			otp: Yup.object({
 				enabled: Yup.boolean(),
+				allowed_methods: Yup.array().when('enabled', {
+					is: true,
+					then: (schema) => schema.min(1, "At least one OTP method is required when OTP is enabled"),
+					otherwise: (schema) => schema
+				}),
+				otp_expiry: Yup.number().min(30, "Expiry must be at least 30 seconds").max(3600, "Expiry cannot exceed 3600 seconds"),
 			}),
 			sso: Yup.object({
 				enabled: Yup.boolean(),
@@ -298,11 +275,9 @@ const ModernAuthConfig = () => {
 			oidc: Yup.object({
 				enabled: Yup.boolean(),
 			}),
-			allowed_usernames: Yup.array().min(1, "At least one username type is required"),
 		}),
 		session_policy: Yup.object({
 			max_concurrent_sessions: Yup.number().min(0, "Cannot be negative"),
-			force_logout_on_password_change: Yup.boolean(),
 		}),
 		password_policy: Yup.object({
 			min_length: Yup.number().min(4, "Minimum length must be at least 4").max(128, "Maximum length is 128"),
@@ -316,7 +291,7 @@ const ModernAuthConfig = () => {
 		}),
 		two_factor_auth: Yup.object({
 			required: Yup.boolean(),
-			allowedMethods: Yup.array().min(1, "At least one method is required"),
+			allowed_methods: Yup.array().min(1, "At least one method is required"),
 		}),
 	});
 
@@ -586,8 +561,8 @@ const ModernAuthConfig = () => {
 															label="Allowed Username Types"
 															description="Select what users can use to log in"
 															options={usernameOptions}
-															value={values?.login_methods?.allowed_usernames || []}
-															onChange={(value) => setFieldValue("login_methods.allowed_usernames", value)}
+															value={values?.login_methods?.password?.allowed_usernames || []}
+															onChange={(value) => setFieldValue("login_methods.password.allowed_usernames", value)}
 														/>
 														
 														<div className="flex items-center justify-between">
@@ -616,9 +591,9 @@ const ModernAuthConfig = () => {
 												)}
 											</div>
 
-											{/* Other Login Methods */}
-											<div className="space-y-[16px]">
-												<div className="flex items-center justify-between">
+											{/* OTP Authentication */}
+											<div className="mb-[24px] pb-[24px] border-b border-[#F3F4F6]">
+												<div className="flex items-center justify-between mb-[16px]">
 													<div>
 														<h4 className="text-[14px] font-medium text-[#111827]">One-Time Password (OTP)</h4>
 														<p className="text-[12px] text-[#6B7280] mt-[2px]">SMS or email based verification codes</p>
@@ -629,15 +604,61 @@ const ModernAuthConfig = () => {
 													/>
 												</div>
 
-												<div className="flex items-center justify-between">
-													<div>
-														<h4 className="text-[14px] font-medium text-[#111827]">Single Sign-On (SSO)</h4>
-														<p className="text-[12px] text-[#6B7280] mt-[2px]">Enterprise SSO integration</p>
+												{values?.login_methods?.otp?.enabled && (
+													<div className="ml-[24px] space-y-[16px]">
+														<MultiSelectChips
+															label="Allowed OTP Methods"
+															description="Select delivery methods for one-time passwords"
+															options={[
+																{ id: "email", label: "Email" },
+																{ id: "sms", label: "SMS" }
+															]}
+															value={values?.login_methods?.otp?.allowed_methods || []}
+															onChange={(value) => setFieldValue("login_methods.otp.allowed_methods", value)}
+														/>
+														<InputField
+															name="login_methods.otp.otp_expiry"
+															label="OTP Expiry (seconds)"
+															description="Time in seconds before OTP expires (30-3600 seconds)"
+															type="number"
+															value={values?.login_methods?.otp?.otp_expiry}
+															onChange={(e) => setFieldValue("login_methods.otp.otp_expiry", parseInt(e.target.value) || 300)}
+														/>
 													</div>
-													<ToggleSwitch
-														checked={values?.login_methods?.sso?.enabled}
-														onChange={(checked) => setFieldValue("login_methods.sso.enabled", checked)}
-													/>
+												)}
+											</div>
+
+											{/* Other Login Methods */}
+											<div className="space-y-[16px]">
+												<div>
+													<div className="flex items-center justify-between mb-[16px]">
+														<div>
+															<h4 className="text-[14px] font-medium text-[#111827]">Single Sign-On (SSO)</h4>
+															<p className="text-[12px] text-[#6B7280] mt-[2px]">Enterprise SSO integration</p>
+														</div>
+														<ToggleSwitch
+															checked={values?.login_methods?.sso?.enabled}
+															onChange={(checked) => setFieldValue("login_methods.sso.enabled", checked)}
+														/>
+													</div>
+
+													{values?.login_methods?.sso?.enabled && (
+														<div className="ml-[24px] p-[12px] bg-[#F0F9FF] border border-[#E0F2FE] rounded-[8px]">
+															<p className="text-[12px] text-[#0369A1] mb-[8px]">
+																SAML providers can be configured in the <strong>SAML Providers</strong> section. Click on <strong>Configure SAML Provider</strong> to add or manage providers.
+															</p>
+															<button
+																type="button"
+																onClick={() => setActiveSection('saml')}
+																className="inline-flex items-center gap-[6px] px-[12px] py-[6px] bg-[#0EA5E9] text-white rounded-[6px] hover:bg-[#0284C7] transition-colors text-[12px] font-medium"
+															>
+																<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+																	<path d="M8 1V15M1 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+																</svg>
+																Go to SAML Configuration
+															</button>
+														</div>
+													)}
 												</div>
 
 												<div className="flex items-center justify-between">
@@ -696,9 +717,10 @@ const ModernAuthConfig = () => {
 														options={[
 															{ id: "email", label: "Email" },
 															{ id: "sms", label: "SMS" },
+															{ id: "totp", label: "Authenticator App (TOTP)" },
 														]}
-														value={values?.two_factor_auth?.allowedMethods || []}
-														onChange={(value) => setFieldValue("two_factor_auth.allowedMethods", value)}
+														value={values?.two_factor_auth?.allowed_methods || []}
+														onChange={(value) => setFieldValue("two_factor_auth.allowed_methods", value)}
 													/>
 												</div>
 											)}
@@ -869,7 +891,7 @@ const ModernAuthConfig = () => {
 							</div>
 
 							{/* Authentication Overview */}
-							<div className="grid grid-cols-1 lg:grid-cols-3 gap-[24px]">
+							<div className="grid grid-cols-1 lg:grid-cols-2 gap-[24px]">
 								{/* Login Methods Overview */}
 								<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
 									<div className="flex items-center gap-[12px] mb-[20px]">
@@ -893,7 +915,7 @@ const ModernAuthConfig = () => {
 												<div className="flex-1">
 													<p className="text-[14px] font-medium text-[#111827]">Password Authentication</p>
 													<p className="text-[12px] text-[#6B7280] mt-[2px]">
-														{authConfig.login_methods?.allowed_usernames?.map(type => type.charAt(0).toUpperCase() + type.slice(1)).join(', ')}
+														{authConfig.login_methods?.password?.allowed_usernames?.map(type => type.charAt(0).toUpperCase() + type.slice(1)).join(', ')}
 														{authConfig.login_methods?.password?.forgot_password_enabled && ' • Forgot password enabled'}
 													</p>
 												</div>
@@ -906,7 +928,11 @@ const ModernAuthConfig = () => {
 												</div>
 												<div className="flex-1">
 													<p className="text-[14px] font-medium text-[#111827]">One-Time Password (OTP)</p>
-													<p className="text-[12px] text-[#6B7280] mt-[2px]">SMS or email verification codes</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">
+														{authConfig.login_methods?.otp?.allowed_methods?.length > 0
+															? authConfig.login_methods.otp.allowed_methods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')
+															: 'SMS or email verification codes'}
+													</p>
 												</div>
 											</div>
 										)}
@@ -962,9 +988,9 @@ const ModernAuthConfig = () => {
 													{authConfig.two_factor_auth?.required ? 'Required' : 'Optional'}
 												</span>
 											</div>
-											{authConfig.two_factor_auth?.allowedMethods?.length > 0 && (
+											{authConfig.two_factor_auth?.allowed_methods?.length > 0 && (
 												<p className="text-[12px] text-[#6B7280]">
-													Methods: {authConfig.two_factor_auth.allowedMethods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+													Methods: {authConfig.two_factor_auth.allowed_methods.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
 												</p>
 											)}
 										</div>
@@ -1015,41 +1041,6 @@ const ModernAuthConfig = () => {
 										</div>
 									</div>
 								</div>
-
-								{/* OAuth Providers Overview */}
-								{oauthProviders && Object.values(oauthProviders).some(p => p.enabled) && (
-									<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
-										<div className="flex items-center gap-[12px] mb-[20px]">
-											<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-[12px] flex items-center justify-center">
-												<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-													<path d="M13.3333 10V7.5C13.3333 4.73858 11.0948 2.5 8.33333 2.5C5.57191 2.5 3.33333 4.73858 3.33333 7.5V10M3.33333 10H15C15.9205 10 16.6667 10.7462 16.6667 11.6667V16.6667C16.6667 17.5871 15.9205 18.3333 15 18.3333H3.33333C2.41286 18.3333 1.66667 17.5871 1.66667 16.6667V11.6667C1.66667 10.7462 2.41286 10 3.33333 10Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-												</svg>
-											</div>
-											<div>
-												<h3 className="text-[16px] font-semibold text-[#111827]">OAuth Providers</h3>
-												<p className="text-[12px] text-[#6B7280]">Social login options</p>
-											</div>
-										</div>
-										<div className="space-y-[12px]">
-											{oauthProviders?.google?.enabled && (
-												<div className="flex items-start gap-[12px] p-[12px] bg-[#F9FAFB] rounded-[8px]">
-													<div className="flex-shrink-0 w-[32px] h-[32px] bg-[#EFF6FF] rounded-[8px] flex items-center justify-center">
-														<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-															<path d="M16.3541 7.53124H15.75V7.5H9V10.5H13.2386C12.6203 12.2463 10.9586 13.5 9 13.5C6.51472 13.5 4.5 11.4853 4.5 9C4.5 6.51472 6.51472 4.5 9 4.5C10.1471 4.5 11.1907 4.93275 11.9854 5.63962L14.1068 3.51825C12.7673 2.26987 10.9755 1.5 9 1.5C4.85775 1.5 1.5 4.85775 1.5 9C1.5 13.1423 4.85775 16.5 9 16.5C13.1423 16.5 16.5 13.1423 16.5 9C16.5 8.49713 16.4483 8.00625 16.3541 7.53124Z" fill="#FFC107"/>
-															<path d="M2.36475 5.50913L4.82884 7.31625C5.49559 5.65912 7.11784 4.5 9 4.5C10.1471 4.5 11.1907 4.93275 11.9854 5.63962L14.1068 3.51825C12.7673 2.26987 10.9755 1.5 9 1.5C6.11921 1.5 3.62096 3.12637 2.36475 5.50913Z" fill="#FF3D00"/>
-															<path d="M9 16.5C10.9373 16.5 12.6975 15.7586 14.0284 14.553L11.7071 12.5887C10.9289 13.1807 9.97284 13.5008 9 13.5C7.04927 13.5 5.39289 12.2561 4.7689 10.5203L2.32318 12.4046C3.56439 14.8335 6.08509 16.5 9 16.5Z" fill="#4CAF50"/>
-															<path d="M16.3541 7.53124H15.75V7.5H9V10.5H13.2386C12.9428 11.3311 12.4100 12.0574 11.706 12.5891L11.7071 12.5884L14.0284 14.5526C13.8642 14.7019 16.5 12.75 16.5 9C16.5 8.49713 16.4483 8.00625 16.3541 7.53124Z" fill="#1976D2"/>
-														</svg>
-													</div>
-													<div className="flex-1">
-														<p className="text-[14px] font-medium text-[#111827]">Google</p>
-														<p className="text-[12px] text-[#6B7280] mt-[2px]">Sign in with Google account</p>
-													</div>
-												</div>
-											)}
-										</div>
-									</div>
-								)}
 							</div>
 
 							{/* Role Overrides Summary */}
@@ -1119,13 +1110,22 @@ const ModernAuthConfig = () => {
 										enabled={authConfig.login_methods?.otp?.enabled}
 										description="SMS or email based verification codes"
 									/>
-									<ConfigToggle 
-										label="Single Sign-On (SSO)" 
-										enabled={authConfig.login_methods?.sso?.enabled}
-										description="Enterprise SSO integration"
-									/>
-									<ConfigToggle 
-										label="OpenID Connect (OIDC)" 
+									<div>
+										<ConfigToggle
+											label="Single Sign-On (SSO)"
+											enabled={authConfig.login_methods?.sso?.enabled}
+											description="Enterprise SSO integration"
+										/>
+										{authConfig.login_methods?.sso?.enabled && (
+											<div className="mt-[12px] ml-[12px] p-[12px] bg-[#F0F9FF] border border-[#E0F2FE] rounded-[8px]">
+												<p className="text-[12px] text-[#0369A1]">
+													✓ SAML providers configured. Visit the <strong>SAML Providers</strong> section to manage them.
+												</p>
+											</div>
+										)}
+									</div>
+									<ConfigToggle
+										label="OpenID Connect (OIDC)"
 										enabled={authConfig.login_methods?.oidc?.enabled}
 										description="OAuth 2.0 based authentication"
 									/>
@@ -1138,7 +1138,7 @@ const ModernAuthConfig = () => {
 								<div className="space-y-[12px]">
 									<p className="text-[13px] text-[#6B7280]">Allowed username types:</p>
 									<div className="flex flex-wrap gap-[8px]">
-										{authConfig.login_methods?.allowed_usernames?.map(type => (
+										{authConfig.login_methods?.password?.allowed_usernames?.map(type => (
 											<span key={type} className="px-[12px] py-[6px] bg-[#EFF6FF] text-[#1E40AF] rounded-[8px] text-[13px] font-medium">
 												{type.charAt(0).toUpperCase() + type.slice(1)}
 											</span>
@@ -1168,11 +1168,11 @@ const ModernAuthConfig = () => {
 									enabled={authConfig.two_factor_auth?.required}
 									description="Additional security layer for user accounts"
 								/>
-								{authConfig.two_factor_auth?.allowedMethods?.length > 0 && (
+								{authConfig.two_factor_auth?.allowed_methods?.length > 0 && (
 									<div className="mt-[20px] pt-[20px] border-t border-[#F3F4F6]">
 										<p className="text-[13px] text-[#6B7280] mb-[12px]">Available 2FA methods:</p>
 										<div className="flex flex-wrap gap-[8px]">
-											{authConfig.two_factor_auth.allowedMethods.map(method => (
+											{authConfig.two_factor_auth.allowed_methods.map(method => (
 												<span key={method} className="px-[12px] py-[6px] bg-[#D1FAE5] text-[#065F46] rounded-[8px] text-[13px] font-medium">
 													{method}
 												</span>
@@ -1401,18 +1401,126 @@ const ModernAuthConfig = () => {
 							</div>
 						</div>
 					)}
+
+					{activeSection === 'saml' && (
+						<div className="space-y-[24px]">
+							<div className="bg-white rounded-[16px] border border-[#E5E7EB] p-[24px]">
+								<div className="mb-[24px] flex items-center justify-between">
+									<div>
+										<h3 className="text-[16px] font-semibold text-[#111827]">SAML Providers</h3>
+										<p className="text-[13px] text-[#6B7280] mt-[4px]">
+											Configure SAML-based single sign-on providers
+										</p>
+									</div>
+									<button
+										onClick={() => setShowSAMLModal(true)}
+										className="flex items-center gap-[8px] px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors"
+									>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+											<path d="M8 1V15M1 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+										</svg>
+										<span className="font-medium text-[14px]">Add Provider</span>
+									</button>
+								</div>
+
+								{loadingSAML ? (
+									<div className="flex items-center justify-center py-[32px]">
+										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5048ED]"></div>
+									</div>
+								) : samlProviders && samlProviders.length > 0 ? (
+									<div className="space-y-[12px]">
+										{samlProviders.map((provider) => (
+											<div key={provider.id} className="border border-[#E5E7EB] rounded-[12px] p-[16px] hover:bg-[#F9FAFB] transition-colors">
+												<div className="flex items-center justify-between">
+													<div className="flex items-center gap-[12px]">
+														<div className="w-[40px] h-[40px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] rounded-[10px] flex items-center justify-center">
+															<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+																<path d="M10 2C5.58 2 2 4.69 2 8c0 2.25 1.38 4.21 3.5 5.27V17c0 .55.45 1 1 1h7c.55 0 1-.45 1-1v-3.73c2.12-1.06 3.5-3.02 3.5-5.27 0-3.31-3.58-6-8-6z" fill="currentColor"/>
+															</svg>
+														</div>
+														<div>
+															<h4 className="text-[14px] font-semibold text-[#111827]">{provider.label}</h4>
+															<p className="text-[12px] text-[#6B7280]">Entity ID: {provider.sp_entityId}</p>
+														</div>
+													</div>
+													<div className="flex items-center gap-[8px]">
+														<button
+															onClick={() => {
+																setEditingSAMLProvider(provider);
+																setShowSAMLModal(true);
+															}}
+															className="flex items-center gap-[6px] px-[12px] py-[6px] text-[#5048ED] hover:bg-[#EFF6FF] rounded-[8px] transition-colors text-[13px] font-medium"
+														>
+															<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+																<path d="M9.917 1.75004C10.0696 1.59743 10.2514 1.47608 10.4517 1.39308C10.652 1.31008 10.8672 1.26709 11.0845 1.26709C11.3017 1.26709 11.517 1.31008 11.7173 1.39308C11.9176 1.47608 12.0994 1.59743 12.252 1.75004C12.4046 1.90265 12.5259 2.08445 12.6089 2.28475C12.6919 2.48505 12.7349 2.70029 12.7349 2.91754C12.7349 3.13479 12.6919 3.35003 12.6089 3.55033C12.5259 3.75064 12.4046 3.93243 12.252 4.08504L4.37557 11.9617L1.16699 12.8334L2.03866 9.62504L9.917 1.75004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+															</svg>
+															Edit
+														</button>
+														<button
+															onClick={async () => {
+																if (window.confirm(`Are you sure you want to delete "${provider.label}"?`)) {
+																	try {
+																		const { success } = await triggerApi({
+																			url: `/api/v1/apps/${appId}/saml-providers/${provider.id}/`,
+																			type: 'DELETE',
+																			loader: true,
+																		});
+																		if (success) {
+																			setSAMLProviders(samlProviders.filter(p => p.id !== provider.id));
+																			dispatch(toggleRerenderPage());
+																		}
+																	} catch (error) {
+																		console.error('Error deleting SAML provider:', error);
+																	}
+																}
+															}}
+															className="flex items-center gap-[6px] px-[12px] py-[6px] text-[#DC2626] hover:bg-[#FEE2E2] rounded-[8px] transition-colors text-[13px] font-medium"
+														>
+															<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+																<path d="M1 3h12M5.5 5.5v5M8.5 5.5v5M2 3l0.5 9c0 0.55 0.45 1 1 1h7c0.55 0 1-0.45 1-1l0.5-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+															</svg>
+															Delete
+														</button>
+													</div>
+												</div>
+											</div>
+										))}
+									</div>
+								) : (
+									<div className="text-center py-[32px]">
+										<div className="w-[80px] h-[80px] bg-[#F3F4F6] rounded-full flex items-center justify-center mx-auto mb-[16px]">
+											<svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+												<path d="M20 4C11.1634 4 4 11.1634 4 20C4 28.8366 11.1634 36 20 36C28.8366 36 36 28.8366 36 20C36 11.1634 28.8366 4 20 4Z" stroke="#D1D5DB" strokeWidth="1.5"/>
+												<path d="M20 12V28M12 20H28" stroke="#D1D5DB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+										</div>
+										<p className="text-[14px] text-[#6B7280] mb-[16px]">No SAML providers configured yet</p>
+										<button
+											onClick={() => setShowSAMLModal(true)}
+											className="inline-flex items-center gap-[8px] px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors"
+										>
+											<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+												<path d="M8 1V15M1 8H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+											</svg>
+											<span className="font-medium text-[14px]">Add First Provider</span>
+										</button>
+									</div>
+								)}
+							</div>
+						</div>
+					)}
 				</>
 			) : null}
-			
+
 			{/* Auth Setup Modal - Also shown when editing existing config */}
 			{isAuthConfigured() && (
 				<AuthSetupModal
 					show={showAuthSetupModal}
 					onClose={() => setShowAuthSetupModal(false)}
-					initialData={{...authConfig, oauth_providers: oauthProviders}}
+					initialData={authConfig}
 					roles={roles}
 					onComplete={async (authData) => {
-						// Transform to expected format
+						// Transform to expected format matching the schema
 						const updatedAuthConfig = {
 							login_methods: {
 								password: {
@@ -1420,56 +1528,67 @@ const ModernAuthConfig = () => {
 									forgot_password_enabled: authData.login_methods.password.forgot_password_enabled,
 									password_reset_link_expiry_hours: authConfig?.login_methods?.password?.password_reset_link_expiry_hours || 24,
 									allowed_usernames: authData.login_methods.allowed_usernames,
-									reset_method: authData.login_methods.password.reset_method,
-									reset_via_sms: authData.login_methods.password.reset_via_sms,
-									reset_via_email: authData.login_methods.password.reset_via_email,
-									reset_sms_content: authData.login_methods.password.reset_sms_content,
-									reset_sms_webhook: authData.login_methods.password.reset_sms_webhook,
-									reset_email_content: authData.login_methods.password.reset_email_content,
-									reset_email_subject: authData.login_methods.password.reset_email_subject,
-									reset_email_webhook: authData.login_methods.password.reset_email_webhook,
-									reset_expiry_minutes: authData.login_methods.password.reset_expiry_minutes,
 								},
 								otp: {
 									enabled: authData.login_methods.otp.enabled,
-									sms_content: authData.login_methods.otp.sms_content,
-									sms_webhook: authData.login_methods.otp.sms_webhook,
-									email_content: authData.login_methods.otp.email_content,
-									email_subject: authData.login_methods.otp.email_subject,
-									email_webhook: authData.login_methods.otp.email_webhook,
-									allowed_methods: authData.login_methods.otp.allowed_methods || ['email', 'sms'],
+									allowed_methods: authData.login_methods.otp.allowed_methods || [],
+									email_content: authData.login_methods.otp.email_content || '',
+									email_subject: authData.login_methods.otp.email_subject || '',
+									email_hook: authData.login_methods.otp.email_webhook || '',
+									email_config_key: authData.login_methods.otp.email_config_key || '',
+									sms_hook: authData.login_methods.otp.sms_webhook || '',
+									sms_content: authData.login_methods.otp.sms_content || '',
+									sms_config_key: authData.login_methods.otp.sms_config_key || '',
+									sms_extra_data: authData.login_methods.otp.sms_extra_data || '',
+									otp_expiry: authData.login_methods.otp.otp_expiry || 300,
 								},
 								sso: { enabled: authData.login_methods.sso.enabled },
 								oidc: { enabled: authData.login_methods.oidc.enabled },
-								allowed_usernames: authData.login_methods.allowed_usernames,
 							},
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
-								force_logout_on_password_change: authData.session_policy.force_logout_on_password_change,
 							},
 							password_policy: {
-								reset: {
-									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
-									enabled: authData.login_methods.password.forgot_password_enabled,
-									allowed_methods: (() => {
-										const methods = [];
-										if (authData.login_methods.password.reset_via_email) methods.push('email');
-										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
-										return methods.length > 0 ? methods : ['email'];
-									})(),
-								},
 								min_length: authData.password_policy.min_length,
 								allow_change: authData.password_policy.allow_change,
 								require_numbers: authData.password_policy.require_numbers,
 								require_lowercase: authData.password_policy.require_lowercase,
 								require_uppercase: authData.password_policy.require_uppercase,
 								password_expiry_days: authData.password_policy.password_expiry_days,
+								password_repeat_days: authData.password_policy.password_repeat_days,
 								require_special_chars: authData.password_policy.require_special_chars,
 								password_history_count: authData.password_policy.password_history_count,
+								reset: {
+									enabled: authData.login_methods.password.forgot_password_enabled,
+									expiry: authData.login_methods.password.reset_expiry_minutes * 60, // Convert minutes to seconds
+									allowed_methods: (() => {
+										const methods = [];
+										if (authData.login_methods.password.reset_via_email) methods.push('email');
+										if (authData.login_methods.password.reset_via_sms) methods.push('sms');
+										return methods.length > 0 ? methods : ['email'];
+									})(),
+									by_code: authData.login_methods.password.reset_method === 'code',
+									by_email: authData.login_methods.password.reset_via_email || false,
+									login_after_reset: false,
+									max_attempts: 3,
+									email_hook: authData.login_methods.password.reset_email_webhook || '',
+									email_content: authData.login_methods.password.reset_email_content || '',
+									email_subject: authData.login_methods.password.reset_email_subject || '',
+									email_config_key: authData.login_methods.password.reset_email_config_key || '',
+									sms_hook: authData.login_methods.password.reset_sms_webhook || '',
+									sms_content: authData.login_methods.password.reset_sms_content || '',
+									sms_config_key: authData.login_methods.password.reset_sms_config_key || '',
+									sms_extra_data: authData.login_methods.password.reset_sms_extra_data || '',
+								},
 							},
 							two_factor_auth: {
 								required: authData.two_factor_auth.required,
-								allowedMethods: authData.two_factor_auth.allowedMethods,
+								allowed_methods: authData.two_factor_auth.allowedMethods || [],
+								enforced_from: null,
+								grace_period_days: null,
+								skip_for_sso: false,
+								email_hook: authData.two_factor_auth.email_hook || '',
+								sms_hook: authData.two_factor_auth.sms_hook || '',
 							},
 						};
 
@@ -1488,24 +1607,6 @@ const ModernAuthConfig = () => {
 							});
 
 							if (success && response) {
-								// Save OAuth providers if configured
-								if (authData.oauth_providers) {
-									const oauthFormData = transformToFormData({
-										oauth_providers: JSON.stringify(authData.oauth_providers)
-									});
-
-									try {
-										await triggerApi({
-											url: `/api/v1/apps/${appId}/oauth-providers/`,
-											type: 'PUT',
-											loader: false,
-											payload: oauthFormData,
-										});
-									} catch (oauthError) {
-										console.error('Error saving OAuth providers:', oauthError);
-									}
-								}
-
 								dispatch(toggleRerenderPage());
 								setShowAuthSetupModal(false);
 							}
@@ -1552,8 +1653,10 @@ const ModernAuthConfig = () => {
 								dispatch(toggleRerenderPage());
 								setShowRoleOverrideModal(false);
 								setSelectedRoleForOverride(null);
-								// Redirect to role overrides section after save
-								setActiveSection('role-overrides');
+								// Reload page after saving role override
+								setTimeout(() => {
+									window.location.reload();
+								}, 500);
 							}
 						} catch (error) {
 							console.error('Error saving role override configuration:', error);
@@ -1561,6 +1664,50 @@ const ModernAuthConfig = () => {
 					}}
 				/>
 			)}
+
+			{/* SAML Provider Modal */}
+			<SAMLProviderModal
+				isOpen={showSAMLModal}
+				initialData={editingSAMLProvider}
+				onClose={() => {
+					setShowSAMLModal(false);
+					setEditingSAMLProvider(null);
+				}}
+				onSave={async (formData) => {
+					try {
+						// Convert form data to FormData object for API
+						const dynamicFormData = transformToFormData(formData);
+
+						const isUpdate = editingSAMLProvider !== null;
+						const url = isUpdate
+							? `/api/v1/apps/${appId}/saml-providers/${editingSAMLProvider.id}/`
+							: `/api/v1/apps/${appId}/saml-providers/`;
+						const method = isUpdate ? 'PUT' : 'POST';
+
+						const { response, success } = await triggerApi({
+							url,
+							type: method,
+							loader: true,
+							payload: dynamicFormData,
+						});
+
+						if (success && response) {
+							if (isUpdate) {
+								// Update existing provider in list
+								setSAMLProviders(samlProviders.map(p => p.id === editingSAMLProvider.id ? response : p));
+							} else {
+								// Add new provider to list
+								setSAMLProviders([...samlProviders, response]);
+							}
+							setShowSAMLModal(false);
+							setEditingSAMLProvider(null);
+							dispatch(toggleRerenderPage());
+						}
+					} catch (error) {
+						console.error('Error saving SAML provider:', error);
+					}
+				}}
+			/>
 		</div>
 	);
 };
