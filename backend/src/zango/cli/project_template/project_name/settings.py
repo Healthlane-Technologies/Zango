@@ -34,13 +34,5 @@ settings_result = setup_settings(AttrDict(vars()), BASE_DIR)
 SECRET_KEY = "{{secret_key}}"  # Shift this to .env
 
 
-# To change the media storage to S3 you can use the BACKEND class provided by the default storage
-# To change the static storage to S3 you can use the BACKEND class provided by the staticfiles storage
-# STORAGES = {
-#     "default": {"BACKEND": "zango.core.storage_utils.S3MediaStorage"},
-#     "staticfiles": {"BACKEND": "zango.core.storage_utils.S3StaticStorage"},
-# }
-
-
 # INTERNAL_IPS can contain a list of IP addresses or CIDR blocks that are considered internal.
 # Both individual IP addresses and CIDR notation (e.g., '192.168.1.1' or '192.168.1.0/24') can be provided.

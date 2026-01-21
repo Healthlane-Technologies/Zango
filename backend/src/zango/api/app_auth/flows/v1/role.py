@@ -4,6 +4,8 @@ from allauth.account.stages import LoginStageController, RoleSelectionStage
 from allauth.headless.base import response
 from allauth.headless.base.views import APIView
 
+from django.http import HttpResponse
+
 from zango.apps.appauth.models import UserRoleModel
 from zango.core.api import ZangoGenericAppAPIView, get_api_response
 
@@ -27,19 +29,27 @@ class UserRoleViewAPIV1(APIView):
     def post(self, request, *args, **kwargs):
         role = request.GET.get("role")
         if role is None:
-            return get_api_response(
-                success=False,
-                response_content={"message": "user role not specified"},
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "user role not specified",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         try:
             UserRoleModel.objects.get(id=role)
         except UserRoleModel.DoesNotExist:
-            return get_api_response(
-                success=False,
-                response_content={"message": "specified user role does not exist"},
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "specified user role does not exist",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         request.session["role_id"] = role
         response = self.respond_next_stage()
         return get_api_response(
@@ -53,19 +63,27 @@ class SwitchRoleAPIV1(ZangoGenericAppAPIView):
     def post(self, request, *args, **kwargs):
         role = request.GET.get("role")
         if role is None:
-            return get_api_response(
-                success=False,
-                response_content={"message": "user role not specified"},
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "user role not specified",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         try:
             UserRoleModel.objects.get(id=role)
         except UserRoleModel.DoesNotExist:
-            return get_api_response(
-                success=False,
-                response_content={"message": "specified user role does not exist"},
-                status=400,
-            )
+            resp = {
+                "status": 400,
+                "errors": [
+                    {
+                        "message": "specified user role does not exist",
+                    }
+                ],
+            }
+            return HttpResponse(json.dumps(resp), status=400)
         request.session["role_id"] = role
         return get_api_response(
             success=True,

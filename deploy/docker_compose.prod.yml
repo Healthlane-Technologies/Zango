@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   postgres:
-    image: postgres
+    image: postgres:15
     env_file:
       - .env
     ports:
@@ -40,7 +40,7 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: config/Dockerfile
+      dockerfile: config/nginx.dockerfile
     ports:
       - "1443:1443"
     env_file:

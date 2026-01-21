@@ -10,7 +10,11 @@ from django.db.models import Q
 from django.utils.decorators import method_decorator
 
 from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
-from zango.apps.appauth.models import AppUserModel, UserRoleModel
+from zango.apps.appauth.models import (
+    AppUserModel,
+    SAMLModel,
+    UserRoleModel,
+)
 from zango.apps.dynamic_models.workspace.base import Workspace
 from zango.apps.permissions.models import PolicyModel
 from zango.apps.shared.tenancy.models import TenantModel, ThemesModel
@@ -31,6 +35,7 @@ from zango.core.utils import (
 
 from .serializers import (
     AppUserModelSerializerModel,
+    SAMLProviderModelSerializer,
     SocialAppSerializer,
     TenantSerializerModel,
     ThemeModelSerializer,
@@ -224,7 +229,7 @@ class UserRoleViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination, TenantM
     def get_dropdown_options(self):
         options = {}
         options["policies"] = [
-            {"id": t.id, "label": t.name}
+            {"id": t.id, "label": t.name, "type": t.type, "path": t.path}
             for t in PolicyModel.objects.all().order_by("-modified_at")
         ]
         return options
@@ -327,6 +332,14 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
         obj = UserRoleModel.objects.get(id=kwargs.get("role_id"))
         return obj
 
+    def get_dropdown_options(self):
+        options = {}
+        options["all_policies"] = [
+            {"id": p.id, "label": p.name}
+            for p in PolicyModel.objects.all().order_by("-modified_at")
+        ]
+        return options
+
     def get(self, request, *args, **kwargs):
         try:
             obj = self.get_obj(**kwargs)
@@ -337,6 +350,7 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             )
             success = True
             response = {"role": serializer.data}
+            response.update(self.get_dropdown_options())
             status = 200
         except Exception as e:
             success = False
@@ -372,14 +386,16 @@ class UserRoleDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
                 success = False
                 status_code = 400
                 if serializer.errors:
-                    error_messages = [
-                        error[0] for field_name, error in serializer.errors.items()
-                    ]
-                    error_message = ", ".join(error_messages)
+                    result = {
+                        "message": ", ".join(
+                            [
+                                error[0]
+                                for field_name, error in serializer.errors.items()
+                            ]
+                        )
+                    }
                 else:
-                    error_message = "Invalid data"
-
-                result = {"message": error_message}
+                    result = {"message": "Invalid data"}
         except Exception as e:
             import traceback
 
@@ -441,18 +457,28 @@ class UserViewAPIV1(
 
     def get(self, request, *args, **kwargs):
         try:
+            app_tenant = self.get_tenant(**kwargs)
             include_dropdown_options = request.GET.get("include_dropdown_options")
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
-            app_users = self.get_queryset(search, columns)
-            app_users = self.paginate_queryset(app_users, request, view=self)
+            app_users_queryset = self.get_queryset(search, columns)
+
+            # Calculate active and inactive counts from the filtered queryset
+            active_count = app_users_queryset.filter(is_active=True).count()
+            inactive_count = app_users_queryset.filter(is_active=False).count()
+
+            app_users = self.paginate_queryset(app_users_queryset, request, view=self)
             serializer = AppUserModelSerializerModel(
                 app_users,
                 many=True,
                 context={"request": request, "tenant": self.get_tenant(**kwargs)},
             )
             app_users_data = self.get_paginated_response_data(serializer.data)
-            app_tenant = self.get_tenant(**kwargs)
+
+            # Add active and inactive counts to the response
+            app_users_data["active_count"] = active_count
+            app_users_data["inactive_count"] = inactive_count
+
             success = True
             response = {
                 "users": app_users_data,
@@ -465,6 +491,9 @@ class UserViewAPIV1(
 
         except Exception as e:
             success = False
+            import traceback
+
+            traceback.print_exc()
             response = {"message": str(e)}
             status = 500
 
@@ -833,3 +862,264 @@ class OAuthProvidersViewAPIV1(ZangoGenericPlatformAPIView):
             status = 500
 
         return get_api_response(success, response, status)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class SAMLProvidersViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
+    """
+    API endpoint for managing SAML providers.
+
+    GET: List all SAML providers for the application
+    POST: Create a new SAML provider with comprehensive validation
+    """
+
+    permission_classes = (IsPlatformUserAllowedApp,)
+
+    def get(self, request, *args, **kwargs):
+        """
+        Retrieve all SAML providers for the application.
+
+        Returns:
+            - saml_providers: List of all configured SAML providers
+            - message: Success message
+        """
+        try:
+            app_tenant = self.get_tenant(**kwargs)
+            saml_providers = SAMLModel.objects.all().order_by("-id")
+
+            serializer = SAMLProviderModelSerializer(saml_providers, many=True)
+
+            success = True
+            response = {
+                "saml_providers": serializer.data,
+                "message": "All SAML providers fetched successfully",
+                "count": saml_providers.count(),
+            }
+            status = 200
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            response = {"message": f"Error fetching SAML providers: {str(e)}"}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Create a new SAML provider with validation.
+
+        Required fields:
+            - label: Unique label for the SAML provider
+            - sp_entityId: Service Provider Entity ID (URL)
+            - sp_acsURL: Service Provider ACS URL
+            - idp_entityId: Identity Provider Entity ID (URL)
+            - idp_sso: Identity Provider SSO URL
+            - idp_x509cert: IdP x509 certificate in PEM format
+
+        Optional fields:
+            - sp_x509cert: SP x509 certificate
+            - sp_privatekey: SP private key for signing
+            - And various security configuration fields
+
+        Returns:
+            - saml_provider_id: ID of the newly created provider
+            - message: Success message
+            - errors: Validation errors (if any)
+        """
+        try:
+            app_tenant = self.get_tenant(**kwargs)
+            data = request.data
+
+            serializer = SAMLProviderModelSerializer(data=data)
+            if serializer.is_valid():
+                saml_provider = serializer.save()
+                success = True
+                status_code = 201
+                result = {
+                    "message": "SAML Provider created successfully",
+                    "saml_provider_id": saml_provider.id,
+                    "saml_provider": SAMLProviderModelSerializer(saml_provider).data,
+                }
+            else:
+                success = False
+                status_code = 400
+                # Format error messages for better readability
+                error_details = {}
+                for field, errors in serializer.errors.items():
+                    error_details[field] = [str(error) for error in errors]
+
+                result = {
+                    "message": "SAML Provider creation failed due to validation errors",
+                    "errors": error_details,
+                }
+
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            result = {
+                "message": f"Error creating SAML Provider: {str(e)}",
+                "errors": {"general": [str(e)]},
+            }
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class SAMLProviderDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
+    """
+    API endpoint for managing a specific SAML provider.
+
+    GET: Retrieve SAML provider configuration
+    PUT: Update SAML provider configuration
+    DELETE: Delete a SAML provider
+    """
+
+    permission_classes = (IsPlatformUserAllowedApp,)
+
+    def get_obj(self, **kwargs):
+        """
+        Retrieve a SAML provider by ID.
+
+        Args:
+            saml_provider_id: ID of the SAML provider
+
+        Returns:
+            SAMLModel instance or None if not found
+        """
+        try:
+            obj = SAMLModel.objects.get(id=kwargs.get("saml_provider_id"))
+            return obj
+        except SAMLModel.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        """
+        Retrieve a specific SAML provider configuration.
+
+        Returns:
+            - saml_provider: Complete SAML provider configuration
+        """
+        try:
+            obj = self.get_obj(**kwargs)
+            if not obj:
+                return get_api_response(
+                    False,
+                    {
+                        "message": f"SAML Provider with ID '{kwargs.get('saml_provider_id')}' not found"
+                    },
+                    404,
+                )
+
+            serializer = SAMLProviderModelSerializer(obj)
+            success = True
+            response = {
+                "saml_provider": serializer.data,
+                "message": "SAML Provider fetched successfully",
+            }
+            status = 200
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            response = {"message": f"Error fetching SAML Provider: {str(e)}"}
+            status = 500
+
+        return get_api_response(success, response, status)
+
+    def put(self, request, *args, **kwargs):
+        """
+        Update an existing SAML provider configuration.
+
+        Supports partial updates. Any fields not provided will retain their current values.
+
+        Returns:
+            - saml_provider_id: ID of the updated provider
+            - saml_provider: Updated SAML provider configuration
+            - message: Success message
+            - errors: Validation errors (if any)
+        """
+        try:
+            obj = self.get_obj(**kwargs)
+            if not obj:
+                return get_api_response(
+                    False,
+                    {
+                        "message": f"SAML Provider with ID '{kwargs.get('saml_provider_id')}' not found"
+                    },
+                    404,
+                )
+
+            serializer = SAMLProviderModelSerializer(
+                instance=obj, data=request.data, partial=True
+            )
+
+            if serializer.is_valid():
+                updated_provider = serializer.save()
+                success = True
+                status_code = 200
+                result = {
+                    "message": "SAML Provider updated successfully",
+                    "saml_provider_id": obj.id,
+                    "saml_provider": SAMLProviderModelSerializer(updated_provider).data,
+                }
+            else:
+                success = False
+                status_code = 400
+                # Format error messages for better readability
+                error_details = {}
+                for field, errors in serializer.errors.items():
+                    error_details[field] = [str(error) for error in errors]
+
+                result = {
+                    "message": "SAML Provider update failed due to validation errors",
+                    "errors": error_details,
+                }
+
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            result = {
+                "message": f"Error updating SAML Provider: {str(e)}",
+                "errors": {"general": [str(e)]},
+            }
+            status_code = 500
+
+        return get_api_response(success, result, status_code)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Delete a SAML provider.
+
+        Returns:
+            - message: Success message
+        """
+        try:
+            obj = self.get_obj(**kwargs)
+            if not obj:
+                return get_api_response(
+                    False,
+                    {
+                        "message": f"SAML Provider with ID '{kwargs.get('saml_provider_id')}' not found"
+                    },
+                    404,
+                )
+
+            provider_label = obj.label
+            obj.delete()
+            success = True
+            status_code = 200
+            result = {
+                "message": f"SAML Provider '{provider_label}' deleted successfully",
+                "saml_provider_id": kwargs.get("saml_provider_id"),
+            }
+
+        except Exception as e:
+            traceback.print_exc()
+            success = False
+            result = {
+                "message": f"Error deleting SAML Provider: {str(e)}",
+                "errors": {"general": [str(e)]},
+            }
+            status_code = 500
+
+        return get_api_response(success, result, status_code)

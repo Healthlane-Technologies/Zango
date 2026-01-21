@@ -136,6 +136,15 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             search = request.GET.get("search", None)
             columns = get_search_columns(request)
             audit_logs = self.get_queryset(search, tenant, columns, model_type)
+
+            # Calculate total stats for all records (not just paginated)
+            total_stats = {
+                "total_changes": audit_logs.count(),
+                "total_created": audit_logs.filter(action="0").count(),
+                "total_updated": audit_logs.filter(action="1").count(),
+                "total_deleted": audit_logs.filter(action="2").count(),
+            }
+
             paginated_audit_logs = self.paginate_queryset(
                 audit_logs, request, view=self
             )
@@ -146,6 +155,7 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             success = True
             response = {
                 "audit_logs": auditlogs,
+                "total_stats": total_stats,
                 "message": "Audit logs fetched successfully",
             }
             if include_dropdown_options:

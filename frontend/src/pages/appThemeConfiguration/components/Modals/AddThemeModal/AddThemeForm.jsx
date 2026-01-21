@@ -3,9 +3,9 @@ import { get } from 'lodash';
 import { useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
-import { ReactComponent as BorderRadiusIcon } from '../../../../../assets/images/svg/border-radius-icon.svg';
 import InputField from '../../../../../components/Form/InputField';
 import SelectField from '../../../../../components/Form/SelectField';
+import FontFamilySelectField from '../../../../../components/Form/FontFamilySelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { getFontFamily } from '../../../../../utils/fonts';
@@ -22,18 +22,25 @@ const AddThemeForm = ({ closeModal }) => {
 		name: '',
 		config: {
 			color: {
-				primary: '#5048ED',
-				secondary: '#ffffff',
+				primary: '#000000',
+				secondary: '#E1D6AE',
 				background: '#ffffff',
-			},
-			typography: {
-				font_family: 'Open Sans',
+				gray: '#717680',
+				success: '#52c41a',
+				warning: '#faad14',
+				error: '#AA4A44',
+				info: '#1890ff',
 			},
 			button: {
-				border_radius: '4',
 				color: '#ffffff',
-				border_color: '#C7CED3',
 				background: '#5048ED',
+				border_color: '#C7CED3',
+				border_radius: '10',
+			},
+			typography: {
+				font_family: '-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif',
+				font_size_base: '14px',
+				line_height: 1.5715,
 			},
 		},
 	};
@@ -43,17 +50,24 @@ const AddThemeForm = ({ closeModal }) => {
 		config: Yup.object({
 			color: Yup.object({
 				primary: Yup.string().required('Required'),
-				secondary: Yup.string().required('Required'),
-				background: Yup.string().required('Required'),
+				secondary: Yup.string(),
+				background: Yup.string(),
+				gray: Yup.string().required('Required'),
+				success: Yup.string().required('Required'),
+				warning: Yup.string().required('Required'),
+				error: Yup.string().required('Required'),
+				info: Yup.string().required('Required'),
+			}),
+			button: Yup.object({
+				color: Yup.string(),
+				background: Yup.string(),
+				border_color: Yup.string(),
+				border_radius: Yup.string(),
 			}),
 			typography: Yup.object({
 				font_family: Yup.string().required('Required'),
-			}),
-			button: Yup.object({
-				border_radius: Yup.string().required('Required'),
-				color: Yup.string().required('Required'),
-				border_color: Yup.string().required('Required'),
-				background: Yup.string().required('Required'),
+				font_size_base: Yup.string().required('Required'),
+				line_height: Yup.number().required('Required'),
 			}),
 		}),
 	});
@@ -105,7 +119,7 @@ const AddThemeForm = ({ closeModal }) => {
 							/>
 							<div className="flex flex-col gap-[16px]">
 								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
-									Color
+									Colors
 								</h4>
 								<ColorPicker
 									data={{
@@ -117,7 +131,7 @@ const AddThemeForm = ({ closeModal }) => {
 								<ColorPicker
 									data={{
 										id: 'config.color.secondary',
-										label: 'Secondary Color (optional)',
+										label: 'Secondary Color',
 										formik: formik,
 									}}
 								/>
@@ -128,14 +142,85 @@ const AddThemeForm = ({ closeModal }) => {
 										formik: formik,
 									}}
 								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.gray',
+										label: 'Gray Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.success',
+										label: 'Success Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.warning',
+										label: 'Warning Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.error',
+										label: 'Error Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.color.info',
+										label: 'Info Color',
+										formik: formik,
+									}}
+								/>
+							</div>
+							<div className="flex flex-col gap-[16px]">
+								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
+									Button
+								</h4>
+								<ColorPicker
+									data={{
+										id: 'config.button.color',
+										label: 'Button Text Color',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.button.background',
+										label: 'Button Background',
+										formik: formik,
+									}}
+								/>
+								<ColorPicker
+									data={{
+										id: 'config.button.border_color',
+										label: 'Button Border Color',
+										formik: formik,
+									}}
+								/>
+								<InputField
+									key="config.button.border_radius"
+									label="Button Border Radius"
+									name="config.button.border_radius"
+									id="config.button.border_radius"
+									placeholder="e.g., 10"
+									value={get(formik.values, 'config.button.border_radius', '')}
+									onChange={formik.handleChange}
+									formik={formik}
+								/>
 							</div>
 							<div className="flex flex-col gap-[16px]">
 								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
 									Typography
 								</h4>
-								<SelectField
+								<FontFamilySelectField
 									key="config.typography.font_family"
-									label="Font"
+									label="Font Family"
 									name="config.typography.font_family"
 									id="config.typography.font_family"
 									placeholder="Select font family"
@@ -148,64 +233,27 @@ const AddThemeForm = ({ closeModal }) => {
 									optionsData={getFontFamily() ?? []}
 									formik={formik}
 								/>
-							</div>
-							<div className="flex flex-col gap-[16px]">
-								<h4 className="font-source-sans-pro text-[18px] font-semibold leading-[24px] tracking-[-0.2px] text-[#212429]">
-									Button/CTA
-								</h4>
-								<div className="flex flex-col gap-[4px]">
-									<label
-										htmlFor="config.button.border_radius"
-										className="font-lato text-form-xs font-semibold text-[#A3ABB1]"
-									>
-										Corner Radius
-									</label>
-									<div className="relative flex w-full gap-[16px] rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato text-[#212429]">
-										<input
-											id="config.button.border_radius"
-											name="config.button.border_radius"
-											type="text"
-											pattern="[0-9]+"
-											onChange={formik.handleChange}
-											onBlur={formik.handleBlur}
-											value={get(
-												formik.values,
-												'config.button.border_radius',
-												'#ffffff'
-											)}
-											className="w-full placeholder:text-[#9A9A9A] hover:outline-0 focus:outline-0"
-											placeholder="Enter"
-										/>
-										<span className="text-[#6C747D]">px</span>
-										<BorderRadiusIcon />
-									</div>
-									{get(formik.touched, 'config.button.border_radius', '') &&
-									get(formik.errors, 'config.button.border_radius', '') ? (
-										<div className="font-lato text-form-xs text-[#cc3300]">
-											{get(formik.errors, 'config.button.border_radius', '')}
-										</div>
-									) : null}
-								</div>
-								<ColorPicker
-									data={{
-										id: 'config.button.background',
-										label: 'CTA Color',
-										formik: formik,
-									}}
+								<InputField
+									key="config.typography.font_size_base"
+									label="Base Font Size"
+									name="config.typography.font_size_base"
+									id="config.typography.font_size_base"
+									placeholder="e.g., 14px"
+									value={get(formik.values, 'config.typography.font_size_base', '')}
+									onChange={formik.handleChange}
+									formik={formik}
 								/>
-								<ColorPicker
-									data={{
-										id: 'config.button.border_color',
-										label: 'Border Color',
-										formik: formik,
-									}}
-								/>
-								<ColorPicker
-									data={{
-										id: 'config.button.color',
-										label: 'Font Color on CTA',
-										formik: formik,
-									}}
+								<InputField
+									key="config.typography.line_height"
+									label="Line Height"
+									name="config.typography.line_height"
+									id="config.typography.line_height"
+									placeholder="e.g., 1.5715"
+									type="number"
+									step="0.0001"
+									value={get(formik.values, 'config.typography.line_height', '')}
+									onChange={formik.handleChange}
+									formik={formik}
 								/>
 							</div>
 						</div>

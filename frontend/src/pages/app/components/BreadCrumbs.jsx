@@ -11,7 +11,7 @@ export default function BreadCrumbs() {
 		<div className="flex flex-wrap gap-[5px]">
 			{location.pathname
 				.split('/')
-				.filter((each, index) => each && index !== 1)
+				.filter((each, index) => each && index !== 1 && each !== 'app-configuration')
 				.map((each, index, filterBreadCrumb) => {
 					let url = filterBreadCrumb.slice(0, index + 1).join('/');
 					let suffixSlash = index === filterBreadCrumb.length - 1 ? ' / ' : '';

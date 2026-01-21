@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import Modal from '../../../../../components/Modal';
+import StandardModal from '../../../../../components/StandardModal';
 import {
 	closeIsAddNewUserModalOpen,
 	selectIsAddNewUserModalOpen,
@@ -15,10 +15,11 @@ function AddNewUserModal() {
 	}
 
 	return (
-		<Modal
+		<StandardModal
 			label="Add New User"
 			show={isAddNewUserModalOpen}
 			closeModal={closeModal}
+			size="lg"
 			ModalBody={<AddNewUserForm closeModal={closeModal} />}
 		/>
 	);

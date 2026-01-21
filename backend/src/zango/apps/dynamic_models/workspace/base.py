@@ -65,6 +65,7 @@ class Workspace:
         self.path = str(settings.BASE_DIR) + f"/workspaces/{wobj.name}/"
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
+        self.routes = self.get_all_view_urls()
         self.models = []  # sorted with bfs
 
     @classmethod
@@ -122,11 +123,15 @@ class Workspace:
         for item in bfs:
             if item["type"] == "package":
                 for mod in item["modules"]:
-                    path = self.get_package_path(item["name"]) + mod["path"]
+                    # Convert dotted module path to filesystem path (e.g., "parent.child" -> "parent/child")
+                    # This allows packages to have nested module structures just like app modules
+                    fs_path = mod["path"].replace(".", "/")
+                    path = self.get_package_path(item["name"]) + fs_path
                     if path not in modules:
-                        modules.append(path)
+                        modules.append(path.replace(".", "/"))
             if item["type"] == "module":
-                # Convert nested module path (e.g., "test_mod.test_sub") to filesystem path
+                # Convert dotted module path to filesystem path (e.g., "parent.child" -> "parent/child")
+                # This allows app modules to have nested structures
                 fs_path = item["path"].replace(".", "/")
                 path = self.path + fs_path
                 if path not in modules:
@@ -362,19 +367,167 @@ class Workspace:
 
         package_routes = _settings["package_routes"]
         for route in package_routes:
-            pkg_app_routes = self.get_package_settings(route["package"])["app_routes"]
+            pkg_settings = self.get_package_settings(route["package"])
+            pkg_app_routes = pkg_settings["app_routes"]
+
+            # Create a mapping of module names to their actual paths for this package
+            pkg_module_path_map = {
+                module["name"]: module["path"] for module in pkg_settings["modules"]
+            }
+
             for pkg_route in pkg_app_routes:
+                # Map module name to actual path if it exists in the mapping
+                module_path = pkg_module_path_map.get(
+                    pkg_route["module"], pkg_route["module"]
+                )
+
                 routes.append(
                     {
                         "re_path": route["re_path"] + pkg_route["re_path"].strip("^"),
-                        "module": "packages."
-                        + route["package"]
-                        + "."
-                        + pkg_route["module"],
+                        "module": "packages." + route["package"] + "." + module_path,
                         "url": pkg_route["url"],
                     }
                 )
         return routes
+
+    def get_all_view_urls(self) -> list[dict]:
+        """
+        Returns URLs of all views in the workspace by examining urlpatterns
+        from each module defined in get_root_urls()
+        """
+        all_urls = []
+        root_urls = self.get_root_urls()
+
+        for root_url in root_urls:
+            try:
+                module_path = root_url["module"] + "." + root_url["url"]
+                module = self.plugin_source.load_plugin(module_path)
+                urlpatterns = getattr(module, "urlpatterns", [])
+
+                for pattern in urlpatterns:
+                    # Construct full URL by combining root path and pattern
+                    root_path = root_url["re_path"].strip("^$")
+                    pattern_str = str(pattern.pattern).strip("^$")
+                    full_url = "/" + root_path.strip("/") + "/" + pattern_str.strip("/")
+                    full_url = re.sub(r"/+", "/", full_url)  # Remove duplicate slashes
+
+                    url_info = {
+                        "root_path": root_url["re_path"],
+                        "module": root_url["module"],
+                        "pattern": str(pattern.pattern),
+                        "full_url": full_url,
+                        "name": getattr(pattern, "name", None),
+                        "callback": pattern.view_class[3:]
+                        if getattr(pattern, "view_class", None)
+                        else None,
+                        "full_module_path": module_path,
+                    }
+                    all_urls.append(url_info)
+
+            except Exception:
+                # Skip modules that can't be loaded or don't have urlpatterns
+                continue
+
+        return all_urls
+
+    def generate_dot_diagram(self, **options):
+        """
+        Generate a DOT diagram for the dynamic models in this workspace.
+
+        Args:
+            **options: Configuration options for the graph generation
+                - disable_fields (bool): Don't show model fields
+                - group_models (bool): Group models in subgraphs
+                - verbose_names (bool): Use verbose field names
+                - include_models (str/list): Models to include (supports wildcards)
+                - exclude_models (str/list): Models to exclude (supports wildcards)
+                - inheritance (bool): Show inheritance relationships
+                - hide_edge_labels (bool): Hide relationship labels
+                - rankdir (str): Graph layout direction
+                - output_format (str): Output format ('dot', 'png', 'svg', 'json')
+                - output_file (str): Output file path (for image formats)
+                - layout (str): GraphViz layout algorithm ('dot', 'neato', 'fdp', etc.)
+
+        Returns:
+            str: DOT format string if output_format is 'dot' or None
+            dict: JSON data if output_format is 'json'
+            None: If output is written to file
+        """
+        from ..graph_utils import (
+            DynamicModelGraphGenerator,
+            generate_dot_from_data,
+            render_output_pydot,
+            render_output_pygraphviz,
+        )
+
+        # Set default options
+        default_options = {
+            "disable_fields": False,
+            "group_models": False,
+            "verbose_names": False,
+            "inheritance": True,
+            "hide_edge_labels": False,
+            "output_format": "dot",
+            "layout": "dot",
+        }
+        default_options.update(options)
+
+        # Create graph generator
+        graph_generator = DynamicModelGraphGenerator(
+            tenant_name=self.wobj.name, **default_options
+        )
+
+        # Generate graph data
+        graph_generator.generate_graph_data()
+
+        output_format = default_options.get("output_format", "dot")
+        output_file = default_options.get("output_file")
+
+        if output_format == "json":
+            graph_data = graph_generator.get_graph_data(as_json=True)
+            if output_file:
+                import json
+
+                with open(output_file, "w") as f:
+                    json.dump(graph_data, f, indent=2)
+                return None
+            return graph_data
+
+        # Generate DOT data
+        graph_data = graph_generator.get_graph_data(as_json=False)
+        dotdata = generate_dot_from_data(graph_data)
+
+        if output_format == "dot":
+            if output_file:
+                with open(output_file, "w") as f:
+                    f.write(dotdata)
+                return None
+            return dotdata
+
+        # For image formats, we need an output file
+        if not output_file:
+            raise ValueError("output_file is required for image formats")
+
+        if output_format in ["png", "svg", "pdf"] or output_file.endswith(
+            (".png", ".svg", ".pdf")
+        ):
+            # Try pygraphviz first, then pydot
+            try:
+                render_output_pygraphviz(
+                    dotdata, output_file, layout=default_options.get("layout", "dot")
+                )
+            except ImportError:
+                try:
+                    render_output_pydot(dotdata, output_file)
+                except ImportError:
+                    raise ImportError(
+                        "Neither pygraphviz nor pydot is available. "
+                        "Install one of them to generate image output."
+                    )
+            return None
+
+        # For any other format, return the DOT data
+        return dotdata
 
     def match_view(self, request) -> object:
         routes = self.get_root_urls()

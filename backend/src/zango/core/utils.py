@@ -34,6 +34,34 @@ def get_app_object():
     return getattr(_request_local, "app_object", None)
 
 
+def has_view_feature(request, feature_name):
+    """
+    Check if a specific feature is enabled for the current view based on user's permissions.
+
+    Features are automatically attached to the request during view permission checks
+    by the DynamicView's PermissionMixin.has_perm() method.
+
+    Args:
+        request: HttpRequest object (must have view_features attached by permission check)
+        feature_name (str): The feature to check (e.g., 'add', 'export', 'upload', 'delete')
+
+    Returns:
+        bool: True if the feature is enabled for the current user and view, False otherwise
+
+    Note:
+        Features must be defined in the policies.json file:
+        ```json
+        {
+            "name": "backend.myapp.views.MyView",
+            "type": "view",
+            "features": ["add", "export", "upload"]
+        }
+        ```
+    """
+    view_features = getattr(request, "view_features", set())
+    return feature_name in view_features
+
+
 def get_package_url(request, path, package_name):
     if not request:
         request = get_mock_request()
@@ -109,6 +137,41 @@ def get_datetime_in_tenant_timezone(datetime_val, tenant):
 
 def get_datetime_str_in_tenant_timezone(datetime_val, tenant):
     datetime_val = get_datetime_in_tenant_timezone(datetime_val, tenant)
+    return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")
+
+
+def get_datetime_in_current_timezone(datetime_val, tenant):
+    """
+    Convert datetime to currently activated timezone.
+    Priority: X-Client-Timezone header (from request) > task timezone (from connection) > tenant timezone > settings.TIME_ZONE
+    """
+    from django.db import connection
+
+    request = get_current_request()
+
+    # Priority 1: Request timezone (set by middleware from X-Client-Timezone header)
+    if request and hasattr(request, "tzname") and request.tzname:
+        tzname = request.tzname
+    # Priority 2: Task timezone (set on connection in task executor)
+    elif hasattr(connection, "tzname") and connection.tzname:
+        tzname = connection.tzname
+    # Priority 3: Tenant timezone
+    elif tenant.timezone:
+        tzname = tenant.timezone
+    # Priority 4: Default timezone
+    else:
+        tzname = settings.TIME_ZONE
+
+    tz = pytz.timezone(tzname)
+    return datetime_val.astimezone(tz)
+
+
+def get_datetime_str_in_current_timezone(datetime_val, tenant):
+    """
+    Convert datetime to currently activated timezone and format using tenant's format.
+    Uses X-Client-Timezone header if set, otherwise tenant timezone.
+    """
+    datetime_val = get_datetime_in_current_timezone(datetime_val, tenant)
     return datetime_val.strftime(tenant.datetime_format or "%d %b %Y %I:%M %p")
 
 
@@ -289,6 +352,8 @@ def deep_merge(target: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]
 
 
 def filter_user_auth_config(user_auth_config, user_role_auth_config):
+    if user_auth_config.get("two_factor_auth", {}).get("required"):
+        return user_auth_config
     if user_role_auth_config.get("two_factor_auth", {}).get("required"):
         if user_auth_config.get("two_factor_auth", {}):
             user_auth_config["two_factor_auth"]["required"] = True
@@ -345,8 +410,8 @@ def get_auth_priority(
     if request is None:
         request = get_current_request()
     if user is None:
-        user = request.user
-        if user.is_anonymous:
+        user = request.user if request else None
+        if user and user.is_anonymous:
             from allauth.account.internal.stagekit import unstash_login
 
             login = unstash_login(request, peek=True)
@@ -400,6 +465,19 @@ def get_auth_priority(
         getattr(user, "auth_config", {}) if user and not user.is_anonymous else {},
         user_role_auth_config,
     )
+
+    from zango.apps.appauth.models import SAMLModel
+
+    for saml in SAMLModel.objects.filter(is_active=True):
+        if (
+            not tenant_auth_config.get("login_methods", {})
+            .get("sso", {})
+            .get("providers")
+        ):
+            tenant_auth_config["login_methods"]["sso"]["providers"] = []
+        tenant_auth_config["login_methods"]["sso"]["providers"].append(
+            {"id": saml.id, "label": saml.label}
+        )
 
     if not config_key and not policy:
         merged_policy = {}

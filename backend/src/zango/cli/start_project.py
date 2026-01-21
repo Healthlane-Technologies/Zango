@@ -92,8 +92,11 @@ def create_project(
 
     project_root = get_project_root(project_name, directory=directory)
 
-    if not directory and os.path.exists(project_root):
-        return False, f"Folder already exists: {project_root}"
+    if os.path.exists(project_root):
+        click.echo(
+            f"Project directory already exists: {project_root}. Skipping project creation."
+        )
+        return True, "Project directory already exists"
 
     project_template_path = os.path.join(
         os.path.dirname(zango.cli.__file__), "project_template"
@@ -130,6 +133,8 @@ def create_project(
 def create_public_tenant(platform_domain_url="localhost"):
     from zango.apps.shared.tenancy.models import Domain, TenantModel
 
+    created = False
+
     # Creating public tenant
     if not TenantModel.objects.filter(schema_name="public").exists():
         public_tenant = TenantModel.objects.create(
@@ -143,10 +148,22 @@ def create_public_tenant(platform_domain_url="localhost"):
         Domain.objects.create(
             tenant=public_tenant, domain=platform_domain_url, is_primary=True
         )
+        created = True
+        click.echo("Public tenant created successfully.")
+    else:
+        click.echo("Public tenant already exists. Skipping creation.")
+    return created
 
 
 def create_platform_user(platform_username, platform_username_password):
     from zango.apps.shared.platformauth.models import PlatformUserModel
+
+    # Check if platform user already exists
+    if PlatformUserModel.objects.filter(email=platform_username).exists():
+        return {
+            "success": True,
+            "message": f"Platform user with email '{platform_username}' already exists. Skipping user creation.",
+        }
 
     # Creating default SuperAdmin User
     result = PlatformUserModel.create_user(
@@ -164,13 +181,13 @@ def create_platform_user(platform_username, platform_username_password):
 @click.command(name="start-project")
 @click.argument("project_name")
 @click.option("--directory", help="Project Directory")
-@click.option("--db_name", prompt=True, help="DB Name")
-@click.option("--db_user", prompt=True, help="DB User")
-@click.option("--db_password", prompt=True, hide_input=True, help="DB Password")
-@click.option("--db_host", prompt=True, help="DB Host", default="127.0.0.1")
-@click.option("--db_port", prompt=True, help="DB Port", default="5432")
-@click.option("--redis_host", prompt=True, help="Redis Host", default="127.0.0.1")
-@click.option("--redis_port", prompt=True, help="Redis Port", default="6379")
+@click.option("--db_name", help="DB Name")
+@click.option("--db_user", help="DB User")
+@click.option("--db_password", hide_input=True, help="DB Password")
+@click.option("--db_host", help="DB Host")
+@click.option("--db_port", help="DB Port")
+@click.option("--redis_host", help="Redis Host")
+@click.option("--redis_port", help="Redis Port")
 @click.option("--platform_username", prompt=False, help="Platform Username")
 @click.option(
     "--platform_domain_url",
@@ -183,6 +200,11 @@ def create_platform_user(platform_username, platform_username_password):
     prompt=False,
     hide_input=True,
     help="Platform User Password",
+)
+@click.option(
+    "--skip-db-setup",
+    is_flag=True,
+    help="Skip database operations, tenant and user creation (useful for base image creation)",
 )
 def start_project(
     project_name,
@@ -197,18 +219,54 @@ def start_project(
     platform_username,
     platform_user_password,
     platform_domain_url,
+    skip_db_setup,
 ):
     """Create Project"""
     if directory:
         click.echo(f"Creating Project under: {directory}")
         directory = os.path.join(directory, project_name)
 
-    db_connection_status = test_db_conection(
-        db_name, db_user, db_password, db_host, db_port
-    )
-    click.echo(f"db_connection_status: {db_connection_status}")
-    if not db_connection_status:
-        raise click.ClickException("DB Connection Failed!")
+    # Handle prompting when not skipping DB setup
+    if not skip_db_setup:
+        if not db_name:
+            db_name = click.prompt("DB Name")
+        if not db_user:
+            db_user = click.prompt("DB User")
+        if not db_password:
+            db_password = click.prompt("DB Password", hide_input=True)
+        if not db_host:
+            db_host = click.prompt("DB Host", default="127.0.0.1")
+        if not db_port:
+            db_port = click.prompt("DB Port", default="5432")
+        if not redis_host:
+            redis_host = click.prompt("Redis Host", default="127.0.0.1")
+        if not redis_port:
+            redis_port = click.prompt("Redis Port", default="6379")
+    else:
+        # Use environment variables when skipping DB setup
+        if not db_name:
+            db_name = "POSTGRES_DB"
+        if not db_user:
+            db_user = "POSTGRES_USER"
+        if not db_password:
+            db_password = ""
+        if not db_host:
+            db_host = "POSTGRES_HOST"
+        if not db_port:
+            db_port = "POSTGRES_PORT"
+        if not redis_host:
+            redis_host = "REDIS_HOST"
+        if not redis_port:
+            redis_port = "REDIS_PORT"
+
+    # Skip DB connection test when skip_db_setup is True
+    if not skip_db_setup:
+        db_connection_status = test_db_conection(
+            db_name, db_user, db_password, db_host, db_port
+        )
+        click.echo(f"db_connection_status: {db_connection_status}")
+        if not db_connection_status:
+            raise click.ClickException("DB Connection Failed!")
 
     project_status, project_message = create_project(
         project_name,
@@ -224,6 +282,11 @@ def start_project(
     if not project_status:
         raise click.ClickException(project_message)
 
+    # Skip all database operations when skip_db_setup is True
+    if skip_db_setup:
+        click.echo("Project structure created successfully. Skipping database setup.")
+        return
+
     # Initializing the project
     project_root = get_project_root(project_name, directory=directory)
     sys.path.insert(0, project_root)
@@ -235,29 +298,32 @@ def start_project(
     call_command("migrate_schemas", schema="public")
 
     # Creating Public Tenant
-    create_public_tenant(platform_domain_url=platform_domain_url)
+    created = create_public_tenant(platform_domain_url=platform_domain_url)
 
-    # Prompting default platform user details
-    while True:
-        if not platform_username:
-            click.echo("Please enter platform user email")
-            platform_username = click.prompt("Email")
-        if not platform_user_password:
-            platform_user_password = click.prompt(
-                "Password", hide_input=True, confirmation_prompt=True
+    if created:
+        # Prompting default platform user details
+        while True:
+            if not platform_username:
+                click.echo("Please enter platform user email")
+                platform_username = click.prompt("Email")
+            if not platform_user_password:
+                platform_user_password = click.prompt(
+                    "Password", hide_input=True, confirmation_prompt=True
+                )
+
+            user_creation_result = create_platform_user(
+                platform_username, platform_user_password
             )
+            if user_creation_result["success"]:
+                break
+            else:
+                platform_username = None
+                platform_user_password = None
+                click.echo(user_creation_result["message"])
+                retry = click.prompt(
+                    "Do you want to try again? (yes/no)", default="yes"
+                )
+                if retry.lower() != "yes":
+                    raise click.ClickException("User creation aborted by the user.")
 
-        user_creation_result = create_platform_user(
-            platform_username, platform_user_password
-        )
-        if user_creation_result["success"]:
-            break
-        else:
-            platform_username = None
-            platform_user_password = None
-            click.echo(user_creation_result["message"])
-            retry = click.prompt("Do you want to try again? (yes/no)", default="yes")
-            if retry.lower() != "yes":
-                raise click.ClickException("User creation aborted by the user.")
-
-    click.echo(user_creation_result["message"])
+        click.echo(user_creation_result["message"])

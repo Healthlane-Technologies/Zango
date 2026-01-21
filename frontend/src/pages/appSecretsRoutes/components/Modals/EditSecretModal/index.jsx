@@ -16,7 +16,7 @@ function EditSecretModal() {
 
 	return (
 		<Modal
-			label="Edit New Secret"
+			label="Edit Secret"
 			show={isEditSecretModalOpen}
 			closeModal={closeModal}
 			ModalBody={<EditSecretForm closeModal={closeModal} />}

@@ -7,7 +7,7 @@ PROJECT_DIR = os.path.dirname(__file__)
 REQUIREMENTS_DIR = os.path.join(PROJECT_DIR, "requirements")
 README = os.path.join(PROJECT_DIR, "README.md")
 
-PLATFORM_VERSION = "0.6.1"
+PLATFORM_VERSION = "1.0.4"
 
 
 def get_requirements(env):
@@ -67,11 +67,11 @@ setup(
     long_description_content_type="text/markdown",
     author='Zelthy ("Healthlane Technologies")',
     author_email="maintainers@zelthy.com",
-    url="https://github.com/Healthlane-Technologies/zelthy3",
+    url="https://github.com/Healthlane-Technologies/Zango",
     project_urls={
-        "Bug Reports": "https://github.com/Healthlane-Technologies/zelthy3/issues",
-        "Source": "https://github.com/Healthlane-Technologies/zelthy3",
-        "Documentation": "https://github.com/Healthlane-Technologies/zelthy3#readme",
+        "Bug Reports": "https://github.com/Healthlane-Technologies/Zango/issues",
+        "Source": "https://github.com/Healthlane-Technologies/Zango",
+        "Documentation": "https://github.com/Healthlane-Technologies/Zango#readme",
     },
     package_dir={"": "src"},
     packages=find_packages("src"),
@@ -109,5 +109,4 @@ setup(
             "zango=zango.cli:cli",
         ],
     },
-    zip_safe=False,
 )

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -10,8 +10,8 @@ import SubmitButton from "../../../../../components/Form/SubmitButton";
 
 const UpdateAuthConfigForm = ({ closeModal }) => {
 	const dispatch = useDispatch();
-	const [updateAuthConfigLoading, setUpdateAuthConfigLoading] = useState(false);
-	
+	const [setUpdateAuthConfigLoading] = useState(false);
+
 	// Mock initial values - will be populated from API later
 	const initialValues = {
 		login_methods: {
@@ -96,17 +96,17 @@ const UpdateAuthConfigForm = ({ closeModal }) => {
 				enabled: Yup.boolean(),
 				client_id: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().required('Client ID is required when Google OAuth is enabled'),
+					then: Yup.string().required('Client ID is required'),
 					otherwise: Yup.string()
 				}),
 				client_secret: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().required('Client Secret is required when Google OAuth is enabled'),
+					then: Yup.string().required('Client Secret is required'),
 					otherwise: Yup.string()
 				}),
 				redirect_uri: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when Google OAuth is enabled'),
+					then: Yup.string().required('Redirect URI is required'),
 					otherwise: Yup.string()
 				}),
 			}),
@@ -114,17 +114,17 @@ const UpdateAuthConfigForm = ({ closeModal }) => {
 				enabled: Yup.boolean(),
 				client_id: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().required('Client ID is required when GitHub OAuth is enabled'),
+					then: Yup.string().required('Client ID is required'),
 					otherwise: Yup.string()
 				}),
 				client_secret: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().required('Client Secret is required when GitHub OAuth is enabled'),
+					then: Yup.string().required('Client Secret is required'),
 					otherwise: Yup.string()
 				}),
 				redirect_uri: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when GitHub OAuth is enabled'),
+					then: Yup.string().required('Redirect URI is required'),
 					otherwise: Yup.string()
 				}),
 			}),
@@ -132,34 +132,34 @@ const UpdateAuthConfigForm = ({ closeModal }) => {
 				enabled: Yup.boolean(),
 				client_id: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().required('Client ID is required when Microsoft OAuth is enabled'),
+					then: Yup.string().required('Client ID is required'),
 					otherwise: Yup.string()
 				}),
 				client_secret: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().required('Client Secret is required when Microsoft OAuth is enabled'),
+					then: Yup.string().required('Client Secret is required'),
 					otherwise: Yup.string()
 				}),
 				redirect_uri: Yup.string().when('enabled', {
 					is: true,
-					then: Yup.string().url('Must be a valid URL').required('Redirect URI is required when Microsoft OAuth is enabled'),
+					then: Yup.string().required('Redirect URI is required'),
 					otherwise: Yup.string()
 				}),
 			}),
 		}),
 		session_policy: Yup.object({
-			max_concurrent_sessions: Yup.number().min(0, "Cannot be negative"),
+			max_concurrent_sessions: Yup.number(),
 			force_logout_on_password_change: Yup.boolean(),
 		}),
 		password_policy: Yup.object({
-			min_length: Yup.number().min(4, "Minimum length must be at least 4").max(128, "Maximum length is 128"),
+			min_length: Yup.number(),
 			allow_change: Yup.boolean(),
 			require_numbers: Yup.boolean(),
 			require_lowercase: Yup.boolean(),
 			require_uppercase: Yup.boolean(),
 			require_special_chars: Yup.boolean(),
-			password_expiry_days: Yup.number().min(1, "Must be at least 1 day").max(365, "Must be less than 365 days"),
-			password_history_count: Yup.number().min(0, "Cannot be negative").max(24, "Maximum is 24"),
+			password_expiry_days: Yup.number(),
+			password_history_count: Yup.number(),
 		}),
 		two_factor_auth: Yup.object({
 			required: Yup.boolean(),
@@ -169,21 +169,21 @@ const UpdateAuthConfigForm = ({ closeModal }) => {
 
 	const handleSubmit = async (values) => {
 		setUpdateAuthConfigLoading(true);
-		
+
 		try {
 			// Separate OAuth providers data from main auth config
 			const { oauth_providers, ...authConfigData } = values;
-			
+
 			// TODO: Replace with actual API calls
 			// 1. Submit main auth configuration (excluding OAuth providers)
 			console.log("Auth config values to be saved:", authConfigData);
-			
+
 			// 2. Submit OAuth providers to separate endpoint /api/v1/apps/<tenant_id>/oauth-providers/
 			console.log("OAuth providers data to be saved:", oauth_providers);
-			
+
 			// Simulate API call delay
 			await new Promise(resolve => setTimeout(resolve, 1000));
-			
+
 			// Close modal and trigger re-render
 			dispatch(toggleRerenderPage());
 			closeModal();
@@ -198,366 +198,326 @@ const UpdateAuthConfigForm = ({ closeModal }) => {
 	const usernameOptions = [
 		{ id: "email", label: "Email" },
 		{ id: "username", label: "Username" },
-		{ id: "phone", label: "Phone Number" },
 	];
 
-	const twoFactorMethodOptions = [
+	const allowedMethodsOptions = [
 		{ id: "email", label: "Email" },
 		{ id: "sms", label: "SMS" },
-		{ id: "authenticator", label: "Authenticator App" },
 	];
 
 	return (
-		<div className="complete-hidden-scroll-style flex h-[calc(100vh-130px)] max-h-[700px] flex-col gap-[32px] overflow-y-auto px-[20px] pb-[20px]">
-			<Formik
-				initialValues={initialValues}
-				validationSchema={validationSchema}
-				onSubmit={handleSubmit}
-				enableReinitialize={true}
-			>
-				{(formik) => {
-					const { values, setFieldValue, handleSubmit, isValid, dirty } = formik;
-					return (
+		<Formik
+			initialValues={initialValues}
+			validationSchema={validationSchema}
+			onSubmit={handleSubmit}
+		>
+			{(formikState) => {
+				const { values, setFieldValue, handleSubmit } = formikState;
+				return (
 					<form
+						className="complete-hidden-scroll-style flex grow flex-col overflow-y-auto"
 						onSubmit={handleSubmit}
-						className="flex flex-col gap-[24px]"
 					>
-						{/* Login Methods Section */}
-						<div className="flex flex-col gap-[16px]">
-							<div className="flex items-center gap-[8px]">
-								<div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#346BD4]">
-									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M9 6V4.5C9 2.84315 7.65685 1.5 6 1.5C4.34315 1.5 3 2.84315 3 4.5V6M2.5 6H9.5C9.77614 6 10 6.22386 10 6.5V10.5C10 10.7761 9.77614 11 9.5 11H2.5C2.22386 11 2 10.7761 2 10.5V6.5C2 6.22386 2.22386 6 2.5 6Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-									</svg>
-								</div>
-								<h3 className="font-lato text-[16px] font-bold leading-[20px] text-[#212429]">
+						<div className="flex grow flex-col gap-[20px] pb-[20px] px-[40px] [&_input]:!py-[10px] [&_input]:!text-[13px]">
+							{/* Login Methods Section */}
+							<div className="space-y-[16px]">
+								<h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
 									Login Methods
 								</h3>
-							</div>
-							<div className="flex flex-col gap-[16px] rounded-[8px] border border-[#DDE2E5] bg-[#F8F9FA] p-[20px]">
-								<CheckboxField
-									name="login_methods.password.enabled"
-									label="Enable Password Login"
-									value={values.login_methods.password.enabled}
-									onChange={(e) => setFieldValue("login_methods.password.enabled", e.target.checked)}
-								/>
-								{values.login_methods.password.enabled && (
-									<div className="flex flex-col gap-[16px] rounded-[6px] border border-[#E5E7EB] bg-white p-[16px] ml-[24px]">
-										<CheckboxField
-											name="login_methods.password.forgot_password_enabled"
-											label="Enable Forgot Password"
-											value={values.login_methods.password.forgot_password_enabled}
-											onChange={(e) => setFieldValue("login_methods.password.forgot_password_enabled", e.target.checked)}
-										/>
-										<InputField
-											name="login_methods.password.password_reset_link_expiry_hours"
-											label="Password Reset Link Expiry (Hours)"
-											type="number"
-											value={values.login_methods.password.password_reset_link_expiry_hours}
-											onChange={(e) => setFieldValue("login_methods.password.password_reset_link_expiry_hours", parseInt(e.target.value))}
-										/>
-									</div>
-								)}
-								<CheckboxField
-									name="login_methods.otp.enabled"
-									label="Enable OTP Login"
-									value={values.login_methods.otp.enabled}
-									onChange={(e) => setFieldValue("login_methods.otp.enabled", e.target.checked)}
-								/>
-								<CheckboxField
-									name="login_methods.sso.enabled"
-									label="Enable SSO Login"
-									value={values.login_methods.sso.enabled}
-									onChange={(e) => setFieldValue("login_methods.sso.enabled", e.target.checked)}
-								/>
-								<CheckboxField
-									name="login_methods.oidc.enabled"
-									label="Enable OIDC Login"
-									value={values.login_methods.oidc.enabled}
-									onChange={(e) => setFieldValue("login_methods.oidc.enabled", e.target.checked)}
-								/>
-								<SelectField
-									name="login_methods.allowed_usernames"
-									label="Allowed Username Types"
-									optionsData={usernameOptions}
-									value={values.login_methods.allowed_usernames || ""}
-									placeholder="Select username types"
-									formik={{ setFieldValue }}
-								/>
-							</div>
-						</div>
-
-						{/* OAuth Providers Section */}
-						<div className="flex flex-col gap-[16px]">
-							<div className="flex items-center gap-[8px]">
-								<div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#346BD4]">
-									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M10.5 6C10.5 8.48528 8.48528 10.5 6 10.5C3.51472 10.5 1.5 8.48528 1.5 6C1.5 3.51472 3.51472 1.5 6 1.5C8.48528 1.5 10.5 3.51472 10.5 6Z" stroke="white" strokeWidth="1.5"/>
-										<path d="M6 4.5V6L7.5 7.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-									</svg>
+								<div className="space-y-[12px]">
+									<CheckboxField
+										name="login_methods.password.enabled"
+										label="Password Authentication"
+										value={values.login_methods?.password?.enabled}
+										onChange={(e) => setFieldValue("login_methods.password.enabled", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="login_methods.otp.enabled"
+										label="OTP Authentication"
+										value={values.login_methods?.otp?.enabled}
+										onChange={(e) => setFieldValue("login_methods.otp.enabled", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="login_methods.sso.enabled"
+										label="SSO Authentication"
+										value={values.login_methods?.sso?.enabled}
+										onChange={(e) => setFieldValue("login_methods.sso.enabled", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="login_methods.oidc.enabled"
+										label="OIDC Authentication"
+										value={values.login_methods?.oidc?.enabled}
+										onChange={(e) => setFieldValue("login_methods.oidc.enabled", e.target.checked)}
+										formik={formikState}
+									/>
+									<SelectField
+										name="login_methods.allowed_usernames"
+										label="Allowed Username Type"
+										options={usernameOptions}
+										value={values.login_methods?.allowed_usernames}
+										onChange={(e) => setFieldValue("login_methods.allowed_usernames", e.target.value)}
+										formik={formikState}
+									/>
 								</div>
-								<h3 className="font-lato text-[16px] font-bold leading-[20px] text-[#212429]">
+							</div>
+
+							{/* OAuth Providers Section */}
+							<div className="space-y-[16px]">
+								<h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
 									OAuth Providers
 								</h3>
-							</div>
-							<div className="flex flex-col gap-[20px] rounded-[8px] border border-[#DDE2E5] bg-[#F8F9FA] p-[20px]">
-								{/* Google OAuth */}
-								<div className="flex flex-col gap-[16px]">
-									<CheckboxField
-										name="oauth_providers.google.enabled"
-										label="Enable Google OAuth"
-										value={values.oauth_providers?.google?.enabled || false}
-										onChange={(e) => setFieldValue("oauth_providers.google.enabled", e.target.checked)}
-									/>
-									{values.oauth_providers?.google?.enabled && (
-										<div className="flex flex-col gap-[16px] rounded-[6px] border border-[#E5E7EB] bg-white p-[16px] ml-[24px]">
-											<InputField
-												name="oauth_providers.google.client_id"
-												label="Client ID"
-												type="text"
-												value={values.oauth_providers?.google?.client_id || ""}
-												onChange={(e) => setFieldValue("oauth_providers.google.client_id", e.target.value)}
-												placeholder="Enter Google Client ID"
-											/>
-											<InputField
-												name="oauth_providers.google.client_secret"
-												label="Client Secret"
-												type="password"
-												value={values.oauth_providers?.google?.client_secret || ""}
-												onChange={(e) => setFieldValue("oauth_providers.google.client_secret", e.target.value)}
-												placeholder="Enter Google Client Secret"
-											/>
-											<InputField
-												name="oauth_providers.google.redirect_uri"
-												label="Redirect URI"
-												type="url"
-												value={values.oauth_providers?.google?.redirect_uri || ""}
-												onChange={(e) => setFieldValue("oauth_providers.google.redirect_uri", e.target.value)}
-												placeholder="Enter Google Redirect URI"
-											/>
-										</div>
-									)}
-								</div>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+									{/* Google OAuth */}
+									<div className="space-y-[12px]">
+										<CheckboxField
+											name="oauth_providers.google.enabled"
+											label="Google OAuth"
+											value={values.oauth_providers?.google?.enabled}
+											onChange={(e) => setFieldValue("oauth_providers.google.enabled", e.target.checked)}
+											formik={formikState}
+										/>
+										{values.oauth_providers?.google?.enabled && (
+											<>
+												<InputField
+													name="oauth_providers.google.client_id"
+													label="Client ID"
+													value={values.oauth_providers?.google?.client_id}
+													onChange={(e) => setFieldValue("oauth_providers.google.client_id", e.target.value)}
+													formik={formikState}
+												/>
+												<InputField
+													name="oauth_providers.google.client_secret"
+													label="Client Secret"
+													type="password"
+													value={values.oauth_providers?.google?.client_secret}
+													onChange={(e) => setFieldValue("oauth_providers.google.client_secret", e.target.value)}
+													formik={formikState}
+												/>
+												<InputField
+													name="oauth_providers.google.redirect_uri"
+													label="Redirect URI"
+													value={values.oauth_providers?.google?.redirect_uri}
+													onChange={(e) => setFieldValue("oauth_providers.google.redirect_uri", e.target.value)}
+													formik={formikState}
+												/>
+											</>
+										)}
+									</div>
 
-								{/* GitHub OAuth */}
-								<div className="flex flex-col gap-[16px]">
-									<CheckboxField
-										name="oauth_providers.github.enabled"
-										label="Enable GitHub OAuth"
-										value={values.oauth_providers?.github?.enabled || false}
-										onChange={(e) => setFieldValue("oauth_providers.github.enabled", e.target.checked)}
-									/>
-									{values.oauth_providers?.github?.enabled && (
-										<div className="flex flex-col gap-[16px] rounded-[6px] border border-[#E5E7EB] bg-white p-[16px] ml-[24px]">
-											<InputField
-												name="oauth_providers.github.client_id"
-												label="Client ID"
-												type="text"
-												value={values.oauth_providers?.github?.client_id || ""}
-												onChange={(e) => setFieldValue("oauth_providers.github.client_id", e.target.value)}
-												placeholder="Enter GitHub Client ID"
-											/>
-											<InputField
-												name="oauth_providers.github.client_secret"
-												label="Client Secret"
-												type="password"
-												value={values.oauth_providers?.github?.client_secret || ""}
-												onChange={(e) => setFieldValue("oauth_providers.github.client_secret", e.target.value)}
-												placeholder="Enter GitHub Client Secret"
-											/>
-											<InputField
-												name="oauth_providers.github.redirect_uri"
-												label="Redirect URI"
-												type="url"
-												value={values.oauth_providers?.github?.redirect_uri || ""}
-												onChange={(e) => setFieldValue("oauth_providers.github.redirect_uri", e.target.value)}
-												placeholder="Enter GitHub Redirect URI"
-											/>
-										</div>
-									)}
-								</div>
+									{/* GitHub OAuth */}
+									<div className="space-y-[12px]">
+										<CheckboxField
+											name="oauth_providers.github.enabled"
+											label="GitHub OAuth"
+											value={values.oauth_providers?.github?.enabled}
+											onChange={(e) => setFieldValue("oauth_providers.github.enabled", e.target.checked)}
+											formik={formikState}
+										/>
+										{values.oauth_providers?.github?.enabled && (
+											<>
+												<InputField
+													name="oauth_providers.github.client_id"
+													label="Client ID"
+													value={values.oauth_providers?.github?.client_id}
+													onChange={(e) => setFieldValue("oauth_providers.github.client_id", e.target.value)}
+													formik={formikState}
+												/>
+												<InputField
+													name="oauth_providers.github.client_secret"
+													label="Client Secret"
+													type="password"
+													value={values.oauth_providers?.github?.client_secret}
+													onChange={(e) => setFieldValue("oauth_providers.github.client_secret", e.target.value)}
+													formik={formikState}
+												/>
+												<InputField
+													name="oauth_providers.github.redirect_uri"
+													label="Redirect URI"
+													value={values.oauth_providers?.github?.redirect_uri}
+													onChange={(e) => setFieldValue("oauth_providers.github.redirect_uri", e.target.value)}
+													formik={formikState}
+												/>
+											</>
+										)}
+									</div>
 
-								{/* Microsoft OAuth */}
-								<div className="flex flex-col gap-[16px]">
-									<CheckboxField
-										name="oauth_providers.microsoft.enabled"
-										label="Enable Microsoft OAuth"
-										value={values.oauth_providers?.microsoft?.enabled || false}
-										onChange={(e) => setFieldValue("oauth_providers.microsoft.enabled", e.target.checked)}
-									/>
-									{values.oauth_providers?.microsoft?.enabled && (
-										<div className="flex flex-col gap-[16px] rounded-[6px] border border-[#E5E7EB] bg-white p-[16px] ml-[24px]">
-											<InputField
-												name="oauth_providers.microsoft.client_id"
-												label="Client ID"
-												type="text"
-												value={values.oauth_providers?.microsoft?.client_id || ""}
-												onChange={(e) => setFieldValue("oauth_providers.microsoft.client_id", e.target.value)}
-												placeholder="Enter Microsoft Client ID"
-											/>
-											<InputField
-												name="oauth_providers.microsoft.client_secret"
-												label="Client Secret"
-												type="password"
-												value={values.oauth_providers?.microsoft?.client_secret || ""}
-												onChange={(e) => setFieldValue("oauth_providers.microsoft.client_secret", e.target.value)}
-												placeholder="Enter Microsoft Client Secret"
-											/>
-											<InputField
-												name="oauth_providers.microsoft.redirect_uri"
-												label="Redirect URI"
-												type="url"
-												value={values.oauth_providers?.microsoft?.redirect_uri || ""}
-												onChange={(e) => setFieldValue("oauth_providers.microsoft.redirect_uri", e.target.value)}
-												placeholder="Enter Microsoft Redirect URI"
-											/>
-										</div>
-									)}
+									{/* Microsoft OAuth */}
+									<div className="space-y-[12px]">
+										<CheckboxField
+											name="oauth_providers.microsoft.enabled"
+											label="Microsoft OAuth"
+											value={values.oauth_providers?.microsoft?.enabled}
+											onChange={(e) => setFieldValue("oauth_providers.microsoft.enabled", e.target.checked)}
+											formik={formikState}
+										/>
+										{values.oauth_providers?.microsoft?.enabled && (
+											<>
+												<InputField
+													name="oauth_providers.microsoft.client_id"
+													label="Client ID"
+													value={values.oauth_providers?.microsoft?.client_id}
+													onChange={(e) => setFieldValue("oauth_providers.microsoft.client_id", e.target.value)}
+													formik={formikState}
+												/>
+												<InputField
+													name="oauth_providers.microsoft.client_secret"
+													label="Client Secret"
+													type="password"
+													value={values.oauth_providers?.microsoft?.client_secret}
+													onChange={(e) => setFieldValue("oauth_providers.microsoft.client_secret", e.target.value)}
+													formik={formikState}
+												/>
+												<InputField
+													name="oauth_providers.microsoft.redirect_uri"
+													label="Redirect URI"
+													value={values.oauth_providers?.microsoft?.redirect_uri}
+													onChange={(e) => setFieldValue("oauth_providers.microsoft.redirect_uri", e.target.value)}
+													formik={formikState}
+												/>
+											</>
+										)}
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{/* Session Policy Section */}
-						<div className="flex flex-col gap-[16px]">
-							<div className="flex items-center gap-[8px]">
-								<div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#346BD4]">
-									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M6 1V6L9 9" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-										<circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5"/>
-									</svg>
-								</div>
-								<h3 className="font-lato text-[16px] font-bold leading-[20px] text-[#212429]">
+							{/* Session Policy Section */}
+							<div className="space-y-[16px]">
+								<h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
 									Session Policy
 								</h3>
-							</div>
-							<div className="flex flex-col gap-[16px] rounded-[8px] border border-[#DDE2E5] bg-[#F8F9FA] p-[20px]">
-								<InputField
-									name="session_policy.max_concurrent_sessions"
-									label="Max Concurrent Sessions (0 = unlimited)"
-									type="number"
-									value={values.session_policy.max_concurrent_sessions}
-									onChange={(e) => setFieldValue("session_policy.max_concurrent_sessions", parseInt(e.target.value) || 0)}
-								/>
-								<CheckboxField
-									name="session_policy.force_logout_on_password_change"
-									label="Force Logout on Password Change"
-									value={values.session_policy.force_logout_on_password_change}
-									onChange={(e) => setFieldValue("session_policy.force_logout_on_password_change", e.target.checked)}
-								/>
-							</div>
-						</div>
-
-						{/* Password Policy Section */}
-						<div className="flex flex-col gap-[16px]">
-							<div className="flex items-center gap-[8px]">
-								<div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#346BD4]">
-									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M8.25 4.5V3.75C8.25 2.09315 6.90685 0.75 5.25 0.75C3.59315 0.75 2.25 2.09315 2.25 3.75V4.5M1.5 4.5H9C9.27614 4.5 9.5 4.72386 9.5 5V9.5C9.5 9.77614 9.27614 10 9 10H1.5C1.22386 10 1 9.77614 1 9.5V5C1 4.72386 1.22386 4.5 1.5 4.5Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-										<circle cx="5.25" cy="7.25" r="0.5" fill="white"/>
-									</svg>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+									<InputField
+										name="session_policy.max_concurrent_sessions"
+										label="Max Concurrent Sessions"
+										type="number"
+										value={values.session_policy?.max_concurrent_sessions}
+										onChange={(e) => setFieldValue("session_policy.max_concurrent_sessions", parseInt(e.target.value))}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="session_policy.force_logout_on_password_change"
+										label="Force Logout on Password Change"
+										value={values.session_policy?.force_logout_on_password_change}
+										onChange={(e) => setFieldValue("session_policy.force_logout_on_password_change", e.target.checked)}
+										formik={formikState}
+									/>
 								</div>
-								<h3 className="font-lato text-[16px] font-bold leading-[20px] text-[#212429]">
+							</div>
+
+							{/* Password Policy Section */}
+							<div className="space-y-[16px]">
+								<h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
 									Password Policy
 								</h3>
-							</div>
-							<div className="flex flex-col gap-[16px] rounded-[8px] border border-[#DDE2E5] bg-[#F8F9FA] p-[20px]">
-								<InputField
-									name="password_policy.min_length"
-									label="Minimum Password Length"
-									type="number"
-									value={values.password_policy.min_length}
-									onChange={(e) => setFieldValue("password_policy.min_length", parseInt(e.target.value))}
-								/>
-								<CheckboxField
-									name="password_policy.allow_change"
-									label="Allow Password Change"
-									value={values.password_policy.allow_change}
-									onChange={(e) => setFieldValue("password_policy.allow_change", e.target.checked)}
-								/>
-								<CheckboxField
-									name="password_policy.require_numbers"
-									label="Require Numbers"
-									value={values.password_policy.require_numbers}
-									onChange={(e) => setFieldValue("password_policy.require_numbers", e.target.checked)}
-								/>
-								<CheckboxField
-									name="password_policy.require_lowercase"
-									label="Require Lowercase Letters"
-									value={values.password_policy.require_lowercase}
-									onChange={(e) => setFieldValue("password_policy.require_lowercase", e.target.checked)}
-								/>
-								<CheckboxField
-									name="password_policy.require_uppercase"
-									label="Require Uppercase Letters"
-									value={values.password_policy.require_uppercase}
-									onChange={(e) => setFieldValue("password_policy.require_uppercase", e.target.checked)}
-								/>
-								<CheckboxField
-									name="password_policy.require_special_chars"
-									label="Require Special Characters"
-									value={values.password_policy.require_special_chars}
-									onChange={(e) => setFieldValue("password_policy.require_special_chars", e.target.checked)}
-								/>
-								<InputField
-									name="password_policy.password_expiry_days"
-									label="Password Expiry (Days)"
-									type="number"
-									value={values.password_policy.password_expiry_days}
-									onChange={(e) => setFieldValue("password_policy.password_expiry_days", parseInt(e.target.value))}
-								/>
-								<InputField
-									name="password_policy.password_history_count"
-									label="Password History Count"
-									type="number"
-									value={values.password_policy.password_history_count}
-									onChange={(e) => setFieldValue("password_policy.password_history_count", parseInt(e.target.value))}
-								/>
-							</div>
-						</div>
-
-						{/* Two-Factor Authentication Section */}
-						<div className="flex flex-col gap-[16px]">
-							<div className="flex items-center gap-[8px]">
-								<div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#346BD4]">
-									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M6 1L7.5 2.25H10.5V5.25L9 6.75L10.5 8.25V11.25H7.5L6 9.75L4.5 11.25H1.5V8.25L3 6.75L1.5 5.25V2.25H4.5L6 1Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-										<circle cx="6" cy="6" r="1.5" stroke="white" strokeWidth="1.5"/>
-									</svg>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+									<InputField
+										name="password_policy.min_length"
+										label="Minimum Length"
+										type="number"
+										value={values.password_policy?.min_length}
+										onChange={(e) => setFieldValue("password_policy.min_length", parseInt(e.target.value))}
+										formik={formikState}
+									/>
+									<InputField
+										name="password_policy.password_expiry_days"
+										label="Password Expiry Days"
+										type="number"
+										value={values.password_policy?.password_expiry_days}
+										onChange={(e) => setFieldValue("password_policy.password_expiry_days", parseInt(e.target.value))}
+										formik={formikState}
+									/>
+									<InputField
+										name="password_policy.password_history_count"
+										label="Password History Count"
+										type="number"
+										value={values.password_policy?.password_history_count}
+										onChange={(e) => setFieldValue("password_policy.password_history_count", parseInt(e.target.value))}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="password_policy.allow_change"
+										label="Allow Password Change"
+										value={values.password_policy?.allow_change}
+										onChange={(e) => setFieldValue("password_policy.allow_change", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="password_policy.require_numbers"
+										label="Require Numbers"
+										value={values.password_policy?.require_numbers}
+										onChange={(e) => setFieldValue("password_policy.require_numbers", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="password_policy.require_lowercase"
+										label="Require Lowercase"
+										value={values.password_policy?.require_lowercase}
+										onChange={(e) => setFieldValue("password_policy.require_lowercase", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="password_policy.require_uppercase"
+										label="Require Uppercase"
+										value={values.password_policy?.require_uppercase}
+										onChange={(e) => setFieldValue("password_policy.require_uppercase", e.target.checked)}
+										formik={formikState}
+									/>
+									<CheckboxField
+										name="password_policy.require_special_chars"
+										label="Require Special Characters"
+										value={values.password_policy?.require_special_chars}
+										onChange={(e) => setFieldValue("password_policy.require_special_chars", e.target.checked)}
+										formik={formikState}
+									/>
 								</div>
-								<h3 className="font-lato text-[16px] font-bold leading-[20px] text-[#212429]">
+							</div>
+
+							{/* Two-Factor Authentication Section */}
+							<div className="space-y-[16px]">
+								<h3 className="font-lato text-[14px] font-semibold text-[#111827] border-b border-[#E5E7EB] pb-[8px]">
 									Two-Factor Authentication
 								</h3>
-							</div>
-							<div className="flex flex-col gap-[16px] rounded-[8px] border border-[#DDE2E5] bg-[#F8F9FA] p-[20px]">
-								<CheckboxField
-									name="two_factor_auth.required"
-									label="Require Two-Factor Authentication"
-									value={values.two_factor_auth.required}
-									onChange={(e) => setFieldValue("two_factor_auth.required", e.target.checked)}
-								/>
-								<SelectField
-									name="two_factor_auth.allowedMethods"
-									label="Allowed Two-Factor Methods"
-									optionsData={twoFactorMethodOptions}
-									value={values.two_factor_auth.allowedMethods || ""}
-									placeholder="Select two-factor methods"
-									formik={{ setFieldValue }}
-								/>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+									<CheckboxField
+										name="two_factor_auth.required"
+										label="Require 2FA"
+										value={values.two_factor_auth?.required}
+										onChange={(e) => setFieldValue("two_factor_auth.required", e.target.checked)}
+										formik={formikState}
+									/>
+									<SelectField
+										name="two_factor_auth.allowedMethods"
+										label="Allowed Methods"
+										options={allowedMethodsOptions}
+										value={values.two_factor_auth?.allowedMethods}
+										onChange={(e) => setFieldValue("two_factor_auth.allowedMethods", e.target.value)}
+										formik={formikState}
+									/>
+								</div>
 							</div>
 						</div>
 
-						{/* Submit Button */}
-						<div className="sticky bottom-0 flex justify-end border-t border-[#DDE2E5] bg-white pt-[20px]">
+						<div className="sticky bottom-0 flex gap-[12px] bg-[#ffffff] pt-[24px] px-[40px] border-t border-[#E5E7EB]">
+							<button
+								type="button"
+								onClick={closeModal}
+								className="px-[16px] py-[10px] rounded-[8px] border border-[#E5E7EB] font-lato text-[14px] font-medium text-[#6B7280] hover:bg-[#F9FAFB] transition-colors"
+							>
+								Cancel
+							</button>
 							<SubmitButton
-								formik={formik}
-								label="Save Authentication Configuration"
+								label={'Save Changes'}
+								formik={formikState}
+								allowDisabled={false}
 							/>
 						</div>
 					</form>
-					);
-				}}
-			</Formik>
-		</div>
+				);
+			}}
+		</Formik>
 	);
 };
 

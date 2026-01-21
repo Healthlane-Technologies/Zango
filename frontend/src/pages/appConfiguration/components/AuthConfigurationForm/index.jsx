@@ -33,7 +33,7 @@ const AuthConfigurationForm = () => {
 					type: 'GET',
 					loader: false,
 				});
-				
+
 				if (success && response) {
 					setOauthProviders(response.oauth_providers || {});
 				}
@@ -61,7 +61,7 @@ const AuthConfigurationForm = () => {
 	// Combine auth_config and oauth_providers for form initial values
 	const getInitialValues = () => {
 		if (!auth_config) return {};
-		
+
 		// Ensure oauth_providers structure exists with default values
 		const defaultOAuthProviders = {
 			google: {
@@ -71,7 +71,7 @@ const AuthConfigurationForm = () => {
 				redirect_url: ''
 			}
 		};
-		
+
 		return {
 			...auth_config,
 			oauth_providers: {
@@ -144,14 +144,14 @@ const AuthConfigurationForm = () => {
 	let onSubmit = (values) => {
 		// Extract OAuth providers data from values
 		const { oauth_providers, ...authConfigWithoutOAuth } = values;
-		
+
 		const cleanedAuthConfig = authConfigWithoutOAuth;
-		
+
 		if (Object.keys(cleanedAuthConfig).length === 0 && (!oauth_providers || Object.keys(oauth_providers).length === 0)) {
 			console.warn('No configuration changes to save');
 			return;
 		}
-		
+
 		const makeApiCall = async () => {
 			setIsSubmitting(true);
 			try {
@@ -291,8 +291,8 @@ const AuthConfigurationForm = () => {
 			onClick={() => !disabled && onChange(!checked)}
 			disabled={disabled}
 			className={`relative inline-flex h-[24px] w-[44px] items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:ring-offset-2 ${
-				checked 
-					? 'bg-[#5048ED] shadow-md' 
+				checked
+					? 'bg-[#5048ED] shadow-md'
 					: 'bg-[#E5E7EB] hover:bg-[#D1D5DB]'
 			} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
 		>
@@ -306,8 +306,8 @@ const AuthConfigurationForm = () => {
 
 	const ToggleCard = ({ title, description, name, value, onChange, children, disabled = false }) => (
 		<div className={`group rounded-[12px] border-2 transition-all duration-300 hover:shadow-md ${
-			value 
-				? 'border-[#5048ED] bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] shadow-sm' 
+			value
+				? 'border-[#5048ED] bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] shadow-sm'
 				: 'border-[#E5E7EB] bg-white hover:border-[#D1D5DB]'
 		}`}>
 			<div className="p-[20px]">
@@ -544,7 +544,7 @@ const AuthConfigurationForm = () => {
 					>
 						{(formik) => {
 							const { values, setFieldValue, handleSubmit, isValid, dirty } = formik;
-							
+
 							const renderTabContent = () => {
 								switch (activeTab) {
 									case "login":
@@ -562,275 +562,35 @@ const AuthConfigurationForm = () => {
 															<p className="font-lato text-[14px] text-[#6B7280]">Configure available authentication methods</p>
 														</div>
 													</div>
-													
+
 													<div className="space-y-[24px]">
-															<ToggleCard
-																title="Password Authentication"
-																description="Allow users to log in with email/username and password"
-																name="login_methods.password.enabled"
-																value={values?.login_methods?.password?.enabled}
-																onChange={(e) => setFieldValue("login_methods.password.enabled", e.target.checked)}
-															>
-																
-																<div className="max-w-2xl">
-																	<MultiSelectChips
-																		name="login_methods.password.allowed_usernames"
-																		label="Allowed Username Types"
-																		description="Select the types of username users can use to log in"
-																		options={usernameOptions}
-																		value={values?.login_methods?.password?.allowed_usernames || []}
-																		onChange={(value) => setFieldValue("login_methods.password.allowed_usernames", value)}
-																	/>
-																</div>
-																
-																<div className="grid grid-cols-1 md:grid-cols-2 gap-[20px]">
-																	
-																	<ToggleCard
-																		title="Forgot Password"
-																		description="Enable password reset functionality"
-																		name="password_policy.reset.enabled"
-																		value={values?.password_policy?.reset?.enabled}
-																		onChange={(e) => setFieldValue("password_policy.reset.enabled", e.target.checked)}
-																	>
-																		<div className="space-y-[16px]">
-																			<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] mb-[4px] block">
-																				Reset Method Type
-																			</label>
-																			<div className="flex gap-[12px]">
-																				<button
-																					type="button"
-																					onClick={() => {
-																						setFieldValue("password_policy.reset.by_code", true);
-																						setFieldValue("password_policy.reset.by_email", false);
-																					}}
-																					className={`px-[20px] py-[12px] rounded-[10px] border-2 font-lato text-[14px] font-medium transition-all duration-200 flex items-center gap-[8px] transform hover:scale-[1.02] ${
-																						values?.password_policy?.reset?.by_code === true
-																							? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg'
-																							: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC] hover:shadow-md'
-																					}`}
-																				>
-																					Code
-																				</button>
-																				<button
-																					type="button"
-																					onClick={() => {
-																						setFieldValue("password_policy.reset.by_email", true);
-																						setFieldValue("password_policy.reset.by_code", false);
-																						// When link is selected, ensure email is selected and remove SMS
-																						setFieldValue("password_policy.reset.allowed_methods", ["email"]);
-																					}}
-																					className={`px-[20px] py-[12px] rounded-[10px] border-2 font-lato text-[14px] font-medium transition-all duration-200 flex items-center gap-[8px] transform hover:scale-[1.02] ${
-																						values?.password_policy?.reset?.by_email === true
-																							? 'border-[#5048ED] bg-[#5048ED] text-white shadow-lg'
-																							: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC] hover:shadow-md'
-																					}`}
-																				>
-																					Link
-																				</button>
-																			</div>
-																			<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
-																				Choose whether users receive a code to enter or a direct reset link
-																			</p>
-																		</div>
-																		<InputField
-																			name="password_policy.reset.expiry"
-																			label="Reset Link Expiry (Seconds)"
-																			type="number"
-																			value={values?.password_policy?.reset?.expiry}
-																			onChange={(e) => setFieldValue("password_policy.reset.expiry", parseInt(e.target.value))}
-																		/>
-																		<MultiSelectChips
-																			name="password_policy.reset.allowed_methods"
-																			label="Password reset methods"
-																			description="Select the method which user can use to get forgot password code/link"
-																			options={passwordResetOptions}
-																			value={values?.password_policy?.reset?.allowed_methods || []}
-																			onChange={(value) => {
-																				setFieldValue("password_policy.reset.allowed_methods", value);
-																			}}
-																			disabledOptions={values?.password_policy?.reset?.by_email === true ? ["sms"] : []}
-																			requiredOptions={values?.password_policy?.reset?.by_email === true ? ["email"] : []}
-																		/>
-																		{(values?.password_policy?.reset?.by_email === true || values?.password_policy?.reset?.by_code === true) && values?.password_policy?.reset?.allowed_methods?.includes("email") && (
-																			<div className="space-y-[16px]">
-																				<InputField
-																					name="password_policy.reset.email_subject"
-																					label="Email Subject"
-																					type="text"
-																					placeholder="Enter the subject line for password reset emails"
-																					value={values?.password_policy?.reset?.email_subject || ''}
-																					onChange={(e) => setFieldValue("password_policy.reset.email_subject", e.target.value)}
-																				/>
-																				<div className="space-y-[8px]">
-																					<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
-																						Email Content
-																					</label>
-																					<textarea
-																						name="password_policy.reset.email_content"
-																						className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
-																						placeholder={values?.password_policy?.reset?.by_code 
-																							? "Enter the email content with {code} variable. Example: Your password reset code is: {code}" 
-																							: "Enter the email content with {reset_url} variable. Example: Click here to reset your password: {reset_url}"}
-																						value={values?.password_policy?.reset?.email_content || ''}
-																						onChange={(e) => setFieldValue("password_policy.reset.email_content", e.target.value)}
-																					/>
-																					<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
-																						This content will be included in the password reset email sent to users. 
-																						{values?.password_policy?.reset?.by_code 
-																							? " Use {code} to include the reset code." 
-																							: " Use {reset_url} to include the reset link."}
-																					</p>
-																				</div>
-																				<InputField
-																					name="password_policy.reset.email_config_key"
-																					label="Email Config Key"
-																					type="text"
-																					placeholder="Enter email configuration key"
-																					value={values?.password_policy?.reset?.email_config_key || ''}
-																					onChange={(e) => setFieldValue("password_policy.reset.email_config_key", e.target.value)}
-																				/>
-																			</div>
-																		)}
-																		{values?.password_policy?.reset?.allowed_methods?.includes("sms") && (
-																			<div className="space-y-[16px]">
-																				<div className="space-y-[8px]">
-																					<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
-																						SMS Content
-																					</label>
-																					<textarea
-																						name="password_policy.reset.sms_content"
-																						className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
-																						placeholder={values?.password_policy?.reset?.by_code 
-																							? "Enter the SMS content with {code} variable. Example: Your password reset code is: {code}" 
-																							: "Enter the SMS content with {reset_url} variable. Example: Reset your password: {reset_url}"}
-																						value={values?.password_policy?.reset?.sms_content || ''}
-																						onChange={(e) => setFieldValue("password_policy.reset.sms_content", e.target.value)}
-																					/>
-																					<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
-																						This content will be included in the password reset SMS sent to users. 
-																						{values?.password_policy?.reset?.by_code 
-																							? " Use {code} to include the reset code." 
-																							: " Use {reset_url} to include the reset link."}
-																					</p>
-																				</div>
-																				<KeyValuePairs
-																					name="password_policy.reset.sms_extra_data"
-																					label="SMS Extra Data"
-																					description="Additional key-value pairs to include in the SMS payload"
-																					value={values?.password_policy?.reset?.sms_extra_data || {}}
-																					onChange={(value) => setFieldValue("password_policy.reset.sms_extra_data", value)}
-																				/>
-																				<InputField
-																					name="password_policy.reset.sms_config_key"
-																					label="SMS Config Key"
-																					type="text"
-																					placeholder="Enter SMS configuration key"
-																					value={values?.password_policy?.reset?.sms_config_key || ''}
-																					onChange={(e) => setFieldValue("password_policy.reset.sms_config_key", e.target.value)}
-																				/>
-																			</div>
-																		)}
-																		<ToggleCard
-																			title="Login After Reset"
-																			description="Automatically log in users after successful password reset"
-																			name="password_policy.reset.login_after_reset"
-																			value={values?.password_policy?.reset?.login_after_reset}
-																			onChange={(e) => setFieldValue("password_policy.reset.login_after_reset", e.target.checked)}
-																		/>
-																	</ToggleCard>
-																	
-																</div>
-															</ToggleCard>
+														<ToggleCard
+															title="Password Authentication"
+															description="Allow users to log in with email/username and password"
+															name="login_methods.password.enabled"
+															value={values?.login_methods?.password?.enabled}
+															onChange={(e) => setFieldValue("login_methods.password.enabled", e.target.checked)}
+														>
+															<div className="max-w-2xl">
+																<MultiSelectChips
+																	name="login_methods.password.allowed_usernames"
+																	label="Allowed Username Types"
+																	description="Select the types of username users can use to log in"
+																	options={usernameOptions}
+																	value={values?.login_methods?.password?.allowed_usernames || []}
+																	onChange={(value) => setFieldValue("login_methods.password.allowed_usernames", value)}
+																/>
+															</div>
+														</ToggleCard>
 
 														<div className="grid grid-cols-1 md:grid-cols-3 gap-[20px]">
-															<div>
-																<ToggleCard
-																	title="OTP Authentication"
-																	description="One Time Password integration"
-																	name="login_methods.otp.enabled"
-																	value={values?.login_methods?.otp?.enabled}
-																	onChange={(e) => setFieldValue("login_methods.otp.enabled", e.target.checked)}
-																>
-																	<MultiSelectChips
-																		name="login_methods.otp.allowed_methods"
-																		label="Allowed OTP Methods"
-																		description="Select the types of OTP methods allowed for login"
-																		options={loginOTPMethodOptions}
-																		value={values?.login_methods?.otp?.allowed_methods || []}
-																		onChange={(value) => setFieldValue("login_methods.otp.allowed_methods", value)}
-																	/>
-																	{values?.login_methods?.otp?.allowed_methods?.includes("email") && (
-																		<div className="space-y-[16px]">
-																			<InputField
-																				name="login_methods.otp.email_subject"
-																				label="Email Subject"
-																				type="text"
-																				placeholder="Enter the subject line for OTP emails"
-																				value={values?.login_methods?.otp?.email_subject || ''}
-																				onChange={(e) => setFieldValue("login_methods.otp.email_subject", e.target.value)}
-																			/>
-																			<div className="space-y-[8px]">
-																				<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
-																					Email Content
-																				</label>
-																				<textarea
-																					name="login_methods.otp.email_content"
-																					className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
-																					placeholder="Enter the email content with {code} variable. Example: Your login code is: {code}"
-																					value={values?.login_methods?.otp?.email_content || ''}
-																					onChange={(e) => setFieldValue("login_methods.otp.email_content", e.target.value)}
-																				/>
-																				<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
-																					This content will be included in the OTP email sent to users. Use {'{code}'} to include the OTP code.
-																				</p>
-																			</div>
-																			<InputField
-																				name="login_methods.otp.email_config_key"
-																				label="Email Config Key"
-																				type="text"
-																				placeholder="Enter email configuration key"
-																				value={values?.login_methods?.otp?.email_config_key || ''}
-																				onChange={(e) => setFieldValue("login_methods.otp.email_config_key", e.target.value)}
-																			/>
-																		</div>
-																	)}
-																	{values?.login_methods?.otp?.allowed_methods?.includes("sms") && (
-																		<div className="space-y-[16px]">
-																			<div className="space-y-[8px]">
-																				<label className="font-source-sans-pro text-[14px] font-semibold text-[#111827] block">
-																					SMS Content
-																				</label>
-																				<textarea
-																					name="login_methods.otp.sms_content"
-																					className="w-full px-[16px] py-[12px] border-2 border-[#E5E7EB] rounded-[10px] font-lato text-[14px] text-[#111827] placeholder-[#9CA3AF] focus:border-[#5048ED] focus:outline-none focus:ring-2 focus:ring-[#5048ED]/20 transition-all duration-200 min-h-[120px] resize-vertical"
-																					placeholder="Enter the SMS content with {code} variable. Example: Your login code is: {code}"
-																					value={values?.login_methods?.otp?.sms_content || ''}
-																					onChange={(e) => setFieldValue("login_methods.otp.sms_content", e.target.value)}
-																				/>
-																				<p className="font-lato text-[13px] leading-[18px] text-[#6B7280]">
-																					This content will be included in the OTP SMS sent to users. Use {'{code}'} to include the OTP code.
-																				</p>
-																			</div>
-																			<KeyValuePairs
-																				name="login_methods.otp.sms_extra_data"
-																				label="SMS Extra Data"
-																				description="Additional key-value pairs to include in the SMS payload"
-																				value={values?.login_methods?.otp?.sms_extra_data || {}}
-																				onChange={(value) => setFieldValue("login_methods.otp.sms_extra_data", value)}
-																			/>
-																			<InputField
-																				name="login_methods.otp.sms_config_key"
-																				label="SMS Config Key"
-																				type="text"
-																				placeholder="Enter SMS configuration key"
-																				value={values?.login_methods?.otp?.sms_config_key || ''}
-																				onChange={(e) => setFieldValue("login_methods.otp.sms_config_key", e.target.value)}
-																			/>
-																		</div>
-																	)}
-																</ToggleCard>
-
-															</div>
+															<ToggleCard
+																title="OTP Authentication"
+																description="One Time Password integration"
+																name="login_methods.otp.enabled"
+																value={values?.login_methods?.otp?.enabled}
+																onChange={(e) => setFieldValue("login_methods.otp.enabled", e.target.checked)}
+															/>
 															<ToggleCard
 																title="SSO Authentication"
 																description="Single Sign-On integration"
@@ -850,7 +610,7 @@ const AuthConfigurationForm = () => {
 												</div>
 											</div>
 										);
-									
+
 									case "oauth":
 										return (
 											<div className="space-y-[32px]">
@@ -867,9 +627,8 @@ const AuthConfigurationForm = () => {
 															<p className="font-lato text-[14px] text-[#6B7280]">Configure third-party authentication providers</p>
 														</div>
 													</div>
-													
+
 													<div className="space-y-[24px]">
-														{/* Google OAuth */}
 														<ToggleCard
 															title="Google OAuth"
 															description="Allow users to sign in with their Google account"
@@ -910,7 +669,7 @@ const AuthConfigurationForm = () => {
 												</div>
 											</div>
 										);
-									
+
 									case "session":
 										return (
 											<div className="space-y-[32px]">
@@ -927,8 +686,7 @@ const AuthConfigurationForm = () => {
 															<p className="font-lato text-[14px] text-[#6B7280]">Configure session management settings</p>
 														</div>
 													</div>
-													
-													
+
 													<div className="grid grid-cols-1 md:grid-cols-2 gap-[24px]">
 														<InputField
 															name="session_policy.max_concurrent_sessions"
@@ -948,7 +706,7 @@ const AuthConfigurationForm = () => {
 												</div>
 											</div>
 										);
-									
+
 									case "password":
 										return (
 											<div className="space-y-[32px]">
@@ -965,7 +723,6 @@ const AuthConfigurationForm = () => {
 															<p className="font-lato text-[14px] text-[#6B7280]">Define password requirements and security rules</p>
 														</div>
 													</div>
-													
 
 													<div className="space-y-[24px]">
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-[24px]">
@@ -1023,7 +780,6 @@ const AuthConfigurationForm = () => {
 															/>
 														</div>
 
-
 														<div className="max-w-md">
 															<InputField
 																name="password_policy.password_history_count"
@@ -1033,12 +789,11 @@ const AuthConfigurationForm = () => {
 																onChange={(e) => setFieldValue("password_policy.password_history_count", parseInt(e.target.value))}
 															/>
 														</div>
-
 													</div>
 												</div>
 											</div>
 										);
-									
+
 									case "2fa":
 										return (
 											<div className="space-y-[32px]">
@@ -1056,126 +811,46 @@ const AuthConfigurationForm = () => {
 														</div>
 													</div>
 
-														<div className="space-y-[24px]">
-																<ToggleCard
-																	title="Require Two-Factor Authentication"
-																	description="Make 2FA mandatory for all users"
-																	name="two_factor_auth.required"
-																	value={values?.two_factor_auth?.required}
-																	onChange={(e) => {
-																		const isEnabled = e.target.checked;
-																		setFieldValue("two_factor_auth.required", isEnabled);
-																		if (isEnabled) {
-																			setFieldValue("two_factor_auth.allowed_methods", ["email", "sms"]);
-																		} else {
-																			setFieldValue("two_factor_auth.allowed_methods", []);
-																		}
-																	}}
-																>
-																	<div className="space-y-[24px]">
-																		
-																			<div className="max-w-2xl">
-																				<MultiSelectChips
-																					name="two_factor_auth.allowed_methods"
-																					label="Allowed Two-Factor Methods"
-																					description="Select available methods for two-factor authentication"
-																					options={twoFactorMethodOptions}
-																					value={values?.two_factor_auth?.allowed_methods || []}
-																					onChange={(value) => setFieldValue("two_factor_auth.allowed_methods", value)}
-																					requiredOptions={values?.two_factor_auth?.required ? ["email", "sms"] : []}
-																				/>
-																			</div>
-																		
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.email_hook"
-																				label="Email Hook URL"
-																				description="Webhook URL for email-based two-factor authentication"
-																				type="url"
-																				placeholder="https://your-domain.com/email-2fa-hook"
-																				value={values?.two_factor_auth?.email_hook || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_hook", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.email_content"
-																				label="Email Content"
-																				type="text"
-																				placeholder="Enter the email content for 2FA"
-																				value={values?.two_factor_auth?.email_content || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_content", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.email_subject"
-																				label="Email Subject"
-																				type="text"
-																				placeholder="Enter the email subject for 2FA"
-																				value={values?.two_factor_auth?.email_subject || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_subject", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.email_config_key"
-																				label="Email Config Key"
-																				type="text"
-																				placeholder="Enter email configuration key for 2FA"
-																				value={values?.two_factor_auth?.email_config_key || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.email_config_key", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.sms_hook"
-																				label="SMS Hook URL"
-																				description="Webhook URL for SMS-based two-factor authentication"
-																				type="url"
-																				placeholder="https://your-domain.com/sms-2fa-hook"
-																				value={values?.two_factor_auth?.sms_hook || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.sms_hook", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<InputField
-																				name="two_factor_auth.sms_config_key"
-																				label="SMS Config Key"
-																				type="text"
-																				placeholder="Enter SMS configuration key for 2FA"
-																				value={values?.two_factor_auth?.sms_config_key || ""}
-																				onChange={(e) => setFieldValue("two_factor_auth.sms_config_key", e.target.value)}
-																			/>
-																		</div>
-																		
-																		<div className="max-w-2xl">
-																			<KeyValuePairs
-																				name="two_factor_auth.sms_extra_data"
-																				label="SMS Extra Data"
-																				description="Additional key-value pairs to include in the SMS payload"
-																				value={values?.two_factor_auth?.sms_extra_data || {}}
-																				onChange={(value) => setFieldValue("two_factor_auth.sms_extra_data", value)}
-																			/>
-																		</div>
-																	</div>
-																</ToggleCard>
-														</div>
+													<div className="space-y-[24px]">
+														<ToggleCard
+															title="Require Two-Factor Authentication"
+															description="Make 2FA mandatory for all users"
+															name="two_factor_auth.required"
+															value={values?.two_factor_auth?.required}
+															onChange={(e) => {
+																const isEnabled = e.target.checked;
+																setFieldValue("two_factor_auth.required", isEnabled);
+																if (isEnabled) {
+																	setFieldValue("two_factor_auth.allowed_methods", ["email", "sms"]);
+																} else {
+																	setFieldValue("two_factor_auth.allowed_methods", []);
+																}
+															}}
+														>
+															<div className="space-y-[24px]">
+																<div className="max-w-2xl">
+																	<MultiSelectChips
+																		name="two_factor_auth.allowed_methods"
+																		label="Allowed Two-Factor Methods"
+																		description="Select available methods for two-factor authentication"
+																		options={twoFactorMethodOptions}
+																		value={values?.two_factor_auth?.allowed_methods || []}
+																		onChange={(value) => setFieldValue("two_factor_auth.allowed_methods", value)}
+																		requiredOptions={values?.two_factor_auth?.required ? ["email", "sms"] : []}
+																	/>
+																</div>
+															</div>
+														</ToggleCard>
+													</div>
 												</div>
 											</div>
 										);
-									
+
 									default:
 										return null;
 								}
 							};
-							
+
 							return (
 								<form id="auth-config-form" onSubmit={handleSubmit}>
 									{renderTabContent()}

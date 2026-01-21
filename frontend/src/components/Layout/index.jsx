@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ReactComponent as BrandIcon } from '../../assets/images/svg/brand-icon.svg';
 import { getPlatformVersion } from '../../utils/helper';
 import { useWindowSizeHeight } from '../../utils/responsiveFix';
+import PageContentWrapper from '../PageContentWrapper';
 import NavSearchForm from './NavSearchForm';
 import ProfileMenu from './ProfileMenu';
 
@@ -56,10 +57,12 @@ export default function Layout({
 			<main
 				className={`${
 					showFooter ? 'small-device-height-fix' : 'small-device-height-fix2'
-				}  flex grow overflow-y-auto`}
+				}  flex grow overflow-hidden relative`}
 			>
 				{SideMenu}
-				{children}
+				<div className="flex-1 flex flex-col overflow-hidden">
+					{children}
+				</div>
 				{CodeAssist}
 			</main>
 			{showFooter ? (

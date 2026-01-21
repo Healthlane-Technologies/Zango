@@ -37,7 +37,9 @@ class AppTask(FullAuditMixin):
     attached_policies = models.ManyToManyField(PolicyModel, blank=True, null=True)
 
     def schedule(self):
-        return self.master_task.schedule
+        if self.master_task:
+            return self.master_task.schedule
+        return None
 
     def save(self, *args, **kwargs):
         # validating imports of code
