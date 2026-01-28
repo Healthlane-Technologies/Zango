@@ -203,6 +203,7 @@ MEDIA_URL = "/media/"
 # Celery
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_EXTENDED = True
+CELERY_RESULT_EXPIRES = None
 CELERY_BEAT_SCHEDULE = {
     "health_check_periodic_task": {
         "task": "zango.apps.tasks.tasks.health_check_periodic_task",
@@ -211,6 +212,11 @@ CELERY_BEAT_SCHEDULE = {
     "health_check_task": {
         "task": "zango.apps.tasks.tasks.health_check",
         "schedule": crontab(minute="*/1"),
+        "enabled": False,
+    },
+    "celery.backend_cleanup": {
+        "task": "celery.backend_cleanup",
+        "schedule": crontab(minute="0", hour="4"),
         "enabled": False,
     },
 }
