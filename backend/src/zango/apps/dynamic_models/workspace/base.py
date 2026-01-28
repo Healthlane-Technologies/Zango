@@ -65,7 +65,7 @@ class Workspace:
         self.path = str(settings.BASE_DIR) + f"/workspaces/{wobj.name}/"
         self.modules = self.get_ws_modules()
         self.packages = self.get_packages()
-        self.routes = self.get_all_view_urls()
+        # self.routes = self.get_all_view_urls()
         self.models = []  # sorted with bfs
 
     @classmethod
