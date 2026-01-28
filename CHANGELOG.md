@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-01-28
+
+### Fixed
+* Exclude packages from normal app migrations [(#547)](https://github.com/Healthlane-Technologies/Zango/pull/547)
+* Disable task results cleanup [(#550)](https://github.com/Healthlane-Technologies/Zango/pull/550)
+
 ## [1.0.4] - 2025-12-29
 
 * fix: Users cannot enable TWO-FA from profile (will be enabled once support for email and sms customization is added) [(#545)](https://github.com/Healthlane-Technologies/Zango/pull/545)
