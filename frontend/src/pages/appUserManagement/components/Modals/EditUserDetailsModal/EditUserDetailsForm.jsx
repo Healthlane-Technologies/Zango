@@ -1,6 +1,6 @@
 import { Formik } from 'formik';
 import { get } from 'lodash';
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useState, useContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import * as Yup from 'yup';
@@ -11,6 +11,7 @@ import CountryCodeSelector from '../../../../../components/Form/CountryCodeSelec
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
+import { ErrorMessageContext } from '../../../../../context/ErrorMessageContextProvider';
 import {
 	selectAppUserManagementData,
 	selectAppUserManagementFormData,
@@ -23,6 +24,7 @@ import Notifications from '../../../../../components/Notifications';
 const EditUserDetailsForm = ({ closeModal }) => {
 	let { appId } = useParams();
 	const dispatch = useDispatch();
+	const setErrorMessage = useContext(ErrorMessageContext);
 	const [countryCode,setCountryCode] = useState({
 		name: 'India',
 		  dial_code: '+91',
@@ -56,7 +58,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 			<div className="flex flex-wrap gap-[8px]">
 				{options.map((option) => {
 					const isSelected = Array.isArray(value) ? value.includes(option.id) : value === option.id;
-					const isDisabled = twoFactorEnabled && isSelected;
+					const isDisabled = twoFactorEnabled;
 					return (
 						<button
 							key={option.id}
@@ -73,7 +75,7 @@ const EditUserDetailsForm = ({ closeModal }) => {
 							className={`px-[12px] py-[6px] rounded-[6px] border font-lato text-[12px] font-medium transition-all duration-200 flex items-center gap-[6px] ${
 								isSelected
 									? `border-[#5048ED] bg-[#5048ED] text-white ${isDisabled ? 'opacity-75 cursor-not-allowed' : ''}`
-									: 'border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#5048ED] hover:bg-[#F8FAFC]'
+									: `border-[#E5E7EB] bg-white text-[#6B7280] ${isDisabled ? 'opacity-75 cursor-not-allowed' : 'hover:border-[#5048ED] hover:bg-[#F8FAFC]'}`
 							}`}
 						>
 							{isSelected && (
@@ -185,26 +187,30 @@ const EditUserDetailsForm = ({ closeModal }) => {
 		const auth_config = {
 			two_factor_auth: tempValues.two_factor_auth
 		};
-		
+
 		// Remove the original two_factor_auth field
 		delete tempValues.two_factor_auth;
-		
+
 		let dynamicFormData = transformToFormData(tempValues);
-		
+
 		dynamicFormData.append('auth_config', JSON.stringify(auth_config));
 
 		const makeApiCall = async () => {
-			const { success } = await triggerApi({
+			const response = await triggerApi({
 				url: `/api/v1/apps/${appId}/users/${appUserManagementFormData?.id}/`,
 				type: 'PUT',
 				loader: true,
 				payload: dynamicFormData,
+				showErrorModal: false,
 			});
 
-			if (success) {
+			if (response?.success) {
 				closeModal();
 				dispatch(toggleRerenderPage());
-			}else{
+			} else {
+				const errorMessage = response?.response?.message || 'An error occurred while updating the user';
+				setErrorMessage(errorMessage);
+				closeModal();
 			}
 		};
 

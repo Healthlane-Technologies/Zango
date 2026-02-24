@@ -653,7 +653,6 @@ class ThemeViewAPIV1(ZangoGenericPlatformAPIView):
         else:
             success = False
             status_code = 400
-            print(theme_serializer.errors)
             if theme_serializer.errors:
                 error_messages = [
                     error[0] for field_name, error in theme_serializer.errors.items()

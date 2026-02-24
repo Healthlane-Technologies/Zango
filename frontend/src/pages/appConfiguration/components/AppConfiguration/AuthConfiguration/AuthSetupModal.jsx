@@ -243,9 +243,16 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			password_policy: initialData.password_policy || defaultSetupData.password_policy,
 			two_factor_auth: {
 				required: initialData.two_factor_auth?.required || false,
-				allowedMethods: initialData.two_factor_auth?.allowedMethods || initialData.two_factor_auth?.allowed_methods || ['email'],
-				email_hook: initialData.two_factor_auth?.email_hook || '',
+				allowedMethods: initialData.two_factor_auth?.allowedMethods || initialData.two_factor_auth?.allowed_methods || ['email', 'sms'],
 				sms_hook: initialData.two_factor_auth?.sms_hook || '',
+				email_hook: initialData.two_factor_auth?.email_hook || '',
+				email_content: initialData.two_factor_auth?.email_content || 'Your 2FA code is {code}',
+				email_subject: initialData.two_factor_auth?.email_subject || '',
+				email_config_key: initialData.two_factor_auth?.email_config_key || '',
+				sms_content: initialData.two_factor_auth?.sms_content || 'Your 2FA code is {code}',
+				sms_config_key: initialData.two_factor_auth?.sms_config_key || '',
+				sms_extra_data: initialData.two_factor_auth?.sms_extra_data || '{}',
+				expiry: initialData.two_factor_auth?.expiry || 300,
 			},
 			session_policy: initialData.session_policy || defaultSetupData.session_policy,
 		};
@@ -260,6 +267,34 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			setCurrentStep(1);
 		}
 	}, [show, initialData]);
+
+	// Auto-switch reset method from link to code when email is disabled
+	React.useEffect(() => {
+		if (setupData.login_methods.password.enabled &&
+			setupData.login_methods.password.forgot_password_enabled &&
+			setupData.login_methods.password.reset_method === 'link' &&
+			!setupData.login_methods.allowed_usernames.includes('email')) {
+			// Email was disabled but reset method is still 'link', switch to 'code'
+			setSetupData(prev => ({
+				...prev,
+				login_methods: {
+					...prev.login_methods,
+					password: {
+						...prev.login_methods.password,
+						reset_method: 'code',
+						// When switching to code due to disabled email, auto-enable SMS if phone is available
+						reset_via_email: false,
+						reset_via_sms: prev.login_methods.allowed_usernames.includes('phone')
+					}
+				}
+			}));
+		}
+	}, [
+		setupData.login_methods.allowed_usernames,
+		setupData.login_methods.password.enabled,
+		setupData.login_methods.password.forgot_password_enabled,
+		setupData.login_methods.password.reset_method
+	]);
 
 	const handleNext = () => {
 		if (currentStep < totalSteps) {
@@ -498,6 +533,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 																name="reset_method"
 																value="link"
 																checked={setupData.login_methods.password.reset_method === 'link'}
+																disabled={!setupData.login_methods.allowed_usernames.includes('email')}
 																onChange={(e) => updateSetupData('login_methods', {
 																	...setupData.login_methods,
 																	password: {
@@ -508,9 +544,14 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 																		reset_via_sms: false
 																	}
 																})}
-																className="w-[14px] h-[14px] text-[#5048ED]"
+																className="w-[14px] h-[14px] text-[#5048ED] disabled:opacity-50 disabled:cursor-not-allowed"
 															/>
-															<span className="text-[12px] text-[#111827]">Reset Link</span>
+															<span className={`text-[12px] ${setupData.login_methods.allowed_usernames.includes('email') ? 'text-[#111827]' : 'text-[#9CA3AF]'}`}>
+																Reset Link
+															</span>
+															{!setupData.login_methods.allowed_usernames.includes('email') && (
+																<span className="text-[10px] text-[#EF4444]">(requires email)</span>
+															)}
 														</label>
 														<label className="flex items-center gap-[6px]">
 															<input
@@ -1232,31 +1273,143 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							<label className="flex items-center gap-[12px]">
 								<input
 									type="checkbox"
-									checked={setupData.two_factor_auth.allowedMethods.includes('email')}
-									onChange={(e) => {
-										const methods = e.target.checked
-											? [...setupData.two_factor_auth.allowedMethods, 'email']
-											: setupData.two_factor_auth.allowedMethods.filter(m => m !== 'email');
-										updateSetupData('two_factor_auth', { allowedMethods: methods });
-									}}
-									className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED]"
+									checked={true}
+									disabled={true}
+									className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED] cursor-not-allowed"
 								/>
 								<span className="text-[14px] text-[#111827]">Email verification</span>
 							</label>
 							<label className="flex items-center gap-[12px]">
 								<input
 									type="checkbox"
-									checked={setupData.two_factor_auth.allowedMethods.includes('sms')}
-									onChange={(e) => {
-										const methods = e.target.checked
-											? [...setupData.two_factor_auth.allowedMethods, 'sms']
-											: setupData.two_factor_auth.allowedMethods.filter(m => m !== 'sms');
-										updateSetupData('two_factor_auth', { allowedMethods: methods });
-									}}
-									className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED]"
+									checked={true}
+									disabled={true}
+									className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED] cursor-not-allowed"
 								/>
 								<span className="text-[14px] text-[#111827]">SMS verification</span>
 							</label>
+						</div>
+
+						{/* 2FA Configuration Fields */}
+						<div className="mt-[16px] bg-[#F8FAFC] rounded-[12px] p-[16px] space-y-[16px]">
+							<p className="text-[14px] font-semibold text-[#111827]">2FA Configuration</p>
+
+							{/* Email Configuration */}
+							{setupData.two_factor_auth.allowedMethods.includes('email') && (
+								<div className="bg-white rounded-[8px] p-[14px] border border-[#E5E7EB] space-y-[12px]">
+									<p className="text-[13px] font-semibold text-[#374151]">Email Settings</p>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Hook</label>
+										<input
+											type="text"
+											value={setupData.two_factor_auth.email_hook}
+											onChange={(e) => updateSetupData('two_factor_auth', { email_hook: e.target.value })}
+											placeholder="Hook name for email handling"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+										/>
+									</div>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Subject</label>
+										<input
+											type="text"
+											value={setupData.two_factor_auth.email_subject}
+											onChange={(e) => updateSetupData('two_factor_auth', { email_subject: e.target.value })}
+											placeholder="2FA Code Verification"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+										/>
+									</div>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Content</label>
+										<textarea
+											value={setupData.two_factor_auth.email_content}
+											onChange={(e) => updateSetupData('two_factor_auth', { email_content: e.target.value })}
+											placeholder="Your 2FA code is {code}"
+											rows="2"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
+										/>
+										<p className="text-[11px] text-[#6B7280] mt-[4px]">Use {'{'}code{'}'} as placeholder for the 2FA code</p>
+									</div>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Config Key</label>
+										<input
+											type="text"
+											value={setupData.two_factor_auth.email_config_key}
+											onChange={(e) => updateSetupData('two_factor_auth', { email_config_key: e.target.value })}
+											placeholder="Configuration key for email service"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+										/>
+									</div>
+								</div>
+							)}
+
+							{/* SMS Configuration */}
+							{setupData.two_factor_auth.allowedMethods.includes('sms') && (
+								<div className="bg-white rounded-[8px] p-[14px] border border-[#E5E7EB] space-y-[12px]">
+									<p className="text-[13px] font-semibold text-[#374151]">SMS Settings</p>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Hook</label>
+										<input
+											type="text"
+											value={setupData.two_factor_auth.sms_hook}
+											onChange={(e) => updateSetupData('two_factor_auth', { sms_hook: e.target.value })}
+											placeholder="Hook name for SMS handling"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+										/>
+									</div>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Content</label>
+										<textarea
+											value={setupData.two_factor_auth.sms_content}
+											onChange={(e) => updateSetupData('two_factor_auth', { sms_content: e.target.value })}
+											placeholder="Your 2FA code is {code}"
+											rows="2"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
+										/>
+										<p className="text-[11px] text-[#6B7280] mt-[4px]">Use {'{'}code{'}'} as placeholder for the 2FA code</p>
+									</div>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Extra Data (JSON)</label>
+										<JsonKeyValueInput
+											value={setupData.two_factor_auth.sms_extra_data}
+											onChange={(value) => updateSetupData('two_factor_auth', { sms_extra_data: value })}
+										/>
+										<p className="text-[11px] text-[#6B7280] mt-[4px]">Additional data to send with SMS webhook</p>
+									</div>
+
+									<div>
+										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Config Key</label>
+										<input
+											type="text"
+											value={setupData.two_factor_auth.sms_config_key}
+											onChange={(e) => updateSetupData('two_factor_auth', { sms_config_key: e.target.value })}
+											placeholder="Configuration key for SMS service"
+											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+										/>
+									</div>
+								</div>
+							)}
+
+							{/* Expiry Configuration */}
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Code Expiry (seconds)</label>
+								<input
+									type="number"
+									value={setupData.two_factor_auth.expiry}
+									onChange={(e) => updateSetupData('two_factor_auth', { expiry: Number(e.target.value) })}
+									min="60"
+									max="3600"
+									placeholder="300"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+								/>
+								<p className="text-[11px] text-[#6B7280] mt-[4px]">How long the 2FA code remains valid (60-3600 seconds)</p>
+							</div>
 						</div>
 					</div>
 				)}
