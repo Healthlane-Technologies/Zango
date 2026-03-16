@@ -347,6 +347,7 @@ def setup_settings(settings, BASE_DIR):
         PASSWORD_RECOVERY_SALT=(str, "recover-password"),
         RECAPTCHA_PUBLIC_KEY=(str, ""),
         RECAPTCHA_PRIVATE_KEY=(str, ""),
+        RECAPTCHA_SECRET_KEY=(str, ""),
         HEALTH_CHECK_URL=(str, ""),
         MEDIA_STORAGE_BACKEND=(str, "django.core.files.storage.FileSystemStorage"),
         STATIC_STORAGE_BACKEND=(
@@ -530,6 +531,7 @@ def setup_settings(settings, BASE_DIR):
 
     settings.RECAPTCHA_PUBLIC_KEY = env("RECAPTCHA_PUBLIC_KEY")
     settings.RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
+    settings.RECAPTCHA_SECRET_KEY = env("RECAPTCHA_SECRET_KEY")
 
     settings.HEALTH_CHECK_URL = env("HEALTH_CHECK_URL")
 
