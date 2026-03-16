@@ -111,7 +111,15 @@ def get_current_request_url(request, domain=None):
     # Get the hostname (domain) from the request.
     if not domain:
         domain = request.get_host()
-    if not secure:
+
+    def _domain_has_port(host: str) -> bool:
+        # If there's exactly one colon and the suffix is numeric, treat as host:port.
+        if host.count(":") == 1:
+            _, maybe_port = host.rsplit(":", 1)
+            return maybe_port.isdigit()
+        return False
+
+    if not secure and not _domain_has_port(str(domain)):
         port = request.META.get("SERVER_PORT", "")
         if (protocol == "http" and port == "80") or (
             protocol == "https" and port == "443"
