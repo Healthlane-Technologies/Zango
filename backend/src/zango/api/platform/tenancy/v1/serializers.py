@@ -77,6 +77,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
         return obj.get_date_format_display()
 
     def validate_auth_config(self, value: TenantAuthConfigSchema):
+        reset = value.get("password_policy", {}).get("reset", {})
+        if reset.get("by_code") and reset.get("by_email"):
+            reset["by_email"] = False
         return value
 
     def update(self, instance, validated_data):

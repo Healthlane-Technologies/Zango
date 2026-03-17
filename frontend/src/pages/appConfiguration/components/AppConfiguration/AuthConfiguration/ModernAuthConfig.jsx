@@ -188,7 +188,7 @@ const ModernAuthConfig = () => {
 										return methods.length > 0 ? methods : ['email'];
 									})(),
 									by_code: authData.login_methods.password.reset_method === 'code',
-									by_email: authData.login_methods.password.reset_via_email || false,
+									by_email: authData.login_methods.password.reset_method !== 'code' && (authData.login_methods.password.reset_via_email || false),
 									login_after_reset: false,
 									max_attempts: 3,
 									email_hook: authData.login_methods.password.reset_email_webhook || '',
