@@ -87,7 +87,6 @@ TENANT_DOMAIN_MODEL = "tenancy.Domain"
 
 
 MIDDLEWARE = [
-    "zango.middleware.csp.RelaxedCSPMiddleware",
     "zango.middleware.tenant.ZangoTenantMainMiddleware",
     # 'zango.middleware.context_middleware.SimpleContextMiddleware',
     # 'zango.middleware.tenant_url_switch.url_switch_middleware',
