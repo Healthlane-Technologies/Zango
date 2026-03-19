@@ -55,3 +55,16 @@ python zel_setup.py --project_dir <project_dir> --rebuild_core
 ```
 
 you can then run `docker compose up` from the project directory to start the project
+
+## Minimum System Requirements
+
+When running Zelthy with Docker, ensure your system meets the following:
+
+- **RAM:** At least 4 GB (2 GB may cause crashes)
+- **CPU:** 2 cores recommended
+- **Disk Space:** 5–10 GB free space
+
+### Notes
+
+- Low memory may cause Docker containers to stop unexpectedly (SIGKILL errors).
+- Increase memory allocation in Docker Desktop or Rancher Desktop if needed.
