@@ -172,12 +172,11 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 
 	const toggleTwoFactorAuth = (enabled) => {
 		if (enabled) {
-			// Initialize with minimal values - let user set their own
 			setOverrideConfig(prev => ({
 				...prev,
 				two_factor_auth: {
 					required: true,
-					allowedMethods: [],
+					allowedMethods: ['email', 'sms'],
 				}
 			}));
 		} else {
@@ -496,9 +495,41 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 
 													{enableTwoFactorOverride && (
 														<div className="mt-[20px] bg-white rounded-[8px] p-[16px]">
-															<p className="text-[13px] text-[#6B7280]">
-																Two-factor authentication will be required for all users with this role.
-															</p>
+															<p className="text-[13px] font-medium text-[#111827] mb-[12px]">Allowed verification methods</p>
+															<div className="flex flex-col gap-[10px]">
+																{[
+																	{ id: 'email', label: 'Email verification' },
+																	{ id: 'sms', label: 'SMS verification' },
+																].map(({ id, label }) => {
+																	const methods = overrideConfig.two_factor_auth?.allowedMethods || overrideConfig.two_factor_auth?.allowed_methods || [];
+																	const isChecked = methods.includes(id);
+																	const isLastOne = methods.length === 1 && isChecked;
+																	return (
+																		<label key={id} className={`flex items-center gap-[12px] ${isLastOne ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+																			<input
+																				type="checkbox"
+																				checked={isChecked}
+																				disabled={isLastOne}
+																				onChange={(e) => {
+																					const current = [...methods];
+																					const updated = e.target.checked
+																						? [...current, id]
+																						: current.filter(m => m !== id);
+																					setOverrideConfig(prev => ({
+																						...prev,
+																						two_factor_auth: {
+																							...prev.two_factor_auth,
+																							allowedMethods: updated,
+																						}
+																					}));
+																				}}
+																				className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED]"
+																			/>
+																			<span className="text-[14px] text-[#111827]">{label}</span>
+																		</label>
+																	);
+																})}
+															</div>
 														</div>
 													)}
 												</div>

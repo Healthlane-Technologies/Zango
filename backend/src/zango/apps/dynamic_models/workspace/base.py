@@ -683,10 +683,13 @@ class Workspace:
             roles = policy.role_policies.all()
             # Convert dotted path (test_mod.test_sub) to filesystem path (test_mod/test_sub)
             fs_path = policy.path.replace(".", "/")
-            with open(f"{self.path}/{fs_path}/policies.json", "r") as f:
+            policies_file = f"{self.path}/{fs_path}/policies.json"
+            if not os.path.isfile(policies_file):
+                continue
+            with open(policies_file, "r") as f:
                 policies = json.load(f)
                 for policy_details in policies["policies"]:
                     if policy_details["name"] == policy.name:
                         policy_details["roles"] = [role.name for role in roles]
-            with open(f"{self.path}/{fs_path}/policies.json", "w") as f:
+            with open(policies_file, "w") as f:
                 json.dump(policies, f, indent=4)

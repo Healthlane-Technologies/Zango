@@ -191,7 +191,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		},
 		two_factor_auth: {
 			required: false,
-			allowedMethods: ['email'],
+			allowedMethods: ['email', 'sms'],
 			email_hook: '',
 			sms_hook: '',
 		},
@@ -1270,24 +1270,31 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					<div className="ml-[32px] space-y-[16px] pt-[16px] border-t border-[#E5E7EB]">
 						<p className="text-[14px] font-medium text-[#111827]">Available 2FA Methods</p>
 						<div className="space-y-[12px]">
-							<label className="flex items-center gap-[12px]">
-								<input
-									type="checkbox"
-									checked={true}
-									disabled={true}
-									className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED] cursor-not-allowed"
-								/>
-								<span className="text-[14px] text-[#111827]">Email verification</span>
-							</label>
-							<label className="flex items-center gap-[12px]">
-								<input
-									type="checkbox"
-									checked={true}
-									disabled={true}
-									className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED] cursor-not-allowed"
-								/>
-								<span className="text-[14px] text-[#111827]">SMS verification</span>
-							</label>
+							{[
+								{ id: 'email', label: 'Email verification' },
+								{ id: 'sms', label: 'SMS verification' },
+							].map(({ id, label }) => {
+								const isChecked = setupData.two_factor_auth.allowedMethods.includes(id);
+								const isLastOne = setupData.two_factor_auth.allowedMethods.length === 1 && isChecked;
+								return (
+									<label key={id} className={`flex items-center gap-[12px] ${isLastOne ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+										<input
+											type="checkbox"
+											checked={isChecked}
+											disabled={isLastOne}
+											onChange={(e) => {
+												const current = [...setupData.two_factor_auth.allowedMethods];
+												const updated = e.target.checked
+													? [...current, id]
+													: current.filter(m => m !== id);
+												updateSetupData('two_factor_auth', { allowedMethods: updated });
+											}}
+											className="w-[18px] h-[18px] rounded border-[#D1D5DB] text-[#5048ED]"
+										/>
+										<span className="text-[14px] text-[#111827]">{label}</span>
+									</label>
+								);
+							})}
 						</div>
 
 						{/* 2FA Configuration Fields */}
