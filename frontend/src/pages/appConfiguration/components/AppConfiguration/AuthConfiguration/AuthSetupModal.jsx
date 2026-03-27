@@ -1296,130 +1296,129 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 								);
 							})}
 						</div>
-
-						{/* 2FA Configuration Fields */}
-						<div className="mt-[16px] bg-[#F8FAFC] rounded-[12px] p-[16px] space-y-[16px]">
-							<p className="text-[14px] font-semibold text-[#111827]">2FA Configuration</p>
-
-							{/* Email Configuration */}
-							{setupData.two_factor_auth.allowedMethods.includes('email') && (
-								<div className="bg-white rounded-[8px] p-[14px] border border-[#E5E7EB] space-y-[12px]">
-									<p className="text-[13px] font-semibold text-[#374151]">Email Settings</p>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Hook</label>
-										<input
-											type="text"
-											value={setupData.two_factor_auth.email_hook}
-											onChange={(e) => updateSetupData('two_factor_auth', { email_hook: e.target.value })}
-											placeholder="Hook name for email handling"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Subject</label>
-										<input
-											type="text"
-											value={setupData.two_factor_auth.email_subject}
-											onChange={(e) => updateSetupData('two_factor_auth', { email_subject: e.target.value })}
-											placeholder="2FA Code Verification"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Content</label>
-										<textarea
-											value={setupData.two_factor_auth.email_content}
-											onChange={(e) => updateSetupData('two_factor_auth', { email_content: e.target.value })}
-											placeholder="Your 2FA code is {code}"
-											rows="2"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
-										/>
-										<p className="text-[11px] text-[#6B7280] mt-[4px]">Use {'{'}code{'}'} as placeholder for the 2FA code</p>
-									</div>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Config Key</label>
-										<input
-											type="text"
-											value={setupData.two_factor_auth.email_config_key}
-											onChange={(e) => updateSetupData('two_factor_auth', { email_config_key: e.target.value })}
-											placeholder="Configuration key for email service"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
-										/>
-									</div>
-								</div>
-							)}
-
-							{/* SMS Configuration */}
-							{setupData.two_factor_auth.allowedMethods.includes('sms') && (
-								<div className="bg-white rounded-[8px] p-[14px] border border-[#E5E7EB] space-y-[12px]">
-									<p className="text-[13px] font-semibold text-[#374151]">SMS Settings</p>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Hook</label>
-										<input
-											type="text"
-											value={setupData.two_factor_auth.sms_hook}
-											onChange={(e) => updateSetupData('two_factor_auth', { sms_hook: e.target.value })}
-											placeholder="Hook name for SMS handling"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Content</label>
-										<textarea
-											value={setupData.two_factor_auth.sms_content}
-											onChange={(e) => updateSetupData('two_factor_auth', { sms_content: e.target.value })}
-											placeholder="Your 2FA code is {code}"
-											rows="2"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
-										/>
-										<p className="text-[11px] text-[#6B7280] mt-[4px]">Use {'{'}code{'}'} as placeholder for the 2FA code</p>
-									</div>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Extra Data (JSON)</label>
-										<JsonKeyValueInput
-											value={setupData.two_factor_auth.sms_extra_data}
-											onChange={(value) => updateSetupData('two_factor_auth', { sms_extra_data: value })}
-										/>
-										<p className="text-[11px] text-[#6B7280] mt-[4px]">Additional data to send with SMS webhook</p>
-									</div>
-
-									<div>
-										<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Config Key</label>
-										<input
-											type="text"
-											value={setupData.two_factor_auth.sms_config_key}
-											onChange={(e) => updateSetupData('two_factor_auth', { sms_config_key: e.target.value })}
-											placeholder="Configuration key for SMS service"
-											className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
-										/>
-									</div>
-								</div>
-							)}
-
-							{/* Expiry Configuration */}
-							<div>
-								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Code Expiry (seconds)</label>
-								<input
-									type="number"
-									value={setupData.two_factor_auth.expiry}
-									onChange={(e) => updateSetupData('two_factor_auth', { expiry: Number(e.target.value) })}
-									min="60"
-									max="3600"
-									placeholder="300"
-									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
-								/>
-								<p className="text-[11px] text-[#6B7280] mt-[4px]">How long the 2FA code remains valid (60-3600 seconds)</p>
-							</div>
-						</div>
 					</div>
 				)}
+
+				{/* 2FA Configuration Fields - always visible so role-level overrides can be configured */}
+				<div className="space-y-[16px] pt-[16px] border-t border-[#E5E7EB]">
+					<div className="bg-[#F8FAFC] rounded-[12px] p-[16px] space-y-[16px]">
+						<p className="text-[14px] font-semibold text-[#111827]">2FA Configuration</p>
+						<p className="text-[12px] text-[#6B7280]">Configure email and SMS settings here — these are used even when 2FA is only enabled for specific roles.</p>
+
+						{/* Email Configuration */}
+						<div className="bg-white rounded-[8px] p-[14px] border border-[#E5E7EB] space-y-[12px]">
+							<p className="text-[13px] font-semibold text-[#374151]">Email Settings</p>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Hook</label>
+								<input
+									type="text"
+									value={setupData.two_factor_auth.email_hook}
+									onChange={(e) => updateSetupData('two_factor_auth', { email_hook: e.target.value })}
+									placeholder="Hook name for email handling"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Subject</label>
+								<input
+									type="text"
+									value={setupData.two_factor_auth.email_subject}
+									onChange={(e) => updateSetupData('two_factor_auth', { email_subject: e.target.value })}
+									placeholder="2FA Code Verification"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Content</label>
+								<textarea
+									value={setupData.two_factor_auth.email_content}
+									onChange={(e) => updateSetupData('two_factor_auth', { email_content: e.target.value })}
+									placeholder="Your 2FA code is {code}"
+									rows="2"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
+								/>
+								<p className="text-[11px] text-[#6B7280] mt-[4px]">Use {'{'}code{'}'} as placeholder for the 2FA code</p>
+							</div>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Email Config Key</label>
+								<input
+									type="text"
+									value={setupData.two_factor_auth.email_config_key}
+									onChange={(e) => updateSetupData('two_factor_auth', { email_config_key: e.target.value })}
+									placeholder="Configuration key for email service"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+								/>
+							</div>
+						</div>
+
+						{/* SMS Configuration */}
+						<div className="bg-white rounded-[8px] p-[14px] border border-[#E5E7EB] space-y-[12px]">
+							<p className="text-[13px] font-semibold text-[#374151]">SMS Settings</p>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Hook</label>
+								<input
+									type="text"
+									value={setupData.two_factor_auth.sms_hook}
+									onChange={(e) => updateSetupData('two_factor_auth', { sms_hook: e.target.value })}
+									placeholder="Hook name for SMS handling"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Content</label>
+								<textarea
+									value={setupData.two_factor_auth.sms_content}
+									onChange={(e) => updateSetupData('two_factor_auth', { sms_content: e.target.value })}
+									placeholder="Your 2FA code is {code}"
+									rows="2"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] resize-none"
+								/>
+								<p className="text-[11px] text-[#6B7280] mt-[4px]">Use {'{'}code{'}'} as placeholder for the 2FA code</p>
+							</div>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Extra Data (JSON)</label>
+								<JsonKeyValueInput
+									value={setupData.two_factor_auth.sms_extra_data}
+									onChange={(value) => updateSetupData('two_factor_auth', { sms_extra_data: value })}
+								/>
+								<p className="text-[11px] text-[#6B7280] mt-[4px]">Additional data to send with SMS webhook</p>
+							</div>
+
+							<div>
+								<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">SMS Config Key</label>
+								<input
+									type="text"
+									value={setupData.two_factor_auth.sms_config_key}
+									onChange={(e) => updateSetupData('two_factor_auth', { sms_config_key: e.target.value })}
+									placeholder="Configuration key for SMS service"
+									className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+								/>
+							</div>
+						</div>
+
+						{/* Expiry Configuration */}
+						<div>
+							<label className="block text-[12px] font-medium text-[#111827] mb-[6px]">Code Expiry (seconds)</label>
+							<input
+								type="number"
+								value={setupData.two_factor_auth.expiry}
+								onChange={(e) => updateSetupData('two_factor_auth', { expiry: Number(e.target.value) })}
+								min="60"
+								max="3600"
+								placeholder="300"
+								className="w-full px-[10px] py-[6px] border border-[#E5E7EB] rounded-[6px] text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5048ED]"
+							/>
+							<p className="text-[11px] text-[#6B7280] mt-[4px]">How long the 2FA code remains valid (60-3600 seconds)</p>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	), [setupData.two_factor_auth]);
