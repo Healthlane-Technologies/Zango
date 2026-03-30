@@ -233,9 +233,9 @@ class RequestResetPasswordViewAPIV1(RequestPasswordResetView, CaptchaMixin):
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        # catpcha_check, msg = self.verify_captcha(request, *args, **kwargs)
-        # if not catpcha_check:
-        #     return get_api_response(success=False, response_content=msg, status=400)
+        catpcha_check, msg = self.verify_captcha(request, *args, **kwargs)
+        if not catpcha_check:
+            return get_api_response(success=False, response_content=msg, status=400)
         resp = super().post(request, *args, **kwargs)
         data = json.loads(resp.content.decode("utf-8"))
         password_policy = get_auth_priority(policy="password_policy", request=request)
@@ -295,10 +295,11 @@ class ResetPasswordViewAPIV1(ResetPasswordView, PasswordValidationMixin):
                 "is_pending": True,
                 "metadata": {"login_methods": login_methods},
             }
+        success = resp.status_code in (200, 401)
+        # Normalize successful password reset responses to HTTP 200.
+        status = 200 if success else resp.status_code
         return get_api_response(
-            success=True
-            if resp.status_code == 200 or resp.status_code == 401
-            else False,
+            success=success,
             response_content=resp_data,
-            status=resp.status_code,
+            status=status,
         )
