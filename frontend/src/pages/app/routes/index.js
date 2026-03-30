@@ -20,6 +20,7 @@ import SideMenu from '../components/SideMenu';
 import { AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
 import appCodeRoutes from '../../appCode/routes';
 import { AppLogsRoutes } from '../../appLogs/routes';
+import { AppAiRoutes } from '../../appAi/routes';
 
 const PlatformAppRoutes = () => {
 	let { appId } = useParams();
@@ -99,6 +100,7 @@ const PlatformAppRoutes = () => {
 					element={<AppPackagesManagementRoutes />}
 				/>
 				<Route path="/logs/*" element={<AppLogsRoutes />} />
+				<Route path="/ai/*" element={<AppAiRoutes />} />
 				<Route path="/Releases//*" element={<AppReleasesRoutes />} />
 				<Route
 					path="*"
