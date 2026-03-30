@@ -7,6 +7,54 @@ from zango.apps.appauth.serializers import UserRoleSerializerModel
 from zango.core.utils import get_auth_priority, get_datetime_str_in_tenant_timezone
 
 
+def _get_twofa_can_enable(user, auth_config, tenant):
+    """
+    Returns (can_enable, issue_message) for enabling 2FA.
+    Checks that a cross-channel 2FA method is available:
+    the required 2FA channel must not be the same as the user's login channel,
+    must have its config key set on the tenant, and the user must have
+    the corresponding contact info.
+    """
+    twofa_config = auth_config.get("two_factor_auth", {})
+    login_methods = getattr(tenant, "auth_config", {}).get("login_methods", {})
+
+    otp = login_methods.get("otp", {})
+    password = login_methods.get("password", {})
+
+    otp_enabled = otp.get("enabled", False)
+    otp_methods = otp.get("allowed_methods", [])
+
+    email_is_login = (otp_enabled and "email" in otp_methods) or (
+        password.get("enabled", False) and "email" in password.get("allowed_usernames", [])
+    )
+    sms_is_login = otp_enabled and "sms" in otp_methods
+
+    if email_is_login and not sms_is_login:
+        required_channels = ["sms"]
+    elif sms_is_login and not email_is_login:
+        required_channels = ["email"]
+    else:
+        # both channels used for login, SSO-only, or password-only — require both
+        required_channels = ["sms", "email"]
+
+    issues = []
+    for channel in required_channels:
+        if channel == "sms":
+            if not twofa_config.get("sms_config_key"):
+                issues.append("SMS two-factor authentication is not configured.")
+            elif not user.mobile:
+                issues.append("Your mobile number is required to enable two-factor authentication.")
+        elif channel == "email":
+            if not twofa_config.get("email_config_key"):
+                issues.append("Email two-factor authentication is not configured.")
+            elif not user.email:
+                issues.append("Your email is required to enable two-factor authentication.")
+
+    if issues:
+        return False, " ".join(issues)
+    return True, None
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     profile_pic = serializers.SerializerMethodField()
     roles = UserRoleSerializerModel(many=True)
@@ -58,13 +106,10 @@ class ProfileSerializer(serializers.ModelSerializer):
                 break
         auth_config["two_factor_auth"]["required"] = twofa_enabled
         if not twofa_enabled:
-            if not self.instance.mobile or not self.instance.email:
-                auth_config["two_factor_auth"]["can_enable"] = False
-                auth_config["two_factor_auth"]["issue"] = (
-                    "Mobile number and email are required to enable two-factor authentication."
-                )
-            else:
-                auth_config["two_factor_auth"]["can_enable"] = True
+            can_enable, issue = _get_twofa_can_enable(self.instance, auth_config, tenant)
+            auth_config["two_factor_auth"]["can_enable"] = can_enable
+            if issue:
+                auth_config["two_factor_auth"]["issue"] = issue
         else:
             can_disable_twofa = True
             try:
