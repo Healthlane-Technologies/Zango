@@ -1,15 +1,18 @@
 """
 Executes tool functions with safety wrapping: validation, timeout, serialization.
 Never raises — all outcomes captured in ToolResult.
+
+Tools are dynamically imported from the tenant's workspace via plugin_source,
+following the same pattern as zango_task_executor for Celery tasks.
 """
 
 import datetime
 import json
 import logging
+import signal
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FuturesTimeoutError
+import threading
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -30,74 +33,64 @@ class ToolResult:
     error_traceback: str | None = None  # For internal logging only
 
 
-_executor_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="tool-exec")
+class _ToolTimeoutError(Exception):
+    pass
 
 
 class ToolExecutor:
     """
-    Executes registered tool functions with safety wrapping.
+    Executes tool functions by dynamically importing them from the tenant's
+    workspace, following the same pattern as zango_task_executor.
 
     Usage:
         executor = ToolExecutor()
         result = executor.execute("get_recent_topics", {"employee_id": 42, "hours": 48})
     """
 
-    def _ensure_tools_discovered(self):
-        """Trigger autodiscovery if the TOOL_REGISTRY is empty."""
-        from zango.ai.tools.registry import TOOL_REGISTRY, autodiscover_tools
-
-        if TOOL_REGISTRY:
-            return
-
-        try:
-            import os
-
-            from django.apps import apps as django_apps
-            from django.conf import settings
-            from django.db import connection
-
-            # Resolve tenant name from the current schema
-            # set_app_schema_path sets connection.schema_name via schema_context
-            schema_name = connection.schema_name
-            tenant_model = django_apps.get_model("tenancy", "TenantModel")
-            tenant = tenant_model.objects.using("default").get(schema_name=schema_name)
-            workspace_path = os.path.join(
-                settings.BASE_DIR, "workspaces", tenant.name
-            )
-            autodiscover_tools(workspace_path)
-            logger.info(
-                f"Lazy tool autodiscovery for '{tenant.name}': "
-                f"{len(TOOL_REGISTRY)} tools loaded"
-            )
-        except Exception as e:
-            logger.error(f"Lazy tool autodiscovery failed: {e}", exc_info=True)
-
     def execute(self, tool_name: str, tool_input: dict) -> ToolResult:
         """Execute a tool function by name. Never raises."""
         start_time = time.monotonic()
 
-        # Step 1: Look up function (with lazy autodiscovery fallback)
-        from zango.ai.tools.registry import get_tool_function
-
+        # Step 1: Look up tool record from DB (tenant-scoped via connection.tenant)
         try:
-            func = get_tool_function(tool_name)
+            from zango.apps.ai.models.tool import AppLLMTool
+
+            tool_record = AppLLMTool.objects.get(name=tool_name, is_active=True)
         except Exception:
-            # Registry might be empty — try autodiscovery and retry
-            self._ensure_tools_discovered()
-            try:
-                func = get_tool_function(tool_name)
-            except Exception:
-                return ToolResult(
-                    output=None,
-                    status="error",
-                    execution_time_ms=0,
-                    error_message=f"Tool '{tool_name}' not found in registry",
-                )
+            return ToolResult(
+                output=None,
+                status="error",
+                execution_time_ms=0,
+                error_message=f"Tool '{tool_name}' not found in database",
+            )
 
-        meta = func._tool_meta
+        # Step 2: Dynamic import from tenant workspace (same as zango_task_executor)
+        try:
+            from django.db import connection
 
-        # Step 2: Validate input
-        validation_error = self._validate_input(tool_input, meta.parameters_schema)
+            from zango.apps.dynamic_models.workspace.base import Workspace
+
+            ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+
+            module_path, func_name = tool_record.python_path.rsplit(".", 1)
+            module = ws.plugin_source.load_plugin(module_path)
+            func = getattr(module, func_name)
+        except Exception as e:
+            elapsed = int((time.monotonic() - start_time) * 1000)
+            logger.error(
+                f"Tool '{tool_name}' import failed: {e}", exc_info=True
+            )
+            return ToolResult(
+                output=None,
+                status="error",
+                execution_time_ms=elapsed,
+                error_message=f"Tool import failed: {type(e).__name__}: {str(e)[:500]}",
+            )
+
+        # Step 3: Validate input against schema from DB
+        validation_error = self._validate_input(
+            tool_input, tool_record.parameters_schema
+        )
         if validation_error:
             elapsed = int((time.monotonic() - start_time) * 1000)
             return ToolResult(
@@ -107,33 +100,30 @@ class ToolExecutor:
                 error_message=f"Invalid input: {validation_error}",
             )
 
-        # Step 3: Execute with timeout
-        # Wrap the function to ensure Django DB connections are usable in the thread pool.
-        # Pooled threads can hold stale/closed connections from previous executions.
-        def _run_in_thread(**kwargs):
-            from django.db import close_old_connections
-            close_old_connections()
-            try:
-                return func(**kwargs)
-            finally:
-                close_old_connections()
-
+        # Step 4: Execute synchronously with timeout
+        timeout_seconds = tool_record.timeout_seconds
         try:
-            future = _executor_pool.submit(_run_in_thread, **tool_input)
-            raw_result = future.result(timeout=meta.timeout_seconds)
-        except FuturesTimeoutError:
+            raw_result = self._execute_with_timeout(
+                func, tool_input, timeout_seconds
+            )
+        except _ToolTimeoutError:
             elapsed = int((time.monotonic() - start_time) * 1000)
-            logger.warning(f"Tool '{tool_name}' timed out after {meta.timeout_seconds}s")
+            logger.warning(
+                f"Tool '{tool_name}' timed out after {timeout_seconds}s"
+            )
             return ToolResult(
                 output=None,
                 status="timeout",
                 execution_time_ms=elapsed,
-                error_message=f"Tool execution timed out after {meta.timeout_seconds}s",
+                error_message=f"Tool execution timed out after {timeout_seconds}s",
             )
         except Exception as e:
             elapsed = int((time.monotonic() - start_time) * 1000)
             tb = traceback.format_exc()
-            logger.error(f"Tool '{tool_name}' raised {type(e).__name__}: {e}", exc_info=True)
+            logger.error(
+                f"Tool '{tool_name}' raised {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             return ToolResult(
                 output=None,
                 status="error",
@@ -142,7 +132,7 @@ class ToolExecutor:
                 error_traceback=tb,
             )
 
-        # Step 4: Serialize return value
+        # Step 5: Serialize return value
         elapsed = int((time.monotonic() - start_time) * 1000)
         try:
             serialized = self._serialize_output(raw_result)
@@ -159,6 +149,31 @@ class ToolExecutor:
             status="success",
             execution_time_ms=elapsed,
         )
+
+    def _execute_with_timeout(self, func, tool_input, timeout_seconds):
+        """
+        Execute func synchronously with timeout enforcement.
+
+        Uses signal.SIGALRM when running in the main thread (gunicorn sync
+        workers, celery workers). Falls back to no timeout enforcement in
+        non-main threads, relying on the outer framework's timeout instead.
+        """
+        if threading.current_thread() is threading.main_thread():
+            def _timeout_handler(signum, frame):
+                raise _ToolTimeoutError()
+
+            old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(timeout_seconds)
+            try:
+                return func(**tool_input)
+            finally:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
+        else:
+            logger.debug(
+                "Tool executing in non-main thread — timeout not enforced"
+            )
+            return func(**tool_input)
 
     def _validate_input(self, tool_input: dict, schema: dict) -> str | None:
         """Validate tool_input against JSON Schema. Returns None on success."""

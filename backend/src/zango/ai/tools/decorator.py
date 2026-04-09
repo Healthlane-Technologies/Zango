@@ -72,6 +72,7 @@ class _ToolDecorator:
     def __init__(self, func: Callable, meta: ToolMeta):
         self._func = func
         self._meta = meta
+        self._tool_meta = meta
         self.__name__ = func.__name__
         self.__doc__ = func.__doc__
         self.__module__ = func.__module__
@@ -140,10 +141,6 @@ def tool(
         )
 
         func._tool_meta = meta
-
-        from zango.ai.tools.registry import TOOL_REGISTRY
-
-        TOOL_REGISTRY[name] = func
 
         return _ToolDecorator(func, meta)
 

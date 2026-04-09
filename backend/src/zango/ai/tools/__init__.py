@@ -10,13 +10,9 @@ Usage:
         days: int = ToolParam(description="Days to look back", default=7),
     ) -> dict:
         ...
+
+Tool discovery and sync are handled by Workspace.sync_tools().
+Tool execution uses dynamic import via Workspace.plugin_source.
 """
 
 from zango.ai.tools.decorator import ToolParam, ToolSafety, tool
-from zango.ai.tools.registry import (
-    TOOL_REGISTRY,
-    autodiscover_tools,
-    get_all_tool_metas,
-    get_tool_function,
-    sync_tools_to_db,
-)

@@ -4,7 +4,7 @@ All endpoints are scoped to the current tenant (app).
 Authentication: Session auth (platform admin user).
 """
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -998,7 +998,9 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
                 "system_prompt__active_version",
                 "user_prompt__active_version",
             ).get(id=agent_id)
-
+            print(agent)
+            from django.db import connection
+            print(connection.tenant)
             if not agent.provider:
                 return get_api_response(
                     False, {"message": "Agent has no provider configured"}, 400
@@ -1007,35 +1009,43 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
             # Use AgentClient so agent metadata is captured in invocation logs
             from zango.ai.agent_client import AgentClient
             from zango.ai.providers.base import LLMMessage
+            from zango.apps.dynamic_models.workspace.base import Workspace
+            from zango.apps.shared.tenancy.models import TenantModel
 
             variables = request.data.get("variables", {})
-            agent_client = AgentClient(agent)
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+            connection.set_tenant(tenant)
+            with connection.cursor() as c:
+                ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                ws.ready()
+                
+                agent_client = AgentClient(agent)
 
-            messages = None
-            if not agent.user_prompt:
-                messages = [LLMMessage(role="user", content="generate assessment for Employee ID 24 based on past 30 days performance for topic Biology.")]
+                messages = None
+                if not agent.user_prompt:
+                    messages = [LLMMessage(role="user", content="generate assessment for Employee ID 2 based on past 30 days performance for topic Biology.")]
 
-            response = agent_client.run(
-                variables=variables or None,
-                messages=messages,
-                triggered_by="system",
-            )
+                response = agent_client.run(
+                    variables=variables or None,
+                    messages=messages,
+                    triggered_by="system",
+                )
 
-            return get_api_response(
-                True,
-                {
-                    "message": "Test successful",
-                    "result": {
-                        "content": response.content[:500],
-                        "model": response.model,
-                        "latency_ms": response.latency_ms,
-                        "input_tokens": response.usage.input_tokens,
-                        "output_tokens": response.usage.output_tokens,
-                        "cost_usd": response.cost_usd,
+                return get_api_response(
+                    True,
+                    {
+                        "message": "Test successful",
+                        "result": {
+                            "content": response.content[:500],
+                            "model": response.model,
+                            "latency_ms": response.latency_ms,
+                            "input_tokens": response.usage.input_tokens,
+                            "output_tokens": response.usage.output_tokens,
+                            "cost_usd": response.cost_usd,
+                        },
                     },
-                },
-                200,
-            )
+                    200,
+                )
         except AppLLMAgent.DoesNotExist:
             return get_api_response(False, {"message": "Agent not found"}, 404)
         except Exception as e:
@@ -1097,26 +1107,15 @@ class ToolDetailViewAPIV1(ZangoGenericPlatformAPIView):
 class ToolSyncViewAPIV1(ZangoGenericPlatformAPIView):
     def post(self, request, app_uuid, *args, **kwargs):
         try:
-            import os
+            from zango.apps.dynamic_models.workspace.base import Workspace
+            from zango.apps.shared.tenancy.models import TenantModel
 
-            from django.apps import apps as django_apps
-            from django.conf import settings
-
-            from zango.ai.tools.registry import autodiscover_tools, sync_tools_to_db
-
-            # Resolve workspace path for this app
-            tenant_model = django_apps.get_model("tenancy", "TenantModel")
-            tenant = tenant_model.objects.get(uuid=app_uuid)
-            workspace_path = os.path.join(
-                settings.BASE_DIR, "workspaces", tenant.name
-            )
-
-            # Step 1: Import all tools.py files → populates TOOL_REGISTRY
-            discovered = autodiscover_tools(workspace_path)
-
-            # Step 2: Mirror TOOL_REGISTRY → AppLLMTool table
-            stats = sync_tools_to_db()
-            stats["discovered_files"] = discovered
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+            connection.set_tenant(tenant)
+            with connection.cursor() as c:
+                ws = Workspace(connection.tenant, request=None, as_systemuser=True)
+                ws.ready()
+                stats = ws.sync_tools()
 
             return get_api_response(
                 True, {"message": "Tool sync complete", "stats": stats}, 200
