@@ -73,55 +73,204 @@ function InvocationDetail({ invocation }) {
 				))}
 			</div>
 
-			{/* Request / Response */}
-			{activeTab === 'request' && (
-				<div className="flex flex-col gap-[16px]">
-					{invocation.request_system && (
-						<div>
-							<span className="mb-[6px] block font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">System Prompt</span>
-							<div className="rounded-[6px] bg-[#1F2937] p-[12px] max-h-[200px] overflow-auto">
-								<pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-[20px] text-[#FCD34D]">{invocation.request_system}</pre>
-							</div>
-						</div>
-					)}
-					<div>
-						<span className="mb-[6px] block font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Messages</span>
-						<JsonBlock data={invocation.request_messages} maxHeight="300px" />
-					</div>
-					{invocation.request_tools && invocation.request_tools.length > 0 && (
-						<div>
-							<span className="mb-[6px] block font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">
-								Tools Sent to LLM ({invocation.request_tools.length})
-							</span>
-							<div className="flex flex-col gap-[8px]">
-								{invocation.request_tools.map((t, i) => (
-									<div key={i} className="rounded-[6px] border border-[#E5E7EB] bg-[#F9FAFB] p-[12px]">
-										<div className="flex items-center gap-[8px] mb-[6px]">
-											<span className="font-mono font-lato text-[13px] font-semibold text-[#111827]">{t.name}</span>
-											<span className="font-lato text-[12px] text-[#6B7280]">{t.description?.slice(0, 80)}</span>
-										</div>
-										<JsonBlock data={t.input_schema} maxHeight="120px" />
-									</div>
-								))}
-							</div>
-						</div>
-					)}
-					<div className="grid grid-cols-2 gap-[16px]">
-						<div>
-							<span className="mb-[6px] block font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Response</span>
-							<div className="rounded-[6px] bg-[#F0FDF4] border border-[#BBF7D0] p-[12px] max-h-[300px] overflow-auto">
-								<pre className="whitespace-pre-wrap break-words font-lato text-[13px] leading-[22px] text-[#111827]">{invocation.response_content || '-'}</pre>
-							</div>
-						</div>
-						{invocation.response_tool_calls && (
-							<div>
-								<span className="mb-[6px] block font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Tool Calls</span>
-								<JsonBlock data={invocation.response_tool_calls} />
+			{/* Request / Response — conversation timeline */}
+			{activeTab === 'request' && (() => {
+				// Parse messages to build a conversation timeline
+				let messages = [];
+				try {
+					messages = typeof invocation.request_messages === 'string'
+						? JSON.parse(invocation.request_messages)
+						: (invocation.request_messages || []);
+				} catch (e) {}
+
+				// Build tool result lookup: tool_call_id -> content
+				const toolResults = {};
+				messages.forEach(m => {
+					if (m.role === 'tool' && m.tool_call_id) {
+						toolResults[m.tool_call_id] = m.content;
+					}
+				});
+
+				// Collect tool calls made by LLM (from assistant messages in history + current response)
+				const historyToolCalls = [];
+				messages.forEach(m => {
+					if (m.role === 'assistant' && m.tool_calls) {
+						m.tool_calls.forEach(tc => historyToolCalls.push(tc));
+					}
+				});
+				const currentToolCalls = invocation.response_tool_calls || [];
+
+				// Files from first user message
+				const firstUserMsg = messages.find(m => m.role === 'user');
+				const hasFileBlocks = firstUserMsg && Array.isArray(firstUserMsg.content) &&
+					firstUserMsg.content.some(b => b.type === 'image_url' || b.type === 'document');
+
+				return (
+					<div className="flex flex-col gap-[12px]">
+
+						{/* System prompt */}
+						{invocation.request_system && (
+							<div className="rounded-[8px] border border-[#FCD34D] bg-[#1F2937] overflow-hidden">
+								<div className="flex items-center gap-[8px] border-b border-[#374151] px-[12px] py-[8px]">
+									<span className="text-[12px]">⚙️</span>
+									<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#FCD34D]">System Prompt</span>
+								</div>
+								<div className="px-[12px] py-[10px] max-h-[160px] overflow-auto">
+									<pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-[18px] text-[#D1D5DB]">{invocation.request_system}</pre>
+								</div>
 							</div>
 						)}
+
+						{/* Files attached */}
+						{invocation.request_files && invocation.request_files.length > 0 && (
+							<div className="flex items-center gap-[8px] rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-[12px] py-[10px]">
+								<span className="text-[14px]">📎</span>
+								{invocation.request_files.map((f, i) => (
+									<span key={i} className="flex items-center gap-[6px]">
+										<span className="font-lato text-[12px] font-medium text-[#111827]">{f.filename?.split('/').pop() || 'file'}</span>
+										<span className="rounded-full bg-[#EFF6FF] px-[6px] py-[1px] font-lato text-[10px] text-[#2563EB]">{f.media_type}</span>
+										{f.size_bytes != null && (
+											<span className="font-lato text-[11px] text-[#9CA3AF]">
+												{f.size_bytes >= 1048576 ? `${(f.size_bytes / 1048576).toFixed(1)}MB`
+													: f.size_bytes >= 1024 ? `${(f.size_bytes / 1024).toFixed(1)}KB`
+													: `${f.size_bytes}B`}
+											</span>
+										)}
+									</span>
+								))}
+								{hasFileBlocks && !invocation.request_files.length && (
+									<span className="font-lato text-[12px] text-[#6B7280]">File included in message</span>
+								)}
+							</div>
+						)}
+
+						{/* Conversation timeline */}
+						<div className="flex flex-col gap-[8px]">
+
+							{/* User message (first only — subsequent are tool results shown inline) */}
+							{firstUserMsg && (
+								<div className="flex gap-[10px]">
+									<div className="flex flex-col items-center">
+										<div className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[#346BD4] text-[11px] text-white font-bold">U</div>
+										<div className="mt-[4px] w-[1px] flex-1 bg-[#E5E7EB]" />
+									</div>
+									<div className="flex-1 pb-[8px]">
+										<span className="mb-[4px] block font-lato text-[11px] font-semibold text-[#374151]">User</span>
+										<div className="rounded-[6px] bg-[#EFF6FF] border border-[#BFDBFE] px-[12px] py-[8px]">
+											{Array.isArray(firstUserMsg.content)
+												? <span className="font-lato text-[12px] text-[#6B7280] italic">
+													{firstUserMsg.content.filter(b => b.type === 'text').map(b => b.text).join(' ') || '(file attachment)'}
+												  </span>
+												: <pre className="whitespace-pre-wrap break-words font-lato text-[12px] text-[#1E3A5F]">{firstUserMsg.content || '(empty)'}</pre>
+											}
+										</div>
+									</div>
+								</div>
+							)}
+
+							{/* Tool calls from history (already executed in prior rounds) */}
+							{historyToolCalls.map((tc, i) => {
+								const tcId = tc.id || tc.function?.name;
+								const name = tc.function?.name || tc.name;
+								let args = {};
+								try { args = typeof tc.function?.arguments === 'string' ? JSON.parse(tc.function.arguments) : (tc.input || {}); } catch(e) {}
+								const result = toolResults[tc.id];
+								let parsedResult = null;
+								try { parsedResult = result ? JSON.parse(result) : null; } catch(e) { parsedResult = result; }
+								const found = parsedResult?.found;
+
+								return (
+									<div key={i} className="flex gap-[10px]">
+										<div className="flex flex-col items-center">
+											<div className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[#7C3AED] text-[11px] text-white font-bold">T</div>
+											<div className="mt-[4px] w-[1px] flex-1 bg-[#E5E7EB]" />
+										</div>
+										<div className="flex-1 pb-[8px]">
+											<span className="mb-[4px] block font-lato text-[11px] font-semibold text-[#374151]">Tool Call</span>
+											<div className="rounded-[6px] border border-[#DDD6FE] bg-[#F5F3FF] px-[12px] py-[8px]">
+												<div className="flex items-center gap-[8px] mb-[6px]">
+													<span className="font-mono text-[12px] font-bold text-[#7C3AED]">{name}</span>
+													{result && (
+														<span className={`rounded-full px-[6px] py-[1px] font-lato text-[10px] font-semibold ${
+															found === false ? 'bg-[#FEF2F2] text-[#DC2626]' :
+															found === true ? 'bg-[#F0FDF4] text-[#16A34A]' :
+															'bg-[#F3F4F6] text-[#6B7280]'
+														}`}>
+															{found === false ? 'not found' : found === true ? 'found' : 'done'}
+														</span>
+													)}
+												</div>
+												<div className="grid grid-cols-2 gap-[8px]">
+													<div>
+														<span className="mb-[2px] block font-lato text-[10px] font-bold uppercase tracking-[0.5px] text-[#7C3AED]">Input</span>
+														<JsonBlock data={args} maxHeight="80px" />
+													</div>
+													{result && (
+														<div>
+															<span className="mb-[2px] block font-lato text-[10px] font-bold uppercase tracking-[0.5px] text-[#6B7280]">Result</span>
+															<JsonBlock data={parsedResult || result} maxHeight="80px" />
+														</div>
+													)}
+												</div>
+											</div>
+										</div>
+									</div>
+								);
+							})}
+
+							{/* Current round output */}
+							<div className="flex gap-[10px]">
+								<div className="flex flex-col items-center">
+									<div className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[#059669] text-[11px] text-white font-bold">A</div>
+								</div>
+								<div className="flex-1">
+									<span className="mb-[4px] block font-lato text-[11px] font-semibold text-[#374151]">
+										LLM Response
+										{invocation.stop_reason && (
+											<span className={`ml-[8px] rounded-full px-[6px] py-[1px] font-lato text-[10px] font-semibold ${
+												invocation.stop_reason === 'tool_use' ? 'bg-[#F5F3FF] text-[#7C3AED]' :
+												invocation.stop_reason === 'end_turn' ? 'bg-[#F0FDF4] text-[#16A34A]' :
+												'bg-[#F3F4F6] text-[#6B7280]'
+											}`}>
+												{invocation.stop_reason === 'tool_use' ? '🔧 called tool' :
+												 invocation.stop_reason === 'end_turn' ? '✓ finished' :
+												 invocation.stop_reason}
+											</span>
+										)}
+									</span>
+
+									{/* Tool calls this round made */}
+									{currentToolCalls.length > 0 && (
+										<div className="mb-[8px] flex flex-col gap-[6px]">
+											{currentToolCalls.map((tc, i) => (
+												<div key={i} className="rounded-[6px] border border-[#DDD6FE] bg-[#F5F3FF] px-[12px] py-[8px]">
+													<div className="flex items-center gap-[6px] mb-[4px]">
+														<span className="text-[11px]">🔧</span>
+														<span className="font-mono text-[12px] font-bold text-[#7C3AED]">{tc.name}</span>
+														<span className="font-lato text-[10px] text-[#9CA3AF]">→ pending result in next round</span>
+													</div>
+													<JsonBlock data={tc.input} maxHeight="60px" />
+												</div>
+											))}
+										</div>
+									)}
+
+									{/* Final text response */}
+									{invocation.response_content ? (
+										<div className="rounded-[6px] bg-[#F0FDF4] border border-[#BBF7D0] px-[12px] py-[8px] max-h-[300px] overflow-auto">
+											<pre className="whitespace-pre-wrap break-words font-lato text-[12px] leading-[20px] text-[#111827]">{invocation.response_content}</pre>
+										</div>
+									) : currentToolCalls.length === 0 && (
+										<div className="rounded-[6px] bg-[#F9FAFB] border border-[#E5E7EB] px-[12px] py-[8px]">
+											<span className="font-lato text-[12px] text-[#9CA3AF] italic">No text response — see tool call above</span>
+										</div>
+									)}
+								</div>
+							</div>
+						</div>
 					</div>
-				</div>
-			)}
+				);
+			})()}
 
 			{/* Prompt */}
 			{activeTab === 'prompt' && (
@@ -231,18 +380,21 @@ function InvocationDetail({ invocation }) {
 	);
 }
 
-/* ─── Invocation Row ─── */
-function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail }) {
+/* ─── Single invocation row (used inside a run group or standalone) ─── */
+function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail, indent }) {
 	return (
-		<div className="border-b border-[#E5E7EB] bg-white">
-			<div className="flex items-center px-[16px] py-[12px] cursor-pointer hover:bg-[#F9FAFB]" onClick={onExpand}>
-				<button className="mr-[12px] text-[#6B7280]">
+		<div className={`border-b border-[#E5E7EB] bg-white ${indent ? 'bg-[#FAFBFC]' : ''}`}>
+			<div className="flex items-center px-[16px] py-[12px] cursor-pointer hover:bg-[#F3F4F6]" onClick={onExpand}>
+				<button className={`text-[#6B7280] ${indent ? 'ml-[20px] mr-[8px]' : 'mr-[12px]'}`}>
 					<svg width="10" height="10" viewBox="0 0 10 10" className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
 						<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
 					</svg>
 				</button>
 				<span className="mr-[16px] w-[70px] font-mono font-lato text-[12px] text-[#6B7280]">
-					inv_{String(inv.id).padStart(4, '0')}
+					{indent
+						? <span className="text-[#9CA3AF]">r{inv.round_number ?? '?'}</span>
+						: `inv_${String(inv.id).padStart(4, '0')}`
+					}
 				</span>
 				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
 					{new Date(inv.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' })}
@@ -270,7 +422,7 @@ function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail }) {
 			</div>
 
 			{isExpanded && (
-				<div className="border-t border-[#E5E7EB] px-[24px] py-[16px] bg-[#FAFBFC]">
+				<div className="border-t border-[#E5E7EB] px-[24px] py-[16px] bg-[#F8FAFC]">
 					{loadingDetail ? (
 						<div className="flex items-center justify-center py-[32px]">
 							<span className="inline-block h-[20px] w-[20px] animate-spin rounded-full border-[2px] border-[#346BD4] border-t-transparent" />
@@ -279,6 +431,84 @@ function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail }) {
 					) : (
 						<InvocationDetail invocation={detail} />
 					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
+/* ─── Run group: one header row that expands to show all rounds ─── */
+function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fetchDetail }) {
+	const [groupExpanded, setGroupExpanded] = useState(false);
+	// Summary from all rounds
+	const first = rounds[0];
+	const last = rounds[rounds.length - 1];
+	const totalCost = rounds.reduce((s, r) => s + parseFloat(r.cost_usd || 0), 0);
+	const totalTokensIn = rounds.reduce((s, r) => s + (r.input_tokens || 0), 0);
+	const totalTokensOut = rounds.reduce((s, r) => s + (r.output_tokens || 0), 0);
+	const totalLatency = rounds.reduce((s, r) => s + (r.latency_ms || 0), 0);
+	const hasError = rounds.some(r => r.status !== 'success');
+	const overallStatus = hasError ? 'error' : last.status;
+
+	return (
+		<div className="border-b border-[#E5E7EB]">
+			{/* Group header */}
+			<div
+				className="flex items-center px-[16px] py-[12px] cursor-pointer hover:bg-[#F9FAFB] bg-white"
+				onClick={() => setGroupExpanded(g => !g)}
+			>
+				<button className="mr-[12px] text-[#6B7280]">
+					<svg width="10" height="10" viewBox="0 0 10 10" className={`transition-transform ${groupExpanded ? 'rotate-90' : ''}`}>
+						<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+					</svg>
+				</button>
+				<span className="mr-[16px] w-[70px] font-mono font-lato text-[12px] text-[#6B7280]">
+					run_{String(first.id).padStart(4, '0')}
+				</span>
+				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
+					{new Date(first.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' })}
+				</span>
+				<span className="mr-[16px] w-[160px] font-lato text-[13px] font-medium text-[#111827] truncate">
+					{first.agent_name || '-'}
+				</span>
+				<span className="mr-[16px] w-[160px]">
+					<span className="block font-lato text-[12px] text-[#111827]">{first.provider_name}</span>
+					<span className="block font-mono font-lato text-[11px] text-[#6B7280]">{first.model}</span>
+				</span>
+				<span className="mr-[16px] w-[100px] font-mono font-lato text-[12px] text-[#374151]">
+					{totalTokensIn.toLocaleString()} / {totalTokensOut.toLocaleString()}
+				</span>
+				<span className="mr-[16px] w-[70px] font-lato text-[12px] text-[#374151]">
+					${totalCost.toFixed(4)}
+				</span>
+				<span className="mr-[16px] w-[60px] font-lato text-[12px] text-[#346BD4]">
+					{totalLatency ? `${(totalLatency / 1000).toFixed(1)}s` : '-'}
+				</span>
+				<span className="mr-[16px] w-[70px] font-lato text-[11px] text-[#6B7280] capitalize">
+					{first.triggered_by}
+				</span>
+				<span className="w-[80px] flex items-center gap-[6px]">
+					<StatusBadge status={overallStatus} />
+					<span className="rounded-full bg-[#EFF6FF] px-[6px] py-[1px] font-lato text-[10px] font-semibold text-[#2563EB]">
+						{rounds.length} rounds
+					</span>
+				</span>
+			</div>
+
+			{/* Expanded: show each round as an indented row */}
+			{groupExpanded && (
+				<div className="border-t border-[#E5E7EB] bg-[#F9FAFB]">
+					{rounds.map((inv) => (
+						<InvocationRow
+							key={inv.id}
+							inv={inv}
+							indent
+							isExpanded={expandedId === inv.id}
+							onExpand={() => { onExpand(inv.id); fetchDetail(inv.id); }}
+							detail={detailData[inv.id]}
+							loadingDetail={loadingDetail && expandedId === inv.id}
+						/>
+					))}
 				</div>
 			)}
 		</div>
@@ -353,8 +583,34 @@ export default function InvocationLogs() {
 	const handleExpand = (id) => {
 		if (expandedId === id) { setExpandedId(null); return; }
 		setExpandedId(id);
-		fetchDetail(id);
 	};
+
+	// Group invocations: rows with the same run_id go together (sorted by round_number),
+	// rows without a run_id are standalone.
+	const groupedRows = (() => {
+		const groups = [];
+		const seen = new Map(); // run_id -> group index
+
+		invocations.forEach((inv) => {
+			if (inv.run_id) {
+				if (seen.has(inv.run_id)) {
+					groups[seen.get(inv.run_id)].rounds.push(inv);
+				} else {
+					seen.set(inv.run_id, groups.length);
+					groups.push({ type: 'run', run_id: inv.run_id, rounds: [inv] });
+				}
+			} else {
+				groups.push({ type: 'standalone', inv });
+			}
+		});
+
+		// Sort rounds within each group by round_number
+		groups.forEach((g) => {
+			if (g.type === 'run') g.rounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
+		});
+
+		return groups;
+	})();
 
 	const selectClass = "rounded-[6px] border border-[#DDE2E5] px-[10px] py-[8px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#5048ED] bg-white";
 
@@ -431,16 +687,28 @@ export default function InvocationLogs() {
 						<p className="font-lato text-[14px] text-[#9CA3AF]">No invocations found.</p>
 					</div>
 				) : (
-					invocations.map((inv) => (
-						<InvocationRow
-							key={inv.id}
-							inv={inv}
-							isExpanded={expandedId === inv.id}
-							onExpand={() => handleExpand(inv.id)}
-							detail={detailData[inv.id]}
-							loadingDetail={loadingDetail && expandedId === inv.id}
-						/>
-					))
+					groupedRows.map((group, i) =>
+						group.type === 'run' ? (
+							<RunGroup
+								key={group.run_id}
+								rounds={group.rounds}
+								expandedId={expandedId}
+								onExpand={handleExpand}
+								detailData={detailData}
+								loadingDetail={loadingDetail}
+								fetchDetail={fetchDetail}
+							/>
+						) : (
+							<InvocationRow
+								key={group.inv.id}
+								inv={group.inv}
+								isExpanded={expandedId === group.inv.id}
+								onExpand={() => { handleExpand(group.inv.id); fetchDetail(group.inv.id); }}
+								detail={detailData[group.inv.id]}
+								loadingDetail={loadingDetail && expandedId === group.inv.id}
+							/>
+						)
+					)
 				)}
 			</div>
 

@@ -1,10 +1,11 @@
 from decimal import Decimal
 
-from django.db import models
 from rest_framework import serializers
 
+from django.db import models
+
 from zango.ai.encryption import encrypt_config, mask_config
-from zango.ai.providers.registry import PROVIDER_REGISTRY, get_available_providers
+from zango.ai.providers.registry import PROVIDER_REGISTRY
 from zango.apps.ai.models import (
     AppLLMAgent,
     AppLLMInvocation,
@@ -101,8 +102,12 @@ class AppLLMProviderCreateSerializer(serializers.Serializer):
     provider_slug = serializers.CharField(max_length=50)
     config = serializers.DictField()
     default_model = serializers.CharField(max_length=100)
-    rate_limit_rpm = serializers.IntegerField(required=False, allow_null=True, default=None)
-    rate_limit_tpm = serializers.IntegerField(required=False, allow_null=True, default=None)
+    rate_limit_rpm = serializers.IntegerField(
+        required=False, allow_null=True, default=None
+    )
+    rate_limit_tpm = serializers.IntegerField(
+        required=False, allow_null=True, default=None
+    )
     monthly_budget_usd = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True, default=None
     )
@@ -119,7 +124,8 @@ class AppLLMProviderCreateSerializer(serializers.Serializer):
         return value
 
     def validate(self, data):
-        """Validate required config fields per provider's config_fields spec."""
+        """Validate required config fields per provider's config_fields spec,
+        then validate the API key and fetch available models from the provider."""
         slug = data.get("provider_slug")
         config = data.get("config", {})
         provider_cls = PROVIDER_REGISTRY.get(slug)
@@ -135,9 +141,38 @@ class AppLLMProviderCreateSerializer(serializers.Serializer):
                             "config": f"Missing required config field: {field_def['name']}"
                         }
                     )
+
+            # Build a full config dict including default_model for providers that need it
+            full_config = dict(config)
+            full_config.setdefault("default_model", data.get("default_model", ""))
+
+            # Validate API key / credentials before saving
+            try:
+                client = provider_cls(full_config)
+                is_valid, error_msg = client.validate_config()
+            except Exception as exc:
+                raise serializers.ValidationError(
+                    {"config": f"Provider initialisation failed: {exc}"}
+                )
+
+            if not is_valid:
+                raise serializers.ValidationError(
+                    {"config": f"API key validation failed: {error_msg}"}
+                )
+
+            # Fetch available models and store them for use in create()
+            try:
+                data["_resolved_models"] = client.get_models()
+            except Exception:
+                # Fall back to static supported_models list
+                data["_resolved_models"] = getattr(provider_cls, "supported_models", [])
+
         return data
 
     def create(self, validated_data):
+        # Pop internal keys not part of the model fields
+        resolved_models = validated_data.pop("_resolved_models", None)
+
         config = validated_data.pop("config")
         encrypted = encrypt_config(config)
 
@@ -153,18 +188,24 @@ class AppLLMProviderCreateSerializer(serializers.Serializer):
             budget_alert_threshold=validated_data.get(
                 "budget_alert_threshold", Decimal("80.00")
             ),
+            # Mark as validated since we just confirmed the credentials work
+            is_validated=True,
         )
 
-        # Auto-create AppLLMProviderModel entries for each supported model
+        # Use dynamically fetched models if available, otherwise fall back to
+        # the static supported_models list on the provider class
         provider_cls = PROVIDER_REGISTRY.get(validated_data["provider_slug"])
-        if provider_cls:
-            for model_info in getattr(provider_cls, "supported_models", []):
-                AppLLMProviderModel.objects.create(
-                    provider=provider,
-                    model_id=model_info["id"],
-                    display_name=model_info["name"],
-                    is_enabled=True,
-                )
+        models_to_create = resolved_models
+        if not models_to_create and provider_cls:
+            models_to_create = getattr(provider_cls, "supported_models", [])
+
+        for model_info in models_to_create or []:
+            AppLLMProviderModel.objects.create(
+                provider=provider,
+                model_id=model_info["id"],
+                display_name=model_info["name"],
+                is_enabled=True,
+            )
 
         return provider
 
@@ -231,6 +272,8 @@ class AppLLMInvocationListSerializer(serializers.ModelSerializer):
         model = AppLLMInvocation
         fields = [
             "id",
+            "run_id",
+            "round_number",
             "provider_name",
             "provider_slug",
             "model",
@@ -255,6 +298,8 @@ class AppLLMInvocationDetailSerializer(serializers.ModelSerializer):
         model = AppLLMInvocation
         fields = [
             "id",
+            "run_id",
+            "round_number",
             "provider",
             "provider_name",
             "provider_slug",
@@ -265,6 +310,7 @@ class AppLLMInvocationDetailSerializer(serializers.ModelSerializer):
             "request_system",
             "request_tools",
             "request_params",
+            "request_files",
             "response_content",
             "response_tool_calls",
             "stop_reason",
@@ -457,9 +503,9 @@ class AppLLMPromptVersionCreateSerializer(serializers.Serializer):
 
         from django.db.models import Max
 
-        max_version = prompt.versions.aggregate(Max("version_number"))[
-            "version_number__max"
-        ] or 0
+        max_version = (
+            prompt.versions.aggregate(Max("version_number"))["version_number__max"] or 0
+        )
 
         version = AppLLMPromptVersion.objects.create(
             prompt=prompt,
@@ -627,9 +673,7 @@ class AppLLMAgentCreateSerializer(serializers.Serializer):
                     {"provider_id": "This provider is disabled."}
                 )
         except AppLLMProvider.DoesNotExist:
-            raise serializers.ValidationError(
-                {"provider_id": "Provider not found."}
-            )
+            raise serializers.ValidationError({"provider_id": "Provider not found."})
 
         # Verify prompts exist if provided
         if data.get("system_prompt_name"):
@@ -637,14 +681,18 @@ class AppLLMAgentCreateSerializer(serializers.Serializer):
                 name=data["system_prompt_name"], is_active=True
             ).exists():
                 raise serializers.ValidationError(
-                    {"system_prompt_name": f"Prompt '{data['system_prompt_name']}' not found."}
+                    {
+                        "system_prompt_name": f"Prompt '{data['system_prompt_name']}' not found."
+                    }
                 )
         if data.get("user_prompt_name"):
             if not AppLLMPrompt.objects.filter(
                 name=data["user_prompt_name"], is_active=True
             ).exists():
                 raise serializers.ValidationError(
-                    {"user_prompt_name": f"Prompt '{data['user_prompt_name']}' not found."}
+                    {
+                        "user_prompt_name": f"Prompt '{data['user_prompt_name']}' not found."
+                    }
                 )
 
         return data
@@ -689,12 +737,8 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
         choices=["JSON", "Text", "Markdown"], required=False
     )
     output_json_schema = serializers.JSONField(required=False, allow_null=True)
-    guardrails = serializers.ListField(
-        child=serializers.CharField(), required=False
-    )
-    tools = serializers.ListField(
-        child=serializers.CharField(), required=False
-    )
+    guardrails = serializers.ListField(child=serializers.CharField(), required=False)
+    tools = serializers.ListField(child=serializers.CharField(), required=False)
 
     def validate_output_json_schema(self, value):
         if value is not None and isinstance(value, dict):
@@ -732,9 +776,16 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
 
         # Simple fields
         for attr in [
-            "name", "description", "model", "temperature", "max_tokens",
-            "timeout_seconds", "output_schema", "output_json_schema",
-            "guardrails", "tools",
+            "name",
+            "description",
+            "model",
+            "temperature",
+            "max_tokens",
+            "timeout_seconds",
+            "output_schema",
+            "output_json_schema",
+            "guardrails",
+            "tools",
         ]:
             if attr in validated_data:
                 setattr(instance, attr, validated_data[attr])
@@ -752,12 +803,24 @@ class AppLLMToolListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppLLMTool
         fields = [
-            "id", "name", "description", "section", "safety",
-            "requires_confirmation", "timeout_seconds", "rate_limit_rpm",
-            "return_type", "has_display_func", "is_active",
-            "total_calls", "total_errors", "total_timeouts",
-            "avg_execution_ms", "last_called_at",
-            "schema_hash", "python_path",
+            "id",
+            "name",
+            "description",
+            "section",
+            "safety",
+            "requires_confirmation",
+            "timeout_seconds",
+            "rate_limit_rpm",
+            "return_type",
+            "has_display_func",
+            "is_active",
+            "total_calls",
+            "total_errors",
+            "total_timeouts",
+            "avg_execution_ms",
+            "last_called_at",
+            "schema_hash",
+            "python_path",
             "params_count",
         ]
 
@@ -771,14 +834,28 @@ class AppLLMToolDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppLLMTool
         fields = [
-            "id", "name", "description", "section", "safety",
-            "requires_confirmation", "timeout_seconds", "rate_limit_rpm",
-            "parameters_schema", "parameters_display",
-            "python_path", "return_type", "has_display_func",
-            "is_active", "schema_hash",
-            "total_calls", "total_errors", "total_timeouts",
-            "avg_execution_ms", "last_called_at",
-            "created_at", "modified_at",
+            "id",
+            "name",
+            "description",
+            "section",
+            "safety",
+            "requires_confirmation",
+            "timeout_seconds",
+            "rate_limit_rpm",
+            "parameters_schema",
+            "parameters_display",
+            "python_path",
+            "return_type",
+            "has_display_func",
+            "is_active",
+            "schema_hash",
+            "total_calls",
+            "total_errors",
+            "total_timeouts",
+            "avg_execution_ms",
+            "last_called_at",
+            "created_at",
+            "modified_at",
         ]
 
     def get_parameters_display(self, obj):
@@ -801,10 +878,16 @@ class AppLLMToolCallListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppLLMToolCall
         fields = [
-            "id", "tool_name", "round_number",
-            "tool_input", "tool_output",
-            "status", "error_message", "execution_time_ms",
-            "confirmation_decision", "confirmation_decided_by",
+            "id",
+            "tool_name",
+            "round_number",
+            "tool_input",
+            "tool_output",
+            "status",
+            "error_message",
+            "execution_time_ms",
+            "confirmation_decision",
+            "confirmation_decided_by",
             "created_at",
         ]
 
@@ -816,11 +899,19 @@ class AppLLMToolConfirmationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppLLMToolConfirmation
         fields = [
-            "id", "tool_name", "tool_input", "tool_input_display",
-            "status", "round_number", "agent_name",
-            "expires_at", "seconds_remaining",
-            "decided_by_user", "decided_by_policy",
-            "decided_at", "denial_reason",
+            "id",
+            "tool_name",
+            "tool_input",
+            "tool_input_display",
+            "status",
+            "round_number",
+            "agent_name",
+            "expires_at",
+            "seconds_remaining",
+            "decided_by_user",
+            "decided_by_policy",
+            "decided_at",
+            "denial_reason",
             "created_at",
         ]
 

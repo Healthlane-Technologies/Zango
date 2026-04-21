@@ -609,11 +609,12 @@ export default function Providers() {
 			monthly_budget_usd: values.monthly_budget_usd || null,
 		};
 
-		const { success } = await triggerApi({
+		const { success, response } = await triggerApi({
 			url: `/api/v1/apps/${appId}/ai/providers/`,
 			type: 'POST',
 			loader: true,
 			payload,
+			showErrorModal: false,
 		});
 
 		setSubmitting(false);
@@ -622,6 +623,8 @@ export default function Providers() {
 			resetForm();
 			notify('success', 'Provider Added', `${values.name} has been added successfully.`);
 			fetchProviders();
+		} else {
+			notify('error', 'Failed to Add Provider', response?.message || 'An error occurred.');
 		}
 	};
 

@@ -27,10 +27,6 @@ from .serializers import (
     AppLLMAgentCreateSerializer,
     AppLLMAgentListSerializer,
     AppLLMAgentUpdateSerializer,
-    AppLLMToolConfirmationListSerializer,
-    AppLLMToolDetailSerializer,
-    AppLLMToolListSerializer,
-    ConfirmationDecisionSerializer,
     AppLLMInvocationDetailSerializer,
     AppLLMInvocationListSerializer,
     AppLLMPromptCreateSerializer,
@@ -42,6 +38,10 @@ from .serializers import (
     AppLLMProviderCreateSerializer,
     AppLLMProviderListSerializer,
     AppLLMProviderUpdateSerializer,
+    AppLLMToolConfirmationListSerializer,
+    AppLLMToolDetailSerializer,
+    AppLLMToolListSerializer,
+    ConfirmationDecisionSerializer,
 )
 
 
@@ -121,7 +121,17 @@ class ProvidersListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 error_messages = []
                 for field_name, errors in serializer.errors.items():
                     for error in errors:
-                        error_messages.append(f"{field_name}: {error}")
+                        if isinstance(error, dict):
+                            # Nested ValidationError dict e.g. {"config": "msg"}
+                            for sub_field, sub_msg in error.items():
+                                sub_msg_str = (
+                                    sub_msg[0]
+                                    if isinstance(sub_msg, list)
+                                    else str(sub_msg)
+                                )
+                                error_messages.append(str(sub_msg_str))
+                        else:
+                            error_messages.append(str(error))
                 return get_api_response(
                     False, {"message": ", ".join(error_messages)}, 400
                 )
@@ -223,7 +233,9 @@ class ProviderValidateViewAPIV1(ZangoGenericPlatformAPIView):
 
             if is_valid:
                 return get_api_response(
-                    True, {"message": "Provider credentials validated successfully"}, 200
+                    True,
+                    {"message": "Provider credentials validated successfully"},
+                    200,
                 )
             else:
                 return get_api_response(
@@ -335,9 +347,7 @@ class ProviderResetBudgetViewAPIV1(ZangoGenericPlatformAPIView):
             provider.current_month_spend_usd = 0
             provider.last_budget_reset = timezone.now()
             provider.save()
-            return get_api_response(
-                True, {"message": "Budget reset successfully"}, 200
-            )
+            return get_api_response(True, {"message": "Budget reset successfully"}, 200)
         except AppLLMProvider.DoesNotExist:
             return get_api_response(False, {"message": "Provider not found"}, 404)
         except Exception as e:
@@ -355,8 +365,6 @@ class InvocationStatsViewAPIV1(ZangoGenericPlatformAPIView):
         try:
             from datetime import timedelta
 
-            from django.db.models import Count
-
             now = timezone.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             cutoff_24h = now - timedelta(hours=24)
@@ -365,12 +373,17 @@ class InvocationStatsViewAPIV1(ZangoGenericPlatformAPIView):
 
             total_runs = all_qs.count()
             today_count = all_qs.filter(created_at__gte=today_start).count()
-            errors_24h = all_qs.filter(
-                created_at__gte=cutoff_24h
-            ).exclude(status="success").count()
-            cost_today = all_qs.filter(
-                created_at__gte=today_start
-            ).aggregate(total=Sum("cost_usd"))["total"] or 0
+            errors_24h = (
+                all_qs.filter(created_at__gte=cutoff_24h)
+                .exclude(status="success")
+                .count()
+            )
+            cost_today = (
+                all_qs.filter(created_at__gte=today_start).aggregate(
+                    total=Sum("cost_usd")
+                )["total"]
+                or 0
+            )
 
             return get_api_response(
                 True,
@@ -491,7 +504,9 @@ class PromptsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             # Summary stats
             total_prompts = AppLLMPrompt.objects.filter(is_active=True).count()
             total_versions = AppLLMPromptVersion.objects.count()
-            active_versions = AppLLMPromptVersion.objects.filter(status="active").count()
+            active_versions = AppLLMPromptVersion.objects.filter(
+                status="active"
+            ).count()
 
             paginated = self.paginate_queryset(prompts, request, view=self)
             serializer = AppLLMPromptListSerializer(paginated, many=True)
@@ -619,9 +634,7 @@ class PromptVersionsListViewAPIV1(ZangoGenericPlatformAPIView):
             prompt = AppLLMPrompt.objects.get(id=prompt_id)
             versions = prompt.versions.all().order_by("-version_number")
             serializer = AppLLMPromptVersionSerializer(versions, many=True)
-            return get_api_response(
-                True, {"versions": serializer.data}, 200
-            )
+            return get_api_response(True, {"versions": serializer.data}, 200)
         except AppLLMPrompt.DoesNotExist:
             return get_api_response(False, {"message": "Prompt not found"}, 404)
         except Exception as e:
@@ -1000,6 +1013,7 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
             ).get(id=agent_id)
             print(agent)
             from django.db import connection
+
             print(connection.tenant)
             if not agent.provider:
                 return get_api_response(
@@ -1018,12 +1032,17 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
             with connection.cursor() as c:
                 ws = Workspace(connection.tenant, request=None, as_systemuser=True)
                 ws.ready()
-                
+
                 agent_client = AgentClient(agent)
 
                 messages = None
                 if not agent.user_prompt:
-                    messages = [LLMMessage(role="user", content="generate assessment for Employee ID 2 based on past 30 days performance for topic Biology.")]
+                    messages = [
+                        LLMMessage(
+                            role="user",
+                            content="generate assessment for Employee ID 2 based on past 30 days performance for topic Biology.",
+                        )
+                    ]
 
                 response = agent_client.run(
                     variables=variables or None,
@@ -1064,7 +1083,9 @@ class ToolsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             tools = AppLLMTool.objects.all()
             search = request.GET.get("search", "")
             if search:
-                tools = tools.filter(Q(name__icontains=search) | Q(description__icontains=search))
+                tools = tools.filter(
+                    Q(name__icontains=search) | Q(description__icontains=search)
+                )
             section = request.GET.get("section")
             if section:
                 tools = tools.filter(section=section)
@@ -1077,15 +1098,24 @@ class ToolsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
             stats = {
                 "active_tools": AppLLMTool.objects.filter(is_active=True).count(),
-                "sections": AppLLMTool.objects.filter(is_active=True).values("section").distinct().count(),
-                "confirmable": AppLLMTool.objects.filter(is_active=True, requires_confirmation=True).count(),
-                "pending_confirmations": AppLLMToolConfirmation.objects.filter(status="pending").count(),
+                "sections": AppLLMTool.objects.filter(is_active=True)
+                .values("section")
+                .distinct()
+                .count(),
+                "confirmable": AppLLMTool.objects.filter(
+                    is_active=True, requires_confirmation=True
+                ).count(),
+                "pending_confirmations": AppLLMToolConfirmation.objects.filter(
+                    status="pending"
+                ).count(),
             }
 
             paginated = self.paginate_queryset(tools, request, view=self)
             serializer = AppLLMToolListSerializer(paginated, many=True)
             paginated_data = self.get_paginated_response_data(serializer.data)
-            return get_api_response(True, {"tools": paginated_data, "stats": stats}, 200)
+            return get_api_response(
+                True, {"tools": paginated_data, "stats": stats}, 200
+            )
         except Exception as e:
             return get_api_response(False, {"message": str(e)}, 500)
 
@@ -1129,9 +1159,15 @@ class ToolSectionsViewAPIV1(ZangoGenericPlatformAPIView):
     def get(self, request, app_uuid, *args, **kwargs):
         try:
             from django.db.models import Count
-            sections = AppLLMTool.objects.values("section").annotate(
-                count=Count("id"), active_count=Count("id", filter=Q(is_active=True))
-            ).order_by("section")
+
+            sections = (
+                AppLLMTool.objects.values("section")
+                .annotate(
+                    count=Count("id"),
+                    active_count=Count("id", filter=Q(is_active=True)),
+                )
+                .order_by("section")
+            )
             return get_api_response(True, {"sections": list(sections)}, 200)
         except Exception as e:
             return get_api_response(False, {"message": str(e)}, 500)
@@ -1143,7 +1179,9 @@ class ConfirmationsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination
 
     def get(self, request, app_uuid, *args, **kwargs):
         try:
-            qs = AppLLMToolConfirmation.objects.select_related("invocation", "tool").all()
+            qs = AppLLMToolConfirmation.objects.select_related(
+                "invocation", "tool"
+            ).all()
             status_filter = request.GET.get("status", "pending")
             if status_filter != "all":
                 qs = qs.filter(status=status_filter)
@@ -1163,16 +1201,24 @@ class ConfirmationDecideViewAPIV1(ZangoGenericPlatformAPIView):
             if not serializer.is_valid():
                 return get_api_response(False, {"message": str(serializer.errors)}, 400)
             from zango.ai.tools.confirmation import resume_after_confirmation
+
             result = resume_after_confirmation(
                 confirmation_id=confirmation_id,
                 decision=serializer.validated_data["decision"],
                 decided_by_user=getattr(request, "user", None),
                 denial_reason=serializer.validated_data.get("reason", ""),
             )
-            return get_api_response(True, {
-                "message": f"Tool call {serializer.validated_data['decision']}",
-                "result": {"output": result.output if result else None, "status": result.status if result else None},
-            }, 200)
+            return get_api_response(
+                True,
+                {
+                    "message": f"Tool call {serializer.validated_data['decision']}",
+                    "result": {
+                        "output": result.output if result else None,
+                        "status": result.status if result else None,
+                    },
+                },
+                200,
+            )
         except AppLLMToolConfirmation.DoesNotExist:
             return get_api_response(False, {"message": "Confirmation not found"}, 404)
         except Exception as e:

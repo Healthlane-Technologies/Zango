@@ -18,7 +18,6 @@ from zango.ai.providers.registry import register_provider
 
 @register_provider("openai", "OpenAI", icon="openai.svg")
 class OpenAIProvider(BaseLLMProvider):
-
     supported_models = [
         {
             "id": "gpt-4o",
@@ -93,7 +92,7 @@ class OpenAIProvider(BaseLLMProvider):
         if system:
             result.append({"role": "system", "content": system})
         for msg in messages:
-            d = {"role": msg.role, "content": msg.content}
+            d = {"role": msg.role, "content": msg.build_content_for_openai()}
             if msg.tool_calls:
                 d["tool_calls"] = msg.tool_calls
             if msg.tool_call_id:
@@ -110,6 +109,47 @@ class OpenAIProvider(BaseLLMProvider):
             "content_filter": "content_filter",
         }
         return mapping.get(finish_reason, finish_reason)
+
+    def _enforce_additional_properties_false(self, schema):
+        """
+        Recursively patch a JSON schema for OpenAI strict mode:
+        - additionalProperties: false on every object
+        - required must list every key in properties
+        - nullable fields: replace type: [X, "null"] with type: X + nullable workaround
+          (OpenAI strict mode doesn't support type arrays; use anyOf instead)
+        """
+        if not isinstance(schema, dict):
+            return schema
+        schema = dict(schema)
+
+        # Normalise nullable type arrays: ["string", "null"] -> anyOf: [{type: string}, {type: null}]
+        if isinstance(schema.get("type"), list):
+            types = schema.pop("type")
+            schema["anyOf"] = [{"type": t} for t in types]
+
+        if schema.get("type") == "object" or "properties" in schema:
+            schema["additionalProperties"] = False
+            if "properties" in schema:
+                schema["properties"] = {
+                    k: self._enforce_additional_properties_false(v)
+                    for k, v in schema["properties"].items()
+                }
+                # Every property key must appear in required
+                all_keys = list(schema["properties"].keys())
+                schema["required"] = all_keys
+
+        if "items" in schema:
+            schema["items"] = self._enforce_additional_properties_false(schema["items"])
+        if "$defs" in schema:
+            schema["$defs"] = {
+                k: self._enforce_additional_properties_false(v)
+                for k, v in schema["$defs"].items()
+            }
+        if "anyOf" in schema:
+            schema["anyOf"] = [
+                self._enforce_additional_properties_false(s) for s in schema["anyOf"]
+            ]
+        return schema
 
     def format_tools_for_api(self, tools):
         """Convert LLMToolDef to OpenAI's tool format."""
@@ -152,7 +192,13 @@ class OpenAIProvider(BaseLLMProvider):
         if isinstance(response_format, dict):
             api_kwargs["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "response", "strict": True, "schema": response_format},
+                "json_schema": {
+                    "name": "response",
+                    "strict": True,
+                    "schema": self._enforce_additional_properties_false(
+                        response_format
+                    ),
+                },
             }
         elif response_format == "json":
             api_kwargs["response_format"] = {"type": "json_object"}

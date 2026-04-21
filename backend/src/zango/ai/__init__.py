@@ -15,6 +15,7 @@ Usage:
 """
 
 from zango.ai.providers.base import (
+    LLMFile,
     LLMMessage,
     LLMResponse,
     LLMStreamChunk,
@@ -103,6 +104,7 @@ __all__ = [
     "get_provider",
     "get_prompt",
     "get_agent",
+    "LLMFile",
     "LLMMessage",
     "LLMResponse",
     "LLMStreamChunk",

@@ -20,7 +20,6 @@ from zango.ai.providers.registry import register_provider
 
 @register_provider("anthropic", "Anthropic", icon="anthropic.svg")
 class AnthropicProvider(BaseLLMProvider):
-
     supported_models = [
         {
             "id": "claude-opus-4-20250514",
@@ -99,9 +98,49 @@ class AnthropicProvider(BaseLLMProvider):
             timeout=config.get("timeout_seconds", 120),
         )
 
+    def prepare_files(self, files):
+        """
+        Upload each file to the Anthropic Files API (beta) once and return
+        lightweight LLMFile objects carrying only the file_id.
+        Falls back to raw bytes if upload fails.
+        """
+        import io
+
+        from zango.ai.providers.base import LLMFile
+
+        prepared = []
+        for f in files:
+            if f.url:
+                prepared.append(f)
+                continue
+            try:
+                filename = f.filename or "upload"
+                file_obj = io.BytesIO(f.data)
+                uploaded = self._client.beta.files.upload(
+                    file=(
+                        filename,
+                        file_obj,
+                        f.media_type or "application/octet-stream",
+                    ),
+                )
+                prepared.append(
+                    LLMFile(
+                        url=f"file-id://{uploaded.id}",
+                        media_type=f.media_type,
+                        filename=f.filename,
+                    )
+                )
+            except Exception:
+                # Files API not available or failed — fall back to raw bytes
+                prepared.append(f)
+        return prepared
+
     def _convert_messages(self, messages):
         """Convert LLMMessage list to Anthropic's message format."""
-        return [{"role": msg.role, "content": msg.content} for msg in messages]
+        return [
+            {"role": msg.role, "content": msg.build_content_for_anthropic()}
+            for msg in messages
+        ]
 
     def _map_stop_reason(self, stop_reason):
         """Map Anthropic stop_reason to standard stop reasons."""
@@ -177,7 +216,9 @@ class AnthropicProvider(BaseLLMProvider):
                 )
 
             if schema_instruction:
-                kwargs_api["system"] = (kwargs_api.get("system") or "") + schema_instruction
+                kwargs_api["system"] = (
+                    kwargs_api.get("system") or ""
+                ) + schema_instruction
                 # Prefill assistant message to force JSON output
                 kwargs_api["messages"] = kwargs_api["messages"] + [
                     {"role": "assistant", "content": prefill}
@@ -210,7 +251,11 @@ class AnthropicProvider(BaseLLMProvider):
         content = self._extract_text(response)
         # If we used a prefill, prepend it to the response content
         if response_format and content:
-            root_type = response_format.get("type", "object") if isinstance(response_format, dict) else "object"
+            root_type = (
+                response_format.get("type", "object")
+                if isinstance(response_format, dict)
+                else "object"
+            )
             prefill_char = "[" if root_type == "array" else "{"
             content = prefill_char + content
 
@@ -308,9 +353,7 @@ class AnthropicProvider(BaseLLMProvider):
 
     def compute_cost(self, usage, model):
         """Override to handle prompt caching pricing."""
-        model_info = next(
-            (m for m in self.supported_models if m["id"] == model), None
-        )
+        model_info = next((m for m in self.supported_models if m["id"] == model), None)
         if not model_info:
             return 0.0
         return compute_anthropic_cost(usage, model_info)

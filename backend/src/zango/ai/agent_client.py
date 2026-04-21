@@ -8,10 +8,13 @@ AgentClient wraps an AppLLMAgent with execution logic:
 
 import json
 import logging
+import uuid
+
 from typing import Optional
 
 from zango.ai.exceptions import AgentDisabled
 from zango.ai.providers.base import LLMMessage, LLMResponse
+
 
 logger = logging.getLogger("zango.ai")
 
@@ -79,57 +82,73 @@ class AgentClient:
 
         if self._is_openai_style_provider():
             # OpenAI format: assistant message with tool_calls, then one tool message per result
-            new_messages.append(LLMMessage(
-                role="assistant",
-                content=response.content or None,
-                tool_calls=[
-                    {
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.name,
-                            "arguments": json.dumps(tc.input),
-                        },
-                    }
-                    for tc in response.tool_calls
-                ],
-            ))
+            new_messages.append(
+                LLMMessage(
+                    role="assistant",
+                    content=response.content or None,
+                    tool_calls=[
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.name,
+                                "arguments": json.dumps(tc.input),
+                            },
+                        }
+                        for tc in response.tool_calls
+                    ],
+                )
+            )
             for tc, result in tool_results:
                 if result.status == "success":
-                    content = json.dumps(result.output) if not isinstance(result.output, str) else result.output
+                    content = (
+                        json.dumps(result.output)
+                        if not isinstance(result.output, str)
+                        else result.output
+                    )
                 else:
                     content = f"Error: {result.error_message}"
-                new_messages.append(LLMMessage(
-                    role="tool",
-                    content=content,
-                    tool_call_id=tc.id,
-                ))
+                new_messages.append(
+                    LLMMessage(
+                        role="tool",
+                        content=content,
+                        tool_call_id=tc.id,
+                    )
+                )
         else:
             # Anthropic format: assistant content blocks, then user message with tool_result blocks
             assistant_content = []
             if response.content:
                 assistant_content.append({"type": "text", "text": response.content})
             for tc in response.tool_calls:
-                assistant_content.append({
-                    "type": "tool_use",
-                    "id": tc.id,
-                    "name": tc.name,
-                    "input": tc.input,
-                })
+                assistant_content.append(
+                    {
+                        "type": "tool_use",
+                        "id": tc.id,
+                        "name": tc.name,
+                        "input": tc.input,
+                    }
+                )
             new_messages.append(LLMMessage(role="assistant", content=assistant_content))
 
             tool_result_blocks = []
             for tc, result in tool_results:
                 if result.status == "success":
-                    content = json.dumps(result.output) if not isinstance(result.output, str) else result.output
+                    content = (
+                        json.dumps(result.output)
+                        if not isinstance(result.output, str)
+                        else result.output
+                    )
                 else:
                     content = f"Error: {result.error_message}"
-                tool_result_blocks.append({
-                    "type": "tool_result",
-                    "tool_use_id": tc.id,
-                    "content": content,
-                    "is_error": result.status != "success",
-                })
+                tool_result_blocks.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tc.id,
+                        "content": content,
+                        "is_error": result.status != "success",
+                    }
+                )
             new_messages.append(LLMMessage(role="user", content=tool_result_blocks))
 
         return new_messages
@@ -164,10 +183,16 @@ class AgentClient:
                 elif result.status == "timeout":
                     tool_record.total_timeouts += 1
                 from django.utils import timezone
+
                 tool_record.last_called_at = timezone.now()
-                tool_record.save(update_fields=[
-                    "total_calls", "total_errors", "total_timeouts", "last_called_at",
-                ])
+                tool_record.save(
+                    update_fields=[
+                        "total_calls",
+                        "total_errors",
+                        "total_timeouts",
+                        "last_called_at",
+                    ]
+                )
         except Exception as e:
             logger.error(f"Failed to log tool call '{tool_call.name}': {e}")
 
@@ -175,6 +200,7 @@ class AgentClient:
         self,
         variables: Optional[dict] = None,
         messages: Optional[list[LLMMessage]] = None,
+        files: Optional[list] = None,
         triggered_by: str = "user",
         max_tool_rounds: int = DEFAULT_MAX_TOOL_ROUNDS,
         **kwargs,
@@ -208,7 +234,21 @@ class AgentClient:
             messages = []
             user_content = self._agent.get_user_prompt_content(**(variables or {}))
             if user_content:
-                messages.append(LLMMessage(role="user", content=user_content))
+                messages.append(
+                    LLMMessage(role="user", content=user_content, files=files or None)
+                )
+            elif files:
+                # No user prompt text but files provided — send files with empty text
+                messages.append(LLMMessage(role="user", content="", files=files))
+        elif files:
+            # Caller provided explicit messages — attach files to the last user message
+            for msg in reversed(messages):
+                if msg.role == "user":
+                    msg.files = (msg.files or []) + list(files)
+                    break
+            else:
+                # No user message found — append one with just files
+                messages.append(LLMMessage(role="user", content="", files=files))
 
         if not messages:
             raise ValueError(
@@ -224,10 +264,14 @@ class AgentClient:
         }
         if self._agent.system_prompt and self._agent.system_prompt.active_version:
             agent_tracking["system_prompt_name"] = self._agent.system_prompt.name
-            agent_tracking["system_prompt_version"] = self._agent.system_prompt.active_version.version_number
+            agent_tracking["system_prompt_version"] = (
+                self._agent.system_prompt.active_version.version_number
+            )
         if self._agent.user_prompt and self._agent.user_prompt.active_version:
             agent_tracking["user_prompt_name"] = self._agent.user_prompt.name
-            agent_tracking["user_prompt_version"] = self._agent.user_prompt.active_version.version_number
+            agent_tracking["user_prompt_version"] = (
+                self._agent.user_prompt.active_version.version_number
+            )
 
         # Resolve agent tools to LLMToolDef objects for the LLM
         llm_tools = self._resolve_tools()
@@ -236,14 +280,52 @@ class AgentClient:
         response_format_kwarg = {}
         if self._agent.output_schema == "JSON":
             if self._agent.output_json_schema:
-                response_format_kwarg["response_format"] = self._agent.output_json_schema
+                response_format_kwarg["response_format"] = (
+                    self._agent.output_json_schema
+                )
             else:
                 response_format_kwarg["response_format"] = "json"
 
+        # Generate a single run_id to group all rounds of this agent.run()
+        run_id = uuid.uuid4()
+
         # Execute via ProviderClient with agentic tool loop
         provider_client = ProviderClient(self._agent.provider)
+        raw_provider = provider_client._get_client()
         executor = ToolExecutor()
         total_cost = 0.0
+
+        # Pre-upload files once before the loop, then bake the file blocks
+        # permanently into the message content so they survive across all rounds.
+        #
+        # - OpenAI: uploads file → gets file_id → bakes a lightweight image_url
+        #   block (file_id reference) into content. No raw bytes in history.
+        # - Anthropic/others: no upload API → bakes raw base64 blocks into
+        #   content. Bytes are re-sent every round (unavoidable without Files API).
+        #
+        # Either way, after this step `msg.files` is cleared and the file
+        # representation lives in `msg.content` as a permanent content block.
+        if files:
+            files = raw_provider.prepare_files(files)
+            is_openai_style = self._is_openai_style_provider()
+            for msg in messages:
+                if msg.role == "user" and msg.files:
+                    # Build provider-specific file blocks
+                    if is_openai_style:
+                        file_blocks = [f.to_openai_block() for f in files]
+                    else:
+                        file_blocks = [f.to_anthropic_block() for f in files]
+                    # Prepend file blocks into content permanently
+                    existing = msg.content
+                    if isinstance(existing, list):
+                        msg.content = file_blocks + existing
+                    elif isinstance(existing, str) and existing:
+                        msg.content = file_blocks + [{"type": "text", "text": existing}]
+                    else:
+                        msg.content = file_blocks
+                    # Clear files — content now owns the file representation
+                    msg.files = None
+                    break
 
         for round_number in range(1, max_tool_rounds + 2):
             response = provider_client.complete(
@@ -254,6 +336,8 @@ class AgentClient:
                 max_tokens=self._agent.max_tokens,
                 system=system,
                 triggered_by=triggered_by,
+                run_id=run_id,
+                round_number=round_number,
                 **{**agent_tracking},
                 **response_format_kwarg,
                 **kwargs,
@@ -280,7 +364,9 @@ class AgentClient:
 
                 # Log tool execution to DB
                 if response.invocation_id:
-                    self._log_tool_call(tc, result, response.invocation_id, round_number)
+                    self._log_tool_call(
+                        tc, result, response.invocation_id, round_number
+                    )
 
                 logger.info(
                     f"Agent '{self._agent.name}' round {round_number}: "
@@ -301,6 +387,7 @@ class AgentClient:
         self,
         variables: Optional[dict] = None,
         messages: Optional[list[LLMMessage]] = None,
+        files: Optional[list] = None,
         triggered_by: str = "user",
         **kwargs,
     ):
@@ -323,7 +410,18 @@ class AgentClient:
             messages = []
             user_content = self._agent.get_user_prompt_content(**(variables or {}))
             if user_content:
-                messages.append(LLMMessage(role="user", content=user_content))
+                messages.append(
+                    LLMMessage(role="user", content=user_content, files=files or None)
+                )
+            elif files:
+                messages.append(LLMMessage(role="user", content="", files=files))
+        elif files:
+            for msg in reversed(messages):
+                if msg.role == "user":
+                    msg.files = (msg.files or []) + list(files)
+                    break
+            else:
+                messages.append(LLMMessage(role="user", content="", files=files))
 
         if not messages:
             raise ValueError(

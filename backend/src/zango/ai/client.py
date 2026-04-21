@@ -10,6 +10,7 @@ App developers interact with this, not the raw provider.
 
 import logging
 import time
+
 from dataclasses import asdict
 from typing import Iterator, Optional
 
@@ -18,11 +19,11 @@ from zango.ai.exceptions import (
     LLMAPIError,
     LLMTimeoutError,
     ModelNotAvailable,
-    ProviderDisabled,
     RateLimitExceeded,
     ZangoAIError,
 )
 from zango.ai.providers.base import LLMMessage, LLMResponse, LLMStreamChunk, LLMToolDef
+
 
 logger = logging.getLogger("zango.ai")
 
@@ -82,6 +83,24 @@ class ProviderClient:
                 result.append(str(msg))
         return result
 
+    def _extract_file_metadata(self, messages):
+        """Extract file metadata (filename, media_type, size_bytes) from messages for logging."""
+        files_meta = []
+        for msg in messages:
+            if not isinstance(msg, LLMMessage) or not msg.files:
+                continue
+            for f in msg.files:
+                meta = {
+                    "filename": f.filename or None,
+                    "media_type": f.media_type or None,
+                    "size_bytes": len(f.data) if f.data else None,
+                    "source": "url" if f.url else "upload",
+                }
+                if f.url:
+                    meta["url"] = f.url
+                files_meta.append(meta)
+        return files_meta or None
+
     def _serialize_tools(self, tools):
         """Convert tools list to JSON-serializable format for logging."""
         if not tools:
@@ -121,6 +140,8 @@ class ProviderClient:
         user_prompt_version=None,
         rendered_system_prompt=None,
         context_snapshot=None,
+        run_id=None,
+        round_number=None,
     ):
         """Create an AppLLMInvocation log entry."""
         from zango.apps.ai.models import AppLLMInvocation
@@ -134,6 +155,7 @@ class ProviderClient:
             "request_system": system,
             "request_tools": self._serialize_tools(tools),
             "request_params": params,
+            "request_files": self._extract_file_metadata(messages),
             "status": status,
             "latency_ms": latency_ms,
             "cost_usd": cost_usd,
@@ -146,17 +168,23 @@ class ProviderClient:
             "user_prompt_version": user_prompt_version,
             "rendered_system_prompt": rendered_system_prompt,
             "context_snapshot": context_snapshot,
+            "run_id": run_id,
+            "round_number": round_number,
         }
 
         if response:
             invocation_data["response_content"] = response.content
             invocation_data["response_tool_calls"] = (
-                [asdict(tc) for tc in response.tool_calls] if response.tool_calls else None
+                [asdict(tc) for tc in response.tool_calls]
+                if response.tool_calls
+                else None
             )
             invocation_data["stop_reason"] = response.stop_reason
             invocation_data["input_tokens"] = response.usage.input_tokens
             invocation_data["output_tokens"] = response.usage.output_tokens
-            invocation_data["cache_creation_tokens"] = response.usage.cache_creation_tokens
+            invocation_data["cache_creation_tokens"] = (
+                response.usage.cache_creation_tokens
+            )
             invocation_data["cache_read_tokens"] = response.usage.cache_read_tokens
             invocation_data["time_to_first_token_ms"] = response.time_to_first_token_ms
 
@@ -174,9 +202,16 @@ class ProviderClient:
     def _extract_agent_kwargs(self, kwargs):
         """Extract agent/prompt tracking fields from kwargs, returning (agent_kwargs, remaining_kwargs)."""
         agent_fields = [
-            "agent", "agent_name", "system_prompt_name", "system_prompt_version",
-            "user_prompt_name", "user_prompt_version", "rendered_system_prompt",
+            "agent",
+            "agent_name",
+            "system_prompt_name",
+            "system_prompt_version",
+            "user_prompt_name",
+            "user_prompt_version",
+            "rendered_system_prompt",
             "context_snapshot",
+            "run_id",
+            "round_number",
         ]
         agent_kwargs = {k: kwargs.pop(k) for k in agent_fields if k in kwargs}
         return agent_kwargs
@@ -257,17 +292,29 @@ class ProviderClient:
                 error_status = "budget_exceeded"
 
             self._log_invocation(
-                model=model, messages=messages, system=system, tools=tools,
-                params=params, error=e, status=error_status,
-                triggered_by=triggered_by, **agent_kwargs,
+                model=model,
+                messages=messages,
+                system=system,
+                tools=tools,
+                params=params,
+                error=e,
+                status=error_status,
+                triggered_by=triggered_by,
+                **agent_kwargs,
             )
             raise
 
         except Exception as e:
             self._log_invocation(
-                model=model, messages=messages, system=system, tools=tools,
-                params=params, error=e, status="error",
-                triggered_by=triggered_by, **agent_kwargs,
+                model=model,
+                messages=messages,
+                system=system,
+                tools=tools,
+                params=params,
+                error=e,
+                status="error",
+                triggered_by=triggered_by,
+                **agent_kwargs,
             )
             raise LLMAPIError(str(e), original_error=e) from e
 

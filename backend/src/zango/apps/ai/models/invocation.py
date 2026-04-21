@@ -58,6 +58,11 @@ class AppLLMInvocation(FullAuditMixin):
     request_params = models.JSONField(
         default=dict, help_text="temperature, max_tokens, etc."
     )
+    request_files = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Metadata of files attached to the request (filename, media_type, size_bytes)",
+    )
 
     # Response
     response_content = models.TextField(
@@ -95,12 +100,27 @@ class AppLLMInvocation(FullAuditMixin):
     user_prompt_name = models.CharField(max_length=150, blank=True, default="")
     user_prompt_version = models.IntegerField(null=True, blank=True)
     rendered_system_prompt = models.TextField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="Fully rendered system prompt after variable substitution",
     )
     context_snapshot = models.JSONField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="Variables/context passed at runtime",
+    )
+
+    # Agent run grouping — all rounds of a single agent.run() share the same run_id
+    run_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Groups all LLM call rounds belonging to a single agent.run() invocation",
+    )
+    round_number = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Which round within the agent run (1 = first call, 2 = after first tool round, etc.)",
     )
 
     # Context — who/what triggered this
@@ -116,9 +136,7 @@ class AppLLMInvocation(FullAuditMixin):
     celery_task_id = models.CharField(max_length=255, null=True, blank=True)
 
     # Status
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="success"
-    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="success")
     error_message = models.TextField(null=True, blank=True)
     error_type = models.CharField(max_length=100, null=True, blank=True)
 
@@ -132,4 +150,6 @@ class AppLLMInvocation(FullAuditMixin):
         ]
 
     def __str__(self):
-        return f"Invocation {self.pk} - {self.provider_name}/{self.model} ({self.status})"
+        return (
+            f"Invocation {self.pk} - {self.provider_name}/{self.model} ({self.status})"
+        )
