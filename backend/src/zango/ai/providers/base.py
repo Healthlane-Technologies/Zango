@@ -231,6 +231,9 @@ class LLMResponse:
     time_to_first_token_ms: Optional[int] = None  # For streaming
     cost_usd: float = 0.0  # Computed cost
     invocation_id: Optional[int] = None  # DB invocation PK (set by ProviderClient)
+    session_id: Optional[str] = (
+        None  # Memory session ID (set by AgentClient when memory_enabled)
+    )
 
 
 @dataclass

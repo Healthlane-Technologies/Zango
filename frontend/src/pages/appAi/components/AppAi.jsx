@@ -177,7 +177,7 @@ export default function AppAi() {
 				)}
 
 				{activeTab === 'invocation-logs' && (
-					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
+					<div className="px-[40px] pt-[32px] pb-[60px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
 						<InvocationLogs />
 					</div>
 				)}

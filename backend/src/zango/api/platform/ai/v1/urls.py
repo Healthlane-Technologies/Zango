@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     AgentDetailViewAPIV1,
     AgentDuplicateViewAPIV1,
+    AgentSessionDetailViewAPIV1,
+    AgentSessionsListViewAPIV1,
     AgentsListViewAPIV1,
     AgentTestViewAPIV1,
     AgentToggleViewAPIV1,
@@ -76,6 +78,15 @@ urlpatterns = [
     path("agents/<int:agent_id>/toggle/", AgentToggleViewAPIV1.as_view()),
     path("agents/<int:agent_id>/duplicate/", AgentDuplicateViewAPIV1.as_view()),
     path("agents/<int:agent_id>/test/", AgentTestViewAPIV1.as_view()),
+    # Agent memory sessions — must come after named action paths
+    path(
+        "agents/<int:agent_id>/sessions/",
+        AgentSessionsListViewAPIV1.as_view(),
+    ),
+    path(
+        "agents/<int:agent_id>/sessions/<str:session_id_str>/",
+        AgentSessionDetailViewAPIV1.as_view(),
+    ),
     # Tools — sync/sections must come before <int:tool_id>
     path("tools/sync/", ToolSyncViewAPIV1.as_view()),
     path("tools/sections/", ToolSectionsViewAPIV1.as_view()),
@@ -84,7 +95,10 @@ urlpatterns = [
     # Confirmations — pending-count must come before <int:confirmation_id>
     path("confirmations/pending-count/", PendingConfirmationsCountViewAPIV1.as_view()),
     path("confirmations/", ConfirmationsListViewAPIV1.as_view()),
-    path("confirmations/<int:confirmation_id>/decide/", ConfirmationDecideViewAPIV1.as_view()),
+    path(
+        "confirmations/<int:confirmation_id>/decide/",
+        ConfirmationDecideViewAPIV1.as_view(),
+    ),
     # Invocation logs — stats must come before <int:invocation_id>
     path("invocations/stats/", InvocationStatsViewAPIV1.as_view()),
     path("invocations/", InvocationListViewAPIV1.as_view()),

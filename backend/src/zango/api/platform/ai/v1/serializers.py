@@ -17,6 +17,7 @@ from zango.apps.ai.models import (
     AppLLMToolCall,
     AppLLMToolConfirmation,
 )
+from zango.apps.ai.models.memory import AppLLMMemoryMessage, AppLLMMemorySession
 
 
 class AppLLMProviderModelSerializer(serializers.ModelSerializer):
@@ -273,6 +274,7 @@ class AppLLMInvocationListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "run_id",
+            "session_id",
             "round_number",
             "provider_name",
             "provider_slug",
@@ -299,6 +301,7 @@ class AppLLMInvocationDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "run_id",
+            "session_id",
             "round_number",
             "provider",
             "provider_name",
@@ -529,6 +532,7 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
     system_prompt_name = serializers.SerializerMethodField()
     user_prompt_name = serializers.SerializerMethodField()
     metrics = serializers.SerializerMethodField()
+    session_count = serializers.SerializerMethodField()
 
     class Meta:
         model = AppLLMAgent
@@ -555,6 +559,9 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
             "status",
             "total_invocations",
             "total_cost_usd",
+            "memory_enabled",
+            "memory_max_messages",
+            "session_count",
             "created_at",
             "modified_at",
             "metrics",
@@ -574,6 +581,11 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
 
     def get_user_prompt_name(self, obj):
         return obj.user_prompt.name if obj.user_prompt else None
+
+    def get_session_count(self, obj):
+        if not obj.memory_enabled:
+            return 0
+        return obj.sessions.filter(is_active=True).count()
 
     def get_metrics(self, obj):
         """Compute metrics from AppLLMInvocation. Lightweight aggregation."""
@@ -641,6 +653,10 @@ class AppLLMAgentCreateSerializer(serializers.Serializer):
     )
     tools = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
+    )
+    memory_enabled = serializers.BooleanField(required=False, default=False)
+    memory_max_messages = serializers.IntegerField(
+        required=False, default=20, min_value=1, max_value=200
     )
 
     def validate_output_json_schema(self, value):
@@ -739,6 +755,10 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
     output_json_schema = serializers.JSONField(required=False, allow_null=True)
     guardrails = serializers.ListField(child=serializers.CharField(), required=False)
     tools = serializers.ListField(child=serializers.CharField(), required=False)
+    memory_enabled = serializers.BooleanField(required=False)
+    memory_max_messages = serializers.IntegerField(
+        required=False, min_value=1, max_value=200
+    )
 
     def validate_output_json_schema(self, value):
         if value is not None and isinstance(value, dict):
@@ -786,6 +806,8 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
             "output_json_schema",
             "guardrails",
             "tools",
+            "memory_enabled",
+            "memory_max_messages",
         ]:
             if attr in validated_data:
                 setattr(instance, attr, validated_data[attr])
@@ -924,3 +946,69 @@ class AppLLMToolConfirmationListSerializer(serializers.ModelSerializer):
 class ConfirmationDecisionSerializer(serializers.Serializer):
     decision = serializers.ChoiceField(choices=["approved", "denied"])
     reason = serializers.CharField(required=False, default="", allow_blank=True)
+
+
+# ── Memory Serializers ──────────────────────────────────────────────────────
+
+
+class AppLLMMemoryMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppLLMMemoryMessage
+        fields = [
+            "id",
+            "role",
+            "content",
+            "tool_calls",
+            "tool_call_id",
+            "sequence",
+            "invocation",
+            "created_at",
+        ]
+
+
+class AppLLMMemorySessionSerializer(serializers.ModelSerializer):
+    message_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AppLLMMemorySession
+        fields = [
+            "id",
+            "session_id",
+            "user_ref",
+            "is_active",
+            "last_active_at",
+            "metadata",
+            "message_count",
+            "created_at",
+            "modified_at",
+        ]
+
+    def get_message_count(self, obj):
+        return obj.messages.count()
+
+
+class AppLLMMemorySessionDetailSerializer(serializers.ModelSerializer):
+    messages = serializers.SerializerMethodField()
+    message_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AppLLMMemorySession
+        fields = [
+            "id",
+            "session_id",
+            "user_ref",
+            "is_active",
+            "last_active_at",
+            "metadata",
+            "message_count",
+            "messages",
+            "created_at",
+            "modified_at",
+        ]
+
+    def get_messages(self, obj):
+        msgs = obj.messages.order_by("sequence").select_related("invocation")
+        return AppLLMMemoryMessageSerializer(msgs, many=True).data
+
+    def get_message_count(self, obj):
+        return obj.messages.count()

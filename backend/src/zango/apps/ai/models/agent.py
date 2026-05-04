@@ -76,11 +76,17 @@ class AppLLMAgent(FullAuditMixin):
     )
 
     # Future features
-    guardrails = models.JSONField(
-        default=list, help_text="List of guardrail names"
+    guardrails = models.JSONField(default=list, help_text="List of guardrail names")
+    tools = models.JSONField(default=list, help_text="List of tool names")
+
+    # Memory
+    memory_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable session-scoped conversation history",
     )
-    tools = models.JSONField(
-        default=list, help_text="List of tool names"
+    memory_max_messages = models.IntegerField(
+        default=20,
+        help_text="Max past user/assistant pairs to load per call (sliding window)",
     )
 
     # Status
@@ -93,7 +99,7 @@ class AppLLMAgent(FullAuditMixin):
     )
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.name} ({self.provider})"

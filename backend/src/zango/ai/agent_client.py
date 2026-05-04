@@ -198,22 +198,35 @@ class AgentClient:
 
     def run(
         self,
+        input: Optional[str] = None,
         variables: Optional[dict] = None,
         messages: Optional[list[LLMMessage]] = None,
         files: Optional[list] = None,
         triggered_by: str = "user",
         max_tool_rounds: int = DEFAULT_MAX_TOOL_ROUNDS,
+        session_id: Optional[str] = None,
+        user_ref: str = "",
         **kwargs,
     ) -> LLMResponse:
         """
-        Execute the agent with an agentic tool loop:
-        1. Check agent is enabled
-        2. Render system_prompt with variables
-        3. Build messages: if provided use them, else render user_prompt
-        4. Call provider_client.complete() with agent's params
-        5. If the LLM requests tool calls, execute them and loop
-        6. Repeat until the LLM produces a final response or max rounds reached
-        7. Update agent usage counters
+        Execute the agent with an agentic tool loop.
+
+        Input priority (first non-None wins):
+          1. messages — full LLMMessage list, caller owns everything
+          2. input    — plain string, simplest case
+          3. variables — rendered against the agent's user_prompt template
+
+        Args:
+            input: Plain string user message. Simplest way to call the agent.
+            variables: Dict of template variables rendered into the agent's
+                user_prompt. Used when the agent has a prompt template configured.
+            messages: Full list of LLMMessage objects. Low-level escape hatch
+                for multi-turn history or tool-result injection.
+            files: File/image attachments (LLMFile instances).
+            triggered_by: Audit label — "user" | "celery" | "cron" | "system".
+            session_id: Memory session key. Auto-generated if memory_enabled and
+                not supplied; returned on response.session_id.
+            user_ref: Opaque string stored on the session for audit (e.g. user PK).
         """
         from zango.ai.client import ProviderClient
         from zango.ai.tools.executor import ToolExecutor
@@ -229,17 +242,26 @@ class AgentClient:
         if self._agent.system_prompt:
             system = self._agent.get_system_prompt_content(**(variables or {}))
 
-        # Build messages
+        # Build messages — priority: explicit messages > input string > user_prompt template
         if messages is None:
             messages = []
-            user_content = self._agent.get_user_prompt_content(**(variables or {}))
-            if user_content:
+
+            if input is not None:
+                # Plain string — simplest case
                 messages.append(
-                    LLMMessage(role="user", content=user_content, files=files or None)
+                    LLMMessage(role="user", content=input, files=files or None)
                 )
-            elif files:
-                # No user prompt text but files provided — send files with empty text
-                messages.append(LLMMessage(role="user", content="", files=files))
+            else:
+                user_content = self._agent.get_user_prompt_content(**(variables or {}))
+                if user_content:
+                    messages.append(
+                        LLMMessage(
+                            role="user", content=user_content, files=files or None
+                        )
+                    )
+                elif files:
+                    # No text but files provided
+                    messages.append(LLMMessage(role="user", content="", files=files))
         elif files:
             # Caller provided explicit messages — attach files to the last user message
             for msg in reversed(messages):
@@ -247,13 +269,23 @@ class AgentClient:
                     msg.files = (msg.files or []) + list(files)
                     break
             else:
-                # No user message found — append one with just files
                 messages.append(LLMMessage(role="user", content="", files=files))
 
         if not messages:
             raise ValueError(
-                f"Agent '{self._agent.name}' has no user prompt and no messages provided."
+                f"Agent '{self._agent.name}' has no input: provide input=, variables=, or messages=."
             )
+
+        # ── Memory: auto-generate session_id if memory is on and none supplied ─
+        if self._agent.memory_enabled and not session_id:
+            session_id = str(uuid.uuid4())
+
+        # ── Memory: prepend prior session messages ────────────────────────────
+        history_messages = []
+        if session_id and self._agent.memory_enabled:
+            history_messages = self._load_session_messages(session_id)
+            if history_messages:
+                messages = history_messages + messages
 
         # Build agent tracking metadata for invocation logging
         agent_tracking = {
@@ -261,6 +293,7 @@ class AgentClient:
             "agent_name": self._agent.name,
             "rendered_system_prompt": system,
             "context_snapshot": variables,
+            "session_id": session_id,
         }
         if self._agent.system_prompt and self._agent.system_prompt.active_version:
             agent_tracking["system_prompt_name"] = self._agent.system_prompt.name
@@ -327,6 +360,9 @@ class AgentClient:
                     msg.files = None
                     break
 
+        # Capture the new-turn slice (excludes history) for memory persistence
+        new_user_messages_for_memory = messages[len(history_messages) :]
+
         for round_number in range(1, max_tool_rounds + 2):
             response = provider_client.complete(
                 messages=messages,
@@ -381,7 +417,206 @@ class AgentClient:
         # Update agent-level counters with total cost across all rounds
         self._agent.record_usage(total_cost)
 
+        # ── Memory: persist this exchange ─────────────────────────────────────
+        if session_id and self._agent.memory_enabled:
+            self._save_session_messages(
+                session_id=session_id,
+                user_ref=user_ref,
+                input_messages=new_user_messages_for_memory,
+                response=response,
+            )
+            response.session_id = session_id
+
         return response
+
+    # ─────────────────────────────── Memory helpers ───────────────────────────
+
+    def _load_session_messages(self, session_id: str) -> list:
+        """
+        Load prior messages for this session from the DB.
+        Returns LLMMessage list ordered oldest-first, capped to
+        memory_max_messages pairs (each pair = 1 user + 1 assistant).
+        Fail-open: returns [] on any error so the LLM call is never blocked.
+        """
+        from zango.apps.ai.models.memory import AppLLMMemorySession
+
+        try:
+            session = AppLLMMemorySession.objects.filter(
+                agent=self._agent,
+                session_id=session_id,
+                is_active=True,
+            ).first()
+
+            if not session:
+                return []
+
+            max_rows = (
+                self._agent.memory_max_messages * 2
+            )  # pairs → individual messages
+            db_messages = list(session.messages.order_by("-sequence")[:max_rows])
+            db_messages.reverse()  # oldest-first
+
+            result = []
+            for m in db_messages:
+                result.append(
+                    LLMMessage(
+                        role=m.role,
+                        content=m.content,
+                        tool_calls=m.tool_calls or None,
+                        tool_call_id=m.tool_call_id or None,
+                    )
+                )
+            return result
+
+        except Exception as e:
+            logger.warning(
+                f"Memory load failed for agent '{self._agent.name}' "
+                f"session '{session_id}': {e}"
+            )
+            return []
+
+    def _save_session_messages(
+        self,
+        session_id: str,
+        user_ref: str,
+        input_messages: list,
+        response,
+    ) -> None:
+        """
+        Persist the user input(s) and final assistant response to the DB.
+        Stores only role=user messages and the final role=assistant message.
+        File content blocks are replaced with [file: attachment] placeholders.
+        Fail-open: logs error but never re-raises so the caller still gets the response.
+        """
+        from django.db import transaction
+        from django.db.models import Max
+
+        from zango.apps.ai.models.memory import AppLLMMemoryMessage, AppLLMMemorySession
+
+        try:
+            with transaction.atomic():
+                session, _ = AppLLMMemorySession.objects.get_or_create(
+                    agent=self._agent,
+                    session_id=session_id,
+                    defaults={"user_ref": user_ref},
+                )
+                # Trigger auto_now update on last_active_at
+                session.save(update_fields=["last_active_at"])
+
+                agg = session.messages.aggregate(max_seq=Max("sequence"))
+                next_seq = (agg["max_seq"] or 0) + 1
+
+                to_create = []
+
+                for msg in input_messages:
+                    if msg.role == "user":
+                        content = self._sanitize_content_for_memory(msg.content)
+                        to_create.append(
+                            AppLLMMemoryMessage(
+                                session=session,
+                                role="user",
+                                content=content,
+                                tool_calls=None,
+                                tool_call_id="",
+                                invocation_id=response.invocation_id,
+                                sequence=next_seq,
+                            )
+                        )
+                        next_seq += 1
+
+                # Save the final assistant response
+                if response.content:
+                    to_create.append(
+                        AppLLMMemoryMessage(
+                            session=session,
+                            role="assistant",
+                            content=response.content,
+                            tool_calls=None,
+                            tool_call_id="",
+                            invocation_id=response.invocation_id,
+                            sequence=next_seq,
+                        )
+                    )
+
+                if to_create:
+                    AppLLMMemoryMessage.objects.bulk_create(to_create)
+
+        except Exception as e:
+            logger.error(
+                f"Memory save failed for agent '{self._agent.name}' "
+                f"session '{session_id}': {e}"
+            )
+
+    def _sanitize_content_for_memory(self, content):
+        """
+        Replace file/image content blocks with lightweight text placeholders.
+        Prevents large base64 blobs from being stored in the memory table.
+        """
+        if isinstance(content, str):
+            return content
+
+        if not isinstance(content, list):
+            return content
+
+        sanitized = []
+        for block in content:
+            if not isinstance(block, dict):
+                sanitized.append(block)
+                continue
+
+            block_type = block.get("type", "")
+
+            if block_type in ("image", "document"):
+                # Anthropic content block
+                source = block.get("source", {})
+                if isinstance(source, dict) and source.get("type") == "url":
+                    url = source.get("url", "")
+                    sanitized.append({"type": "text", "text": f"[file: {url}]"})
+                else:
+                    sanitized.append({"type": "text", "text": "[file: attachment]"})
+
+            elif block_type == "image_url":
+                # OpenAI image block
+                url = block.get("image_url", {}).get("url", "")
+                if url.startswith("data:"):
+                    sanitized.append({"type": "text", "text": "[file: attachment]"})
+                else:
+                    sanitized.append({"type": "text", "text": f"[file: {url}]"})
+
+            else:
+                sanitized.append(block)
+
+        return sanitized
+
+    def clear_session(self, session_id: str) -> bool:
+        """
+        Deactivate a session and delete all its messages.
+        Returns True if found and cleared, False if not found.
+        """
+        from zango.apps.ai.models.memory import AppLLMMemorySession
+
+        try:
+            session = AppLLMMemorySession.objects.filter(
+                agent=self._agent,
+                session_id=session_id,
+            ).first()
+
+            if not session:
+                return False
+
+            session.messages.all().delete()
+            session.is_active = False
+            session.save(update_fields=["is_active"])
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"clear_session failed for agent '{self._agent.name}' "
+                f"session '{session_id}': {e}"
+            )
+            return False
+
+    # ──────────────────────────────────────────────────────────────────────────
 
     def stream(
         self,

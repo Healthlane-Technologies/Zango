@@ -315,7 +315,7 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 
 	return (
 		<div className="fixed inset-0 z-50 flex bg-black/50">
-			<div className="m-auto flex h-[90vh] w-full max-w-[1100px] flex-col rounded-[16px] bg-white shadow-2xl">
+			<div className="m-auto flex h-[95vh] w-full max-w-[1100px] flex-col rounded-[16px] bg-white shadow-2xl">
 				{/* Header */}
 				<div className="flex items-center justify-between border-b border-[#E5E7EB] px-[32px] py-[20px]">
 					<div className="flex items-center gap-[12px]">
@@ -347,6 +347,11 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 						max_tokens: Yup.number().min(1).max(128000).required('Required'),
 						timeout_seconds: Yup.number().min(1).required('Required'),
 						output_schema: Yup.string().required('Required'),
+						output_json_schema_str: Yup.string().when('output_schema', {
+							is: 'JSON',
+							then: (schema) => schema.required('JSON Schema is required when output is set to JSON').test('valid-json', 'Invalid JSON', (val) => { try { JSON.parse(val); return true; } catch { return false; } }),
+							otherwise: (schema) => schema.optional(),
+						}),
 					})}
 					onSubmit={onSave}
 					enableReinitialize
@@ -540,7 +545,7 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 												{formik.values.output_schema === 'JSON' && (
 													<div className="mt-[8px]">
 														<label className="mb-[4px] block font-lato text-[13px] font-semibold text-[#374151]">
-															JSON Schema <span className="font-normal text-[#9CA3AF]">(optional)</span>
+															JSON Schema <span className="font-normal text-[#EF4444]">*</span>
 														</label>
 														<p className="mb-[6px] font-lato text-[12px] text-[#9CA3AF]">
 															Define a JSON Schema to enforce structured output. The LLM will be constrained to return JSON matching this schema.
@@ -599,6 +604,49 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 													</p>
 												)}
 											</div>
+										</div>
+									</div>
+
+									{/* Section 5: Memory */}
+									<div className="mb-[24px]">
+										<h3 className="mb-[4px] font-source-sans-pro text-[16px] font-semibold text-[#111827]">Memory</h3>
+										<p className="mb-[16px] font-lato text-[13px] text-[#9CA3AF]">
+											Enable session-scoped conversation history for multi-turn interactions
+										</p>
+										<div className="flex flex-col gap-[16px]">
+											<div className="flex items-center justify-between rounded-[8px] border border-[#E5E7EB] p-[16px]">
+												<div>
+													<p className="font-lato text-[13px] font-semibold text-[#374151]">Enable Memory</p>
+													<p className="font-lato text-[12px] text-[#9CA3AF]">
+														Persist conversation history across <code className="rounded bg-[#F3F4F6] px-[3px] py-[0.5px] text-[11px]">agent.run()</code> calls using a <code className="rounded bg-[#F3F4F6] px-[3px] py-[0.5px] text-[11px]">session_id</code>
+													</p>
+												</div>
+												<button
+													type="button"
+													onClick={() => formik.setFieldValue('memory_enabled', !formik.values.memory_enabled)}
+													className={`relative ml-[16px] h-[22px] w-[40px] flex-shrink-0 rounded-full transition-colors ${formik.values.memory_enabled ? 'bg-[#10B981]' : 'bg-[#D1D5DB]'}`}
+												>
+													<span className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${formik.values.memory_enabled ? 'left-[20px]' : 'left-[2px]'}`} />
+												</button>
+											</div>
+											{formik.values.memory_enabled && (
+												<div>
+													<label className="mb-[4px] block font-lato text-[13px] font-semibold text-[#374151]">Max Messages in History</label>
+													<p className="mb-[6px] font-lato text-[12px] text-[#9CA3AF]">
+														Maximum number of past user/assistant exchanges to include per call (1–200)
+													</p>
+													<input
+														name="memory_max_messages"
+														type="number"
+														min="1"
+														max="200"
+														value={formik.values.memory_max_messages}
+														onChange={formik.handleChange}
+														onBlur={formik.handleBlur}
+														className="w-[120px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
+													/>
+												</div>
+											)}
 										</div>
 									</div>
 								</div>
@@ -667,6 +715,7 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 												)}
 											</div>
 										</div>
+
 									</div>
 
 									{/* Code Preview */}
@@ -674,11 +723,32 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 										<div className="mt-[16px] rounded-[8px] bg-[#1F2937] p-[12px]">
 											<span className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#6B7280]">Usage in Code</span>
 											<pre className="mt-[6px] font-mono text-[11px] leading-[18px] text-[#D1D5DB]">
-{`from zango.ai import get_agent
+{formik.values.memory_enabled
+? `from zango.ai import get_agent
+
+agent = get_agent("${formik.values.name}")
+
+# First turn — session auto-created
+r = agent.run(input="Hello!")
+session_id = r.session_id
+
+# Continue the conversation
+r = agent.run(
+    input="...",
+    session_id=session_id,
+)`
+: formik.values.user_prompt_name
+? `from zango.ai import get_agent
 
 agent = get_agent("${formik.values.name}")
 response = agent.run(
     variables={"{...}"}
+)`
+: `from zango.ai import get_agent
+
+agent = get_agent("${formik.values.name}")
+response = agent.run(
+    input="Your message here"
 )`}
 											</pre>
 										</div>
@@ -702,10 +772,44 @@ response = agent.run(
 }
 
 /* ─── Agent Row (list item) ─── */
-function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, testingId }) {
+function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, testingId, appId, triggerApi }) {
 	const [expanded, setExpanded] = useState(false);
+	const [showSessions, setShowSessions] = useState(false);
+	const [sessions, setSessions] = useState([]);
+	const [sessionsLoading, setSessionsLoading] = useState(false);
+	const [copied, setCopied] = useState(false);
 	const metrics = agent.metrics || {};
 	const isTesting = testingId === agent.id;
+
+	const fetchSessions = async () => {
+		setSessionsLoading(true);
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/sessions/`,
+			type: 'GET',
+			loader: false,
+		});
+		setSessionsLoading(false);
+		if (success && response) {
+			setSessions(response.sessions?.records || response.sessions || []);
+		}
+	};
+
+	const handleShowSessions = () => {
+		if (!showSessions) fetchSessions();
+		setShowSessions(!showSessions);
+	};
+
+	const handleClearSession = async (sessionId) => {
+		const { success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/sessions/${encodeURIComponent(sessionId)}/`,
+			type: 'DELETE',
+			loader: false,
+		});
+		if (success) {
+			notify('success', 'Session Cleared', `Session "${sessionId}" cleared.`);
+			fetchSessions();
+		}
+	};
 
 	return (
 		<div className="rounded-[8px] border border-[#E5E7EB] bg-white">
@@ -760,19 +864,89 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 								{agent.tools?.length > 0 && (
 									<div className="flex items-start"><span className="w-[120px] shrink-0 pt-[2px] font-lato text-[13px] text-[#6B7280]">Tools</span><div className="flex flex-wrap gap-[6px]">{agent.tools.map((t) => <Tag key={t} color="blue">{t}</Tag>)}</div></div>
 								)}
+								<div className="flex">
+									<span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Memory</span>
+									<span className={`font-lato text-[13px] ${agent.memory_enabled ? 'text-[#10B981]' : 'text-[#6B7280]'}`}>
+										{agent.memory_enabled ? `Enabled (${agent.memory_max_messages} msg window)` : 'Disabled'}
+									</span>
+								</div>
 							</div>
 						</div>
-						<div className="w-[400px] shrink-0">
-							<h4 className="mb-[16px] font-lato text-[11px] font-bold uppercase tracking-[0.8px] text-[#6C747D]">Usage & Metrics</h4>
-							<div className="mb-[8px] grid grid-cols-3 gap-[8px]">
-								<MetricCard label="Total Invocations" value={(metrics.totalInvocations || 0).toLocaleString()} />
-								<MetricCard label="Success Rate" value={metrics.successRate > 0 ? `${metrics.successRate}%` : '-'} color={metrics.successRate >= 99 ? 'text-[#10B981]' : metrics.successRate >= 95 ? 'text-[#F59E0B]' : 'text-[#111827]'} />
-								<MetricCard label="Avg Latency" value={metrics.avgLatency || '-'} color="text-[#346BD4]" />
+						<div className="w-[400px] shrink-0 flex flex-col gap-[12px]">
+							{/* Metrics */}
+							<div>
+								<p className="mb-[8px] font-lato text-[11px] font-bold uppercase tracking-[0.8px] text-[#6C747D]">Usage & Metrics</p>
+								<div className="mb-[8px] grid grid-cols-3 gap-[8px]">
+									<MetricCard label="Total Invocations" value={(metrics.totalInvocations || 0).toLocaleString()} />
+									<MetricCard label="Success Rate" value={metrics.successRate > 0 ? `${metrics.successRate}%` : '-'} color={metrics.successRate >= 99 ? 'text-[#10B981]' : metrics.successRate >= 95 ? 'text-[#F59E0B]' : 'text-[#111827]'} />
+									<MetricCard label="Avg Latency" value={metrics.avgLatency || '-'} color="text-[#346BD4]" />
+								</div>
+								<div className="grid grid-cols-3 gap-[8px]">
+									<MetricCard label="Total Cost" value={metrics.totalCost > 0 ? `$${metrics.totalCost.toFixed(2)}` : '-'} />
+									<MetricCard label="Avg In Tokens" value={metrics.avgInputTokens > 0 ? metrics.avgInputTokens.toLocaleString() : '-'} />
+									<MetricCard label="Avg Out Tokens" value={metrics.avgOutputTokens > 0 ? metrics.avgOutputTokens.toLocaleString() : '-'} />
+								</div>
 							</div>
-							<div className="grid grid-cols-3 gap-[8px]">
-								<MetricCard label="Total Cost" value={metrics.totalCost > 0 ? `$${metrics.totalCost.toFixed(2)}` : '-'} />
-								<MetricCard label="Avg In Tokens" value={metrics.avgInputTokens > 0 ? metrics.avgInputTokens.toLocaleString() : '-'} />
-								<MetricCard label="Avg Out Tokens" value={metrics.avgOutputTokens > 0 ? metrics.avgOutputTokens.toLocaleString() : '-'} />
+
+							{/* Code snippet */}
+							<div className="rounded-[8px] bg-[#1F2937] p-[14px]">
+								<div className="mb-[10px] flex items-center justify-between">
+									<span className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#9CA3AF]">Use in Code</span>
+									<button
+										onClick={() => {
+											const snippet = agent.memory_enabled
+												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\n\n# First turn — session auto-created\nr = agent.run(input="Hello!")\nsession_id = r.session_id\n\n# Continue the conversation\nr = agent.run(\n    input="...",\n    session_id=session_id,\n)`
+												: agent.user_prompt_name
+												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    variables={...}\n)`
+												: `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    input="Your message here"\n)`;
+											navigator.clipboard.writeText(snippet);
+											setCopied(true);
+											setTimeout(() => setCopied(false), 2000);
+										}}
+										className="flex items-center gap-[4px] font-lato text-[11px] text-[#6B7280] hover:text-[#D1D5DB] transition-colors"
+									>
+										{copied ? (
+											<>
+												<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+												<span className="text-[#10B981]">Copied</span>
+											</>
+										) : (
+											<>
+												<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="1" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/><path d="M1 4v7h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+												<span>Copy</span>
+											</>
+										)}
+									</button>
+								</div>
+								<pre className="font-mono text-[11px] leading-[19px] text-[#D1D5DB] whitespace-pre-wrap">
+{agent.memory_enabled
+? `from zango.ai import get_agent
+
+agent = get_agent("${agent.name}")
+
+# First turn — session auto-created
+r = agent.run(input="Hello!")
+session_id = r.session_id
+
+# Continue the conversation
+r = agent.run(
+    input="...",
+    session_id=session_id,
+)`
+: agent.user_prompt_name
+? `from zango.ai import get_agent
+
+agent = get_agent("${agent.name}")
+response = agent.run(
+    variables={...}
+)`
+: `from zango.ai import get_agent
+
+agent = get_agent("${agent.name}")
+response = agent.run(
+    input="Your message here"
+)`}
+								</pre>
 							</div>
 						</div>
 					</div>
@@ -786,7 +960,68 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 						<button onClick={() => onToggleStatus(agent)} className={`rounded-[6px] border px-[12px] py-[6px] font-lato text-[13px] ${agent.status === 'active' ? 'border-[#EF4444] text-[#EF4444] hover:bg-[#FEF2F2]' : 'border-[#10B981] text-[#10B981] hover:bg-[#ECFDF5]'}`}>
 							{agent.status === 'active' ? 'Disable' : 'Enable'}
 						</button>
+						{agent.memory_enabled && (
+							<button onClick={handleShowSessions} className={`rounded-[6px] border px-[12px] py-[6px] font-lato text-[13px] ${showSessions ? 'border-[#5048ED] bg-[#EEF2FF] text-[#5048ED]' : 'border-[#DDE2E5] text-[#111827] hover:bg-[#F9FAFB]'}`}>
+								Sessions {agent.session_count > 0 ? `(${agent.session_count})` : ''}
+							</button>
+						)}
 					</div>
+
+					{/* Sessions Panel */}
+					{showSessions && agent.memory_enabled && (
+						<div className="mt-[16px] rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] p-[16px]">
+							<div className="mb-[12px] flex items-center justify-between">
+								<h4 className="font-lato text-[13px] font-semibold text-[#111827]">Memory Sessions</h4>
+								<button onClick={fetchSessions} className="font-lato text-[12px] text-[#346BD4] hover:underline">
+									Refresh
+								</button>
+							</div>
+							{sessionsLoading ? (
+								<p className="font-lato text-[13px] text-[#6B7280]">Loading sessions...</p>
+							) : sessions.length === 0 ? (
+								<p className="font-lato text-[13px] text-[#9CA3AF]">No sessions yet. Sessions are created automatically when agent.run() is called with a session_id.</p>
+							) : (
+								<table className="w-full border-collapse">
+									<thead>
+										<tr className="border-b border-[#E5E7EB]">
+											<th className="pb-[8px] text-left font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Session ID</th>
+											<th className="pb-[8px] text-left font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">User Ref</th>
+											<th className="pb-[8px] text-right font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Messages</th>
+											<th className="pb-[8px] text-right font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Last Active</th>
+											<th className="pb-[8px] text-right font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Status</th>
+											<th className="pb-[8px]" />
+										</tr>
+									</thead>
+									<tbody>
+										{sessions.map((s) => (
+											<tr key={s.id} className="border-b border-[#F3F4F6]">
+												<td className="py-[8px] font-mono font-lato text-[12px] text-[#111827]">{s.session_id}</td>
+												<td className="py-[8px] font-lato text-[12px] text-[#6B7280]">{s.user_ref || '-'}</td>
+												<td className="py-[8px] text-right font-lato text-[12px] text-[#374151]">{s.message_count}</td>
+												<td className="py-[8px] text-right font-lato text-[12px] text-[#6B7280]">{new Date(s.last_active_at).toLocaleString()}</td>
+												<td className="py-[8px] text-right">
+													<span className={`inline-flex items-center gap-[4px] font-lato text-[11px] font-medium ${s.is_active ? 'text-[#10B981]' : 'text-[#6B7280]'}`}>
+														<span className={`h-[5px] w-[5px] rounded-full ${s.is_active ? 'bg-[#10B981]' : 'bg-[#9CA3AF]'}`} />
+														{s.is_active ? 'Active' : 'Cleared'}
+													</span>
+												</td>
+												<td className="py-[8px] text-right">
+													{s.is_active && (
+														<button
+															onClick={() => handleClearSession(s.session_id)}
+															className="font-lato text-[12px] text-[#EF4444] hover:underline"
+														>
+															Clear
+														</button>
+													)}
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							)}
+						</div>
+					)}
 				</div>
 			)}
 		</div>
@@ -845,27 +1080,43 @@ export default function Agents() {
 	useEffect(() => { fetchAgents(); fetchProviders(); fetchPrompts(); fetchTools(); }, [appId]);
 
 	const handleSave = async (values, { resetForm, setSubmitting }) => {
-		const guardrails = values.guardrails_str ? values.guardrails_str.split(',').map((g) => g.trim()).filter(Boolean) : [];
-		const tools = values.selected_tools || [];
-		const payload = {
-			name: values.name, description: values.description,
-			provider_id: parseInt(values.provider_id, 10), model: values.model,
-			system_prompt_name: values.system_prompt_name || '',
-			user_prompt_name: values.user_prompt_name || '',
-			temperature: parseFloat(values.temperature), max_tokens: parseInt(values.max_tokens, 10),
-			timeout_seconds: parseInt(values.timeout_seconds, 10), output_schema: values.output_schema,
-			output_json_schema: values.output_json_schema_str ? JSON.parse(values.output_json_schema_str) : null,
-			guardrails, tools,
-		};
+		try {
+			const guardrails = values.guardrails_str ? values.guardrails_str.split(',').map((g) => g.trim()).filter(Boolean) : [];
+			const tools = values.selected_tools || [];
 
-		const isEdit = !!values._isEdit;
-		const url = isEdit ? `/api/v1/apps/${appId}/ai/agents/${editingAgent.id}/` : `/api/v1/apps/${appId}/ai/agents/`;
-		const { success } = await triggerApi({ url, type: isEdit ? 'PUT' : 'POST', loader: true, payload });
-		setSubmitting(false);
-		if (success) {
-			setBuilderOpen(false); setEditingAgent(null); resetForm();
-			notify('success', isEdit ? 'Agent Updated' : 'Agent Created', `${values.name} ${isEdit ? 'updated' : 'created'} successfully.`);
-			fetchAgents();
+			let output_json_schema = undefined;
+			if (values.output_schema === 'JSON' && values.output_json_schema_str) {
+				output_json_schema = JSON.parse(values.output_json_schema_str);
+			}
+
+			const payload = {
+				name: values.name, description: values.description,
+				provider_id: parseInt(values.provider_id, 10), model: values.model,
+				system_prompt_name: values.system_prompt_name || '',
+				user_prompt_name: values.user_prompt_name || '',
+				temperature: parseFloat(values.temperature), max_tokens: parseInt(values.max_tokens, 10),
+				timeout_seconds: parseInt(values.timeout_seconds, 10), output_schema: values.output_schema,
+				guardrails, tools,
+				memory_enabled: values.memory_enabled,
+				memory_max_messages: parseInt(values.memory_max_messages, 10) || 20,
+			};
+			if (output_json_schema !== undefined) {
+				payload.output_json_schema = output_json_schema;
+			}
+
+			const isEdit = !!values._isEdit;
+			const url = isEdit ? `/api/v1/apps/${appId}/ai/agents/${editingAgent.id}/` : `/api/v1/apps/${appId}/ai/agents/`;
+			const { success, response } = await triggerApi({ url, type: isEdit ? 'PUT' : 'POST', loader: false, payload });
+			if (success) {
+				setBuilderOpen(false); setEditingAgent(null); resetForm();
+				notify('success', isEdit ? 'Agent Updated' : 'Agent Created', `${values.name} ${isEdit ? 'updated' : 'created'} successfully.`);
+				fetchAgents();
+			} else {
+				const msg = response?.message || 'Something went wrong. Please try again.';
+				notify('error', isEdit ? 'Failed to Update Agent' : 'Failed to Create Agent', msg);
+			}
+		} finally {
+			setSubmitting(false);
 		}
 	};
 
@@ -918,13 +1169,18 @@ export default function Agents() {
 				timeout_seconds: editingAgent.timeout_seconds, output_schema: editingAgent.output_schema,
 				guardrails_str: (editingAgent.guardrails || []).join(', '),
 				output_json_schema_str: editingAgent.output_json_schema ? JSON.stringify(editingAgent.output_json_schema, null, 2) : '',
-				selected_tools: editingAgent.tools || [], _isEdit: true,
+				selected_tools: editingAgent.tools || [],
+				memory_enabled: editingAgent.memory_enabled ?? false,
+				memory_max_messages: editingAgent.memory_max_messages ?? 20,
+				_isEdit: true,
 		  }
 		: {
 				name: '', description: '', provider_id: '', model: '',
 				system_prompt_name: '', user_prompt_name: '',
 				temperature: 0.7, max_tokens: 4096, timeout_seconds: 30,
-				output_schema: 'JSON', output_json_schema_str: '', guardrails_str: '', selected_tools: [], _isEdit: false,
+				output_schema: 'JSON', output_json_schema_str: '', guardrails_str: '', selected_tools: [],
+				memory_enabled: false, memory_max_messages: 20,
+				_isEdit: false,
 		  };
 
 	return (
@@ -965,7 +1221,7 @@ export default function Agents() {
 					</div>
 				)}
 				{agents.map((agent) => (
-					<AgentRow key={agent.id} agent={agent} onEdit={openEdit} onToggleStatus={handleToggleStatus} onDuplicate={handleDuplicate} onTestAgent={handleTestAgent} testingId={testingId} />
+					<AgentRow key={agent.id} agent={agent} onEdit={openEdit} onToggleStatus={handleToggleStatus} onDuplicate={handleDuplicate} onTestAgent={handleTestAgent} testingId={testingId} appId={appId} triggerApi={triggerApi} />
 				))}
 			</div>
 

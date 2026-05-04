@@ -324,7 +324,15 @@ class ProviderUsageViewAPIV1(ZangoGenericPlatformAPIView):
                     "total_output_tokens": provider.total_output_tokens,
                     "total_cost_usd": str(provider.total_cost_usd),
                     "budget_status": provider.check_budget(),
-                    "model_breakdown": list(model_breakdown),
+                    "model_breakdown": [
+                        {
+                            **row,
+                            "cost": str(row["cost"])
+                            if row["cost"] is not None
+                            else "0",
+                        }
+                        for row in model_breakdown
+                    ],
                 },
                 200,
             )
@@ -440,6 +448,10 @@ class InvocationListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             model = request.GET.get("model")
             if model:
                 invocations = invocations.filter(model=model)
+
+            session_id = request.GET.get("session_id")
+            if session_id:
+                invocations = invocations.filter(session_id=session_id)
 
             paginated = self.paginate_queryset(invocations, request, view=self)
             serializer = AppLLMInvocationListSerializer(paginated, many=True)
@@ -979,6 +991,8 @@ class AgentDuplicateViewAPIV1(ZangoGenericPlatformAPIView):
                 output_schema=original.output_schema,
                 guardrails=original.guardrails,
                 tools=original.tools,
+                memory_enabled=original.memory_enabled,
+                memory_max_messages=original.memory_max_messages,
                 is_enabled=False,
             )
 
@@ -1065,6 +1079,103 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
                     },
                     200,
                 )
+        except AppLLMAgent.DoesNotExist:
+            return get_api_response(False, {"message": "Agent not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+# ── Agent Memory Session Views ──────────────────────────────────────────────
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentSessionsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
+    """
+    GET /api/v1/apps/<app_uuid>/ai/agents/<agent_id>/sessions/
+    List memory sessions for an agent.
+    Supports ?search= (session_id or user_ref) and ?is_active=true|false.
+    """
+
+    pagination_class = ZangoAPIPagination
+
+    def get(self, request, app_uuid, agent_id, *args, **kwargs):
+        from zango.api.platform.ai.v1.serializers import AppLLMMemorySessionSerializer
+
+        try:
+            agent = AppLLMAgent.objects.get(id=agent_id)
+            qs = agent.sessions.all()
+
+            search = request.GET.get("search", "")
+            if search:
+                qs = qs.filter(
+                    Q(session_id__icontains=search) | Q(user_ref__icontains=search)
+                )
+
+            is_active = request.GET.get("is_active")
+            if is_active is not None:
+                qs = qs.filter(is_active=is_active.lower() == "true")
+
+            paginated = self.paginate_queryset(qs, request, view=self)
+            serializer = AppLLMMemorySessionSerializer(paginated, many=True)
+            paginated_data = self.get_paginated_response_data(serializer.data)
+
+            return get_api_response(
+                True,
+                {
+                    "sessions": paginated_data,
+                    "message": "Sessions fetched successfully",
+                },
+                200,
+            )
+        except AppLLMAgent.DoesNotExist:
+            return get_api_response(False, {"message": "Agent not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentSessionDetailViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    GET    /api/v1/apps/<app_uuid>/ai/agents/<agent_id>/sessions/<session_id_str>/
+    DELETE /api/v1/apps/<app_uuid>/ai/agents/<agent_id>/sessions/<session_id_str>/
+    """
+
+    def get(self, request, app_uuid, agent_id, session_id_str, *args, **kwargs):
+        from zango.api.platform.ai.v1.serializers import (
+            AppLLMMemorySessionDetailSerializer,
+        )
+        from zango.apps.ai.models.memory import AppLLMMemorySession
+
+        try:
+            agent = AppLLMAgent.objects.get(id=agent_id)
+            session = AppLLMMemorySession.objects.get(
+                agent=agent, session_id=session_id_str
+            )
+            serializer = AppLLMMemorySessionDetailSerializer(session)
+            return get_api_response(
+                True,
+                {"session": serializer.data, "message": "Session fetched successfully"},
+                200,
+            )
+        except AppLLMAgent.DoesNotExist:
+            return get_api_response(False, {"message": "Agent not found"}, 404)
+        except AppLLMMemorySession.DoesNotExist:
+            return get_api_response(False, {"message": "Session not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+    def delete(self, request, app_uuid, agent_id, session_id_str, *args, **kwargs):
+        from zango.ai.agent_client import AgentClient
+
+        try:
+            agent = AppLLMAgent.objects.get(id=agent_id)
+            client = AgentClient(agent)
+            found = client.clear_session(session_id_str)
+            if not found:
+                return get_api_response(False, {"message": "Session not found"}, 404)
+            return get_api_response(
+                True, {"message": "Session cleared successfully"}, 200
+            )
         except AppLLMAgent.DoesNotExist:
             return get_api_response(False, {"message": "Agent not found"}, 404)
         except Exception as e:

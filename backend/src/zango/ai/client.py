@@ -142,6 +142,7 @@ class ProviderClient:
         context_snapshot=None,
         run_id=None,
         round_number=None,
+        session_id=None,
     ):
         """Create an AppLLMInvocation log entry."""
         from zango.apps.ai.models import AppLLMInvocation
@@ -170,6 +171,7 @@ class ProviderClient:
             "context_snapshot": context_snapshot,
             "run_id": run_id,
             "round_number": round_number,
+            "session_id": session_id,
         }
 
         if response:
@@ -212,6 +214,7 @@ class ProviderClient:
             "context_snapshot",
             "run_id",
             "round_number",
+            "session_id",
         ]
         agent_kwargs = {k: kwargs.pop(k) for k in agent_fields if k in kwargs}
         return agent_kwargs

@@ -122,6 +122,14 @@ class AppLLMInvocation(FullAuditMixin):
         blank=True,
         help_text="Which round within the agent run (1 = first call, 2 = after first tool round, etc.)",
     )
+    session_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Groups all agent.run() calls belonging to a single memory session. "
+        "Null for non-memory agents.",
+    )
 
     # Context — who/what triggered this
     triggered_by = models.CharField(

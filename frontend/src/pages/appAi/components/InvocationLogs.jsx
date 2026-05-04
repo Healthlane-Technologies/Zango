@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../hooks/useApi';
 
@@ -34,6 +34,49 @@ function JsonBlock({ data, maxHeight = '200px' }) {
 	return (
 		<div className={`rounded-[6px] bg-[#1F2937] p-[12px] overflow-auto`} style={{ maxHeight }}>
 			<pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-[20px] text-[#D1D5DB]">{formatted}</pre>
+		</div>
+	);
+}
+
+/* ─── Collapsible panel showing memory context messages injected before the current turn ─── */
+function MemoryHistoryPanel({ messages, renderContent }) {
+	const [expanded, setExpanded] = useState(false);
+	const exchangeCount = Math.ceil(messages.length / 2);
+	return (
+		<div className="rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+			<button
+				onClick={() => setExpanded(e => !e)}
+				className="w-full flex items-center gap-[8px] px-[12px] py-[8px] bg-[#F9FAFB] hover:bg-[#F3F4F6] text-left"
+			>
+				<svg width="9" height="9" viewBox="0 0 10 10" className={`transition-transform text-[#7C3AED] shrink-0 ${expanded ? 'rotate-90' : ''}`}>
+					<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+				</svg>
+				<svg width="11" height="11" viewBox="0 0 12 12" fill="none" className="text-[#7C3AED] shrink-0">
+					<path d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5S8.76 1 6 1zm0 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 7.1a3.6 3.6 0 01-3-1.62c.015-1 2-1.55 3-1.55s2.985.55 3 1.55A3.6 3.6 0 016 10.1z" fill="currentColor"/>
+				</svg>
+				<span className="font-lato text-[11px] font-semibold text-[#7C3AED]">Session memory context</span>
+				<span className="font-lato text-[11px] text-[#9CA3AF]">
+					({exchangeCount} prior exchange{exchangeCount !== 1 ? 's' : ''} injected from memory)
+				</span>
+			</button>
+			{expanded && (
+				<div className="divide-y divide-[#F3F4F6]">
+					{messages.map((m, i) => (
+						<div key={i} className="flex items-start gap-[8px] px-[12px] py-[8px] bg-white">
+							<span className={`mt-[1px] shrink-0 rounded-full px-[6px] py-[1px] font-mono text-[10px] font-bold ${
+								m.role === 'user' ? 'bg-[#EFF6FF] text-[#2563EB]' :
+								m.role === 'assistant' ? 'bg-[#F0FDF4] text-[#16A34A]' :
+								'bg-[#F5F3FF] text-[#7C3AED]'
+							}`}>
+								{m.role === 'user' ? 'U' : m.role === 'assistant' ? 'A' : 'T'}
+							</span>
+							<pre className="whitespace-pre-wrap break-words font-lato text-[12px] leading-[18px] text-[#6B7280]">
+								{renderContent(m.content)}
+							</pre>
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -100,10 +143,28 @@ function InvocationDetail({ invocation }) {
 				});
 				const currentToolCalls = invocation.response_tool_calls || [];
 
-				// Files from first user message
-				const firstUserMsg = messages.find(m => m.role === 'user');
-				const hasFileBlocks = firstUserMsg && Array.isArray(firstUserMsg.content) &&
-					firstUserMsg.content.some(b => b.type === 'image_url' || b.type === 'document');
+				// Separate memory history from the current turn's input.
+				// For memory-enabled runs, request_messages = [...historyMessages, currentUserMsg].
+				// The current user input is the last user-role message; everything before it is
+				// prior session context loaded from memory.
+				const userMsgIndices = messages.reduce((acc, m, i) => m.role === 'user' ? [...acc, i] : acc, []);
+				const currentUserMsgIdx = userMsgIndices[userMsgIndices.length - 1] ?? -1;
+				const currentUserMsg = currentUserMsgIdx >= 0 ? messages[currentUserMsgIdx] : null;
+				// History = all messages before the current user message (memory context)
+				const memoryHistoryMessages = currentUserMsgIdx > 0 ? messages.slice(0, currentUserMsgIdx) : [];
+				const hasMemoryHistory = memoryHistoryMessages.length > 0;
+
+				const hasFileBlocks = currentUserMsg && Array.isArray(currentUserMsg.content) &&
+					currentUserMsg.content.some(b => b.type === 'image_url' || b.type === 'document');
+
+				// Helper to render message text content
+				const renderContent = (content) => {
+					if (Array.isArray(content)) {
+						const text = content.filter(b => b.type === 'text').map(b => b.text).join(' ');
+						return text || '(file attachment)';
+					}
+					return content || '(empty)';
+				};
 
 				return (
 					<div className="flex flex-col gap-[12px]">
@@ -144,24 +205,32 @@ function InvocationDetail({ invocation }) {
 							</div>
 						)}
 
-						{/* Conversation timeline */}
+						{/* Memory history context — collapsible, shows prior exchanges loaded from memory */}
+						{hasMemoryHistory && (
+							<MemoryHistoryPanel messages={memoryHistoryMessages} renderContent={renderContent} />
+						)}
+
+						{/* Conversation timeline — current turn only */}
 						<div className="flex flex-col gap-[8px]">
 
-							{/* User message (first only — subsequent are tool results shown inline) */}
-							{firstUserMsg && (
+							{/* Current turn's user input */}
+							{currentUserMsg && (
 								<div className="flex gap-[10px]">
 									<div className="flex flex-col items-center">
 										<div className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[#346BD4] text-[11px] text-white font-bold">U</div>
 										<div className="mt-[4px] w-[1px] flex-1 bg-[#E5E7EB]" />
 									</div>
 									<div className="flex-1 pb-[8px]">
-										<span className="mb-[4px] block font-lato text-[11px] font-semibold text-[#374151]">User</span>
+										<span className="mb-[4px] block font-lato text-[11px] font-semibold text-[#374151]">
+											User
+											{hasMemoryHistory && <span className="ml-[6px] font-normal text-[#9CA3AF]">· this turn</span>}
+										</span>
 										<div className="rounded-[6px] bg-[#EFF6FF] border border-[#BFDBFE] px-[12px] py-[8px]">
-											{Array.isArray(firstUserMsg.content)
+											{Array.isArray(currentUserMsg.content)
 												? <span className="font-lato text-[12px] text-[#6B7280] italic">
-													{firstUserMsg.content.filter(b => b.type === 'text').map(b => b.text).join(' ') || '(file attachment)'}
+													{currentUserMsg.content.filter(b => b.type === 'text').map(b => b.text).join(' ') || '(file attachment)'}
 												  </span>
-												: <pre className="whitespace-pre-wrap break-words font-lato text-[12px] text-[#1E3A5F]">{firstUserMsg.content || '(empty)'}</pre>
+												: <pre className="whitespace-pre-wrap break-words font-lato text-[12px] text-[#1E3A5F]">{currentUserMsg.content || '(empty)'}</pre>
 											}
 										</div>
 									</div>
@@ -382,6 +451,7 @@ function InvocationDetail({ invocation }) {
 
 /* ─── Single invocation row (used inside a run group or standalone) ─── */
 function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail, indent }) {
+	const hasMemory = !!inv.session_id;
 	return (
 		<div className={`border-b border-[#E5E7EB] bg-white ${indent ? 'bg-[#FAFBFC]' : ''}`}>
 			<div className="flex items-center px-[16px] py-[12px] cursor-pointer hover:bg-[#F3F4F6]" onClick={onExpand}>
@@ -390,7 +460,7 @@ function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail, inden
 						<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
 					</svg>
 				</button>
-				<span className="mr-[16px] w-[70px] font-mono font-lato text-[12px] text-[#6B7280]">
+				<span className="mr-[16px] w-[120px] font-mono font-lato text-[12px] text-[#6B7280] truncate">
 					{indent
 						? <span className="text-[#9CA3AF]">r{inv.round_number ?? '?'}</span>
 						: `inv_${String(inv.id).padStart(4, '0')}`
@@ -399,8 +469,16 @@ function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail, inden
 				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
 					{new Date(inv.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' })}
 				</span>
-				<span className="mr-[16px] w-[160px] font-lato text-[13px] font-medium text-[#111827] truncate">
-					{inv.agent_name || '-'}
+				<span className="mr-[16px] w-[220px] flex items-center gap-[6px]">
+					<span className="font-lato text-[13px] font-medium text-[#111827] truncate">{inv.agent_name || '-'}</span>
+					{hasMemory && (
+						<span title="Memory-enabled session" className="shrink-0 inline-flex items-center gap-[3px] rounded-[4px] bg-[#EDE9FE] px-[4px] py-[1px]">
+							<svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+								<path d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5S8.76 1 6 1zm0 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 7.1a3.6 3.6 0 01-3-1.62c.015-1 2-1.55 3-1.55s2.985.55 3 1.55A3.6 3.6 0 016 10.1z" fill="#7C3AED"/>
+							</svg>
+							<span className="font-lato text-[9px] font-semibold text-[#6D28D9]">mem</span>
+						</span>
+					)}
 				</span>
 				<span className="mr-[16px] w-[160px]">
 					<span className="block font-lato text-[12px] text-[#111827]">{inv.provider_name}</span>
@@ -437,8 +515,138 @@ function InvocationRow({ inv, onExpand, isExpanded, detail, loadingDetail, inden
 	);
 }
 
+/* ─── Session group: top-level grouping for memory agents ─── */
+function SessionGroup({ session_id, runs, onExpand, expandedId, detailData, loadingDetail, fetchDetail }) {
+	const [groupExpanded, setGroupExpanded] = useState(false);
+
+	// Aggregate across all rounds in all runs
+	const allRounds = runs.flatMap(r => r.type === 'run' ? r.rounds : (r.inv ? [r.inv] : []));
+	const firstRound = allRounds[0];
+	const last = allRounds[allRounds.length - 1];
+	const totalCost = allRounds.reduce((s, r) => s + parseFloat(r.cost_usd || 0), 0);
+	const totalTokensIn = allRounds.reduce((s, r) => s + (r.input_tokens || 0), 0);
+	const totalTokensOut = allRounds.reduce((s, r) => s + (r.output_tokens || 0), 0);
+	const hasError = allRounds.some(r => r.status !== 'success');
+	const overallStatus = hasError ? 'error' : (last?.status || 'success');
+	const totalRounds = allRounds.length;
+
+	// Format session_id for display: if UUID-like use short form, otherwise show as-is (truncated)
+	const isUuid = /^[0-9a-f-]{32,36}$/i.test(session_id);
+	const sessionLabel = isUuid
+		? session_id.replace(/-/g, '').slice(0, 12)
+		: session_id.length > 16 ? session_id.slice(0, 16) + '…' : session_id;
+
+	return (
+		<div className="border-b border-[#E5E7EB]">
+			{/* Session header — distinct purple-tinted row with a left accent bar */}
+			<div
+				className="flex items-center cursor-pointer hover:bg-[#F5F3FF] bg-[#FAFAFF] border-l-[3px] border-l-[#7C3AED]"
+				onClick={() => setGroupExpanded(g => !g)}
+			>
+				{/* Chevron */}
+				<div className="flex items-center pl-[13px] pr-[12px] py-[10px]">
+					<svg width="10" height="10" viewBox="0 0 10 10" className={`transition-transform text-[#7C3AED] ${groupExpanded ? 'rotate-90' : ''}`}>
+						<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+					</svg>
+				</div>
+
+				{/* Session identity pill */}
+				<div className="mr-[16px] flex items-center overflow-hidden" style={{ width: '120px' }}>
+					<span
+						className="inline-flex items-center gap-[4px] rounded-[4px] bg-[#EDE9FE] px-[6px] py-[2px] font-mono text-[11px] font-semibold text-[#6D28D9] min-w-0 max-w-full"
+						title={session_id}
+					>
+						<svg width="9" height="9" viewBox="0 0 12 12" fill="none" className="shrink-0">
+							<path d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5S8.76 1 6 1zm0 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 7.1a3.6 3.6 0 01-3-1.62c.015-1 2-1.55 3-1.55s2.985.55 3 1.55A3.6 3.6 0 016 10.1z" fill="currentColor"/>
+						</svg>
+						<span className="truncate">{sessionLabel}</span>
+					</span>
+				</div>
+
+				{/* Timestamp */}
+				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
+					{firstRound ? new Date(firstRound.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' }) : '-'}
+				</span>
+
+				{/* Agent */}
+				<span className="mr-[16px] w-[220px] flex items-center gap-[6px]">
+					<span className="font-lato text-[13px] font-medium text-[#111827] truncate">{firstRound?.agent_name || '-'}</span>
+					<span className="shrink-0 inline-flex items-center gap-[3px] rounded-[4px] bg-[#EDE9FE] px-[4px] py-[1px]">
+						<svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+							<path d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5S8.76 1 6 1zm0 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 7.1a3.6 3.6 0 01-3-1.62c.015-1 2-1.55 3-1.55s2.985.55 3 1.55A3.6 3.6 0 016 10.1z" fill="#7C3AED"/>
+						</svg>
+						<span className="font-lato text-[9px] font-semibold text-[#6D28D9]">memory</span>
+					</span>
+				</span>
+
+				{/* Provider / Model */}
+				<span className="mr-[16px] w-[160px]">
+					<span className="block font-lato text-[12px] text-[#111827]">{firstRound?.provider_name}</span>
+					<span className="block font-mono font-lato text-[11px] text-[#6B7280]">{firstRound?.model}</span>
+				</span>
+
+				{/* Tokens */}
+				<span className="mr-[16px] w-[100px] font-mono font-lato text-[12px] text-[#374151]">
+					{totalTokensIn.toLocaleString()} / {totalTokensOut.toLocaleString()}
+				</span>
+
+				{/* Cost */}
+				<span className="mr-[16px] w-[70px] font-lato text-[12px] text-[#374151]">
+					${totalCost.toFixed(4)}
+				</span>
+
+				{/* Latency — not meaningful at session level */}
+				<span className="mr-[16px] w-[60px] font-lato text-[12px] text-[#9CA3AF]">—</span>
+
+				{/* Trigger */}
+				<span className="mr-[16px] w-[70px] font-lato text-[11px] text-[#6B7280] capitalize">
+					{firstRound?.triggered_by}
+				</span>
+
+				{/* Status + counts */}
+				<span className="w-[80px] flex items-center gap-[4px] flex-wrap">
+					<StatusBadge status={overallStatus} />
+					<span className="rounded-full bg-[#EDE9FE] px-[5px] py-[1px] font-lato text-[10px] font-semibold text-[#7C3AED] whitespace-nowrap">
+						{runs.length}R · {totalRounds}rnd
+					</span>
+				</span>
+			</div>
+
+			{/* Expanded: show each run nested under the session */}
+			{groupExpanded && (
+				<div className="border-t border-[#E5E7EB] bg-[#F9F8FF]">
+					{runs.map((run) =>
+						run.type === 'run' ? (
+							<RunGroup
+								key={run.run_id}
+								rounds={run.rounds}
+								expandedId={expandedId}
+								onExpand={onExpand}
+								detailData={detailData}
+								loadingDetail={loadingDetail}
+								fetchDetail={fetchDetail}
+								indented
+							/>
+						) : (
+							<InvocationRow
+								key={run.inv.id}
+								inv={run.inv}
+								indent
+								isExpanded={expandedId === run.inv.id}
+								onExpand={() => { onExpand(run.inv.id); fetchDetail(run.inv.id); }}
+								detail={detailData[run.inv.id]}
+								loadingDetail={loadingDetail && expandedId === run.inv.id}
+							/>
+						)
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
 /* ─── Run group: one header row that expands to show all rounds ─── */
-function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fetchDetail }) {
+function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fetchDetail, indented }) {
 	const [groupExpanded, setGroupExpanded] = useState(false);
 	// Summary from all rounds
 	const first = rounds[0];
@@ -449,12 +657,13 @@ function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fet
 	const totalLatency = rounds.reduce((s, r) => s + (r.latency_ms || 0), 0);
 	const hasError = rounds.some(r => r.status !== 'success');
 	const overallStatus = hasError ? 'error' : last.status;
+	const roundCount = rounds.length;
 
 	return (
-		<div className="border-b border-[#E5E7EB]">
+		<div className={`border-b border-[#E5E7EB] ${indented ? 'border-l-2 border-l-[#7C3AED]' : ''}`}>
 			{/* Group header */}
 			<div
-				className="flex items-center px-[16px] py-[12px] cursor-pointer hover:bg-[#F9FAFB] bg-white"
+				className={`flex items-center px-[16px] py-[12px] cursor-pointer ${indented ? 'hover:bg-[#F0EBFF] bg-[#FAF9FF]' : 'hover:bg-[#F9FAFB] bg-white'}`}
 				onClick={() => setGroupExpanded(g => !g)}
 			>
 				<button className="mr-[12px] text-[#6B7280]">
@@ -462,13 +671,13 @@ function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fet
 						<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
 					</svg>
 				</button>
-				<span className="mr-[16px] w-[70px] font-mono font-lato text-[12px] text-[#6B7280]">
+				<span className="mr-[16px] w-[120px] font-mono font-lato text-[12px] text-[#6B7280]">
 					run_{String(first.id).padStart(4, '0')}
 				</span>
 				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
 					{new Date(first.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' })}
 				</span>
-				<span className="mr-[16px] w-[160px] font-lato text-[13px] font-medium text-[#111827] truncate">
+				<span className="mr-[16px] w-[220px] font-lato text-[13px] font-medium text-[#111827] truncate">
 					{first.agent_name || '-'}
 				</span>
 				<span className="mr-[16px] w-[160px]">
@@ -487,11 +696,13 @@ function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fet
 				<span className="mr-[16px] w-[70px] font-lato text-[11px] text-[#6B7280] capitalize">
 					{first.triggered_by}
 				</span>
-				<span className="w-[80px] flex items-center gap-[6px]">
+				<span className="w-[80px] flex items-center gap-[4px]">
 					<StatusBadge status={overallStatus} />
-					<span className="rounded-full bg-[#EFF6FF] px-[6px] py-[1px] font-lato text-[10px] font-semibold text-[#2563EB]">
-						{rounds.length} rounds
-					</span>
+					{roundCount > 1 && (
+						<span className="rounded-full bg-[#EFF6FF] px-[5px] py-[1px] font-lato text-[10px] font-semibold text-[#2563EB] whitespace-nowrap">
+							{roundCount} rnd
+						</span>
+					)}
 				</span>
 			</div>
 
@@ -515,12 +726,120 @@ function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fet
 	);
 }
 
+/* ─── Filter chip used in the active-filter bar ─── */
+function FilterChip({ label, onRemove }) {
+	return (
+		<span className="inline-flex items-center gap-[4px] rounded-full bg-[#EFF6FF] border border-[#BFDBFE] px-[8px] py-[3px] font-lato text-[12px] text-[#1D4ED8]">
+			{label}
+			<button onClick={onRemove} className="ml-[2px] text-[#60A5FA] hover:text-[#1D4ED8]">
+				<svg width="10" height="10" viewBox="0 0 10 10">
+					<path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+				</svg>
+			</button>
+		</span>
+	);
+}
+
+/* ─── Select with a label pill (replaces bare <select>) ─── */
+function FilterSelect({ label, value, onChange, options, accentColor }) {
+	const accent = accentColor || '#346BD4';
+	const isActive = !!value;
+	return (
+		<div className="relative">
+			<select
+				value={value}
+				onChange={onChange}
+				className={`h-[34px] rounded-[6px] border pl-[8px] pr-[24px] font-lato text-[13px] outline-none appearance-none cursor-pointer transition-colors ${
+					isActive
+						? 'border-[#346BD4] bg-[#EFF6FF] text-[#1D4ED8] font-medium'
+						: 'border-[#DDE2E5] bg-white text-[#374151] hover:border-[#346BD4]'
+				}`}
+				style={isActive ? { borderColor: accent, backgroundColor: `${accent}18`, color: accent } : {}}
+			>
+				{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+			</select>
+			{/* caret */}
+			<svg width="10" height="10" viewBox="0 0 10 10" className="pointer-events-none absolute right-[7px] top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+				<path d="M2 3l3 4 3-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+			</svg>
+		</div>
+	);
+}
+
+/* ─── Pagination bar ─── */
+function PaginationBar({ page, totalPages, totalRecords, onPrev, onNext, onGoTo }) {
+	const pageNumbers = [];
+	const delta = 2;
+	for (let i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) {
+		pageNumbers.push(i);
+	}
+	const showLeftEllipsis = pageNumbers[0] > 2;
+	const showRightEllipsis = pageNumbers[pageNumbers.length - 1] < totalPages - 1;
+
+	return (
+		<div className="flex items-center justify-between px-[16px] py-[14px] border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-b-[8px]">
+			<span className="font-lato text-[12px] text-[#6B7280]">
+				{totalRecords != null ? `${totalRecords.toLocaleString()} invocation${totalRecords !== 1 ? 's' : ''}` : ''}
+			</span>
+			<div className="flex items-center gap-[4px]">
+				<button
+					onClick={onPrev}
+					disabled={page === 1}
+					className="flex items-center gap-[4px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					<svg width="12" height="12" viewBox="0 0 10 10"><path d="M7 1L3 5l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+					Prev
+				</button>
+
+				{pageNumbers[0] > 1 && (
+					<>
+						<button onClick={() => onGoTo(1)} className="rounded-[6px] border border-[#DDE2E5] px-[8px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white">1</button>
+						{showLeftEllipsis && <span className="px-[4px] font-lato text-[12px] text-[#9CA3AF]">…</span>}
+					</>
+				)}
+
+				{pageNumbers.map(n => (
+					<button
+						key={n}
+						onClick={() => onGoTo(n)}
+						className={`rounded-[6px] border px-[8px] py-[5px] font-lato text-[12px] transition-colors ${
+							n === page
+								? 'border-[#346BD4] bg-[#346BD4] text-white font-semibold'
+								: 'border-[#DDE2E5] text-[#374151] hover:bg-white'
+						}`}
+					>
+						{n}
+					</button>
+				))}
+
+				{pageNumbers[pageNumbers.length - 1] < totalPages && (
+					<>
+						{showRightEllipsis && <span className="px-[4px] font-lato text-[12px] text-[#9CA3AF]">…</span>}
+						<button onClick={() => onGoTo(totalPages)} className="rounded-[6px] border border-[#DDE2E5] px-[8px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white">{totalPages}</button>
+					</>
+				)}
+
+				<button
+					onClick={onNext}
+					disabled={page === totalPages}
+					className="flex items-center gap-[4px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					Next
+					<svg width="12" height="12" viewBox="0 0 10 10"><path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+				</button>
+			</div>
+			<span className="font-lato text-[12px] text-[#6B7280]">Page {page} of {totalPages}</span>
+		</div>
+	);
+}
+
 /* ─── Main Component ─── */
 export default function InvocationLogs() {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
 	const [invocations, setInvocations] = useState([]);
+	const [totalRecords, setTotalRecords] = useState(0);
 	const [stats, setStats] = useState({});
 	const [agents, setAgents] = useState([]);
 	const [providers, setProviders] = useState([]);
@@ -531,11 +850,11 @@ export default function InvocationLogs() {
 	const [totalPages, setTotalPages] = useState(1);
 
 	// Filters
-	const [search, setSearch] = useState('');
 	const [filterAgent, setFilterAgent] = useState('');
 	const [filterProvider, setFilterProvider] = useState('');
 	const [filterStatus, setFilterStatus] = useState('');
 	const [filterTriggeredBy, setFilterTriggeredBy] = useState('');
+	const [filterMemory, setFilterMemory] = useState(''); // 'yes' | 'no' | ''
 
 	const fetchStats = useCallback(async () => {
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/invocations/stats/`, type: 'GET', loader: false });
@@ -544,19 +863,24 @@ export default function InvocationLogs() {
 
 	const fetchInvocations = useCallback(async () => {
 		const params = new URLSearchParams({ page: String(page) });
-		if (search) params.set('search', search);
 		if (filterAgent) params.set('agent_id', filterAgent);
 		if (filterProvider) params.set('provider_id', filterProvider);
 		if (filterStatus) params.set('status', filterStatus);
 		if (filterTriggeredBy) params.set('triggered_by', filterTriggeredBy);
+		// memory filter: has_session translates to filtering on session_id being set/unset
+		// BE doesn't support this natively yet — handled FE-side after fetch if needed
 
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/invocations/?${params}`, type: 'GET', loader: false });
 		if (success && response) {
 			const data = response.invocations || {};
-			setInvocations(data.records || []);
+			let records = data.records || [];
+			if (filterMemory === 'yes') records = records.filter(r => !!r.session_id);
+			if (filterMemory === 'no') records = records.filter(r => !r.session_id);
+			setInvocations(records);
 			setTotalPages(data.total_pages || 1);
+			setTotalRecords(data.total_records || 0);
 		}
-	}, [appId, triggerApi, page, search, filterAgent, filterProvider, filterStatus, filterTriggeredBy]);
+	}, [appId, triggerApi, page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory]);
 
 	const fetchDetail = async (id) => {
 		if (detailData[id]) return;
@@ -578,44 +902,87 @@ export default function InvocationLogs() {
 	}, [appId, triggerApi]);
 
 	useEffect(() => { fetchStats(); fetchDropdowns(); }, [appId]);
-	useEffect(() => { fetchInvocations(); }, [page, search, filterAgent, filterProvider, filterStatus, filterTriggeredBy]);
+	useEffect(() => { fetchInvocations(); }, [page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory]);
 
 	const handleExpand = (id) => {
 		if (expandedId === id) { setExpandedId(null); return; }
 		setExpandedId(id);
 	};
 
-	// Group invocations: rows with the same run_id go together (sorted by round_number),
-	// rows without a run_id are standalone.
+	const clearFilter = (setter) => { setter(''); setPage(1); };
+
+	// Group invocations into a 3-level hierarchy:
+	//   session (session_id, memory agents) → run (run_id) → round (round_number)
+	// Non-memory agents retain the existing 2-level: run → round (or standalone).
 	const groupedRows = (() => {
 		const groups = [];
-		const seen = new Map(); // run_id -> group index
+		const sessionMap = new Map(); // session_id -> group index
+		const runMap = new Map();     // run_id key -> { groupIdx } or { sessionIdx, runIdx }
 
 		invocations.forEach((inv) => {
-			if (inv.run_id) {
-				if (seen.has(inv.run_id)) {
-					groups[seen.get(inv.run_id)].rounds.push(inv);
+			if (inv.session_id) {
+				// Memory agent — session > run > round
+				if (!sessionMap.has(inv.session_id)) {
+					sessionMap.set(inv.session_id, groups.length);
+					groups.push({ type: 'session', session_id: inv.session_id, runs: [] });
+				}
+				const sessionGroup = groups[sessionMap.get(inv.session_id)];
+				if (inv.run_id) {
+					const runKey = `${inv.session_id}:${inv.run_id}`;
+					if (!runMap.has(runKey)) {
+						runMap.set(runKey, { sessionIdx: sessionMap.get(inv.session_id), runIdx: sessionGroup.runs.length });
+						sessionGroup.runs.push({ type: 'run', run_id: inv.run_id, rounds: [inv] });
+					} else {
+						const { runIdx } = runMap.get(runKey);
+						sessionGroup.runs[runIdx].rounds.push(inv);
+					}
 				} else {
-					seen.set(inv.run_id, groups.length);
+					sessionGroup.runs.push({ type: 'standalone', inv });
+				}
+			} else if (inv.run_id) {
+				// Non-memory agent with multi-round run
+				const runKey = `run:${inv.run_id}`;
+				if (!runMap.has(runKey)) {
+					runMap.set(runKey, { groupIdx: groups.length });
 					groups.push({ type: 'run', run_id: inv.run_id, rounds: [inv] });
+				} else {
+					groups[runMap.get(runKey).groupIdx].rounds.push(inv);
 				}
 			} else {
+				// Completely standalone (no session, no run)
 				groups.push({ type: 'standalone', inv });
 			}
 		});
 
-		// Sort rounds within each group by round_number
+		// Sort rounds within each run group by round_number
 		groups.forEach((g) => {
-			if (g.type === 'run') g.rounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
+			if (g.type === 'run') {
+				g.rounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
+			} else if (g.type === 'session') {
+				g.runs.forEach(r => {
+					if (r.type === 'run') r.rounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
+				});
+			}
 		});
 
 		return groups;
 	})();
 
-	const selectClass = "rounded-[6px] border border-[#DDE2E5] px-[10px] py-[8px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#5048ED] bg-white";
+	// Active filter labels for the chip bar
+	const activeFilters = [];
+	const agentObj = agents.find(a => String(a.id) === String(filterAgent));
+	const providerObj = providers.find(p => String(p.id) === String(filterProvider));
+	if (agentObj) activeFilters.push({ label: `Agent: ${agentObj.name}`, clear: () => clearFilter(setFilterAgent) });
+	if (providerObj) activeFilters.push({ label: `Provider: ${providerObj.name}`, clear: () => clearFilter(setFilterProvider) });
+	if (filterStatus) activeFilters.push({ label: `Status: ${filterStatus.replace('_', ' ')}`, clear: () => clearFilter(setFilterStatus) });
+	if (filterTriggeredBy) activeFilters.push({ label: `Trigger: ${filterTriggeredBy}`, clear: () => clearFilter(setFilterTriggeredBy) });
+	if (filterMemory === 'yes') activeFilters.push({ label: 'Memory: enabled', clear: () => clearFilter(setFilterMemory) });
+	if (filterMemory === 'no') activeFilters.push({ label: 'Memory: disabled', clear: () => clearFilter(setFilterMemory) });
+
+	const hasFilters = activeFilters.length > 0;
 
 	return (
-		<div className="flex flex-col gap-[24px]">
+		<div className="flex flex-col gap-[20px] pb-[32px]">
 			{/* Header */}
 			<div className="rounded-[16px] border border-[#E5E7EB] bg-white p-[24px]">
 				<h2 className="font-source-sans-pro text-[18px] font-semibold text-[#111827]">Invocation Logs</h2>
@@ -633,47 +1000,86 @@ export default function InvocationLogs() {
 				</div>
 			</div>
 
-			{/* Filters */}
-			<div className="flex flex-wrap items-center gap-[10px]">
-				<input
-					value={search}
-					onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-					placeholder="Search by agent, provider, or model..."
-					className="w-[280px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[8px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
+			{/* Filter bar */}
+			<div className="rounded-[8px] border border-[#E5E7EB] bg-white p-[12px] flex flex-wrap items-center gap-[8px]">
+				<span className="font-lato text-[12px] font-semibold text-[#6C747D] mr-[4px]">Filter:</span>
+
+				<FilterSelect
+					label="Agent"
+					value={filterAgent}
+					onChange={(e) => { setFilterAgent(e.target.value); setPage(1); }}
+					options={[{ value: '', label: 'All Agents' }, ...agents.map(a => ({ value: String(a.id), label: a.name }))]}
 				/>
-				<select value={filterAgent} onChange={(e) => { setFilterAgent(e.target.value); setPage(1); }} className={selectClass}>
-					<option value="">All Agents</option>
-					{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-				</select>
-				<select value={filterProvider} onChange={(e) => { setFilterProvider(e.target.value); setPage(1); }} className={selectClass}>
-					<option value="">All Providers</option>
-					{providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-				</select>
-				<select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }} className={selectClass}>
-					<option value="">All Status</option>
-					<option value="success">Success</option>
-					<option value="error">Error</option>
-					<option value="timeout">Timeout</option>
-					<option value="rate_limited">Rate Limited</option>
-					<option value="budget_exceeded">Budget Exceeded</option>
-				</select>
-				<select value={filterTriggeredBy} onChange={(e) => { setFilterTriggeredBy(e.target.value); setPage(1); }} className={selectClass}>
-					<option value="">Triggered By</option>
-					<option value="user">User</option>
-					<option value="celery">Celery</option>
-					<option value="cron">Cron</option>
-					<option value="system">System</option>
-				</select>
+				<FilterSelect
+					label="Provider"
+					value={filterProvider}
+					onChange={(e) => { setFilterProvider(e.target.value); setPage(1); }}
+					options={[{ value: '', label: 'All Providers' }, ...providers.map(p => ({ value: String(p.id), label: p.name }))]}
+				/>
+				<FilterSelect
+					label="Status"
+					value={filterStatus}
+					onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+					options={[
+						{ value: '', label: 'All Status' },
+						{ value: 'success', label: '✓ Success' },
+						{ value: 'error', label: '✕ Error' },
+						{ value: 'timeout', label: '⏱ Timeout' },
+						{ value: 'rate_limited', label: '⚡ Rate Limited' },
+						{ value: 'budget_exceeded', label: '💸 Budget Exceeded' },
+					]}
+				/>
+				<FilterSelect
+					label="Trigger"
+					value={filterTriggeredBy}
+					onChange={(e) => { setFilterTriggeredBy(e.target.value); setPage(1); }}
+					options={[
+						{ value: '', label: 'All Triggers' },
+						{ value: 'user', label: '👤 User' },
+						{ value: 'celery', label: '⚙ Celery' },
+						{ value: 'cron', label: '🕐 Cron' },
+						{ value: 'system', label: '🔧 System' },
+					]}
+				/>
+				<FilterSelect
+					label="Memory"
+					value={filterMemory}
+					onChange={(e) => { setFilterMemory(e.target.value); setPage(1); }}
+					accentColor="#7C3AED"
+					options={[
+						{ value: '', label: 'Memory: Any' },
+						{ value: 'yes', label: '🧠 Memory On' },
+						{ value: 'no', label: 'No Memory' },
+					]}
+				/>
+
+				{hasFilters && (
+					<button
+						onClick={() => { setFilterAgent(''); setFilterProvider(''); setFilterStatus(''); setFilterTriggeredBy(''); setFilterMemory(''); setPage(1); }}
+						className="ml-auto font-lato text-[12px] text-[#6B7280] hover:text-[#EF4444] underline"
+					>
+						Clear all
+					</button>
+				)}
 			</div>
 
-			{/* Table */}
+			{/* Active filter chips */}
+			{hasFilters && (
+				<div className="flex flex-wrap items-center gap-[6px] -mt-[10px]">
+					{activeFilters.map((f, i) => (
+						<FilterChip key={i} label={f.label} onRemove={f.clear} />
+					))}
+				</div>
+			)}
+
+			{/* Table + pagination as one card */}
 			<div className="rounded-[8px] border border-[#E5E7EB] bg-white overflow-hidden">
 				{/* Table header */}
 				<div className="flex items-center px-[16px] py-[10px] bg-[#F9FAFB] border-b border-[#E5E7EB] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">
 					<span className="mr-[12px] w-[10px]" />
-					<span className="mr-[16px] w-[70px]">ID</span>
+					<span className="mr-[16px] w-[120px]">ID</span>
 					<span className="mr-[16px] w-[120px]">Timestamp</span>
-					<span className="mr-[16px] w-[160px]">Agent</span>
+					<span className="mr-[16px] w-[220px]">Agent</span>
 					<span className="mr-[16px] w-[160px]">Provider / Model</span>
 					<span className="mr-[16px] w-[100px]">Tokens</span>
 					<span className="mr-[16px] w-[70px]">Cost</span>
@@ -687,8 +1093,19 @@ export default function InvocationLogs() {
 						<p className="font-lato text-[14px] text-[#9CA3AF]">No invocations found.</p>
 					</div>
 				) : (
-					groupedRows.map((group, i) =>
-						group.type === 'run' ? (
+					groupedRows.map((group) =>
+						group.type === 'session' ? (
+							<SessionGroup
+								key={group.session_id}
+								session_id={group.session_id}
+								runs={group.runs}
+								expandedId={expandedId}
+								onExpand={handleExpand}
+								detailData={detailData}
+								loadingDetail={loadingDetail}
+								fetchDetail={fetchDetail}
+							/>
+						) : group.type === 'run' ? (
 							<RunGroup
 								key={group.run_id}
 								rounds={group.rounds}
@@ -710,30 +1127,17 @@ export default function InvocationLogs() {
 						)
 					)
 				)}
-			</div>
 
-			{/* Pagination */}
-			{totalPages > 1 && (
-				<div className="flex items-center justify-center gap-[8px]">
-					<button
-						onClick={() => setPage((p) => Math.max(1, p - 1))}
-						disabled={page === 1}
-						className="rounded-[6px] border border-[#DDE2E5] px-[12px] py-[6px] font-lato text-[13px] text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-40"
-					>
-						Previous
-					</button>
-					<span className="font-lato text-[13px] text-[#6B7280]">
-						Page {page} of {totalPages}
-					</span>
-					<button
-						onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-						disabled={page === totalPages}
-						className="rounded-[6px] border border-[#DDE2E5] px-[12px] py-[6px] font-lato text-[13px] text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-40"
-					>
-						Next
-					</button>
-				</div>
-			)}
+				{/* Pagination — always inside the card so it's visible without scrolling */}
+				<PaginationBar
+					page={page}
+					totalPages={totalPages}
+					totalRecords={totalRecords}
+					onPrev={() => setPage(p => Math.max(1, p - 1))}
+					onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+					onGoTo={setPage}
+				/>
+			</div>
 		</div>
 	);
 }
