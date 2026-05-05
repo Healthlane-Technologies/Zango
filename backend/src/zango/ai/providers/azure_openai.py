@@ -19,7 +19,6 @@ from zango.ai.providers.registry import register_provider
 
 @register_provider("azure_openai", "Azure OpenAI", icon="azure.svg")
 class AzureOpenAIProvider(BaseLLMProvider):
-
     supported_models = []  # Azure models depend on deployment, configured per-app
 
     config_fields = [
@@ -127,7 +126,11 @@ class AzureOpenAIProvider(BaseLLMProvider):
         if isinstance(response_format, dict):
             api_kwargs["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "response", "strict": True, "schema": response_format},
+                "json_schema": {
+                    "name": "response",
+                    "strict": True,
+                    "schema": response_format,
+                },
             }
         elif response_format == "json":
             api_kwargs["response_format"] = {"type": "json_object"}
@@ -241,6 +244,52 @@ class AzureOpenAIProvider(BaseLLMProvider):
             raise LLMAPIError(
                 str(e), status_code=getattr(e, "status_code", None), original_error=e
             ) from e
+
+    @classmethod
+    def fetch_models(cls, config: dict) -> list[dict]:
+        """
+        Azure OpenAI doesn't have a standard "list chat models" endpoint —
+        models are tied to deployments configured in the Azure portal.
+        We call GET /openai/deployments to list what's deployed under this resource.
+        Falls back to an empty list with a clear error on auth failure.
+        """
+        import openai
+
+        try:
+            client = openai.AzureOpenAI(
+                api_key=config["api_key"],
+                azure_endpoint=config["azure_endpoint"],
+                api_version=config.get("api_version", "2024-10-21"),
+                max_retries=0,
+            )
+            raw = client.models.list()
+        except openai.AuthenticationError as e:
+            raise ValueError(
+                "Invalid credentials. Check your Azure API key and endpoint."
+            ) from e
+        except openai.APIConnectionError as e:
+            raise ValueError(
+                "Could not reach your Azure OpenAI endpoint. Verify the endpoint URL."
+            ) from e
+        except openai.APIError as e:
+            raise ValueError(f"Azure OpenAI API error: {e}") from e
+
+        models = []
+        for m in raw.data:
+            models.append(
+                {
+                    "id": m.id,
+                    "name": m.id,  # Azure deployment names are the model ID
+                    "context_window": 128000,
+                    "max_output_tokens": 16384,
+                    "input_cost_per_mtok": None,
+                    "output_cost_per_mtok": None,
+                    "supports_tools": True,
+                    "supports_vision": False,
+                    "supports_streaming": True,
+                }
+            )
+        return models
 
     def validate_config(self):
         try:

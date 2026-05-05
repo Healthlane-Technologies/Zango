@@ -333,6 +333,57 @@ class AnthropicProvider(BaseLLMProvider):
                 str(e), status_code=getattr(e, "status_code", None), original_error=e
             ) from e
 
+    @classmethod
+    def fetch_models(cls, config: dict) -> list[dict]:
+        """
+        Fetch available models live from GET /v1/models using the supplied API key.
+        Falls back to the hardcoded supported_models list if the call fails unexpectedly.
+        Raises a descriptive exception on auth / credential errors.
+        """
+        import anthropic
+
+        client = anthropic.Anthropic(api_key=config["api_key"], max_retries=0)
+        try:
+            page = client.models.list(limit=100)
+        except anthropic.AuthenticationError as e:
+            raise ValueError(
+                "Invalid API key. Please check your Anthropic API key and try again."
+            ) from e
+        except anthropic.PermissionDeniedError as e:
+            raise ValueError(
+                "Access denied. Your API key does not have permission to list models."
+            ) from e
+        except anthropic.APIConnectionError as e:
+            raise ValueError(
+                "Could not reach the Anthropic API. Check your network connection."
+            ) from e
+        except anthropic.APIError as e:
+            raise ValueError(f"Anthropic API error: {e}") from e
+
+        models = []
+        for m in page.data:
+            caps = getattr(m, "capabilities", None)
+            supports_vision = (
+                getattr(getattr(caps, "image_input", None), "supported", False)
+                if caps
+                else False
+            )
+            supports_tools = True  # All current Claude models support tools
+            models.append(
+                {
+                    "id": m.id,
+                    "name": m.display_name,
+                    "context_window": getattr(m, "max_input_tokens", 200000),
+                    "max_output_tokens": getattr(m, "max_tokens", 8192),
+                    "input_cost_per_mtok": None,  # Not exposed by the API
+                    "output_cost_per_mtok": None,
+                    "supports_tools": supports_tools,
+                    "supports_vision": supports_vision,
+                    "supports_streaming": True,
+                }
+            )
+        return models
+
     def validate_config(self):
         try:
             self._client.messages.create(

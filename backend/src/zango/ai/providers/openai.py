@@ -314,6 +314,78 @@ class OpenAIProvider(BaseLLMProvider):
                 str(e), status_code=getattr(e, "status_code", None), original_error=e
             ) from e
 
+    # Models that are chat-capable (prefix match). The OpenAI /models endpoint
+    # returns everything including embeddings, TTS, whisper, etc. — we only
+    # want models users would select for chat/completion workloads.
+    _CHAT_MODEL_PREFIXES = (
+        "gpt-4",
+        "gpt-3.5",
+        "o1",
+        "o3",
+        "o4",
+        "chatgpt",
+    )
+
+    @classmethod
+    def fetch_models(cls, config: dict) -> list[dict]:
+        """
+        Fetch available chat models live from GET /v1/models using the supplied API key.
+        Filters to known chat-capable model families.
+        Raises a descriptive exception on auth / credential errors.
+        """
+        import openai
+
+        kwargs = {"api_key": config["api_key"], "max_retries": 0}
+        if config.get("organization"):
+            kwargs["organization"] = config["organization"]
+        client = openai.OpenAI(**kwargs)
+
+        try:
+            all_models = client.models.list()
+        except openai.AuthenticationError as e:
+            raise ValueError(
+                "Invalid API key. Please check your OpenAI API key and try again."
+            ) from e
+        except openai.PermissionDeniedError as e:
+            raise ValueError(
+                "Access denied. Your API key does not have permission to list models."
+            ) from e
+        except openai.APIConnectionError as e:
+            raise ValueError(
+                "Could not reach the OpenAI API. Check your network connection."
+            ) from e
+        except openai.APIError as e:
+            raise ValueError(f"OpenAI API error: {e}") from e
+
+        chat_models = [
+            m
+            for m in all_models.data
+            if any(m.id.startswith(p) for p in cls._CHAT_MODEL_PREFIXES)
+            and not any(excl in m.id for excl in ("instruct", "vision-preview"))
+        ]
+        # Sort: newest first (OpenAI model IDs embed dates in YYYY-MM-DD form)
+        chat_models.sort(key=lambda m: m.id, reverse=True)
+
+        # Look up capability metadata from hardcoded list where available
+        known = {m["id"]: m for m in cls.supported_models}
+        models = []
+        for m in chat_models:
+            base = known.get(m.id, {})
+            models.append(
+                {
+                    "id": m.id,
+                    "name": base.get("name") or m.id,
+                    "context_window": base.get("context_window", 128000),
+                    "max_output_tokens": base.get("max_output_tokens", 16384),
+                    "input_cost_per_mtok": base.get("input_cost_per_mtok"),
+                    "output_cost_per_mtok": base.get("output_cost_per_mtok"),
+                    "supports_tools": base.get("supports_tools", True),
+                    "supports_vision": base.get("supports_vision", False),
+                    "supports_streaming": base.get("supports_streaming", True),
+                }
+            )
+        return models
+
     def validate_config(self):
         try:
             self._client.chat.completions.create(

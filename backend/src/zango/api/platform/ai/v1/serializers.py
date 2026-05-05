@@ -74,7 +74,7 @@ class AppLLMProviderListSerializer(serializers.ModelSerializer):
         return "active" if obj.is_enabled else "inactive"
 
     def get_models_count(self, obj):
-        return obj.enabled_models.filter(is_enabled=True).count()
+        return obj.enabled_models.count()
 
     def get_masked_config(self, obj):
         """Return config with secrets masked."""
@@ -102,6 +102,12 @@ class AppLLMProviderCreateSerializer(serializers.Serializer):
     provider_slug = serializers.CharField(max_length=50)
     config = serializers.DictField()
     default_model = serializers.CharField(max_length=100)
+    # Optional: list of model dicts fetched from the live API by the wizard.
+    # If provided, these are stored as AppLLMProviderModel records instead of
+    # the provider class's static supported_models list.
+    fetched_models = serializers.ListField(
+        child=serializers.DictField(), required=False, default=list
+    )
     rate_limit_rpm = serializers.IntegerField(
         required=False, allow_null=True, default=None
     )
@@ -160,18 +166,25 @@ class AppLLMProviderCreateSerializer(serializers.Serializer):
                     {"config": f"API key validation failed: {error_msg}"}
                 )
 
-            # Fetch available models and store them for use in create()
-            try:
-                data["_resolved_models"] = client.get_models()
-            except Exception:
-                # Fall back to static supported_models list
-                data["_resolved_models"] = getattr(provider_cls, "supported_models", [])
+            # Use fetched_models from the wizard if provided; otherwise fall back
+            # to the provider's static supported_models list.
+            fetched_models = data.get("fetched_models") or []
+            if fetched_models:
+                data["_resolved_models"] = fetched_models
+            else:
+                try:
+                    data["_resolved_models"] = client.get_models()
+                except Exception:
+                    data["_resolved_models"] = getattr(
+                        provider_cls, "supported_models", []
+                    )
 
         return data
 
     def create(self, validated_data):
         # Pop internal keys not part of the model fields
         resolved_models = validated_data.pop("_resolved_models", None)
+        validated_data.pop("fetched_models", None)
 
         config = validated_data.pop("config")
         encrypted = encrypt_config(config)

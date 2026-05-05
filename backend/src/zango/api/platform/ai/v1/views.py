@@ -42,6 +42,49 @@ from .serializers import (
 )
 
 
+_AUTH_ERROR_FRAGMENTS = [
+    "invalid api key",
+    "authentication",
+    "unauthorized",
+    "access denied",
+    "permission denied",
+    "invalidclienttokenid",
+    "invalidsignatureexception",
+    "accessdeniedexception",
+    "unauthorizedexception",
+    "unrecognizedclientexception",
+    "authfailure",
+    "invalid aws credentials",
+    "invalid credentials",
+    "incorrect api key",
+    "api key",
+    "forbidden",
+    # connection/endpoint failures are also definitive config errors — user must fix before proceeding
+    "could not connect",
+    "connection error",
+    "endpoint url",
+    "name or service not known",
+    "could not reach",
+    "failed to establish",
+    "nodename nor servname",
+    "getaddrinfo failed",
+]
+
+
+def _classify_fetch_error(message: str) -> str:
+    """
+    Classify a fetch-models error as 'auth_error' (block step 2) or 'unknown_error' (allow fallback).
+    Both credential failures and endpoint/connection failures are treated as config errors that
+    the user must fix before proceeding — there is no valid reason to advance to model selection
+    if the provider cannot be reached at all.
+    """
+    lower = message.lower()
+    for fragment in _AUTH_ERROR_FRAGMENTS:
+        if fragment in lower:
+            return "auth_error"
+    return "unknown_error"
+
+
 @method_decorator(set_app_schema_path, name="dispatch")
 class AvailableProvidersViewAPIV1(ZangoGenericPlatformAPIView):
     """
@@ -56,6 +99,53 @@ class AvailableProvidersViewAPIV1(ZangoGenericPlatformAPIView):
             return get_api_response(True, {"providers": providers}, 200)
         except Exception as e:
             return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class ProviderFetchModelsViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    POST /api/v1/apps/<app_uuid>/ai/providers/fetch-models/
+    Calls the provider's live models API with the supplied (unsaved) config.
+    Returns available models without writing anything to the database.
+    Body: { "provider_slug": "anthropic", "config": { "api_key": "..." } }
+    """
+
+    def post(self, request, app_uuid, *args, **kwargs):
+        provider_slug = request.data.get("provider_slug", "").strip()
+        config = request.data.get("config", {})
+
+        if not provider_slug:
+            return get_api_response(
+                False, {"message": "provider_slug is required"}, 400
+            )
+        if not isinstance(config, dict) or not config:
+            return get_api_response(False, {"message": "config is required"}, 400)
+
+        try:
+            from zango.ai.providers.registry import get_provider_class
+
+            provider_cls = get_provider_class(provider_slug)
+        except Exception:
+            return get_api_response(
+                False, {"message": f"Unknown provider: {provider_slug}"}, 400
+            )
+
+        try:
+            models = provider_cls.fetch_models(config)
+            return get_api_response(True, {"models": models}, 200)
+        except ValueError as e:
+            # Human-readable auth/config errors raised by fetch_models()
+            msg = str(e)
+            error_type = _classify_fetch_error(msg)
+            return get_api_response(
+                False, {"message": msg, "error_type": error_type}, 400
+            )
+        except Exception as e:
+            msg = f"Failed to fetch models: {e}"
+            error_type = _classify_fetch_error(str(e))
+            return get_api_response(
+                False, {"message": msg, "error_type": error_type}, 500
+            )
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
@@ -267,6 +357,45 @@ class ProviderToggleViewAPIV1(ZangoGenericPlatformAPIView):
             return get_api_response(
                 True, {"message": f"Provider {status} successfully"}, 200
             )
+        except AppLLMProvider.DoesNotExist:
+            return get_api_response(False, {"message": "Provider not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class ProviderModelToggleViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    POST /api/v1/apps/<app_uuid>/ai/providers/<provider_id>/models/<model_id>/toggle/
+    Enables or disables a single AppLLMProviderModel record.
+    Body: { "is_enabled": true/false }
+    """
+
+    def post(self, request, app_uuid, provider_id, model_id, *args, **kwargs):
+        try:
+            from zango.apps.ai.models.provider import AppLLMProviderModel
+
+            model_obj = AppLLMProviderModel.objects.get(
+                provider_id=provider_id, id=model_id
+            )
+            is_enabled = request.data.get("is_enabled")
+            if is_enabled is None:
+                return get_api_response(
+                    False, {"message": "is_enabled field is required"}, 400
+                )
+            model_obj.is_enabled = bool(is_enabled)
+            model_obj.save()
+            return get_api_response(
+                True,
+                {
+                    "message": f"Model {'enabled' if model_obj.is_enabled else 'disabled'} successfully",
+                    "model_id": model_obj.id,
+                    "is_enabled": model_obj.is_enabled,
+                },
+                200,
+            )
+        except AppLLMProviderModel.DoesNotExist:
+            return get_api_response(False, {"message": "Model not found"}, 404)
         except AppLLMProvider.DoesNotExist:
             return get_api_response(False, {"message": "Provider not found"}, 404)
         except Exception as e:

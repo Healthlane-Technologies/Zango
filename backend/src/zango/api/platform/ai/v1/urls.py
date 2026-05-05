@@ -19,6 +19,8 @@ from .views import (
     PromptVersionPromoteViewAPIV1,
     PromptVersionsListViewAPIV1,
     ProviderDetailViewAPIV1,
+    ProviderFetchModelsViewAPIV1,
+    ProviderModelToggleViewAPIV1,
     ProviderResetBudgetViewAPIV1,
     ProvidersListViewAPIV1,
     ProviderToggleViewAPIV1,
@@ -34,6 +36,7 @@ from .views import (
 urlpatterns = [
     # Available providers (registry metadata) — must come before <int:provider_id>
     path("providers/available/", AvailableProvidersViewAPIV1.as_view()),
+    path("providers/fetch-models/", ProviderFetchModelsViewAPIV1.as_view()),
     # Provider CRUD
     path("providers/", ProvidersListViewAPIV1.as_view()),
     path("providers/<int:provider_id>/", ProviderDetailViewAPIV1.as_view()),
@@ -45,6 +48,10 @@ urlpatterns = [
     path(
         "providers/<int:provider_id>/toggle/",
         ProviderToggleViewAPIV1.as_view(),
+    ),
+    path(
+        "providers/<int:provider_id>/models/<int:model_id>/toggle/",
+        ProviderModelToggleViewAPIV1.as_view(),
     ),
     path(
         "providers/<int:provider_id>/usage/",

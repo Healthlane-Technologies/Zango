@@ -321,6 +321,24 @@ class BaseLLMProvider(ABC):
         Can be static (from supported_models) or dynamic (API call).
         """
 
+    @classmethod
+    def fetch_models(cls, config: dict) -> list[dict]:
+        """
+        Fetch available models from the provider API using the supplied config.
+        Called before the provider is saved — credentials may not yet be stored in DB.
+
+        Returns a list of model dicts in the same shape as supported_models:
+            {"id": str, "name": str, "context_window": int, "max_output_tokens": int,
+             "supports_tools": bool, "supports_vision": bool, "supports_streaming": bool}
+
+        Default: instantiates the provider with config and calls get_models().
+        Override in subclasses that support a live /models API endpoint.
+
+        Raises an exception (with a human-readable message) on auth failure.
+        """
+        instance = cls(config)
+        return instance.get_models()
+
     @abstractmethod
     def estimate_tokens(self, text: str) -> int:
         """

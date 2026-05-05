@@ -304,6 +304,89 @@ function ToolSelector({ selectedTools, onChange, availableTools }) {
 	);
 }
 
+/* ─── Searchable Select ─── */
+function SearchableSelect({ value, onChange, options, placeholder, disabled }) {
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState('');
+	const selected = options.find((o) => o.value === value);
+
+	const filtered = search.trim()
+		? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()) || o.sublabel?.toLowerCase().includes(search.toLowerCase()))
+		: [...options].sort((a, b) => (b.value === value ? 1 : 0) - (a.value === value ? 1 : 0));
+
+	return (
+		<div className="relative">
+			<button
+				type="button"
+				disabled={disabled}
+				onClick={() => { setOpen(!open); setSearch(''); }}
+				className={`flex w-full items-center justify-between rounded-[6px] border px-[12px] py-[10px] font-lato text-[13px] outline-none transition-colors ${
+					disabled ? 'border-[#DDE2E5] bg-[#F9FAFB] text-[#9CA3AF]' : open ? 'border-[#5048ED]' : 'border-[#DDE2E5] hover:border-[#9CA3AF]'
+				}`}
+			>
+				{selected ? (
+					<span className="flex-1 truncate text-left text-[#111827]">
+						{selected.label}
+						{selected.sublabel && <span className="ml-[6px] font-mono text-[11px] text-[#9CA3AF]">{selected.sublabel}</span>}
+					</span>
+				) : (
+					<span className="flex-1 text-left text-[#9CA3AF]">{disabled ? 'Select a provider first' : placeholder}</span>
+				)}
+				<svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`ml-[6px] shrink-0 text-[#9CA3AF] transition-transform ${open ? 'rotate-180' : ''}`}>
+					<path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+				</svg>
+			</button>
+
+			{open && !disabled && (
+				<>
+					<div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+					<div className="absolute z-20 mt-[4px] w-full rounded-[8px] border border-[#E5E7EB] bg-white shadow-lg">
+						<div className="border-b border-[#F3F4F6] p-[8px]">
+							<div className="relative">
+								<svg className="absolute left-[8px] top-1/2 -translate-y-1/2 text-[#9CA3AF]" width="13" height="13" viewBox="0 0 14 14" fill="none">
+									<circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
+									<path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+								</svg>
+								<input
+									autoFocus
+									type="text"
+									value={search}
+									onChange={(e) => setSearch(e.target.value)}
+									placeholder="Search…"
+									className="w-full rounded-[4px] border border-[#E5E7EB] py-[6px] pl-[26px] pr-[8px] font-lato text-[12px] outline-none focus:border-[#5048ED]"
+								/>
+							</div>
+						</div>
+						<div className="max-h-[220px] overflow-y-auto">
+							{filtered.length === 0 ? (
+								<p className="px-[12px] py-[10px] font-lato text-[12px] text-[#9CA3AF]">No matches</p>
+							) : filtered.map((o) => (
+								<button
+									key={o.value}
+									type="button"
+									onClick={() => { onChange(o.value); setOpen(false); setSearch(''); }}
+									className={`flex w-full items-center justify-between px-[12px] py-[9px] text-left transition-colors hover:bg-[#F9FAFB] ${value === o.value ? 'bg-[#F5F3FF]' : ''}`}
+								>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-lato text-[13px] text-[#111827]">{o.label}</p>
+										{o.sublabel && <p className="font-mono text-[11px] text-[#9CA3AF]">{o.sublabel}</p>}
+									</div>
+									{value === o.value && (
+										<svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="ml-[8px] shrink-0">
+											<circle cx="7" cy="7" r="6" fill="#5048ED"/>
+											<path d="M4 7L6 9L10 5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+										</svg>
+									)}
+								</button>
+							))}
+						</div>
+					</div>
+				</>
+			)}
+		</div>
+	);
+}
+
 /* ─── Full-Page Agent Builder ─── */
 function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts, availableTools, appId, triggerApi, onPromptCreated }) {
 	if (!show) return null;
@@ -418,18 +501,16 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 														</span>
 													)}
 												</div>
-												<select
-													name="provider_id"
-													value={formik.values.provider_id}
-													onChange={(e) => { formik.setFieldValue('provider_id', e.target.value); formik.setFieldValue('model', ''); }}
-													onBlur={formik.handleBlur}
-													className="w-full rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
-												>
-													<option value="">Select a provider...</option>
-													{providers.filter((p) => p.is_enabled).map((p) => (
-														<option key={p.id} value={p.id}>{p.name} ({p.provider_slug})</option>
-													))}
-												</select>
+																<SearchableSelect
+													value={String(formik.values.provider_id || '')}
+													onChange={(val) => {
+														formik.setFieldValue('provider_id', val);
+														const prov = providers.find((p) => String(p.id) === val);
+														formik.setFieldValue('model', prov?.default_model || '');
+													}}
+													placeholder="Select a provider…"
+													options={providers.filter((p) => p.is_enabled).map((p) => ({ value: String(p.id), label: p.name, sublabel: p.provider_slug }))}
+												/>
 												{formik.touched.provider_id && formik.errors.provider_id && (
 													<p className="mt-[4px] font-lato text-[12px] text-[#EF4444]">{formik.errors.provider_id}</p>
 												)}
@@ -437,22 +518,21 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 
 											<div>
 												<label className="mb-[4px] block font-lato text-[13px] font-semibold text-[#374151]">Model</label>
-												<select
-													name="model"
-													value={formik.values.model}
-													onChange={formik.handleChange}
-													onBlur={formik.handleBlur}
-													disabled={!formik.values.provider_id}
-													className="w-full rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] outline-none focus:border-[#5048ED] disabled:bg-[#F9FAFB] disabled:text-[#9CA3AF]"
-												>
-													<option value="">{formik.values.provider_id ? 'Select a model...' : 'Select a provider first'}</option>
-													{models.map((m) => (
-														<option key={m.model_id} value={m.model_id}>{m.display_name} ({m.model_id})</option>
-													))}
-													{models.length === 0 && selectedProvider?.default_model && (
-														<option value={selectedProvider.default_model}>{selectedProvider.default_model}</option>
-													)}
-												</select>
+												{(() => {
+													const modelOptions = [
+														...models.map((m) => ({ value: m.model_id, label: m.display_name || m.model_id, sublabel: m.display_name && m.display_name !== m.model_id ? m.model_id : undefined })),
+														...(models.length === 0 && selectedProvider?.default_model ? [{ value: selectedProvider.default_model, label: selectedProvider.default_model }] : []),
+													];
+													return (
+														<SearchableSelect
+															value={formik.values.model}
+															onChange={(val) => formik.setFieldValue('model', val)}
+															placeholder="Select a model…"
+															disabled={!formik.values.provider_id}
+															options={modelOptions}
+														/>
+													);
+												})()}
 												{formik.touched.model && formik.errors.model && (
 													<p className="mt-[4px] font-lato text-[12px] text-[#EF4444]">{formik.errors.model}</p>
 												)}
