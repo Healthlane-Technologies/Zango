@@ -9,12 +9,9 @@ from .views import (
     AgentTestViewAPIV1,
     AgentToggleViewAPIV1,
     AvailableProvidersViewAPIV1,
-    ConfirmationDecideViewAPIV1,
-    ConfirmationsListViewAPIV1,
     InvocationDetailViewAPIV1,
     InvocationListViewAPIV1,
     InvocationStatsViewAPIV1,
-    PendingConfirmationsCountViewAPIV1,
     PromptCompareViewAPIV1,
     PromptDetailViewAPIV1,
     PromptsListViewAPIV1,
@@ -92,13 +89,6 @@ urlpatterns = [
     path("tools/sections/", ToolSectionsViewAPIV1.as_view()),
     path("tools/", ToolsListViewAPIV1.as_view()),
     path("tools/<int:tool_id>/", ToolDetailViewAPIV1.as_view()),
-    # Confirmations — pending-count must come before <int:confirmation_id>
-    path("confirmations/pending-count/", PendingConfirmationsCountViewAPIV1.as_view()),
-    path("confirmations/", ConfirmationsListViewAPIV1.as_view()),
-    path(
-        "confirmations/<int:confirmation_id>/decide/",
-        ConfirmationDecideViewAPIV1.as_view(),
-    ),
     # Invocation logs — stats must come before <int:invocation_id>
     path("invocations/stats/", InvocationStatsViewAPIV1.as_view()),
     path("invocations/", InvocationListViewAPIV1.as_view()),

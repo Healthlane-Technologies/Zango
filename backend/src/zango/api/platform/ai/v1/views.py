@@ -17,7 +17,6 @@ from zango.apps.ai.models import (
     AppLLMPromptVersion,
     AppLLMProvider,
     AppLLMTool,
-    AppLLMToolConfirmation,
 )
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
@@ -38,10 +37,8 @@ from .serializers import (
     AppLLMProviderCreateSerializer,
     AppLLMProviderListSerializer,
     AppLLMProviderUpdateSerializer,
-    AppLLMToolConfirmationListSerializer,
     AppLLMToolDetailSerializer,
     AppLLMToolListSerializer,
-    ConfirmationDecisionSerializer,
 )
 
 
@@ -1213,12 +1210,6 @@ class ToolsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 .values("section")
                 .distinct()
                 .count(),
-                "confirmable": AppLLMTool.objects.filter(
-                    is_active=True, requires_confirmation=True
-                ).count(),
-                "pending_confirmations": AppLLMToolConfirmation.objects.filter(
-                    status="pending"
-                ).count(),
             }
 
             paginated = self.paginate_queryset(tools, request, view=self)
@@ -1280,69 +1271,5 @@ class ToolSectionsViewAPIV1(ZangoGenericPlatformAPIView):
                 .order_by("section")
             )
             return get_api_response(True, {"sections": list(sections)}, 200)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class ConfirmationsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
-    pagination_class = ZangoAPIPagination
-
-    def get(self, request, app_uuid, *args, **kwargs):
-        try:
-            qs = AppLLMToolConfirmation.objects.select_related(
-                "invocation", "tool"
-            ).all()
-            status_filter = request.GET.get("status", "pending")
-            if status_filter != "all":
-                qs = qs.filter(status=status_filter)
-            paginated = self.paginate_queryset(qs, request, view=self)
-            serializer = AppLLMToolConfirmationListSerializer(paginated, many=True)
-            paginated_data = self.get_paginated_response_data(serializer.data)
-            return get_api_response(True, {"confirmations": paginated_data}, 200)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class ConfirmationDecideViewAPIV1(ZangoGenericPlatformAPIView):
-    def post(self, request, app_uuid, confirmation_id, *args, **kwargs):
-        try:
-            serializer = ConfirmationDecisionSerializer(data=request.data)
-            if not serializer.is_valid():
-                return get_api_response(False, {"message": str(serializer.errors)}, 400)
-            from zango.ai.tools.confirmation import resume_after_confirmation
-
-            result = resume_after_confirmation(
-                confirmation_id=confirmation_id,
-                decision=serializer.validated_data["decision"],
-                decided_by_user=getattr(request, "user", None),
-                denial_reason=serializer.validated_data.get("reason", ""),
-            )
-            return get_api_response(
-                True,
-                {
-                    "message": f"Tool call {serializer.validated_data['decision']}",
-                    "result": {
-                        "output": result.output if result else None,
-                        "status": result.status if result else None,
-                    },
-                },
-                200,
-            )
-        except AppLLMToolConfirmation.DoesNotExist:
-            return get_api_response(False, {"message": "Confirmation not found"}, 404)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class PendingConfirmationsCountViewAPIV1(ZangoGenericPlatformAPIView):
-    def get(self, request, app_uuid, *args, **kwargs):
-        try:
-            count = AppLLMToolConfirmation.objects.filter(
-                status="pending", expires_at__gt=timezone.now()
-            ).count()
-            return get_api_response(True, {"count": count}, 200)
         except Exception as e:
             return get_api_response(False, {"message": str(e)}, 500)

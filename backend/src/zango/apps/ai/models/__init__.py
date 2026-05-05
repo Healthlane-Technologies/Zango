@@ -1,5 +1,4 @@
 from .agent import AppLLMAgent
-from .confirmation import AppLLMToolConfirmation
 from .invocation import AppLLMInvocation
 from .memory import AppLLMMemoryMessage, AppLLMMemorySession
 from .prompt import AppLLMPrompt, AppLLMPromptVersion
@@ -9,7 +8,6 @@ from .tool import AppLLMTool, AppLLMToolCall
 
 __all__ = [
     "AppLLMAgent",
-    "AppLLMToolConfirmation",
     "AppLLMInvocation",
     "AppLLMMemoryMessage",
     "AppLLMMemorySession",

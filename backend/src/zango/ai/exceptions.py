@@ -126,17 +126,4 @@ class ToolTimeout(ZangoAIError):
     def __init__(self, tool_name, timeout_seconds):
         self.tool_name = tool_name
         self.timeout_seconds = timeout_seconds
-        super().__init__(
-            f"Tool '{tool_name}' timed out after {timeout_seconds}s."
-        )
-
-
-class ConfirmationRequired(ZangoAIError):
-    """Tool call requires human confirmation before execution."""
-
-    def __init__(self, tool_name, confirmation_id):
-        self.tool_name = tool_name
-        self.confirmation_id = confirmation_id
-        super().__init__(
-            f"Tool '{tool_name}' requires confirmation (id={confirmation_id})."
-        )
+        super().__init__(f"Tool '{tool_name}' timed out after {timeout_seconds}s.")

@@ -8,9 +8,11 @@ import hashlib
 import inspect
 import json
 import typing
+
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, get_args, get_origin, get_type_hints
+from typing import Any, Callable, get_args, get_origin, get_type_hints
+
 
 # Sentinel for "no default provided"
 _MISSING = object()
@@ -54,20 +56,16 @@ class ToolMeta:
     description: str
     section: str
     safety: ToolSafety
-    requires_confirmation: bool
     timeout_seconds: int
     rate_limit: int | None
     parameters_schema: dict
     python_path: str
     return_type: str | None
-    display_func: Callable | None
     schema_hash: str
 
 
 class _ToolDecorator:
-    """
-    Wrapper returned by @tool that supports the .display sub-decorator.
-    """
+    """Wrapper returned by @tool."""
 
     def __init__(self, func: Callable, meta: ToolMeta):
         self._func = func
@@ -80,19 +78,12 @@ class _ToolDecorator:
     def __call__(self, *args, **kwargs):
         return self._func(*args, **kwargs)
 
-    def display(self, display_func: Callable) -> Callable:
-        """Register a display function for confirmation UI."""
-        self._meta.display_func = display_func
-        self._func._tool_meta = self._meta
-        return display_func
-
 
 def tool(
     name: str,
     description: str,
     section: str = "general",
     safety: ToolSafety = ToolSafety.READ_ONLY,
-    requires_confirmation: bool = False,
     timeout_seconds: int = 30,
     rate_limit: int | None = None,
 ) -> Callable:
@@ -104,7 +95,6 @@ def tool(
         description: What this tool does. Written FOR the LLM.
         section: Grouping for panel UI (e.g., "assessments", "notifications").
         safety: READ_ONLY, WRITE, or EXTERNAL.
-        requires_confirmation: If True, execution needs human approval.
         timeout_seconds: Max execution time before kill.
         rate_limit: Max calls per minute. None = unlimited.
     """
@@ -130,13 +120,11 @@ def tool(
             description=description,
             section=section,
             safety=safety,
-            requires_confirmation=requires_confirmation,
             timeout_seconds=timeout_seconds,
             rate_limit=rate_limit,
             parameters_schema=schema,
             python_path=python_path,
             return_type=return_type,
-            display_func=None,
             schema_hash=schema_hash,
         )
 

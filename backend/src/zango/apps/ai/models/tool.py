@@ -28,12 +28,12 @@ class AppLLMTool(FullAuditMixin):
         help_text="JSON Schema for the tool's input parameters"
     )
     python_path = models.CharField(max_length=255)
-    safety = models.CharField(max_length=20, choices=SAFETY_CHOICES, default="read_only")
-    requires_confirmation = models.BooleanField(default=False)
+    safety = models.CharField(
+        max_length=20, choices=SAFETY_CHOICES, default="read_only"
+    )
     timeout_seconds = models.IntegerField(default=30)
     rate_limit_rpm = models.IntegerField(null=True, blank=True)
     return_type = models.CharField(max_length=100, null=True, blank=True)
-    has_display_func = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     schema_hash = models.CharField(max_length=64)
 
@@ -67,15 +67,6 @@ class AppLLMToolCall(FullAuditMixin):
         ("pending", "Pending"),
     ]
 
-    CONFIRMATION_CHOICES = [
-        ("auto_approved", "Auto-approved"),
-        ("auto_approved_by_policy", "Auto-approved by policy"),
-        ("approved", "Approved by human"),
-        ("denied", "Denied by human"),
-        ("denied_by_policy", "Denied by policy"),
-        ("expired", "Expired"),
-    ]
-
     invocation = models.ForeignKey(
         "ai.AppLLMInvocation",
         on_delete=models.CASCADE,
@@ -92,19 +83,6 @@ class AppLLMToolCall(FullAuditMixin):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     error_message = models.TextField(null=True, blank=True)
     error_traceback = models.TextField(null=True, blank=True)
-
-    # Confirmation tracking
-    confirmation = models.ForeignKey(
-        "ai.AppLLMToolConfirmation",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="tool_call",
-    )
-    confirmation_decision = models.CharField(
-        max_length=30, null=True, blank=True, choices=CONFIRMATION_CHOICES
-    )
-    confirmation_decided_by = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         ordering = ["invocation", "round_number", "created_at"]

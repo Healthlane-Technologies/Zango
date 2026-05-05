@@ -26,13 +26,6 @@ function SafetyBadge({ safety }) {
 	);
 }
 
-function ConfirmBadge({ requires }) {
-	return requires ? (
-		<span className="font-lato text-[12px] font-medium text-[#D97706]">Yes</span>
-	) : (
-		<span className="font-lato text-[12px] text-[#9CA3AF]">No</span>
-	);
-}
 
 function LatencyColor({ ms }) {
 	const val = ms || 0;
@@ -53,59 +46,6 @@ function JsonBlock({ data, maxHeight = '200px' }) {
 	);
 }
 
-/* ─── Pending Confirmations Banner ─── */
-function PendingConfirmationsBanner({ confirmations, onDecide, deciding }) {
-	if (!confirmations || confirmations.length === 0) return null;
-
-	return (
-		<div className="rounded-[12px] border border-[#F59E0B] bg-[#FFFBEB] p-[20px]">
-			<div className="mb-[12px] flex items-center justify-between">
-				<div className="flex items-center gap-[8px]">
-					<span className="text-[16px]">&#9888;</span>
-					<span className="font-lato text-[14px] font-semibold text-[#92400E]">
-						{confirmations.length} Pending Tool Confirmation{confirmations.length > 1 ? 's' : ''}
-					</span>
-				</div>
-			</div>
-			<div className="flex flex-col gap-[8px]">
-				{confirmations.map((c) => (
-					<div key={c.id} className="flex items-center gap-[16px] rounded-[8px] border border-[#FDE68A] bg-white px-[16px] py-[12px]">
-						<div className="flex-1 min-w-0">
-							<div className="flex items-center gap-[8px]">
-								<span className="font-mono font-lato text-[13px] font-semibold text-[#111827]">{c.tool_name}</span>
-								{c.agent_name && (
-									<span className="font-lato text-[12px] text-[#6B7280]">via {c.agent_name}</span>
-								)}
-							</div>
-							<p className="mt-[2px] font-lato text-[12px] text-[#6B7280] truncate">
-								{c.tool_input_display || JSON.stringify(c.tool_input).slice(0, 100)}
-							</p>
-						</div>
-						<span className="flex-shrink-0 font-lato text-[12px] text-[#D97706]">
-							{c.seconds_remaining > 0 ? `${Math.floor(c.seconds_remaining / 60)}m ${c.seconds_remaining % 60}s` : 'Expiring'}
-						</span>
-						<div className="flex gap-[6px]">
-							<button
-								onClick={() => onDecide(c.id, 'approved')}
-								disabled={deciding}
-								className="rounded-[6px] bg-[#10B981] px-[12px] py-[5px] font-lato text-[12px] font-medium text-white hover:bg-[#059669] disabled:opacity-50"
-							>
-								Approve
-							</button>
-							<button
-								onClick={() => onDecide(c.id, 'denied')}
-								disabled={deciding}
-								className="rounded-[6px] border border-[#EF4444] px-[12px] py-[5px] font-lato text-[12px] font-medium text-[#EF4444] hover:bg-[#FEF2F2] disabled:opacity-50"
-							>
-								Deny
-							</button>
-						</div>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-}
 
 /* ─── Tool Detail (expanded row) ─── */
 function ToolDetail({ tool, detail, loading }) {
@@ -125,21 +65,34 @@ function ToolDetail({ tool, detail, loading }) {
 		<div className="flex gap-[32px]">
 			{/* Left: metadata + params */}
 			<div className="flex-1 min-w-0">
+				{d.description && (
+					<div className="mb-[16px]">
+						<h4 className="mb-[4px] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Description</h4>
+						<p className="font-lato text-[13px] text-[#374151]">{d.description}</p>
+					</div>
+				)}
 				<h4 className="mb-[12px] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Tool Metadata</h4>
-				<div className="mb-[16px] grid grid-cols-3 gap-[12px]">
-					{[
-						['Python Path', d.python_path],
-						['Return Type', d.return_type || '-'],
-						['Timeout', `${d.timeout_seconds}s`],
-						['Rate Limit', d.rate_limit_rpm ? `${d.rate_limit_rpm}/min` : 'Unlimited'],
-						['Display Func', d.has_display_func ? 'Yes' : 'No'],
-						['Schema Hash', d.schema_hash],
-					].map(([label, val]) => (
-						<div key={label}>
-							<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">{label}</span>
-							<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827]">{val}</p>
-						</div>
-					))}
+				<div className="mb-[16px] grid grid-cols-2 gap-[12px]">
+					<div>
+						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Module Path</span>
+						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827] break-all">{d.python_path}</p>
+					</div>
+					<div>
+						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Return Type</span>
+						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827]">{d.return_type || '-'}</p>
+					</div>
+					<div>
+						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Timeout</span>
+						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827]">{d.timeout_seconds != null ? `${d.timeout_seconds}s` : '-'}</p>
+					</div>
+					<div>
+						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Rate Limit</span>
+						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827]">{d.rate_limit_rpm ? `${d.rate_limit_rpm}/min` : 'Unlimited'}</p>
+					</div>
+					<div className="col-span-2">
+						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Schema Hash</span>
+						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827] break-all">{d.schema_hash}</p>
+					</div>
 				</div>
 
 				{/* Parameters table */}
@@ -230,11 +183,10 @@ function ToolRow({ tool, onExpand, isExpanded, detail, loadingDetail }) {
 					<span className="block font-lato text-[11px] text-[#9CA3AF] truncate">{tool.python_path}</span>
 				</div>
 				<span className="mr-[16px] w-[90px]">
-					<span className="rounded-[4px] bg-[#F3F4F6] px-[8px] py-[2px] font-lato text-[11px] font-medium text-[#6B7280]">{tool.section}</span>
+					<span className="rounded-[4px] bg-[#F3F4F6] px-[8px] py-[2px] font-lato text-[11px] font-medium text-[#6B7280]">{tool.section || '-'}</span>
 				</span>
 				<span className="mr-[16px] w-[220px] font-lato text-[12px] text-[#374151] truncate">{tool.description}</span>
 				<span className="mr-[16px] w-[70px]"><SafetyBadge safety={tool.safety} /></span>
-				<span className="mr-[16px] w-[50px]"><ConfirmBadge requires={tool.requires_confirmation} /></span>
 				<span className="mr-[16px] w-[60px] font-lato text-[12px] text-[#374151]">{tool.params_count} params</span>
 				<span className="mr-[16px] w-[50px] font-lato text-[12px] text-[#374151]">{(tool.total_calls || 0).toLocaleString()}</span>
 				<span className="mr-[16px] w-[60px]"><LatencyColor ms={tool.avg_execution_ms} /></span>
@@ -267,11 +219,9 @@ export default function Tools() {
 	const [tools, setTools] = useState([]);
 	const [stats, setStats] = useState({});
 	const [sections, setSections] = useState([]);
-	const [confirmations, setConfirmations] = useState([]);
 	const [expandedId, setExpandedId] = useState(null);
 	const [detailData, setDetailData] = useState({});
 	const [loadingDetail, setLoadingDetail] = useState(false);
-	const [deciding, setDeciding] = useState(false);
 	const [syncing, setSyncing] = useState(false);
 
 	// Filters
@@ -298,11 +248,6 @@ export default function Tools() {
 		if (success && response) setSections(response.sections || []);
 	}, [appId, triggerApi]);
 
-	const fetchConfirmations = useCallback(async () => {
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/confirmations/?status=pending`, type: 'GET', loader: false });
-		if (success && response) setConfirmations(response.confirmations?.records || response.confirmations || []);
-	}, [appId, triggerApi]);
-
 	const fetchDetail = async (id) => {
 		if (detailData[id]) return;
 		setLoadingDetail(true);
@@ -311,7 +256,7 @@ export default function Tools() {
 		if (success && response?.tool) setDetailData((prev) => ({ ...prev, [id]: response.tool }));
 	};
 
-	useEffect(() => { fetchTools(); fetchSections(); fetchConfirmations(); }, [appId]);
+	useEffect(() => { fetchTools(); fetchSections(); }, [appId]);
 	useEffect(() => { fetchTools(); }, [search, filterSection, filterSafety, filterActive]);
 
 	const handleExpand = (id) => {
@@ -329,20 +274,6 @@ export default function Tools() {
 			notify('success', 'Sync Complete', `${s.created || 0} created, ${s.updated || 0} updated, ${s.deactivated || 0} deactivated`);
 			fetchTools();
 			fetchSections();
-		}
-	};
-
-	const handleDecide = async (confirmationId, decision) => {
-		setDeciding(true);
-		const { success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/ai/confirmations/${confirmationId}/decide/`,
-			type: 'POST', loader: false,
-			payload: { decision },
-		});
-		setDeciding(false);
-		if (success) {
-			notify('success', decision === 'approved' ? 'Tool Approved' : 'Tool Denied', `Confirmation ${decision}.`);
-			fetchConfirmations();
 		}
 	};
 
@@ -383,28 +314,11 @@ export default function Tools() {
 					</div>
 					<div className="h-[16px] w-[1px] bg-[#E5E7EB]" />
 					<div className="flex items-center gap-[8px]">
-						<span className="font-lato text-[14px] text-[#6B7280]">Sections</span>
+						<span className="font-lato text-[14px] text-[#6B7280]">Modules</span>
 						<span className="font-lato text-[14px] font-semibold text-[#111827]">{stats.sections ?? 0}</span>
 					</div>
-					<div className="h-[16px] w-[1px] bg-[#E5E7EB]" />
-					<div className="flex items-center gap-[8px]">
-						<span className="font-lato text-[14px] text-[#6B7280]">Confirmable</span>
-						<span className="font-lato text-[14px] font-semibold text-[#D97706]">{stats.confirmable ?? 0}</span>
-					</div>
-					{(stats.pending_confirmations || 0) > 0 && (
-						<>
-							<div className="h-[16px] w-[1px] bg-[#E5E7EB]" />
-							<div className="flex items-center gap-[8px]">
-								<span className="font-lato text-[14px] text-[#6B7280]">Pending</span>
-								<span className="rounded-[4px] bg-[#FEF3C7] px-[6px] py-[1px] font-lato text-[14px] font-bold text-[#D97706]">{stats.pending_confirmations}</span>
-							</div>
-						</>
-					)}
 				</div>
 			</div>
-
-			{/* Pending Confirmations */}
-			<PendingConfirmationsBanner confirmations={confirmations} onDecide={handleDecide} deciding={deciding} />
 
 			{/* Filters */}
 			<div className="flex flex-wrap items-center gap-[10px]">
@@ -415,7 +329,7 @@ export default function Tools() {
 					className="w-[260px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[8px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
 				/>
 				<select value={filterSection} onChange={(e) => setFilterSection(e.target.value)} className={selectClass}>
-					<option value="">All Sections</option>
+					<option value="">All Modules</option>
 					{sections.map((s) => <option key={s.section} value={s.section}>{s.section} ({s.active_count})</option>)}
 				</select>
 				<select value={filterSafety} onChange={(e) => setFilterSafety(e.target.value)} className={selectClass}>
@@ -436,10 +350,9 @@ export default function Tools() {
 				<div className="flex items-center px-[16px] py-[10px] bg-[#F9FAFB] border-b border-[#E5E7EB] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">
 					<span className="mr-[12px] w-[10px]" />
 					<span className="mr-[16px] w-[200px]">Tool Name</span>
-					<span className="mr-[16px] w-[90px]">Section</span>
+					<span className="mr-[16px] w-[90px]">Module</span>
 					<span className="mr-[16px] w-[220px]">Description</span>
 					<span className="mr-[16px] w-[70px]">Safety</span>
-					<span className="mr-[16px] w-[50px]">Confirm</span>
 					<span className="mr-[16px] w-[60px]">Params</span>
 					<span className="mr-[16px] w-[50px]">Calls</span>
 					<span className="mr-[16px] w-[60px]">Avg Time</span>

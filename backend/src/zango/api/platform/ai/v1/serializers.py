@@ -15,7 +15,6 @@ from zango.apps.ai.models import (
     AppLLMProviderModel,
     AppLLMTool,
     AppLLMToolCall,
-    AppLLMToolConfirmation,
 )
 from zango.apps.ai.models.memory import AppLLMMemoryMessage, AppLLMMemorySession
 
@@ -830,11 +829,9 @@ class AppLLMToolListSerializer(serializers.ModelSerializer):
             "description",
             "section",
             "safety",
-            "requires_confirmation",
             "timeout_seconds",
             "rate_limit_rpm",
             "return_type",
-            "has_display_func",
             "is_active",
             "total_calls",
             "total_errors",
@@ -861,14 +858,12 @@ class AppLLMToolDetailSerializer(serializers.ModelSerializer):
             "description",
             "section",
             "safety",
-            "requires_confirmation",
             "timeout_seconds",
             "rate_limit_rpm",
             "parameters_schema",
             "parameters_display",
             "python_path",
             "return_type",
-            "has_display_func",
             "is_active",
             "schema_hash",
             "total_calls",
@@ -908,44 +903,8 @@ class AppLLMToolCallListSerializer(serializers.ModelSerializer):
             "status",
             "error_message",
             "execution_time_ms",
-            "confirmation_decision",
-            "confirmation_decided_by",
             "created_at",
         ]
-
-
-class AppLLMToolConfirmationListSerializer(serializers.ModelSerializer):
-    seconds_remaining = serializers.IntegerField(read_only=True)
-    agent_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = AppLLMToolConfirmation
-        fields = [
-            "id",
-            "tool_name",
-            "tool_input",
-            "tool_input_display",
-            "status",
-            "round_number",
-            "agent_name",
-            "expires_at",
-            "seconds_remaining",
-            "decided_by_user",
-            "decided_by_policy",
-            "decided_at",
-            "denial_reason",
-            "created_at",
-        ]
-
-    def get_agent_name(self, obj):
-        if obj.invocation:
-            return obj.invocation.agent_name
-        return ""
-
-
-class ConfirmationDecisionSerializer(serializers.Serializer):
-    decision = serializers.ChoiceField(choices=["approved", "denied"])
-    reason = serializers.CharField(required=False, default="", allow_blank=True)
 
 
 # ── Memory Serializers ──────────────────────────────────────────────────────

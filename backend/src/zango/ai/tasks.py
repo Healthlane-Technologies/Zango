@@ -6,6 +6,7 @@ import logging
 
 from celery import shared_task
 
+
 logger = logging.getLogger("zango.ai")
 
 
@@ -74,32 +75,6 @@ def async_llm_complete(
         raise
 
 
-@shared_task(name="zango.ai.expire_pending_confirmations")
-def expire_pending_confirmations():
-    """
-    Periodic task — run every 60 seconds.
-    Expires pending confirmations past their expiry time.
-    """
-    from django.utils import timezone
-
-    from zango.apps.ai.models.confirmation import AppLLMToolConfirmation
-
-    expired = AppLLMToolConfirmation.objects.filter(
-        status="pending", expires_at__lt=timezone.now()
-    )
-
-    count = 0
-    for confirmation in expired:
-        confirmation.status = "expired"
-        confirmation.decided_at = timezone.now()
-        confirmation.save(update_fields=["status", "decided_at"])
-        count += 1
-
-    if count:
-        logger.info(f"Expired {count} pending tool confirmations")
-    return f"Expired {count} confirmations"
-
-
 @shared_task(name="zango.ai.update_tool_usage_stats")
 def update_tool_usage_stats():
     """
@@ -125,9 +100,9 @@ def update_tool_usage_stats():
             last_called=Max("created_at"),
         )
 
-        avg_ms = calls.filter(
-            status="success", created_at__gte=cutoff_24h
-        ).aggregate(avg=Avg("execution_time_ms"))["avg"]
+        avg_ms = calls.filter(status="success", created_at__gte=cutoff_24h).aggregate(
+            avg=Avg("execution_time_ms")
+        )["avg"]
 
         tool_record.total_calls = stats["total"] or 0
         tool_record.total_errors = stats["errors"] or 0
@@ -136,7 +111,10 @@ def update_tool_usage_stats():
         tool_record.last_called_at = stats["last_called"]
         tool_record.save(
             update_fields=[
-                "total_calls", "total_errors", "total_timeouts",
-                "avg_execution_ms", "last_called_at",
+                "total_calls",
+                "total_errors",
+                "total_timeouts",
+                "avg_execution_ms",
+                "last_called_at",
             ]
         )

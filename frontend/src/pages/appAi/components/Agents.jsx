@@ -281,9 +281,6 @@ function ToolSelector({ selectedTools, onChange, availableTools }) {
 										<span className={`rounded-[3px] px-[5px] py-[1px] text-[9px] font-bold ${safetyColors[tool.safety] || 'bg-[#F3F4F6] text-[#6B7280]'}`}>
 											{safetyLabels[tool.safety] || '?'}
 										</span>
-										{tool.requires_confirmation && (
-											<span className="text-[10px] text-[#D97706]">requires confirmation</span>
-										)}
 									</div>
 									<p className="mt-[2px] font-lato text-[11px] text-[#6B7280] truncate">{tool.description}</p>
 								</div>

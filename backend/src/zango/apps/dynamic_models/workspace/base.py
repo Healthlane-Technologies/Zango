@@ -365,7 +365,7 @@ class Workspace:
         tool_ids_synced = []
         stats = {"created": 0, "updated": 0, "deactivated": 0}
 
-        for m in self.get_tools():            
+        for m in self.get_tools():
             mod_path = m.split(".")[2:]
             mod_path_str = ".".join(mod_path)
             _plugin = self.plugin_source.load_plugin(mod_path_str)
@@ -385,25 +385,17 @@ class Workspace:
                         or tool_record.description != meta.description
                         or tool_record.section != meta.section
                         or tool_record.safety != meta.safety.value
-                        or tool_record.requires_confirmation
-                        != meta.requires_confirmation
                         or tool_record.python_path != python_path
                     )
                     if needs_update:
                         tool_record.description = meta.description
                         tool_record.section = meta.section
                         tool_record.safety = meta.safety.value
-                        tool_record.requires_confirmation = (
-                            meta.requires_confirmation
-                        )
                         tool_record.timeout_seconds = meta.timeout_seconds
                         tool_record.rate_limit_rpm = meta.rate_limit
                         tool_record.parameters_schema = meta.parameters_schema
                         tool_record.python_path = python_path
                         tool_record.return_type = meta.return_type
-                        tool_record.has_display_func = (
-                            meta.display_func is not None
-                        )
                         tool_record.schema_hash = meta.schema_hash
                         tool_record.is_active = True
                         tool_record.save()
@@ -415,13 +407,11 @@ class Workspace:
                         description=meta.description,
                         section=meta.section,
                         safety=meta.safety.value,
-                        requires_confirmation=meta.requires_confirmation,
                         timeout_seconds=meta.timeout_seconds,
                         rate_limit_rpm=meta.rate_limit,
                         parameters_schema=meta.parameters_schema,
                         python_path=python_path,
                         return_type=meta.return_type,
-                        has_display_func=meta.display_func is not None,
                         schema_hash=meta.schema_hash,
                         is_active=True,
                     )
