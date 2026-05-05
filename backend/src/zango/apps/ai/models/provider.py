@@ -4,8 +4,6 @@ These models live in each app's schema (not the shared/public schema).
 They store the app admin's configuration of available providers.
 """
 
-from datetime import datetime
-
 from django.db import models
 from django.db.models import F
 from django.utils import timezone
@@ -98,9 +96,7 @@ class AppLLMProvider(FullAuditMixin):
     total_invocations = models.IntegerField(default=0)
     total_input_tokens = models.BigIntegerField(default=0)
     total_output_tokens = models.BigIntegerField(default=0)
-    total_cost_usd = models.DecimalField(
-        max_digits=12, decimal_places=6, default=0
-    )
+    total_cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0)
 
     class Meta:
         ordering = ["name"]

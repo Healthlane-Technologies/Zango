@@ -15,4 +15,7 @@ Tool discovery and sync are handled by Workspace.sync_tools().
 Tool execution uses dynamic import via Workspace.plugin_source.
 """
 
-from zango.ai.tools.decorator import ToolParam, ToolSafety, tool
+from zango.ai.tools.decorator import ToolParam, ToolSafety, tool  # noqa: F401
+
+
+__all__ = ["tool", "ToolParam", "ToolSafety"]
