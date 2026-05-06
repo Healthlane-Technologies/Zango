@@ -12,12 +12,15 @@ from .views import (
     InvocationDetailViewAPIV1,
     InvocationListViewAPIV1,
     InvocationStatsViewAPIV1,
+    PromptActivateViewAPIV1,
     PromptCompareViewAPIV1,
+    PromptDependenciesViewAPIV1,
     PromptDetailViewAPIV1,
     PromptsListViewAPIV1,
     PromptVersionDetailViewAPIV1,
     PromptVersionPromoteViewAPIV1,
     PromptVersionsListViewAPIV1,
+    ProviderDependenciesViewAPIV1,
     ProviderDetailViewAPIV1,
     ProviderFetchModelsViewAPIV1,
     ProviderModelToggleViewAPIV1,
@@ -61,6 +64,10 @@ urlpatterns = [
         "providers/<int:provider_id>/reset-budget/",
         ProviderResetBudgetViewAPIV1.as_view(),
     ),
+    path(
+        "providers/<int:provider_id>/dependencies/",
+        ProviderDependenciesViewAPIV1.as_view(),
+    ),
     # Prompt CRUD
     path("prompts/", PromptsListViewAPIV1.as_view()),
     path("prompts/<int:prompt_id>/", PromptDetailViewAPIV1.as_view()),
@@ -74,8 +81,14 @@ urlpatterns = [
         "prompts/<int:prompt_id>/versions/<int:version_id>/promote/",
         PromptVersionPromoteViewAPIV1.as_view(),
     ),
-    # Prompt compare
+    # Prompt actions
+    path("prompts/<int:prompt_id>/activate/", PromptActivateViewAPIV1.as_view()),
+    # Prompt compare & dependencies
     path("prompts/<int:prompt_id>/compare/", PromptCompareViewAPIV1.as_view()),
+    path(
+        "prompts/<int:prompt_id>/dependencies/",
+        PromptDependenciesViewAPIV1.as_view(),
+    ),
     # Agent CRUD
     path("agents/", AgentsListViewAPIV1.as_view()),
     path("agents/<int:agent_id>/", AgentDetailViewAPIV1.as_view()),

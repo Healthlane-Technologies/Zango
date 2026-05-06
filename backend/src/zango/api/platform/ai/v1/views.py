@@ -4,7 +4,7 @@ All endpoints are scoped to the current tenant (app).
 Authentication: Session auth (platform admin user).
 """
 
-from django.db import connection, transaction
+from django.db import connection, models, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -275,6 +275,32 @@ class ProviderDetailViewAPIV1(ZangoGenericPlatformAPIView):
     def delete(self, request, app_uuid, provider_id, *args, **kwargs):
         try:
             provider = AppLLMProvider.objects.get(id=provider_id)
+
+            # Dependency guard — block if active agents reference this provider
+            using_agents = AppLLMAgent.objects.filter(
+                provider=provider, is_enabled=True
+            )
+            if using_agents.exists():
+                agent_list = list(using_agents.values("id", "name"))
+                names = [a["name"] for a in agent_list[:5]]
+                suffix = (
+                    f" and {using_agents.count() - 5} more"
+                    if using_agents.count() > 5
+                    else ""
+                )
+                return get_api_response(
+                    False,
+                    {
+                        "message": (
+                            f"This provider is used by {using_agents.count()} active agent(s): "
+                            f"{', '.join(names)}{suffix}. Reassign or disable them before deleting."
+                        ),
+                        "error_code": "PROVIDER_IN_USE",
+                        "agents": agent_list,
+                    },
+                    409,
+                )
+
             if provider.total_invocations == 0:
                 # Hard delete if no invocations
                 provider.delete()
@@ -351,6 +377,33 @@ class ProviderToggleViewAPIV1(ZangoGenericPlatformAPIView):
                 return get_api_response(
                     False, {"message": "is_enabled field is required"}, 400
                 )
+
+            # Guard: block disabling when active agents depend on this provider
+            if not bool(is_enabled):
+                using_agents = AppLLMAgent.objects.filter(
+                    provider=provider, is_enabled=True
+                )
+                if using_agents.exists():
+                    agent_list = list(using_agents.values("id", "name"))
+                    names = [a["name"] for a in agent_list[:5]]
+                    suffix = (
+                        f" and {using_agents.count() - 5} more"
+                        if using_agents.count() > 5
+                        else ""
+                    )
+                    return get_api_response(
+                        False,
+                        {
+                            "message": (
+                                f"Cannot disable: {using_agents.count()} active agent(s) use this provider "
+                                f"({', '.join(names)}{suffix}). Reassign or disable them first."
+                            ),
+                            "error_code": "PROVIDER_IN_USE",
+                            "agents": agent_list,
+                        },
+                        409,
+                    )
+
             provider.is_enabled = bool(is_enabled)
             provider.save()
             status = "enabled" if provider.is_enabled else "disabled"
@@ -482,6 +535,115 @@ class ProviderResetBudgetViewAPIV1(ZangoGenericPlatformAPIView):
             provider.last_budget_reset = timezone.now()
             provider.save()
             return get_api_response(True, {"message": "Budget reset successfully"}, 200)
+        except AppLLMProvider.DoesNotExist:
+            return get_api_response(False, {"message": "Provider not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class PromptActivateViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    POST /api/v1/apps/<app_uuid>/ai/prompts/<prompt_id>/activate/
+    Re-activates a previously deactivated prompt.
+    """
+
+    def post(self, request, app_uuid, prompt_id, *args, **kwargs):
+        try:
+            prompt = AppLLMPrompt.objects.get(id=prompt_id)
+            if prompt.is_active:
+                return get_api_response(
+                    False, {"message": "Prompt is already active"}, 400
+                )
+            prompt.is_active = True
+            prompt.save()
+            return get_api_response(
+                True, {"message": "Prompt activated successfully"}, 200
+            )
+        except AppLLMPrompt.DoesNotExist:
+            return get_api_response(False, {"message": "Prompt not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class PromptDependenciesViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    GET /api/v1/apps/<app_uuid>/ai/prompts/<prompt_id>/dependencies/
+    Returns active agents that reference this prompt (as system or user prompt).
+    Used by the frontend to decide whether to block deactivation.
+    """
+
+    def get(self, request, app_uuid, prompt_id, *args, **kwargs):
+        try:
+            prompt = AppLLMPrompt.objects.get(id=prompt_id)
+            agents_sys = list(
+                AppLLMAgent.objects.filter(
+                    system_prompt=prompt, is_enabled=True
+                ).values("id", "name")
+            )
+            agents_user = list(
+                AppLLMAgent.objects.filter(user_prompt=prompt, is_enabled=True).values(
+                    "id", "name"
+                )
+            )
+            # Deduplicate — an agent may use same prompt as both system + user
+            seen, unique = set(), []
+            for agent in agents_sys + agents_user:
+                if agent["id"] not in seen:
+                    seen.add(agent["id"])
+                    unique.append(agent)
+
+            return get_api_response(
+                True,
+                {
+                    "is_mapped": len(unique) > 0,
+                    "agent_count": len(unique),
+                    "agents": unique,
+                    "suggested_action": (
+                        "Unlink this prompt from all agents before deactivating."
+                        if unique
+                        else None
+                    ),
+                },
+                200,
+            )
+        except AppLLMPrompt.DoesNotExist:
+            return get_api_response(False, {"message": "Prompt not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class ProviderDependenciesViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    GET /api/v1/apps/<app_uuid>/ai/providers/<provider_id>/dependencies/
+    Returns active agents that reference this provider.
+    Used by the frontend to decide whether to block deactivation/disable.
+    """
+
+    def get(self, request, app_uuid, provider_id, *args, **kwargs):
+        try:
+            provider = AppLLMProvider.objects.get(id=provider_id)
+            agents = list(
+                AppLLMAgent.objects.filter(provider=provider, is_enabled=True).values(
+                    "id", "name"
+                )
+            )
+            return get_api_response(
+                True,
+                {
+                    "is_mapped": len(agents) > 0,
+                    "agent_count": len(agents),
+                    "agents": agents,
+                    "suggested_action": (
+                        "Reassign or disable all agents using this provider before deactivating."
+                        if agents
+                        else None
+                    ),
+                },
+                200,
+            )
         except AppLLMProvider.DoesNotExist:
             return get_api_response(False, {"message": "Provider not found"}, 404)
         except Exception as e:
@@ -627,7 +789,14 @@ class PromptsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
 
     def get(self, request, app_uuid, *args, **kwargs):
         try:
-            prompts = AppLLMPrompt.objects.select_related("active_version").all()
+            include_inactive = (
+                request.GET.get("include_inactive", "false").lower() == "true"
+            )
+            prompts = AppLLMPrompt.objects.select_related("active_version").order_by(
+                "-created_at"
+            )
+            if not include_inactive:
+                prompts = prompts.filter(is_active=True)
 
             search = request.GET.get("search", "")
             if search:
@@ -639,11 +808,16 @@ class PromptsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             if type_filter:
                 prompts = prompts.filter(type=type_filter)
 
-            # Summary stats
-            total_prompts = AppLLMPrompt.objects.filter(is_active=True).count()
-            total_versions = AppLLMPromptVersion.objects.count()
-            active_versions = AppLLMPromptVersion.objects.filter(
-                status="active"
+            # Summary stats — scoped to active prompts only
+            active_prompts_qs = AppLLMPrompt.objects.filter(is_active=True)
+            total_prompts = active_prompts_qs.count()
+            # Versions belonging only to active prompts
+            total_versions = AppLLMPromptVersion.objects.filter(
+                prompt__is_active=True
+            ).count()
+            # Number of active prompts that have a promoted (active) version
+            active_versions = active_prompts_qs.filter(
+                active_version__isnull=False
             ).count()
 
             paginated = self.paginate_queryset(prompts, request, view=self)
@@ -742,6 +916,33 @@ class PromptDetailViewAPIV1(ZangoGenericPlatformAPIView):
     def delete(self, request, app_uuid, prompt_id, *args, **kwargs):
         try:
             prompt = AppLLMPrompt.objects.get(id=prompt_id)
+
+            # Dependency guard — block if active agents reference this prompt
+            using_agents = AppLLMAgent.objects.filter(
+                models.Q(system_prompt=prompt) | models.Q(user_prompt=prompt),
+                is_enabled=True,
+            )
+            if using_agents.exists():
+                agent_list = list(using_agents.values("id", "name"))
+                names = [a["name"] for a in agent_list[:5]]
+                suffix = (
+                    f" and {using_agents.count() - 5} more"
+                    if using_agents.count() > 5
+                    else ""
+                )
+                return get_api_response(
+                    False,
+                    {
+                        "message": (
+                            f"This prompt is used by {using_agents.count()} active agent(s): "
+                            f"{', '.join(names)}{suffix}. Unlink it from all agents before deactivating."
+                        ),
+                        "error_code": "PROMPT_IN_USE",
+                        "agents": agent_list,
+                    },
+                    409,
+                )
+
             if prompt.versions.exists():
                 # Soft delete — preserve audit trail
                 prompt.is_active = False

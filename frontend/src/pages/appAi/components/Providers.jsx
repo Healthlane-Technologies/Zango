@@ -1051,6 +1051,48 @@ function EditProviderForm({ provider, availableProviders, onSave, onClose, appId
 	);
 }
 
+/* ─── Dependency block dialog — shown when backend returns 409 PROVIDER_IN_USE ─── */
+function DependencyBlockModal({ show, onClose, entityName, agentCount, agents }) {
+	if (!show) return null;
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center">
+			<div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+			<div className="relative w-full max-w-[440px] rounded-[16px] bg-white p-[28px] shadow-2xl">
+				{/* Amber warning icon */}
+				<div className="mb-[16px] flex h-[44px] w-[44px] items-center justify-center rounded-full bg-[#FFFBEB]">
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+						<path d="M10 6V10M10 14H10.01M19 10C19 14.9706 14.9706 19 10 19C5.02944 19 1 14.9706 1 10C1 5.02944 5.02944 1 10 1C14.9706 1 19 5.02944 19 10Z" stroke="#F59E0B" strokeWidth="1.8" strokeLinecap="round"/>
+					</svg>
+				</div>
+				<h3 className="mb-[8px] font-source-sans-pro text-[18px] font-semibold text-[#111827]">
+					Cannot Deactivate Provider
+				</h3>
+				<p className="mb-[6px] font-lato text-[14px] leading-[22px] text-[#6B7280]">
+					<span className="font-semibold text-[#111827]">&ldquo;{entityName}&rdquo;</span> is actively used by{' '}
+					<span className="font-semibold text-[#D97706]">{agentCount} agent{agentCount !== 1 ? 's' : ''}</span>.
+					Reassign or disable the following agents before deactivating this provider:
+				</p>
+				<ul className="mb-[24px] mt-[12px] max-h-[180px] overflow-y-auto rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] p-[12px] space-y-[8px]">
+					{agents.map((a) => (
+						<li key={a.id} className="flex items-center gap-[10px] font-lato text-[13px] text-[#111827]">
+							<span className="inline-block h-[6px] w-[6px] flex-shrink-0 rounded-full bg-[#10B981]" />
+							{a.name}
+						</li>
+					))}
+				</ul>
+				<div className="flex justify-end">
+					<button
+						onClick={onClose}
+						className="rounded-[8px] border border-[#DDE2E5] px-[20px] py-[10px] font-lato text-[14px] font-medium text-[#111827] hover:bg-[#F9FAFB]"
+					>
+						Got it
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function ProviderRow({ provider, onEdit, onToggleStatus, onTestConnection, onDelete, testingId }) {
 	const [expanded, setExpanded] = useState(false);
 	const meta = PROVIDER_META[provider.provider_slug] || { bg: '#F9FAFB', border: '#E5E7EB', accent: '#6B7280' };
@@ -1220,6 +1262,7 @@ export default function Providers() {
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [editingProvider, setEditingProvider] = useState(null);
 	const [confirmModal, setConfirmModal] = useState({ show: false, type: null, provider: null });
+	const [depModal, setDepModal] = useState({ show: false, entityName: '', agentCount: 0, agents: [] });
 	const [testingId, setTestingId] = useState(null);
 	const [actionLoading, setActionLoading] = useState(false);
 
@@ -1318,7 +1361,7 @@ export default function Providers() {
 		const newEnabled = provider.status !== 'active';
 		setActionLoading(true);
 
-		const { success } = await triggerApi({
+		const { success, response } = await triggerApi({
 			url: `/api/v1/apps/${appId}/ai/providers/${provider.id}/toggle/`,
 			type: 'POST',
 			loader: false,
@@ -1327,6 +1370,16 @@ export default function Providers() {
 
 		setActionLoading(false);
 		setConfirmModal({ show: false, type: null, provider: null });
+
+		if (!success && response?.error_code === 'PROVIDER_IN_USE') {
+			setDepModal({
+				show: true,
+				entityName: provider.name,
+				agentCount: response.agents?.length ?? 0,
+				agents: response.agents ?? [],
+			});
+			return;
+		}
 
 		if (success) {
 			notify(
@@ -1359,7 +1412,7 @@ export default function Providers() {
 		const provider = confirmModal.provider;
 		setActionLoading(true);
 
-		const { success } = await triggerApi({
+		const { success, response } = await triggerApi({
 			url: `/api/v1/apps/${appId}/ai/providers/${provider.id}/`,
 			type: 'DELETE',
 			loader: false,
@@ -1367,6 +1420,16 @@ export default function Providers() {
 
 		setActionLoading(false);
 		setConfirmModal({ show: false, type: null, provider: null });
+
+		if (!success && response?.error_code === 'PROVIDER_IN_USE') {
+			setDepModal({
+				show: true,
+				entityName: provider.name,
+				agentCount: response.agents?.length ?? 0,
+				agents: response.agents ?? [],
+			});
+			return;
+		}
 
 		if (success) {
 			notify('success', 'Provider Deleted', `${provider.name} has been removed.`);
@@ -1512,6 +1575,15 @@ export default function Providers() {
 				confirmLabel={confirmModal.confirmLabel}
 				confirmColor={confirmModal.confirmColor}
 				loading={actionLoading}
+			/>
+
+			{/* Dependency block — shown when provider is in use by active agents */}
+			<DependencyBlockModal
+				show={depModal.show}
+				onClose={() => setDepModal({ show: false, entityName: '', agentCount: 0, agents: [] })}
+				entityName={depModal.entityName}
+				agentCount={depModal.agentCount}
+				agents={depModal.agents}
 			/>
 		</div>
 	);

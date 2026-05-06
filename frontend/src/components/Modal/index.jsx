@@ -2,7 +2,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { ReactComponent as ModalCloseIcon } from '../../assets/images/svg/modal-close-icon.svg';
 
-function Modal({ label = '', show = false, closeModal, ModalBody }) {
+function Modal({ label = '', show = false, closeModal, ModalBody, maxWidth = 'max-w-[498px]' }) {
 	return (
 		<Transition appear show={show} as={Fragment}>
 			<Dialog as="div" className="relative z-10" onClose={() => {}}>
@@ -29,7 +29,7 @@ function Modal({ label = '', show = false, closeModal, ModalBody }) {
 				>
 					<div className="fixed inset-0 overflow-y-auto">
 						<div className="flex h-screen max-h-screen min-h-full grow items-center justify-center text-center md:justify-end">
-							<Dialog.Panel className="relative flex h-screen max-h-screen min-h-full w-full max-w-[498px] transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pb-[40px] pt-[52px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[72px] md:pt-[32px]">
+							<Dialog.Panel className={`relative flex h-screen max-h-screen min-h-full w-full ${maxWidth} transform flex-col gap-[32px] overflow-hidden bg-white px-[24px] pb-[40px] pt-[52px] text-left align-middle shadow-xl transition-all md:pl-[32px] md:pr-[48px] md:pt-[32px]`}>
 								<div className="flex justify-end md:absolute md:right-0 md:top-0">
 									<button
 										type="button"

@@ -4,7 +4,6 @@ import { Formik } from 'formik';
 import * as Yup from 'yup';
 import toast from 'react-hot-toast';
 import useApi from '../../../hooks/useApi';
-import Modal from '../../../components/Modal';
 import InputField from '../../../components/Form/InputField.jsx';
 import Toast from '../../../components/Notifications/Toast';
 
@@ -60,23 +59,6 @@ function MetricCard({ label, value, color }) {
 	);
 }
 
-function ConfirmationModal({ show, onClose, onConfirm, title, message, confirmLabel, confirmColor, loading }) {
-	if (!show) return null;
-	const colorClasses = { red: 'bg-[#EF4444] hover:bg-[#DC2626]', green: 'bg-[#10B981] hover:bg-[#059669]', blue: 'bg-[#346BD4] hover:bg-[#2556B0]' };
-	return (
-		<Modal label={title} show={show} closeModal={onClose} ModalBody={
-			<div className="flex flex-col gap-[24px]">
-				<p className="font-lato text-[14px] leading-[22px] text-[#6B7280]">{message}</p>
-				<div className="flex justify-end gap-[12px]">
-					<button onClick={onClose} disabled={loading} className="rounded-[8px] border border-[#DDE2E5] px-[20px] py-[10px] font-lato text-[14px] font-medium text-[#111827] hover:bg-[#F9FAFB] disabled:opacity-50">Cancel</button>
-					<button onClick={onConfirm} disabled={loading} className={`rounded-[8px] px-[20px] py-[10px] font-lato text-[14px] font-medium text-white disabled:opacity-50 ${colorClasses[confirmColor] || colorClasses.blue}`}>
-						{loading ? 'Processing...' : confirmLabel}
-					</button>
-				</div>
-			</div>
-		} />
-	);
-}
 
 /* ─── Inline Prompt Creator (mini form within agent builder) ─── */
 function InlinePromptCreator({ type, appId, triggerApi, onCreated, onCancel }) {
@@ -305,7 +287,7 @@ function ToolSelector({ selectedTools, onChange, availableTools }) {
 }
 
 /* ─── Searchable Select ─── */
-function SearchableSelect({ value, onChange, options, placeholder, disabled }) {
+function SearchableSelect({ value, onChange, options, placeholder, disabled, renderTriggerContent, renderOptionContent }) {
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState('');
 	const selected = options.find((o) => o.value === value);
@@ -325,10 +307,14 @@ function SearchableSelect({ value, onChange, options, placeholder, disabled }) {
 				}`}
 			>
 				{selected ? (
-					<span className="flex-1 truncate text-left text-[#111827]">
-						{selected.label}
-						{selected.sublabel && <span className="ml-[6px] font-mono text-[11px] text-[#9CA3AF]">{selected.sublabel}</span>}
-					</span>
+					renderTriggerContent ? (
+						<span className="flex-1 min-w-0">{renderTriggerContent(selected)}</span>
+					) : (
+						<span className="flex-1 truncate text-left text-[#111827]">
+							{selected.label}
+							{selected.sublabel && <span className="ml-[6px] font-mono text-[11px] text-[#9CA3AF]">{selected.sublabel}</span>}
+						</span>
+					)
 				) : (
 					<span className="flex-1 text-left text-[#9CA3AF]">{disabled ? 'Select a provider first' : placeholder}</span>
 				)}
@@ -367,10 +353,14 @@ function SearchableSelect({ value, onChange, options, placeholder, disabled }) {
 									onClick={() => { onChange(o.value); setOpen(false); setSearch(''); }}
 									className={`flex w-full items-center justify-between px-[12px] py-[9px] text-left transition-colors hover:bg-[#F9FAFB] ${value === o.value ? 'bg-[#F5F3FF]' : ''}`}
 								>
-									<div className="min-w-0 flex-1">
-										<p className="truncate font-lato text-[13px] text-[#111827]">{o.label}</p>
-										{o.sublabel && <p className="font-mono text-[11px] text-[#9CA3AF]">{o.sublabel}</p>}
-									</div>
+									{renderOptionContent ? (
+										<span className="min-w-0 flex-1">{renderOptionContent(o)}</span>
+									) : (
+										<div className="min-w-0 flex-1">
+											<p className="truncate font-lato text-[13px] text-[#111827]">{o.label}</p>
+											{o.sublabel && <p className="font-mono text-[11px] text-[#9CA3AF]">{o.sublabel}</p>}
+										</div>
+									)}
 									{value === o.value && (
 										<svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="ml-[8px] shrink-0">
 											<circle cx="7" cy="7" r="6" fill="#5048ED"/>
@@ -510,6 +500,12 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 													}}
 													placeholder="Select a provider…"
 													options={providers.filter((p) => p.is_enabled).map((p) => ({ value: String(p.id), label: p.name, sublabel: p.provider_slug }))}
+													renderTriggerContent={(o) => <ProviderBadge slug={o.sublabel} name={o.label} />}
+													renderOptionContent={(o) => (
+														<div className="flex items-center gap-[8px]">
+															<ProviderBadge slug={o.sublabel} name={o.label} />
+														</div>
+													)}
 												/>
 												{formik.touched.provider_id && formik.errors.provider_id && (
 													<p className="mt-[4px] font-lato text-[12px] text-[#EF4444]">{formik.errors.provider_id}</p>
@@ -1117,9 +1113,7 @@ export default function Agents() {
 	const [availableTools, setAvailableTools] = useState([]);
 	const [builderOpen, setBuilderOpen] = useState(false);
 	const [editingAgent, setEditingAgent] = useState(null);
-	const [confirmModal, setConfirmModal] = useState({ show: false });
 	const [testingId, setTestingId] = useState(null);
-	const [actionLoading, setActionLoading] = useState(false);
 
 	const fetchAgents = useCallback(async () => {
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/`, type: 'GET', loader: false });
@@ -1200,23 +1194,10 @@ export default function Agents() {
 	const openCreate = () => { setEditingAgent(null); setBuilderOpen(true); };
 	const openEdit = (agent) => { setEditingAgent(agent); setBuilderOpen(true); };
 
-	const handleToggleStatus = (agent) => {
-		const isDisabling = agent.status === 'active';
-		setConfirmModal({
-			show: true, agent,
-			title: isDisabling ? 'Disable Agent' : 'Enable Agent',
-			message: isDisabling ? `Disable "${agent.name}"? It will stop responding to invocations.` : `Enable "${agent.name}"?`,
-			confirmLabel: isDisabling ? 'Disable' : 'Enable',
-			confirmColor: isDisabling ? 'red' : 'green',
-		});
-	};
-
-	const confirmToggle = async () => {
-		const agent = confirmModal.agent;
-		setActionLoading(true);
-		const { success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/toggle/`, type: 'POST', loader: false, payload: { is_enabled: agent.status !== 'active' } });
-		setActionLoading(false); setConfirmModal({ show: false });
-		if (success) { notify('success', agent.status === 'active' ? 'Agent Disabled' : 'Agent Enabled', `${agent.name} updated.`); fetchAgents(); }
+	const handleToggleStatus = async (agent) => {
+		const newEnabled = agent.status !== 'active';
+		const { success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/toggle/`, type: 'POST', loader: false, payload: { is_enabled: newEnabled } });
+		if (success) { notify('success', newEnabled ? 'Agent Enabled' : 'Agent Disabled', `${agent.name} updated.`); fetchAgents(); }
 	};
 
 	const handleDuplicate = async (agent) => {
@@ -1315,16 +1296,6 @@ export default function Agents() {
 				onPromptCreated={fetchPrompts}
 			/>
 
-			<ConfirmationModal
-				show={confirmModal.show}
-				onClose={() => setConfirmModal({ show: false })}
-				onConfirm={confirmToggle}
-				title={confirmModal.title}
-				message={confirmModal.message}
-				confirmLabel={confirmModal.confirmLabel}
-				confirmColor={confirmModal.confirmColor}
-				loading={actionLoading}
-			/>
 		</div>
 	);
 }
