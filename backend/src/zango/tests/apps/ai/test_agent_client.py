@@ -235,10 +235,10 @@ class SystemPromptTest(SimpleTestCase):
 
 class OutputFormatTest(SimpleTestCase):
 
-    def _run_and_get_complete_kwargs(self, agent):
+    def _run_and_get_complete_kwargs(self, agent, response_content="Done"):
         with patch(_PC) as mock_pc_cls:
             mock_pc = MagicMock()
-            mock_pc.complete.return_value = _make_response()
+            mock_pc.complete.return_value = _make_response(content=response_content)
             mock_pc._get_client.return_value = MagicMock()
             mock_pc_cls.return_value = mock_pc
             AgentClient(agent).run(input="hi")
@@ -251,13 +251,13 @@ class OutputFormatTest(SimpleTestCase):
 
     def test_json_output_schema_no_json_schema_passes_json_string(self):
         agent = _make_agent(output_schema="JSON", output_json_schema=None)
-        kwargs = self._run_and_get_complete_kwargs(agent)
+        kwargs = self._run_and_get_complete_kwargs(agent, response_content='{"result": "ok"}')
         self.assertEqual(kwargs.get("response_format"), "json")
 
     def test_json_output_schema_with_json_schema_passes_dict(self):
         schema = {"type": "object", "properties": {"name": {"type": "string"}}}
         agent = _make_agent(output_schema="JSON", output_json_schema=schema)
-        kwargs = self._run_and_get_complete_kwargs(agent)
+        kwargs = self._run_and_get_complete_kwargs(agent, response_content='{"name": "Alice"}')
         self.assertEqual(kwargs.get("response_format"), schema)
 
 
