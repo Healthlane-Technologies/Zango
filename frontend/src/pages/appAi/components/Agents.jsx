@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -184,15 +184,84 @@ function InlinePromptCreator({ type, appId, triggerApi, onCreated, onCancel }) {
 	);
 }
 
-/* ─── Prompt Selector with Preview ─── */
-function PromptSelector({ label, hint, type, value, onChange, prompts, appId, triggerApi, onPromptCreated }) {
+/* ─── Prompt Selector — async searchable dropdown ─── */
+function PromptSelector({ label, hint, type, value, onChange, appId, triggerApi }) {
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState('');
+	const [results, setResults] = useState([]);
+	const [loading, setLoading] = useState(false);
 	const [showPreview, setShowPreview] = useState(false);
 	const [showCreator, setShowCreator] = useState(false);
-	const filtered = prompts.filter((p) => p.type === type);
-	const selected = filtered.find((p) => p.name === value);
+	const [selectedPrompt, setSelectedPrompt] = useState(null);
+	const containerRef = useRef(null);
+
+	// Fetch prompts from API with debounce
+	useEffect(() => {
+		if (!open) return;
+		const t = setTimeout(async () => {
+			setLoading(true);
+			const params = new URLSearchParams({ type, page: '1' });
+			if (search) params.set('search', search);
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/ai/prompts/?${params}`,
+				type: 'GET',
+				loader: false,
+			});
+			if (success && response) {
+				const data = response.prompts || {};
+				setResults(Array.isArray(data.records) ? data.records : []);
+			}
+			setLoading(false);
+		}, 300);
+		return () => clearTimeout(t);
+	}, [open, search, type, appId]);
+
+	// When the dropdown opens reset search and load initial results
+	const handleOpen = () => {
+		setSearch('');
+		setOpen(true);
+	};
+
+	// Load the selected prompt's detail for preview (only when value changes)
+	useEffect(() => {
+		if (!value) { setSelectedPrompt(null); setShowPreview(false); return; }
+		// Check if already in results
+		const found = results.find((p) => p.name === value);
+		if (found) { setSelectedPrompt(found); return; }
+		// Fetch it by search
+		triggerApi({ url: `/api/v1/apps/${appId}/ai/prompts/?search=${encodeURIComponent(value)}&type=${type}`, type: 'GET', loader: false })
+			.then(({ response, success }) => {
+				if (success) {
+					const data = response.prompts || {};
+					const records = Array.isArray(data.records) ? data.records : [];
+					const match = records.find((p) => p.name === value);
+					if (match) setSelectedPrompt(match);
+				}
+			});
+	}, [value]);
+
+	// Close dropdown on outside click
+	useEffect(() => {
+		const handler = (e) => { if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false); };
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
+	}, []);
+
+	const handleSelect = (p) => {
+		onChange(p.name);
+		setSelectedPrompt(p);
+		setOpen(false);
+		setShowPreview(false);
+	};
+
+	const handleClear = () => {
+		onChange('');
+		setSelectedPrompt(null);
+		setShowPreview(false);
+	};
 
 	return (
-		<div>
+		<div ref={containerRef}>
 			<div className="mb-[4px] flex items-center justify-between">
 				<label className="font-lato text-[13px] font-semibold text-[#374151]">{label}</label>
 				{value && (
@@ -202,17 +271,111 @@ function PromptSelector({ label, hint, type, value, onChange, prompts, appId, tr
 				)}
 			</div>
 			<p className="mb-[6px] font-lato text-[12px] text-[#9CA3AF]">{hint}</p>
+
 			<div className="flex items-center gap-[8px]">
-				<select
-					value={value}
-					onChange={(e) => { onChange(e.target.value); setShowPreview(false); }}
-					className="flex-1 rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] text-[#111827] outline-none focus:border-[#5048ED]"
-				>
-					<option value="">None (optional)</option>
-					{filtered.map((p) => (
-						<option key={p.id} value={p.name}>{p.name}{p.active_version_number ? ` (v${p.active_version_number})` : ''}</option>
-					))}
-				</select>
+				{/* Trigger button */}
+				<div className="relative flex-1">
+					<button
+						type="button"
+						onClick={handleOpen}
+						className="w-full flex items-center justify-between rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] text-left outline-none focus:border-[#5048ED] hover:border-[#5048ED] transition-colors"
+					>
+						{value ? (
+							<span className="text-[#111827]">
+								{value}
+								{selectedPrompt?.active_version_number ? <span className="ml-[6px] text-[#9CA3AF]">v{selectedPrompt.active_version_number}</span> : null}
+							</span>
+						) : (
+							<span className="text-[#9CA3AF]">None (optional)</span>
+						)}
+						<div className="flex items-center gap-[6px] flex-shrink-0">
+							{value && (
+								<span
+									role="button"
+									onClick={(e) => { e.stopPropagation(); handleClear(); }}
+									className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors"
+								>
+									<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+										<path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+									</svg>
+								</span>
+							)}
+							<svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-[#9CA3AF]">
+								<path d="M2 3l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+							</svg>
+						</div>
+					</button>
+
+					{/* Dropdown */}
+					{open && (
+						<div className="absolute z-50 mt-[4px] w-full rounded-[8px] border border-[#E5E7EB] bg-white shadow-lg">
+							{/* Search input */}
+							<div className="p-[8px] border-b border-[#F3F4F6]">
+								<div className="relative">
+									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="absolute left-[8px] top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+										<circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.3"/>
+										<path d="M8.5 8.5L11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+									</svg>
+									<input
+										autoFocus
+										type="text"
+										value={search}
+										onChange={(e) => setSearch(e.target.value)}
+										placeholder="Search prompts…"
+										className="w-full rounded-[5px] border border-[#DDE2E5] pl-[26px] pr-[8px] py-[6px] font-lato text-[12px] outline-none focus:border-[#5048ED]"
+									/>
+								</div>
+							</div>
+
+							{/* Results */}
+							<div className="max-h-[200px] overflow-y-auto">
+								{loading ? (
+									<div className="flex items-center justify-center py-[16px]">
+										<svg className="animate-spin text-[#5048ED]" width="16" height="16" viewBox="0 0 16 16" fill="none">
+											<path d="M8 2a6 6 0 1 0 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+										</svg>
+									</div>
+								) : results.length === 0 ? (
+									<div className="px-[12px] py-[10px] font-lato text-[12px] text-[#9CA3AF]">
+										{search ? `No ${type} prompts matching "${search}"` : `No ${type} prompts found`}
+									</div>
+								) : (
+									<>
+										{/* None option */}
+										<button
+											type="button"
+											onClick={() => { handleClear(); setOpen(false); }}
+											className="w-full px-[12px] py-[8px] text-left font-lato text-[12px] text-[#9CA3AF] hover:bg-[#F9FAFB]"
+										>
+											None (optional)
+										</button>
+										{results.map((p) => (
+											<button
+												key={p.id}
+												type="button"
+												onClick={() => handleSelect(p)}
+												className={`w-full flex items-center justify-between px-[12px] py-[8px] text-left font-lato text-[13px] hover:bg-[#F3F4FF] transition-colors ${value === p.name ? 'bg-[#EEF2FF] text-[#5048ED]' : 'text-[#111827]'}`}
+											>
+												<span>{p.name}</span>
+												<div className="flex items-center gap-[6px] flex-shrink-0">
+													{p.active_version_number && (
+														<span className="font-lato text-[11px] text-[#9CA3AF]">v{p.active_version_number}</span>
+													)}
+													{value === p.name && (
+														<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+															<path d="M2 6l3 3 5-5" stroke="#5048ED" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+														</svg>
+													)}
+												</div>
+											</button>
+										))}
+									</>
+								)}
+							</div>
+						</div>
+					)}
+				</div>
+
 				<button
 					type="button"
 					onClick={() => setShowCreator(!showCreator)}
@@ -223,16 +386,18 @@ function PromptSelector({ label, hint, type, value, onChange, prompts, appId, tr
 				</button>
 			</div>
 
-			{showPreview && selected?.active_version?.content && (
+			{/* Preview */}
+			{showPreview && selectedPrompt?.active_version?.content && (
 				<div className="mt-[8px] rounded-[6px] bg-[#1F2937] p-[12px] max-h-[160px] overflow-y-auto">
 					<pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-[20px] text-[#D1D5DB]">
-						{selected.active_version.content.split(/(\{\{\w+\}\})/g).map((part, i) =>
+						{selectedPrompt.active_version.content.split(/(\{\{\w+\}\})/g).map((part, i) =>
 							/^\{\{\w+\}\}$/.test(part) ? <span key={i} className="text-[#F59E0B]">{part}</span> : <span key={i}>{part}</span>
 						)}
 					</pre>
 				</div>
 			)}
 
+			{/* Inline creator */}
 			{showCreator && (
 				<InlinePromptCreator
 					type={type}
@@ -240,42 +405,23 @@ function PromptSelector({ label, hint, type, value, onChange, prompts, appId, tr
 					triggerApi={triggerApi}
 					onCreated={(name) => {
 						setShowCreator(false);
-						onPromptCreated();
 						onChange(name);
 					}}
 					onCancel={() => setShowCreator(false)}
 				/>
 			)}
-
-			{filtered.length === 0 && !showCreator && (
-				<p className="mt-[4px] font-lato text-[11px] text-[#D97706]">
-					No {type} prompts found. Click "+ New" to create one, or go to the Prompts tab.
-				</p>
-			)}
 		</div>
 	);
 }
 
-/* ─── Tool Multi-Select with Chips ─── */
-function ToolSelector({ selectedTools, onChange, availableTools }) {
+/* ─── Tool Multi-Select with Chips (async searchable) ─── */
+function ToolSelector({ selectedTools, onChange, appId, triggerApi }) {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [search, setSearch] = useState('');
-
-	const filtered = availableTools.filter(
-		(t) => t.is_active && !selectedTools.includes(t.name) && (
-			t.name.toLowerCase().includes(search.toLowerCase()) ||
-			t.description.toLowerCase().includes(search.toLowerCase())
-		)
-	);
-
-	const addTool = (name) => {
-		onChange([...selectedTools, name]);
-		setSearch('');
-	};
-
-	const removeTool = (name) => {
-		onChange(selectedTools.filter((t) => t !== name));
-	};
+	const [results, setResults] = useState([]);
+	const [loading, setLoading] = useState(false);
+	// Cache fetched tool details for chips (name → tool object)
+	const toolCache = useRef({});
 
 	const safetyColors = {
 		read_only: 'bg-[#ECFDF5] text-[#059669]',
@@ -284,12 +430,55 @@ function ToolSelector({ selectedTools, onChange, availableTools }) {
 	};
 	const safetyLabels = { read_only: 'READ', write: 'WRITE', external: 'EXT' };
 
+	// Fetch tools with 300ms debounce when dropdown is open
+	useEffect(() => {
+		if (!dropdownOpen) return;
+		const t = setTimeout(async () => {
+			setLoading(true);
+			const params = new URLSearchParams({ page: '1', page_size: '20' });
+			if (search) params.set('search', search);
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/ai/tools/?${params}`,
+				type: 'GET',
+				loader: false,
+			});
+			if (success && response) {
+				const records = response.tools?.records || response.tools || [];
+				setResults(records);
+				// Update cache
+				records.forEach((t) => { toolCache.current[t.name] = t; });
+			}
+			setLoading(false);
+		}, 300);
+		return () => clearTimeout(t);
+	}, [dropdownOpen, search, appId]);
+
+	// When dropdown opens, reset search
+	const handleFocus = () => {
+		setSearch('');
+		setDropdownOpen(true);
+	};
+
+	const addTool = (tool) => {
+		toolCache.current[tool.name] = tool;
+		onChange([...selectedTools, tool.name]);
+		setSearch('');
+		setDropdownOpen(false);
+	};
+
+	const removeTool = (name) => {
+		onChange(selectedTools.filter((t) => t !== name));
+	};
+
+	// Filtered: exclude already-selected tools
+	const filtered = results.filter((t) => !selectedTools.includes(t.name));
+
 	return (
 		<div className="relative">
 			{/* Selected chips */}
 			<div className="mb-[6px] flex flex-wrap gap-[6px]">
 				{selectedTools.map((name) => {
-					const toolInfo = availableTools.find((t) => t.name === name);
+					const toolInfo = toolCache.current[name];
 					return (
 						<span key={name} className="flex items-center gap-[4px] rounded-[6px] bg-[#EFF6FF] px-[10px] py-[4px]">
 							<span className="font-mono font-lato text-[12px] text-[#346BD4]">{name}</span>
@@ -315,36 +504,43 @@ function ToolSelector({ selectedTools, onChange, availableTools }) {
 				<input
 					value={search}
 					onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true); }}
-					onFocus={() => setDropdownOpen(true)}
+					onFocus={handleFocus}
 					placeholder={selectedTools.length > 0 ? 'Add another tool...' : 'Search and select tools...'}
 					className="w-full rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
 				/>
-				{dropdownOpen && filtered.length > 0 && (
+				{dropdownOpen && (
 					<div className="absolute z-20 mt-[4px] w-full max-h-[240px] overflow-y-auto rounded-[8px] border border-[#E5E7EB] bg-white shadow-lg">
-						{filtered.map((tool) => (
-							<button
-								key={tool.name}
-								type="button"
-								onClick={() => { addTool(tool.name); setDropdownOpen(false); }}
-								className="flex w-full items-start gap-[10px] px-[12px] py-[10px] text-left hover:bg-[#F9FAFB] border-b border-[#F3F4F6] last:border-b-0"
-							>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-[6px]">
-										<span className="font-mono font-lato text-[13px] font-medium text-[#111827]">{tool.name}</span>
-										<span className={`rounded-[3px] px-[5px] py-[1px] text-[9px] font-bold ${safetyColors[tool.safety] || 'bg-[#F3F4F6] text-[#6B7280]'}`}>
-											{safetyLabels[tool.safety] || '?'}
-										</span>
+						{loading ? (
+							<div className="flex items-center justify-center py-[16px]">
+								<svg className="animate-spin text-[#5048ED]" width="16" height="16" viewBox="0 0 16 16" fill="none">
+									<path d="M8 2a6 6 0 1 0 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+								</svg>
+							</div>
+						) : filtered.length === 0 ? (
+							<p className="px-[12px] py-[10px] font-lato text-[12px] text-[#9CA3AF]">
+								{search ? `No tools matching "${search}". Sync tools from the Tools tab first.` : 'No tools found. Sync tools from the Tools tab first.'}
+							</p>
+						) : (
+							filtered.map((tool) => (
+								<button
+									key={tool.name}
+									type="button"
+									onClick={() => addTool(tool)}
+									className="flex w-full items-start gap-[10px] px-[12px] py-[10px] text-left hover:bg-[#F9FAFB] border-b border-[#F3F4F6] last:border-b-0"
+								>
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center gap-[6px]">
+											<span className="font-mono font-lato text-[13px] font-medium text-[#111827]">{tool.name}</span>
+											<span className={`rounded-[3px] px-[5px] py-[1px] text-[9px] font-bold ${safetyColors[tool.safety] || 'bg-[#F3F4F6] text-[#6B7280]'}`}>
+												{safetyLabels[tool.safety] || '?'}
+											</span>
+										</div>
+										<p className="mt-[2px] font-lato text-[11px] text-[#6B7280] truncate">{tool.description}</p>
 									</div>
-									<p className="mt-[2px] font-lato text-[11px] text-[#6B7280] truncate">{tool.description}</p>
-								</div>
-								<span className="flex-shrink-0 font-lato text-[11px] text-[#9CA3AF]">{tool.section}</span>
-							</button>
-						))}
-					</div>
-				)}
-				{dropdownOpen && filtered.length === 0 && search && (
-					<div className="absolute z-20 mt-[4px] w-full rounded-[8px] border border-[#E5E7EB] bg-white px-[12px] py-[10px] shadow-lg">
-						<p className="font-lato text-[12px] text-[#9CA3AF]">No matching tools found. Sync tools first from the Tools tab.</p>
+									<span className="flex-shrink-0 font-lato text-[11px] text-[#9CA3AF]">{tool.section}</span>
+								</button>
+							))
+						)}
 					</div>
 				)}
 			</div>
@@ -449,7 +645,7 @@ function SearchableSelect({ value, onChange, options, placeholder, disabled, ren
 }
 
 /* ─── Full-Page Agent Builder ─── */
-function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts, availableTools, appId, triggerApi, onPromptCreated }) {
+function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, triggerApi }) {
 	if (!show) return null;
 
 	const isEdit = !!initialValues._isEdit;
@@ -641,10 +837,8 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 												type="system"
 												value={formik.values.system_prompt_name}
 												onChange={(val) => formik.setFieldValue('system_prompt_name', val)}
-												prompts={prompts}
 												appId={appId}
 												triggerApi={triggerApi}
-												onPromptCreated={onPromptCreated}
 											/>
 											<PromptSelector
 												label="User Prompt"
@@ -652,10 +846,8 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 												type="user"
 												value={formik.values.user_prompt_name}
 												onChange={(val) => formik.setFieldValue('user_prompt_name', val)}
-												prompts={prompts}
 												appId={appId}
 												triggerApi={triggerApi}
-												onPromptCreated={onPromptCreated}
 											/>
 										</div>
 									</div>
@@ -725,11 +917,13 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 											</div>
 
 											<div>
-												<label className="mb-[4px] block font-lato text-[13px] font-semibold text-[#374151]">Guardrails</label>
-												<p className="mb-[6px] font-lato text-[12px] text-[#9CA3AF]">Comma-separated list of guardrail names (e.g. pii-redaction, token-budget-check)</p>
-												<input name="guardrails_str" value={formik.values.guardrails_str} onChange={formik.handleChange}
-													placeholder="e.g. pii-redaction, content-safety"
-													className="w-full rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] outline-none focus:border-[#5048ED]" />
+												<label className="mb-[4px] block font-lato text-[13px] font-semibold text-[#374151]">
+													Guardrails
+													<span className="ml-[8px] inline-flex items-center rounded-full bg-[#F5F3FF] border border-[#DDD6FE] px-[8px] py-[1px] font-lato text-[10px] font-semibold text-[#5048ED]">Coming Soon</span>
+												</label>
+												<div className="w-full rounded-[6px] border border-dashed border-[#DDE2E5] bg-[#F9FAFB] px-[12px] py-[10px] font-lato text-[13px] text-[#9CA3AF] cursor-not-allowed select-none">
+													Guardrail configuration will be available soon
+												</div>
 											</div>
 
 											<div>
@@ -740,13 +934,9 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, prompts
 												<ToolSelector
 													selectedTools={formik.values.selected_tools}
 													onChange={(tools) => formik.setFieldValue('selected_tools', tools)}
-													availableTools={availableTools}
+													appId={appId}
+													triggerApi={triggerApi}
 												/>
-												{availableTools.length === 0 && (
-													<p className="mt-[4px] font-lato text-[11px] text-[#D97706]">
-														No tools available. Register tools with @tool decorator and sync from the Tools tab.
-													</p>
-												)}
 											</div>
 										</div>
 									</div>
@@ -1210,54 +1400,141 @@ response = agent.run(
 	);
 }
 
+/* ─── Pagination bar (mirrors InvocationLogs) ─── */
+function PaginationBar({ page, totalPages, totalRecords, onPrev, onNext, onGoTo, noun = 'agent' }) {
+	const pageNumbers = [];
+	const delta = 2;
+	for (let i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) {
+		pageNumbers.push(i);
+	}
+	const showLeftEllipsis = pageNumbers[0] > 2;
+	const showRightEllipsis = pageNumbers[pageNumbers.length - 1] < totalPages - 1;
+	return (
+		<div className="flex items-center justify-between px-[16px] py-[14px] border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-b-[8px]">
+			<span className="font-lato text-[12px] text-[#6B7280]">
+				{totalRecords != null ? `${totalRecords.toLocaleString()} ${noun}${totalRecords !== 1 ? 's' : ''}` : ''}
+			</span>
+			<div className="flex items-center gap-[4px]">
+				<button onClick={onPrev} disabled={page === 1} className="flex items-center gap-[4px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
+					<svg width="12" height="12" viewBox="0 0 10 10"><path d="M7 1L3 5l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+					Prev
+				</button>
+				{pageNumbers[0] > 1 && (
+					<>
+						<button onClick={() => onGoTo(1)} className="rounded-[6px] border border-[#DDE2E5] px-[8px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white">1</button>
+						{showLeftEllipsis && <span className="px-[4px] font-lato text-[12px] text-[#9CA3AF]">…</span>}
+					</>
+				)}
+				{pageNumbers.map(n => (
+					<button key={n} onClick={() => onGoTo(n)} className={`rounded-[6px] border px-[8px] py-[5px] font-lato text-[12px] transition-colors ${n === page ? 'border-[#346BD4] bg-[#346BD4] text-white font-semibold' : 'border-[#DDE2E5] text-[#374151] hover:bg-white'}`}>{n}</button>
+				))}
+				{pageNumbers[pageNumbers.length - 1] < totalPages && (
+					<>
+						{showRightEllipsis && <span className="px-[4px] font-lato text-[12px] text-[#9CA3AF]">…</span>}
+						<button onClick={() => onGoTo(totalPages)} className="rounded-[6px] border border-[#DDE2E5] px-[8px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white">{totalPages}</button>
+					</>
+				)}
+				<button onClick={onNext} disabled={page === totalPages} className="flex items-center gap-[4px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
+					Next
+					<svg width="12" height="12" viewBox="0 0 10 10"><path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+				</button>
+			</div>
+			<span className="font-lato text-[12px] text-[#6B7280]">Page {page} of {totalPages}</span>
+		</div>
+	);
+}
+
+/* ─── Filter select (mirrors InvocationLogs) ─── */
+function FilterSelect({ value, onChange, options, accentColor }) {
+	const accent = accentColor || '#346BD4';
+	const isActive = !!value;
+	return (
+		<div className="relative">
+			<select
+				value={value}
+				onChange={onChange}
+				className={`h-[34px] rounded-[6px] border pl-[8px] pr-[24px] font-lato text-[13px] outline-none appearance-none cursor-pointer transition-colors ${isActive ? 'border-[#346BD4] bg-[#EFF6FF] text-[#1D4ED8] font-medium' : 'border-[#DDE2E5] bg-white text-[#374151] hover:border-[#346BD4]'}`}
+				style={isActive ? { borderColor: accent, backgroundColor: `${accent}18`, color: accent } : {}}
+			>
+				{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+			</select>
+			<svg width="10" height="10" viewBox="0 0 10 10" className="pointer-events-none absolute right-[7px] top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+				<path d="M2 3l3 4 3-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+			</svg>
+		</div>
+	);
+}
+
 /* ─── Main Agents Component ─── */
-export default function Agents() {
+export default function Agents({ onReady }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
 	const [agents, setAgents] = useState([]);
 	const [stats, setStats] = useState({});
+	const [initialLoading, setInitialLoading] = useState(true);
 	const [providers, setProviders] = useState([]);
-	const [prompts, setPrompts] = useState([]);
-	const [availableTools, setAvailableTools] = useState([]);
 	const [builderOpen, setBuilderOpen] = useState(false);
 	const [editingAgent, setEditingAgent] = useState(null);
 	const [testingId, setTestingId] = useState(null);
+	const readyCalledRef = useRef(false);
+
+	// Pagination
+	const [page, setPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalRecords, setTotalRecords] = useState(0);
+
+	// Filters
+	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [statusFilter, setStatusFilter] = useState('');
+
+	// Debounce search — wait 400ms after last keystroke before fetching
+	useEffect(() => {
+		const t = setTimeout(() => setDebouncedSearch(search), 400);
+		return () => clearTimeout(t);
+	}, [search]);
 
 	const fetchAgents = useCallback(async () => {
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/`, type: 'GET', loader: false });
+		const params = new URLSearchParams({ page: String(page) });
+		if (debouncedSearch) params.set('search', debouncedSearch);
+		if (statusFilter) params.set('status', statusFilter);
+		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/?${params}`, type: 'GET', loader: false });
 		if (success && response) {
-			setAgents(Array.isArray(response.agents?.records || response.agents) ? (response.agents?.records || response.agents) : []);
+			const data = response.agents || {};
+			setAgents(Array.isArray(data.records) ? data.records : (Array.isArray(data) ? data : []));
+			setTotalPages(data.total_pages || 1);
+			setTotalRecords(data.total_records || 0);
 			if (response.stats) setStats(response.stats);
 		}
-	}, [appId, triggerApi]);
+	}, [appId, triggerApi, page, debouncedSearch, statusFilter]);
 
 	const fetchProviders = useCallback(async () => {
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/providers/`, type: 'GET', loader: false });
+		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/providers/?page_size=100`, type: 'GET', loader: false });
 		if (success && response) setProviders(Array.isArray(response.providers?.records || response.providers) ? (response.providers?.records || response.providers) : []);
 	}, [appId, triggerApi]);
 
-	const fetchPrompts = useCallback(async () => {
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/prompts/`, type: 'GET', loader: false });
-		if (success && response) {
-			const records = response.prompts?.records || response.prompts || [];
-			// Fetch detail for each to get active_version content for preview
-			const detailed = await Promise.all(
-				(Array.isArray(records) ? records : []).map(async (p) => {
-					const { response: d, success: ok } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/prompts/${p.id}/`, type: 'GET', loader: false });
-					return ok && d?.prompt ? { ...p, ...d.prompt } : p;
-				})
-			);
-			setPrompts(detailed);
+	// Initial load — only the agents list; builder dependencies load on demand
+	useEffect(() => {
+		setInitialLoading(true);
+		fetchAgents().finally(() => {
+			setInitialLoading(false);
+			if (!readyCalledRef.current && onReady) {
+				readyCalledRef.current = true;
+				onReady();
+			}
+		});
+	}, [appId]);
+	useEffect(() => { fetchAgents(); }, [fetchAgents]);
+
+	// Load providers only when the builder opens for the first time
+	const builderDepsLoaded = useRef(false);
+	useEffect(() => {
+		if (builderOpen && !builderDepsLoaded.current) {
+			builderDepsLoaded.current = true;
+			fetchProviders();
 		}
-	}, [appId, triggerApi]);
-
-	const fetchTools = useCallback(async () => {
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/tools/`, type: 'GET', loader: false });
-		if (success && response) setAvailableTools(response.tools?.records || response.tools || []);
-	}, [appId, triggerApi]);
-
-	useEffect(() => { fetchAgents(); fetchProviders(); fetchPrompts(); fetchTools(); }, [appId]);
+	}, [builderOpen]);
 
 	const handleSave = async (values, { resetForm, setSubmitting }) => {
 		try {
@@ -1323,8 +1600,8 @@ export default function Agents() {
 		else notify('error', 'Test Failed', response?.message || 'Test failed.');
 	};
 
-	const activeCount = agents.filter((a) => a.status === 'active').length;
-	const disabledCount = agents.filter((a) => a.status === 'disabled').length;
+	const activeCount = stats.active_agents ?? agents.filter((a) => a.status === 'active').length;
+	const disabledCount = (stats.total_agents ?? agents.length) - activeCount;
 
 	const builderInitialValues = editingAgent
 		? {
@@ -1361,12 +1638,47 @@ export default function Agents() {
 					<button onClick={openCreate} className="flex items-center gap-[6px] rounded-[8px] bg-[#5048ED] px-[16px] py-[8px] font-lato text-[14px] font-medium text-white hover:bg-[#4338CA]">+ Create Agent</button>
 				</div>
 				<div className="flex items-center gap-[16px]">
-					<div className="flex items-center gap-[8px]"><span className="font-lato text-[14px] text-[#6B7280]">Total</span><span className="font-lato text-[14px] font-semibold text-[#111827]">{stats.total_agents ?? agents.length}</span></div>
+					<div className="flex items-center gap-[8px]"><span className="font-lato text-[14px] text-[#6B7280]">Total</span><span className="font-lato text-[14px] font-semibold text-[#111827]">{stats.total_agents ?? totalRecords}</span></div>
 					<div className="h-[16px] w-[1px] bg-[#E5E7EB]" />
-					<div className="flex items-center gap-[8px]"><span className="font-lato text-[14px] text-[#6B7280]">Active</span><span className="font-lato text-[14px] font-semibold text-[#10B981]">{stats.active_agents ?? activeCount}</span></div>
+					<div className="flex items-center gap-[8px]"><span className="font-lato text-[14px] text-[#6B7280]">Active</span><span className="font-lato text-[14px] font-semibold text-[#10B981]">{activeCount}</span></div>
 					<div className="h-[16px] w-[1px] bg-[#E5E7EB]" />
 					<div className="flex items-center gap-[8px]"><span className="font-lato text-[14px] text-[#6B7280]">Disabled</span><span className="font-lato text-[14px] font-semibold text-[#6B7280]">{disabledCount}</span></div>
 				</div>
+			</div>
+
+			{/* Filter bar */}
+			<div className="rounded-[8px] border border-[#E5E7EB] bg-white p-[12px] flex flex-wrap items-center gap-[8px]">
+				<span className="font-lato text-[12px] font-semibold text-[#6C747D] mr-[4px]">Filter:</span>
+				<div className="relative flex-1 min-w-[200px] max-w-[320px]">
+					<input
+						type="text"
+						value={search}
+						onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+						placeholder="Search agents…"
+						className="h-[34px] w-full rounded-[6px] border border-[#DDE2E5] pl-[30px] pr-[8px] font-lato text-[13px] text-[#374151] outline-none hover:border-[#346BD4] focus:border-[#346BD4]"
+					/>
+					<svg width="13" height="13" viewBox="0 0 13 13" className="absolute left-[9px] top-1/2 -translate-y-1/2 text-[#9CA3AF]" fill="none">
+						<circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+						<path d="M9 9l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+					</svg>
+				</div>
+				<FilterSelect
+					value={statusFilter}
+					onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+					options={[
+						{ value: '', label: 'All Status' },
+						{ value: 'active', label: '✓ Active' },
+						{ value: 'disabled', label: '✕ Disabled' },
+					]}
+				/>
+				{(search || statusFilter) && (
+					<button
+						onClick={() => { setSearch(''); setStatusFilter(''); setPage(1); }}
+						className="ml-auto font-lato text-[12px] text-[#6B7280] hover:text-[#EF4444] underline"
+					>
+						Clear all
+					</button>
+				)}
 			</div>
 
 			{agents.length > 0 && (
@@ -1382,14 +1694,27 @@ export default function Agents() {
 			)}
 
 			<div className="flex flex-col gap-[8px]">
-				{agents.length === 0 && (
+				{!initialLoading && agents.length === 0 && (
 					<div className="rounded-[8px] border border-dashed border-[#D1D5DB] bg-white px-[24px] py-[48px] text-center">
-						<p className="font-lato text-[14px] text-[#9CA3AF]">No agents yet. Click "Create Agent" to get started.</p>
+						<p className="font-lato text-[14px] text-[#9CA3AF]">{search || statusFilter ? 'No agents match your filters.' : 'No agents yet. Click "Create Agent" to get started.'}</p>
 					</div>
 				)}
 				{agents.map((agent) => (
 					<AgentRow key={agent.id} agent={agent} onEdit={openEdit} onToggleStatus={handleToggleStatus} onDuplicate={handleDuplicate} onTestAgent={handleTestAgent} testingId={testingId} appId={appId} triggerApi={triggerApi} />
 				))}
+				{totalPages > 1 && (
+					<div className="rounded-[8px] border border-[#E5E7EB] bg-white overflow-hidden">
+						<PaginationBar
+							page={page}
+							totalPages={totalPages}
+							totalRecords={totalRecords}
+							onPrev={() => setPage(p => Math.max(1, p - 1))}
+							onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+							onGoTo={setPage}
+							noun="agent"
+						/>
+					</div>
+				)}
 			</div>
 
 			<AgentBuilder
@@ -1398,11 +1723,8 @@ export default function Agents() {
 				onSave={handleSave}
 				initialValues={builderInitialValues}
 				providers={providers}
-				prompts={prompts}
-				availableTools={availableTools}
 				appId={appId}
 				triggerApi={triggerApi}
-				onPromptCreated={fetchPrompts}
 			/>
 
 		</div>

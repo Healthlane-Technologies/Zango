@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useApi from '../../../hooks/useApi';
@@ -1252,12 +1252,13 @@ function ProviderRow({ provider, onEdit, onToggleStatus, onTestConnection, onDel
 	);
 }
 
-export default function Providers() {
+export default function Providers({ onReady }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
 	const [providers, setProviders] = useState([]);
 	const [availableProviders, setAvailableProviders] = useState([]);
+	const [initialLoading, setInitialLoading] = useState(true);
 	const [addModalOpen, setAddModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [editingProvider, setEditingProvider] = useState(null);
@@ -1265,6 +1266,7 @@ export default function Providers() {
 	const [depModal, setDepModal] = useState({ show: false, entityName: '', agentCount: 0, agents: [] });
 	const [testingId, setTestingId] = useState(null);
 	const [actionLoading, setActionLoading] = useState(false);
+	const readyCalledRef = useRef(false);
 
 	// Fetch configured providers
 	const fetchProviders = useCallback(async () => {
@@ -1292,8 +1294,14 @@ export default function Providers() {
 	}, [appId, triggerApi]);
 
 	useEffect(() => {
-		fetchProviders();
-		fetchAvailableProviders();
+		setInitialLoading(true);
+		Promise.all([fetchProviders(), fetchAvailableProviders()]).finally(() => {
+			setInitialLoading(false);
+			if (!readyCalledRef.current && onReady) {
+				readyCalledRef.current = true;
+				onReady();
+			}
+		});
 	}, [appId]);
 
 	// Add provider — called by wizard on step 3 submit
@@ -1506,7 +1514,7 @@ export default function Providers() {
 
 			{/* Provider list */}
 			<div className="flex flex-col gap-[12px]">
-				{providers.length === 0 && (
+				{!initialLoading && providers.length === 0 && (
 					<div className="rounded-[8px] border border-dashed border-[#D1D5DB] bg-white px-[24px] py-[48px] text-center">
 						<p className="font-lato text-[14px] text-[#9CA3AF]">
 							No providers configured yet. Click "Add Provider" to get started.

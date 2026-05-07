@@ -851,12 +851,13 @@ function PaginationBar({ page, totalPages, totalRecords, onPrev, onNext, onGoTo 
 }
 
 /* ─── Main Component ─── */
-export default function InvocationLogs() {
+export default function InvocationLogs({ onReady }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
 	const [invocations, setInvocations] = useState([]);
 	const [totalRecords, setTotalRecords] = useState(0);
+	const [initialLoading, setInitialLoading] = useState(true);
 	const [stats, setStats] = useState({});
 	const [agents, setAgents] = useState([]);
 	const [providers, setProviders] = useState([]);
@@ -865,6 +866,7 @@ export default function InvocationLogs() {
 	const [loadingDetail, setLoadingDetail] = useState(false);
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
+	const readyCalledRef = useRef(false);
 
 	// Filters
 	const [filterAgent, setFilterAgent] = useState('');
@@ -872,6 +874,8 @@ export default function InvocationLogs() {
 	const [filterStatus, setFilterStatus] = useState('');
 	const [filterTriggeredBy, setFilterTriggeredBy] = useState('');
 	const [filterMemory, setFilterMemory] = useState(''); // 'yes' | 'no' | ''
+	const [filterDateStart, setFilterDateStart] = useState('');
+	const [filterDateEnd, setFilterDateEnd] = useState('');
 
 	const fetchStats = useCallback(async () => {
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/invocations/stats/`, type: 'GET', loader: false });
@@ -884,20 +888,19 @@ export default function InvocationLogs() {
 		if (filterProvider) params.set('provider_id', filterProvider);
 		if (filterStatus) params.set('status', filterStatus);
 		if (filterTriggeredBy) params.set('triggered_by', filterTriggeredBy);
-		// memory filter: has_session translates to filtering on session_id being set/unset
-		// BE doesn't support this natively yet — handled FE-side after fetch if needed
+		if (filterMemory) params.set('has_session', filterMemory);
+		if (filterDateStart) params.set('start_date', filterDateStart);
+		if (filterDateEnd) params.set('end_date', filterDateEnd);
 
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/invocations/?${params}`, type: 'GET', loader: false });
 		if (success && response) {
 			const data = response.invocations || {};
-			let records = data.records || [];
-			if (filterMemory === 'yes') records = records.filter(r => !!r.session_id);
-			if (filterMemory === 'no') records = records.filter(r => !r.session_id);
+			const records = data.records || [];
 			setInvocations(records);
 			setTotalPages(data.total_pages || 1);
 			setTotalRecords(data.total_records || 0);
 		}
-	}, [appId, triggerApi, page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory]);
+	}, [appId, triggerApi, page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory, filterDateStart, filterDateEnd]);
 
 	const fetchDetail = async (id) => {
 		if (detailData[id]) return;
@@ -918,8 +921,17 @@ export default function InvocationLogs() {
 		if (providerRes.success) setProviders(providerRes.response?.providers?.records || providerRes.response?.providers || []);
 	}, [appId, triggerApi]);
 
-	useEffect(() => { fetchStats(); fetchDropdowns(); }, [appId]);
-	useEffect(() => { fetchInvocations(); }, [page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory]);
+	useEffect(() => {
+		setInitialLoading(true);
+		Promise.all([fetchStats(), fetchDropdowns(), fetchInvocations()]).finally(() => {
+			setInitialLoading(false);
+			if (!readyCalledRef.current && onReady) {
+				readyCalledRef.current = true;
+				onReady();
+			}
+		});
+	}, [appId]);
+	useEffect(() => { fetchInvocations(); }, [fetchInvocations]);
 
 	const handleExpand = (id) => {
 		if (expandedId === id) { setExpandedId(null); return; }
@@ -995,8 +1007,11 @@ export default function InvocationLogs() {
 	if (filterTriggeredBy) activeFilters.push({ label: `Trigger: ${filterTriggeredBy}`, clear: () => clearFilter(setFilterTriggeredBy) });
 	if (filterMemory === 'yes') activeFilters.push({ label: 'Memory: enabled', clear: () => clearFilter(setFilterMemory) });
 	if (filterMemory === 'no') activeFilters.push({ label: 'Memory: disabled', clear: () => clearFilter(setFilterMemory) });
+	if (filterDateStart && filterDateEnd) activeFilters.push({ label: `Date: ${filterDateStart} → ${filterDateEnd}`, clear: () => { setFilterDateStart(''); setFilterDateEnd(''); setPage(1); } });
+	else if (filterDateStart) activeFilters.push({ label: `From: ${filterDateStart}`, clear: () => { setFilterDateStart(''); setPage(1); } });
+	else if (filterDateEnd) activeFilters.push({ label: `Until: ${filterDateEnd}`, clear: () => { setFilterDateEnd(''); setPage(1); } });
 
-	const hasFilters = activeFilters.length > 0;
+	const hasFilters = activeFilters.length > 0 || !!filterDateStart || !!filterDateEnd;
 
 	return (
 		<div className="flex flex-col gap-[20px] pb-[32px]">
@@ -1070,9 +1085,52 @@ export default function InvocationLogs() {
 					]}
 				/>
 
+				{/* Date range inputs */}
+				<div className="flex items-center gap-[4px]">
+					<span className="font-lato text-[12px] text-[#6C747D]">From</span>
+					<input
+						type="date"
+						value={filterDateStart}
+						max={filterDateEnd || undefined}
+						onChange={(e) => { setFilterDateStart(e.target.value); setPage(1); }}
+						className={`h-[34px] rounded-[6px] border px-[8px] font-lato text-[13px] outline-none cursor-pointer transition-colors ${filterDateStart ? 'border-[#346BD4] bg-[#EFF6FF] text-[#1D4ED8]' : 'border-[#DDE2E5] bg-white text-[#374151] hover:border-[#346BD4]'}`}
+					/>
+					<span className="font-lato text-[12px] text-[#6C747D]">To</span>
+					<input
+						type="date"
+						value={filterDateEnd}
+						min={filterDateStart || undefined}
+						onChange={(e) => { setFilterDateEnd(e.target.value); setPage(1); }}
+						className={`h-[34px] rounded-[6px] border px-[8px] font-lato text-[13px] outline-none cursor-pointer transition-colors ${filterDateEnd ? 'border-[#346BD4] bg-[#EFF6FF] text-[#1D4ED8]' : 'border-[#DDE2E5] bg-white text-[#374151] hover:border-[#346BD4]'}`}
+					/>
+				</div>
+
+				{/* Predefined date shortcuts */}
+				<div className="flex items-center gap-[4px]">
+					{[
+						{ label: 'Today', days: 0 },
+						{ label: '7d', days: 7 },
+						{ label: '30d', days: 30 },
+					].map(({ label, days }) => {
+						const today = new Date();
+						const end = today.toISOString().slice(0, 10);
+						const start = days === 0 ? end : new Date(today.setDate(today.getDate() - days)).toISOString().slice(0, 10);
+						const isActive = filterDateStart === start && filterDateEnd === end;
+						return (
+							<button
+								key={label}
+								onClick={() => { setFilterDateStart(start); setFilterDateEnd(end); setPage(1); }}
+								className={`h-[34px] rounded-[6px] border px-[10px] font-lato text-[12px] transition-colors ${isActive ? 'border-[#346BD4] bg-[#346BD4] text-white' : 'border-[#DDE2E5] bg-white text-[#374151] hover:border-[#346BD4]'}`}
+							>
+								{label}
+							</button>
+						);
+					})}
+				</div>
+
 				{hasFilters && (
 					<button
-						onClick={() => { setFilterAgent(''); setFilterProvider(''); setFilterStatus(''); setFilterTriggeredBy(''); setFilterMemory(''); setPage(1); }}
+						onClick={() => { setFilterAgent(''); setFilterProvider(''); setFilterStatus(''); setFilterTriggeredBy(''); setFilterMemory(''); setFilterDateStart(''); setFilterDateEnd(''); setPage(1); }}
 						className="ml-auto font-lato text-[12px] text-[#6B7280] hover:text-[#EF4444] underline"
 					>
 						Clear all
@@ -1105,7 +1163,7 @@ export default function InvocationLogs() {
 					<span className="w-[80px]">Status</span>
 				</div>
 
-				{invocations.length === 0 ? (
+				{!initialLoading && invocations.length === 0 ? (
 					<div className="px-[24px] py-[48px] text-center">
 						<p className="font-lato text-[14px] text-[#9CA3AF]">No invocations found.</p>
 					</div>

@@ -4,6 +4,8 @@ All endpoints are scoped to the current tenant (app).
 Authentication: Session auth (platform admin user).
 """
 
+import json
+
 from django.db import connection, models, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
@@ -21,6 +23,7 @@ from zango.apps.ai.models import (
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
+from zango.core.time_utils import process_timestamp
 
 from .serializers import (
     AppLLMAgentCreateSerializer,
@@ -740,6 +743,29 @@ class InvocationListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             session_id = request.GET.get("session_id")
             if session_id:
                 invocations = invocations.filter(session_id=session_id)
+
+            has_session = request.GET.get("has_session")
+            if has_session == "yes":
+                invocations = invocations.filter(session_id__isnull=False).exclude(
+                    session_id=""
+                )
+            elif has_session == "no":
+                invocations = invocations.filter(
+                    Q(session_id__isnull=True) | Q(session_id="")
+                )
+
+            start_date = request.GET.get("start_date")
+            end_date = request.GET.get("end_date")
+            if start_date or end_date:
+                effective_start = start_date or end_date
+                effective_end = end_date or start_date
+                ts = process_timestamp(
+                    json.dumps({"start": effective_start, "end": effective_end})
+                )
+                if ts:
+                    invocations = invocations.filter(
+                        created_at__gte=ts["start"], created_at__lte=ts["end"]
+                    )
 
             paginated = self.paginate_queryset(invocations, request, view=self)
             serializer = AppLLMInvocationListSerializer(paginated, many=True)

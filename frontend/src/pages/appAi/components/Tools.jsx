@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useApi from '../../../hooks/useApi';
@@ -212,27 +212,36 @@ function ToolRow({ tool, onExpand, isExpanded, detail, loadingDetail }) {
 }
 
 /* ─── Main Tools Component ─── */
-export default function Tools() {
+export default function Tools({ onReady }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
 	const [tools, setTools] = useState([]);
 	const [stats, setStats] = useState({});
+	const [initialLoading, setInitialLoading] = useState(true);
 	const [sections, setSections] = useState([]);
 	const [expandedId, setExpandedId] = useState(null);
 	const [detailData, setDetailData] = useState({});
 	const [loadingDetail, setLoadingDetail] = useState(false);
 	const [syncing, setSyncing] = useState(false);
+	const readyCalledRef = useRef(false);
 
 	// Filters
 	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [filterSection, setFilterSection] = useState('');
 	const [filterSafety, setFilterSafety] = useState('');
 	const [filterActive, setFilterActive] = useState('');
 
+	// Debounce search — wait 400ms after last keystroke before fetching
+	useEffect(() => {
+		const t = setTimeout(() => setDebouncedSearch(search), 400);
+		return () => clearTimeout(t);
+	}, [search]);
+
 	const fetchTools = useCallback(async () => {
 		const params = new URLSearchParams();
-		if (search) params.set('search', search);
+		if (debouncedSearch) params.set('search', debouncedSearch);
 		if (filterSection) params.set('section', filterSection);
 		if (filterSafety) params.set('safety', filterSafety);
 		if (filterActive) params.set('is_active', filterActive);
@@ -241,7 +250,7 @@ export default function Tools() {
 			setTools(response.tools?.records || response.tools || []);
 			if (response.stats) setStats(response.stats);
 		}
-	}, [appId, triggerApi, search, filterSection, filterSafety, filterActive]);
+	}, [appId, triggerApi, debouncedSearch, filterSection, filterSafety, filterActive]);
 
 	const fetchSections = useCallback(async () => {
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/tools/sections/`, type: 'GET', loader: false });
@@ -256,8 +265,17 @@ export default function Tools() {
 		if (success && response?.tool) setDetailData((prev) => ({ ...prev, [id]: response.tool }));
 	};
 
-	useEffect(() => { fetchTools(); fetchSections(); }, [appId]);
-	useEffect(() => { fetchTools(); }, [search, filterSection, filterSafety, filterActive]);
+	useEffect(() => {
+		setInitialLoading(true);
+		Promise.all([fetchTools(), fetchSections()]).finally(() => {
+			setInitialLoading(false);
+			if (!readyCalledRef.current && onReady) {
+				readyCalledRef.current = true;
+				onReady();
+			}
+		});
+	}, [appId]);
+	useEffect(() => { fetchTools(); }, [fetchTools]);
 
 	const handleExpand = (id) => {
 		if (expandedId === id) { setExpandedId(null); return; }
@@ -359,7 +377,7 @@ export default function Tools() {
 					<span className="w-[60px]">Status</span>
 				</div>
 
-				{tools.length === 0 ? (
+				{!initialLoading && tools.length === 0 ? (
 					<div className="px-[24px] py-[48px] text-center">
 						<p className="font-lato text-[14px] text-[#9CA3AF]">
 							No tools registered. Define functions with <code className="rounded bg-[#F3F4F6] px-[4px] py-[1px] text-[12px]">@tool</code> in your workspace&apos;s <code className="rounded bg-[#F3F4F6] px-[4px] py-[1px] text-[12px]">tools.py</code>, then click &quot;Sync Tools&quot;.

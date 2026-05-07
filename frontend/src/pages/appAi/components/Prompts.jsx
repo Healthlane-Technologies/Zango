@@ -1006,18 +1006,76 @@ function NewVersionModalBody({ formik, versionPrompt, onClose }) {
 	);
 }
 
+/* ─── Pagination bar ─── */
+function PaginationBar({ page, totalPages, totalRecords, onPrev, onNext, onGoTo }) {
+	const pageNumbers = [];
+	const delta = 2;
+	for (let i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) {
+		pageNumbers.push(i);
+	}
+	const showLeftEllipsis = pageNumbers[0] > 2;
+	const showRightEllipsis = pageNumbers[pageNumbers.length - 1] < totalPages - 1;
+	return (
+		<div className="flex items-center justify-between px-[16px] py-[14px] border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-b-[8px]">
+			<span className="font-lato text-[12px] text-[#6B7280]">
+				{totalRecords != null ? `${totalRecords.toLocaleString()} prompt${totalRecords !== 1 ? 's' : ''}` : ''}
+			</span>
+			<div className="flex items-center gap-[4px]">
+				<button onClick={onPrev} disabled={page === 1} className="flex items-center gap-[4px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
+					<svg width="12" height="12" viewBox="0 0 10 10"><path d="M7 1L3 5l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+					Prev
+				</button>
+				{pageNumbers[0] > 1 && (
+					<>
+						<button onClick={() => onGoTo(1)} className="rounded-[6px] border border-[#DDE2E5] px-[8px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white">1</button>
+						{showLeftEllipsis && <span className="px-[4px] font-lato text-[12px] text-[#9CA3AF]">…</span>}
+					</>
+				)}
+				{pageNumbers.map(n => (
+					<button key={n} onClick={() => onGoTo(n)} className={`rounded-[6px] border px-[8px] py-[5px] font-lato text-[12px] transition-colors ${n === page ? 'border-[#5048ED] bg-[#5048ED] text-white font-semibold' : 'border-[#DDE2E5] text-[#374151] hover:bg-white'}`}>{n}</button>
+				))}
+				{pageNumbers[pageNumbers.length - 1] < totalPages && (
+					<>
+						{showRightEllipsis && <span className="px-[4px] font-lato text-[12px] text-[#9CA3AF]">…</span>}
+						<button onClick={() => onGoTo(totalPages)} className="rounded-[6px] border border-[#DDE2E5] px-[8px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white">{totalPages}</button>
+					</>
+				)}
+				<button onClick={onNext} disabled={page === totalPages} className="flex items-center gap-[4px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
+					Next
+					<svg width="12" height="12" viewBox="0 0 10 10"><path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+				</button>
+			</div>
+			<span className="font-lato text-[12px] text-[#6B7280]">Page {page} of {totalPages}</span>
+		</div>
+	);
+}
+
 /* ─────────────────────────── Main Component ─────────────────────────── */
 
-export default function Prompts() {
+export default function Prompts({ onReady }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
+	const readyCalledRef = useRef(false);
 
 	const [prompts, setPrompts] = useState([]);
 	const [stats, setStats] = useState({});
 	const [loading, setLoading] = useState(true);
+	const [searching, setSearching] = useState(false);
 	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [typeFilter, setTypeFilter] = useState('');
 	const [showInactive, setShowInactive] = useState(false);
+
+	// Pagination
+	const [page, setPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalRecords, setTotalRecords] = useState(0);
+
+	// Debounce search input — wait 400ms after last keystroke before fetching
+	useEffect(() => {
+		const t = setTimeout(() => setDebouncedSearch(search), 400);
+		return () => clearTimeout(t);
+	}, [search]);
 
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
@@ -1031,43 +1089,43 @@ export default function Prompts() {
 	const [actionLoading, setActionLoading] = useState(false);
 
 	/* ── fetch ── */
+	const isFirstLoad = useRef(true);
 	const fetchPrompts = useCallback(async () => {
-		setLoading(true);
-		const url = showInactive
-			? `/api/v1/apps/${appId}/ai/prompts/?include_inactive=true`
-			: `/api/v1/apps/${appId}/ai/prompts/`;
+		if (isFirstLoad.current) {
+			setLoading(true);
+		} else {
+			setSearching(true);
+		}
+		const params = new URLSearchParams({ page: String(page) });
+		if (showInactive) params.set('include_inactive', 'true');
+		if (debouncedSearch) params.set('search', debouncedSearch);
+		if (typeFilter) params.set('type', typeFilter);
 		const { response, success } = await triggerApi({
-			url,
+			url: `/api/v1/apps/${appId}/ai/prompts/?${params}`,
 			type: 'GET',
 			loader: false,
 		});
 		if (success && response) {
-			const records = response.prompts?.records || response.prompts || [];
+			const data = response.prompts || {};
+			const records = Array.isArray(data.records) ? data.records : [];
+			setTotalPages(data.total_pages || 1);
+			setTotalRecords(data.total_records || 0);
 			if (response.stats) setStats(response.stats);
-
-			const detailed = await Promise.all(
-				(Array.isArray(records) ? records : []).map(async (p) => {
-					const { response: det, success: ok } = await triggerApi({
-						url: `/api/v1/apps/${appId}/ai/prompts/${p.id}/`,
-						type: 'GET',
-						loader: false,
-					});
-					return ok && det?.prompt ? { ...p, ...det.prompt } : p;
-				})
-			);
-			setPrompts(detailed);
+			setPrompts(records);
 		}
+		isFirstLoad.current = false;
 		setLoading(false);
-	}, [appId, triggerApi, showInactive]);
+		setSearching(false);
+		if (!readyCalledRef.current && onReady) {
+			readyCalledRef.current = true;
+			onReady();
+		}
+	}, [appId, triggerApi, showInactive, page, debouncedSearch, typeFilter]);
 
-	useEffect(() => { fetchPrompts(); }, [appId, showInactive]);
+	useEffect(() => { fetchPrompts(); }, [fetchPrompts]);
 
-	/* ── filtered list ── */
-	const filteredPrompts = prompts.filter((p) => {
-		const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || '').toLowerCase().includes(search.toLowerCase());
-		const matchType = !typeFilter || p.type === typeFilter;
-		return matchSearch && matchType;
-	});
+	/* ── filtered list (client-side no longer needed — server handles it) ── */
+	const filteredPrompts = prompts;
 
 	/* ── CRUD handlers ── */
 	const handleCreatePrompt = async (values, { resetForm, setSubmitting }) => {
@@ -1251,17 +1309,23 @@ export default function Prompts() {
 			{!loading && (
 				<div className="flex items-center gap-[10px]">
 					<div className="relative flex-1 max-w-[360px]">
-						<svg
-							width="14" height="14" viewBox="0 0 14 14" fill="none"
-							className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#9CA3AF]"
-						>
-							<circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
-							<path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-						</svg>
+						{searching ? (
+							<svg className="absolute left-[12px] top-1/2 -translate-y-1/2 animate-spin text-[#5048ED]" width="14" height="14" viewBox="0 0 14 14" fill="none">
+								<path d="M7 1.5A5.5 5.5 0 1 0 12.5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+							</svg>
+						) : (
+							<svg
+								width="14" height="14" viewBox="0 0 14 14" fill="none"
+								className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#9CA3AF]"
+							>
+								<circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+								<path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+							</svg>
+						)}
 						<input
 							type="text"
 							value={search}
-							onChange={(e) => setSearch(e.target.value)}
+							onChange={(e) => { setSearch(e.target.value); setPage(1); }}
 							placeholder="Search prompts…"
 							className="w-full rounded-[8px] border border-[#DDE2E5] pl-[36px] pr-[12px] py-[8px] font-lato text-[13px] text-[#111827] placeholder-[#9CA3AF] outline-none focus:border-[#5048ED] focus:ring-1 focus:ring-[#5048ED] transition-colors"
 						/>
@@ -1270,7 +1334,7 @@ export default function Prompts() {
 						{['', 'system', 'user'].map((t) => (
 							<button
 								key={t}
-								onClick={() => setTypeFilter(t)}
+								onClick={() => { setTypeFilter(t); setPage(1); }}
 								className={`rounded-[7px] px-[12px] py-[7px] font-lato text-[12px] font-medium transition-colors ${
 									typeFilter === t
 										? t === 'system'
@@ -1287,7 +1351,7 @@ export default function Prompts() {
 					</div>
 					{(search || typeFilter) && (
 						<button
-							onClick={() => { setSearch(''); setTypeFilter(''); }}
+							onClick={() => { setSearch(''); setTypeFilter(''); setPage(1); }}
 							className="font-lato text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
 						>
 							Clear
@@ -1295,7 +1359,7 @@ export default function Prompts() {
 					)}
 					<div className="ml-auto">
 						<button
-							onClick={() => setShowInactive((v) => !v)}
+							onClick={() => { setShowInactive((v) => !v); setPage(1); }}
 							className={`flex items-center gap-[6px] rounded-[7px] border px-[12px] py-[7px] font-lato text-[12px] font-medium transition-colors ${
 								showInactive
 									? 'border-[#DDD6FE] bg-[#F5F3FF] text-[#5048ED]'
@@ -1342,7 +1406,7 @@ export default function Prompts() {
 						<div className="rounded-[10px] border border-[#E5E7EB] bg-white px-[24px] py-[32px] text-center">
 							<p className="font-lato text-[14px] text-[#9CA3AF]">
 								No prompts match your filters.{' '}
-								<button onClick={() => { setSearch(''); setTypeFilter(''); }} className="text-[#5048ED] hover:underline">
+								<button onClick={() => { setSearch(''); setTypeFilter(''); setPage(1); }} className="text-[#5048ED] hover:underline">
 									Clear filters
 								</button>
 							</p>
@@ -1361,6 +1425,18 @@ export default function Prompts() {
 							promotingId={promotingId}
 						/>
 					))
+				)}
+				{totalPages > 1 && !loading && (
+					<div className="rounded-[10px] border border-[#E5E7EB] bg-white overflow-hidden">
+						<PaginationBar
+							page={page}
+							totalPages={totalPages}
+							totalRecords={totalRecords}
+							onPrev={() => setPage(p => Math.max(1, p - 1))}
+							onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+							onGoTo={setPage}
+						/>
+					</div>
 				)}
 			</div>
 
@@ -1430,7 +1506,7 @@ export default function Prompts() {
 											onChange={(e) => formik.setFieldValue('content', e.target.value)}
 											onBlur={() => formik.setFieldTouched('content', true)}
 											error={formik.touched.content && formik.errors.content}
-											rows={14}
+											rows={8}
 										/>
 									</div>
 								</div>

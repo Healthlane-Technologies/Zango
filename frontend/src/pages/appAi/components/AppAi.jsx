@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import BreadCrumbs from '../../app/components/BreadCrumbs';
 import Providers from './Providers';
@@ -6,11 +6,20 @@ import Agents from './Agents';
 import Prompts from './Prompts';
 import Tools from './Tools';
 import InvocationLogs from './InvocationLogs';
+import Guardrails from './Guardrails';
+import {
+	ProvidersListSkeleton,
+	AgentsListSkeleton,
+	PromptsListSkeleton,
+	ToolsListSkeleton,
+	InvocationLogsSkeleton,
+} from './AiSkeletons';
 
 const tabs = [
 	{
 		id: 'agents',
 		label: 'Agents',
+		Skeleton: AgentsListSkeleton,
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<circle cx="8" cy="5" r="3" fillOpacity="0.3" stroke="currentColor" strokeWidth="1.2" fill="none"/>
@@ -21,6 +30,7 @@ const tabs = [
 	{
 		id: 'providers',
 		label: 'Providers',
+		Skeleton: ProvidersListSkeleton,
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<path d="M8 1L2 4V8L8 11L14 8V4L8 1Z" fillOpacity="0.3"/>
@@ -33,6 +43,7 @@ const tabs = [
 	{
 		id: 'prompts',
 		label: 'Prompts',
+		Skeleton: PromptsListSkeleton,
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<path d="M3 3H13V11H8L5 14V11H3V3Z" fillOpacity="0.3"/>
@@ -43,6 +54,7 @@ const tabs = [
 	{
 		id: 'tools',
 		label: 'Tools',
+		Skeleton: ToolsListSkeleton,
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<path d="M10.5 1.5L14.5 5.5L5.5 14.5H1.5V10.5L10.5 1.5Z" fillOpacity="0.3"/>
@@ -53,6 +65,7 @@ const tabs = [
 	{
 		id: 'guardrails',
 		label: 'Guardrails',
+		Skeleton: null, // static page, no loading needed
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<path d="M8 2L3 5V8C3 11.04 4.88 13.64 8 14C11.12 13.64 13 11.04 13 8V5L8 2Z" fillOpacity="0.3"/>
@@ -63,6 +76,7 @@ const tabs = [
 	{
 		id: 'invocation-logs',
 		label: 'Invocation Logs',
+		Skeleton: InvocationLogsSkeleton,
 		icon: () => (
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 				<path d="M2 4H14M2 7H14M2 10H14M2 13H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -70,6 +84,47 @@ const tabs = [
 		),
 	},
 ];
+
+/**
+ * TabPanel — keeps the child mounted after first visit (avoids re-fetch on tab switch)
+ * but hides inactive panels with display:none. Shows a skeleton until the child
+ * signals it has finished its initial data load via onReady().
+ *
+ * Strategy:
+ * - While not ready AND active: render Skeleton visibly + child off-screen (sr-only)
+ *   so the child can run its useEffect/fetch and call onReady.
+ * - Once ready: render child normally; skeleton is gone.
+ * - When inactive: display:none — child stays mounted but invisible (no re-fetch).
+ */
+function TabPanel({ id, activeTab, Skeleton, isReady, children }) {
+	const isActive = activeTab === id;
+	const showSkeleton = isActive && !isReady && !!Skeleton;
+
+	return (
+		<div
+			role="tabpanel"
+			aria-labelledby={`tab-${id}`}
+			style={{ display: isActive ? undefined : 'none' }}
+			className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]"
+		>
+			{/* Skeleton overlay — replaces content appearance until data lands */}
+			{showSkeleton && (
+				<div aria-hidden="true">
+					<Skeleton />
+				</div>
+			)}
+
+			{/*
+			 * Child is always rendered once mounted. While skeleton is shown we push
+			 * the child out of visible flow using sr-only so it can fire useEffects.
+			 * Once ready we remove the sr-only class so content renders normally.
+			 */}
+			<div className={showSkeleton ? 'sr-only' : undefined}>
+				{children}
+			</div>
+		</div>
+	);
+}
 
 export default function AppAi() {
 	const location = useLocation();
@@ -82,13 +137,26 @@ export default function AppAi() {
 
 	const [activeTab, setActiveTab] = useState(getActiveTab());
 
+	// Track which tabs have finished their initial data load
+	const [tabReady, setTabReady] = useState({});
+	// Track which tabs have been mounted (we mount lazily on first visit)
+	const [tabMounted, setTabMounted] = useState({ [getActiveTab()]: true });
+
 	useEffect(() => {
-		setActiveTab(getActiveTab());
+		const next = getActiveTab();
+		setActiveTab(next);
+		// Mount the tab if it hasn't been mounted yet
+		setTabMounted((prev) => prev[next] ? prev : { ...prev, [next]: true });
 	}, [location]);
 
 	const handleTabChange = (tabId) => {
 		navigate(`#${tabId}`, { replace: true });
 		setActiveTab(tabId);
+		setTabMounted((prev) => prev[tabId] ? prev : { ...prev, [tabId]: true });
+	};
+
+	const makeOnReady = (tabId) => () => {
+		setTabReady((prev) => prev[tabId] ? prev : { ...prev, [tabId]: true });
 	};
 
 	return (
@@ -127,6 +195,10 @@ export default function AppAi() {
 						return (
 							<button
 								key={tab.id}
+								id={`tab-${tab.id}`}
+								role="tab"
+								aria-selected={isActive}
+								aria-controls={`tabpanel-${tab.id}`}
 								onClick={() => handleTabChange(tab.id)}
 								className={`flex items-center gap-[8px] py-[16px] px-[4px] border-b-[3px] transition-all ${
 									isActive
@@ -144,43 +216,31 @@ export default function AppAi() {
 				</div>
 			</div>
 
-			{/* Content */}
+			{/* Content — all tabs stay mounted after first visit */}
 			<div className="flex-1 overflow-auto">
-				{activeTab === 'providers' && (
-					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
-						<Providers />
-					</div>
-				)}
+				{tabs.map((tab) => {
+					if (!tabMounted[tab.id]) return null;
 
-{activeTab === 'agents' && (
-					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
-						<Agents />
-					</div>
-				)}
+					const isReady = !!tabReady[tab.id];
+					const onReady = makeOnReady(tab.id);
 
-				{activeTab === 'prompts' && (
-					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
-						<Prompts />
-					</div>
-				)}
-
-				{activeTab === 'tools' && (
-					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
-						<Tools />
-					</div>
-				)}
-
-				{activeTab === 'guardrails' && (
-					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
-						<p className="text-[#6B7280] font-lato text-[14px]">Guardrails coming soon.</p>
-					</div>
-				)}
-
-				{activeTab === 'invocation-logs' && (
-					<div className="px-[40px] pt-[32px] pb-[60px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
-						<InvocationLogs />
-					</div>
-				)}
+					return (
+						<TabPanel
+							key={tab.id}
+							id={tab.id}
+							activeTab={activeTab}
+							Skeleton={tab.Skeleton}
+							isReady={isReady}
+						>
+							{tab.id === 'providers'       && <Providers      onReady={onReady} />}
+							{tab.id === 'agents'          && <Agents         onReady={onReady} />}
+							{tab.id === 'prompts'         && <Prompts        onReady={onReady} />}
+							{tab.id === 'tools'           && <Tools          onReady={onReady} />}
+							{tab.id === 'guardrails'      && <Guardrails     onReady={onReady} />}
+							{tab.id === 'invocation-logs' && <InvocationLogs onReady={onReady} />}
+						</TabPanel>
+					);
+				})}
 			</div>
 		</div>
 	);

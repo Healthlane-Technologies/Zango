@@ -397,6 +397,9 @@ class AppLLMPromptVersionSerializer(serializers.ModelSerializer):
 class AppLLMPromptListSerializer(serializers.ModelSerializer):
     active_version_number = serializers.SerializerMethodField()
     total_versions = serializers.SerializerMethodField()
+    active_version = AppLLMPromptVersionSerializer(read_only=True)
+    versions = serializers.SerializerMethodField()
+    used_by_agents = serializers.SerializerMethodField()
 
     class Meta:
         model = AppLLMPrompt
@@ -406,8 +409,11 @@ class AppLLMPromptListSerializer(serializers.ModelSerializer):
             "description",
             "type",
             "is_active",
+            "active_version",
             "active_version_number",
+            "versions",
             "total_versions",
+            "used_by_agents",
             "created_at",
             "modified_at",
         ]
@@ -419,6 +425,18 @@ class AppLLMPromptListSerializer(serializers.ModelSerializer):
 
     def get_total_versions(self, obj):
         return obj.versions.count()
+
+    def get_versions(self, obj):
+        versions = obj.versions.all().order_by("-version_number")
+        return AppLLMPromptVersionSerializer(versions, many=True).data
+
+    def get_used_by_agents(self, obj):
+        agents = (
+            AppLLMAgent.objects.filter(is_enabled=True)
+            .filter(models.Q(system_prompt=obj) | models.Q(user_prompt=obj))
+            .values("id", "name")
+        )
+        return list(agents)
 
 
 class AppLLMPromptDetailSerializer(serializers.ModelSerializer):
