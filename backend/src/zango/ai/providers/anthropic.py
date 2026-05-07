@@ -149,6 +149,7 @@ class AnthropicProvider(BaseLLMProvider):
             "tool_use": "tool_use",
             "max_tokens": "max_tokens",
             "stop_sequence": "stop_sequence",
+            "refusal": "refusal",
         }
         return mapping.get(stop_reason, stop_reason)
 
@@ -181,8 +182,6 @@ class AnthropicProvider(BaseLLMProvider):
         stop_sequences=None,
         **kwargs,
     ):
-        import json as json_module
-
         kwargs_api = {
             "model": model,
             "messages": self._convert_messages(messages),
@@ -196,33 +195,22 @@ class AnthropicProvider(BaseLLMProvider):
         if stop_sequences:
             kwargs_api["stop_sequences"] = stop_sequences
 
-        # Structured output: append schema to system prompt and prefill assistant
+        # Structured output
         response_format = kwargs.get("response_format")
-        if response_format:
-            schema_instruction = ""
-            prefill = "{"
-            if isinstance(response_format, dict):
-                schema_instruction = (
-                    "\n\nYou MUST respond with ONLY valid JSON that conforms to this JSON Schema:\n"
-                    f"```json\n{json_module.dumps(response_format, indent=2)}\n```\n"
-                    "Do not include any text outside the JSON."
-                )
-                root_type = response_format.get("type", "object")
-                prefill = "[" if root_type == "array" else "{"
-            elif response_format == "json":
-                schema_instruction = (
-                    "\n\nYou MUST respond with ONLY valid JSON. "
-                    "Do not include any text, markdown formatting, or code fences outside the JSON."
-                )
-
-            if schema_instruction:
-                kwargs_api["system"] = (
-                    kwargs_api.get("system") or ""
-                ) + schema_instruction
-                # Prefill assistant message to force JSON output
-                kwargs_api["messages"] = kwargs_api["messages"] + [
-                    {"role": "assistant", "content": prefill}
-                ]
+        if isinstance(response_format, dict):
+            # Native JSON schema enforcement via output_config — incompatible with prefill
+            kwargs_api["output_config"] = {
+                "format": {
+                    "type": "json_schema",
+                    "schema": response_format,
+                }
+            }
+        elif response_format == "json":
+            # No schema supplied — fall back to prompt engineering
+            kwargs_api["system"] = (kwargs_api.get("system") or "") + (
+                "\n\nYou MUST respond with ONLY valid JSON. "
+                "Do not include any text, markdown formatting, or code fences outside the JSON."
+            )
 
         start = time.monotonic()
         try:
@@ -248,19 +236,8 @@ class AnthropicProvider(BaseLLMProvider):
             or 0,
         )
 
-        content = self._extract_text(response)
-        # If we used a prefill, prepend it to the response content
-        if response_format and content:
-            root_type = (
-                response_format.get("type", "object")
-                if isinstance(response_format, dict)
-                else "object"
-            )
-            prefill_char = "[" if root_type == "array" else "{"
-            content = prefill_char + content
-
         return LLMResponse(
-            content=content,
+            content=self._extract_text(response),
             tool_calls=self._extract_tool_calls(response),
             stop_reason=self._map_stop_reason(response.stop_reason),
             usage=usage,
@@ -292,6 +269,21 @@ class AnthropicProvider(BaseLLMProvider):
             kwargs_api["tools"] = self.format_tools_for_api(tools)
         if stop_sequences:
             kwargs_api["stop_sequences"] = stop_sequences
+
+        # Structured output — output_config is compatible with streaming
+        response_format = kwargs.get("response_format")
+        if isinstance(response_format, dict):
+            kwargs_api["output_config"] = {
+                "format": {
+                    "type": "json_schema",
+                    "schema": response_format,
+                }
+            }
+        elif response_format == "json":
+            kwargs_api["system"] = (kwargs_api.get("system") or "") + (
+                "\n\nYou MUST respond with ONLY valid JSON. "
+                "Do not include any text, markdown formatting, or code fences outside the JSON."
+            )
 
         try:
             with self._client.messages.stream(**kwargs_api) as stream:

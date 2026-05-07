@@ -14,6 +14,7 @@ Usage:
     print(response.cost_usd)
 """
 
+from zango.ai.exceptions import OutputParseError, OutputValidationError
 from zango.ai.providers.base import (
     LLMFile,
     LLMMessage,
@@ -111,4 +112,6 @@ __all__ = [
     "LLMToolCall",
     "LLMToolDef",
     "LLMUsage",
+    "OutputParseError",
+    "OutputValidationError",
 ]

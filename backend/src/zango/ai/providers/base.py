@@ -223,7 +223,7 @@ class LLMToolCall:
 class LLMResponse:
     content: str  # Text content of the response
     tool_calls: list[LLMToolCall]  # Tool use requests from the LLM
-    stop_reason: str  # "end_turn", "tool_use", "max_tokens"
+    stop_reason: str  # "end_turn", "tool_use", "max_tokens", "refusal"
     usage: LLMUsage
     model: str  # Actual model used (resolved)
     raw_response: Any  # The original SDK response object
@@ -233,6 +233,9 @@ class LLMResponse:
     invocation_id: Optional[int] = None  # DB invocation PK (set by ProviderClient)
     session_id: Optional[str] = (
         None  # Memory session ID (set by AgentClient when memory_enabled)
+    )
+    parsed_content: Optional[Any] = (
+        None  # Parsed + validated JSON dict (set when output_schema=JSON)
     )
 
 

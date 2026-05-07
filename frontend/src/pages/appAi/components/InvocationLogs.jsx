@@ -147,7 +147,20 @@ function InvocationDetail({ invocation }) {
 				// For memory-enabled runs, request_messages = [...historyMessages, currentUserMsg].
 				// The current user input is the last user-role message; everything before it is
 				// prior session context loaded from memory.
-				const userMsgIndices = messages.reduce((acc, m, i) => m.role === 'user' ? [...acc, i] : acc, []);
+				//
+				// Anthropic tool-result messages also use role="user" with content blocks of
+				// type "tool_result" — these are NOT the user's actual input and must be skipped
+				// when finding the real current user message.
+				const isToolResultMsg = (m) =>
+					m.role === 'user' &&
+					Array.isArray(m.content) &&
+					m.content.length > 0 &&
+					m.content.every(b => b.type === 'tool_result');
+
+				const userMsgIndices = messages.reduce(
+					(acc, m, i) => (m.role === 'user' && !isToolResultMsg(m)) ? [...acc, i] : acc,
+					[]
+				);
 				const currentUserMsgIdx = userMsgIndices[userMsgIndices.length - 1] ?? -1;
 				const currentUserMsg = currentUserMsgIdx >= 0 ? messages[currentUserMsgIdx] : null;
 				// History = all messages before the current user message (memory context)
@@ -160,6 +173,10 @@ function InvocationDetail({ invocation }) {
 				// Helper to render message text content
 				const renderContent = (content) => {
 					if (Array.isArray(content)) {
+						// tool_result blocks are internal Anthropic protocol — show a neutral label
+						if (content.every(b => b.type === 'tool_result')) {
+							return '(tool result)';
+						}
 						const text = content.filter(b => b.type === 'text').map(b => b.text).join(' ');
 						return text || '(file attachment)';
 					}
@@ -227,9 +244,9 @@ function InvocationDetail({ invocation }) {
 										</span>
 										<div className="rounded-[6px] bg-[#EFF6FF] border border-[#BFDBFE] px-[12px] py-[8px]">
 											{Array.isArray(currentUserMsg.content)
-												? <span className="font-lato text-[12px] text-[#6B7280] italic">
+												? <pre className="whitespace-pre-wrap break-words font-lato text-[12px] text-[#1E3A5F]">
 													{currentUserMsg.content.filter(b => b.type === 'text').map(b => b.text).join(' ') || '(file attachment)'}
-												  </span>
+												  </pre>
 												: <pre className="whitespace-pre-wrap break-words font-lato text-[12px] text-[#1E3A5F]">{currentUserMsg.content || '(empty)'}</pre>
 											}
 										</div>

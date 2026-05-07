@@ -127,3 +127,16 @@ class ToolTimeout(ZangoAIError):
         self.tool_name = tool_name
         self.timeout_seconds = timeout_seconds
         super().__init__(f"Tool '{tool_name}' timed out after {timeout_seconds}s.")
+
+
+class OutputParseError(ZangoAIError):
+    """LLM response could not be parsed as JSON."""
+
+
+class OutputValidationError(ZangoAIError):
+    """LLM response JSON does not match the configured output schema."""
+
+    def __init__(self, message, field=None, errors=None):
+        super().__init__(message)
+        self.field = field
+        self.errors = errors  # list of validation error dicts

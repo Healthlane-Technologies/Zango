@@ -417,6 +417,33 @@ class AgentClient:
         # Update agent-level counters with total cost across all rounds
         self._agent.record_usage(total_cost)
 
+        # ── Output schema validation ───────────────────────────────────────────
+        if self._agent.output_schema == "JSON" and response.content:
+            from zango.ai.exceptions import OutputParseError, OutputValidationError
+
+            try:
+                parsed = json.loads(response.content)
+            except json.JSONDecodeError as e:
+                raise OutputParseError(
+                    f"Agent '{self._agent.name}' returned invalid JSON: {e}"
+                ) from e
+
+            if self._agent.output_json_schema:
+                try:
+                    import jsonschema
+
+                    jsonschema.validate(
+                        instance=parsed, schema=self._agent.output_json_schema
+                    )
+                except jsonschema.ValidationError as e:
+                    raise OutputValidationError(
+                        message=e.message,
+                        field=e.json_path,
+                        errors=[e.message],
+                    ) from e
+
+            response.parsed_content = parsed
+
         # ── Memory: persist this exchange ─────────────────────────────────────
         if session_id and self._agent.memory_enabled:
             self._save_session_messages(

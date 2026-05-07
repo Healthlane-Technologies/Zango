@@ -7,11 +7,77 @@ import useApi from '../../../hooks/useApi';
 import InputField from '../../../components/Form/InputField.jsx';
 import Toast from '../../../components/Notifications/Toast';
 
-const PROVIDER_COLORS = {
-	anthropic: { color: '#6B5CE7', initial: 'A', label: 'Anthropic' },
-	openai: { color: '#10B981', initial: 'O', label: 'OpenAI' },
-	azure_openai: { color: '#346BD4', initial: 'Az', label: 'Azure OpenAI' },
-	bedrock: { color: '#F59E0B', initial: 'B', label: 'AWS Bedrock' },
+// ── Provider logo SVGs ───────────────────────────────────────────────────────
+
+function AnthropicLogo({ size = 18 }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 46 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M32.73 0h-6.945L38.74 32h6.945L32.73 0Z" fill="#181818"/>
+			<path d="M13.055 0 0.315 32h7.109l2.656-6.8h13.6l2.656 6.8h7.11L18.705 0h-5.65Zm-.78 19.367 4.44-11.371 4.44 11.371h-8.88Z" fill="#181818"/>
+		</svg>
+	);
+}
+
+function OpenAILogo({ size = 18 }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M29.71 13.09A8.09 8.09 0 0 0 20.78 4a8.1 8.1 0 0 0-13.7 3A8.1 8.1 0 0 0 2.29 18.9 8.1 8.1 0 0 0 11.22 28a8.09 8.09 0 0 0 13.69-3A8.1 8.1 0 0 0 29.71 13.09Zm-12.4 17.3a6 6 0 0 1-3.84-1.39l.19-.11 6.37-3.68a1 1 0 0 0 .53-.92v-8.98l2.69 1.56a.09.09 0 0 1 .05.07v7.44a6 6 0 0 1-6 6.01Zm-12.89-5.5a6 6 0 0 1-.72-4 5.89 5.89 0 0 0 1 .17l6.37 3.68a1 1 0 0 0 1.06 0l7.78-4.49v3.12a.1.1 0 0 1-.04.08L13.48 27a6 6 0 0 1-8.06-2.11ZM3.29 10.52a6 6 0 0 1 3.13-2.64v7.58a1 1 0 0 0 .51.9l7.75 4.47-2.7 1.56a.1.1 0 0 1-.09 0L5.41 18.4a6 6 0 0 1-2.12-7.88Zm22.13 5.15-7.78-4.52 2.7-1.55a.1.1 0 0 1 .09 0l6.48 3.74a6 6 0 0 1-.93 10.82v-7.58a1.06 1.06 0 0 0-.56-.91Zm2.68-4.06a5.9 5.9 0 0 0-1-.17l-6.37-3.68a1 1 0 0 0-1.06 0L11.9 12.25V9.13a.09.09 0 0 1 .04-.08L18.43 5a6 6 0 0 1 9 6.61ZM10.55 17.1l-2.69-1.55a.09.09 0 0 1-.05-.07V8.03a6 6 0 0 1 9.84-4.6l-.19.11-6.37 3.68a1 1 0 0 0-.53.91l-.01 8.97Zm1.46-3.15 3.46-2 3.46 2v4l-3.46 2-3.46-2v-4Z" fill="#181818"/>
+		</svg>
+	);
+}
+
+function AzureLogo({ size = 18 }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+			<defs>
+				<linearGradient id="ag-az1" x1="0.957" y1="39.859" x2="0.458" y2="40.44" gradientUnits="userSpaceOnUse">
+					<stop offset="0" stopColor="#114a8b"/>
+					<stop offset="1" stopColor="#0669bc"/>
+				</linearGradient>
+				<linearGradient id="ag-az2" x1="0.654" y1="39.92" x2="0.946" y2="40.198" gradientUnits="userSpaceOnUse">
+					<stop offset="0" stopOpacity=".3"/>
+					<stop offset=".071" stopOpacity=".2"/>
+					<stop offset=".321" stopOpacity=".1"/>
+					<stop offset=".623" stopOpacity=".05"/>
+					<stop offset="1" stopOpacity="0"/>
+				</linearGradient>
+				<linearGradient id="ag-az3" x1="0.372" y1="39.128" x2="0.796" y2="40.473" gradientUnits="userSpaceOnUse">
+					<stop offset="0" stopColor="#3ccbf4"/>
+					<stop offset="1" stopColor="#2892df"/>
+				</linearGradient>
+			</defs>
+			<path d="M33.338 6.544h26.038l-27.03 80.087a4.152 4.152 0 0 1-3.933 2.824H8.149a4.145 4.145 0 0 1-3.928-5.47L29.405 9.368a4.152 4.152 0 0 1 3.933-2.824z" fill="url(#ag-az1)"/>
+			<path d="M71.175 60.261h-41.29L53.44 6.544H29.395A4.15 4.15 0 0 0 25.47 9.37L.222 83.985a4.145 4.145 0 0 0 3.928 5.47h20.343a4.15 4.15 0 0 0 3.896-2.693z" fill="#0078d4"/>
+			<path d="M33.338 6.544a4.12 4.12 0 0 0-3.924 2.848L.247 83.951a4.14 4.14 0 0 0 3.902 5.504h20.484a4.45 4.45 0 0 0 3.415-2.82l4.918-14.507 17.582 16.335a4.24 4.24 0 0 0 2.65.992H74.59L62.194 60.1l-17.055.005L59.47 6.544z" fill="url(#ag-az2)"/>
+			<path d="M66.595 9.368A4.145 4.145 0 0 0 62.67 6.54H33.648a4.145 4.145 0 0 1 3.925 2.828l25.184 74.616a4.145 4.145 0 0 1-3.925 5.472h29.02a4.145 4.145 0 0 0 3.924-5.472z" fill="url(#ag-az3)"/>
+		</svg>
+	);
+}
+
+function BedrockLogo({ size = 18 }) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<rect width="32" height="32" rx="4" fill="#232F3E"/>
+			<path d="M16 4L4 10.5V21.5L16 28L28 21.5V10.5L16 4Z" fill="#FF9900"/>
+			<path d="M16 4L28 10.5V21.5L16 28V4Z" fill="#FF9900" opacity="0.7"/>
+			<path d="M16 4L4 10.5L16 17L28 10.5L16 4Z" fill="white" opacity="0.15"/>
+			<text x="16" y="20" textAnchor="middle" fill="white" fontSize="9" fontFamily="sans-serif" fontWeight="bold">BR</text>
+		</svg>
+	);
+}
+
+const PROVIDER_LOGOS = {
+	anthropic:    AnthropicLogo,
+	openai:       OpenAILogo,
+	azure_openai: AzureLogo,
+	bedrock:      BedrockLogo,
+};
+
+const PROVIDER_META = {
+	anthropic:    { bg: '#F5F2FF', accent: '#6B5CE7', label: 'Anthropic' },
+	openai:       { bg: '#F0FDF9', accent: '#059669', label: 'OpenAI' },
+	azure_openai: { bg: '#EFF6FF', accent: '#2563EB', label: 'Azure OpenAI' },
+	bedrock:      { bg: '#FFFBEB', accent: '#D97706', label: 'AWS Bedrock' },
 };
 
 function notify(type, title, description) {
@@ -22,13 +88,17 @@ function notify(type, title, description) {
 }
 
 function ProviderBadge({ slug, name }) {
-	const info = PROVIDER_COLORS[slug] || { color: '#6B7280', initial: '?', label: name || slug };
+	const meta = PROVIDER_META[slug] || { bg: '#F3F4F6', accent: '#6B7280', label: name || slug };
+	const Logo = PROVIDER_LOGOS[slug];
 	return (
 		<span className="flex items-center gap-[6px]">
-			<span className="flex h-[20px] w-[20px] items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ backgroundColor: info.color }}>
-				{info.initial}
+			<span className="flex h-[22px] w-[22px] items-center justify-center rounded-[4px]" style={{ backgroundColor: meta.bg }}>
+				{Logo
+					? <Logo size={14} />
+					: <span className="font-lato text-[10px] font-bold" style={{ color: meta.accent }}>{(slug || '?')[0].toUpperCase()}</span>
+				}
 			</span>
-			<span className="font-lato text-[13px] text-[#111827]">{name || info.label}</span>
+			<span className="font-lato text-[13px] text-[#111827]">{name || meta.label}</span>
 		</span>
 	);
 }
@@ -126,7 +196,7 @@ function PromptSelector({ label, hint, type, value, onChange, prompts, appId, tr
 			<div className="mb-[4px] flex items-center justify-between">
 				<label className="font-lato text-[13px] font-semibold text-[#374151]">{label}</label>
 				{value && (
-					<button onClick={() => setShowPreview(!showPreview)} className="font-lato text-[11px] font-medium text-[#346BD4] hover:underline">
+					<button type="button" onClick={() => setShowPreview(!showPreview)} className="font-lato text-[11px] font-medium text-[#346BD4] hover:underline">
 						{showPreview ? 'Hide Preview' : 'Preview'}
 					</button>
 				)}
@@ -144,6 +214,7 @@ function PromptSelector({ label, hint, type, value, onChange, prompts, appId, tr
 					))}
 				</select>
 				<button
+					type="button"
 					onClick={() => setShowCreator(!showCreator)}
 					className="flex-shrink-0 rounded-[6px] border border-dashed border-[#346BD4] px-[10px] py-[9px] font-lato text-[12px] font-medium text-[#346BD4] hover:bg-[#EFF6FF]"
 					title="Create a new prompt"
@@ -844,6 +915,36 @@ response = agent.run(
 	);
 }
 
+/* ─── JSON Schema Collapsible ─── */
+function JsonSchemaCollapsible({ schema }) {
+	const [open, setOpen] = useState(false);
+	const formatted = JSON.stringify(schema, null, 2);
+	return (
+		<div className="mt-[6px]">
+			<button
+				type="button"
+				onClick={() => setOpen(!open)}
+				className="flex items-center gap-[4px] font-lato text-[11px] font-medium text-[#346BD4] hover:underline"
+			>
+				<svg
+					width="10" height="10" viewBox="0 0 10 10" fill="none"
+					className={`transition-transform ${open ? 'rotate-90' : ''}`}
+				>
+					<path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+				</svg>
+				{open ? 'Hide Schema' : 'View Schema'}
+			</button>
+			{open && (
+				<div className="mt-[6px] max-h-[200px] overflow-y-auto rounded-[6px] bg-[#1F2937] p-[10px]">
+					<pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-[18px] text-[#D1D5DB]">
+						{formatted}
+					</pre>
+				</div>
+			)}
+		</div>
+	);
+}
+
 /* ─── Agent Row (list item) ─── */
 function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, testingId, appId, triggerApi }) {
 	const [expanded, setExpanded] = useState(false);
@@ -930,7 +1031,15 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Timeout</span><span className="font-lato text-[13px] text-[#111827]">{agent.timeout_seconds}s</span></div>
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">System Prompt</span><span className="font-lato text-[13px] font-medium text-[#346BD4]">{agent.system_prompt_name || '-'}</span></div>
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">User Prompt</span><span className="font-lato text-[13px] font-medium text-[#346BD4]">{agent.user_prompt_name || '-'}</span></div>
-								<div className="flex items-center"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Output</span><Tag color="green">{agent.output_schema}</Tag></div>
+								<div className="flex items-start">
+									<span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Output</span>
+									<div>
+										<Tag color="green">{agent.output_schema}</Tag>
+										{agent.output_schema === 'JSON' && agent.output_json_schema && (
+											<JsonSchemaCollapsible schema={agent.output_json_schema} />
+										)}
+									</div>
+								</div>
 								{agent.guardrails?.length > 0 && (
 									<div className="flex items-start"><span className="w-[120px] shrink-0 pt-[2px] font-lato text-[13px] text-[#6B7280]">Guardrails</span><div className="flex flex-wrap gap-[6px]">{agent.guardrails.map((g) => <Tag key={g} color="purple">{g}</Tag>)}</div></div>
 								)}
