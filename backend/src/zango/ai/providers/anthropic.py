@@ -20,23 +20,26 @@ from zango.ai.providers.registry import register_provider
 
 @register_provider("anthropic", "Anthropic", icon="anthropic.svg")
 class AnthropicProvider(BaseLLMProvider):
+    # Pricing sourced from https://docs.anthropic.com/en/docs/about-claude/models (May 2026)
+    # Only active and deprecated (not yet retired) models are listed.
     supported_models = [
+        # ── Active models ──────────────────────────────────────────────────
         {
-            "id": "claude-opus-4-20250514",
-            "name": "Claude Opus 4",
-            "context_window": 200000,
-            "max_output_tokens": 32000,
-            "input_cost_per_mtok": 15.00,
-            "output_cost_per_mtok": 75.00,
+            "id": "claude-opus-4-7",
+            "name": "Claude Opus 4.7",
+            "context_window": 1000000,
+            "max_output_tokens": 128000,
+            "input_cost_per_mtok": 5.00,
+            "output_cost_per_mtok": 25.00,
             "supports_tools": True,
             "supports_vision": True,
             "supports_streaming": True,
         },
         {
-            "id": "claude-sonnet-4-20250514",
-            "name": "Claude Sonnet 4",
-            "context_window": 200000,
-            "max_output_tokens": 16000,
+            "id": "claude-sonnet-4-6",
+            "name": "Claude Sonnet 4.6",
+            "context_window": 1000000,
+            "max_output_tokens": 64000,
             "input_cost_per_mtok": 3.00,
             "output_cost_per_mtok": 15.00,
             "supports_tools": True,
@@ -47,9 +50,76 @@ class AnthropicProvider(BaseLLMProvider):
             "id": "claude-haiku-4-5-20251001",
             "name": "Claude Haiku 4.5",
             "context_window": 200000,
-            "max_output_tokens": 8192,
-            "input_cost_per_mtok": 0.80,
-            "output_cost_per_mtok": 4.00,
+            "max_output_tokens": 64000,
+            "input_cost_per_mtok": 1.00,
+            "output_cost_per_mtok": 5.00,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        {
+            "id": "claude-opus-4-6",
+            "name": "Claude Opus 4.6",
+            "context_window": 1000000,
+            "max_output_tokens": 128000,
+            "input_cost_per_mtok": 5.00,
+            "output_cost_per_mtok": 25.00,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        {
+            "id": "claude-sonnet-4-5-20250929",
+            "name": "Claude Sonnet 4.5",
+            "context_window": 200000,
+            "max_output_tokens": 64000,
+            "input_cost_per_mtok": 3.00,
+            "output_cost_per_mtok": 15.00,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        {
+            "id": "claude-opus-4-5-20251101",
+            "name": "Claude Opus 4.5",
+            "context_window": 200000,
+            "max_output_tokens": 64000,
+            "input_cost_per_mtok": 5.00,
+            "output_cost_per_mtok": 25.00,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        {
+            "id": "claude-opus-4-1-20250805",
+            "name": "Claude Opus 4.1",
+            "context_window": 200000,
+            "max_output_tokens": 32000,
+            "input_cost_per_mtok": 15.00,
+            "output_cost_per_mtok": 75.00,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        # ── Deprecated models (retiring June 15 2026) ─────────────────────
+        {
+            "id": "claude-sonnet-4-20250514",
+            "name": "Claude Sonnet 4 (deprecated)",
+            "context_window": 200000,
+            "max_output_tokens": 64000,
+            "input_cost_per_mtok": 3.00,
+            "output_cost_per_mtok": 15.00,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        {
+            "id": "claude-opus-4-20250514",
+            "name": "Claude Opus 4 (deprecated)",
+            "context_window": 200000,
+            "max_output_tokens": 32000,
+            "input_cost_per_mtok": 15.00,
+            "output_cost_per_mtok": 75.00,
             "supports_tools": True,
             "supports_vision": True,
             "supports_streaming": True,
@@ -114,7 +184,9 @@ class AnthropicProvider(BaseLLMProvider):
                 prepared.append(f)
                 continue
             try:
-                filename = f.filename or "upload"
+                import os
+
+                filename = os.path.basename(f.filename or "upload") or "upload"
                 file_obj = io.BytesIO(f.data)
                 uploaded = self._client.beta.files.upload(
                     file=(
@@ -122,6 +194,7 @@ class AnthropicProvider(BaseLLMProvider):
                         file_obj,
                         f.media_type or "application/octet-stream",
                     ),
+                    extra_headers={"anthropic-beta": "files-api-2025-04-14"},
                 )
                 prepared.append(
                     LLMFile(
@@ -130,8 +203,15 @@ class AnthropicProvider(BaseLLMProvider):
                         filename=f.filename,
                     )
                 )
-            except Exception:
+            except Exception as exc:
                 # Files API not available or failed — fall back to raw bytes
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Anthropic Files API upload failed (%s: %s) — falling back to base64",
+                    type(exc).__name__,
+                    exc,
+                )
                 prepared.append(f)
         return prepared
 
@@ -141,6 +221,19 @@ class AnthropicProvider(BaseLLMProvider):
             {"role": msg.role, "content": msg.build_content_for_anthropic()}
             for msg in messages
         ]
+
+    def _needs_files_beta(self, converted_messages):
+        """Return True if any message content block references an uploaded file_id."""
+        for msg in converted_messages:
+            content = msg.get("content", [])
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if isinstance(block, dict):
+                    src = block.get("source", {})
+                    if isinstance(src, dict) and src.get("type") == "file":
+                        return True
+        return False
 
     def _map_stop_reason(self, stop_reason):
         """Map Anthropic stop_reason to standard stop reasons."""
@@ -212,9 +305,16 @@ class AnthropicProvider(BaseLLMProvider):
                 "Do not include any text, markdown formatting, or code fences outside the JSON."
             )
 
+        uses_files_beta = self._needs_files_beta(kwargs_api["messages"])
+
         start = time.monotonic()
         try:
-            response = self._client.messages.create(**kwargs_api)
+            if uses_files_beta:
+                response = self._client.beta.messages.create(
+                    **kwargs_api, betas=["files-api-2025-04-14"]
+                )
+            else:
+                response = self._client.messages.create(**kwargs_api)
         except self._anthropic.RateLimitError as e:
             raise RateLimitExceeded(str(e)) from e
         except self._anthropic.APITimeoutError as e:
@@ -285,8 +385,17 @@ class AnthropicProvider(BaseLLMProvider):
                 "Do not include any text, markdown formatting, or code fences outside the JSON."
             )
 
+        uses_files_beta = self._needs_files_beta(kwargs_api["messages"])
+
         try:
-            with self._client.messages.stream(**kwargs_api) as stream:
+            _stream_ctx = (
+                self._client.beta.messages.stream(
+                    **kwargs_api, betas=["files-api-2025-04-14"]
+                )
+                if uses_files_beta
+                else self._client.messages.stream(**kwargs_api)
+            )
+            with _stream_ctx as stream:
                 for event in stream:
                     if hasattr(event, "type"):
                         if event.type == "content_block_delta":
