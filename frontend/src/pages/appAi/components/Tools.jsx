@@ -150,7 +150,7 @@ function ToolDetail({ tool, detail, loading }) {
 						['Total Calls', (d.total_calls || 0).toLocaleString()],
 						['Errors', (d.total_errors || 0).toLocaleString()],
 						['Timeouts', (d.total_timeouts || 0).toLocaleString()],
-						['Avg Time', d.avg_execution_ms > 0 ? `${d.avg_execution_ms}ms` : '-'],
+						['Avg Time (24h)', d.avg_execution_ms > 0 ? `${d.avg_execution_ms}ms` : '-'],
 					].map(([label, val]) => (
 						<div key={label} className="rounded-[6px] border border-[#E5E7EB] bg-[#F9FAFB] px-[12px] py-[10px]">
 							<span className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">{label}</span>
@@ -382,7 +382,7 @@ export default function Tools({ onReady, refreshSignal, onFetchComplete }) {
 					<span className="mr-[16px] w-[70px]">Safety</span>
 					<span className="mr-[16px] w-[60px]">Params</span>
 					<span className="mr-[16px] w-[50px]">Calls</span>
-					<span className="mr-[16px] w-[60px]">Avg Time</span>
+					<span className="mr-[16px] w-[60px]">Avg Time (24h)</span>
 					<span className="w-[60px]">Status</span>
 				</div>
 

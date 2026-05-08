@@ -479,7 +479,3 @@ class OpenAIProvider(BaseLLMProvider):
 
     def get_models(self):
         return self.supported_models
-
-    def estimate_tokens(self, text):
-        """Approximate at ~4 chars per token."""
-        return max(1, len(text) // 4)

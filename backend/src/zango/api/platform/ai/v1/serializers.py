@@ -583,7 +583,6 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
             "timeout_seconds",
             "output_schema",
             "output_json_schema",
-            "guardrails",
             "tools",
             "is_enabled",
             "status",
@@ -678,9 +677,6 @@ class AppLLMAgentCreateSerializer(serializers.Serializer):
         choices=["JSON", "Text", "Markdown"], required=False, default="Text"
     )
     output_json_schema = serializers.JSONField(required=False, default=None)
-    guardrails = serializers.ListField(
-        child=serializers.CharField(), required=False, default=list
-    )
     tools = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
     )
@@ -783,7 +779,6 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
         choices=["JSON", "Text", "Markdown"], required=False
     )
     output_json_schema = serializers.JSONField(required=False, allow_null=True)
-    guardrails = serializers.ListField(child=serializers.CharField(), required=False)
     tools = serializers.ListField(child=serializers.CharField(), required=False)
     memory_enabled = serializers.BooleanField(required=False)
     memory_max_messages = serializers.IntegerField(
@@ -834,7 +829,6 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
             "timeout_seconds",
             "output_schema",
             "output_json_schema",
-            "guardrails",
             "tools",
             "memory_enabled",
             "memory_max_messages",

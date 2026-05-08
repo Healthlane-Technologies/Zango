@@ -220,6 +220,10 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="0", hour="4"),
         "enabled": False,
     },
+    "update_tool_usage_stats": {
+        "task": "zango.ai.update_tool_usage_stats",
+        "schedule": crontab(minute="0", hour="2"),
+    },
 }
 
 X_FRAME_OPTIONS = "ALLOW"

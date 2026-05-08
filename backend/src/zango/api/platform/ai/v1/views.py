@@ -459,92 +459,6 @@ class ProviderModelToggleViewAPIV1(ZangoGenericPlatformAPIView):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
-class ProviderUsageViewAPIV1(ZangoGenericPlatformAPIView):
-    """
-    GET /api/v1/apps/<app_uuid>/ai/providers/<provider_id>/usage/
-    Returns usage/cost breakdown.
-    """
-
-    def get(self, request, app_uuid, provider_id, *args, **kwargs):
-        try:
-            provider = AppLLMProvider.objects.get(id=provider_id)
-
-            # Per-model breakdown
-            model_breakdown = (
-                AppLLMInvocation.objects.filter(provider=provider, status="success")
-                .values("model")
-                .annotate(
-                    total_invocations=Sum("id"),
-                    total_input_tokens=Sum("input_tokens"),
-                    total_output_tokens=Sum("output_tokens"),
-                    total_cost=Sum("cost_usd"),
-                )
-                .order_by("-total_cost")
-            )
-
-            # Fix: use Count instead of Sum('id') for invocation count
-            from django.db.models import Count
-
-            model_breakdown = (
-                AppLLMInvocation.objects.filter(provider=provider, status="success")
-                .values("model")
-                .annotate(
-                    invocations=Count("id"),
-                    input_tokens=Sum("input_tokens"),
-                    output_tokens=Sum("output_tokens"),
-                    cost=Sum("cost_usd"),
-                )
-                .order_by("-cost")
-            )
-
-            return get_api_response(
-                True,
-                {
-                    "provider_id": provider.id,
-                    "total_invocations": provider.total_invocations,
-                    "total_input_tokens": provider.total_input_tokens,
-                    "total_output_tokens": provider.total_output_tokens,
-                    "total_cost_usd": str(provider.total_cost_usd),
-                    "budget_status": provider.check_budget(),
-                    "model_breakdown": [
-                        {
-                            **row,
-                            "cost": str(row["cost"])
-                            if row["cost"] is not None
-                            else "0",
-                        }
-                        for row in model_breakdown
-                    ],
-                },
-                200,
-            )
-        except AppLLMProvider.DoesNotExist:
-            return get_api_response(False, {"message": "Provider not found"}, 404)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class ProviderResetBudgetViewAPIV1(ZangoGenericPlatformAPIView):
-    """
-    POST /api/v1/apps/<app_uuid>/ai/providers/<provider_id>/reset-budget/
-    Manually resets current_month_spend_usd to 0.
-    """
-
-    def post(self, request, app_uuid, provider_id, *args, **kwargs):
-        try:
-            provider = AppLLMProvider.objects.get(id=provider_id)
-            provider.current_month_spend_usd = 0
-            provider.last_budget_reset = timezone.now()
-            provider.save()
-            return get_api_response(True, {"message": "Budget reset successfully"}, 200)
-        except AppLLMProvider.DoesNotExist:
-            return get_api_response(False, {"message": "Provider not found"}, 404)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
 class PromptActivateViewAPIV1(ZangoGenericPlatformAPIView):
     """
     POST /api/v1/apps/<app_uuid>/ai/prompts/<prompt_id>/activate/
@@ -565,90 +479,6 @@ class PromptActivateViewAPIV1(ZangoGenericPlatformAPIView):
             )
         except AppLLMPrompt.DoesNotExist:
             return get_api_response(False, {"message": "Prompt not found"}, 404)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class PromptDependenciesViewAPIV1(ZangoGenericPlatformAPIView):
-    """
-    GET /api/v1/apps/<app_uuid>/ai/prompts/<prompt_id>/dependencies/
-    Returns active agents that reference this prompt (as system or user prompt).
-    Used by the frontend to decide whether to block deactivation.
-    """
-
-    def get(self, request, app_uuid, prompt_id, *args, **kwargs):
-        try:
-            prompt = AppLLMPrompt.objects.get(id=prompt_id)
-            agents_sys = list(
-                AppLLMAgent.objects.filter(
-                    system_prompt=prompt, is_enabled=True
-                ).values("id", "name")
-            )
-            agents_user = list(
-                AppLLMAgent.objects.filter(user_prompt=prompt, is_enabled=True).values(
-                    "id", "name"
-                )
-            )
-            # Deduplicate — an agent may use same prompt as both system + user
-            seen, unique = set(), []
-            for agent in agents_sys + agents_user:
-                if agent["id"] not in seen:
-                    seen.add(agent["id"])
-                    unique.append(agent)
-
-            return get_api_response(
-                True,
-                {
-                    "is_mapped": len(unique) > 0,
-                    "agent_count": len(unique),
-                    "agents": unique,
-                    "suggested_action": (
-                        "Unlink this prompt from all agents before deactivating."
-                        if unique
-                        else None
-                    ),
-                },
-                200,
-            )
-        except AppLLMPrompt.DoesNotExist:
-            return get_api_response(False, {"message": "Prompt not found"}, 404)
-        except Exception as e:
-            return get_api_response(False, {"message": str(e)}, 500)
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class ProviderDependenciesViewAPIV1(ZangoGenericPlatformAPIView):
-    """
-    GET /api/v1/apps/<app_uuid>/ai/providers/<provider_id>/dependencies/
-    Returns active agents that reference this provider.
-    Used by the frontend to decide whether to block deactivation/disable.
-    """
-
-    def get(self, request, app_uuid, provider_id, *args, **kwargs):
-        try:
-            provider = AppLLMProvider.objects.get(id=provider_id)
-            agents = list(
-                AppLLMAgent.objects.filter(provider=provider, is_enabled=True).values(
-                    "id", "name"
-                )
-            )
-            return get_api_response(
-                True,
-                {
-                    "is_mapped": len(agents) > 0,
-                    "agent_count": len(agents),
-                    "agents": agents,
-                    "suggested_action": (
-                        "Reassign or disable all agents using this provider before deactivating."
-                        if agents
-                        else None
-                    ),
-                },
-                200,
-            )
-        except AppLLMProvider.DoesNotExist:
-            return get_api_response(False, {"message": "Provider not found"}, 404)
         except Exception as e:
             return get_api_response(False, {"message": str(e)}, 500)
 
@@ -1342,7 +1172,6 @@ class AgentDuplicateViewAPIV1(ZangoGenericPlatformAPIView):
                 max_tokens=original.max_tokens,
                 timeout_seconds=original.timeout_seconds,
                 output_schema=original.output_schema,
-                guardrails=original.guardrails,
                 tools=original.tools,
                 memory_enabled=original.memory_enabled,
                 memory_max_messages=original.memory_max_messages,

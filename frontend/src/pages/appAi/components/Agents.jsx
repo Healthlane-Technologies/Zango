@@ -1539,11 +1539,9 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 		fetchAgents();
 	}, [refreshSignal]);
 
-	// Load providers only when the builder opens for the first time
-	const builderDepsLoaded = useRef(false);
+	// Load providers every time the builder opens so newly-created providers are visible
 	useEffect(() => {
-		if (builderOpen && !builderDepsLoaded.current) {
-			builderDepsLoaded.current = true;
+		if (builderOpen) {
 			fetchProviders();
 		}
 	}, [builderOpen]);

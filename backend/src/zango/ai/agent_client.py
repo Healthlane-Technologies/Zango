@@ -175,24 +175,20 @@ class AgentClient:
                 error_traceback=result.error_traceback,
             )
 
-            # Update tool-level stats
+            # Update tool-level stats atomically to avoid race conditions
             if tool_record:
-                tool_record.total_calls += 1
-                if result.status == "error":
-                    tool_record.total_errors += 1
-                elif result.status == "timeout":
-                    tool_record.total_timeouts += 1
+                from django.db.models import F
                 from django.utils import timezone
 
-                tool_record.last_called_at = timezone.now()
-                tool_record.save(
-                    update_fields=[
-                        "total_calls",
-                        "total_errors",
-                        "total_timeouts",
-                        "last_called_at",
-                    ]
-                )
+                update = {
+                    "total_calls": F("total_calls") + 1,
+                    "last_called_at": timezone.now(),
+                }
+                if result.status == "error":
+                    update["total_errors"] = F("total_errors") + 1
+                elif result.status == "timeout":
+                    update["total_timeouts"] = F("total_timeouts") + 1
+                AppLLMTool.objects.filter(pk=tool_record.pk).update(**update)
         except Exception as e:
             logger.error(f"Failed to log tool call '{tool_call.name}': {e}")
 
@@ -489,8 +485,6 @@ class AgentClient:
                     LLMMessage(
                         role=m.role,
                         content=m.content,
-                        tool_calls=m.tool_calls or None,
-                        tool_call_id=m.tool_call_id or None,
                     )
                 )
             return result
@@ -543,8 +537,6 @@ class AgentClient:
                                 session=session,
                                 role="user",
                                 content=content,
-                                tool_calls=None,
-                                tool_call_id="",
                                 invocation_id=response.invocation_id,
                                 sequence=next_seq,
                             )
@@ -558,8 +550,6 @@ class AgentClient:
                             session=session,
                             role="assistant",
                             content=response.content,
-                            tool_calls=None,
-                            tool_call_id="",
                             invocation_id=response.invocation_id,
                             sequence=next_seq,
                         )

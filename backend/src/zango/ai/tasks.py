@@ -78,8 +78,9 @@ def async_llm_complete(
 @shared_task(name="zango.ai.update_tool_usage_stats")
 def update_tool_usage_stats():
     """
-    Periodic task — run every 5 minutes.
+    Periodic task — run daily at 2 AM.
     Aggregates AppLLMToolCall records to update usage stats on AppLLMTool.
+    avg_execution_ms is computed over the last 24 hours of successful calls.
     """
     from datetime import timedelta
 

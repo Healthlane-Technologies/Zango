@@ -499,10 +499,6 @@ class AnthropicProvider(BaseLLMProvider):
     def get_models(self):
         return self.supported_models
 
-    def estimate_tokens(self, text):
-        """Approximate at ~4 chars per token."""
-        return max(1, len(text) // 4)
-
     def compute_cost(self, usage, model):
         """Override to handle prompt caching pricing."""
         model_info = next((m for m in self.supported_models if m["id"] == model), None)

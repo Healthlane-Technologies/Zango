@@ -75,8 +75,6 @@ class AppLLMAgent(FullAuditMixin):
         help_text="JSON Schema definition for structured output when output_schema is JSON",
     )
 
-    # Future features
-    guardrails = models.JSONField(default=list, help_text="List of guardrail names")
     tools = models.JSONField(default=list, help_text="List of tool names")
 
     # Memory

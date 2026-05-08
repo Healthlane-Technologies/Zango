@@ -67,17 +67,6 @@ class AppLLMMemoryMessage(FullAuditMixin):
     content = models.JSONField(
         help_text="Message content — str or list of content blocks",
     )
-    tool_calls = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="Tool call list for assistant messages (reserved for future use)",
-    )
-    tool_call_id = models.CharField(
-        max_length=100,
-        blank=True,
-        default="",
-        help_text="Tool call ID for tool-result messages (reserved for future use)",
-    )
     invocation = models.ForeignKey(
         "ai.AppLLMInvocation",
         null=True,

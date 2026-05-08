@@ -257,7 +257,6 @@ class BaseLLMProvider(ABC):
     - stream()            streaming completion (generator)
     - validate_config()   check that config/credentials are valid
     - get_models()        return list of available models
-    - estimate_tokens()   estimate token count for messages
     """
 
     # -- Class-level metadata (set by subclass or @register_provider) --
@@ -341,13 +340,6 @@ class BaseLLMProvider(ABC):
         """
         instance = cls(config)
         return instance.get_models()
-
-    @abstractmethod
-    def estimate_tokens(self, text: str) -> int:
-        """
-        Estimate token count for a text string.
-        Used for pre-flight checks (will this fit in context window?).
-        """
 
     def compute_cost(self, usage: LLMUsage, model: str) -> float:
         """

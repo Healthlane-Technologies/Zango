@@ -126,6 +126,3 @@ class BedrockProvider(BaseLLMProvider):
 
     def get_models(self):
         return self.supported_models
-
-    def estimate_tokens(self, text):
-        return max(1, len(text) // 4)

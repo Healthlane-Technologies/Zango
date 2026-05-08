@@ -193,6 +193,8 @@ const PROVIDER_META = {
 	bedrock:      { bg: '#FFFBEB', border: '#FDE68A', accent: '#D97706', description: 'AWS-managed foundation models' },
 };
 
+const COMING_SOON_PROVIDERS = ['bedrock', 'azure_openai'];
+
 function CapabilityChip({ label, active }) {
 	if (!active) return null;
 	return (
@@ -436,20 +438,30 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 								const meta = PROVIDER_META[p.slug] || { bg: '#F9FAFB', border: '#E5E7EB', accent: '#6B7280', description: '' };
 								const Logo = PROVIDER_LOGOS[p.slug];
 								const isSelected = selectedSlug === p.slug;
+								const isComingSoon = COMING_SOON_PROVIDERS.includes(p.slug);
 								return (
 									<button
 										key={p.slug}
 										type="button"
-										onClick={() => setSelectedSlug(p.slug)}
+										onClick={isComingSoon ? undefined : () => setSelectedSlug(p.slug)}
+										disabled={isComingSoon}
 										className={`group relative flex flex-col gap-[12px] rounded-[12px] border-2 p-[16px] text-left transition-all duration-150 ${
-											isSelected
-												? 'border-[#5048ED] shadow-[0_0_0_3px_rgba(80,72,237,0.12)]'
-												: 'border-[#E5E7EB] hover:border-[#C4B5FD] hover:shadow-sm'
+											isComingSoon
+												? 'cursor-not-allowed border-[#E5E7EB] opacity-60'
+												: isSelected
+													? 'border-[#5048ED] shadow-[0_0_0_3px_rgba(80,72,237,0.12)]'
+													: 'border-[#E5E7EB] hover:border-[#C4B5FD] hover:shadow-sm'
 										}`}
-										style={{ backgroundColor: isSelected ? meta.bg : 'white' }}
+										style={{ backgroundColor: isComingSoon ? '#F9FAFB' : isSelected ? meta.bg : 'white' }}
 									>
+										{/* Coming Soon badge */}
+										{isComingSoon && (
+											<span className="absolute right-[10px] top-[10px] rounded-full bg-[#F3F4F6] px-[8px] py-[2px] font-lato text-[10px] font-semibold uppercase tracking-wide text-[#6B7280]">
+												Coming Soon
+											</span>
+										)}
 										{/* Selected checkmark */}
-										{isSelected && (
+										{isSelected && !isComingSoon && (
 											<span className="absolute right-[10px] top-[10px]">
 												<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
 													<circle cx="9" cy="9" r="9" fill="#5048ED"/>
@@ -459,7 +471,7 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 										)}
 										{/* Logo */}
 										<div className={`flex h-[44px] w-[44px] items-center justify-center rounded-[10px] border p-[8px] transition-colors`}
-											style={{ borderColor: isSelected ? meta.border : '#F3F4F6', backgroundColor: isSelected ? 'white' : '#F9FAFB' }}>
+											style={{ borderColor: isSelected && !isComingSoon ? meta.border : '#F3F4F6', backgroundColor: isSelected && !isComingSoon ? 'white' : '#F9FAFB' }}>
 											{Logo ? <Logo size={26} /> : (
 												<span className="font-semibold text-[15px]" style={{ color: meta.accent }}>
 													{p.display_name[0]}
@@ -522,7 +534,7 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 						</div>
 					)}
 
-					<div className="mt-[24px]">
+					<div className="sticky bottom-0 bg-white pt-[12px] pb-[4px]">
 						<button
 							type="button"
 							onClick={handleStep1Continue}
@@ -672,7 +684,7 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 						</div>
 					)}
 
-					<div className="mt-[24px]">
+					<div className="sticky bottom-0 bg-white pt-[12px] pb-[4px]">
 						<button
 							type="button"
 							onClick={handleStep2Continue}
@@ -794,7 +806,7 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 						</div>
 					</div>
 
-					<div className="mt-[24px]">
+					<div className="sticky bottom-0 bg-white pt-[12px] pb-[4px]">
 						<button
 							type="button"
 							onClick={handleSubmit}
@@ -1034,8 +1046,8 @@ function EditProviderForm({ provider, availableProviders, onSave, onClose, appId
 				</div>
 			</div>
 
-			{/* Actions */}
-			<div className="flex justify-end gap-[12px] pt-[4px]">
+			{/* Actions — sticky so Save is always visible without scrolling */}
+			<div className="sticky bottom-0 bg-white flex justify-end gap-[12px] pt-[12px] pb-[4px]">
 				<button type="button" onClick={onClose}
 					className="rounded-[8px] border border-[#DDE2E5] px-[20px] py-[10px] font-lato text-[14px] font-medium text-[#111827] transition-colors hover:bg-[#F9FAFB]">
 					Cancel

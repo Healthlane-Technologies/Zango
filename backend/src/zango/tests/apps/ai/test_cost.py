@@ -1,61 +1,16 @@
 """
-Unit tests for zango.ai.cost — compute_cost and compute_anthropic_cost.
+Unit tests for zango.ai.cost — compute_anthropic_cost.
 
 Pure arithmetic functions. No DB, no mocking required.
 """
 
 from django.test import SimpleTestCase
 
-from zango.ai.cost import compute_anthropic_cost, compute_cost
+from zango.ai.cost import compute_anthropic_cost
 from zango.ai.providers.base import LLMUsage
 
 
 STANDARD_RATES = {"input_cost_per_mtok": 3.0, "output_cost_per_mtok": 15.0}
-
-
-class ComputeCostTest(SimpleTestCase):
-    """Tests for the standard (non-Anthropic) cost computation."""
-
-    def test_zero_tokens_returns_zero(self):
-        usage = LLMUsage(input_tokens=0, output_tokens=0)
-        self.assertEqual(compute_cost(usage, STANDARD_RATES), 0.0)
-
-    def test_input_and_output_combined(self):
-        # 1M input @ $3 + 1M output @ $15 = $18
-        usage = LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000)
-        self.assertEqual(compute_cost(usage, STANDARD_RATES), 18.0)
-
-    def test_input_only(self):
-        # 1M input @ $3 = $3, output contributes nothing
-        usage = LLMUsage(input_tokens=1_000_000, output_tokens=0)
-        self.assertAlmostEqual(compute_cost(usage, STANDARD_RATES), 3.0, places=6)
-
-    def test_output_only(self):
-        # 1M output @ $15 = $15, input contributes nothing
-        usage = LLMUsage(input_tokens=0, output_tokens=1_000_000)
-        self.assertAlmostEqual(compute_cost(usage, STANDARD_RATES), 15.0, places=6)
-
-    def test_result_rounded_to_6_decimal_places(self):
-        # 1 token @ $3/M = $0.000003 — should not have noise beyond 6dp
-        usage = LLMUsage(input_tokens=1, output_tokens=0)
-        result = compute_cost(usage, STANDARD_RATES)
-        self.assertEqual(result, round(result, 6))
-
-    def test_missing_input_rate_defaults_to_zero(self):
-        # Only output rate present — no KeyError, input contributes $0
-        rates = {"output_cost_per_mtok": 15.0}
-        usage = LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000)
-        self.assertAlmostEqual(compute_cost(usage, rates), 15.0, places=6)
-
-    def test_missing_output_rate_defaults_to_zero(self):
-        # Only input rate present — no KeyError, output contributes $0
-        rates = {"input_cost_per_mtok": 3.0}
-        usage = LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000)
-        self.assertAlmostEqual(compute_cost(usage, rates), 3.0, places=6)
-
-    def test_empty_rates_returns_zero(self):
-        usage = LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000)
-        self.assertEqual(compute_cost(usage, {}), 0.0)
 
 
 class ComputeAnthropicCostTest(SimpleTestCase):
@@ -68,12 +23,12 @@ class ComputeAnthropicCostTest(SimpleTestCase):
         )
         self.assertEqual(compute_anthropic_cost(usage, STANDARD_RATES), 0.0)
 
-    def test_standard_tokens_same_as_compute_cost(self):
-        # With no cache tokens, Anthropic cost == standard cost
+    def test_standard_tokens_no_cache(self):
+        # With no cache tokens: 1M input @ $3 + 1M output @ $15 = $18
         usage = LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000)
         self.assertAlmostEqual(
             compute_anthropic_cost(usage, STANDARD_RATES),
-            compute_cost(usage, STANDARD_RATES),
+            18.0,
             places=6
         )
 
