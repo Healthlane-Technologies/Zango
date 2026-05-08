@@ -212,7 +212,7 @@ function ToolRow({ tool, onExpand, isExpanded, detail, loadingDetail }) {
 }
 
 /* ─── Main Tools Component ─── */
-export default function Tools({ onReady }) {
+export default function Tools({ onReady, refreshSignal, onFetchComplete }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
@@ -249,8 +249,9 @@ export default function Tools({ onReady }) {
 		if (success && response) {
 			setTools(response.tools?.records || response.tools || []);
 			if (response.stats) setStats(response.stats);
+			onFetchComplete?.();
 		}
-	}, [appId, triggerApi, debouncedSearch, filterSection, filterSafety, filterActive]);
+	}, [appId, triggerApi, debouncedSearch, filterSection, filterSafety, filterActive, onFetchComplete]);
 
 	const fetchSections = useCallback(async () => {
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/tools/sections/`, type: 'GET', loader: false });
@@ -276,6 +277,14 @@ export default function Tools({ onReady }) {
 		});
 	}, [appId]);
 	useEffect(() => { fetchTools(); }, [fetchTools]);
+
+	// Background re-fetch when parent signals staleness (skip first render)
+	const isFirstRefreshSignal = useRef(true);
+	useEffect(() => {
+		if (isFirstRefreshSignal.current) { isFirstRefreshSignal.current = false; return; }
+		if (!refreshSignal) return;
+		fetchTools();
+	}, [refreshSignal]);
 
 	const handleExpand = (id) => {
 		if (expandedId === id) { setExpandedId(null); return; }

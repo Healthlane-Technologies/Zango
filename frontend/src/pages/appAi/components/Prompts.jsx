@@ -1052,7 +1052,7 @@ function PaginationBar({ page, totalPages, totalRecords, onPrev, onNext, onGoTo 
 
 /* ─────────────────────────── Main Component ─────────────────────────── */
 
-export default function Prompts({ onReady }) {
+export default function Prompts({ onReady, refreshSignal, onFetchComplete }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 	const readyCalledRef = useRef(false);
@@ -1060,6 +1060,7 @@ export default function Prompts({ onReady }) {
 	const [prompts, setPrompts] = useState([]);
 	const [stats, setStats] = useState({});
 	const [loading, setLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
 	const [searching, setSearching] = useState(false);
 	const [search, setSearch] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -1090,8 +1091,10 @@ export default function Prompts({ onReady }) {
 
 	/* ── fetch ── */
 	const isFirstLoad = useRef(true);
-	const fetchPrompts = useCallback(async () => {
-		if (isFirstLoad.current) {
+	const fetchPrompts = useCallback(async ({ background = false } = {}) => {
+		if (background) {
+			setRefreshing(true);
+		} else if (isFirstLoad.current) {
 			setLoading(true);
 		} else {
 			setSearching(true);
@@ -1112,17 +1115,27 @@ export default function Prompts({ onReady }) {
 			setTotalRecords(data.total_records || 0);
 			if (response.stats) setStats(response.stats);
 			setPrompts(records);
+			onFetchComplete?.();
 		}
 		isFirstLoad.current = false;
 		setLoading(false);
 		setSearching(false);
+		setRefreshing(false);
 		if (!readyCalledRef.current && onReady) {
 			readyCalledRef.current = true;
 			onReady();
 		}
-	}, [appId, triggerApi, showInactive, page, debouncedSearch, typeFilter]);
+	}, [appId, triggerApi, showInactive, page, debouncedSearch, typeFilter, onFetchComplete]);
 
 	useEffect(() => { fetchPrompts(); }, [fetchPrompts]);
+
+	// Background re-fetch when parent signals staleness (skip first render)
+	const isFirstRefreshSignal = useRef(true);
+	useEffect(() => {
+		if (isFirstRefreshSignal.current) { isFirstRefreshSignal.current = false; return; }
+		if (!refreshSignal) return;
+		fetchPrompts({ background: true });
+	}, [refreshSignal]);
 
 	/* ── filtered list (client-side no longer needed — server handles it) ── */
 	const filteredPrompts = prompts;
@@ -1293,15 +1306,31 @@ export default function Prompts({ onReady }) {
 							<StatPill label="Total versions" value={stats.total_versions ?? '—'} />
 						</div>
 					</div>
-					<button
-						onClick={() => setCreateModalOpen(true)}
-						className="flex-shrink-0 flex items-center gap-[6px] rounded-[8px] bg-[#5048ED] px-[16px] py-[9px] font-lato text-[14px] font-medium text-white hover:bg-[#4338CA] transition-colors shadow-sm"
-					>
-						<svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-							<path d="M6.5 1.5V11.5M1.5 6.5H11.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-						</svg>
-						Create Prompt
-					</button>
+					<div className="flex items-center gap-[8px]">
+						<button
+							onClick={() => fetchPrompts({ background: true })}
+							disabled={refreshing}
+							className="flex items-center gap-[5px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[8px] font-lato text-[13px] text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-50 transition-colors"
+						>
+							<svg
+								width="12" height="12" viewBox="0 0 12 12" fill="none"
+								className={refreshing ? 'animate-spin' : ''}
+							>
+								<path d="M10.5 6A4.5 4.5 0 1 1 8.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+								<path d="M8.5 1v2.5H11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+							</svg>
+							{refreshing ? 'Refreshing…' : 'Refresh'}
+						</button>
+						<button
+							onClick={() => setCreateModalOpen(true)}
+							className="flex-shrink-0 flex items-center gap-[6px] rounded-[8px] bg-[#5048ED] px-[16px] py-[9px] font-lato text-[14px] font-medium text-white hover:bg-[#4338CA] transition-colors shadow-sm"
+						>
+							<svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+								<path d="M6.5 1.5V11.5M1.5 6.5H11.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+							</svg>
+							Create Prompt
+						</button>
+					</div>
 				</div>
 			</div>
 

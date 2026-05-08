@@ -757,6 +757,146 @@ function FilterChip({ label, onRemove }) {
 	);
 }
 
+/* ─── Searchable agent filter dropdown (handles paginated agents API) ─── */
+function SearchableAgentFilter({ appId, triggerApi, value, valueName, onChange }) {
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState('');
+	const [results, setResults] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const containerRef = useRef(null);
+	const inputRef = useRef(null);
+	const isActive = !!value;
+
+	// Fetch agents with debounce whenever dropdown is open or search changes
+	useEffect(() => {
+		if (!open) return;
+		const t = setTimeout(async () => {
+			setLoading(true);
+			const params = new URLSearchParams({ page: '1', page_size: '20' });
+			if (search) params.set('search', search);
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/ai/agents/?${params}`,
+				type: 'GET',
+				loader: false,
+			});
+			if (success && response) {
+				const data = response.agents || {};
+				setResults(Array.isArray(data.records) ? data.records : (Array.isArray(data) ? data : []));
+			}
+			setLoading(false);
+		}, 250);
+		return () => clearTimeout(t);
+	}, [open, search, appId]);
+
+	// Close on outside click
+	useEffect(() => {
+		const handler = (e) => {
+			if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+		};
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
+	}, []);
+
+	const handleOpen = () => {
+		setSearch('');
+		setOpen(true);
+		setTimeout(() => inputRef.current?.focus(), 0);
+	};
+
+	const handleSelect = (agent) => {
+		onChange(String(agent.id), agent.name);
+		setOpen(false);
+	};
+
+	const handleClear = (e) => {
+		e.stopPropagation();
+		onChange('', '');
+	};
+
+	return (
+		<div className="relative" ref={containerRef}>
+			{/* Trigger button — matches FilterSelect appearance */}
+			<button
+				type="button"
+				onClick={open ? () => setOpen(false) : handleOpen}
+				className={`h-[34px] flex items-center gap-[6px] rounded-[6px] border pl-[8px] pr-[6px] font-lato text-[13px] outline-none cursor-pointer transition-colors ${
+					isActive
+						? 'border-[#346BD4] bg-[#EFF6FF] text-[#1D4ED8] font-medium'
+						: 'border-[#DDE2E5] bg-white text-[#374151] hover:border-[#346BD4]'
+				}`}
+			>
+				<span className="max-w-[140px] truncate">
+					{isActive ? valueName || 'Agent' : 'All Agents'}
+				</span>
+				{isActive ? (
+					<span
+						onClick={handleClear}
+						className="ml-[2px] flex items-center text-[#60A5FA] hover:text-[#1D4ED8]"
+					>
+						<svg width="10" height="10" viewBox="0 0 10 10">
+							<path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+						</svg>
+					</span>
+				) : (
+					<svg width="10" height="10" viewBox="0 0 10 10" className="text-[#9CA3AF]">
+						<path d="M2 3l3 4 3-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+					</svg>
+				)}
+			</button>
+
+			{/* Dropdown */}
+			{open && (
+				<div className="absolute top-[38px] left-0 z-50 w-[220px] rounded-[8px] border border-[#E5E7EB] bg-white shadow-lg overflow-hidden">
+					{/* Search input */}
+					<div className="flex items-center gap-[6px] border-b border-[#E5E7EB] px-[10px] py-[7px]">
+						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0 text-[#9CA3AF]">
+							<circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
+							<path d="M8 8l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+						</svg>
+						<input
+							ref={inputRef}
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							placeholder="Search agents…"
+							className="flex-1 min-w-0 font-lato text-[13px] text-[#111827] outline-none placeholder-[#9CA3AF]"
+						/>
+						{loading && (
+							<svg className="animate-spin flex-shrink-0 text-[#346BD4]" width="11" height="11" viewBox="0 0 11 11" fill="none">
+								<path d="M5.5 1.5A4 4 0 1 0 9.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+							</svg>
+						)}
+					</div>
+
+					{/* Results */}
+					<div className="max-h-[200px] overflow-y-auto">
+						{/* "All Agents" option */}
+						<button
+							type="button"
+							onClick={() => { onChange('', ''); setOpen(false); }}
+							className={`w-full text-left px-[10px] py-[7px] font-lato text-[13px] hover:bg-[#F3F4F6] transition-colors ${!value ? 'text-[#346BD4] font-medium bg-[#EFF6FF]' : 'text-[#374151]'}`}
+						>
+							All Agents
+						</button>
+						{results.map((agent) => (
+							<button
+								key={agent.id}
+								type="button"
+								onClick={() => handleSelect(agent)}
+								className={`w-full text-left px-[10px] py-[7px] font-lato text-[13px] hover:bg-[#F3F4F6] transition-colors truncate ${String(agent.id) === value ? 'text-[#346BD4] font-medium bg-[#EFF6FF]' : 'text-[#374151]'}`}
+							>
+								{agent.name}
+							</button>
+						))}
+						{!loading && results.length === 0 && (
+							<p className="px-[10px] py-[12px] font-lato text-[12px] text-[#9CA3AF] text-center">No agents found</p>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 /* ─── Select with a label pill (replaces bare <select>) ─── */
 function FilterSelect({ label, value, onChange, options, accentColor }) {
 	const accent = accentColor || '#346BD4';
@@ -850,16 +990,34 @@ function PaginationBar({ page, totalPages, totalRecords, onPrev, onNext, onGoTo 
 	);
 }
 
+/* ─── Relative time helper ─── */
+function useRelativeTime(timestamp) {
+	const [label, setLabel] = useState('');
+	useEffect(() => {
+		if (!timestamp) { setLabel(''); return; }
+		const update = () => {
+			const diff = Date.now() - timestamp;
+			if (diff < 60000) setLabel('just now');
+			else if (diff < 3600000) setLabel(`${Math.floor(diff / 60000)} min ago`);
+			else setLabel(`${Math.floor(diff / 3600000)} hr ago`);
+		};
+		update();
+		const id = setInterval(update, 30000);
+		return () => clearInterval(id);
+	}, [timestamp]);
+	return label;
+}
+
 /* ─── Main Component ─── */
-export default function InvocationLogs({ onReady }) {
+export default function InvocationLogs({ onReady, refreshSignal, onFetchComplete, lastFetchedAt }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
 	const [invocations, setInvocations] = useState([]);
 	const [totalRecords, setTotalRecords] = useState(0);
 	const [initialLoading, setInitialLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
 	const [stats, setStats] = useState({});
-	const [agents, setAgents] = useState([]);
 	const [providers, setProviders] = useState([]);
 	const [expandedId, setExpandedId] = useState(null);
 	const [detailData, setDetailData] = useState({});
@@ -867,9 +1025,11 @@ export default function InvocationLogs({ onReady }) {
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const readyCalledRef = useRef(false);
+	const updatedLabel = useRelativeTime(lastFetchedAt);
 
 	// Filters
 	const [filterAgent, setFilterAgent] = useState('');
+	const [filterAgentName, setFilterAgentName] = useState('');
 	const [filterProvider, setFilterProvider] = useState('');
 	const [filterStatus, setFilterStatus] = useState('');
 	const [filterTriggeredBy, setFilterTriggeredBy] = useState('');
@@ -882,7 +1042,12 @@ export default function InvocationLogs({ onReady }) {
 		if (success && response) setStats(response);
 	}, [appId, triggerApi]);
 
-	const fetchInvocations = useCallback(async () => {
+	const fetchInvocations = useCallback(async ({ background = false } = {}) => {
+		if (!background) {
+			// only set initialLoading on the very first load (handled by the appId effect below)
+		} else {
+			setRefreshing(true);
+		}
 		const params = new URLSearchParams({ page: String(page) });
 		if (filterAgent) params.set('agent_id', filterAgent);
 		if (filterProvider) params.set('provider_id', filterProvider);
@@ -899,8 +1064,17 @@ export default function InvocationLogs({ onReady }) {
 			setInvocations(records);
 			setTotalPages(data.total_pages || 1);
 			setTotalRecords(data.total_records || 0);
+			onFetchComplete?.();
 		}
-	}, [appId, triggerApi, page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory, filterDateStart, filterDateEnd]);
+		if (background) setRefreshing(false);
+	}, [appId, triggerApi, page, filterAgent, filterProvider, filterStatus, filterTriggeredBy, filterMemory, filterDateStart, filterDateEnd, onFetchComplete]);
+
+	// Manual refresh — updates both invocations list AND stats
+	const handleRefresh = useCallback(async () => {
+		setRefreshing(true);
+		await Promise.all([fetchStats(), fetchInvocations({ background: true })]);
+		setRefreshing(false);
+	}, [fetchStats, fetchInvocations]);
 
 	const fetchDetail = async (id) => {
 		if (detailData[id]) return;
@@ -913,12 +1087,8 @@ export default function InvocationLogs({ onReady }) {
 	};
 
 	const fetchDropdowns = useCallback(async () => {
-		const [agentRes, providerRes] = await Promise.all([
-			triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/`, type: 'GET', loader: false }),
-			triggerApi({ url: `/api/v1/apps/${appId}/ai/providers/`, type: 'GET', loader: false }),
-		]);
-		if (agentRes.success) setAgents(agentRes.response?.agents?.records || agentRes.response?.agents || []);
-		if (providerRes.success) setProviders(providerRes.response?.providers?.records || providerRes.response?.providers || []);
+		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/providers/`, type: 'GET', loader: false });
+		if (success) setProviders(response?.providers?.records || response?.providers || []);
 	}, [appId, triggerApi]);
 
 	useEffect(() => {
@@ -932,6 +1102,14 @@ export default function InvocationLogs({ onReady }) {
 		});
 	}, [appId]);
 	useEffect(() => { fetchInvocations(); }, [fetchInvocations]);
+
+	// Background re-fetch on tab activation — only invocations list, not stats
+	const isFirstRefreshSignal = useRef(true);
+	useEffect(() => {
+		if (isFirstRefreshSignal.current) { isFirstRefreshSignal.current = false; return; }
+		if (!refreshSignal) return;
+		fetchInvocations({ background: true });
+	}, [refreshSignal]);
 
 	const handleExpand = (id) => {
 		if (expandedId === id) { setExpandedId(null); return; }
@@ -999,9 +1177,8 @@ export default function InvocationLogs({ onReady }) {
 
 	// Active filter labels for the chip bar
 	const activeFilters = [];
-	const agentObj = agents.find(a => String(a.id) === String(filterAgent));
 	const providerObj = providers.find(p => String(p.id) === String(filterProvider));
-	if (agentObj) activeFilters.push({ label: `Agent: ${agentObj.name}`, clear: () => clearFilter(setFilterAgent) });
+	if (filterAgent) activeFilters.push({ label: `Agent: ${filterAgentName || filterAgent}`, clear: () => { setFilterAgent(''); setFilterAgentName(''); setPage(1); } });
 	if (providerObj) activeFilters.push({ label: `Provider: ${providerObj.name}`, clear: () => clearFilter(setFilterProvider) });
 	if (filterStatus) activeFilters.push({ label: `Status: ${filterStatus.replace('_', ' ')}`, clear: () => clearFilter(setFilterStatus) });
 	if (filterTriggeredBy) activeFilters.push({ label: `Trigger: ${filterTriggeredBy}`, clear: () => clearFilter(setFilterTriggeredBy) });
@@ -1017,10 +1194,35 @@ export default function InvocationLogs({ onReady }) {
 		<div className="flex flex-col gap-[20px] pb-[32px]">
 			{/* Header */}
 			<div className="rounded-[16px] border border-[#E5E7EB] bg-white p-[24px]">
-				<h2 className="font-source-sans-pro text-[18px] font-semibold text-[#111827]">Invocation Logs</h2>
-				<p className="mb-[16px] font-lato text-[14px] text-[#6B7280]">
-					Complete audit trail of every agent run — LLM calls, resolved prompts, cost breakdown
-				</p>
+				<div className="flex items-start justify-between gap-[16px]">
+					<div>
+						<h2 className="font-source-sans-pro text-[18px] font-semibold text-[#111827]">Invocation Logs</h2>
+						<p className="mb-[16px] font-lato text-[14px] text-[#6B7280]">
+							Complete audit trail of every agent run — LLM calls, resolved prompts, cost breakdown
+						</p>
+					</div>
+					<div className="flex items-center gap-[8px] flex-shrink-0 mt-[2px]">
+						{refreshing ? (
+							<span className="font-lato text-[12px] text-[#6B7280]">Refreshing…</span>
+						) : updatedLabel ? (
+							<span className="font-lato text-[12px] text-[#9CA3AF]">Updated {updatedLabel}</span>
+						) : null}
+						<button
+							onClick={handleRefresh}
+							disabled={refreshing}
+							className="flex items-center gap-[5px] rounded-[6px] border border-[#DDE2E5] px-[10px] py-[5px] font-lato text-[12px] text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-50 transition-colors"
+						>
+							<svg
+								width="12" height="12" viewBox="0 0 12 12" fill="none"
+								className={refreshing ? 'animate-spin' : ''}
+							>
+								<path d="M10.5 6A4.5 4.5 0 1 1 8.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+								<path d="M8.5 1v2.5H11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+							</svg>
+							Refresh
+						</button>
+					</div>
+				</div>
 				<div className="flex flex-wrap items-center gap-[20px]">
 					<StatCard icon="🏃" label="Total Runs" value={stats.total_runs ?? '-'} />
 					<div className="h-[16px] w-[1px] bg-[#E5E7EB]" />
@@ -1036,11 +1238,12 @@ export default function InvocationLogs({ onReady }) {
 			<div className="rounded-[8px] border border-[#E5E7EB] bg-white p-[12px] flex flex-wrap items-center gap-[8px]">
 				<span className="font-lato text-[12px] font-semibold text-[#6C747D] mr-[4px]">Filter:</span>
 
-				<FilterSelect
-					label="Agent"
+				<SearchableAgentFilter
+					appId={appId}
+					triggerApi={triggerApi}
 					value={filterAgent}
-					onChange={(e) => { setFilterAgent(e.target.value); setPage(1); }}
-					options={[{ value: '', label: 'All Agents' }, ...agents.map(a => ({ value: String(a.id), label: a.name }))]}
+					valueName={filterAgentName}
+					onChange={(id, name) => { setFilterAgent(id); setFilterAgentName(name || ''); setPage(1); }}
 				/>
 				<FilterSelect
 					label="Provider"
@@ -1130,7 +1333,7 @@ export default function InvocationLogs({ onReady }) {
 
 				{hasFilters && (
 					<button
-						onClick={() => { setFilterAgent(''); setFilterProvider(''); setFilterStatus(''); setFilterTriggeredBy(''); setFilterMemory(''); setFilterDateStart(''); setFilterDateEnd(''); setPage(1); }}
+						onClick={() => { setFilterAgent(''); setFilterAgentName(''); setFilterProvider(''); setFilterStatus(''); setFilterTriggeredBy(''); setFilterMemory(''); setFilterDateStart(''); setFilterDateEnd(''); setPage(1); }}
 						className="ml-auto font-lato text-[12px] text-[#6B7280] hover:text-[#EF4444] underline"
 					>
 						Clear all

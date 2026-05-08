@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import BreadCrumbs from '../../app/components/BreadCrumbs';
 import Providers from './Providers';
@@ -85,6 +85,15 @@ const tabs = [
 	},
 ];
 
+// Staleness thresholds per tab (ms)
+const STALE_AFTER = {
+	'invocation-logs': 2 * 60 * 1000,  // 2 min — live data
+	'prompts':         3 * 60 * 1000,  // 3 min — collaborative
+	'agents':          5 * 60 * 1000,  // 5 min — user-owned
+	'providers':       5 * 60 * 1000,  // 5 min — user-owned
+	'tools':           5 * 60 * 1000,  // 5 min — user-owned
+};
+
 /**
  * TabPanel — keeps the child mounted after first visit (avoids re-fetch on tab switch)
  * but hides inactive panels with display:none. Shows a skeleton until the child
@@ -96,9 +105,18 @@ const tabs = [
  * - Once ready: render child normally; skeleton is gone.
  * - When inactive: display:none — child stays mounted but invisible (no re-fetch).
  */
-function TabPanel({ id, activeTab, Skeleton, isReady, children }) {
+function TabPanel({ id, activeTab, Skeleton, isReady, onActivate, children }) {
 	const isActive = activeTab === id;
 	const showSkeleton = isActive && !isReady && !!Skeleton;
+
+	// Fire onActivate when this tab transitions from inactive → active
+	const wasActiveRef = useRef(isActive);
+	useEffect(() => {
+		if (isActive && !wasActiveRef.current) {
+			onActivate?.();
+		}
+		wasActiveRef.current = isActive;
+	}, [isActive]);
 
 	return (
 		<div
@@ -141,6 +159,44 @@ export default function AppAi() {
 	const [tabReady, setTabReady] = useState({});
 	// Track which tabs have been mounted (we mount lazily on first visit)
 	const [tabMounted, setTabMounted] = useState({ [getActiveTab()]: true });
+
+	// Data freshness tracking
+	// lastFetchedAt[tabId] = timestamp (Date.now()) of last successful fetch
+	const [lastFetchedAt, setLastFetchedAt] = useState({});
+	// tabStaleFlags[tabId] = true means force re-fetch on next activation
+	const [tabStaleFlags, setTabStaleFlags] = useState({});
+	// refreshSignals[tabId] = counter that increments to signal a background re-fetch
+	const [refreshSignals, setRefreshSignals] = useState({});
+
+	// Called by each tab after a successful fetch
+	const markFetched = useCallback((tabId) => {
+		setLastFetchedAt((prev) => ({ ...prev, [tabId]: Date.now() }));
+	}, []);
+
+	// Stable per-tab onFetchComplete callbacks — must not be inline lambdas or they
+	// become new references every render and cause infinite fetch loops via useCallback deps
+	const onFetchCompleteAgents        = useCallback(() => markFetched('agents'),          [markFetched]);
+	const onFetchCompleteProviders     = useCallback(() => markFetched('providers'),        [markFetched]);
+	const onFetchCompletePrompts       = useCallback(() => markFetched('prompts'),          [markFetched]);
+	const onFetchCompleteTools         = useCallback(() => markFetched('tools'),            [markFetched]);
+	const onFetchCompleteInvocations   = useCallback(() => markFetched('invocation-logs'),  [markFetched]);
+
+	// Called to mark a tab's data as stale (e.g. cross-tab invalidation)
+	const markStale = useCallback((tabId) => {
+		setTabStaleFlags((prev) => ({ ...prev, [tabId]: true }));
+	}, []);
+
+	// Called when a tab becomes active — check staleness and signal refresh if needed
+	const handleActivate = useCallback((tabId) => {
+		const threshold = STALE_AFTER[tabId];
+		if (!threshold) return; // guardrails — static tab, no fetch
+		const last = lastFetchedAt[tabId];
+		const isStale = tabStaleFlags[tabId] || !last || (Date.now() - last > threshold);
+		if (isStale) {
+			setRefreshSignals((prev) => ({ ...prev, [tabId]: (prev[tabId] || 0) + 1 }));
+			setTabStaleFlags((prev) => ({ ...prev, [tabId]: false }));
+		}
+	}, [lastFetchedAt, tabStaleFlags]);
 
 	useEffect(() => {
 		const next = getActiveTab();
@@ -223,6 +279,7 @@ export default function AppAi() {
 
 					const isReady = !!tabReady[tab.id];
 					const onReady = makeOnReady(tab.id);
+					const refreshSignal = refreshSignals[tab.id] || 0;
 
 					return (
 						<TabPanel
@@ -231,13 +288,14 @@ export default function AppAi() {
 							activeTab={activeTab}
 							Skeleton={tab.Skeleton}
 							isReady={isReady}
+							onActivate={() => handleActivate(tab.id)}
 						>
-							{tab.id === 'providers'       && <Providers      onReady={onReady} />}
-							{tab.id === 'agents'          && <Agents         onReady={onReady} />}
-							{tab.id === 'prompts'         && <Prompts        onReady={onReady} />}
-							{tab.id === 'tools'           && <Tools          onReady={onReady} />}
+							{tab.id === 'providers'       && <Providers      onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteProviders} />}
+							{tab.id === 'agents'          && <Agents         onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteAgents} onInvalidate={markStale} />}
+							{tab.id === 'prompts'         && <Prompts        onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompletePrompts} />}
+							{tab.id === 'tools'           && <Tools          onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteTools} />}
 							{tab.id === 'guardrails'      && <Guardrails     onReady={onReady} />}
-							{tab.id === 'invocation-logs' && <InvocationLogs onReady={onReady} />}
+							{tab.id === 'invocation-logs' && <InvocationLogs onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteInvocations} lastFetchedAt={lastFetchedAt['invocation-logs']} />}
 						</TabPanel>
 					);
 				})}

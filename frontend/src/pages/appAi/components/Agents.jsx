@@ -185,7 +185,7 @@ function InlinePromptCreator({ type, appId, triggerApi, onCreated, onCancel }) {
 }
 
 /* ─── Prompt Selector — async searchable dropdown ─── */
-function PromptSelector({ label, hint, type, value, onChange, appId, triggerApi }) {
+function PromptSelector({ label, hint, type, value, onChange, appId, triggerApi, onInvalidate }) {
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState('');
 	const [results, setResults] = useState([]);
@@ -405,6 +405,7 @@ function PromptSelector({ label, hint, type, value, onChange, appId, triggerApi 
 					triggerApi={triggerApi}
 					onCreated={(name) => {
 						setShowCreator(false);
+						onInvalidate?.('prompts');
 						onChange(name);
 					}}
 					onCancel={() => setShowCreator(false)}
@@ -645,7 +646,7 @@ function SearchableSelect({ value, onChange, options, placeholder, disabled, ren
 }
 
 /* ─── Full-Page Agent Builder ─── */
-function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, triggerApi }) {
+function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, triggerApi, onInvalidate }) {
 	if (!show) return null;
 
 	const isEdit = !!initialValues._isEdit;
@@ -839,6 +840,7 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, 
 												onChange={(val) => formik.setFieldValue('system_prompt_name', val)}
 												appId={appId}
 												triggerApi={triggerApi}
+												onInvalidate={onInvalidate}
 											/>
 											<PromptSelector
 												label="User Prompt"
@@ -848,6 +850,7 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, 
 												onChange={(val) => formik.setFieldValue('user_prompt_name', val)}
 												appId={appId}
 												triggerApi={triggerApi}
+												onInvalidate={onInvalidate}
 											/>
 										</div>
 									</div>
@@ -1466,7 +1469,7 @@ function FilterSelect({ value, onChange, options, accentColor }) {
 }
 
 /* ─── Main Agents Component ─── */
-export default function Agents({ onReady }) {
+export default function Agents({ onReady, refreshSignal, onFetchComplete, onInvalidate }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
@@ -1506,8 +1509,9 @@ export default function Agents({ onReady }) {
 			setTotalPages(data.total_pages || 1);
 			setTotalRecords(data.total_records || 0);
 			if (response.stats) setStats(response.stats);
+			onFetchComplete?.();
 		}
-	}, [appId, triggerApi, page, debouncedSearch, statusFilter]);
+	}, [appId, triggerApi, page, debouncedSearch, statusFilter, onFetchComplete]);
 
 	const fetchProviders = useCallback(async () => {
 		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/providers/?page_size=100`, type: 'GET', loader: false });
@@ -1526,6 +1530,14 @@ export default function Agents({ onReady }) {
 		});
 	}, [appId]);
 	useEffect(() => { fetchAgents(); }, [fetchAgents]);
+
+	// Background re-fetch when parent signals staleness (skip first render)
+	const isFirstRefreshSignal = useRef(true);
+	useEffect(() => {
+		if (isFirstRefreshSignal.current) { isFirstRefreshSignal.current = false; return; }
+		if (!refreshSignal) return;
+		fetchAgents();
+	}, [refreshSignal]);
 
 	// Load providers only when the builder opens for the first time
 	const builderDepsLoaded = useRef(false);
@@ -1725,6 +1737,7 @@ export default function Agents({ onReady }) {
 				providers={providers}
 				appId={appId}
 				triggerApi={triggerApi}
+				onInvalidate={onInvalidate}
 			/>
 
 		</div>

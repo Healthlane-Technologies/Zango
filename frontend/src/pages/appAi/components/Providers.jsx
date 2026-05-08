@@ -1252,7 +1252,7 @@ function ProviderRow({ provider, onEdit, onToggleStatus, onTestConnection, onDel
 	);
 }
 
-export default function Providers({ onReady }) {
+export default function Providers({ onReady, refreshSignal, onFetchComplete }) {
 	const { appId } = useParams();
 	const triggerApi = useApi();
 
@@ -1278,8 +1278,9 @@ export default function Providers({ onReady }) {
 		if (success && response?.providers) {
 			const records = response.providers.records || response.providers;
 			setProviders(Array.isArray(records) ? records : []);
+			onFetchComplete?.();
 		}
-	}, [appId, triggerApi]);
+	}, [appId, triggerApi, onFetchComplete]);
 
 	// Fetch available provider types from registry
 	const fetchAvailableProviders = useCallback(async () => {
@@ -1303,6 +1304,14 @@ export default function Providers({ onReady }) {
 			}
 		});
 	}, [appId]);
+
+	// Background re-fetch when parent signals staleness (skip first render)
+	const isFirstRefreshSignal = useRef(true);
+	useEffect(() => {
+		if (isFirstRefreshSignal.current) { isFirstRefreshSignal.current = false; return; }
+		if (!refreshSignal) return;
+		fetchProviders();
+	}, [refreshSignal]);
 
 	// Add provider — called by wizard on step 3 submit
 	const handleAddProvider = async (payload) => {
