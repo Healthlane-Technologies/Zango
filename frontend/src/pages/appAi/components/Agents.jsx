@@ -1638,7 +1638,7 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 		  };
 
 	return (
-		<div className="flex flex-col gap-[24px]">
+		<div className="flex flex-col gap-[24px] pb-[32px]">
 			<div className="rounded-[16px] border border-[#E5E7EB] bg-white p-[24px]">
 				<div className="mb-[16px] flex items-center justify-between">
 					<div>

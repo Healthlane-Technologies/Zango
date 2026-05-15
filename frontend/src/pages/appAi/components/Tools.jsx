@@ -307,7 +307,7 @@ export default function Tools({ onReady, refreshSignal, onFetchComplete }) {
 	const selectClass = "rounded-[6px] border border-[#DDE2E5] px-[10px] py-[8px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#5048ED] bg-white";
 
 	return (
-		<div className="flex flex-col gap-[24px]">
+		<div className="flex flex-col gap-[24px] pb-[32px]">
 			{/* Header */}
 			<div className="rounded-[16px] border border-[#E5E7EB] bg-white p-[24px]">
 				<div className="mb-[16px] flex items-center justify-between">

@@ -1286,7 +1286,7 @@ export default function Prompts({ onReady, refreshSignal, onFetchComplete }) {
 	});
 
 	return (
-		<div className="flex flex-col gap-[20px]">
+		<div className="flex flex-col gap-[20px] pb-[32px]">
 
 			{/* ── Header card ── */}
 			<div className="rounded-[14px] border border-[#E5E7EB] bg-white p-[24px]">
