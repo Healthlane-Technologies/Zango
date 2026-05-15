@@ -7,7 +7,7 @@ Authentication: Session auth (platform admin user).
 import json
 
 from django.db import connection, models, transaction
-from django.db.models import Q, Sum
+from django.db.models import Max, Q, Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 
@@ -597,14 +597,184 @@ class InvocationListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                         created_at__gte=ts["start"], created_at__lte=ts["end"]
                     )
 
-            paginated = self.paginate_queryset(invocations, request, view=self)
-            serializer = AppLLMInvocationListSerializer(paginated, many=True)
-            paginated_data = self.get_paginated_response_data(serializer.data)
+            # ── Group-level pagination ──────────────────────────────────
+            # Each top-level group (session | run-without-session | standalone)
+            # counts as one page slot. Representative = MAX(id) in the group.
+
+            try:
+                page_size = min(int(request.GET.get("page_size", 10)), 100)
+            except (ValueError, TypeError):
+                page_size = 10
+            try:
+                page_num = max(1, int(request.GET.get("page", 1)))
+            except (ValueError, TypeError):
+                page_num = 1
+
+            # Session groups
+            has_session_qs = invocations.filter(
+                session_id__isnull=False
+            ).exclude(session_id="")
+            session_reps = {
+                row["session_id"]: row["rep"]
+                for row in has_session_qs.values("session_id").annotate(rep=Max("id"))
+            }
+
+            # Run groups (no session)
+            no_session_qs = invocations.filter(
+                Q(session_id__isnull=True) | Q(session_id="")
+            )
+            run_reps = {
+                str(row["run_id"]): row["rep"]
+                for row in no_session_qs.filter(run_id__isnull=False)
+                .values("run_id")
+                .annotate(rep=Max("id"))
+            }
+
+            # Standalone (no session, no run)
+            standalone_ids = list(
+                no_session_qs.filter(run_id__isnull=True).values_list("id", flat=True)
+            )
+
+            # Build rep_id → (type, key) map and sort newest-first
+            rep_to_group_key = {}
+            for sid, rep in session_reps.items():
+                rep_to_group_key[rep] = ("session", sid)
+            for rid, rep in run_reps.items():
+                rep_to_group_key[rep] = ("run", rid)
+            for inv_id in standalone_ids:
+                rep_to_group_key[inv_id] = ("standalone", inv_id)
+
+            all_rep_ids = sorted(rep_to_group_key.keys(), reverse=True)
+            total_groups = len(all_rep_ids)
+            total_pages = max(1, (total_groups + page_size - 1) // page_size)
+            page_num = min(page_num, total_pages)
+            offset = (page_num - 1) * page_size
+            page_rep_ids = all_rep_ids[offset: offset + page_size]
+
+            if not page_rep_ids:
+                return get_api_response(
+                    True,
+                    {
+                        "invocations": {
+                            "records": [],
+                            "total_pages": total_pages,
+                            "total_records": total_groups,
+                        },
+                        "message": "Invocations fetched successfully",
+                    },
+                    200,
+                )
+
+            # Build bulk-fetch filter for this page's groups
+            page_session_ids = [
+                rep_to_group_key[r][1]
+                for r in page_rep_ids
+                if rep_to_group_key[r][0] == "session"
+            ]
+            page_run_ids = [
+                rep_to_group_key[r][1]
+                for r in page_rep_ids
+                if rep_to_group_key[r][0] == "run"
+            ]
+            page_standalone_ids = [
+                rep_to_group_key[r][1]
+                for r in page_rep_ids
+                if rep_to_group_key[r][0] == "standalone"
+            ]
+
+            bulk_q = Q()
+            if page_session_ids:
+                bulk_q |= Q(session_id__in=page_session_ids)
+            if page_run_ids:
+                bulk_q |= Q(run_id__in=page_run_ids) & (
+                    Q(session_id__isnull=True) | Q(session_id="")
+                )
+            if page_standalone_ids:
+                bulk_q |= Q(id__in=page_standalone_ids)
+
+            # Order by (session_id, id) — id is sequential so chronological within session
+            bulk_invocations = list(
+                invocations.filter(bulk_q).order_by("session_id", "id")
+            )
+
+            # Serialize
+            inv_data = {
+                inv.id: AppLLMInvocationListSerializer(inv).data
+                for inv in bulk_invocations
+            }
+
+            # Build nested groups
+            groups_by_session = {}
+            groups_by_run = {}
+            groups_by_standalone = {}
+
+            for inv in bulk_invocations:
+                d = inv_data[inv.id]
+                sid = inv.session_id or ""
+                rid = str(inv.run_id) if inv.run_id else ""
+
+                if sid:
+                    if sid not in groups_by_session:
+                        groups_by_session[sid] = {
+                            "type": "session",
+                            "session_id": sid,
+                            "runs": [],
+                            "_run_map": {},
+                        }
+                    sg = groups_by_session[sid]
+                    if rid:
+                        if rid not in sg["_run_map"]:
+                            rg = {"type": "run", "run_id": rid, "rounds": [d]}
+                            sg["_run_map"][rid] = rg
+                            sg["runs"].append(rg)
+                        else:
+                            sg["_run_map"][rid]["rounds"].append(d)
+                    else:
+                        sg["runs"].append({"type": "standalone", "inv": d})
+                elif rid:
+                    if rid not in groups_by_run:
+                        groups_by_run[rid] = {"type": "run", "run_id": rid, "rounds": [d]}
+                    else:
+                        groups_by_run[rid]["rounds"].append(d)
+                else:
+                    groups_by_standalone[inv.id] = {"type": "standalone", "inv": d}
+
+            # Assign sequential run labels
+            rep_id_to_pos = {rep_id: pos for pos, rep_id in enumerate(all_rep_ids)}
+            for rep_id in page_rep_ids:
+                gtype, gkey = rep_to_group_key[rep_id]
+                global_pos = rep_id_to_pos[rep_id]
+                if gtype == "run" and gkey in groups_by_run:
+                    groups_by_run[gkey]["run_label"] = f"Run #{total_groups - global_pos}"
+                elif gtype == "session" and gkey in groups_by_session:
+                    run_n = 0
+                    for run in groups_by_session[gkey]["runs"]:
+                        if run["type"] == "run":
+                            run_n += 1
+                            run["run_label"] = f"Run #{run_n}"
+
+            # Build final ordered list
+            result_groups = []
+            for rep_id in page_rep_ids:
+                gtype, gkey = rep_to_group_key[rep_id]
+                if gtype == "session" and gkey in groups_by_session:
+                    g = groups_by_session[gkey]
+                    result_groups.append(
+                        {k: v for k, v in g.items() if not k.startswith("_")}
+                    )
+                elif gtype == "run" and gkey in groups_by_run:
+                    result_groups.append(groups_by_run[gkey])
+                elif gtype == "standalone" and gkey in groups_by_standalone:
+                    result_groups.append(groups_by_standalone[gkey])
 
             return get_api_response(
                 True,
                 {
-                    "invocations": paginated_data,
+                    "invocations": {
+                        "records": result_groups,
+                        "total_pages": total_pages,
+                        "total_records": total_groups,
+                    },
                     "message": "Invocations fetched successfully",
                 },
                 200,
