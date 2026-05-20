@@ -637,6 +637,7 @@ function SessionGroup({ session_id, runs, onExpand, expandedId, detailData, load
 							<RunGroup
 								key={run.run_id}
 								rounds={run.rounds}
+								runLabel={run.run_label}
 								expandedId={expandedId}
 								onExpand={onExpand}
 								detailData={detailData}
@@ -663,7 +664,7 @@ function SessionGroup({ session_id, runs, onExpand, expandedId, detailData, load
 }
 
 /* ─── Run group: one header row that expands to show all rounds ─── */
-function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fetchDetail, indented }) {
+function RunGroup({ rounds, runLabel, onExpand, expandedId, detailData, loadingDetail, fetchDetail, indented }) {
 	const [groupExpanded, setGroupExpanded] = useState(false);
 	// Summary from all rounds
 	const first = rounds[0];
@@ -689,7 +690,7 @@ function RunGroup({ rounds, onExpand, expandedId, detailData, loadingDetail, fet
 					</svg>
 				</button>
 				<span className="mr-[16px] w-[120px] font-mono font-lato text-[12px] text-[#6B7280]">
-					run_{String(first.id).padStart(4, '0')}
+					{runLabel || `run_${String(first.id).padStart(4, '0')}`}
 				</span>
 				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
 					{new Date(first.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' })}
@@ -1118,62 +1119,8 @@ export default function InvocationLogs({ onReady, refreshSignal, onFetchComplete
 
 	const clearFilter = (setter) => { setter(''); setPage(1); };
 
-	// Group invocations into a 3-level hierarchy:
-	//   session (session_id, memory agents) → run (run_id) → round (round_number)
-	// Non-memory agents retain the existing 2-level: run → round (or standalone).
-	const groupedRows = (() => {
-		const groups = [];
-		const sessionMap = new Map(); // session_id -> group index
-		const runMap = new Map();     // run_id key -> { groupIdx } or { sessionIdx, runIdx }
-
-		invocations.forEach((inv) => {
-			if (inv.session_id) {
-				// Memory agent — session > run > round
-				if (!sessionMap.has(inv.session_id)) {
-					sessionMap.set(inv.session_id, groups.length);
-					groups.push({ type: 'session', session_id: inv.session_id, runs: [] });
-				}
-				const sessionGroup = groups[sessionMap.get(inv.session_id)];
-				if (inv.run_id) {
-					const runKey = `${inv.session_id}:${inv.run_id}`;
-					if (!runMap.has(runKey)) {
-						runMap.set(runKey, { sessionIdx: sessionMap.get(inv.session_id), runIdx: sessionGroup.runs.length });
-						sessionGroup.runs.push({ type: 'run', run_id: inv.run_id, rounds: [inv] });
-					} else {
-						const { runIdx } = runMap.get(runKey);
-						sessionGroup.runs[runIdx].rounds.push(inv);
-					}
-				} else {
-					sessionGroup.runs.push({ type: 'standalone', inv });
-				}
-			} else if (inv.run_id) {
-				// Non-memory agent with multi-round run
-				const runKey = `run:${inv.run_id}`;
-				if (!runMap.has(runKey)) {
-					runMap.set(runKey, { groupIdx: groups.length });
-					groups.push({ type: 'run', run_id: inv.run_id, rounds: [inv] });
-				} else {
-					groups[runMap.get(runKey).groupIdx].rounds.push(inv);
-				}
-			} else {
-				// Completely standalone (no session, no run)
-				groups.push({ type: 'standalone', inv });
-			}
-		});
-
-		// Sort rounds within each run group by round_number
-		groups.forEach((g) => {
-			if (g.type === 'run') {
-				g.rounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
-			} else if (g.type === 'session') {
-				g.runs.forEach(r => {
-					if (r.type === 'run') r.rounds.sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
-				});
-			}
-		});
-
-		return groups;
-	})();
+	// Backend returns pre-grouped records: type 'session' | 'run' | 'standalone'
+	const groupedRows = invocations;
 
 	// Active filter labels for the chip bar
 	const activeFilters = [];
@@ -1387,6 +1334,7 @@ export default function InvocationLogs({ onReady, refreshSignal, onFetchComplete
 							<RunGroup
 								key={group.run_id}
 								rounds={group.rounds}
+								runLabel={group.run_label}
 								expandedId={expandedId}
 								onExpand={handleExpand}
 								detailData={detailData}

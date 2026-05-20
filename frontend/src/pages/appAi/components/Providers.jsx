@@ -1496,7 +1496,7 @@ export default function Providers({ onReady, refreshSignal, onFetchComplete }) {
 	const totalModels = providers.reduce((sum, p) => sum + (p.models_count || 0), 0);
 
 	return (
-		<div className="flex flex-col gap-[24px]">
+		<div className="flex flex-col gap-[24px] pb-[32px]">
 			{/* Summary card */}
 			<div className="rounded-[16px] border border-[#E5E7EB] bg-white p-[24px]">
 				<div className="mb-[16px] flex items-center justify-between">
