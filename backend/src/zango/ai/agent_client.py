@@ -635,62 +635,8 @@ class AgentClient:
 
     # ──────────────────────────────────────────────────────────────────────────
 
-    def stream(
-        self,
-        variables: Optional[dict] = None,
-        messages: Optional[list[LLMMessage]] = None,
-        files: Optional[list] = None,
-        triggered_by: str = "user",
-        **kwargs,
-    ):
-        """
-        Streaming version of run(). Yields LLMStreamChunks.
-        """
-        from zango.ai.client import ProviderClient
-
-        if not self._agent.is_enabled:
-            raise AgentDisabled(self._agent.name)
-
-        if not self._agent.provider:
-            raise ValueError(f"Agent '{self._agent.name}' has no provider configured.")
-
-        system = None
-        if self._agent.system_prompt:
-            system = self._agent.get_system_prompt_content(**(variables or {}))
-
-        if messages is None:
-            messages = []
-            user_content = self._agent.get_user_prompt_content(**(variables or {}))
-            if user_content:
-                messages.append(
-                    LLMMessage(role="user", content=user_content, files=files or None)
-                )
-            elif files:
-                messages.append(LLMMessage(role="user", content="", files=files))
-        elif files:
-            for msg in reversed(messages):
-                if msg.role == "user":
-                    msg.files = (msg.files or []) + list(files)
-                    break
-            else:
-                messages.append(LLMMessage(role="user", content="", files=files))
-
-        if not messages:
-            raise ValueError(
-                f"Agent '{self._agent.name}' has no user prompt and no messages provided."
-            )
-
-        # Resolve agent tools
-        llm_tools = self._resolve_tools()
-
-        provider_client = ProviderClient(self._agent.provider)
-        return provider_client.stream(
-            messages=messages,
-            model=self._agent.model,
-            tools=llm_tools,
-            temperature=self._agent.temperature,
-            max_tokens=self._agent.max_tokens,
-            system=system,
-            triggered_by=triggered_by,
-            **kwargs,
+    def stream(self, *args, **kwargs):
+        raise NotImplementedError(
+            "AgentClient.stream() is not yet implemented. "
+            "Use AgentClient.run() for synchronous agent execution."
         )
