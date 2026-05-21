@@ -942,8 +942,6 @@ class AppLLMMemoryMessageSerializer(serializers.ModelSerializer):
             "id",
             "role",
             "content",
-            "tool_calls",
-            "tool_call_id",
             "sequence",
             "invocation",
             "created_at",

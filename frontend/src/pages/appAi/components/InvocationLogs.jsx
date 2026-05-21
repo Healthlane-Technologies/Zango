@@ -263,7 +263,6 @@ function InvocationDetail({ invocation }) {
 								const result = toolResults[tc.id];
 								let parsedResult = null;
 								try { parsedResult = result ? JSON.parse(result) : null; } catch(e) { parsedResult = result; }
-								const found = parsedResult?.found;
 
 								return (
 									<div key={i} className="flex gap-[10px]">
@@ -276,15 +275,6 @@ function InvocationDetail({ invocation }) {
 											<div className="rounded-[6px] border border-[#DDD6FE] bg-[#F5F3FF] px-[12px] py-[8px]">
 												<div className="flex items-center gap-[8px] mb-[6px]">
 													<span className="font-mono text-[12px] font-bold text-[#7C3AED]">{name}</span>
-													{result && (
-														<span className={`rounded-full px-[6px] py-[1px] font-lato text-[10px] font-semibold ${
-															found === false ? 'bg-[#FEF2F2] text-[#DC2626]' :
-															found === true ? 'bg-[#F0FDF4] text-[#16A34A]' :
-															'bg-[#F3F4F6] text-[#6B7280]'
-														}`}>
-															{found === false ? 'not found' : found === true ? 'found' : 'done'}
-														</span>
-													)}
 												</div>
 												<div className="grid grid-cols-2 gap-[8px]">
 													<div>
@@ -547,11 +537,11 @@ function SessionGroup({ session_id, runs, onExpand, expandedId, detailData, load
 	const overallStatus = hasError ? 'error' : (last?.status || 'success');
 	const totalRounds = allRounds.length;
 
-	// Format session_id for display: if UUID-like use short form, otherwise show as-is (truncated)
 	const isUuid = /^[0-9a-f-]{32,36}$/i.test(session_id);
 	const sessionLabel = isUuid
 		? session_id.replace(/-/g, '').slice(0, 12)
 		: session_id.length > 16 ? session_id.slice(0, 16) + '…' : session_id;
+	const sessionStartId = firstRound ? `Session #${firstRound.id}` : null;
 
 	return (
 		<div className="border-b border-[#E5E7EB]">
@@ -567,17 +557,18 @@ function SessionGroup({ session_id, runs, onExpand, expandedId, detailData, load
 					</svg>
 				</div>
 
-				{/* Session identity pill */}
-				<div className="mr-[16px] flex items-center overflow-hidden" style={{ width: '120px' }}>
+				{/* Session identity — matches RunGroup first-column width */}
+				<div className="mr-[16px] flex flex-col gap-[3px] overflow-hidden" style={{ width: '120px' }}>
 					<span
-						className="inline-flex items-center gap-[4px] rounded-[4px] bg-[#EDE9FE] px-[6px] py-[2px] font-mono text-[11px] font-semibold text-[#6D28D9] min-w-0 max-w-full"
+						className="inline-flex w-fit items-center gap-[4px] rounded-[6px] bg-[#7C3AED] px-[7px] py-[2px] font-mono text-[11px] font-semibold text-white truncate shadow-sm"
 						title={session_id}
 					>
-						<svg width="9" height="9" viewBox="0 0 12 12" fill="none" className="shrink-0">
-							<path d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5S8.76 1 6 1zm0 2a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 7.1a3.6 3.6 0 01-3-1.62c.015-1 2-1.55 3-1.55s2.985.55 3 1.55A3.6 3.6 0 016 10.1z" fill="currentColor"/>
+						<svg width="8" height="8" viewBox="0 0 12 12" fill="none" className="shrink-0 opacity-80">
+							<path d="M2 2h3v3H2zm5 0h3v3H7zm0 5h3v3H7zm-5 0h3v3H2z" fill="currentColor"/>
 						</svg>
-						<span className="truncate">{sessionLabel}</span>
+						{sessionLabel}
 					</span>
+					<span className="font-mono text-[10px] text-[#9CA3AF]">{sessionStartId}</span>
 				</div>
 
 				{/* Timestamp */}
@@ -689,8 +680,8 @@ function RunGroup({ rounds, runLabel, onExpand, expandedId, detailData, loadingD
 						<path d="M3 1L7 5L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
 					</svg>
 				</button>
-				<span className="mr-[16px] w-[120px] font-mono font-lato text-[12px] text-[#6B7280]">
-					{runLabel || `run_${String(first.id).padStart(4, '0')}`}
+				<span className="mr-[16px] w-[120px] font-mono text-[12px] font-medium text-[#374151]">
+					{runLabel || `Run #${first.id}`}
 				</span>
 				<span className="mr-[16px] w-[120px] font-lato text-[12px] text-[#374151]">
 					{new Date(first.created_at).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' })}

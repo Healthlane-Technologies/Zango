@@ -611,9 +611,9 @@ class InvocationListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 page_num = 1
 
             # Session groups
-            has_session_qs = invocations.filter(
-                session_id__isnull=False
-            ).exclude(session_id="")
+            has_session_qs = invocations.filter(session_id__isnull=False).exclude(
+                session_id=""
+            )
             session_reps = {
                 row["session_id"]: row["rep"]
                 for row in has_session_qs.values("session_id").annotate(rep=Max("id"))
@@ -649,7 +649,7 @@ class InvocationListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             total_pages = max(1, (total_groups + page_size - 1) // page_size)
             page_num = min(page_num, total_pages)
             offset = (page_num - 1) * page_size
-            page_rep_ids = all_rep_ids[offset: offset + page_size]
+            page_rep_ids = all_rep_ids[offset : offset + page_size]
 
             if not page_rep_ids:
                 return get_api_response(
@@ -733,25 +733,28 @@ class InvocationListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                         sg["runs"].append({"type": "standalone", "inv": d})
                 elif rid:
                     if rid not in groups_by_run:
-                        groups_by_run[rid] = {"type": "run", "run_id": rid, "rounds": [d]}
+                        groups_by_run[rid] = {
+                            "type": "run",
+                            "run_id": rid,
+                            "rounds": [d],
+                        }
                     else:
                         groups_by_run[rid]["rounds"].append(d)
                 else:
                     groups_by_standalone[inv.id] = {"type": "standalone", "inv": d}
 
-            # Assign sequential run labels
-            rep_id_to_pos = {rep_id: pos for pos, rep_id in enumerate(all_rep_ids)}
+            # Assign stable run labels from first round's invocation ID
             for rep_id in page_rep_ids:
                 gtype, gkey = rep_to_group_key[rep_id]
-                global_pos = rep_id_to_pos[rep_id]
                 if gtype == "run" and gkey in groups_by_run:
-                    groups_by_run[gkey]["run_label"] = f"Run #{total_groups - global_pos}"
+                    first_id = groups_by_run[gkey]["rounds"][0]["id"]
+                    groups_by_run[gkey]["run_label"] = f"Run #{first_id}"
                 elif gtype == "session" and gkey in groups_by_session:
                     run_n = 0
                     for run in groups_by_session[gkey]["runs"]:
                         if run["type"] == "run":
                             run_n += 1
-                            run["run_label"] = f"Run #{run_n}"
+                            run["run_label"] = f"Run {run_n}"
 
             # Build final ordered list
             result_groups = []

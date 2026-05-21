@@ -360,6 +360,13 @@ class AgentClient:
         new_user_messages_for_memory = messages[len(history_messages) :]
 
         for round_number in range(1, max_tool_rounds + 2):
+            # OpenAI-style providers cannot use response_format and tools together —
+            # passing both causes the model to loop on tool_use instead of finalising.
+            # Only enforce response_format on round 1 (before any tools have been
+            # called) or on subsequent rounds where no tools are being sent.
+            suppress_response_format = (
+                round_number > 1 and llm_tools and response_format_kwarg
+            )
             response = provider_client.complete(
                 messages=messages,
                 model=self._agent.model,
@@ -371,7 +378,7 @@ class AgentClient:
                 run_id=run_id,
                 round_number=round_number,
                 **{**agent_tracking},
-                **response_format_kwarg,
+                **(response_format_kwarg if not suppress_response_format else {}),
                 **kwargs,
             )
             total_cost += response.cost_usd

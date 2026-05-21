@@ -989,10 +989,11 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, 
 								</div>
 
 								{/* Right Column — Summary & Actions */}
-								<div className="w-[320px] flex-shrink-0 border-l border-[#E5E7EB] bg-[#F9FAFB] px-[24px] py-[24px] flex flex-col overflow-y-auto">
+								<div className="w-[320px] flex-shrink-0 border-l border-[#E5E7EB] bg-[#F9FAFB] flex flex-col">
+									<div className="flex-1 overflow-y-auto px-[24px] py-[24px]">
 									<h3 className="mb-[20px] font-source-sans-pro text-[16px] font-semibold text-[#111827]">Summary</h3>
 
-									<div className="flex flex-col gap-[16px] flex-1">
+									<div className="flex flex-col gap-[16px]">
 										<div className="rounded-[8px] border border-[#E5E7EB] bg-white p-[16px]">
 											<div className="flex items-center gap-[8px] mb-[12px]">
 												<div className="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] bg-[#EEF2FF]">
@@ -1090,14 +1091,17 @@ response = agent.run(
 											</pre>
 										</div>
 									)}
+									</div>{/* end scrollable area */}
 
-									<button
-										type="submit"
-										disabled={formik.isSubmitting || !formik.isValid}
-										className="mt-[16px] w-full rounded-[8px] bg-[#5048ED] py-[12px] font-lato text-[14px] font-semibold text-white transition-colors hover:bg-[#4338CA] disabled:opacity-50"
-									>
-										{formik.isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Agent'}
-									</button>
+									<div className="shrink-0 border-t border-[#E5E7EB] px-[24px] py-[16px]">
+										<button
+											type="submit"
+											disabled={formik.isSubmitting || !formik.isValid}
+											className="w-full rounded-[8px] bg-[#5048ED] py-[12px] font-lato text-[14px] font-semibold text-white transition-colors hover:bg-[#4338CA] disabled:opacity-50"
+										>
+											{formik.isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Agent'}
+										</button>
+									</div>
 								</div>
 							</form>
 						);
@@ -1692,7 +1696,9 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 			</div>
 
 			{agents.length > 0 && (
-				<div className="flex items-center px-[72px] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">
+				<div className="flex items-center px-[24px] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">
+					<span className="mr-[12px] w-[12px] shrink-0" />{/* expand chevron */}
+					<span className="mr-[12px] w-[32px] shrink-0" />{/* provider icon */}
 					<span className="mr-[20px] min-w-[180px]">Agent</span>
 					<span className="mr-[20px] min-w-[100px]">Provider</span>
 					<span className="mr-[20px] min-w-[150px]">Model</span>
