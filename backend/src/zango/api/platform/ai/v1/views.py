@@ -1345,6 +1345,7 @@ class AgentDuplicateViewAPIV1(ZangoGenericPlatformAPIView):
                 max_tokens=original.max_tokens,
                 timeout_seconds=original.timeout_seconds,
                 output_schema=original.output_schema,
+                output_json_schema=original.output_json_schema,
                 tools=original.tools,
                 memory_enabled=original.memory_enabled,
                 memory_max_messages=original.memory_max_messages,
