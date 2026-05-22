@@ -51,8 +51,10 @@ class AppLLMMemorySession(FullAuditMixin):
 class AppLLMMemoryMessage(FullAuditMixin):
     """
     A single stored message within a memory session.
-    Only user input and final assistant responses are stored — not
-    intermediate tool-call rounds (they are ephemeral scaffolding).
+    Stores user input, assistant responses, and tool call/result rounds
+    so they are replayed verbatim on subsequent agent.run() calls.
+    role is one of: "user", "assistant", "tool" (OpenAI-style tool result),
+    or "assistant_tool_use" (Anthropic-style tool-use round).
     """
 
     session = models.ForeignKey(
@@ -62,7 +64,7 @@ class AppLLMMemoryMessage(FullAuditMixin):
     )
     role = models.CharField(
         max_length=20,
-        help_text="'user' or 'assistant'",
+        help_text="'user', 'assistant', or 'tool'",
     )
     content = models.JSONField(
         help_text="Message content — str or list of content blocks",

@@ -12,6 +12,23 @@ function notify(type, title, description) {
 	);
 }
 
+function MemoryPolicyBadge({ policy }) {
+	if (policy === 'exclude') {
+		return (
+			<span className="inline-flex items-center gap-[4px] rounded-[4px] bg-[#FEF2F2] px-[8px] py-[2px] font-lato text-[11px] font-bold text-[#DC2626]">
+				<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+				EXCLUDE
+			</span>
+		);
+	}
+	return (
+		<span className="inline-flex items-center gap-[4px] rounded-[4px] bg-[#ECFDF5] px-[8px] py-[2px] font-lato text-[11px] font-bold text-[#059669]">
+			<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l3 3 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+			INCLUDE
+		</span>
+	);
+}
+
 function SafetyBadge({ safety }) {
 	const styles = {
 		read_only: 'bg-[#ECFDF5] text-[#059669]',
@@ -89,7 +106,11 @@ function ToolDetail({ tool, detail, loading }) {
 						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Rate Limit</span>
 						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827]">{d.rate_limit_rpm ? `${d.rate_limit_rpm}/min` : 'Unlimited'}</p>
 					</div>
-					<div className="col-span-2">
+					<div>
+						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Memory Policy</span>
+						<div className="mt-[4px]"><MemoryPolicyBadge policy={d.memory_policy || 'include'} /></div>
+					</div>
+					<div>
 						<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">Schema Hash</span>
 						<p className="mt-[2px] font-mono font-lato text-[13px] text-[#111827] break-all">{d.schema_hash}</p>
 					</div>

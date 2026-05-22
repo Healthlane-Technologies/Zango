@@ -126,11 +126,25 @@ function InvocationDetail({ invocation }) {
 						: (invocation.request_messages || []);
 				} catch (e) {}
 
-				// Build tool result lookup: tool_call_id -> content
+				// Build tool result lookup for the current turn only (messages after currentUserMsgIdx).
 				// OpenAI format: role="tool" messages with tool_call_id
 				// Anthropic format: role="user" messages with content blocks of type="tool_result" and tool_use_id
+				// We compute currentUserMsgIdx first via a pre-pass so the lookup is scoped correctly.
+				const isToolResultMsg = (m) =>
+					m.role === 'user' &&
+					Array.isArray(m.content) &&
+					m.content.length > 0 &&
+					m.content.every(b => b.type === 'tool_result');
+
+				const userMsgIndices = messages.reduce(
+					(acc, m, i) => (m.role === 'user' && !isToolResultMsg(m)) ? [...acc, i] : acc,
+					[]
+				);
+				const currentUserMsgIdx = userMsgIndices[userMsgIndices.length - 1] ?? -1;
+
 				const toolResults = {};
-				messages.forEach(m => {
+				messages.forEach((m, idx) => {
+					if (idx <= currentUserMsgIdx) return; // skip memory history
 					if (m.role === 'tool' && m.tool_call_id) {
 						toolResults[m.tool_call_id] = m.content;
 					} else if (m.role === 'user' && Array.isArray(m.content)) {
@@ -145,11 +159,15 @@ function InvocationDetail({ invocation }) {
 					}
 				});
 
-				// Collect tool calls made by LLM (from assistant messages in history + current response)
+				// Collect tool calls made by the LLM *in the current turn only* —
+				// i.e. assistant messages that appear AFTER the current user message index.
+				// Memory-injected assistant messages (before currentUserMsgIdx) are excluded
+				// to avoid showing replayed history tool calls as live calls.
 				// OpenAI format: assistant message has tool_calls array
 				// Anthropic format: assistant message has content array with blocks of type="tool_use"
 				const historyToolCalls = [];
-				messages.forEach(m => {
+				messages.forEach((m, idx) => {
+					if (idx <= currentUserMsgIdx) return; // skip memory history
 					if (m.role === 'assistant') {
 						if (m.tool_calls) {
 							m.tool_calls.forEach(tc => historyToolCalls.push(tc));
@@ -172,17 +190,6 @@ function InvocationDetail({ invocation }) {
 				// Anthropic tool-result messages also use role="user" with content blocks of
 				// type "tool_result" — these are NOT the user's actual input and must be skipped
 				// when finding the real current user message.
-				const isToolResultMsg = (m) =>
-					m.role === 'user' &&
-					Array.isArray(m.content) &&
-					m.content.length > 0 &&
-					m.content.every(b => b.type === 'tool_result');
-
-				const userMsgIndices = messages.reduce(
-					(acc, m, i) => (m.role === 'user' && !isToolResultMsg(m)) ? [...acc, i] : acc,
-					[]
-				);
-				const currentUserMsgIdx = userMsgIndices[userMsgIndices.length - 1] ?? -1;
 				const currentUserMsg = currentUserMsgIdx >= 0 ? messages[currentUserMsgIdx] : null;
 				// History = all messages before the current user message (memory context)
 				const memoryHistoryMessages = currentUserMsgIdx > 0 ? messages.slice(0, currentUserMsgIdx) : [];
