@@ -21,6 +21,11 @@ class AppLLMTool(FullAuditMixin):
         ("external", "External"),
     ]
 
+    MEMORY_POLICY_CHOICES = [
+        ("include", "Include — replay verbatim in session history"),
+        ("exclude", "Exclude — drop from loaded history (side-effect tools)"),
+    ]
+
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     section = models.CharField(max_length=50, default="general")
@@ -36,6 +41,15 @@ class AppLLMTool(FullAuditMixin):
     return_type = models.CharField(max_length=100, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     schema_hash = models.CharField(max_length=64)
+    memory_policy = models.CharField(
+        max_length=10,
+        choices=MEMORY_POLICY_CHOICES,
+        default="include",
+        help_text=(
+            "include: replay tool call/result verbatim in session history (default). "
+            "exclude: drop from loaded history — use for side-effect tools (send_email, etc.)."
+        ),
+    )
 
     # Usage stats
     total_calls = models.IntegerField(default=0)

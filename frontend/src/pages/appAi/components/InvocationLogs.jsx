@@ -38,8 +38,103 @@ function JsonBlock({ data, maxHeight = '200px' }) {
 	);
 }
 
+/* ─── Render a single memory message row ─── */
+function MemoryMessageRow({ m }) {
+	const content = m.content;
+
+	// Anthropic assistant tool-use round: list of tool_use blocks
+	const isAssistantToolUse = m.role === 'assistant' && Array.isArray(content) &&
+		content.some(b => b?.type === 'tool_use');
+
+	// Anthropic tool result: role=user with tool_result blocks
+	const isToolResult = m.role === 'user' && Array.isArray(content) &&
+		content.length > 0 && content.every(b => b?.type === 'tool_result');
+
+	// OpenAI tool result: role=tool with {content, tool_call_id} stored as dict
+	const isOpenAIToolResult = m.role === 'tool';
+
+	if (isAssistantToolUse) {
+		const toolUseBlocks = content.filter(b => b?.type === 'tool_use');
+		const textBlocks = content.filter(b => b?.type === 'text' && b.text);
+		return (
+			<div className="flex items-start gap-[8px] px-[12px] py-[8px] bg-white">
+				<span className="mt-[1px] shrink-0 rounded-full px-[6px] py-[1px] font-mono text-[10px] font-bold bg-[#F5F3FF] text-[#7C3AED]">T</span>
+				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
+					{textBlocks.length > 0 && (
+						<pre className="whitespace-pre-wrap break-words font-lato text-[12px] leading-[18px] text-[#6B7280]">{textBlocks.map(b => b.text).join(' ')}</pre>
+					)}
+					{toolUseBlocks.map((b, i) => (
+						<div key={i} className="inline-flex items-center gap-[6px] rounded-[4px] bg-[#F5F3FF] border border-[#DDD6FE] px-[8px] py-[3px]">
+							<span className="text-[10px]">🔧</span>
+							<span className="font-mono text-[11px] font-semibold text-[#7C3AED]">{b.name}</span>
+							<span className="font-lato text-[10px] text-[#9CA3AF]">
+								{b.input && Object.keys(b.input).length > 0
+									? Object.entries(b.input).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')
+									: 'no args'}
+							</span>
+						</div>
+					))}
+				</div>
+			</div>
+		);
+	}
+
+	if (isToolResult) {
+		return (
+			<div className="flex items-start gap-[8px] px-[12px] py-[8px] bg-white">
+				<span className="mt-[1px] shrink-0 rounded-full px-[6px] py-[1px] font-mono text-[10px] font-bold bg-[#F5F3FF] text-[#7C3AED]">T</span>
+				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
+					{content.map((b, i) => {
+						let resultText = '';
+						try {
+							const raw = typeof b.content === 'string' ? JSON.parse(b.content) : b.content;
+							resultText = typeof raw === 'object' ? JSON.stringify(raw, null, 2) : String(raw);
+						} catch { resultText = String(b.content || ''); }
+						return (
+							<div key={i} className="rounded-[4px] bg-[#F0FDF4] border border-[#BBF7D0] px-[8px] py-[4px]">
+								<span className="block font-lato text-[10px] font-bold text-[#059669] mb-[2px]">↩ tool result</span>
+								<pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-[17px] text-[#374151] max-h-[80px] overflow-auto">{resultText}</pre>
+							</div>
+						);
+					})}
+				</div>
+			</div>
+		);
+	}
+
+	if (isOpenAIToolResult) {
+		const stored = typeof content === 'object' && content !== null && !Array.isArray(content) ? content : {};
+		const resultText = stored.content ?? (typeof content === 'string' ? content : JSON.stringify(content));
+		return (
+			<div className="flex items-start gap-[8px] px-[12px] py-[8px] bg-white">
+				<span className="mt-[1px] shrink-0 rounded-full px-[6px] py-[1px] font-mono text-[10px] font-bold bg-[#F5F3FF] text-[#7C3AED]">T</span>
+				<div className="rounded-[4px] bg-[#F0FDF4] border border-[#BBF7D0] px-[8px] py-[4px] flex-1 min-w-0">
+					<span className="block font-lato text-[10px] font-bold text-[#059669] mb-[2px]">↩ tool result</span>
+					<pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-[17px] text-[#374151] max-h-[80px] overflow-auto">{resultText}</pre>
+				</div>
+			</div>
+		);
+	}
+
+	// Regular user or assistant text message
+	const text = Array.isArray(content)
+		? content.filter(b => b?.type === 'text').map(b => b.text).join(' ') || '(empty)'
+		: (content || '(empty)');
+
+	return (
+		<div className="flex items-start gap-[8px] px-[12px] py-[8px] bg-white">
+			<span className={`mt-[1px] shrink-0 rounded-full px-[6px] py-[1px] font-mono text-[10px] font-bold ${
+				m.role === 'user' ? 'bg-[#EFF6FF] text-[#2563EB]' : 'bg-[#F0FDF4] text-[#16A34A]'
+			}`}>
+				{m.role === 'user' ? 'U' : 'A'}
+			</span>
+			<pre className="whitespace-pre-wrap break-words font-lato text-[12px] leading-[18px] text-[#6B7280]">{text}</pre>
+		</div>
+	);
+}
+
 /* ─── Collapsible panel showing memory context messages injected before the current turn ─── */
-function MemoryHistoryPanel({ messages, renderContent }) {
+function MemoryHistoryPanel({ messages }) {
 	const [expanded, setExpanded] = useState(false);
 	const exchangeCount = Math.ceil(messages.length / 2);
 	return (
@@ -61,20 +156,7 @@ function MemoryHistoryPanel({ messages, renderContent }) {
 			</button>
 			{expanded && (
 				<div className="divide-y divide-[#F3F4F6]">
-					{messages.map((m, i) => (
-						<div key={i} className="flex items-start gap-[8px] px-[12px] py-[8px] bg-white">
-							<span className={`mt-[1px] shrink-0 rounded-full px-[6px] py-[1px] font-mono text-[10px] font-bold ${
-								m.role === 'user' ? 'bg-[#EFF6FF] text-[#2563EB]' :
-								m.role === 'assistant' ? 'bg-[#F0FDF4] text-[#16A34A]' :
-								'bg-[#F5F3FF] text-[#7C3AED]'
-							}`}>
-								{m.role === 'user' ? 'U' : m.role === 'assistant' ? 'A' : 'T'}
-							</span>
-							<pre className="whitespace-pre-wrap break-words font-lato text-[12px] leading-[18px] text-[#6B7280]">
-								{renderContent(m.content)}
-							</pre>
-						</div>
-					))}
+					{messages.map((m, i) => <MemoryMessageRow key={i} m={m} />)}
 				</div>
 			)}
 		</div>
@@ -126,11 +208,25 @@ function InvocationDetail({ invocation }) {
 						: (invocation.request_messages || []);
 				} catch (e) {}
 
-				// Build tool result lookup: tool_call_id -> content
+				// Build tool result lookup for the current turn only (messages after currentUserMsgIdx).
 				// OpenAI format: role="tool" messages with tool_call_id
 				// Anthropic format: role="user" messages with content blocks of type="tool_result" and tool_use_id
+				// We compute currentUserMsgIdx first via a pre-pass so the lookup is scoped correctly.
+				const isToolResultMsg = (m) =>
+					m.role === 'user' &&
+					Array.isArray(m.content) &&
+					m.content.length > 0 &&
+					m.content.every(b => b.type === 'tool_result');
+
+				const userMsgIndices = messages.reduce(
+					(acc, m, i) => (m.role === 'user' && !isToolResultMsg(m)) ? [...acc, i] : acc,
+					[]
+				);
+				const currentUserMsgIdx = userMsgIndices[userMsgIndices.length - 1] ?? -1;
+
 				const toolResults = {};
-				messages.forEach(m => {
+				messages.forEach((m, idx) => {
+					if (idx <= currentUserMsgIdx) return; // skip memory history
 					if (m.role === 'tool' && m.tool_call_id) {
 						toolResults[m.tool_call_id] = m.content;
 					} else if (m.role === 'user' && Array.isArray(m.content)) {
@@ -145,11 +241,15 @@ function InvocationDetail({ invocation }) {
 					}
 				});
 
-				// Collect tool calls made by LLM (from assistant messages in history + current response)
+				// Collect tool calls made by the LLM *in the current turn only* —
+				// i.e. assistant messages that appear AFTER the current user message index.
+				// Memory-injected assistant messages (before currentUserMsgIdx) are excluded
+				// to avoid showing replayed history tool calls as live calls.
 				// OpenAI format: assistant message has tool_calls array
 				// Anthropic format: assistant message has content array with blocks of type="tool_use"
 				const historyToolCalls = [];
-				messages.forEach(m => {
+				messages.forEach((m, idx) => {
+					if (idx <= currentUserMsgIdx) return; // skip memory history
 					if (m.role === 'assistant') {
 						if (m.tool_calls) {
 							m.tool_calls.forEach(tc => historyToolCalls.push(tc));
@@ -172,17 +272,6 @@ function InvocationDetail({ invocation }) {
 				// Anthropic tool-result messages also use role="user" with content blocks of
 				// type "tool_result" — these are NOT the user's actual input and must be skipped
 				// when finding the real current user message.
-				const isToolResultMsg = (m) =>
-					m.role === 'user' &&
-					Array.isArray(m.content) &&
-					m.content.length > 0 &&
-					m.content.every(b => b.type === 'tool_result');
-
-				const userMsgIndices = messages.reduce(
-					(acc, m, i) => (m.role === 'user' && !isToolResultMsg(m)) ? [...acc, i] : acc,
-					[]
-				);
-				const currentUserMsgIdx = userMsgIndices[userMsgIndices.length - 1] ?? -1;
 				const currentUserMsg = currentUserMsgIdx >= 0 ? messages[currentUserMsgIdx] : null;
 				// History = all messages before the current user message (memory context)
 				const memoryHistoryMessages = currentUserMsgIdx > 0 ? messages.slice(0, currentUserMsgIdx) : [];
@@ -190,19 +279,6 @@ function InvocationDetail({ invocation }) {
 
 				const hasFileBlocks = currentUserMsg && Array.isArray(currentUserMsg.content) &&
 					currentUserMsg.content.some(b => b.type === 'image_url' || b.type === 'document');
-
-				// Helper to render message text content
-				const renderContent = (content) => {
-					if (Array.isArray(content)) {
-						// tool_result blocks are internal Anthropic protocol — show a neutral label
-						if (content.every(b => b.type === 'tool_result')) {
-							return '(tool result)';
-						}
-						const text = content.filter(b => b.type === 'text').map(b => b.text).join(' ');
-						return text || '(file attachment)';
-					}
-					return content || '(empty)';
-				};
 
 				return (
 					<div className="flex flex-col gap-[12px]">
@@ -245,7 +321,7 @@ function InvocationDetail({ invocation }) {
 
 						{/* Memory history context — collapsible, shows prior exchanges loaded from memory */}
 						{hasMemoryHistory && (
-							<MemoryHistoryPanel messages={memoryHistoryMessages} renderContent={renderContent} />
+							<MemoryHistoryPanel messages={memoryHistoryMessages} />
 						)}
 
 						{/* Conversation timeline — current turn only */}

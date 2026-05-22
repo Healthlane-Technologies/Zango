@@ -62,6 +62,7 @@ class ToolMeta:
     python_path: str
     return_type: str | None
     schema_hash: str
+    memory_policy: str = "include"  # "include" | "exclude"
 
 
 class _ToolDecorator:
@@ -86,6 +87,7 @@ def tool(
     safety: ToolSafety = ToolSafety.READ_ONLY,
     timeout_seconds: int = 30,
     rate_limit: int | None = None,
+    memory_policy: str = "include",
 ) -> Callable:
     """
     Decorator that registers a function as an LLM tool.
@@ -97,6 +99,8 @@ def tool(
         safety: READ_ONLY, WRITE, or EXTERNAL.
         timeout_seconds: Max execution time before kill.
         rate_limit: Max calls per minute. None = unlimited.
+        memory_policy: "include" (default) — replay verbatim in session history.
+            "exclude" — drop from loaded history (use for side-effect tools).
     """
 
     def decorator(func: Callable) -> _ToolDecorator:
@@ -126,6 +130,7 @@ def tool(
             python_path=python_path,
             return_type=return_type,
             schema_hash=schema_hash,
+            memory_policy=memory_policy,
         )
 
         func._tool_meta = meta

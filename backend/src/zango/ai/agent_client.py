@@ -356,9 +356,6 @@ class AgentClient:
                     msg.files = None
                     break
 
-        # Capture the new-turn slice (excludes history) for memory persistence
-        new_user_messages_for_memory = messages[len(history_messages) :]
-
         for round_number in range(1, max_tool_rounds + 2):
             response = provider_client.complete(
                 messages=messages,
@@ -442,10 +439,11 @@ class AgentClient:
 
         # ── Memory: persist this exchange ─────────────────────────────────────
         if session_id and self._agent.memory_enabled:
+            new_messages_for_memory = messages[len(history_messages) :]
             self._save_session_messages(
                 session_id=session_id,
                 user_ref=user_ref,
-                input_messages=new_user_messages_for_memory,
+                new_messages=new_messages_for_memory,
                 response=response,
             )
             response.session_id = session_id
@@ -454,11 +452,29 @@ class AgentClient:
 
     # ─────────────────────────────── Memory helpers ───────────────────────────
 
+    def _get_excluded_tool_names(self) -> set:
+        """
+        Return the set of tool names whose memory_policy is "exclude".
+        These tools' call/result messages are dropped from loaded history.
+        """
+        from zango.apps.ai.models.tool import AppLLMTool
+
+        if not self._agent.tools:
+            return set()
+
+        return set(
+            AppLLMTool.objects.filter(
+                name__in=self._agent.tools,
+                memory_policy="exclude",
+            ).values_list("name", flat=True)
+        )
+
     def _load_session_messages(self, session_id: str) -> list:
         """
         Load prior messages for this session from the DB.
         Returns LLMMessage list ordered oldest-first, capped to
-        memory_max_messages pairs (each pair = 1 user + 1 assistant).
+        memory_max_messages rows. Tool call/result message pairs whose
+        tool has memory_policy="exclude" are dropped from the loaded history.
         Fail-open: returns [] on any error so the LLM call is never blocked.
         """
         from zango.apps.ai.models.memory import AppLLMMemorySession
@@ -473,20 +489,102 @@ class AgentClient:
             if not session:
                 return []
 
-            max_rows = (
-                self._agent.memory_max_messages * 2
-            )  # pairs → individual messages
+            max_rows = self._agent.memory_max_messages * 2
             db_messages = list(session.messages.order_by("-sequence")[:max_rows])
             db_messages.reverse()  # oldest-first
 
+            excluded_tools = self._get_excluded_tool_names()
+
+            # Identify sequences belonging to excluded tool rounds.
+            # Strategy: walk messages in order; when an assistant message contains
+            # a tool_use block for an excluded tool, mark it excluded and mark the
+            # immediately following tool-result message (role="tool" for OpenAI or
+            # role="user" with tool_result blocks for Anthropic) as excluded too.
+            excluded_sequences = set()
+            if excluded_tools:
+                prev_assistant_excluded = False
+                for m in db_messages:
+                    if m.role == "assistant" and isinstance(m.content, list):
+                        tool_use_names = {
+                            b.get("name")
+                            for b in m.content
+                            if isinstance(b, dict) and b.get("type") == "tool_use"
+                        }
+                        if tool_use_names & excluded_tools:
+                            excluded_sequences.add(m.sequence)
+                            prev_assistant_excluded = True
+                        else:
+                            prev_assistant_excluded = False
+
+                    elif m.role == "tool":
+                        # OpenAI-style tool result follows the preceding assistant
+                        if prev_assistant_excluded:
+                            excluded_sequences.add(m.sequence)
+                        prev_assistant_excluded = False
+
+                    elif m.role == "user" and isinstance(m.content, list):
+                        if any(
+                            isinstance(b, dict) and b.get("type") == "tool_result"
+                            for b in m.content
+                        ):
+                            # Anthropic-style tool result follows the preceding assistant
+                            if prev_assistant_excluded:
+                                excluded_sequences.add(m.sequence)
+                        prev_assistant_excluded = False
+
+                    else:
+                        prev_assistant_excluded = False
+
+            is_openai = self._is_openai_style_provider()
+
             result = []
             for m in db_messages:
-                result.append(
-                    LLMMessage(
-                        role=m.role,
-                        content=m.content,
+                if m.sequence in excluded_sequences:
+                    continue
+
+                kwargs = {"role": m.role, "content": m.content}
+
+                if m.role == "tool" and isinstance(m.content, dict):
+                    # OpenAI-style tool result stored as {content, tool_call_id}
+                    kwargs["content"] = m.content.get("content", m.content)
+                    kwargs["tool_call_id"] = m.content.get("tool_call_id")
+
+                elif (
+                    is_openai
+                    and m.role == "assistant"
+                    and isinstance(m.content, list)
+                    and any(
+                        isinstance(b, dict) and b.get("type") == "tool_use"
+                        for b in m.content
                     )
-                )
+                ):
+                    # Assistant tool-use round was stored in Anthropic-style content blocks.
+                    # Convert back to OpenAI tool_calls format so the SDK doesn't reject it.
+                    tool_calls = [
+                        {
+                            "id": b.get("id"),
+                            "type": "function",
+                            "function": {
+                                "name": b.get("name"),
+                                "arguments": (
+                                    b.get("input")
+                                    if isinstance(b.get("input"), str)
+                                    else json.dumps(b.get("input") or {})
+                                ),
+                            },
+                        }
+                        for b in m.content
+                        if isinstance(b, dict) and b.get("type") == "tool_use"
+                    ]
+                    text_blocks = [
+                        b.get("text", "")
+                        for b in m.content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ]
+                    kwargs["content"] = " ".join(text_blocks) if text_blocks else None
+                    kwargs["tool_calls"] = tool_calls
+
+                result.append(LLMMessage(**kwargs))
             return result
 
         except Exception as e:
@@ -500,14 +598,15 @@ class AgentClient:
         self,
         session_id: str,
         user_ref: str,
-        input_messages: list,
+        new_messages: list,
         response,
     ) -> None:
         """
-        Persist the user input(s) and final assistant response to the DB.
-        Stores only role=user messages and the final role=assistant message.
-        File content blocks are replaced with [file: attachment] placeholders.
-        Fail-open: logs error but never re-raises so the caller still gets the response.
+        Persist all messages from the current turn to the DB, including
+        intermediate tool call/result rounds. File content blocks are replaced
+        with lightweight placeholders. The final assistant text response is
+        always persisted last.
+        Fail-open: logs error but never re-raises so the caller gets the response.
         """
         from django.db import transaction
         from django.db.models import Max
@@ -521,7 +620,6 @@ class AgentClient:
                     session_id=session_id,
                     defaults={"user_ref": user_ref},
                 )
-                # Trigger auto_now update on last_active_at
                 session.save(update_fields=["last_active_at"])
 
                 agg = session.messages.aggregate(max_seq=Max("sequence"))
@@ -529,8 +627,40 @@ class AgentClient:
 
                 to_create = []
 
-                for msg in input_messages:
-                    if msg.role == "user":
+                for msg in new_messages:
+                    is_anthropic_tool_result = (
+                        msg.role == "user"
+                        and isinstance(msg.content, list)
+                        and any(
+                            isinstance(b, dict) and b.get("type") == "tool_result"
+                            for b in msg.content
+                        )
+                    )
+                    is_assistant_tool_use = msg.role == "assistant" and (
+                        msg.tool_calls
+                        or (
+                            isinstance(msg.content, list)
+                            and any(
+                                isinstance(b, dict) and b.get("type") == "tool_use"
+                                for b in msg.content
+                            )
+                        )
+                    )
+
+                    if is_anthropic_tool_result:
+                        # Anthropic-style tool result block (role=user with tool_result)
+                        to_create.append(
+                            AppLLMMemoryMessage(
+                                session=session,
+                                role="user",
+                                content=msg.content,
+                                invocation_id=response.invocation_id,
+                                sequence=next_seq,
+                            )
+                        )
+                        next_seq += 1
+
+                    elif msg.role == "user":
                         content = self._sanitize_content_for_memory(msg.content)
                         to_create.append(
                             AppLLMMemoryMessage(
@@ -543,7 +673,53 @@ class AgentClient:
                         )
                         next_seq += 1
 
-                # Save the final assistant response
+                    elif is_assistant_tool_use:
+                        # Intermediate assistant message with tool calls — persist verbatim.
+                        # OpenAI-style: content may be None when tool calls live in msg.tool_calls.
+                        # Reconstruct content list so the JSONField is never null.
+                        if msg.content is not None:
+                            content = self._sanitize_content_for_memory(msg.content)
+                        elif msg.tool_calls:
+                            content = [
+                                {
+                                    "type": "tool_use",
+                                    "id": tc.get("id"),
+                                    "name": tc.get("function", {}).get("name"),
+                                    "input": tc.get("function", {}).get("arguments"),
+                                }
+                                for tc in msg.tool_calls
+                            ]
+                        else:
+                            content = []
+                        to_create.append(
+                            AppLLMMemoryMessage(
+                                session=session,
+                                role="assistant",
+                                content=content,
+                                invocation_id=response.invocation_id,
+                                sequence=next_seq,
+                            )
+                        )
+                        next_seq += 1
+
+                    elif msg.role == "tool":
+                        # OpenAI-style tool result — store content + tool_call_id together
+                        stored_content = {
+                            "content": msg.content,
+                            "tool_call_id": msg.tool_call_id,
+                        }
+                        to_create.append(
+                            AppLLMMemoryMessage(
+                                session=session,
+                                role="tool",
+                                content=stored_content,
+                                invocation_id=response.invocation_id,
+                                sequence=next_seq,
+                            )
+                        )
+                        next_seq += 1
+
+                # Final assistant text response
                 if response.content:
                     to_create.append(
                         AppLLMMemoryMessage(

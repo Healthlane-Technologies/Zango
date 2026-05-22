@@ -386,6 +386,7 @@ class Workspace:
                         or tool_record.section != meta.section
                         or tool_record.safety != meta.safety.value
                         or tool_record.python_path != python_path
+                        or tool_record.memory_policy != meta.memory_policy
                     )
                     if needs_update:
                         tool_record.description = meta.description
@@ -397,6 +398,7 @@ class Workspace:
                         tool_record.python_path = python_path
                         tool_record.return_type = meta.return_type
                         tool_record.schema_hash = meta.schema_hash
+                        tool_record.memory_policy = meta.memory_policy
                         tool_record.is_active = True
                         tool_record.save()
                         stats["updated"] += 1
@@ -413,6 +415,7 @@ class Workspace:
                         python_path=python_path,
                         return_type=meta.return_type,
                         schema_hash=meta.schema_hash,
+                        memory_policy=meta.memory_policy,
                         is_active=True,
                     )
                     stats["created"] += 1

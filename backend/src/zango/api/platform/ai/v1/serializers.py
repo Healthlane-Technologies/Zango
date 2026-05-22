@@ -866,6 +866,7 @@ class AppLLMToolListSerializer(serializers.ModelSerializer):
             "schema_hash",
             "python_path",
             "params_count",
+            "memory_policy",
         ]
 
     def get_params_count(self, obj):
@@ -891,6 +892,7 @@ class AppLLMToolDetailSerializer(serializers.ModelSerializer):
             "return_type",
             "is_active",
             "schema_hash",
+            "memory_policy",
             "total_calls",
             "total_errors",
             "total_timeouts",
