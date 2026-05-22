@@ -127,18 +127,39 @@ function InvocationDetail({ invocation }) {
 				} catch (e) {}
 
 				// Build tool result lookup: tool_call_id -> content
+				// OpenAI format: role="tool" messages with tool_call_id
+				// Anthropic format: role="user" messages with content blocks of type="tool_result" and tool_use_id
 				const toolResults = {};
 				messages.forEach(m => {
 					if (m.role === 'tool' && m.tool_call_id) {
 						toolResults[m.tool_call_id] = m.content;
+					} else if (m.role === 'user' && Array.isArray(m.content)) {
+						m.content.forEach(b => {
+							if (b.type === 'tool_result' && b.tool_use_id) {
+								const resultContent = Array.isArray(b.content)
+									? b.content.filter(c => c.type === 'text').map(c => c.text).join(' ')
+									: b.content;
+								toolResults[b.tool_use_id] = resultContent;
+							}
+						});
 					}
 				});
 
 				// Collect tool calls made by LLM (from assistant messages in history + current response)
+				// OpenAI format: assistant message has tool_calls array
+				// Anthropic format: assistant message has content array with blocks of type="tool_use"
 				const historyToolCalls = [];
 				messages.forEach(m => {
-					if (m.role === 'assistant' && m.tool_calls) {
-						m.tool_calls.forEach(tc => historyToolCalls.push(tc));
+					if (m.role === 'assistant') {
+						if (m.tool_calls) {
+							m.tool_calls.forEach(tc => historyToolCalls.push(tc));
+						} else if (Array.isArray(m.content)) {
+							m.content.forEach(b => {
+								if (b.type === 'tool_use') {
+									historyToolCalls.push({ id: b.id, name: b.name, input: b.input });
+								}
+							});
+						}
 					}
 				});
 				const currentToolCalls = invocation.response_tool_calls || [];
