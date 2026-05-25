@@ -20,6 +20,7 @@ from zango.apps.ai.models import (
     AppLLMProvider,
     AppLLMTool,
 )
+from zango.apps.shared.tenancy.models import TenantModel
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
@@ -1181,8 +1182,11 @@ class AgentsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             total_agents = AppLLMAgent.objects.count()
             active_agents = AppLLMAgent.objects.filter(is_enabled=True).count()
 
+            tenant = TenantModel.objects.get(uuid=app_uuid)
             paginated = self.paginate_queryset(agents, request, view=self)
-            serializer = AppLLMAgentListSerializer(paginated, many=True)
+            serializer = AppLLMAgentListSerializer(
+                paginated, many=True, context={"tenant": tenant}
+            )
             paginated_data = self.get_paginated_response_data(serializer.data)
 
             return get_api_response(
@@ -1235,7 +1239,8 @@ class AgentDetailViewAPIV1(ZangoGenericPlatformAPIView):
             agent = AppLLMAgent.objects.select_related(
                 "provider", "system_prompt", "user_prompt"
             ).get(id=agent_id)
-            serializer = AppLLMAgentListSerializer(agent)
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+            serializer = AppLLMAgentListSerializer(agent, context={"tenant": tenant})
             return get_api_response(True, {"agent": serializer.data}, 200)
         except AppLLMAgent.DoesNotExist:
             return get_api_response(False, {"message": "Agent not found"}, 404)
@@ -1248,7 +1253,8 @@ class AgentDetailViewAPIV1(ZangoGenericPlatformAPIView):
             serializer = AppLLMAgentUpdateSerializer(data=request.data)
             if serializer.is_valid():
                 agent = serializer.update(agent, serializer.validated_data)
-                result = AppLLMAgentListSerializer(agent)
+                tenant = TenantModel.objects.get(uuid=app_uuid)
+                result = AppLLMAgentListSerializer(agent, context={"tenant": tenant})
                 return get_api_response(
                     True,
                     {"message": "Agent updated successfully", "agent": result.data},
@@ -1352,7 +1358,8 @@ class AgentDuplicateViewAPIV1(ZangoGenericPlatformAPIView):
                 is_enabled=False,
             )
 
-            serializer = AppLLMAgentListSerializer(clone)
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+            serializer = AppLLMAgentListSerializer(clone, context={"tenant": tenant})
             return get_api_response(
                 True,
                 {
@@ -1381,10 +1388,8 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
                 "system_prompt__active_version",
                 "user_prompt__active_version",
             ).get(id=agent_id)
-            print(agent)
             from django.db import connection
 
-            print(connection.tenant)
             if not agent.provider:
                 return get_api_response(
                     False, {"message": "Agent has no provider configured"}, 400
@@ -1407,12 +1412,16 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
 
                 messages = None
                 if not agent.user_prompt:
-                    messages = [
-                        LLMMessage(
-                            role="user",
-                            content="generate assessment for Employee ID 2 based on past 30 days performance for topic Biology.",
+                    user_message = request.data.get("user_message", "").strip()
+                    if not user_message:
+                        return get_api_response(
+                            False,
+                            {
+                                "message": "This agent has no user prompt configured. Provide a 'user_message' to run a test."
+                            },
+                            400,
                         )
-                    ]
+                    messages = [LLMMessage(role="user", content=user_message)]
 
                 response = agent_client.run(
                     variables=variables or None,
@@ -1425,7 +1434,7 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
                     {
                         "message": "Test successful",
                         "result": {
-                            "content": response.content[:500],
+                            "content": response.content[:2000],
                             "model": response.model,
                             "latency_ms": response.latency_ms,
                             "input_tokens": response.usage.input_tokens,
