@@ -1185,30 +1185,33 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 	return (
 		<div className="rounded-[8px] border border-[#E5E7EB] bg-white">
 			<div className="flex items-center px-[24px] py-[14px]">
-				<button onClick={() => setExpanded(!expanded)} className="mr-[12px] text-[#6B7280] transition-colors hover:text-[#111827]">
+				{/* chevron — fixed 12px to match header spacer */}
+				<button onClick={() => setExpanded(!expanded)} className="mr-[12px] flex w-[12px] shrink-0 items-center justify-center text-[#6B7280] transition-colors hover:text-[#111827]">
 					<svg width="12" height="12" viewBox="0 0 12 12" className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>
 						<path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
 					</svg>
 				</button>
-				<div className="mr-[12px] flex h-[32px] w-[32px] items-center justify-center rounded-[6px] bg-[#F3F4F6]">
+				{/* icon — fixed 32px to match header spacer */}
+				<div className="mr-[12px] flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[6px] bg-[#F3F4F6]">
 					<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
 						<rect x="4" y="3" width="10" height="8" rx="2" stroke="#6B7280" strokeWidth="1.2"/>
 						<circle cx="7" cy="7" r="1" fill="#6B7280"/><circle cx="11" cy="7" r="1" fill="#6B7280"/>
 						<path d="M6 11V14M12 11V14" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/>
 					</svg>
 				</div>
-				<div className="mr-[20px] min-w-[180px]">
+				<div className="mr-[20px] w-[180px] shrink-0">
 					<span className="font-source-sans-pro text-[14px] font-semibold text-[#111827]">{agent.name}</span>
 				</div>
-				<div className="mr-[20px] min-w-[100px]"><ProviderBadge slug={agent.provider_slug} name={agent.provider_name} /></div>
-				<div className="mr-[20px] min-w-[150px]"><span className="font-lato text-[13px] text-[#374151]">{agent.model}</span></div>
-				<div className="mr-[20px] min-w-[70px]"><StatusBadge status={agent.status} /></div>
-				<div className="mr-[20px] min-w-[40px] text-right"><span className="font-lato text-[14px] font-semibold text-[#111827]">{(metrics.invocations24h || 0).toLocaleString()}</span></div>
-				<div className="mr-[20px] min-w-[70px] text-right"><span className="font-lato text-[13px] text-[#374151]">${(metrics.totalCost || 0).toFixed(3)}</span></div>
-				<div className="mr-[16px] min-w-[80px] text-right"><span className="font-lato text-[13px] text-[#374151]">${(metrics.avgCost || 0).toFixed(3)}</span></div>
+				<div className="mr-[20px] w-[100px] shrink-0"><ProviderBadge slug={agent.provider_slug} name={agent.provider_name} /></div>
+				<div className="mr-[20px] w-[150px] shrink-0"><span className="font-lato text-[13px] text-[#374151]">{agent.model}</span></div>
+				<div className="mr-[20px] w-[70px] shrink-0"><StatusBadge status={agent.status} /></div>
+				<div className="mr-[20px] w-[40px] shrink-0 text-right"><span className="font-lato text-[14px] font-semibold text-[#111827]">{(metrics.invocations24h || 0).toLocaleString()}</span></div>
+				<div className="mr-[20px] w-[70px] shrink-0 text-right"><span className="font-lato text-[13px] text-[#374151]">${(metrics.totalCost || 0).toFixed(3)}</span></div>
+				<div className="mr-[20px] w-[80px] shrink-0 text-right"><span className="font-lato text-[13px] text-[#374151]">${(metrics.avgCost || 0).toFixed(3)}</span></div>
+				<div className="w-[130px] shrink-0 text-right"><span className="font-lato text-[12px] text-[#6B7280]">{agent.modified_at || '—'}</span></div>
 				<button
 					onClick={(e) => { e.stopPropagation(); onToggleStatus(agent); }}
-					className={`relative ml-auto h-[22px] w-[40px] rounded-full transition-colors ${agent.status === 'active' ? 'bg-[#10B981]' : 'bg-[#D1D5DB]'}`}
+					className={`relative ml-[20px] h-[22px] w-[40px] shrink-0 rounded-full transition-colors ${agent.status === 'active' ? 'bg-[#10B981]' : 'bg-[#D1D5DB]'}`}
 				>
 					<span className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-transform ${agent.status === 'active' ? 'left-[20px]' : 'left-[2px]'}`} />
 				</button>
@@ -1249,6 +1252,8 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 										{agent.memory_enabled ? `Enabled (${agent.memory_max_messages} msg window)` : 'Disabled'}
 									</span>
 								</div>
+								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Created</span><span className="font-lato text-[13px] text-[#374151]">{agent.created_at || '—'}</span></div>
+								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Modified</span><span className="font-lato text-[13px] text-[#374151]">{agent.modified_at || '—'}</span></div>
 							</div>
 						</div>
 						<div className="w-[400px] shrink-0 flex flex-col gap-[12px]">
@@ -1484,6 +1489,10 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 	const [builderOpen, setBuilderOpen] = useState(false);
 	const [editingAgent, setEditingAgent] = useState(null);
 	const [testingId, setTestingId] = useState(null);
+	const [testModalAgent, setTestModalAgent] = useState(null);
+	const [testUserMessage, setTestUserMessage] = useState('');
+	const [testResult, setTestResult] = useState(null);
+	const [disableConfirmAgent, setDisableConfirmAgent] = useState(null);
 	const readyCalledRef = useRef(false);
 
 	// Pagination
@@ -1594,10 +1603,24 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 	const openCreate = () => { setEditingAgent(null); setBuilderOpen(true); };
 	const openEdit = (agent) => { setEditingAgent(agent); setBuilderOpen(true); };
 
-	const handleToggleStatus = async (agent) => {
-		const newEnabled = agent.status !== 'active';
-		const { success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/toggle/`, type: 'POST', loader: false, payload: { is_enabled: newEnabled } });
-		if (success) { notify('success', newEnabled ? 'Agent Enabled' : 'Agent Disabled', `${agent.name} updated.`); fetchAgents(); }
+	const handleToggleStatus = (agent) => {
+		if (agent.status === 'active') {
+			setDisableConfirmAgent(agent);
+		} else {
+			confirmEnableAgent(agent);
+		}
+	};
+
+	const confirmEnableAgent = async (agent) => {
+		const { success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/toggle/`, type: 'POST', loader: false, payload: { is_enabled: true } });
+		if (success) { notify('success', 'Agent Enabled', `${agent.name} is now active.`); fetchAgents(); }
+	};
+
+	const confirmDisableAgent = async () => {
+		const agent = disableConfirmAgent;
+		setDisableConfirmAgent(null);
+		const { success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/toggle/`, type: 'POST', loader: false, payload: { is_enabled: false } });
+		if (success) { notify('success', 'Agent Disabled', `${agent.name} has been disabled.`); fetchAgents(); }
 	};
 
 	const handleDuplicate = async (agent) => {
@@ -1605,13 +1628,32 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 		if (success) { notify('success', 'Agent Duplicated', `"${agent.name}" duplicated.`); fetchAgents(); }
 	};
 
+	const runTestAgent = async (agent, userMessage) => {
+		setTestingId(agent.id);
+		const body = userMessage ? { user_message: userMessage } : {};
+		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/test/`, type: 'POST', loader: false, showErrorModal: false, payload: body });
+		setTestingId(null);
+		if (success) {
+			setTestResult({ agent, ...response.result });
+		} else {
+			notify('error', 'Test Failed', response?.message || 'Test failed.');
+		}
+	};
+
 	const handleTestAgent = async (agent) => {
 		if (testingId) return;
-		setTestingId(agent.id);
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/test/`, type: 'POST', loader: false, showErrorModal: false });
-		setTestingId(null);
-		if (success) { const r = response.result || {}; notify('success', 'Test Passed', `${r.latency_ms}ms, ${(r.input_tokens || 0) + (r.output_tokens || 0)} tokens`); }
-		else notify('error', 'Test Failed', response?.message || 'Test failed.');
+		if (!agent.user_prompt_name) {
+			setTestUserMessage('');
+			setTestModalAgent(agent);
+			return;
+		}
+		runTestAgent(agent, null);
+	};
+
+	const handleTestModalSubmit = async () => {
+		const agent = testModalAgent;
+		await runTestAgent(agent, testUserMessage);
+		setTestModalAgent(null);
 	};
 
 	const activeCount = stats.active_agents ?? agents.filter((a) => a.status === 'active').length;
@@ -1697,15 +1739,16 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 
 			{agents.length > 0 && (
 				<div className="flex items-center px-[24px] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6C747D]">
-					<span className="mr-[12px] w-[12px] shrink-0" />{/* expand chevron */}
-					<span className="mr-[12px] w-[32px] shrink-0" />{/* provider icon */}
-					<span className="mr-[20px] min-w-[180px]">Agent</span>
-					<span className="mr-[20px] min-w-[100px]">Provider</span>
-					<span className="mr-[20px] min-w-[150px]">Model</span>
-					<span className="mr-[20px] min-w-[70px]">Status</span>
-					<span className="mr-[20px] min-w-[40px] text-right">24h</span>
-					<span className="mr-[20px] min-w-[70px] text-right">Total Cost</span>
-					<span className="mr-[16px] min-w-[80px] text-right">Avg Run Cost</span>
+					<span className="mr-[12px] w-[12px] shrink-0" />{/* chevron */}
+					<span className="mr-[12px] w-[32px] shrink-0" />{/* icon */}
+					<span className="mr-[20px] w-[180px] shrink-0">Agent</span>
+					<span className="mr-[20px] w-[100px] shrink-0">Provider</span>
+					<span className="mr-[20px] w-[150px] shrink-0">Model</span>
+					<span className="mr-[20px] w-[70px] shrink-0">Status</span>
+					<span className="mr-[20px] w-[40px] shrink-0 text-right">24h</span>
+					<span className="mr-[20px] w-[70px] shrink-0 text-right">Total Cost</span>
+					<span className="mr-[20px] w-[80px] shrink-0 text-right">Avg Run Cost</span>
+					<span className="w-[130px] shrink-0 text-right">Modified</span>
 				</div>
 			)}
 
@@ -1743,6 +1786,198 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 				triggerApi={triggerApi}
 				onInvalidate={onInvalidate}
 			/>
+
+			{testResult && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+					<div className="w-full max-w-[560px] rounded-[16px] bg-white shadow-xl flex flex-col max-h-[90vh]">
+						{/* Header */}
+						<div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[#E5E7EB]">
+							<div>
+								<div className="flex items-center gap-[8px]">
+									<span className="inline-flex items-center gap-[4px] rounded-full bg-[#D1FAE5] px-[10px] py-[2px] font-lato text-[11px] font-semibold text-[#065F46]">
+										<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="#10B981"/><path d="M3 5l1.5 1.5L7 3.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+										Test Passed
+									</span>
+								</div>
+								<h3 className="font-source-sans-pro text-[16px] font-semibold text-[#111827] mt-[6px]">{testResult.agent?.name}</h3>
+							</div>
+							<button onClick={() => setTestResult(null)} className="text-[#9CA3AF] hover:text-[#374151]">
+								<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+							</button>
+						</div>
+
+						{/* Stats row */}
+						<div className="grid grid-cols-4 divide-x divide-[#E5E7EB] border-b border-[#E5E7EB]">
+							{[
+								{ label: 'Latency', value: `${testResult.latency_ms ?? '—'}ms` },
+								{ label: 'Input tokens', value: testResult.input_tokens ?? '—' },
+								{ label: 'Output tokens', value: testResult.output_tokens ?? '—' },
+								{ label: 'Cost', value: testResult.cost_usd != null ? `$${Number(testResult.cost_usd).toFixed(6)}` : '—' },
+							].map(({ label, value }) => (
+								<div key={label} className="flex flex-col items-center py-[14px] gap-[2px]">
+									<span className="font-lato text-[18px] font-semibold text-[#111827]">{value}</span>
+									<span className="font-lato text-[11px] text-[#6B7280]">{label}</span>
+								</div>
+							))}
+						</div>
+
+						{/* Model badge */}
+						<div className="px-[24px] pt-[12px] pb-[4px]">
+							<span className="font-lato text-[11px] text-[#6B7280]">Model: </span>
+							<span className="font-lato text-[11px] font-medium text-[#374151]">{testResult.model || '—'}</span>
+						</div>
+
+						{/* Output */}
+						<div className="px-[24px] pb-[8px] flex-1 overflow-hidden flex flex-col">
+							<span className="font-lato text-[11px] font-semibold uppercase tracking-[0.5px] text-[#9CA3AF] mb-[6px]">Output</span>
+							<pre className="flex-1 overflow-y-auto rounded-[8px] bg-[#F9FAFB] border border-[#E5E7EB] p-[14px] font-lato text-[13px] text-[#374151] whitespace-pre-wrap break-words">
+								{testResult.content || '(empty response)'}
+							</pre>
+						</div>
+
+						<div className="px-[24px] pb-[20px] flex justify-end">
+							<button
+								onClick={() => setTestResult(null)}
+								className="rounded-[8px] bg-[#5048ED] px-[20px] py-[8px] font-lato text-[13px] font-medium text-white hover:bg-[#4338CA]"
+							>
+								Close
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{testModalAgent && (() => {
+				const isRunning = testingId === testModalAgent.id;
+				return (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+						<div className="w-full max-w-[480px] rounded-[16px] bg-white p-[28px] shadow-xl">
+							<h3 className="font-source-sans-pro text-[16px] font-semibold text-[#111827] mb-[6px]">Test Agent</h3>
+							<p className="font-lato text-[13px] text-[#6B7280] mb-[16px]">
+								<span className="font-semibold text-[#346BD4]">{testModalAgent.name}</span> has no user prompt configured. Enter a message to send as the user turn.
+							</p>
+							<textarea
+								autoFocus
+								rows={5}
+								value={testUserMessage}
+								onChange={(e) => setTestUserMessage(e.target.value)}
+								placeholder="Type your test message here…"
+								disabled={isRunning}
+								className="w-full rounded-[8px] border border-[#D1D5DB] p-[12px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#346BD4] resize-none disabled:bg-[#F9FAFB] disabled:text-[#9CA3AF]"
+							/>
+							{isRunning && (
+								<div className="mt-[12px] flex items-center gap-[8px] text-[#5048ED]">
+									<svg className="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none">
+										<circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25"/>
+										<path d="M14 8a6 6 0 00-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+									</svg>
+									<span className="font-lato text-[13px]">Running agent, please wait…</span>
+								</div>
+							)}
+							<div className="mt-[16px] flex justify-end gap-[10px]">
+								<button
+									onClick={() => setTestModalAgent(null)}
+									disabled={isRunning}
+									className="rounded-[8px] border border-[#D1D5DB] px-[16px] py-[8px] font-lato text-[13px] text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									Cancel
+								</button>
+								<button
+									onClick={handleTestModalSubmit}
+									disabled={!testUserMessage.trim() || isRunning}
+									className="rounded-[8px] bg-[#5048ED] px-[16px] py-[8px] font-lato text-[13px] font-medium text-white hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									{isRunning ? 'Running…' : 'Run Test'}
+								</button>
+							</div>
+						</div>
+					</div>
+				);
+			})()}
+
+			{disableConfirmAgent && (() => {
+				const agent = disableConfirmAgent;
+				const inv24h = agent.metrics?.invocations24h ?? 0;
+				const hasActivity = inv24h > 0;
+				return (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+						<div className="w-full max-w-[440px] rounded-[16px] bg-white shadow-xl overflow-hidden">
+							{/* Red header bar */}
+							<div className="bg-[#FEF2F2] px-[24px] pt-[24px] pb-[20px] border-b border-[#FECACA]">
+								<div className="flex items-start gap-[14px]">
+									<div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full bg-[#FEE2E2]">
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+											<path d="M10 3L18 17H2L10 3Z" stroke="#EF4444" strokeWidth="1.6" strokeLinejoin="round"/>
+											<path d="M10 8V11" stroke="#EF4444" strokeWidth="1.6" strokeLinecap="round"/>
+											<circle cx="10" cy="14" r="0.8" fill="#EF4444"/>
+										</svg>
+									</div>
+									<div>
+										<h3 className="font-source-sans-pro text-[16px] font-semibold text-[#111827]">Disable Agent?</h3>
+										<p className="mt-[4px] font-lato text-[13px] text-[#6B7280]">
+											<span className="font-semibold text-[#111827]">{agent.name}</span> will stop accepting new requests immediately.
+										</p>
+									</div>
+								</div>
+							</div>
+
+							{/* Consequence list */}
+							<div className="px-[24px] py-[18px] flex flex-col gap-[10px]">
+								{hasActivity && (
+									<div className="flex items-start gap-[10px] rounded-[8px] border border-[#FED7AA] bg-[#FFF7ED] px-[12px] py-[10px]">
+										<svg className="mt-[1px] shrink-0" width="15" height="15" viewBox="0 0 15 15" fill="none">
+											<circle cx="7.5" cy="7.5" r="6.5" stroke="#F97316" strokeWidth="1.3"/>
+											<path d="M7.5 4.5V8" stroke="#F97316" strokeWidth="1.3" strokeLinecap="round"/>
+											<circle cx="7.5" cy="10.5" r="0.7" fill="#F97316"/>
+										</svg>
+										<span className="font-lato text-[12px] text-[#92400E]">
+											This agent had <span className="font-semibold">{inv24h} invocations</span> in the last 24 hours. Disabling it will break any callers in production.
+										</span>
+									</div>
+								)}
+								<div className="flex items-center gap-[10px] rounded-[8px] bg-[#F9FAFB] border border-[#E5E7EB] px-[12px] py-[10px]">
+									<svg className="shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none">
+										<circle cx="7" cy="7" r="6" stroke="#6B7280" strokeWidth="1.3"/>
+										<path d="M7 4V7.5" stroke="#6B7280" strokeWidth="1.3" strokeLinecap="round"/>
+										<circle cx="7" cy="9.8" r="0.7" fill="#6B7280"/>
+									</svg>
+									<span className="font-lato text-[12px] text-[#6B7280]">
+										Any code calling <span className="font-mono text-[11px] text-[#374151]">get_agent("{agent.name}")</span> will raise <span className="font-mono text-[11px] text-[#374151]">AgentDisabled</span>.
+									</span>
+								</div>
+								{agent.memory_enabled && (
+									<div className="flex items-center gap-[10px] rounded-[8px] bg-[#F9FAFB] border border-[#E5E7EB] px-[12px] py-[10px]">
+										<svg className="shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none">
+											<rect x="2" y="3" width="10" height="8" rx="1.5" stroke="#6B7280" strokeWidth="1.3"/>
+											<path d="M5 6h4M5 8.5h2.5" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/>
+										</svg>
+										<span className="font-lato text-[12px] text-[#6B7280]">
+											Memory sessions will be preserved but inaccessible until re-enabled.
+										</span>
+									</div>
+								)}
+								<p className="font-lato text-[12px] text-[#9CA3AF]">You can re-enable this agent at any time.</p>
+							</div>
+
+							{/* Actions */}
+							<div className="border-t border-[#E5E7EB] px-[24px] py-[16px] flex justify-end gap-[10px]">
+								<button
+									onClick={() => setDisableConfirmAgent(null)}
+									className="rounded-[8px] border border-[#D1D5DB] px-[16px] py-[8px] font-lato text-[13px] text-[#374151] hover:bg-[#F9FAFB]"
+								>
+									Cancel
+								</button>
+								<button
+									onClick={confirmDisableAgent}
+									className="rounded-[8px] bg-[#EF4444] px-[16px] py-[8px] font-lato text-[13px] font-semibold text-white hover:bg-[#DC2626]"
+								>
+									Disable Agent
+								</button>
+							</div>
+						</div>
+					</div>
+				);
+			})()}
 
 		</div>
 	);

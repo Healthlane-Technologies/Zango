@@ -17,6 +17,7 @@ from zango.apps.ai.models import (
     AppLLMToolCall,
 )
 from zango.apps.ai.models.memory import AppLLMMemoryMessage, AppLLMMemorySession
+from zango.core.utils import get_datetime_str_in_tenant_timezone
 
 
 class AppLLMProviderModelSerializer(serializers.ModelSerializer):
@@ -563,6 +564,8 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
     user_prompt_name = serializers.SerializerMethodField()
     metrics = serializers.SerializerMethodField()
     session_count = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+    modified_at = serializers.SerializerMethodField()
 
     class Meta:
         model = AppLLMAgent
@@ -657,6 +660,18 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
             "invocations24h": invocations_24h,
             "avgCost": avg_cost,
         }
+
+    def get_created_at(self, obj):
+        tenant = self.context.get("tenant")
+        if tenant and hasattr(tenant, "timezone"):
+            return get_datetime_str_in_tenant_timezone(obj.created_at, tenant)
+        return obj.created_at.isoformat() if obj.created_at else None
+
+    def get_modified_at(self, obj):
+        tenant = self.context.get("tenant")
+        if tenant and hasattr(tenant, "timezone"):
+            return get_datetime_str_in_tenant_timezone(obj.modified_at, tenant)
+        return obj.modified_at.isoformat() if obj.modified_at else None
 
 
 class AppLLMAgentCreateSerializer(serializers.Serializer):
