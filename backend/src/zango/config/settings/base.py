@@ -362,6 +362,10 @@ def setup_settings(settings, BASE_DIR):
         SECURE_PROXY_SSL_HEADER=(list, []),
         SENTRY_DSN=(str, ""),
         AWS_CLOUDFRONT_DOMAIN=(str, ""),
+        OTP_GENERATION_RATE_LIMIT=(int, 5),
+        OTP_GENERATION_WINDOW=(int, 600),
+        OTP_IP_RATE_LIMIT=(int, 10),
+        OTP_IP_RATE_WINDOW=(int, 120),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -398,6 +402,11 @@ def setup_settings(settings, BASE_DIR):
 
     settings.REDIS_URL = redis_url
     settings.CELERY_BROKER_URL = redis_url
+
+    settings.OTP_GENERATION_RATE_LIMIT = env("OTP_GENERATION_RATE_LIMIT")
+    settings.OTP_GENERATION_WINDOW = env("OTP_GENERATION_WINDOW")
+    settings.OTP_IP_RATE_LIMIT = env("OTP_IP_RATE_LIMIT")
+    settings.OTP_IP_RATE_WINDOW = env("OTP_IP_RATE_WINDOW")
 
     settings.CACHES = {
         "default": {

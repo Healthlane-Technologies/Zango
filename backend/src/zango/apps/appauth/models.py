@@ -3,13 +3,16 @@ import secrets
 
 from datetime import date, timedelta
 
+from django_redis import get_redis_connection
 from knox.models import AbstractAuthToken
 from knox.settings import knox_settings
 
+from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import connection, models
 from django.utils import timezone
 
+from zango.apps.appauth.exceptions import OTPRateLimitExceeded
 from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
 from zango.apps.auditlogs.registry import auditlog
 from zango.apps.object_store.models import ObjectStore
@@ -722,6 +725,20 @@ class OTPCode(FullAuditMixin):
         self.save()
 
 
+def _check_otp_rate_limit(user, otp_type):
+    r = get_redis_connection("default")
+    key = f"otp_gen:{connection.schema_name}:{user.pk}:{otp_type}"
+    pipe = r.pipeline()
+    pipe.incr(key)
+    pipe.expire(key, settings.OTP_GENERATION_WINDOW, nx=True)
+    count, _ = pipe.execute()
+    if count > settings.OTP_GENERATION_RATE_LIMIT:
+        ttl = r.ttl(key)
+        raise OTPRateLimitExceeded(
+            f"OTP rate limit exceeded. Try again in {ttl} seconds."
+        )
+
+
 def generate_otp(otp_type, user=None, email=None, phone=None, expiry=300, digits=6):
     try:
         if not user:
@@ -730,9 +747,13 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expiry=300, digits
             elif phone:
                 user = AppUserModel.objects.filter(mobile=phone).first()
 
+        if not user:
+            return ""
+
+        _check_otp_rate_limit(user, otp_type)
+
         min_value = 10 ** (digits - 1)
         max_value = 10**digits - 1
-
         code = str(secrets.randbelow(max_value - min_value + 1) + min_value)
         expires_at = timezone.now() + timezone.timedelta(seconds=expiry)
         OTPCode.objects.filter(user=user, otp_type=otp_type).delete()
@@ -743,6 +764,8 @@ def generate_otp(otp_type, user=None, email=None, phone=None, expiry=300, digits
             is_used=False,
             expires_at=expires_at,
         ).code
+    except OTPRateLimitExceeded:
+        raise
     except Exception as e:
         import traceback
 

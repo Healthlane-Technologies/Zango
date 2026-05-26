@@ -1,12 +1,38 @@
 import json
 
 from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCodeView
+from django_redis import get_redis_connection
 
+from django.conf import settings
+from django.db import connection
 from django.db.models import Q
 from django.http import HttpResponse
 
+from zango.apps.appauth.exceptions import OTPRateLimitExceeded
 from zango.apps.appauth.models import AppUserModel, OTPCode
 from zango.core.api import get_api_response
+
+
+def _get_client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _check_ip_rate_limit(request, otp_type):
+    ip = _get_client_ip(request)
+    r = get_redis_connection("default")
+    key = f"otp_gen_ip:{connection.schema_name}:{ip}:{otp_type}"
+    pipe = r.pipeline()
+    pipe.incr(key)
+    pipe.expire(key, settings.OTP_IP_RATE_WINDOW, nx=True)
+    count, _ = pipe.execute()
+    if count > settings.OTP_IP_RATE_LIMIT:
+        ttl = r.ttl(key)
+        raise OTPRateLimitExceeded(
+            f"Too many OTP requests. Try again in {ttl} seconds."
+        )
 
 
 class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
@@ -26,6 +52,16 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
                 ],
             }
             return HttpResponse(json.dumps(response), status=400)
+
+        try:
+            _check_ip_rate_limit(request, "login_code")
+        except OTPRateLimitExceeded as e:
+            response = {
+                "status": 429,
+                "errors": [{"message": str(e)}],
+            }
+            return HttpResponse(json.dumps(response), status=429)
+
         query = Q()
         data = json.loads(request.body)
         email = data.get("email")
@@ -67,7 +103,14 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        resp = super().post(request, *args, **kwargs)
+        try:
+            resp = super().post(request, *args, **kwargs)
+        except OTPRateLimitExceeded as e:
+            response = {
+                "status": 429,
+                "errors": [{"message": str(e)}],
+            }
+            return HttpResponse(json.dumps(response), status=429)
         resp_data = json.loads(resp.content.decode("utf-8"))
         if resp.status_code == 401:
             resp_data["data"]["message"] = "Verification code sent."

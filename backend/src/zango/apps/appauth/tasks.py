@@ -10,6 +10,7 @@ from requests.exceptions import RequestException, Timeout
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 
+from zango.apps.appauth.exceptions import OTPRateLimitExceeded
 from zango.apps.appauth.models import AppUserModel, UserRoleModel, generate_otp
 from zango.apps.shared.tenancy.models import TenantModel
 from zango.core.utils import (
@@ -283,6 +284,8 @@ class OTPService:
                 "otp_type": self.config.otp_type,
             }
 
+        except OTPRateLimitExceeded as e:
+            return {"success": False, "error": "rate_limited", "message": str(e)}
         except OTPSendError as e:
             import traceback
 
