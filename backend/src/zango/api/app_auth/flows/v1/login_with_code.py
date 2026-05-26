@@ -2,6 +2,7 @@ import json
 
 from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCodeView
 from django_redis import get_redis_connection
+from ipware import get_client_ip
 
 from django.conf import settings
 from django.db import connection
@@ -13,15 +14,10 @@ from zango.apps.appauth.models import AppUserModel, OTPCode
 from zango.core.api import get_api_response
 
 
-def _get_client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "")
-
-
 def _check_ip_rate_limit(request, otp_type):
-    ip = _get_client_ip(request)
+    ip, _ = get_client_ip(request)
+    if not ip:
+        ip = "unknown"
     r = get_redis_connection("default")
     key = f"otp_gen_ip:{connection.schema_name}:{ip}:{otp_type}"
     pipe = r.pipeline()
