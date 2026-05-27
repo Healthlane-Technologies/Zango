@@ -591,8 +591,8 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
             "status",
             "total_invocations",
             "total_cost_usd",
-            "memory_enabled",
-            "memory_max_messages",
+            "short_term_memory",
+            "short_term_memory_max_messages",
             "session_count",
             "created_at",
             "modified_at",
@@ -615,7 +615,7 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
         return obj.user_prompt.name if obj.user_prompt else None
 
     def get_session_count(self, obj):
-        if not obj.memory_enabled:
+        if not obj.short_term_memory:
             return 0
         return obj.sessions.filter(is_active=True).count()
 
@@ -695,8 +695,8 @@ class AppLLMAgentCreateSerializer(serializers.Serializer):
     tools = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
     )
-    memory_enabled = serializers.BooleanField(required=False, default=False)
-    memory_max_messages = serializers.IntegerField(
+    short_term_memory = serializers.BooleanField(required=False, default=False)
+    short_term_memory_max_messages = serializers.IntegerField(
         required=False, default=20, min_value=1, max_value=200
     )
 
@@ -795,8 +795,8 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
     )
     output_json_schema = serializers.JSONField(required=False, allow_null=True)
     tools = serializers.ListField(child=serializers.CharField(), required=False)
-    memory_enabled = serializers.BooleanField(required=False)
-    memory_max_messages = serializers.IntegerField(
+    short_term_memory = serializers.BooleanField(required=False)
+    short_term_memory_max_messages = serializers.IntegerField(
         required=False, min_value=1, max_value=200
     )
 
@@ -845,8 +845,8 @@ class AppLLMAgentUpdateSerializer(serializers.Serializer):
             "output_schema",
             "output_json_schema",
             "tools",
-            "memory_enabled",
-            "memory_max_messages",
+            "short_term_memory",
+            "short_term_memory_max_messages",
         ]:
             if attr in validated_data:
                 setattr(instance, attr, validated_data[attr])
