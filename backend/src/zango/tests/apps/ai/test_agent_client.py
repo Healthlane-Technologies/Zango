@@ -49,7 +49,7 @@ def _make_tool_result(status="success", output=None, error_message=None):
 def _make_agent(
     tools=None,
     provider_slug="anthropic",
-    memory_enabled=False,
+    short_term_memory=False,
     output_schema=None,
     output_json_schema=None,
 ):
@@ -65,8 +65,8 @@ def _make_agent(
     agent.tools = tools or []
     agent.system_prompt = None
     agent.user_prompt = None
-    agent.memory_enabled = memory_enabled
-    agent.memory_max_messages = 10
+    agent.short_term_memory = short_term_memory
+    agent.short_term_memory_max_messages = 10
     agent.output_schema = output_schema
     agent.output_json_schema = output_json_schema
     agent.get_user_prompt_content.return_value = "Template rendered content"
@@ -553,27 +553,27 @@ class MemoryFlowTest(SimpleTestCase):
                     response = AgentClient(agent).run(**run_kwargs)
                     return response, mock_pc, mock_session_model, mock_msg_model
 
-    def test_memory_disabled_no_session_id_on_response(self):
-        agent = _make_agent(memory_enabled=False)
+    def test_short_term_memory_disabled_no_session_id_on_response(self):
+        agent = _make_agent(short_term_memory=False)
         response, _, _, _ = self._run_with_memory(agent, input="hi")
         self.assertIsNone(response.session_id)
 
-    def test_memory_enabled_auto_generates_session_id(self):
-        agent = _make_agent(memory_enabled=True)
+    def test_short_term_memory_auto_generates_session_id(self):
+        agent = _make_agent(short_term_memory=True)
         response, _, _, _ = self._run_with_memory(agent, input="hi")
         self.assertIsNotNone(response.session_id)
         # Must be a valid UUID
         uuid.UUID(str(response.session_id))
 
-    def test_memory_enabled_explicit_session_id_preserved(self):
-        agent = _make_agent(memory_enabled=True)
+    def test_short_term_memory_explicit_session_id_preserved(self):
+        agent = _make_agent(short_term_memory=True)
         response, _, _, _ = self._run_with_memory(
             agent, input="hi", session_id="sess-abc"
         )
         self.assertEqual(response.session_id, "sess-abc")
 
     def test_memory_load_failure_does_not_block_llm_call(self):
-        agent = _make_agent(memory_enabled=True)
+        agent = _make_agent(short_term_memory=True)
         with patch(_PC) as mock_pc_cls:
             mock_pc = MagicMock()
             mock_pc.complete.return_value = _make_response("Answer")
@@ -592,7 +592,7 @@ class MemoryFlowTest(SimpleTestCase):
         self.assertEqual(response.content, "Answer")
 
     def test_memory_save_failure_does_not_crash_caller(self):
-        agent = _make_agent(memory_enabled=True)
+        agent = _make_agent(short_term_memory=True)
         with patch(_PC) as mock_pc_cls:
             mock_pc = MagicMock()
             mock_pc.complete.return_value = _make_response("Answer")

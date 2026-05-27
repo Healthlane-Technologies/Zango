@@ -78,11 +78,11 @@ class AppLLMAgent(FullAuditMixin):
     tools = models.JSONField(default=list, help_text="List of tool names")
 
     # Memory
-    memory_enabled = models.BooleanField(
+    short_term_memory = models.BooleanField(
         default=False,
         help_text="Enable session-scoped conversation history",
     )
-    memory_max_messages = models.IntegerField(
+    short_term_memory_max_messages = models.IntegerField(
         default=20,
         help_text="Max past user/assistant pairs to load per call (sliding window)",
     )

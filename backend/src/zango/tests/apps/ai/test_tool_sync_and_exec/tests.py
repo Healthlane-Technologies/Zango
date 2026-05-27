@@ -231,7 +231,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
             default_model="claude-sonnet-4-20250514",
         )
 
-    def _make_agent(self, name, provider, tools=None, memory_enabled=False):
+    def _make_agent(self, name, provider, tools=None, short_term_memory=False):
         """Create a real AppLLMAgent DB record."""
         from zango.apps.ai.models.agent import AppLLMAgent
 
@@ -241,8 +241,8 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
             model="claude-sonnet-4-20250514",
             is_enabled=True,
             tools=tools or [],
-            memory_enabled=memory_enabled,
-            memory_max_messages=20,
+            short_term_memory=short_term_memory,
+            short_term_memory_max_messages=20,
         )
 
     # ─── 7a: sync_tools() ───────────────────────────────────────────────────
@@ -518,7 +518,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
     @patch("zango.apps.ai.models.provider.AppLLMProvider.get_client")
     def test_7d_01_first_run_creates_session(self, mock_get_client):
-        """The first agent.run() with memory_enabled creates an AppLLMMemorySession."""
+        """The first agent.run() with short_term_memory creates an AppLLMMemorySession."""
         from zango.ai.agent_client import AgentClient
         from zango.apps.ai.models.memory import AppLLMMemorySession
 
@@ -527,7 +527,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
         with tenant_context(self.tenant):
             provider = self._make_provider("mem01-provider")
-            agent = self._make_agent("mem01-agent", provider, memory_enabled=True)
+            agent = self._make_agent("mem01-agent", provider, short_term_memory=True)
             response = AgentClient(agent).run(input="Hello")
             session_id = response.session_id
             self.assertIsNotNone(session_id)
@@ -549,7 +549,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
         with tenant_context(self.tenant):
             provider = self._make_provider("mem02-provider")
-            agent = self._make_agent("mem02-agent", provider, memory_enabled=True)
+            agent = self._make_agent("mem02-agent", provider, short_term_memory=True)
             response = AgentClient(agent).run(input="Hi there")
             session = AppLLMMemorySession.objects.get(
                 agent=agent, session_id=response.session_id
@@ -577,7 +577,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
         with tenant_context(self.tenant):
             provider = self._make_provider("mem03-provider")
-            agent = self._make_agent("mem03-agent", provider, memory_enabled=True)
+            agent = self._make_agent("mem03-agent", provider, short_term_memory=True)
             r1 = AgentClient(agent).run(input="Turn one")
             AgentClient(agent).run(input="Turn two", session_id=r1.session_id)
             session = AppLLMMemorySession.objects.get(
@@ -600,7 +600,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
         with tenant_context(self.tenant):
             provider = self._make_provider("mem04-provider")
-            agent = self._make_agent("mem04-agent", provider, memory_enabled=True)
+            agent = self._make_agent("mem04-agent", provider, short_term_memory=True)
             AgentClient(agent).run(input="First", session_id=session_id)
             AgentClient(agent).run(input="Second", session_id=session_id)
             count = AppLLMMemorySession.objects.filter(
@@ -610,7 +610,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
     @patch("zango.apps.ai.models.provider.AppLLMProvider.get_client")
     def test_7d_05_memory_disabled_no_session_created(self, mock_get_client):
-        """Agents with memory_enabled=False create no AppLLMMemorySession records."""
+        """Agents with short_term_memory=False create no AppLLMMemorySession records."""
         from zango.ai.agent_client import AgentClient
         from zango.apps.ai.models.memory import AppLLMMemorySession
 
@@ -619,7 +619,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
         with tenant_context(self.tenant):
             provider = self._make_provider("mem05-provider")
-            agent = self._make_agent("mem05-agent", provider, memory_enabled=False)
+            agent = self._make_agent("mem05-agent", provider, short_term_memory=False)
             response = AgentClient(agent).run(input="Hello")
             count = AppLLMMemorySession.objects.filter(agent=agent).count()
 
@@ -642,7 +642,7 @@ class AIToolSyncAndExecTest(ZangoAppBaseTestCase):
 
         with tenant_context(self.tenant):
             provider = self._make_provider("mem06-provider")
-            agent = self._make_agent("mem06-agent", provider, memory_enabled=True)
+            agent = self._make_agent("mem06-agent", provider, short_term_memory=True)
             r1 = AgentClient(agent).run(input="Q1")
             sid = r1.session_id
             AgentClient(agent).run(input="Q2", session_id=sid)

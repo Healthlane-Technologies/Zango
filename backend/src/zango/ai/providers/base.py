@@ -232,7 +232,7 @@ class LLMResponse:
     cost_usd: float = 0.0  # Computed cost
     invocation_id: Optional[int] = None  # DB invocation PK (set by ProviderClient)
     session_id: Optional[str] = (
-        None  # Memory session ID (set by AgentClient when memory_enabled)
+        None  # Memory session ID (set by AgentClient when short_term_memory)
     )
     parsed_content: Optional[Any] = (
         None  # Parsed + validated JSON dict (set when output_schema=JSON)

@@ -220,7 +220,7 @@ class AgentClient:
                 for multi-turn history or tool-result injection.
             files: File/image attachments (LLMFile instances).
             triggered_by: Audit label — "user" | "celery" | "cron" | "system".
-            session_id: Memory session key. Auto-generated if memory_enabled and
+            session_id: Memory session key. Auto-generated if short_term_memory and
                 not supplied; returned on response.session_id.
             user_ref: Opaque string stored on the session for audit (e.g. user PK).
         """
@@ -273,12 +273,12 @@ class AgentClient:
             )
 
         # ── Memory: auto-generate session_id if memory is on and none supplied ─
-        if self._agent.memory_enabled and not session_id:
+        if self._agent.short_term_memory and not session_id:
             session_id = str(uuid.uuid4())
 
         # ── Memory: prepend prior session messages ────────────────────────────
         history_messages = []
-        if session_id and self._agent.memory_enabled:
+        if session_id and self._agent.short_term_memory:
             history_messages = self._load_session_messages(session_id)
             if history_messages:
                 messages = history_messages + messages
@@ -438,7 +438,7 @@ class AgentClient:
             response.parsed_content = parsed
 
         # ── Memory: persist this exchange ─────────────────────────────────────
-        if session_id and self._agent.memory_enabled:
+        if session_id and self._agent.short_term_memory:
             new_messages_for_memory = messages[len(history_messages) :]
             self._save_session_messages(
                 session_id=session_id,
@@ -473,7 +473,7 @@ class AgentClient:
         """
         Load prior messages for this session from the DB.
         Returns LLMMessage list ordered oldest-first, capped to
-        memory_max_messages rows. Tool call/result message pairs whose
+        short_term_memory_max_messages rows. Tool call/result message pairs whose
         tool has memory_policy="exclude" are dropped from the loaded history.
         Fail-open: returns [] on any error so the LLM call is never blocked.
         """
@@ -489,7 +489,7 @@ class AgentClient:
             if not session:
                 return []
 
-            max_rows = self._agent.memory_max_messages * 2
+            max_rows = self._agent.short_term_memory_max_messages * 2
             db_messages = list(session.messages.order_by("-sequence")[:max_rows])
             db_messages.reverse()  # oldest-first
 

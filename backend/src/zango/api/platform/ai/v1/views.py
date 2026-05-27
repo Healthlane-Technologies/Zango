@@ -1353,8 +1353,8 @@ class AgentDuplicateViewAPIV1(ZangoGenericPlatformAPIView):
                 output_schema=original.output_schema,
                 output_json_schema=original.output_json_schema,
                 tools=original.tools,
-                memory_enabled=original.memory_enabled,
-                memory_max_messages=original.memory_max_messages,
+                short_term_memory=original.short_term_memory,
+                short_term_memory_max_messages=original.short_term_memory_max_messages,
                 is_enabled=False,
             )
 

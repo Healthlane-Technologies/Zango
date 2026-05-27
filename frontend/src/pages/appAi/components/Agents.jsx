@@ -944,44 +944,79 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, 
 										</div>
 									</div>
 
-									{/* Section 5: Memory */}
+									{/* Section 5: Short-Term Memory */}
 									<div className="mb-[24px]">
-										<h3 className="mb-[4px] font-source-sans-pro text-[16px] font-semibold text-[#111827]">Memory</h3>
-										<p className="mb-[16px] font-lato text-[13px] text-[#9CA3AF]">
-											Enable session-scoped conversation history for multi-turn interactions
-										</p>
-										<div className="flex flex-col gap-[16px]">
-											<div className="flex items-center justify-between rounded-[8px] border border-[#E5E7EB] p-[16px]">
-												<div>
-													<p className="font-lato text-[13px] font-semibold text-[#374151]">Enable Memory</p>
-													<p className="font-lato text-[12px] text-[#9CA3AF]">
-														Persist conversation history across <code className="rounded bg-[#F3F4F6] px-[3px] py-[0.5px] text-[11px]">agent.run()</code> calls using a <code className="rounded bg-[#F3F4F6] px-[3px] py-[0.5px] text-[11px]">session_id</code>
+										<div className="mb-[16px] flex items-center gap-[8px]">
+											<h3 className="font-source-sans-pro text-[16px] font-semibold text-[#111827]">Short-Term Memory</h3>
+											<div className="group relative flex items-center">
+												<svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="cursor-pointer text-[#9CA3AF] hover:text-[#6B7280]">
+													<circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+													<path d="M7.5 6.5v4M7.5 5h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+												</svg>
+												<div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-[8px] w-[280px] -translate-x-1/2 rounded-[8px] bg-[#1F2937] p-[12px] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+													<p className="mb-[6px] font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#9CA3AF]">Short-Term Memory</p>
+													<p className="mb-[8px] font-lato text-[12px] leading-[18px] text-[#D1D5DB]">
+														Stores the most recent conversation turns and passes them as context on every <code className="rounded bg-[#374151] px-[3px] py-[0.5px] text-[11px] text-[#93C5FD]">agent.run()</code> call within a session.
 													</p>
+													<div className="mb-[6px] border-t border-[#374151] pt-[8px]">
+														<p className="mb-[4px] font-lato text-[11px] font-semibold text-[#F9FAFB]">How it works</p>
+														<ul className="flex flex-col gap-[3px]">
+															<li className="flex items-start gap-[5px] font-lato text-[11px] text-[#D1D5DB]"><span className="mt-[3px] shrink-0 text-[#10B981]">•</span>Multi-turn: pass a <code className="rounded bg-[#374151] px-[3px] text-[11px] text-[#93C5FD]">session_id</code> across calls</li>
+															<li className="flex items-start gap-[5px] font-lato text-[11px] text-[#D1D5DB]"><span className="mt-[3px] shrink-0 text-[#10B981]">•</span>Last N pairs prepended as context on every call</li>
+															<li className="flex items-start gap-[5px] font-lato text-[11px] text-[#D1D5DB]"><span className="mt-[3px] shrink-0 text-[#10B981]">•</span>Scoped per session — not shared across agents</li>
+														</ul>
+													</div>
+													<div className="border-t border-[#374151] pt-[8px]">
+														<p className="mb-[2px] font-lato text-[11px] font-semibold text-[#F9FAFB]">Not the same as long-term memory</p>
+														<p className="font-lato text-[11px] text-[#9CA3AF]">No semantic search or cross-session persistence. Coming soon.</p>
+													</div>
+												</div>
+											</div>
+										</div>
+
+										<div className="rounded-[10px] border border-[#E5E7EB] bg-white">
+											<div className="flex items-center justify-between p-[16px]">
+												<div className="flex items-center gap-[12px]">
+													<div className="flex h-[36px] w-[36px] items-center justify-center rounded-[8px] bg-[#F3F4F6]">
+														<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+															<path d="M3 5h12M3 9h8M3 13h5" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round"/>
+															<circle cx="14" cy="13" r="2.5" stroke="#6B7280" strokeWidth="1.2"/>
+															<path d="M14 11.5v1.5l.8.8" stroke="#6B7280" strokeWidth="1.1" strokeLinecap="round"/>
+														</svg>
+													</div>
+													<div>
+														<p className="font-lato text-[13px] font-semibold text-[#374151]">
+															Conversation history
+														</p>
+														<p className="font-lato text-[12px] text-[#9CA3AF]">Retain recent turns and pass them as context on every call</p>
+													</div>
 												</div>
 												<button
 													type="button"
-													onClick={() => formik.setFieldValue('memory_enabled', !formik.values.memory_enabled)}
-													className={`relative ml-[16px] h-[22px] w-[40px] flex-shrink-0 rounded-full transition-colors ${formik.values.memory_enabled ? 'bg-[#10B981]' : 'bg-[#D1D5DB]'}`}
+													onClick={() => formik.setFieldValue('short_term_memory', !formik.values.short_term_memory)}
+													className={`relative ml-[16px] h-[22px] w-[40px] flex-shrink-0 rounded-full transition-colors ${formik.values.short_term_memory ? 'bg-[#10B981]' : 'bg-[#D1D5DB]'}`}
 												>
-													<span className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${formik.values.memory_enabled ? 'left-[20px]' : 'left-[2px]'}`} />
+													<span className={`absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${formik.values.short_term_memory ? 'left-[20px]' : 'left-[2px]'}`} />
 												</button>
 											</div>
-											{formik.values.memory_enabled && (
-												<div>
-													<label className="mb-[4px] block font-lato text-[13px] font-semibold text-[#374151]">Max Messages in History</label>
-													<p className="mb-[6px] font-lato text-[12px] text-[#9CA3AF]">
-														Maximum number of past user/assistant exchanges to include per call (1–200)
-													</p>
-													<input
-														name="memory_max_messages"
-														type="number"
-														min="1"
-														max="200"
-														value={formik.values.memory_max_messages}
-														onChange={formik.handleChange}
-														onBlur={formik.handleBlur}
-														className="w-[120px] rounded-[6px] border border-[#DDE2E5] px-[12px] py-[10px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
-													/>
+
+											{formik.values.short_term_memory && (
+												<div className="border-t border-[#E5E7EB] px-[16px] py-[14px]">
+													<label className="mb-[4px] block font-lato text-[12px] font-semibold text-[#374151]">Window size</label>
+													<p className="mb-[8px] font-lato text-[11px] text-[#6B7280]">Past user/assistant pairs to load per call</p>
+													<div className="flex items-center gap-[8px]">
+														<input
+															name="short_term_memory_max_messages"
+															type="number"
+															min="1"
+															max="200"
+															value={formik.values.short_term_memory_max_messages}
+															onChange={formik.handleChange}
+															onBlur={formik.handleBlur}
+															className="w-[80px] rounded-[6px] border border-[#DDE2E5] bg-white px-[10px] py-[8px] font-lato text-[13px] outline-none focus:border-[#5048ED]"
+														/>
+														<span className="font-lato text-[12px] text-[#6B7280]">pairs (max 200)</span>
+													</div>
 												</div>
 											)}
 										</div>
@@ -1061,7 +1096,7 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, 
 										<div className="mt-[16px] rounded-[8px] bg-[#1F2937] p-[12px]">
 											<span className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#6B7280]">Usage in Code</span>
 											<pre className="mt-[6px] font-mono text-[11px] leading-[18px] text-[#D1D5DB]">
-{formik.values.memory_enabled
+{formik.values.short_term_memory
 ? `from zango.ai import get_agent
 
 agent = get_agent("${formik.values.name}")
@@ -1246,11 +1281,22 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 								{agent.tools?.length > 0 && (
 									<div className="flex items-start"><span className="w-[120px] shrink-0 pt-[2px] font-lato text-[13px] text-[#6B7280]">Tools</span><div className="flex flex-wrap gap-[6px]">{agent.tools.map((t) => <Tag key={t} color="blue">{t}</Tag>)}</div></div>
 								)}
-								<div className="flex">
-									<span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Memory</span>
-									<span className={`font-lato text-[13px] ${agent.memory_enabled ? 'text-[#10B981]' : 'text-[#6B7280]'}`}>
-										{agent.memory_enabled ? `Enabled (${agent.memory_max_messages} msg window)` : 'Disabled'}
-									</span>
+								<div className="flex items-center">
+									<span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Short-Term Memory</span>
+									{agent.short_term_memory ? (
+										<div className="flex items-center gap-[6px]">
+											<span className="inline-flex items-center gap-[4px] rounded-full bg-[#D1FAE5] px-[8px] py-[2px] font-lato text-[11px] font-semibold text-[#065F46]">
+												<span className="h-[6px] w-[6px] rounded-full bg-[#10B981]" />
+												Enabled
+											</span>
+											<span className="font-lato text-[12px] text-[#6B7280]">{agent.short_term_memory_max_messages}-pair window</span>
+										</div>
+									) : (
+										<span className="inline-flex items-center gap-[4px] rounded-full bg-[#F3F4F6] px-[8px] py-[2px] font-lato text-[11px] text-[#6B7280]">
+											<span className="h-[6px] w-[6px] rounded-full bg-[#D1D5DB]" />
+											Off
+										</span>
+									)}
 								</div>
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Created</span><span className="font-lato text-[13px] text-[#374151]">{agent.created_at || '—'}</span></div>
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Modified</span><span className="font-lato text-[13px] text-[#374151]">{agent.modified_at || '—'}</span></div>
@@ -1278,7 +1324,7 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 									<span className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#9CA3AF]">Use in Code</span>
 									<button
 										onClick={() => {
-											const snippet = agent.memory_enabled
+											const snippet = agent.short_term_memory
 												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\n\n# First turn — session auto-created\nr = agent.run(input="Hello!")\nsession_id = r.session_id\n\n# Continue the conversation\nr = agent.run(\n    input="...",\n    session_id=session_id,\n)`
 												: agent.user_prompt_name
 												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    variables={...}\n)`
@@ -1303,7 +1349,7 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 									</button>
 								</div>
 								<pre className="font-mono text-[11px] leading-[19px] text-[#D1D5DB] whitespace-pre-wrap">
-{agent.memory_enabled
+{agent.short_term_memory
 ? `from zango.ai import get_agent
 
 agent = get_agent("${agent.name}")
@@ -1344,7 +1390,7 @@ response = agent.run(
 						<button onClick={() => onToggleStatus(agent)} className={`rounded-[6px] border px-[12px] py-[6px] font-lato text-[13px] ${agent.status === 'active' ? 'border-[#EF4444] text-[#EF4444] hover:bg-[#FEF2F2]' : 'border-[#10B981] text-[#10B981] hover:bg-[#ECFDF5]'}`}>
 							{agent.status === 'active' ? 'Disable' : 'Enable'}
 						</button>
-						{agent.memory_enabled && (
+						{agent.short_term_memory && (
 							<button onClick={handleShowSessions} className={`rounded-[6px] border px-[12px] py-[6px] font-lato text-[13px] ${showSessions ? 'border-[#5048ED] bg-[#EEF2FF] text-[#5048ED]' : 'border-[#DDE2E5] text-[#111827] hover:bg-[#F9FAFB]'}`}>
 								Sessions {agent.session_count > 0 ? `(${agent.session_count})` : ''}
 							</button>
@@ -1352,10 +1398,10 @@ response = agent.run(
 					</div>
 
 					{/* Sessions Panel */}
-					{showSessions && agent.memory_enabled && (
+					{showSessions && agent.short_term_memory && (
 						<div className="mt-[16px] rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] p-[16px]">
 							<div className="mb-[12px] flex items-center justify-between">
-								<h4 className="font-lato text-[13px] font-semibold text-[#111827]">Memory Sessions</h4>
+								<h4 className="font-lato text-[13px] font-semibold text-[#111827]">Short-Term Memory Sessions</h4>
 								<button onClick={fetchSessions} className="font-lato text-[12px] text-[#346BD4] hover:underline">
 									Refresh
 								</button>
@@ -1577,8 +1623,8 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 				temperature: parseFloat(values.temperature), max_tokens: parseInt(values.max_tokens, 10),
 				timeout_seconds: parseInt(values.timeout_seconds, 10), output_schema: values.output_schema,
 				guardrails, tools,
-				memory_enabled: values.memory_enabled,
-				memory_max_messages: parseInt(values.memory_max_messages, 10) || 20,
+				short_term_memory: values.short_term_memory,
+				short_term_memory_max_messages: parseInt(values.short_term_memory_max_messages, 10) || 20,
 			};
 			if (output_json_schema !== undefined) {
 				payload.output_json_schema = output_json_schema;
@@ -1670,8 +1716,8 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 				guardrails_str: (editingAgent.guardrails || []).join(', '),
 				output_json_schema_str: editingAgent.output_json_schema ? JSON.stringify(editingAgent.output_json_schema, null, 2) : '',
 				selected_tools: editingAgent.tools || [],
-				memory_enabled: editingAgent.memory_enabled ?? false,
-				memory_max_messages: editingAgent.memory_max_messages ?? 20,
+				short_term_memory: editingAgent.short_term_memory ?? false,
+				short_term_memory_max_messages: editingAgent.short_term_memory_max_messages ?? 20,
 				_isEdit: true,
 		  }
 		: {
@@ -1679,7 +1725,7 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 				system_prompt_name: '', user_prompt_name: '',
 				temperature: 0.7, max_tokens: 4096, timeout_seconds: 30,
 				output_schema: 'JSON', output_json_schema_str: '', guardrails_str: '', selected_tools: [],
-				memory_enabled: false, memory_max_messages: 20,
+				short_term_memory: false, short_term_memory_max_messages: 20,
 				_isEdit: false,
 		  };
 
@@ -1945,7 +1991,7 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 										Any code calling <span className="font-mono text-[11px] text-[#374151]">get_agent("{agent.name}")</span> will raise <span className="font-mono text-[11px] text-[#374151]">AgentDisabled</span>.
 									</span>
 								</div>
-								{agent.memory_enabled && (
+								{agent.short_term_memory && (
 									<div className="flex items-center gap-[10px] rounded-[8px] bg-[#F9FAFB] border border-[#E5E7EB] px-[12px] py-[10px]">
 										<svg className="shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none">
 											<rect x="2" y="3" width="10" height="8" rx="1.5" stroke="#6B7280" strokeWidth="1.3"/>
