@@ -365,7 +365,7 @@ def setup_settings(settings, BASE_DIR):
         OTP_GENERATION_RATE_LIMIT=(int, 5),
         OTP_GENERATION_WINDOW=(int, 600),
         OTP_IP_RATE_LIMIT=(int, 10),
-        OTP_IP_RATE_WINDOW=(int, 120),
+        OTP_IP_RATE_WINDOW=(int, 600),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
