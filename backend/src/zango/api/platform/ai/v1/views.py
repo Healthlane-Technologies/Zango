@@ -798,7 +798,9 @@ class InvocationDetailViewAPIV1(ZangoGenericPlatformAPIView):
 
     def get(self, request, app_uuid, invocation_id, *args, **kwargs):
         try:
-            invocation = AppLLMInvocation.objects.get(id=invocation_id)
+            invocation = AppLLMInvocation.objects.prefetch_related("files").get(
+                id=invocation_id
+            )
             serializer = AppLLMInvocationDetailSerializer(invocation)
             return get_api_response(True, {"invocation": serializer.data}, 200)
         except AppLLMInvocation.DoesNotExist:

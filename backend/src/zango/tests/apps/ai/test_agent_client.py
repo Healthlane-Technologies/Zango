@@ -14,7 +14,7 @@ from django.test import SimpleTestCase
 
 from zango.ai.agent_client import AgentClient
 from zango.ai.exceptions import AgentDisabled
-from zango.ai.providers.base import LLMMessage, LLMResponse, LLMToolCall, LLMUsage
+from zango.ai.providers.base import LLMFile, LLMMessage, LLMResponse, LLMToolCall, LLMUsage
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -150,7 +150,9 @@ class InputResolutionTest(SimpleTestCase):
     def test_files_only_no_text_creates_empty_content_message(self):
         agent = _make_agent()
         agent.get_user_prompt_content.return_value = ""
-        file_mock = MagicMock()
+        file_mock = MagicMock(spec=LLMFile)
+        file_mock.data = None
+        file_mock.url = None
         file_mock.to_anthropic_block.return_value = {"type": "image", "source": {}}
 
         with patch(_PC) as mock_pc_cls:
@@ -173,7 +175,9 @@ class InputResolutionTest(SimpleTestCase):
             LLMMessage(role="assistant", content="reply"),
             LLMMessage(role="user", content="second"),
         ]
-        file_mock = MagicMock()
+        file_mock = MagicMock(spec=LLMFile)
+        file_mock.data = None
+        file_mock.url = None
         file_mock.to_anthropic_block.return_value = {"type": "image", "source": {}}
         with patch(_PC) as mock_pc_cls:
             mock_pc = MagicMock()
@@ -191,7 +195,9 @@ class InputResolutionTest(SimpleTestCase):
     def test_files_creates_new_user_message_when_no_user_message_in_explicit(self):
         agent = _make_agent()
         explicit = [LLMMessage(role="assistant", content="reply")]
-        file_mock = MagicMock()
+        file_mock = MagicMock(spec=LLMFile)
+        file_mock.data = None
+        file_mock.url = None
         with patch(_PC) as mock_pc_cls:
             mock_pc = MagicMock()
             mock_pc.complete.return_value = _make_response()

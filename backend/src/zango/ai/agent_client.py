@@ -153,6 +153,41 @@ class AgentClient:
 
         return new_messages
 
+    def _persist_invocation_files(self, invocation_id, audit_payloads):
+        """
+        Create AppLLMInvocationFile rows for an invocation.
+
+        Bytes-bearing entries are saved through ZFileField (tenant-scoped
+        storage). URL-only entries are recorded as identity rows with blob=None.
+        Fail-open: errors are logged but never re-raised — audit failures must
+        not break the agent run.
+        """
+        from django.core.files.base import ContentFile
+
+        from zango.apps.ai.models.invocation import AppLLMInvocationFile
+
+        for payload in audit_payloads:
+            try:
+                obj = AppLLMInvocationFile(
+                    invocation_id=invocation_id,
+                    sha256=payload.get("sha256", ""),
+                    size_bytes=payload.get("size_bytes", 0),
+                    media_type=payload.get("media_type", ""),
+                    filename=payload.get("filename", ""),
+                    source_kind=payload.get("source_kind", "upload"),
+                    source_url=payload.get("source_url", ""),
+                )
+                data = payload.get("data")
+                if data:
+                    name = payload.get("filename") or "upload.bin"
+                    obj.blob.save(name, ContentFile(data), save=False)
+                obj.save()
+            except Exception as e:
+                logger.error(
+                    f"Failed to persist invocation file "
+                    f"(invocation_id={invocation_id}, filename={payload.get('filename')}): {e}"
+                )
+
     def _log_tool_call(self, tool_call, result, invocation_id, round_number):
         """Log a tool execution to the AppLLMToolCall table."""
         from zango.apps.ai.models.tool import AppLLMTool, AppLLMToolCall
@@ -341,20 +376,44 @@ class AgentClient:
         #
         # Either way, after this step `msg.files` is cleared and the file
         # representation lives in `msg.content` as a permanent content block.
-        # Capture file metadata directly from the LLMFile list before prepare_files()
-        # mutates them, so the invocation log on round 1 records what was attached.
+        # Hash + capture file payloads BEFORE prepare_files() mutates them.
+        # files_meta is the lightweight summary written to the invocation's
+        # request_files JSON; audit_payloads carries the raw bytes used to
+        # create AppLLMInvocationFile rows after round 1's invocation exists.
         files_meta = None
+        audit_payloads = None
         if files:
-            files_meta = [
-                {
-                    "filename": f.filename or None,
-                    "media_type": f.media_type or None,
-                    "size_bytes": len(f.data) if f.data else None,
-                    "source": "url" if f.url else "upload",
-                    **({"url": f.url} if f.url else {}),
-                }
-                for f in files
-            ] or None
+            import hashlib
+
+            files_meta = []
+            audit_payloads = []
+            for f in files:
+                source_kind = "url" if (f.url and not f.data) else "upload"
+                size_bytes = len(f.data) if f.data else 0
+                sha256 = hashlib.sha256(f.data).hexdigest() if f.data else ""
+                files_meta.append(
+                    {
+                        "filename": f.filename or None,
+                        "media_type": f.media_type or None,
+                        "size_bytes": size_bytes or None,
+                        "sha256": sha256 or None,
+                        "source": source_kind,
+                        **({"url": f.url} if f.url else {}),
+                    }
+                )
+                audit_payloads.append(
+                    {
+                        "data": f.data,
+                        "sha256": sha256,
+                        "size_bytes": size_bytes,
+                        "media_type": f.media_type or "",
+                        "filename": f.filename or "",
+                        "source_kind": source_kind,
+                        "source_url": f.url or "",
+                    }
+                )
+            files_meta = files_meta or None
+            audit_payloads = audit_payloads or None
 
         if files:
             files = raw_provider.prepare_files(files)
@@ -395,6 +454,10 @@ class AgentClient:
                 **kwargs,
             )
             total_cost += response.cost_usd
+
+            # Persist mirrored file blobs once, after round 1's invocation row exists.
+            if round_number == 1 and audit_payloads and response.invocation_id:
+                self._persist_invocation_files(response.invocation_id, audit_payloads)
 
             # If the LLM is done (no tool calls), break
             if response.stop_reason != "tool_use" or not response.tool_calls:
