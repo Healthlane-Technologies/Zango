@@ -13,6 +13,7 @@ import Routes from '../Routes';
 import Policies from '../Policies';
 import Packages from '../Packages';
 import AsyncTasks from '../AsyncTasks';
+import CodeExecution from '../CodeExecution';
 
 const tabs = [
 	{
@@ -93,6 +94,18 @@ const tabs = [
 			</svg>
 		),
 		description: 'Background tasks and scheduled jobs',
+	},
+	{
+		id: 'codeexecution',
+		label: 'Code Execution',
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+				<rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" fillOpacity="0.3" fill="currentColor"/>
+				<path d="M5 7L7 8L5 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+				<path d="M8.5 9.5H11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+			</svg>
+		),
+		description: 'Save and run ad-hoc Python snippets with logged history',
 	},
 ];
 
@@ -234,6 +247,12 @@ export default function AppCode() {
 				{activeTab === 'asynctasks' && (
 					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
 						<AsyncTasks />
+					</div>
+				)}
+
+				{activeTab === 'codeexecution' && (
+					<div className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]">
+						<CodeExecution />
 					</div>
 				)}
 			</div>

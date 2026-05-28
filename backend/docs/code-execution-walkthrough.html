@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Code Execution — Implementation Walkthrough | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ========================================================================
+   Tokens — Clinical Precision · Indigo/Teal
+   ======================================================================== */
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-inverted: #0B0D14;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+  --text-disabled: #B5B9CC;
+  --text-inverted: #FFFFFF;
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-200:#BCC8FB;
+  --indigo-500:#5961E5; --indigo-600:#4549D6; --indigo-700:#3938B5;
+
+  --teal-50:#EAFAF7; --teal-100:#CCF2EB; --teal-500:#119C85; --teal-700:#0D6555;
+
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-100:#E5E7EE; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand:        var(--indigo-500);
+  --brand-hover:  var(--indigo-600);
+  --brand-soft:   var(--indigo-50);
+  --brand-ring:   rgba(89,97,229,.18);
+  --accent:        var(--teal-500);
+  --accent-soft:   var(--teal-50);
+
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06), 0 1px 1px rgba(15,19,36,.03);
+  --shadow-md:
+    0 4px 12px -2px rgba(15,19,36,.08),
+    0 2px 4px rgba(15,19,36,.04),
+    inset 0 1px 0 rgba(255,255,255,.6);
+  --shadow-lg:
+    0 16px 32px -8px rgba(15,19,36,.14),
+    0 4px 12px -2px rgba(15,19,36,.06),
+    inset 0 1px 0 rgba(255,255,255,.6);
+
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --d-base: 220ms;
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  font-feature-settings: 'cv11','ss01','ss03';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--surface-page);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+
+/* Layout */
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 48px;
+  padding: 0 32px 96px;
+}
+.toc { position: sticky; top: 32px; align-self: start; padding-top: 80px; height: calc(100vh - 32px); overflow-y: auto; }
+.toc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.toc-kicker { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 16px; }
+.toc a {
+  display: block; padding: 7px 10px;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px; font-weight: 450;
+  line-height: 1.45;
+  transition: all 180ms var(--ease-out);
+  position: relative;
+}
+.toc a::before {
+  content: ''; position: absolute;
+  left: 0; top: 50%; width: 2px; height: 14px;
+  background: transparent; border-radius: 2px;
+  transform: translateY(-50%);
+  transition: background 180ms var(--ease-out);
+}
+.toc a:hover { color: var(--text-strong); background: var(--surface-sunken); }
+.toc a.active { color: var(--brand); background: var(--brand-soft); font-weight: 530; }
+.toc a.active::before { background: var(--brand); }
+.toc-section + .toc-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+
+main { min-width: 0; padding-top: 56px; }
+
+/* Hero */
+.hero {
+  position: relative;
+  margin-bottom: 64px;
+  padding: 40px 44px 44px;
+  background:
+    radial-gradient(ellipse 600px 320px at 100% 0%, rgba(89,97,229,.10), transparent 60%),
+    radial-gradient(ellipse 400px 280px at 0% 100%, rgba(17,156,133,.08), transparent 60%),
+    linear-gradient(180deg, #FAFBFE 0%, #F0F2F9 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: fadeUp 480ms var(--ease-out) both;
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+  color: var(--brand); background: rgba(89,97,229,.08);
+  padding: 5px 11px; border-radius: var(--r-pill);
+  margin-bottom: 18px;
+}
+.hero-kicker::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.18);
+}
+.hero h1 { font-size: 36px; font-weight: 700; letter-spacing: -.04em; line-height: 1.05; color: var(--text-strong); margin-bottom: 12px; max-width: 720px; }
+.hero .lede { font-size: 15px; color: var(--text-muted); line-height: 1.6; max-width: 660px; margin-bottom: 32px; }
+
+.hero-facts {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.fact { background: var(--surface-card); padding: 14px 18px; }
+.fact .label { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 6px; }
+.fact .val { font-size: 14px; color: var(--text-strong); font-weight: 530; }
+.fact .val.brand { color: var(--brand); }
+
+/* Sections */
+section { margin-bottom: 64px; }
+.section-kicker { display: inline-block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 10px; }
+section h2 {
+  font-size: 24px; font-weight: 700; letter-spacing: -.025em; color: var(--text-strong);
+  margin-bottom: 8px; scroll-margin-top: 24px;
+}
+section .section-intro { font-size: 14.5px; color: var(--text-muted); max-width: 760px; margin-bottom: 28px; line-height: 1.65; }
+h3 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--text-strong); margin-bottom: 10px; }
+h4 { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 6px; }
+p { color: var(--text-body); }
+p + p { margin-top: 12px; }
+
+.card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 22px 26px; box-shadow: var(--shadow-sm); }
+.card.tinted { background: var(--surface-tinted); border-color: rgba(89,97,229,.18); }
+.card.sunken { background: var(--surface-sunken); box-shadow: none; }
+
+code.inline {
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px;
+  color: var(--text-strong);
+}
+
+.note {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px; color: var(--text-muted);
+  padding: 10px 14px;
+  border-left: 2px solid var(--brand);
+  background: var(--brand-soft);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.note.warn { border-color: var(--amber-500); background: var(--amber-50); }
+.note.warn strong { color: var(--amber-700); }
+
+/* File map */
+.fmap { display: grid; gap: 8px; }
+.fmap-row {
+  display: grid; grid-template-columns: 24px 1.5fr 2fr 70px;
+  gap: 14px; align-items: center;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 9px 14px;
+  font-size: 12.5px;
+}
+.fmap-row.new { border-left: 3px solid var(--sage-500); }
+.fmap-row.edit { border-left: 3px solid var(--brand); }
+.fmap-row .icon {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  text-align: center;
+  background: var(--brand-soft); color: var(--brand);
+  border-radius: 4px; padding: 2px 0;
+}
+.fmap-row.new .icon { background: var(--sage-50); color: var(--sage-700); }
+.fmap-row.edit .icon { background: var(--brand-soft); color: var(--brand); }
+.fmap-row .path {
+  font-family: var(--font-mono);
+  color: var(--text-strong);
+  font-size: 11.5px;
+}
+.fmap-row .desc { color: var(--text-muted); font-size: 12.5px; }
+.fmap-row .lines { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-subtle); text-align: right; }
+
+/* Code blocks */
+.code {
+  border: 1px solid #2A2E3A;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #0F1117;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #E1E4ED;
+  margin: 10px 0 16px;
+}
+.code-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px;
+  background: #1A1D26;
+  border-bottom: 1px solid #2A2E3A;
+  font-size: 10.5px; color: #8B92A5;
+  font-family: var(--font-mono);
+}
+.code-header .lang { padding: 1px 7px; background: rgba(255,255,255,.06); border-radius: 3px; color: #B7BCC9; }
+.code-header .path { color: #5F6A82; }
+.code-body { padding: 12px 16px; overflow-x: auto; white-space: pre; }
+
+.tok-kw { color: #C792EA; }
+.tok-imp { color: #82AAFF; }
+.tok-fn { color: #82AAFF; }
+.tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; }
+.tok-comment { color: #5F6A82; font-style: italic; }
+.tok-cls { color: #FFCB6B; }
+.tok-self { color: #FF9DBF; }
+.tok-dec { color: #FFCB6B; }
+.tok-op { color: #89DDFF; }
+
+/* Sequence-like flow */
+.flow-step {
+  display: grid; grid-template-columns: 32px 1fr; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.flow-step:last-child { border-bottom: none; }
+.flow-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--text-strong); color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: grid; place-items: center;
+}
+.flow-step h4 { font-size: 13px; color: var(--text-strong); margin-bottom: 4px; }
+.flow-step p { font-size: 12.5px; color: var(--text-muted); }
+.flow-step code.inline { font-size: 11.5px; }
+
+/* 4-column grid of cards */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.feature {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.feature.primary { background: linear-gradient(180deg, var(--brand-soft) 0%, var(--surface-card) 100%); border-color: rgba(89,97,229,.18); }
+.feature h4 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.feature .ico { width: 24px; height: 24px; border-radius: var(--r-sm); background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+.feature.primary .ico { background: var(--brand); color: #fff; }
+.feature p { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+
+/* Inline status pills */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 530;
+}
+.pill.done { background: var(--sage-50); color: var(--sage-700); }
+.pill.done::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sage-500); }
+.pill.warn { background: var(--amber-50); color: var(--amber-700); }
+.pill.warn::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--amber-500); }
+.pill.parked { background: var(--slate-100); color: var(--slate-700); }
+.pill.parked::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--slate-500); }
+
+/* Endpoint rows */
+.endpoint {
+  display: grid; grid-template-columns: 56px 1.4fr 2fr;
+  gap: 14px; align-items: center;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 9px 14px;
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+.endpoint .method {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+  text-align: center; padding: 3px 6px;
+  border-radius: 4px; letter-spacing: .04em;
+}
+.method.get { background: var(--brand-soft); color: var(--brand); }
+.method.post { background: var(--sage-50); color: var(--sage-700); }
+.endpoint .path { font-family: var(--font-mono); font-size: 12px; color: var(--text-strong); }
+.endpoint .desc { color: var(--text-muted); font-size: 12px; }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+main > section { animation: fadeUp 380ms var(--ease-out) both; }
+main > section:nth-of-type(1) { animation-delay: 40ms; }
+main > section:nth-of-type(2) { animation-delay: 80ms; }
+main > section:nth-of-type(3) { animation-delay: 120ms; }
+main > section:nth-of-type(4) { animation-delay: 160ms; }
+main > section:nth-of-type(5) { animation-delay: 200ms; }
+main > section:nth-of-type(6) { animation-delay: 240ms; }
+main > section:nth-of-type(7) { animation-delay: 280ms; }
+main > section:nth-of-type(8) { animation-delay: 320ms; }
+main > section:nth-of-type(9) { animation-delay: 360ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 1fr; padding: 0 20px 64px; }
+  .toc { display: none; }
+  .hero-facts { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .fmap-row { grid-template-columns: 24px 1fr; }
+  .fmap-row .desc, .fmap-row .lines { grid-column: 1 / -1; padding-left: 38px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <nav class="toc">
+    <div class="toc-kicker">On this page</div>
+    <div class="toc-section">
+      <a href="#overview" class="active">Overview</a>
+      <a href="#file-map">File map</a>
+      <a href="#architecture">Architecture</a>
+    </div>
+    <div class="toc-section">
+      <a href="#models">Data model</a>
+      <a href="#validator">AST validator (L1)</a>
+      <a href="#codexec">codexec helper</a>
+      <a href="#executor">Celery executor</a>
+      <a href="#isolation">Isolation L3 + L4</a>
+      <a href="#api">REST API</a>
+    </div>
+    <div class="toc-section">
+      <a href="#frontend">Frontend</a>
+      <a href="#logging">Logging architecture</a>
+      <a href="#files">File storage</a>
+    </div>
+    <div class="toc-section">
+      <a href="#lifecycle">Run lifecycle</a>
+      <a href="#operate">Operating notes</a>
+      <a href="#gaps">Gaps &amp; deferred</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- =======================================================================
+         HERO
+         ======================================================================= -->
+    <header class="hero">
+      <div class="hero-kicker">Zango Platform · Implementation walkthrough</div>
+      <h1>Code Execution<br/><span style="color: var(--text-muted); font-weight: 500;">How the feature is wired, end to end.</span></h1>
+      <p class="lede">
+        A developer-facing tour of every component shipped under
+        <code class="inline">feat/zango_codexec</code> — backend models, AST validator,
+        codexec helper, celery executor, isolation layers, REST API, and the React UI —
+        with file paths, key code excerpts, and the decisions log.
+      </p>
+      <div class="hero-facts">
+        <div class="fact"><div class="label">Branch</div><div class="val" style="font-family: var(--font-mono); font-size: 12px;">feat/zango_codexec</div></div>
+        <div class="fact"><div class="label">Backend files</div><div class="val">10 new · 3 edited</div></div>
+        <div class="fact"><div class="label">Frontend files</div><div class="val">5 new · 3 edited</div></div>
+        <div class="fact"><div class="label">Status</div><div class="val brand">Phase 1+2 complete</div></div>
+      </div>
+    </header>
+
+
+    <!-- =======================================================================
+         OVERVIEW
+         ======================================================================= -->
+    <section id="overview">
+      <div class="section-kicker">01 · Overview</div>
+      <h2>What this feature does</h2>
+      <p class="section-intro">
+        A platform-managed catalog of Python snippets. Each snippet can be edited in a Monaco
+        editor, has input files attached to it, and can be triggered to run inside the tenant's
+        Celery worker — with stdout/stderr captured, files produced auto-registered, and every
+        run kept as a self-contained history row.
+      </p>
+
+      <div class="grid-3">
+        <div class="feature primary">
+          <h4><span class="ico">▸</span> Save &amp; Run</h4>
+          <p>UI saves the snippet (creates the row + uploads any files), then triggers a Celery task that runs the source in the tenant's workspace.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">◐</span> Tracked history</h4>
+          <p>Every run is a frozen row: source snapshot, captured stdout/stderr, per-line log table, return value, files in &amp; out.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">⛨</span> Defense in depth</h4>
+          <p>AST deny list (L1) at save + pickup; locked search_path + statement_timeout (L3); ConnectionGuard against reflective tenant-switching (L4).</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         FILE MAP
+         ======================================================================= -->
+    <section id="file-map">
+      <div class="section-kicker">02 · File map</div>
+      <h2>Every file we touched</h2>
+      <p class="section-intro">
+        Grouped by area. <span class="pill done">NEW</span> means we created it;
+        <span class="pill" style="background: var(--brand-soft); color: var(--brand);">EDIT</span>
+        means we modified an existing file (e.g., settings, URL registry).
+      </p>
+
+      <h3 style="margin-top: 18px;">Backend — app code</h3>
+      <div class="fmap">
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/apps.py</div>
+          <div class="desc">Django app config — CodeExecutionConfig (tenant-scoped).</div>
+          <div class="lines">8 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/models.py</div>
+          <div class="desc">5 models · CodeSnippet, CodeSnippetFile, CodeExecution, CodeExecFile, CodeExecutionLogLine.</div>
+          <div class="lines">~260 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/validator.py</div>
+          <div class="desc">AST NodeVisitor that returns Violation records. Alias-aware. No Django deps.</div>
+          <div class="lines">~300 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/guard.py</div>
+          <div class="desc">ConnectionGuard (L4). Thread-local class patches on the live DatabaseWrapper.</div>
+          <div class="lines">~80 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/isolation.py</div>
+          <div class="desc">begin_isolated_session() — SET LOCAL search_path + statement_timeout.</div>
+          <div class="lines">~50 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/tasks.py</div>
+          <div class="desc">codexec_executor celery task · LineLogger · CapturingStream · stdlib + loguru bridges · sweep_stuck_runs beat job.</div>
+          <div class="lines">~400 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/admin.py</div>
+          <div class="desc">Django admin · all 4 models registered.</div>
+          <div class="lines">~50 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/migrations/0001_initial.py</div>
+          <div class="desc">Initial schema — auto-generated.</div>
+          <div class="lines">~160 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/migrations/0002_initial_policies.py</div>
+          <div class="desc">Seeds platform.code_execution.use / .edit / .run policies.</div>
+          <div class="lines">~60 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/apps/code_execution/migrations/0003_codeexecutionlogline_and_more.py</div>
+          <div class="desc">Adds CodeExecutionLogLine + unique constraint.</div>
+          <div class="lines">~40 LOC</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 22px;">Backend — codexec helper module</h3>
+      <div class="fmap">
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/codexec.py</div>
+          <div class="desc">User-facing API: read/read_text/read_json/open/local_path/list_inputs/write/write_text/write_json/open_output/list_outputs · FileRef · bind_execution context manager.</div>
+          <div class="lines">~280 LOC</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 22px;">Backend — REST API</h3>
+      <div class="fmap">
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/api/platform/code_execution/v1/serializers.py</div>
+          <div class="desc">List / detail / write serializers for Snippet, SnippetFile, Execution, ExecFile · signed download URL helper.</div>
+          <div class="lines">~190 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/api/platform/code_execution/v1/views.py</div>
+          <div class="desc">14 views — snippet CRUD, file CRUD, run, validate, executions, log-tail, abort, export.</div>
+          <div class="lines">~520 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">src/zango/api/platform/code_execution/v1/urls.py</div>
+          <div class="desc">14 URL patterns mounted under /api/platform/v1/apps/&lt;uuid&gt;/code-execution/.</div>
+          <div class="lines">~55 LOC</div>
+        </div>
+        <div class="fmap-row edit"><div class="icon">EDIT</div>
+          <div class="path">src/zango/api/platform/urls.py</div>
+          <div class="desc">+1 line: include the new code_execution_v1_urls.</div>
+          <div class="lines">+5 LOC</div>
+        </div>
+        <div class="fmap-row edit"><div class="icon">EDIT</div>
+          <div class="path">src/zango/config/settings/base.py</div>
+          <div class="desc">+1 line: register zango.apps.code_execution in TENANT_APPS.</div>
+          <div class="lines">+1 LOC</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 22px;">Frontend</h3>
+      <div class="fmap">
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">frontend/src/pages/appCode/components/CodeExecution/index.jsx</div>
+          <div class="desc">List view — paginated snippet table, search, polling on in-flight rows, opens detail / editor.</div>
+          <div class="lines">~370 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">frontend/src/pages/appCode/components/CodeExecution/EditorModal.jsx</div>
+          <div class="desc">Monaco editor (640px), file upload zone, collapsible Options, helpers cheatsheet, Save / Save &amp; Run, ⌘S / ⌘↵.</div>
+          <div class="lines">~430 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">frontend/src/pages/appCode/components/CodeExecution/ExecutionDetail.jsx</div>
+          <div class="desc">Two-column layout — persistent runs sidebar (left), tabs for Logs/Return/Files/Source/Metadata (right). Live polling on log-tail.</div>
+          <div class="lines">~360 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">frontend/src/pages/appCode/components/CodeExecution/ConfirmModal.jsx</div>
+          <div class="desc">Custom confirmation dialog (portal-rendered) — replaces window.confirm everywhere.</div>
+          <div class="lines">~80 LOC</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">frontend/src/pages/appCode/components/CodeExecution/Spinner.jsx</div>
+          <div class="desc">Tiny SVG spinner used in Save / Save &amp; Run / AST validating states.</div>
+          <div class="lines">~25 LOC</div>
+        </div>
+        <div class="fmap-row edit"><div class="icon">EDIT</div>
+          <div class="path">frontend/src/pages/appCode/components/AppCode/index.jsx</div>
+          <div class="desc">+1 tab: "Code Execution" alongside Async Tasks, Policies, Routes, etc.</div>
+          <div class="lines">+20 LOC</div>
+        </div>
+        <div class="fmap-row edit"><div class="icon">EDIT</div>
+          <div class="path">frontend/src/services/api.js</div>
+          <div class="desc">Adds <code style="font-family: var(--font-mono);">Content-Type: application/json</code> header on POST/PUT/DELETE when payload isn't FormData.</div>
+          <div class="lines">+12 LOC</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 22px;">Docs</h3>
+      <div class="fmap">
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">backend/docs/code-execution-spec.html</div>
+          <div class="desc">Original design spec with mockups, isolation layers, model card, edge cases.</div>
+          <div class="lines">—</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">backend/docs/code-execution-progress.md</div>
+          <div class="desc">Implementation tracking checklist with file references and decisions log.</div>
+          <div class="lines">—</div>
+        </div>
+        <div class="fmap-row new"><div class="icon">NEW</div>
+          <div class="path">backend/docs/code-execution-walkthrough.html</div>
+          <div class="desc">This document.</div>
+          <div class="lines">—</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         ARCHITECTURE
+         ======================================================================= -->
+    <section id="architecture">
+      <div class="section-kicker">03 · Architecture</div>
+      <h2>How the pieces fit together</h2>
+      <p class="section-intro">
+        A request from the React UI lands at a DRF view, the view talks to models / Celery,
+        the worker pulls in the codexec helper and isolation layers, runs the snippet, and
+        writes logs &amp; output files back. The frontend polls log-tail and detail endpoints
+        to stream the run as it progresses.
+      </p>
+
+      <div class="card">
+        <pre style="font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--text-body);">
+  React UI (Code → Code Execution tab)
+      ▼ ▲                                                              live tail
+      ▼ ▲  POST /snippets/  + multipart files                     fetched every 1s
+      ▼ ▲  POST /snippets/{id}/run/                                       │
+  ┌───┴─┴────────────────────────────────────────────────────────────────┴───┐
+  │  DRF views (api/platform/code_execution/v1/views.py)                     │
+  │   · Snippet CRUD · file upload · validate · run · executions             │
+  │   · log-tail · abort · CSV export                                        │
+  └──────────────────────────────────────────────┬───────────────────────────┘
+        │ enqueue                                │ read
+        ▼                                        ▲
+  ┌──────────────────────┐         ┌─────────────┴─────────────┐
+  │  Celery broker       │         │  Postgres (tenant schema) │
+  │  (Redis / RabbitMQ)  │         │   · code_execution_snippet│
+  └──────────┬───────────┘         │   · …snippet_file         │
+             │                     │   · …run                  │
+             ▼                     │   · …run_file             │
+  ┌──────────────────────┐         │   · …log_line             │
+  │  codexec_executor    │ ◀─────▶ │  + S3 storage (files)     │
+  │   (tasks.py)         │         └───────────────────────────┘
+  │                      │
+  │  Inside the task:    │
+  │   1. ws.ready()                                  ← workspace plug-in source
+  │   2. AST recheck (L1)
+  │   3. transaction.atomic():
+  │       SET LOCAL search_path = "&lt;tenant&gt;", public    (L3)
+  │       SET LOCAL statement_timeout = N*1000          (L3)
+  │       install_connection_guard()                    (L4)
+  │       codexec.bind_execution(execution_id)
+  │       exec(compile(source_snapshot, …))             ← user code
+  │   4. flush LineLogger, persist status/duration/return
+  └──────────────────────┘
+</pre>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         DATA MODEL
+         ======================================================================= -->
+    <section id="models">
+      <div class="section-kicker">04 · Data model</div>
+      <h2>Models &amp; how they relate</h2>
+      <p class="section-intro">
+        Five tenant-scoped tables — all in <code class="inline">code_execution.*</code>.
+        Two are file mappings (one per scope). One is append-only for the live tail.
+      </p>
+
+      <div class="card sunken">
+        <pre style="font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--text-body);">
+  CodeSnippet
+    id (uuid PK), name (unique), slug, description, code, code_hash,
+    version, timeout_seconds (5..300), is_archived, audit
+    ├── files →  CodeSnippetFile (FK CASCADE)
+    │             id, name, file (FileField), size_bytes, sha256, audit
+    │             UNIQUE (snippet, name)
+    │
+    └── executions →  CodeExecution (FK PROTECT)
+                       id, snippet_version, source_snapshot, source_hash,
+                       status (queued/running/success/failed/timeout/aborted),
+                       celery_task_id, queued_at/started_at/ended_at, duration_ms,
+                       stdout, stderr, return_value (JSON), return_value_truncated,
+                       exception_type/_message/_traceback,
+                       triggered_by, trigger_kind (ui_run/ui_save_run/api/retry)
+                       ├── files → CodeExecFile (FK CASCADE)
+                       │            id, kind (input/output), name, file,
+                       │            source_snippet_file (FK SET_NULL),
+                       │            size_bytes, sha256
+                       │            UNIQUE (execution, kind, name)
+                       │
+                       └── log_lines → CodeExecutionLogLine (FK CASCADE)
+                                       seq, ts, level (out/err/info/warn/sys),
+                                       message
+                                       UNIQUE (execution, seq)
+</pre>
+      </div>
+
+      <p style="margin-top: 18px;">Key design decisions:</p>
+      <div class="grid-2" style="margin-top: 8px;">
+        <div class="feature">
+          <h4><span class="ico">◇</span> UUID PKs everywhere</h4>
+          <p>Avoids enumeration; safe to embed in URLs; no autoincrement collisions between runs.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">◈</span> Two file scopes</h4>
+          <p><code class="inline">CodeSnippetFile</code> is what the editor manipulates; on run, each row is snapshotted into <code class="inline">CodeExecFile(kind=input)</code> with FK back to its source. Outputs only ever live at the execution level.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">⌂</span> Source snapshot on every run</h4>
+          <p><code class="inline">CodeExecution.source_snapshot</code> is the literal code that ran. Edits to the snippet later don't rewrite the history.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">◊</span> Hard delete on snippet files</h4>
+          <p>No <code class="inline">is_deleted</code> flag. The <code class="inline">source_snippet_file</code> FK is <code class="inline">SET_NULL</code> so past executions retain their own row. Storage blobs are kept alive while any exec file still references them.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         VALIDATOR
+         ======================================================================= -->
+    <section id="validator">
+      <div class="section-kicker">05 · L1 · AST validator</div>
+      <h2>Static deny list</h2>
+      <p class="section-intro">
+        Pure <code class="inline">ast.NodeVisitor</code>. No Django, no I/O. Walks the parsed
+        source and returns <code class="inline">Violation(line, col, code, message)</code> records.
+        Called twice: once at save (inline editor feedback) and once at celery pickup (catches
+        list updates between save and run).
+      </p>
+
+      <h3>What it blocks</h3>
+      <div class="grid-2">
+        <div class="feature">
+          <h4>Imports</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">subprocess · socket · ctypes · importlib · pickle · marshal · multiprocessing · pty · resource · _thread · django_tenants.utils</p>
+        </div>
+        <div class="feature">
+          <h4>Names (loaded)</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">eval · exec · compile · __import__ · globals · locals · vars · setattr · delattr · breakpoint · input</p>
+        </div>
+        <div class="feature">
+          <h4>Dunder reflection</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">__class__ · __bases__ · __subclasses__ · __globals__ · __builtins__ · __code__ · __dict__ · __mro__ · __getattribute__ · __reduce__ · __reduce_ex__</p>
+        </div>
+        <div class="feature">
+          <h4>Tenant switching</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">connection.set_tenant · .set_schema · .schema_name = · .tenant = · schema_context · tenant_context · "SET search_path" · "SET SCHEMA" · "SET ROLE"</p>
+        </div>
+        <div class="feature">
+          <h4>Banned attribute chains</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">os.system / popen / execv* / fork / kill · django.db.connections · settings.SECRET_KEY · settings.DATABASES · shutil.rmtree</p>
+        </div>
+        <div class="feature">
+          <h4>Reflective bypass</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">getattr/setattr/delattr(connection, ...) flagged · alias-aware (import os as oo; oo.system → still caught).</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 20px;">Public API</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/code_execution/validator.py</span></div>
+        <div class="code-body"><span class="tok-kw">def</span> <span class="tok-fn">validate</span>(source: <span class="tok-cls">str</span>) -&gt; <span class="tok-cls">List</span>[<span class="tok-cls">Violation</span>]:
+    <span class="tok-comment">"""Return all deny-list violations in `source`. Empty list = clean."""</span>
+    ...
+
+<span class="tok-kw">def</span> <span class="tok-fn">assert_valid</span>(source: <span class="tok-cls">str</span>) -&gt; <span class="tok-cls">None</span>:
+    <span class="tok-comment">"""Raise CodeValidationError if any violations are present."""</span>
+    ...
+
+<span class="tok-kw">class</span> <span class="tok-cls">Violation</span>:           <span class="tok-comment"># frozen dataclass</span>
+    line: <span class="tok-cls">int</span>
+    col: <span class="tok-cls">int</span>
+    code: <span class="tok-cls">str</span>           <span class="tok-comment"># DENY_IMPORT, DENY_NAME, DENY_ATTR, DENY_DUNDER,</span>
+                       <span class="tok-comment">#   DENY_CALL, DENY_TENANT_SWITCH, DENY_REFLECTION,</span>
+                       <span class="tok-comment">#   DENY_SQL, SYNTAX</span>
+    message: <span class="tok-cls">str</span>
+</div>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         codexec helper
+         ======================================================================= -->
+    <section id="codexec">
+      <div class="section-kicker">06 · codexec helper</div>
+      <h2><code class="inline" style="font-size: 14px;">from zango import codexec</code></h2>
+      <p class="section-intro">
+        The only API user code touches for files. Eleven helpers. All scoped to the
+        <em>current execution</em> via a thread-local set by the executor.
+      </p>
+
+      <h3>Surface</h3>
+      <div class="grid-2">
+        <div class="feature">
+          <h4>Reads</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">read(name) → bytes<br/>read_text(name, encoding="utf-8") → str<br/>read_json(name) → parsed<br/>open(name, mode="rb") → file-like<br/>local_path(name) → Path (cached to /tmp)<br/>list_inputs() → list[FileRef]</p>
+        </div>
+        <div class="feature">
+          <h4>Writes</h4>
+          <p style="font-family: var(--font-mono); font-size: 11.5px;">write(name, data, content_type=None) → FileRef<br/>write_text(name, text) → FileRef<br/>write_json(name, obj, indent=2) → FileRef<br/>open_output(name, mode="wb") → buffered writer<br/>list_outputs() → list[FileRef]</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 20px;">How a read works</h3>
+      <ol class="flow-step" style="list-style: none;"><div></div></ol>
+      <div>
+        <div class="flow-step"><div class="flow-num">1</div><div><h4>Name sanitization</h4><p><code class="inline">_sanitize_name</code> strips path traversal (<code class="inline">..</code>), NUL bytes, leading dots; takes only the basename; caps at 255 chars.</p></div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div><h4>DB lookup</h4><p><code class="inline">CodeExecFile.objects.get(execution_id=&lt;current&gt;, kind="input", name=&lt;sanitized&gt;)</code>. <code class="inline">CodexecFileNotFound</code> if absent.</p></div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div><h4>Open via storage</h4><p><code class="inline">obj.file.open("rb")</code> — Django's <code class="inline">FileField</code> resolves through <code class="inline">STORAGES["default"]</code> (S3 / local).</p></div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div><h4>Return bytes / FileRef</h4><p>Caller gets raw bytes (<code class="inline">read</code>), decoded text (<code class="inline">read_text</code>), parsed JSON (<code class="inline">read_json</code>), or a file-like (<code class="inline">open</code>).</p></div></div>
+      </div>
+
+      <h3 style="margin-top: 20px;">How a write works</h3>
+      <div>
+        <div class="flow-step"><div class="flow-num">1</div><div><h4>Sanitize + serialize</h4><p>Same name sanitization. String → utf-8 bytes; objects → JSON via <code class="inline">json.dumps(..., default=str)</code>.</p></div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div><h4>Compute sha256 + size</h4><p>Captured upfront for the model row.</p></div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div><h4>Insert / replace CodeExecFile row</h4><p><code class="inline">get_or_create(execution_id, kind="output", name=…)</code>. If overwriting, the old blob is <code class="inline">delete(save=False)</code>'d first.</p></div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div><h4>Upload bytes</h4><p><code class="inline">obj.file.save(name, ContentFile(payload), save=True)</code> — Django writes through to S3 with the <code class="inline">upload_to=_exec_file_upload_to</code> callable, producing a UUID storage key.</p></div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div><h4>Return FileRef</h4><p>Thin proxy with <code class="inline">.name / .size / .content_type / .sha256</code> for the snippet to inspect.</p></div></div>
+      </div>
+
+      <div class="note" style="margin-top: 16px;">
+        <span><strong>Filename preservation:</strong>
+        <code class="inline">CodeExecFile.name</code> is the source of truth. The storage key uses a UUID,
+        so two same-named files in different runs never collide. The download URL is generated with
+        <code class="inline">ResponseContentDisposition</code> baked in so the browser saves with the original name.
+        </span>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         EXECUTOR
+         ======================================================================= -->
+    <section id="executor">
+      <div class="section-kicker">07 · Celery executor</div>
+      <h2><code class="inline" style="font-size: 14px;">tasks.py · codexec_executor</code></h2>
+      <p class="section-intro">
+        The heart of the feature. Resolves tenant → loads workspace → AST recheck → wraps stdout/stderr →
+        opens isolated transaction → installs ConnectionGuard → binds codexec helper → exec the source →
+        captures result, stdout, stderr, traceback, duration. Catches exceptions <em>inside</em> the
+        atomic so output files written before the failure still commit.
+      </p>
+
+      <h3>Pseudocode</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/code_execution/tasks.py</span></div>
+        <div class="code-body"><span class="tok-dec">@shared_task</span>(bind=<span class="tok-kw">True</span>, name=<span class="tok-str">"zango.code_execution.codexec_executor"</span>)
+<span class="tok-kw">def</span> <span class="tok-fn">codexec_executor</span>(self, execution_id, tenant_name):
+    tenant = <span class="tok-cls">TenantModel</span>.objects.get(name=tenant_name)
+    connection.set_tenant(tenant)
+    execution = <span class="tok-cls">CodeExecution</span>.objects.select_related(<span class="tok-str">"snippet"</span>).get(pk=execution_id)
+    execution.status = <span class="tok-cls">ExecStatus</span>.RUNNING; execution.started_at = now(); execution.save(...)
+
+    ws = <span class="tok-cls">Workspace</span>(connection.tenant, as_systemuser=<span class="tok-kw">True</span>); ws.ready()
+
+    <span class="tok-comment"># L1 recheck — catches deny-list changes between save and pickup</span>
+    <span class="tok-kw">if</span> validate(execution.source_snapshot): <span class="tok-kw">return</span> _finalize_error(...)
+
+    line_logger = <span class="tok-cls">LineLogger</span>(str(execution.id))
+    stdout = <span class="tok-cls">CapturingStream</span>(STDOUT_CAP_BYTES, <span class="tok-str">"stdout"</span>, <span class="tok-str">"out"</span>, line_logger)
+    stderr = <span class="tok-cls">CapturingStream</span>(STDERR_CAP_BYTES, <span class="tok-str">"stderr"</span>, <span class="tok-str">"err"</span>, line_logger)
+
+    <span class="tok-comment"># Bridges so logging.* and loguru also land in the live tail</span>
+    stdlib_handler = _CodexecLogHandler(line_logger)
+    stdlib_handler.addFilter(_NoisyLoggerFilter())   <span class="tok-comment"># drops botocore/urllib3/...</span>
+    stdlib_handler.setLevel(logging.INFO)
+    root_logger.addHandler(stdlib_handler)
+
+    loguru_sink_id = loguru.add(<span class="tok-kw">lambda</span> m: line_logger.emit(<span class="tok-str">"info"</span>, m.record[<span class="tok-str">"message"</span>]), ...)
+
+    saved_stdout, saved_stderr = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = stdout, stderr
+    <span class="tok-kw">try</span>:
+        <span class="tok-kw">with</span> transaction.atomic():
+            <span class="tok-kw">with</span> connection.cursor() <span class="tok-kw">as</span> c:
+                begin_isolated_session(c, tenant.schema_name, execution.snippet.timeout_seconds)
+            <span class="tok-kw">with</span> install_connection_guard():               <span class="tok-comment"># L4</span>
+                <span class="tok-kw">with</span> codexec.bind_execution(str(execution.id)):
+                    <span class="tok-kw">try</span>:
+                        code = compile(execution.source_snapshot, <span class="tok-str">"&lt;codexec&gt;"</span>, <span class="tok-str">"exec"</span>)
+                        exec(code, namespace)
+                        return_value = namespace.get(<span class="tok-str">"codexec_result"</span>)
+                    <span class="tok-kw">except</span> <span class="tok-cls">SoftTimeLimitExceeded</span>:
+                        status = <span class="tok-cls">ExecStatus</span>.TIMEOUT; ...capture...
+                    <span class="tok-kw">except</span> <span class="tok-cls">BaseException</span> <span class="tok-kw">as</span> e:
+                        status = <span class="tok-cls">ExecStatus</span>.FAILED; ...capture...
+    <span class="tok-kw">finally</span>:
+        stdout.flush(); stderr.flush(); line_logger.flush()
+        sys.stdout, sys.stderr = saved_stdout, saved_stderr
+        root_logger.removeHandler(stdlib_handler)
+        loguru.remove(loguru_sink_id)
+
+    execution.status = status
+    execution.ended_at = now(); execution.duration_ms = ...
+    execution.stdout = stdout.getvalue(); execution.stderr = stderr.getvalue()
+    execution.return_value, execution.return_value_truncated = serialize_return(return_value)
+    execution.save()
+</div>
+      </div>
+
+      <h3 style="margin-top: 20px;">Why exceptions are caught inside the atomic</h3>
+      <p>
+        If we let the exception escape <code class="inline">transaction.atomic()</code>, Django would roll back
+        every insert that happened inside — including the <code class="inline">CodeExecFile</code> rows the user
+        already wrote with <code class="inline">codexec.write(...)</code>. So the executor catches everything inside,
+        records what went wrong on <code class="inline">execution.exception_*</code>, and lets the transaction commit
+        cleanly. Output files survive a failed run.
+      </p>
+    </section>
+
+
+    <!-- =======================================================================
+         ISOLATION L3 + L4
+         ======================================================================= -->
+    <section id="isolation">
+      <div class="section-kicker">08 · Isolation</div>
+      <h2>L3 search_path + statement_timeout · L4 ConnectionGuard</h2>
+      <p class="section-intro">
+        L2 (per-tenant Postgres role) is parked. L3 + L4 are what's actually running.
+      </p>
+
+      <h3>L3 — <code class="inline">begin_isolated_session</code></h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/code_execution/isolation.py</span></div>
+        <div class="code-body"><span class="tok-kw">def</span> <span class="tok-fn">begin_isolated_session</span>(cursor, schema_name, timeout_seconds):
+    schema = _validate_identifier(schema_name, <span class="tok-str">"schema_name"</span>)
+    timeout_ms = max(<span class="tok-num">1000</span>, int(timeout_seconds) * <span class="tok-num">1000</span>)
+    cursor.execute(<span class="tok-str">f'SET LOCAL search_path = "{schema}", public'</span>)
+    cursor.execute(<span class="tok-str">f"SET LOCAL statement_timeout = {timeout_ms}"</span>)
+</div>
+      </div>
+      <p>
+        <code class="inline">SET LOCAL</code> bounds the change to the current transaction.
+        Any <code class="inline">SET search_path</code> the snippet issues is also <code class="inline">LOCAL</code>
+        to the same transaction and reverts at commit. <code class="inline">statement_timeout</code> caps single
+        queries at the snippet's wall-clock budget.
+      </p>
+
+      <h3 style="margin-top: 20px;">L4 — ConnectionGuard</h3>
+      <p>
+        Patches tenant-switching methods on the live <code class="inline">DatabaseWrapper</code> class
+        with a thread-local flag. Outside an active guard, original methods run untouched. Inside,
+        attempts to call them raise <code class="inline">TenantSwitchBlocked</code>.
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/code_execution/guard.py</span></div>
+        <div class="code-body"><span class="tok-comment"># Patched once, at startup of first guard activation.</span>
+_GUARDED_METHODS = (<span class="tok-str">"set_tenant"</span>, <span class="tok-str">"set_schema"</span>, <span class="tok-str">"set_schema_to_public"</span>, <span class="tok-str">"_set_schema"</span>)
+
+<span class="tok-kw">def</span> <span class="tok-fn">_install_patches_once</span>():
+    cls = type(connections[DEFAULT_DB_ALIAS])     <span class="tok-comment"># real DatabaseWrapper, not the proxy</span>
+    <span class="tok-kw">if</span> getattr(cls, <span class="tok-str">"_codexec_guard_installed"</span>, <span class="tok-kw">False</span>): <span class="tok-kw">return</span>
+
+    <span class="tok-kw">for</span> name <span class="tok-kw">in</span> _GUARDED_METHODS:
+        <span class="tok-kw">if</span> hasattr(cls, name):
+            original = getattr(cls, name)
+            setattr(cls, name, _blocked_method_factory(original, name))
+
+    cls.__setattr__ = _blocked_setattr_factory(cls.__setattr__)  <span class="tok-comment"># for `.schema_name = …`</span>
+    cls._codexec_guard_installed = <span class="tok-kw">True</span>
+
+
+<span class="tok-dec">@contextmanager</span>
+<span class="tok-kw">def</span> <span class="tok-fn">install_connection_guard</span>():
+    _install_patches_once()
+    prev = getattr(_guard_active, <span class="tok-str">"active"</span>, <span class="tok-kw">False</span>)
+    _guard_active.active = <span class="tok-kw">True</span>
+    <span class="tok-kw">try</span>: <span class="tok-kw">yield</span>
+    <span class="tok-kw">finally</span>: _guard_active.active = prev
+</div>
+      </div>
+      <p>
+        Because the patch lives on the class but only activates when the thread-local flag is set,
+        normal application traffic (other tenant requests, async tasks, etc.) is unaffected — patched
+        methods just call the original.
+      </p>
+    </section>
+
+
+    <!-- =======================================================================
+         API
+         ======================================================================= -->
+    <section id="api">
+      <div class="section-kicker">09 · REST API</div>
+      <h2>14 endpoints, GET + POST only</h2>
+      <p class="section-intro">
+        Mounted under <code class="inline">/api/v1/apps/&lt;app_uuid&gt;/code-execution/</code>. The platform's
+        <code class="inline">useApi</code> hook only treats 200/201 as success, so mutations always return 200
+        with <code class="inline">success: true/false</code> in the body (instead of REST-canonical 4xx codes).
+      </p>
+
+      <h3>Snippets</h3>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/snippets/</div><div class="desc">Paginated list with last-run summary (status, started, duration, runs count).</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/</div><div class="desc">Create. AST validates first. Returns the new snippet row.</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/snippets/{id}/</div><div class="desc">Retrieve full snippet (code + metadata).</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/{id}/update/</div><div class="desc">Partial update. Bumps version on code change. Re-validates.</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/{id}/archive/</div><div class="desc">Soft delete (sets is_archived).</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/{id}/run/</div><div class="desc">Snapshot snippet files into exec files + insert CodeExecution + apply_async on codexec_executor.</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/validate/</div><div class="desc">Dry-run AST check. Called from the editor (debounced 600ms).</div></div>
+
+      <h3 style="margin-top: 16px;">Snippet files</h3>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/snippets/{id}/files/</div><div class="desc">List snippet-level files with download URLs.</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/{id}/files/  · multipart</div><div class="desc">Upload N files. Sanitizes filenames. Replaces on (snippet, name) conflict.</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/snippets/{id}/files/{file_id}/delete/</div><div class="desc">Hard delete the row; blob survives until no exec file references it.</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/snippets/{id}/files/{file_id}/download/</div><div class="desc">Backend redirect to storage URL. Used as fallback when no presigned URL available.</div></div>
+
+      <h3 style="margin-top: 16px;">Executions</h3>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/executions/?snippet_id=&amp;status=&amp;page=&amp;page_size=</div><div class="desc">Paginated; powers the run-history sidebar.</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/executions/export.csv?…</div><div class="desc">Streams the filtered run history as CSV.</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/executions/{id}/</div><div class="desc">Full run with files prefetched, return value, traceback, source snapshot.</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/executions/{id}/log-tail/?after_seq=N</div><div class="desc">Returns log lines with seq &gt; N + current status + is_terminal flag + next_seq.</div></div>
+      <div class="endpoint"><div class="method post">POST</div><div class="path">/executions/{id}/abort/</div><div class="desc">Revokes the celery task (terminate=True), marks aborted, writes a system log line.</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/executions/{id}/files/</div><div class="desc">Files for this run with download URLs (inputs + outputs).</div></div>
+      <div class="endpoint"><div class="method get">GET</div><div class="path">/executions/{id}/files/{file_id}/download/</div><div class="desc">Backend-redirect fallback for execution files.</div></div>
+    </section>
+
+
+    <!-- =======================================================================
+         FRONTEND
+         ======================================================================= -->
+    <section id="frontend">
+      <div class="section-kicker">10 · Frontend</div>
+      <h2>Three React surfaces</h2>
+      <p class="section-intro">
+        Wired as a new tab inside the existing <code class="inline">AppCode</code> tab strip alongside
+        Summary / Data Models / Routes / Policies / Packages / Async Tasks. Internal navigation lives in
+        local state — no router changes were needed.
+      </p>
+
+      <div class="grid-3">
+        <div class="feature">
+          <h4><span class="ico">▤</span> List view</h4>
+          <p>Paginated table of snippets with last-run status pill, run count, search box, "Add New" CTA. Polls every 5s while any row is queued/running.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">✎</span> Editor modal</h4>
+          <p>Monaco (Python, vs-dark, 640px), name/description, collapsible Options (timeout + file zone), AST validate debounced 600ms with inline status, always-visible 11-helper cheatsheet, Save + Save&amp;Run, ⌘S / ⌘↵.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">▦</span> Execution detail</h4>
+          <p>Two-column: persistent runs sidebar (left, polls + highlights current) · tabs (right) for Logs (live polling), Return value, Files (input + output downloads), Source at run, Metadata.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 24px;">Modal infrastructure</h3>
+      <p>
+        Both <code class="inline">EditorModal</code> and <code class="inline">ConfirmModal</code> render via
+        <code class="inline">createPortal(content, document.body)</code> so they escape every parent stacking
+        context in the platform chrome. Without that, the platform sidebar/header sits above the modal and
+        clicks don't reach the form fields. With it, the modal is the top-most DOM node regardless of z-index.
+      </p>
+
+      <h3 style="margin-top: 18px;">Animations &amp; loaders</h3>
+      <p>
+        Modal mount/unmount uses a 200ms <code class="inline">opacity + translate-y + scale</code> transition.
+        Save buttons embed an inline spinner. AST status pulses while validating. List rows stagger-fade-in
+        with a 30ms delay. Tab content fades on switch. Editor uses Monaco's <code class="inline">smoothScrolling</code>
+        and <code class="inline">cursorSmoothCaretAnimation</code>.
+      </p>
+    </section>
+
+
+    <!-- =======================================================================
+         LOGGING ARCHITECTURE
+         ======================================================================= -->
+    <section id="logging">
+      <div class="section-kicker">11 · Logging</div>
+      <h2>How <code class="inline" style="font-size: 14px;">print</code>, <code class="inline" style="font-size: 14px;">logging</code>, and <code class="inline" style="font-size: 14px;">loguru</code> all land in the live tail</h2>
+      <p class="section-intro">
+        Three independent capture mechanisms fan into a single <code class="inline">LineLogger</code> instance.
+        Lines are batched (32 rows per flush) and written via <code class="inline">bulk_create</code> to
+        <code class="inline">CodeExecutionLogLine</code>. The log-tail endpoint reads after a seq cursor; the
+        UI polls every 1s while the run is non-terminal.
+      </p>
+
+      <div class="grid-3">
+        <div class="feature primary">
+          <h4><span class="ico">⌨</span> stdout / stderr</h4>
+          <p>The executor wraps <code class="inline">sys.stdout</code> and <code class="inline">sys.stderr</code> with <code class="inline">CapturingStream</code>. Each newline flushes a line into LineLogger. Caps: 1 MB total stdout, 256 KB stderr, 8 KB per line.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">🐍</span> stdlib logging</h4>
+          <p><code class="inline">_CodexecLogHandler</code> attached to the root logger. Filters out botocore / boto3 / urllib3 / s3transfer / asyncio / django.db.backends / PIL (otherwise the tail floods with library internals). Level INFO+.</p>
+        </div>
+        <div class="feature">
+          <h4><span class="ico">🌠</span> loguru</h4>
+          <p>A loguru sink added at executor entry that forwards each record's message to LineLogger with the matching level. Removed at finally.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 22px;">Recursion safety</h3>
+      <p>
+        Without care, the bridges can loop: a flush hits a DB error, that error logs, the logger calls the
+        handler, the handler inserts a log line, the insert errors, etc. — <code class="inline">RecursionError</code>.
+        Two guards prevent it:
+      </p>
+      <ul style="margin-left: 20px; font-size: 13px; color: var(--text-body);">
+        <li><strong><code class="inline">LineLogger._flushing</code></strong> — set to True for the duration of a bulk_create. The handler reads this and short-circuits.</li>
+        <li><strong>Silent DB errors</strong> — <code class="inline">flush()</code> wraps <code class="inline">bulk_create</code> in a bare <code class="inline">try/except: pass</code>. Logging paths must never raise.</li>
+      </ul>
+    </section>
+
+
+    <!-- =======================================================================
+         FILE STORAGE
+         ======================================================================= -->
+    <section id="files">
+      <div class="section-kicker">12 · File storage</div>
+      <h2>Two-stage storage with reference-counted blobs</h2>
+      <p class="section-intro">
+        Same Django <code class="inline">STORAGES["default"]</code> backend the rest of Zango uses.
+        For project newmi that's <code class="inline">S3MediaStorage</code> (django-storages); fallbacks
+        gracefully to local <code class="inline">FileSystemStorage</code>.
+      </p>
+
+      <h3>Storage layout</h3>
+      <div class="card sunken">
+        <pre style="font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--text-body);">
+&lt;tenant&gt;/codexec/snippets/&lt;snippet_id&gt;/&lt;file_uuid&gt;       ← CodeSnippetFile uploads
+&lt;tenant&gt;/codexec/runs/&lt;exec_id&gt;/&lt;kind&gt;/&lt;file_uuid&gt;       ← CodeExecFile (inputs &amp; outputs)
+</pre>
+      </div>
+
+      <h3 style="margin-top: 18px;">Filename preservation</h3>
+      <p>
+        Storage backends (especially S3) frequently rewrite filenames. We never trust the filename to
+        round-trip — instead the DB column <code class="inline">name</code> is the source of truth, and the
+        storage key uses a UUID. Downloads then bake the original name into S3's
+        <code class="inline">ResponseContentDisposition</code> via a presigned URL:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">api/platform/code_execution/v1/serializers.py</span></div>
+        <div class="code-body"><span class="tok-kw">def</span> <span class="tok-fn">_signed_download_url</span>(file_field, original_name):
+    safe_ascii = (original_name <span class="tok-kw">or</span> <span class="tok-str">"download"</span>).encode(<span class="tok-str">"ascii"</span>, <span class="tok-str">"ignore"</span>).decode(<span class="tok-str">"ascii"</span>) <span class="tok-kw">or</span> <span class="tok-str">"download"</span>
+    quoted = _url_quote(original_name <span class="tok-kw">or</span> <span class="tok-str">"download"</span>)
+    disposition = <span class="tok-str">f'attachment; filename="{safe_ascii}"; filename*=UTF-8\'\'{quoted}'</span>
+    <span class="tok-kw">try</span>:
+        <span class="tok-kw">return</span> file_field.storage.url(
+            file_field.name,
+            parameters={<span class="tok-str">"ResponseContentDisposition"</span>: disposition},
+        )
+    <span class="tok-kw">except</span> <span class="tok-cls">TypeError</span>:
+        <span class="tok-kw">return</span> file_field.url     <span class="tok-comment"># non-S3 fallback</span>
+</div>
+      </div>
+
+      <h3 style="margin-top: 18px;">Snapshot semantics</h3>
+      <p>
+        On <code class="inline">/snippets/{id}/run/</code>, for each <code class="inline">CodeSnippetFile</code>
+        we insert a <code class="inline">CodeExecFile</code> with <code class="inline">file=snip_file.file.name</code>
+        (sharing the storage key) and <code class="inline">source_snippet_file=ref</code> as provenance.
+        <strong>No byte copy.</strong> When the snippet file is later deleted (hard delete), the FK is
+        <code class="inline">SET_NULL</code> and the blob lives until the last execution that references it
+        ages out of the 90-day window.
+      </p>
+    </section>
+
+
+    <!-- =======================================================================
+         LIFECYCLE
+         ======================================================================= -->
+    <section id="lifecycle">
+      <div class="section-kicker">13 · Run lifecycle</div>
+      <h2>What happens between Click and Done</h2>
+      <p class="section-intro">
+        The end-to-end choreography for a single "Save &amp; Run" click.
+      </p>
+
+      <div>
+        <div class="flow-step"><div class="flow-num">1</div><div><h4>UI · Save &amp; Run clicked</h4><p>EditorModal's <code class="inline">handleSave(true)</code> fires. POST <code class="inline">/snippets/</code> (or <code class="inline">/snippets/{id}/update/</code>) with the JSON body.</p></div></div>
+        <div class="flow-step"><div class="flow-num">2</div><div><h4>API · save</h4><p>Backend validates code (AST), persists CodeSnippet, returns 200 with the snippet row.</p></div></div>
+        <div class="flow-step"><div class="flow-num">3</div><div><h4>UI · upload pending files</h4><p>If any files were dropped in the modal, they're uploaded multipart to <code class="inline">/snippets/{id}/files/</code>.</p></div></div>
+        <div class="flow-step"><div class="flow-num">4</div><div><h4>UI · trigger run</h4><p>POST <code class="inline">/snippets/{id}/run/</code>. Frontend animates a fade then swaps to the detail view with the returned execution id.</p></div></div>
+        <div class="flow-step"><div class="flow-num">5</div><div><h4>API · /run/</h4><p>AST recheck, insert CodeExecution (status=queued, source_snapshot, source_hash), snapshot every CodeSnippetFile into CodeExecFile(kind=input), then <code class="inline">codexec_executor.apply_async(..., soft_time_limit=N)</code>.</p></div></div>
+        <div class="flow-step"><div class="flow-num">6</div><div><h4>Worker · pickup</h4><p>celery_task_id stored. Status → running, started_at set. Workspace.ready() runs. SYS log lines: "Run picked up", "Workspace ready", "AST recheck OK".</p></div></div>
+        <div class="flow-step"><div class="flow-num">7</div><div><h4>Worker · isolated exec</h4><p><code class="inline">transaction.atomic()</code> with SET LOCAL search_path + statement_timeout (L3), ConnectionGuard installed (L4), codexec helper bound to execution_id. <code class="inline">compile + exec</code> the source snapshot.</p></div></div>
+        <div class="flow-step"><div class="flow-num">8</div><div><h4>UI · live tail polling</h4><p>While status is non-terminal: GET <code class="inline">/log-tail/?after_seq=N</code> every 1s, GET <code class="inline">/executions/{id}/</code> every 3s. UI renders incremental log lines color-coded by level.</p></div></div>
+        <div class="flow-step"><div class="flow-num">9</div><div><h4>Worker · finalize</h4><p>Streams flushed, LineLogger flushed, sys.stdout/stderr restored, stdlib/loguru bridges removed. Atomic commits. <code class="inline">execution.status / .stdout / .stderr / .return_value / .duration_ms / .exception_*</code> all saved.</p></div></div>
+        <div class="flow-step"><div class="flow-num">10</div><div><h4>UI · terminal state</h4><p>Polling sees <code class="inline">is_terminal=true</code>, switches to a single static fetch. Status pill stops pulsing. Files tab now shows output rows. Sidebar refreshes with the completed run's duration.</p></div></div>
+      </div>
+    </section>
+
+
+    <!-- =======================================================================
+         OPERATING NOTES
+         ======================================================================= -->
+    <section id="operate">
+      <div class="section-kicker">14 · Operate</div>
+      <h2>How to run, deploy, and audit</h2>
+      <p class="section-intro">
+        The dev/setup checklist and a few gotchas for production.
+      </p>
+
+      <h3>One-time setup</h3>
+      <ol style="margin-left: 22px; font-size: 13px; color: var(--text-body); line-height: 1.8;">
+        <li>Pull the branch <code class="inline">feat/zango_codexec</code>.</li>
+        <li><code class="inline">pip install -e .</code> from <code class="inline">backend/</code>.</li>
+        <li><code class="inline">python manage.py migrate_schemas --schema=&lt;tenant&gt;</code> (or all tenants).</li>
+        <li>Restart celery worker so the new task module is loaded.</li>
+        <li>Frontend: <code class="inline">npm install</code>, then <code class="inline">npm run dev</code> in <code class="inline">frontend/</code>.</li>
+      </ol>
+
+      <h3 style="margin-top: 22px;">After backend changes</h3>
+      <p>
+        <strong>Restart the celery worker.</strong> Celery loads task modules at worker startup; in-flight
+        runs use the version of <code class="inline">tasks.py</code> the worker started with. If you change
+        the executor, validator, or any imported helper, the worker keeps using the old code until restart.
+      </p>
+
+      <h3 style="margin-top: 22px;">Scheduled jobs</h3>
+      <p>
+        Register <code class="inline">zango.code_execution.sweep_stuck_runs</code> in celery beat (hourly).
+        It scans every tenant and flips any execution stuck in <code class="inline">running</code> past
+        2&times; the longest plausible timeout to <code class="inline">failed · WorkerLost</code> — important
+        when a worker crashes mid-run and the row would otherwise sit forever.
+      </p>
+
+      <h3 style="margin-top: 22px;">Audit trail</h3>
+      <p>
+        All four core models are registered with <code class="inline">auditlog</code>. Every snippet edit,
+        every execution, every file upload/delete generates an auditlog entry tagged with the triggering user.
+        Combined with the per-run <code class="inline">source_snapshot</code>, every run is provably reconstructable.
+      </p>
+    </section>
+
+
+    <!-- =======================================================================
+         GAPS
+         ======================================================================= -->
+    <section id="gaps">
+      <div class="section-kicker">15 · Gaps</div>
+      <h2>What's parked and what's deferred</h2>
+
+      <div class="grid-2">
+        <div class="feature" style="border-left: 3px solid var(--amber-500);">
+          <h4 style="color: var(--amber-700);"><span class="ico" style="background: var(--amber-50); color: var(--amber-700);">⚠</span> L2 · per-tenant Postgres role <span class="pill parked" style="margin-left: 6px;">parked</span></h4>
+          <p>
+            The original spec had a <code class="inline">codexec_&lt;schema&gt;</code> Postgres role per
+            tenant with USAGE only on its own schema. Snippets would <code class="inline">SET LOCAL ROLE</code>
+            to it so cross-schema queries fail with <em>permission denied</em>. Parked by product direction.
+            Without it, fully-qualified raw SQL like <code class="inline">SELECT * FROM "tntApp"."x"</code>
+            can still cross tenants. L1 + L3 + L4 cover the common paths but not this one.
+          </p>
+        </div>
+        <div class="feature" style="border-left: 3px solid var(--slate-500);">
+          <h4 style="color: var(--slate-700);"><span class="ico" style="background: var(--slate-100); color: var(--slate-700);">◔</span> OpenTelemetry spans <span class="pill parked" style="margin-left: 6px;">deferred</span></h4>
+          <p>
+            Spec called for OTel spans on the celery task and inner <code class="inline">exec</code>,
+            tagged with tenant / snippet_id / version / status / duration_ms. Needs integration with
+            <code class="inline">zango.core.monitoring.telemetry</code>. Add in a follow-up.
+          </p>
+        </div>
+        <div class="feature" style="border-left: 3px solid var(--slate-500);">
+          <h4 style="color: var(--slate-700);"><span class="ico" style="background: var(--slate-100); color: var(--slate-700);">◔</span> Cross-snippet history UI page <span class="pill parked" style="margin-left: 6px;">deferred</span></h4>
+          <p>
+            The API supports filtering executions across all snippets (and CSV export). A dedicated
+            UI page wasn't built — current flow (snippet row → execution detail → sidebar) covers
+            most needs.
+          </p>
+        </div>
+        <div class="feature" style="border-left: 3px solid var(--slate-500);">
+          <h4 style="color: var(--slate-700);"><span class="ico" style="background: var(--slate-100); color: var(--slate-700);">◔</span> Fine-grained policy enforcement <span class="pill parked" style="margin-left: 6px;">deferred</span></h4>
+          <p>
+            Three policies are seeded (<code class="inline">codexec.use</code> / <code class="inline">.edit</code> / <code class="inline">.run</code>)
+            but the API is gated only by <code class="inline">IsAuthenticatedPlatformUser</code>. Per-policy enforcement
+            is a platform-wide pattern that needs separate work.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 24px;">Phase 3 — not started</h3>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Per-tenant rate limits · approval workflow (draft → published) · diff view between versions ·
+        parameterized runs (typed inputs) · cron scheduling (overlap with AppTask) · saved snippet
+        fixture files (auto-staged on every run) · websocket-based live tail (replacing polling).
+      </p>
+    </section>
+
+
+    <!-- footer -->
+    <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-subtle);">
+        <div>Walkthrough · Code Execution · Zango Platform</div>
+        <div>Branch <span style="font-family: var(--font-mono); color: var(--text-muted);">feat/zango_codexec</span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('main section[id]');
+  const tocLinks = document.querySelectorAll('.toc a');
+  function updateActive() {
+    let current = '';
+    const y = window.scrollY + 120;
+    sections.forEach(s => { if (s.offsetTop <= y) current = s.id; });
+    tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + current));
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  tocLinks.forEach(l => l.addEventListener('click', (e) => {
+    const target = document.querySelector(l.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      window.scrollTo({ top: target.offsetTop - 24, behavior: 'smooth' });
+    }
+  }));
+</script>
+
+</body>
+</html>
