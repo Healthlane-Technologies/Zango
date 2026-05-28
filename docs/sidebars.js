@@ -151,6 +151,22 @@ const sidebars = {
             "core/async-tasks/syncing-and-viewing-async-tasks",
           ],
         },
+        {
+          type: "category",
+          label: "AI Agents",
+          description: "Integrate LLMs and intelligent agents into your app.",
+          collapsed: true,
+          items: [
+            "core/ai-agents/overview",
+            "core/ai-agents/setting-up-provider",
+            "core/ai-agents/creating-an-agent",
+            "core/ai-agents/creating-a-prompt",
+            "core/ai-agents/defining-tools",
+            "core/ai-agents/syncing-tools",
+            "core/ai-agents/running-agents",
+            "core/ai-agents/invocation-history",
+          ],
+        },
       ],
       collapsible: true,
       link: {

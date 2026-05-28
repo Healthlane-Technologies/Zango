@@ -1,0 +1,172 @@
+# Defining Tools
+
+Tools are Python functions that an agent can call during a conversation to fetch or mutate live application data. They are defined in your app's module code using the `@tool` decorator and are automatically discovered by the platform when you sync them.
+
+## Creating a tools.py File
+
+Create a `tools.py` file inside any module in your app's `backend/` directory:
+
+```
+backend/
+└── items/
+    ├── models.py
+    ├── views.py
+    └── tools.py        ← define tools here
+```
+
+## The @tool Decorator
+
+```python
+from zango.ai.tools.decorator import ToolParam, ToolSafety, tool
+
+
+@tool(
+    name="get_item_details",
+    description="Fetches details of an item by its ID. Returns name, description, and quantity.",
+    section="items",
+    safety=ToolSafety.READ_ONLY,
+    timeout_seconds=10,
+)
+def get_item_details(
+    item_id: int = ToolParam(description="The database ID of the item"),
+) -> dict:
+    from .models import Item
+
+    try:
+        item = Item.objects.get(pk=item_id)
+    except Item.DoesNotExist:
+        return {"error": f"No item found with id {item_id}"}
+
+    return {
+        "id": item.id,
+        "name": item.name,
+        "description": item.description,
+        "quantity": item.quantity,
+    }
+```
+
+## Decorator Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | — | Unique tool name shown to the LLM and in the App Panel. |
+| `description` | `str` | — | Explains to the LLM what this tool does and when to use it. Write this clearly — the LLM decides whether to call the tool based on this description. |
+| `section` | `str` | `"general"` | Groups related tools together in the App Panel. |
+| `safety` | `ToolSafety` | `READ_ONLY` | `READ_ONLY`, `WRITE`, or `EXTERNAL`. See [Safety Levels](#safety-levels). |
+| `timeout_seconds` | `int` | `30` | Maximum time allowed for the tool to execute before it is aborted. |
+| `rate_limit` | `int \| None` | `None` | Max calls per minute. `None` = unlimited. |
+| `memory_policy` | `str` | `"include"` | Controls whether this tool's call/result is replayed in session memory. See [Memory Policy](#memory-policy). |
+
+## Tool Parameters with ToolParam
+
+Each function argument that the LLM can provide must use `ToolParam` as its default value:
+
+```python
+def my_tool(
+    patient_id: str = ToolParam(description="The UUID of the patient record"),
+    include_history: bool = ToolParam(description="Whether to include past visits"),
+) -> dict:
+    ...
+```
+
+The `description` in `ToolParam` is sent to the LLM so it knows how to populate each argument. Always write descriptions from the LLM's perspective — what is this value and where does it come from?
+
+## Safety Levels
+
+```python
+from zango.ai.tools.decorator import ToolSafety
+
+ToolSafety.READ_ONLY   # Tool only reads data — cannot write, update, or delete
+ToolSafety.WRITE       # Tool modifies data in the database
+ToolSafety.EXTERNAL    # Tool calls an external service (email, SMS, third-party API)
+```
+
+| Level | When to use |
+|-------|-------------|
+| `READ_ONLY` | Any tool that only fetches or queries data |
+| `WRITE` | Tools that create, update, or delete records |
+| `EXTERNAL` | Tools that trigger side-effects outside the database (send email, call an API) |
+
+## Memory Policy
+
+When an agent has [short-term memory](./creating-an-agent#memory) enabled, every tool call and its result are saved to the session history and replayed on the next `agent.run()` call. `memory_policy` controls whether a specific tool participates in that replay.
+
+| Value | Behaviour |
+|-------|-----------|
+| `"include"` (default) | The tool call and result are stored in session history and sent to the LLM on subsequent turns. |
+| `"exclude"` | The tool call and result are **dropped** from loaded history. Use this for side-effect tools that should not be replayed (e.g. send email, send SMS). |
+
+```python
+from zango.ai.tools.decorator import ToolParam, ToolSafety, tool
+
+# This tool's execution will NOT appear in session history on the next turn
+@tool(
+    name="send_notification",
+    description="Sends a push notification to the user. Call this once the response is ready.",
+    safety=ToolSafety.EXTERNAL,
+    memory_policy="exclude",   # don't replay — the notification was already sent
+)
+def send_notification(
+    user_id: int = ToolParam(description="The user to notify"),
+    message: str = ToolParam(description="The notification message body"),
+) -> dict:
+    ...
+    return {"sent": True}
+```
+
+:::tip When to use `memory_policy="exclude"`
+Use `"exclude"` for any tool that triggers an irreversible real-world action: sending an email, posting an SMS, calling a payment API. Replaying those actions in the next session turn would cause double-sends or duplicate charges.
+:::
+
+## Returning Data from Tools
+
+Tools must return a `dict`. The LLM receives this dictionary as the tool result and uses it to formulate its response.
+
+```python
+# Good — structured, descriptive keys
+return {
+    "patient_name": "John Doe",
+    "screening_date": "2024-03-15",
+    "outcome": "Eligible",
+}
+
+# Good — error case
+return {"error": "Patient not found with ID 123"}
+```
+
+## Tenant Context in Tools
+
+Tools run in the same tenant schema as the request or task that triggered the agent. You do not need to manually set `connection.set_tenant()` — Zango handles this automatically.
+
+```python
+# This ORM query automatically uses the correct tenant schema
+item = Item.objects.get(pk=item_id)
+```
+
+## Multiple Tools in One File
+
+A single `tools.py` can define as many tools as needed:
+
+```python
+@tool(name="get_item_details", ...)
+def get_item_details(item_id: int = ToolParam(...)) -> dict:
+    ...
+
+@tool(name="get_item_count", ...)
+def get_item_count() -> dict:
+    from .models import Item
+    return {"total_items": Item.objects.count()}
+
+@tool(name="update_item_quantity", safety=ToolSafety.WRITE, ...)
+def update_item_quantity(
+    item_id: int = ToolParam(description="The item ID"),
+    quantity: int = ToolParam(description="The new quantity"),
+) -> dict:
+    from .models import Item
+    Item.objects.filter(pk=item_id).update(quantity=quantity)
+    return {"success": True, "new_quantity": quantity}
+```
+
+## Next Steps
+
+After defining your tools, [sync them](./syncing-tools) from the App Panel so they become available to agents.

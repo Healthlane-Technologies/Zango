@@ -1,0 +1,367 @@
+# Running Agents
+
+Once an agent is configured in the App Panel, you run it by calling `get_agent()` to look it up and `agent.run()` to execute it. This page covers every way to call an agent — from the simplest one-liner to files, memory sessions, JSON output, and background tasks.
+
+## The Basics
+
+```python
+from zango.ai import get_agent
+
+agent = get_agent("your-agent-name")
+response = agent.run(input="Summarise the latest orders.")
+
+print(response.content)           # str — the LLM's text response
+print(response.cost_usd)          # float — cost of this invocation in USD
+print(response.usage.input_tokens)
+print(response.usage.output_tokens)
+```
+
+`get_agent()` looks up the agent by name in the current tenant's schema. It raises `AgentNotFound` if the name doesn't match or the agent is disabled.
+
+`agent.run()` always returns an `LLMResponse`. Every invocation is automatically logged — see [Invocation History](./invocation-history).
+
+---
+
+## Input Modes
+
+There are three ways to provide input to `agent.run()`. The first non-`None` value wins.
+
+### 1. Plain string (`input=`)
+
+The simplest call. Pass a string directly as the user message.
+
+```python
+agent = get_agent("support-agent")
+response = agent.run(input="What are the refund policies?")
+print(response.content)
+```
+
+Use this when the agent has a system prompt defined but no user prompt template — the system prompt provides the agent's instructions, and `input=` supplies the per-call user message directly.
+
+### 2. Prompt variables (`variables=` and `system_variables=`)
+
+When the agent has a **User Prompt** template configured with `{{placeholders}}`, pass a dict of values to render it via `variables=`.
+
+```python
+agent = get_agent("patient-summary-agent")
+response = agent.run(
+    variables={"patient_id": 42, "question": "Summarise this patient's recent visits."},
+    triggered_by="user",
+)
+print(response.content)
+```
+
+If the **System Prompt** also has `{{placeholders}}`, pass those separately via `system_variables=`. The two dicts are independent — `variables` renders the user prompt, `system_variables` renders the system prompt.
+
+```python
+response = agent.run(
+    variables={"patient_id": 42, "question": "What medications is this patient on?"},
+    system_variables={"department": "cardiology", "protocol_version": "2026-Q1"},
+    triggered_by="user",
+)
+```
+
+If `system_variables` is omitted, the system prompt is used as-is (no substitution).
+
+### 3. Full message list (`messages=`)
+
+For multi-turn conversations or when you need to inject history manually, pass a list of `LLMMessage` objects directly. This bypasses the agent's prompt template.
+
+```python
+from zango.ai import get_agent, LLMMessage
+
+agent = get_agent("chat-agent")
+response = agent.run(
+    messages=[
+        LLMMessage(role="user", content="What's the capital of France?"),
+        LLMMessage(role="assistant", content="Paris."),
+        LLMMessage(role="user", content="And what's its population?"),
+    ],
+    triggered_by="user",
+)
+print(response.content)
+```
+
+---
+
+## Running with File Attachments
+
+Pass one or more `LLMFile` objects via `files=` to send documents or images alongside the prompt. Files work with all three input modes above.
+
+```python
+from zango.ai import get_agent, LLMFile
+```
+
+### From a model file field
+
+The most common case in app code — pass a Django file field directly.
+
+```python
+agent = get_agent("report-analyser")
+response = agent.run(
+    input="Summarise the key findings from this report.",
+    files=[LLMFile.from_django_file(report.report_file)],
+    triggered_by="user",
+)
+```
+
+### From a request upload
+
+For files submitted directly in the HTTP request.
+
+```python
+agent = get_agent("prescription-processor")
+response = agent.run(
+    input="Extract the medication names and dosages from this prescription.",
+    files=[LLMFile.from_django_file(request.FILES["prescription"])],
+    triggered_by="user",
+)
+```
+
+### From raw bytes
+
+When you have the file content in memory (e.g., generated programmatically or fetched from an API).
+
+```python
+agent = get_agent("invoice-agent")
+response = agent.run(
+    input="Extract the total amount and line items from this invoice.",
+    files=[LLMFile.from_bytes(pdf_bytes, media_type="application/pdf")],
+    triggered_by="system",
+)
+```
+
+### From a public URL
+
+When the file is publicly accessible — no download needed, the provider fetches it directly.
+
+```python
+agent = get_agent("image-tagger")
+response = agent.run(
+    input="Describe what's in this image and suggest tags.",
+    files=[LLMFile.from_url("https://cdn.example.com/product-photo.jpg")],
+    triggered_by="user",
+)
+```
+
+### Multiple files
+
+Pass a list to send multiple attachments in one call.
+
+```python
+agent = get_agent("lab-results-agent")
+response = agent.run(
+    input="Compare these two lab reports and highlight changes.",
+    files=[
+        LLMFile.from_django_file(case.lab_report_jan),
+        LLMFile.from_django_file(case.lab_report_feb),
+    ],
+    triggered_by="user",
+)
+```
+
+---
+
+## Running with Memory
+
+When an agent has **Short-term memory** enabled in the App Panel, it retains conversation history across multiple `agent.run()` calls within the same session.
+
+### Starting a session
+
+On the first call, omit `session_id` — the agent auto-generates one and returns it on the response.
+
+```python
+agent = get_agent("support-agent")
+
+# First turn — no session_id yet
+response = agent.run(
+    input="I need help resetting my password.",
+    triggered_by="user",
+)
+
+session_id = response.session_id  # save this for subsequent turns
+print(response.content)
+```
+
+### Continuing a session
+
+Pass the same `session_id` on every subsequent call to load prior conversation history.
+
+```python
+# Second turn — agent remembers the first message
+response = agent.run(
+    input="I tried the reset link but it says it's expired.",
+    session_id=session_id,
+    triggered_by="user",
+)
+print(response.content)
+
+# Third turn
+response = agent.run(
+    input="OK I got a new link, it worked. Thanks!",
+    session_id=session_id,
+    triggered_by="user",
+)
+print(response.content)
+```
+
+### Persisting session_id
+
+Store `response.session_id` and pass it back on subsequent calls — for example in the browser session, a database record, or returned in an API response so the client can echo it on the next request.
+
+```python
+agent = get_agent("chat-agent")
+response = agent.run(
+    input=user_message,
+    session_id=session_id,   # None on first turn, session_id on subsequent turns
+    user_ref=str(request.user.pk),
+    triggered_by="user",
+)
+# Pass response.session_id back to the caller so the next request can continue the session
+```
+
+### Clearing a session
+
+Call `agent.clear_session()` to deactivate a session and delete its stored messages. Useful when a conversation is complete or a user explicitly starts fresh.
+
+```python
+agent = get_agent("chat-agent")
+cleared = agent.clear_session(session_id)
+# Returns True if found and cleared, False if not found
+```
+
+:::note
+Memory stores text content only. File attachments are replaced with `[file: attachment]` placeholders in the session history to avoid storing large base64 blobs.
+:::
+
+---
+
+## Running with JSON Output
+
+When an agent's **Output Schema** is set to `JSON` in the App Panel, the response includes a `parsed_content` attribute with the already-parsed dict.
+
+```python
+agent = get_agent("structured-extractor")
+response = agent.run(
+    variables={"document_id": 7},
+    triggered_by="user",
+)
+
+# response.content is the raw JSON string
+# response.parsed_content is the parsed dict (validated against schema if configured)
+data = response.parsed_content
+print(data["total_amount"])
+print(data["line_items"])
+```
+
+If the response cannot be parsed as JSON, `OutputParseError` is raised. If a JSON Schema is configured on the agent and the response doesn't match, `OutputValidationError` is raised.
+
+```python
+from zango.ai.exceptions import OutputParseError, OutputValidationError
+
+try:
+    response = agent.run(variables={"document_id": 7}, triggered_by="user")
+    data = response.parsed_content
+except OutputParseError:
+    # LLM returned invalid JSON
+    ...
+except OutputValidationError as e:
+    # JSON didn't match the configured schema
+    print(e.errors)
+```
+
+---
+
+## Running from an Async Task
+
+Use `triggered_by="task"` when running an agent from a background job. Zango's tenant context is set automatically inside task execution.
+
+```python
+from zango.apps.tasks.base import BaseTask
+
+
+class NightlyPatientSummaryTask(BaseTask):
+    name = "nightly_patient_summary"
+
+    def run(self):
+        from zango.ai import get_agent
+        from .models import Patient
+
+        agent = get_agent("patient-summary-agent")
+        patients = Patient.objects.filter(flagged_for_review=True)
+
+        for patient in patients:
+            response = agent.run(
+                variables={
+                    "patient_id": patient.id,
+                    "question": "Summarise this patient's recent activity and flag any concerns.",
+                },
+                triggered_by="task",
+            )
+            patient.ai_summary = response.content
+            patient.save(update_fields=["ai_summary"])
+```
+
+---
+
+## The `triggered_by` Parameter
+
+Every `agent.run()` call requires a `triggered_by` value. It is stored in invocation history for auditing.
+
+| Value | When to use |
+|-------|-------------|
+| `"user"` | HTTP request triggered by a logged-in user |
+| `"task"` | Background job or scheduled task |
+| `"system"` | Programmatic call with no direct user action |
+
+---
+
+## The Response Object
+
+```python
+response.content              # str — final text response from the LLM
+response.parsed_content       # dict | None — parsed JSON (when output_schema=JSON)
+response.session_id           # str | None — memory session ID (when short_term_memory is enabled)
+response.cost_usd             # float — total cost of this invocation
+response.usage.input_tokens   # int
+response.usage.output_tokens  # int
+response.model                # str — actual model used
+response.latency_ms           # int — total request time in milliseconds
+```
+
+---
+
+## Error Handling
+
+All exceptions inherit from `ZangoAIError` and are importable from `zango.ai.exceptions`.
+
+| Exception | Raised by | When | Useful attributes |
+|-----------|-----------|------|-------------------|
+| `AgentNotFound` | `get_agent()` | No agent with that name exists, or it is inactive | `e.name` |
+| `AgentDisabled` | `agent.run()` | Agent exists but is toggled off in the App Panel | `e.name` |
+| `PromptRenderError` | `agent.run()` | A `{{variable}}` placeholder in the prompt was not supplied in `variables=` | `e.missing_vars` (list) |
+| `BudgetExceeded` | `agent.run()` | The provider's monthly spend limit has been reached | `e.provider_name`, `e.budget_limit` |
+| `RateLimitExceeded` | `agent.run()` | The provider's rate limit was hit | `e.retry_after_seconds` |
+| `LLMTimeoutError` | `agent.run()` | The LLM request timed out | — |
+| `LLMAPIError` | `agent.run()` | The provider returned an API-level error | `e.status_code`, `e.original_error` |
+| `OutputParseError` | `agent.run()` | Output Schema is JSON but the response couldn't be parsed | — |
+| `OutputValidationError` | `agent.run()` | Parsed JSON doesn't match the configured JSON Schema | `e.field`, `e.errors` (list) |
+
+```python
+from zango.ai import get_agent
+from zango.ai.exceptions import AgentNotFound, ZangoAIError
+
+try:
+    agent = get_agent("my-agent")
+    response = agent.run(variables={"patient_id": 42}, triggered_by="user")
+except AgentNotFound:
+    ...  # name doesn't exist or agent is inactive
+except ZangoAIError:
+    ...  # catch any other AI framework error (see table above)
+```
+
+---
+
+## Next Steps
+
+Every `agent.run()` call is recorded automatically. Use [Invocation History](./invocation-history) to inspect prompts, tool calls, costs, and debug failures.
