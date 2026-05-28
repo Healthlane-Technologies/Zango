@@ -1102,12 +1102,14 @@ function AgentBuilder({ show, onClose, onSave, initialValues, providers, appId, 
 agent = get_agent("${formik.values.name}")
 
 # First turn — session auto-created
-r = agent.run(input="Hello!")
+r = agent.run(
+    variables={"message": "Hello!"},${formik.values.system_prompt_name ? '\n    system_variables={...},  # optional' : ''}
+)
 session_id = r.session_id
 
 # Continue the conversation
 r = agent.run(
-    input="...",
+    variables={"message": "..."},${formik.values.system_prompt_name ? '\n    system_variables={...},  # optional' : ''}
     session_id=session_id,
 )`
 : formik.values.user_prompt_name
@@ -1115,13 +1117,13 @@ r = agent.run(
 
 agent = get_agent("${formik.values.name}")
 response = agent.run(
-    variables={"{...}"}
+    variables={"{...}"},${formik.values.system_prompt_name ? '\n    system_variables={...},  # optional' : ''}
 )`
 : `from zango.ai import get_agent
 
 agent = get_agent("${formik.values.name}")
 response = agent.run(
-    input="Your message here"
+    input="Your message here",${formik.values.system_prompt_name ? '\n    system_variables={...},  # optional' : ''}
 )`}
 											</pre>
 										</div>
@@ -1324,11 +1326,12 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 									<span className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#9CA3AF]">Use in Code</span>
 									<button
 										onClick={() => {
+											const sysVarLine = agent.system_prompt_name ? '\n    system_variables={...},  # optional' : '';
 											const snippet = agent.short_term_memory
-												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\n\n# First turn — session auto-created\nr = agent.run(input="Hello!")\nsession_id = r.session_id\n\n# Continue the conversation\nr = agent.run(\n    input="...",\n    session_id=session_id,\n)`
+												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\n\n# First turn — session auto-created\nr = agent.run(\n    variables={"message": "Hello!"},${sysVarLine}\n)\nsession_id = r.session_id\n\n# Continue the conversation\nr = agent.run(\n    variables={"message": "..."},${sysVarLine}\n    session_id=session_id,\n)`
 												: agent.user_prompt_name
-												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    variables={...}\n)`
-												: `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    input="Your message here"\n)`;
+												? `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    variables={...},${sysVarLine}\n)`
+												: `from zango.ai import get_agent\n\nagent = get_agent("${agent.name}")\nresponse = agent.run(\n    input="Your message here",${sysVarLine}\n)`;
 											navigator.clipboard.writeText(snippet);
 											setCopied(true);
 											setTimeout(() => setCopied(false), 2000);
@@ -1349,33 +1352,36 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 									</button>
 								</div>
 								<pre className="font-mono text-[11px] leading-[19px] text-[#D1D5DB] whitespace-pre-wrap">
-{agent.short_term_memory
-? `from zango.ai import get_agent
+{(() => {
+	const sv = agent.system_prompt_name ? '\n    system_variables={...},  # optional' : '';
+	if (agent.short_term_memory) return `from zango.ai import get_agent
 
 agent = get_agent("${agent.name}")
 
 # First turn — session auto-created
-r = agent.run(input="Hello!")
+r = agent.run(
+    variables={"message": "Hello!"},${sv}
+)
 session_id = r.session_id
 
 # Continue the conversation
 r = agent.run(
-    input="...",
+    variables={"message": "..."},${sv}
     session_id=session_id,
-)`
-: agent.user_prompt_name
-? `from zango.ai import get_agent
+)`;
+	if (agent.user_prompt_name) return `from zango.ai import get_agent
 
 agent = get_agent("${agent.name}")
 response = agent.run(
-    variables={...}
-)`
-: `from zango.ai import get_agent
+    variables={...},${sv}
+)`;
+	return `from zango.ai import get_agent
 
 agent = get_agent("${agent.name}")
 response = agent.run(
-    input="Your message here"
-)`}
+    input="Your message here",${sv}
+)`;
+})()}
 								</pre>
 							</div>
 						</div>
