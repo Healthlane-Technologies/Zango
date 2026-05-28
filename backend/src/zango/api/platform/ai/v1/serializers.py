@@ -561,7 +561,9 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
     provider_name = serializers.SerializerMethodField()
     provider_slug = serializers.SerializerMethodField()
     system_prompt_name = serializers.SerializerMethodField()
+    system_prompt_variables = serializers.SerializerMethodField()
     user_prompt_name = serializers.SerializerMethodField()
+    user_prompt_variables = serializers.SerializerMethodField()
     metrics = serializers.SerializerMethodField()
     session_count = serializers.SerializerMethodField()
     created_at = serializers.SerializerMethodField()
@@ -579,8 +581,10 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
             "model",
             "system_prompt",
             "system_prompt_name",
+            "system_prompt_variables",
             "user_prompt",
             "user_prompt_name",
+            "user_prompt_variables",
             "temperature",
             "max_tokens",
             "timeout_seconds",
@@ -611,8 +615,18 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
     def get_system_prompt_name(self, obj):
         return obj.system_prompt.name if obj.system_prompt else None
 
+    def get_system_prompt_variables(self, obj):
+        if obj.system_prompt and obj.system_prompt.active_version_id:
+            return obj.system_prompt.active_version.variables
+        return []
+
     def get_user_prompt_name(self, obj):
         return obj.user_prompt.name if obj.user_prompt else None
+
+    def get_user_prompt_variables(self, obj):
+        if obj.user_prompt and obj.user_prompt.active_version_id:
+            return obj.user_prompt.active_version.variables
+        return []
 
     def get_session_count(self, obj):
         if not obj.short_term_memory:

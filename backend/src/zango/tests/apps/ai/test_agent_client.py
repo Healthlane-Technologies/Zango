@@ -230,6 +230,62 @@ class SystemPromptTest(SimpleTestCase):
         system = self._run_and_capture_system(agent, input="hi")
         self.assertEqual(system, "You are helpful")
 
+    def test_system_variables_passed_to_get_system_prompt_content(self):
+        agent = _make_agent()
+        agent.system_prompt = MagicMock()
+        agent.get_system_prompt_content.return_value = "Format: md"
+        self._run_and_capture_system(
+            agent, input="hi", system_variables={"format_type": "md"}
+        )
+        agent.get_system_prompt_content.assert_called_once_with(format_type="md")
+
+    def test_system_variables_not_passed_to_user_prompt(self):
+        agent = _make_agent()
+        agent.system_prompt = MagicMock()
+        agent.get_system_prompt_content.return_value = "System"
+        agent.get_user_prompt_content.return_value = "User"
+        with patch(_PC) as mock_pc_cls:
+            mock_pc = MagicMock()
+            mock_pc.complete.return_value = _make_response()
+            mock_pc._get_client.return_value = MagicMock()
+            mock_pc_cls.return_value = mock_pc
+            AgentClient(agent).run(
+                variables={"role": "nurse"},
+                system_variables={"format_type": "md"},
+            )
+        agent.get_system_prompt_content.assert_called_once_with(format_type="md")
+        agent.get_user_prompt_content.assert_called_once_with(role="nurse")
+
+    def test_system_variables_independent_of_variables(self):
+        # variables should not bleed into system prompt rendering
+        agent = _make_agent()
+        agent.system_prompt = MagicMock()
+        agent.get_system_prompt_content.return_value = "System"
+        agent.get_user_prompt_content.return_value = "User content"
+        self._run_and_capture_system(
+            agent, variables={"user_var": "x"}
+        )
+        # Called with empty kwargs — system_variables not provided
+        agent.get_system_prompt_content.assert_called_once_with()
+
+    def test_context_snapshot_contains_both_variable_dicts(self):
+        agent = _make_agent()
+        agent.system_prompt = MagicMock()
+        agent.get_system_prompt_content.return_value = "System"
+        with patch(_PC) as mock_pc_cls:
+            mock_pc = MagicMock()
+            mock_pc.complete.return_value = _make_response()
+            mock_pc._get_client.return_value = MagicMock()
+            mock_pc_cls.return_value = mock_pc
+            AgentClient(agent).run(
+                input="hi",
+                variables={"role": "nurse"},
+                system_variables={"format_type": "md"},
+            )
+        snapshot = mock_pc.complete.call_args.kwargs.get("context_snapshot")
+        self.assertEqual(snapshot["variables"], {"role": "nurse"})
+        self.assertEqual(snapshot["system_variables"], {"format_type": "md"})
+
 
 # ─── 6d. Output format ────────────────────────────────────────────────────────
 

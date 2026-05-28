@@ -6,6 +6,8 @@ Authentication: Session auth (platform admin user).
 
 import json
 
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+
 from django.db import connection, models, transaction
 from django.db.models import Max, Q, Sum
 from django.utils import timezone
@@ -1164,7 +1166,9 @@ class AgentsListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def get(self, request, app_uuid, *args, **kwargs):
         try:
             agents = AppLLMAgent.objects.select_related(
-                "provider", "system_prompt", "user_prompt"
+                "provider",
+                "system_prompt__active_version",
+                "user_prompt__active_version",
             ).all()
 
             search = request.GET.get("search", "")
@@ -1381,6 +1385,8 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
     Runs a minimal test invocation.
     """
 
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
     def post(self, request, app_uuid, agent_id, *args, **kwargs):
         try:
             agent = AppLLMAgent.objects.select_related(
@@ -1396,12 +1402,25 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
                 )
 
             # Use AgentClient so agent metadata is captured in invocation logs
+            import json as _json
+
             from zango.ai.agent_client import AgentClient
-            from zango.ai.providers.base import LLMMessage
+            from zango.ai.providers.base import LLMFile, LLMMessage
             from zango.apps.dynamic_models.workspace.base import Workspace
             from zango.apps.shared.tenancy.models import TenantModel
 
-            variables = request.data.get("variables", {})
+            _vars_raw = request.data.get("variables", {})
+            variables = (
+                _json.loads(_vars_raw)
+                if isinstance(_vars_raw, str)
+                else (_vars_raw or {})
+            )
+            _svars_raw = request.data.get("system_variables", {})
+            system_variables = (
+                _json.loads(_svars_raw)
+                if isinstance(_svars_raw, str)
+                else (_svars_raw or {})
+            )
             tenant = TenantModel.objects.get(uuid=app_uuid)
             connection.set_tenant(tenant)
             with connection.cursor() as c:
@@ -1410,14 +1429,21 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
 
                 agent_client = AgentClient(agent)
 
+                uploaded_files = request.FILES.getlist("files")
+                files = (
+                    [LLMFile.from_django_file(f) for f in uploaded_files]
+                    if uploaded_files
+                    else None
+                )
+
                 messages = None
                 if not agent.user_prompt:
                     user_message = request.data.get("user_message", "").strip()
-                    if not user_message:
+                    if not user_message and not uploaded_files:
                         return get_api_response(
                             False,
                             {
-                                "message": "This agent has no user prompt configured. Provide a 'user_message' to run a test."
+                                "message": "This agent has no user prompt configured. Provide a 'user_message' or attach files to run a test."
                             },
                             400,
                         )
@@ -1425,7 +1451,9 @@ class AgentTestViewAPIV1(ZangoGenericPlatformAPIView):
 
                 response = agent_client.run(
                     variables=variables or None,
+                    system_variables=system_variables or None,
                     messages=messages,
+                    files=files,
                     triggered_by="system",
                 )
 

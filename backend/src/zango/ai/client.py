@@ -143,6 +143,7 @@ class ProviderClient:
         run_id=None,
         round_number=None,
         session_id=None,
+        request_files_meta=None,
     ):
         """Create an AppLLMInvocation log entry."""
         from zango.apps.ai.models import AppLLMInvocation
@@ -156,7 +157,9 @@ class ProviderClient:
             "request_system": system,
             "request_tools": self._serialize_tools(tools),
             "request_params": params,
-            "request_files": self._extract_file_metadata(messages),
+            "request_files": request_files_meta
+            if request_files_meta is not None
+            else self._extract_file_metadata(messages),
             "status": status,
             "latency_ms": latency_ms,
             "cost_usd": cost_usd,
@@ -215,6 +218,7 @@ class ProviderClient:
             "run_id",
             "round_number",
             "session_id",
+            "request_files_meta",
         ]
         agent_kwargs = {k: kwargs.pop(k) for k in agent_fields if k in kwargs}
         return agent_kwargs
