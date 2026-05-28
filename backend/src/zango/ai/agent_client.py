@@ -196,6 +196,7 @@ class AgentClient:
         self,
         input: Optional[str] = None,
         variables: Optional[dict] = None,
+        system_variables: Optional[dict] = None,
         messages: Optional[list[LLMMessage]] = None,
         files: Optional[list] = None,
         triggered_by: str = "user",
@@ -216,6 +217,9 @@ class AgentClient:
             input: Plain string user message. Simplest way to call the agent.
             variables: Dict of template variables rendered into the agent's
                 user_prompt. Used when the agent has a prompt template configured.
+            system_variables: Dict of template variables rendered into the agent's
+                system_prompt. Separate from variables (user prompt). If omitted,
+                the system prompt is used as-is (no variable substitution).
             messages: Full list of LLMMessage objects. Low-level escape hatch
                 for multi-turn history or tool-result injection.
             files: File/image attachments (LLMFile instances).
@@ -236,7 +240,7 @@ class AgentClient:
         # Render system prompt
         system = None
         if self._agent.system_prompt:
-            system = self._agent.get_system_prompt_content(**(variables or {}))
+            system = self._agent.get_system_prompt_content(**(system_variables or {}))
 
         # Build messages — priority: explicit messages > input string > user_prompt template
         if messages is None:
@@ -288,7 +292,10 @@ class AgentClient:
             "agent": self._agent,
             "agent_name": self._agent.name,
             "rendered_system_prompt": system,
-            "context_snapshot": variables,
+            "context_snapshot": {
+                "variables": variables,
+                "system_variables": system_variables,
+            },
             "session_id": session_id,
         }
         if self._agent.system_prompt and self._agent.system_prompt.active_version:
