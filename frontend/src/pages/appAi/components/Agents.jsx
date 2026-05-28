@@ -1543,6 +1543,9 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 	const [testingId, setTestingId] = useState(null);
 	const [testModalAgent, setTestModalAgent] = useState(null);
 	const [testUserMessage, setTestUserMessage] = useState('');
+	const [testFiles, setTestFiles] = useState([]);
+	const [testVariables, setTestVariables] = useState({});
+	const [testSystemVariables, setTestSystemVariables] = useState({});
 	const [testResult, setTestResult] = useState(null);
 	const [disableConfirmAgent, setDisableConfirmAgent] = useState(null);
 	const readyCalledRef = useRef(false);
@@ -1680,10 +1683,22 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 		if (success) { notify('success', 'Agent Duplicated', `"${agent.name}" duplicated.`); fetchAgents(); }
 	};
 
-	const runTestAgent = async (agent, userMessage) => {
+	const runTestAgent = async (agent, userMessage, files = [], variables = {}, systemVariables = {}) => {
 		setTestingId(agent.id);
-		const body = userMessage ? { user_message: userMessage } : {};
-		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/test/`, type: 'POST', loader: false, showErrorModal: false, payload: body });
+		let payload;
+		if (files.length > 0) {
+			payload = new FormData();
+			if (userMessage) payload.append('user_message', userMessage);
+			files.forEach((f) => payload.append('files', f));
+			if (Object.keys(variables).length) payload.append('variables', JSON.stringify(variables));
+			if (Object.keys(systemVariables).length) payload.append('system_variables', JSON.stringify(systemVariables));
+		} else {
+			payload = {};
+			if (userMessage) payload.user_message = userMessage;
+			if (Object.keys(variables).length) payload.variables = variables;
+			if (Object.keys(systemVariables).length) payload.system_variables = systemVariables;
+		}
+		const { response, success } = await triggerApi({ url: `/api/v1/apps/${appId}/ai/agents/${agent.id}/test/`, type: 'POST', loader: false, showErrorModal: false, payload });
 		setTestingId(null);
 		if (success) {
 			setTestResult({ agent, ...response.result });
@@ -1692,20 +1707,22 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 		}
 	};
 
-	const handleTestAgent = async (agent) => {
+	const handleTestAgent = (agent) => {
 		if (testingId) return;
-		if (!agent.user_prompt_name) {
-			setTestUserMessage('');
-			setTestModalAgent(agent);
-			return;
-		}
-		runTestAgent(agent, null);
+		setTestUserMessage('');
+		setTestFiles([]);
+		setTestVariables({});
+		setTestSystemVariables({});
+		setTestModalAgent(agent);
 	};
 
 	const handleTestModalSubmit = async () => {
 		const agent = testModalAgent;
-		await runTestAgent(agent, testUserMessage);
+		await runTestAgent(agent, testUserMessage, testFiles, testVariables, testSystemVariables);
 		setTestModalAgent(null);
+		setTestFiles([]);
+		setTestVariables({});
+		setTestSystemVariables({});
 	};
 
 	const activeCount = stats.active_agents ?? agents.filter((a) => a.status === 'active').length;
@@ -1901,22 +1918,104 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 
 			{testModalAgent && (() => {
 				const isRunning = testingId === testModalAgent.id;
+				const hasUserPrompt = !!testModalAgent.user_prompt_name;
+				const userVars = testModalAgent.user_prompt_variables || [];
+				const sysVars = testModalAgent.system_prompt_variables || [];
+				const hasAnyVars = userVars.length > 0 || sysVars.length > 0;
+				const canSubmit = hasUserPrompt
+					? true
+					: (testUserMessage.trim() || testFiles.length > 0);
+				const closeModal = () => {
+					setTestModalAgent(null);
+					setTestFiles([]);
+					setTestVariables({});
+					setTestSystemVariables({});
+				};
 				return (
 					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-						<div className="w-full max-w-[480px] rounded-[16px] bg-white p-[28px] shadow-xl">
+						<div className="w-full max-w-[500px] rounded-[16px] bg-white p-[28px] shadow-xl max-h-[90vh] overflow-y-auto">
 							<h3 className="font-source-sans-pro text-[16px] font-semibold text-[#111827] mb-[6px]">Test Agent</h3>
-							<p className="font-lato text-[13px] text-[#6B7280] mb-[16px]">
-								<span className="font-semibold text-[#346BD4]">{testModalAgent.name}</span> has no user prompt configured. Enter a message to send as the user turn.
+							<p className="font-lato text-[13px] text-[#6B7280] mb-[20px]">
+								Running <span className="font-semibold text-[#346BD4]">{testModalAgent.name}</span>
+								{!hasUserPrompt && ' — no user prompt configured, enter a message or attach files.'}
 							</p>
-							<textarea
-								autoFocus
-								rows={5}
-								value={testUserMessage}
-								onChange={(e) => setTestUserMessage(e.target.value)}
-								placeholder="Type your test message here…"
-								disabled={isRunning}
-								className="w-full rounded-[8px] border border-[#D1D5DB] p-[12px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#346BD4] resize-none disabled:bg-[#F9FAFB] disabled:text-[#9CA3AF]"
-							/>
+
+							{/* System prompt variables */}
+							{sysVars.length > 0 && (
+								<div className="mb-[16px]">
+									<p className="font-lato text-[12px] font-semibold text-[#374151] mb-[8px] uppercase tracking-wide">System Prompt Variables</p>
+									<div className="flex flex-col gap-[8px]">
+										{sysVars.map((v) => (
+											<div key={v}>
+												<label className="block font-lato text-[12px] text-[#6B7280] mb-[3px]">{v}</label>
+												<input
+													type="text"
+													value={testSystemVariables[v] || ''}
+													onChange={(e) => setTestSystemVariables((prev) => ({ ...prev, [v]: e.target.value }))}
+													placeholder={`Value for {{${v}}}`}
+													disabled={isRunning}
+													className="w-full rounded-[6px] border border-[#D1D5DB] px-[10px] py-[6px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#346BD4] disabled:bg-[#F9FAFB] disabled:text-[#9CA3AF]"
+												/>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+
+							{/* User prompt variables */}
+							{userVars.length > 0 && (
+								<div className={sysVars.length > 0 ? 'mb-[16px] pt-[16px] border-t border-[#F3F4F6]' : 'mb-[16px]'}>
+									<p className="font-lato text-[12px] font-semibold text-[#374151] mb-[8px] uppercase tracking-wide">User Prompt Variables</p>
+									<div className="flex flex-col gap-[8px]">
+										{userVars.map((v) => (
+											<div key={v}>
+												<label className="block font-lato text-[12px] text-[#6B7280] mb-[3px]">{v}</label>
+												<input
+													type="text"
+													value={testVariables[v] || ''}
+													onChange={(e) => setTestVariables((prev) => ({ ...prev, [v]: e.target.value }))}
+													placeholder={`Value for {{${v}}}`}
+													disabled={isRunning}
+													className="w-full rounded-[6px] border border-[#D1D5DB] px-[10px] py-[6px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#346BD4] disabled:bg-[#F9FAFB] disabled:text-[#9CA3AF]"
+												/>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
+
+							{/* Free-text — only when no user prompt */}
+							{!hasUserPrompt && (
+								<div className={hasAnyVars ? 'pt-[16px] border-t border-[#F3F4F6]' : ''}>
+									<textarea
+										autoFocus
+										rows={4}
+										value={testUserMessage}
+										onChange={(e) => setTestUserMessage(e.target.value)}
+										placeholder="Type your test message here…"
+										disabled={isRunning}
+										className="w-full rounded-[8px] border border-[#D1D5DB] p-[12px] font-lato text-[13px] text-[#374151] outline-none focus:border-[#346BD4] resize-none disabled:bg-[#F9FAFB] disabled:text-[#9CA3AF]"
+									/>
+								</div>
+							)}
+
+							{/* File upload — always available */}
+							<div className={hasAnyVars || !hasUserPrompt ? 'mt-[12px]' : ''}>
+								<label className="block font-lato text-[12px] font-medium text-[#6B7280] mb-[5px]">Attach files (optional)</label>
+								<input
+									type="file"
+									multiple
+									disabled={isRunning}
+									onChange={(e) => setTestFiles(Array.from(e.target.files))}
+									className="block w-full font-lato text-[12px] text-[#374151] file:mr-[8px] file:rounded-[6px] file:border-0 file:bg-[#EEF2FF] file:px-[10px] file:py-[5px] file:font-lato file:text-[12px] file:font-medium file:text-[#5048ED] hover:file:bg-[#E0E7FF] disabled:opacity-50 disabled:cursor-not-allowed"
+								/>
+								{testFiles.length > 0 && (
+									<p className="mt-[4px] font-lato text-[11px] text-[#6B7280]">
+										{testFiles.length} file{testFiles.length > 1 ? 's' : ''} selected
+									</p>
+								)}
+							</div>
+
 							{isRunning && (
 								<div className="mt-[12px] flex items-center gap-[8px] text-[#5048ED]">
 									<svg className="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -1926,9 +2025,9 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 									<span className="font-lato text-[13px]">Running agent, please wait…</span>
 								</div>
 							)}
-							<div className="mt-[16px] flex justify-end gap-[10px]">
+							<div className="mt-[20px] flex justify-end gap-[10px]">
 								<button
-									onClick={() => setTestModalAgent(null)}
+									onClick={closeModal}
 									disabled={isRunning}
 									className="rounded-[8px] border border-[#D1D5DB] px-[16px] py-[8px] font-lato text-[13px] text-[#374151] hover:bg-[#F9FAFB] disabled:opacity-50 disabled:cursor-not-allowed"
 								>
@@ -1936,7 +2035,7 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 								</button>
 								<button
 									onClick={handleTestModalSubmit}
-									disabled={!testUserMessage.trim() || isRunning}
+									disabled={!canSubmit || isRunning}
 									className="rounded-[8px] bg-[#5048ED] px-[16px] py-[8px] font-lato text-[13px] font-medium text-white hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{isRunning ? 'Running…' : 'Run Test'}

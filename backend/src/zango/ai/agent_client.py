@@ -341,6 +341,21 @@ class AgentClient:
         #
         # Either way, after this step `msg.files` is cleared and the file
         # representation lives in `msg.content` as a permanent content block.
+        # Capture file metadata directly from the LLMFile list before prepare_files()
+        # mutates them, so the invocation log on round 1 records what was attached.
+        files_meta = None
+        if files:
+            files_meta = [
+                {
+                    "filename": f.filename or None,
+                    "media_type": f.media_type or None,
+                    "size_bytes": len(f.data) if f.data else None,
+                    "source": "url" if f.url else "upload",
+                    **({"url": f.url} if f.url else {}),
+                }
+                for f in files
+            ] or None
+
         if files:
             files = raw_provider.prepare_files(files)
             is_openai_style = self._is_openai_style_provider()
@@ -374,6 +389,7 @@ class AgentClient:
                 triggered_by=triggered_by,
                 run_id=run_id,
                 round_number=round_number,
+                request_files_meta=files_meta if round_number == 1 else None,
                 **{**agent_tracking},
                 **response_format_kwarg,
                 **kwargs,
