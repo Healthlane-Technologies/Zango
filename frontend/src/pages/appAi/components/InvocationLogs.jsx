@@ -296,28 +296,79 @@ function InvocationDetail({ invocation }) {
 							</div>
 						)}
 
-						{/* Files attached */}
-						{invocation.request_files && invocation.request_files.length > 0 && (
-							<div className="flex items-center gap-[8px] rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-[12px] py-[10px]">
-								<span className="text-[14px]">📎</span>
-								{invocation.request_files.map((f, i) => (
-									<span key={i} className="flex items-center gap-[6px]">
-										<span className="font-lato text-[12px] font-medium text-[#111827]">{f.filename?.split('/').pop() || 'file'}</span>
-										<span className="rounded-full bg-[#EFF6FF] px-[6px] py-[1px] font-lato text-[10px] text-[#2563EB]">{f.media_type}</span>
-										{f.size_bytes != null && (
-											<span className="font-lato text-[11px] text-[#9CA3AF]">
-												{f.size_bytes >= 1048576 ? `${(f.size_bytes / 1048576).toFixed(1)}MB`
-													: f.size_bytes >= 1024 ? `${(f.size_bytes / 1024).toFixed(1)}KB`
-													: `${f.size_bytes}B`}
-											</span>
-										)}
-									</span>
-								))}
-								{hasFileBlocks && !invocation.request_files.length && (
-									<span className="font-lato text-[12px] text-[#6B7280]">File included in message</span>
-								)}
-							</div>
-						)}
+						{/* Files attached — prefer rich audit rows (invocation.files), fall back to legacy summary */}
+						{(() => {
+							const richFiles = invocation.files || [];
+							const legacyFiles = !richFiles.length ? (invocation.request_files || []) : [];
+							const allFiles = richFiles.length ? richFiles : legacyFiles;
+							if (!allFiles.length) {
+								return hasFileBlocks ? (
+									<div className="flex items-center gap-[8px] rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-[12px] py-[10px]">
+										<span className="text-[14px]">📎</span>
+										<span className="font-lato text-[12px] text-[#6B7280]">File included in message</span>
+									</div>
+								) : null;
+							}
+							const fmtSize = (n) => n == null ? null
+								: n >= 1048576 ? `${(n / 1048576).toFixed(1)}MB`
+								: n >= 1024 ? `${(n / 1024).toFixed(1)}KB`
+								: `${n}B`;
+							return (
+								<div className="rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-[12px] py-[10px]">
+									<div className="mb-[6px] flex items-center gap-[6px]">
+										<span className="text-[14px]">📎</span>
+										<span className="font-lato text-[11px] font-bold uppercase tracking-[0.6px] text-[#6B7280]">
+											Attached files ({allFiles.length})
+										</span>
+									</div>
+									<div className="flex flex-col gap-[6px]">
+										{allFiles.map((f, i) => {
+											const filename = (f.filename || '').split('/').pop() || 'file';
+											const href = f.url || f.source_url || null;
+											const size = fmtSize(f.size_bytes);
+											const sha = f.sha256 ? f.sha256.slice(0, 12) : null;
+											const sourceLabel = f.source_kind === 'url' ? 'URL (not mirrored)'
+												: f.source_kind === 'upload' ? 'Mirrored' : null;
+											return (
+												<div key={f.id ?? i} className="flex flex-wrap items-center gap-[8px]">
+													{href ? (
+														<a
+															href={href}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="font-lato text-[12px] font-medium text-[#2563EB] underline hover:text-[#1D4ED8]"
+														>
+															{filename}
+														</a>
+													) : (
+														<span className="font-lato text-[12px] font-medium text-[#111827]">{filename}</span>
+													)}
+													{f.media_type && (
+														<span className="rounded-full bg-[#EFF6FF] px-[6px] py-[1px] font-lato text-[10px] text-[#2563EB]">
+															{f.media_type}
+														</span>
+													)}
+													{size && (
+														<span className="font-lato text-[11px] text-[#9CA3AF]">{size}</span>
+													)}
+													{sourceLabel && (
+														<span className="font-lato text-[10px] text-[#6B7280]">· {sourceLabel}</span>
+													)}
+													{sha && (
+														<span
+															className="font-mono text-[10px] text-[#9CA3AF]"
+															title={`sha256: ${f.sha256}`}
+														>
+															sha {sha}…
+														</span>
+													)}
+												</div>
+											);
+										})}
+									</div>
+								</div>
+							);
+						})()}
 
 						{/* Memory history context — collapsible, shows prior exchanges loaded from memory */}
 						{hasMemoryHistory && (

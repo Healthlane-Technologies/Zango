@@ -9,6 +9,7 @@ Log entries are immutable — never updated after creation (append-only).
 from django.db import models
 
 from zango.core.model_mixins import FullAuditMixin
+from zango.core.storage_utils import ZFileField
 
 
 class AppLLMInvocation(FullAuditMixin):
@@ -161,3 +162,65 @@ class AppLLMInvocation(FullAuditMixin):
         return (
             f"Invocation {self.pk} - {self.provider_name}/{self.model} ({self.status})"
         )
+
+
+class AppLLMInvocationFile(FullAuditMixin):
+    """
+    A file attached to an LLM invocation. Mirrors what the model actually saw.
+
+    One row per LLMFile passed to agent.run() / provider.complete(). Only round 1
+    of an agent run creates rows — subsequent rounds re-use the same content.
+
+    The `blob` field stores the actual bytes via the tenant's storage backend.
+    For URL-only attachments (LLMFile.from_url), blob is null and only
+    source_url is recorded. Identity fields (sha256, size_bytes, media_type)
+    are kept even if the blob is later purged by a retention policy.
+    """
+
+    SOURCE_CHOICES = [
+        ("upload", "Upload (django_file / bytes / path)"),
+        ("url", "Public URL (not mirrored)"),
+    ]
+
+    invocation = models.ForeignKey(
+        AppLLMInvocation,
+        on_delete=models.CASCADE,
+        related_name="files",
+    )
+
+    # Identity — preserved forever, even if blob is purged
+    sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="SHA-256 of the file bytes. Empty for URL-only attachments.",
+        blank=True,
+        default="",
+    )
+    size_bytes = models.BigIntegerField(
+        default=0, help_text="Size of the file bytes. 0 for URL-only attachments."
+    )
+    media_type = models.CharField(max_length=120, blank=True, default="")
+    filename = models.CharField(max_length=512, blank=True, default="")
+
+    source_kind = models.CharField(max_length=20, choices=SOURCE_CHOICES)
+    source_url = models.URLField(
+        max_length=2048,
+        blank=True,
+        default="",
+        help_text="Original URL when source_kind='url'.",
+    )
+
+    # The mirrored bytes — null for URL-only attachments or after retention purge.
+    # validators=[] bypasses ZFileField's hardcoded extension allowlist, since
+    # LLM attachments can legitimately be any media type.
+    blob = ZFileField(null=True, blank=True, validators=[])
+
+    class Meta:
+        ordering = ["invocation_id", "id"]
+        indexes = [
+            models.Index(fields=["sha256"]),
+            models.Index(fields=["invocation", "id"]),
+        ]
+
+    def __str__(self):
+        return f"InvocationFile {self.pk} ({self.filename or self.sha256[:12] or self.source_url})"

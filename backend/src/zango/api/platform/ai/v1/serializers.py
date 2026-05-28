@@ -308,6 +308,7 @@ class AppLLMInvocationListSerializer(serializers.ModelSerializer):
 class AppLLMInvocationDetailSerializer(serializers.ModelSerializer):
     prompt_info = serializers.SerializerMethodField()
     cost_breakdown = serializers.SerializerMethodField()
+    files = serializers.SerializerMethodField()
 
     class Meta:
         model = AppLLMInvocation
@@ -327,6 +328,7 @@ class AppLLMInvocationDetailSerializer(serializers.ModelSerializer):
             "request_tools",
             "request_params",
             "request_files",
+            "files",
             "response_content",
             "response_tool_calls",
             "stop_reason",
@@ -354,6 +356,34 @@ class AppLLMInvocationDetailSerializer(serializers.ModelSerializer):
             "prompt_info",
             "cost_breakdown",
         ]
+
+    def get_files(self, obj):
+        """
+        Return the mirrored audit files for this invocation. Each entry includes
+        a presigned download URL when a blob is present, and the original URL
+        when source_kind='url' (not mirrored).
+        """
+        result = []
+        for f in obj.files.all():
+            url = ""
+            if f.blob:
+                try:
+                    url = f.blob.url
+                except Exception:
+                    url = ""
+            result.append(
+                {
+                    "id": f.id,
+                    "filename": f.filename or None,
+                    "media_type": f.media_type or None,
+                    "size_bytes": f.size_bytes or None,
+                    "sha256": f.sha256 or None,
+                    "source_kind": f.source_kind,
+                    "source_url": f.source_url or None,
+                    "url": url or None,
+                }
+            )
+        return result
 
     def get_prompt_info(self, obj):
         return {
