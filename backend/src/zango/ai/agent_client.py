@@ -8,6 +8,7 @@ AgentClient wraps an AppLLMAgent with execution logic:
 
 import json
 import logging
+import time
 import uuid
 
 from typing import Optional
@@ -365,6 +366,7 @@ class AgentClient:
         raw_provider = provider_client._get_client()
         executor = ToolExecutor()
         total_cost = 0.0
+        run_start_ms = time.monotonic() * 1000
 
         # Pre-upload files once before the loop, then bake the file blocks
         # permanently into the message content so they survive across all rounds.
@@ -492,6 +494,9 @@ class AgentClient:
             # Build messages for the next LLM call
             round_messages = self._build_tool_round_messages(response, tool_results)
             messages.extend(round_messages)
+
+        # Overwrite latency_ms with total wall-clock time across all rounds
+        response.latency_ms = int(time.monotonic() * 1000 - run_start_ms)
 
         # Update agent-level counters with total cost across all rounds
         self._agent.record_usage(total_cost)
