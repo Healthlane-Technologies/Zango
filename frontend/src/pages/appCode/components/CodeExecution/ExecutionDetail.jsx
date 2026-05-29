@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import useApi from '../../../../hooks/useApi';
 import ConfirmModal from './ConfirmModal';
+import RunConfirmModal from './RunConfirmModal';
 
 const STATUS = {
 	success:  { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Success' },
@@ -50,7 +51,7 @@ function extOf(name) {
 	return i === -1 ? '' : name.substring(i + 1).slice(0, 4);
 }
 
-export default function ExecutionDetail({ appId, executionId, onBack, onEditSnippet, onSelectExecution }) {
+export default function ExecutionDetail({ appId, executionId, onBack, onEditSnippet, onSelectExecution, onRunCurrent, onRunVersion }) {
 	const triggerApi = useApi();
 	const [execution, setExecution] = useState(null);
 	const [tab, setTab] = useState('logs');
@@ -163,6 +164,91 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 	}, [logStatus, execution?.status, fetchLogTail, fetchExecution]);
 
 	const [confirmingAbort, setConfirmingAbort] = useState(false);
+	// Run confirmation state — for both "Run latest" and "Re-run vN"
+	const [runConfirm, setRunConfirm] = useState(null); // { mode, code, version, sourceHash, title, subtitle, payload }
+	const [runConfirmLoading, setRunConfirmLoading] = useState(false);
+
+	const askRunLatest = async () => {
+		if (!execution?.snippet_id) return;
+		setRunConfirmLoading(true);
+		// Fetch the snippet's current code
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${execution.snippet_id}/`,
+			type: 'GET',
+			loader: false,
+			showErrorModal: false,
+		});
+		setRunConfirmLoading(false);
+		if (success && response?.snippet) {
+			const s = response.snippet;
+			setRunConfirm({
+				mode: 'latest',
+				code: s.code,
+				version: s.version,
+				sourceHash: s.code_hash,
+				title: 'Run latest code',
+				subtitle: `${s.name} · current snippet code`,
+			});
+		} else {
+			toast.error('Could not load the snippet code.');
+		}
+	};
+
+	const askReRunThisVersion = () => {
+		setRunConfirm({
+			mode: 'this',
+			code: execution.source_snapshot,
+			version: execution.snippet_version,
+			sourceHash: execution.source_hash,
+			title: `Re-run v${execution.snippet_version}`,
+			subtitle: `${execution.snippet_name} · code frozen on this run`,
+		});
+	};
+
+	const askRunVersionFromTab = (version, sourceSnapshot, sourceHash, isCurrent) => {
+		setRunConfirm({
+			mode: isCurrent ? 'latest' : 'version',
+			code: sourceSnapshot,
+			version,
+			sourceHash,
+			title: isCurrent ? 'Run latest code' : `Re-run v${version}`,
+			subtitle: `${execution.snippet_name}${isCurrent ? ' · current snippet code' : ` · v${version} frozen code`}`,
+		});
+	};
+
+	const confirmedRun = async () => {
+		if (!runConfirm) return;
+		setRunConfirmLoading(true);
+		try {
+			if (runConfirm.mode === 'latest') {
+				await onRunCurrent?.(execution.snippet_id);
+			} else {
+				await onRunVersion?.(execution.snippet_id, runConfirm.code, runConfirm.version);
+			}
+			setRunConfirm(null);
+		} finally {
+			setRunConfirmLoading(false);
+		}
+	};
+	// Version history state
+	const [versions, setVersions] = useState([]);
+	const [versionsLoading, setVersionsLoading] = useState(false);
+	const [expandedVersion, setExpandedVersion] = useState(null);
+
+	const fetchVersions = useCallback(async () => {
+		if (!execution?.snippet_id) return;
+		setVersionsLoading(true);
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${execution.snippet_id}/versions/`,
+			type: 'GET',
+			loader: false,
+			showErrorModal: false,
+		});
+		if (success && response?.versions) {
+			setVersions(response.versions);
+		}
+		setVersionsLoading(false);
+	}, [appId, execution?.snippet_id, triggerApi]);
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(false);
 	const [historyTotalPages, setHistoryTotalPages] = useState(1);
@@ -264,6 +350,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 		{ id: 'return', label: 'Return value', count: null },
 		{ id: 'files', label: 'Files', count: `${inputs.length} + ${outputs.length}` },
 		{ id: 'source', label: 'Source at run', count: null },
+		{ id: 'versions', label: 'Versions', count: versions.length || null },
 		{ id: 'meta', label: 'Metadata', count: null },
 	];
 
@@ -282,6 +369,19 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 					from { opacity: 0; transform: translateY(4px); }
 					to   { opacity: 1; transform: translateY(0); }
 				}
+				@keyframes codexecSlideInRight {
+					from { opacity: 0; transform: translateX(8px); }
+					to   { opacity: 1; transform: translateX(0); }
+				}
+				@keyframes codexecVersionRowIn {
+					from { opacity: 0; transform: translateY(4px) scale(0.99); }
+					to   { opacity: 1; transform: translateY(0) scale(1); }
+				}
+				.codexec-tab-content { animation: codexecFadeIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+				.codexec-side-row { transition: all 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+				.codexec-side-row:hover { transform: translateX(2px); }
+				.codexec-version-row { animation: codexecVersionRowIn 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+				.codexec-pill { transition: all 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 			`}</style>
 			{/* Top */}
 			<div className="px-7 py-5 border-b border-slate-200 bg-gradient-to-b from-slate-50/50 to-white">
@@ -299,17 +399,38 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 						<div className="ml-3"><StatusPill status={execution.status} /></div>
 					</div>
 					<div className="flex gap-2">
-						<button onClick={onBack} className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-white border border-slate-300 text-slate-800 hover:border-slate-400">← Back</button>
+						<button
+							onClick={onBack}
+							className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-white border border-slate-300 text-slate-800 hover:border-slate-400 hover:shadow-sm transition-all active:scale-[0.98]"
+						>
+							← Back
+						</button>
 						<button
 							onClick={() => onEditSnippet?.(execution.snippet_id)}
-							className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-white border border-slate-300 text-slate-800 hover:border-slate-400"
+							title="Edit the snippet's current (latest) code"
+							className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-white border border-slate-300 text-slate-800 hover:border-slate-400 hover:shadow-sm transition-all active:scale-[0.98]"
 						>
-							✎ Edit snippet
+							✎ Edit latest
+						</button>
+						<button
+							onClick={askReRunThisVersion}
+							title={`Re-run the exact code that this run executed (v${execution.snippet_version})`}
+							className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:shadow-sm transition-all active:scale-[0.98] inline-flex items-center gap-1.5"
+						>
+							<span style={{ fontSize: 10 }}>↻</span> Re-run v{execution.snippet_version}
+						</button>
+						<button
+							onClick={askRunLatest}
+							disabled={runConfirmLoading}
+							title="Run the snippet's current code (latest version)"
+							className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow disabled:opacity-50 transition-all active:scale-[0.98] inline-flex items-center gap-1.5"
+						>
+							<span style={{ fontSize: 10 }}>▸</span> Run latest
 						</button>
 						{(execution.status === 'queued' || execution.status === 'running') && (
 							<button
 								onClick={askAbort}
-								className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all active:scale-[0.98]"
+								className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-slate-900 text-white hover:bg-slate-800 hover:shadow transition-all active:scale-[0.98]"
 							>
 								⊗ Abort
 							</button>
@@ -377,7 +498,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 								<button
 									key={r.id}
 									onClick={() => { if (!isCurrent) onSelectExecution?.(r.id); }}
-									className={`block w-full text-left px-4 py-3 border-b border-slate-200/70 last:border-0 transition-colors ${
+									className={`codexec-side-row block w-full text-left px-4 py-3 border-b border-slate-200/70 last:border-0 ${
 										isCurrent
 											? 'bg-indigo-50 border-l-2 border-l-indigo-600 -ml-px'
 											: 'hover:bg-slate-100 border-l-2 border-l-transparent -ml-px'
@@ -417,7 +538,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 					{tabs.map((t) => (
 						<button
 							key={t.id}
-							onClick={() => setTab(t.id)}
+							onClick={() => { setTab(t.id); if (t.id === 'versions' && versions.length === 0) fetchVersions(); }}
 							className={`py-2.5 mr-6 text-[12.5px] font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
 								tab === t.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-600 hover:text-slate-900'
 							}`}
@@ -430,7 +551,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 			</div>
 
 			{/* Tab content */}
-			<div key={tab} className="px-7 py-5 animate-[fadeIn_180ms_ease-out]" style={{ animation: 'codexecFadeIn 180ms ease-out' }}>
+			<div key={tab} className="px-7 py-5 codexec-tab-content">
 				{tab === 'logs' && (
 					<div>
 						<div className="flex items-center justify-between mb-3 text-[12px] text-slate-600">
@@ -567,6 +688,114 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 					</div>
 				)}
 
+				{tab === 'versions' && (
+					<div>
+						<div className="flex items-center justify-between mb-3">
+							<div className="text-[13px] text-slate-700">
+								Versions of <span className="font-semibold">{execution.snippet_name}</span> that have been run
+								<span className="text-slate-400 font-mono ml-2">· {versions.length} total</span>
+							</div>
+							<button
+								onClick={fetchVersions}
+								className="text-[12px] text-slate-500 hover:text-slate-800 transition-colors"
+							>
+								↻ Refresh
+							</button>
+						</div>
+						{versionsLoading && versions.length === 0 && (
+							<div className="text-center text-slate-400 py-8 text-sm">Loading…</div>
+						)}
+						{!versionsLoading && versions.length === 0 && (
+							<div className="text-center text-slate-400 py-8 text-sm">No version history yet.</div>
+						)}
+						<div className="flex flex-col gap-2">
+							{versions.map((v, idx) => {
+								const isExpanded = expandedVersion === v.version;
+								return (
+									<div
+										key={v.version}
+										style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }}
+										className={`codexec-version-row bg-white border rounded-lg overflow-hidden ${
+											v.version === execution.snippet_version
+												? 'border-emerald-300 ring-1 ring-emerald-100'
+												: v.is_current
+													? 'border-indigo-200'
+													: 'border-slate-200'
+										}`}
+									>
+										<button
+											onClick={() => setExpandedVersion(isExpanded ? null : v.version)}
+											className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between"
+										>
+											<div className="flex items-center gap-3">
+												<div className="font-mono text-[14px] font-semibold text-slate-900">v{v.version}</div>
+												{v.is_current && (
+													<span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700">
+														LATEST
+													</span>
+												)}
+												{v.version === execution.snippet_version && (
+													<span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">
+														THIS RUN
+													</span>
+												)}
+												<div className="font-mono text-[11px] text-slate-400">{(v.source_hash || '').slice(0, 8)}</div>
+											</div>
+											<div className="flex items-center gap-3 text-[12px] text-slate-600">
+												<span>
+													<span className="font-mono text-slate-900">{v.run_count}</span> run{v.run_count !== 1 ? 's' : ''}
+												</span>
+												{v.last_run_at && (
+													<span className="text-slate-500">last: {formatRelative(v.last_run_at)}</span>
+												)}
+												<span
+													role="button"
+													onClick={(e) => {
+														e.stopPropagation();
+														if (v.source_snapshot) {
+															askRunVersionFromTab(v.version, v.source_snapshot, v.source_hash, v.is_current);
+														}
+													}}
+													title={v.is_current ? 'Run latest code' : `Re-run v${v.version}`}
+													className="px-2 h-7 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-all active:scale-[0.97] inline-flex items-center gap-1"
+												>
+													<span style={{ fontSize: 9 }}>▸</span> Run
+												</span>
+												<span className="text-slate-400 text-[14px]">{isExpanded ? '▾' : '▸'}</span>
+											</div>
+										</button>
+										{isExpanded && (
+											<div className="border-t border-slate-200 bg-slate-50/40">
+												<div className="px-4 py-2 flex items-center justify-between text-[11.5px] text-slate-600">
+													<div>
+														{v.first_run_at && (
+															<>First run: <span className="text-slate-800">{new Date(v.first_run_at).toLocaleString()}</span></>
+														)}
+														{!v.first_run_at && v.is_current && (
+															<span className="text-amber-700">Current code · not yet executed</span>
+														)}
+													</div>
+													{v.representative_execution_id && v.representative_execution_id !== execution.id && (
+														<button
+															onClick={() => onSelectExecution?.(v.representative_execution_id)}
+															className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+														>
+															Open a run of v{v.version} →
+														</button>
+													)}
+												</div>
+												<pre className="bg-[#0F1117] text-slate-200 m-2 mt-0 rounded-md p-3.5 font-mono text-[12px] overflow-auto whitespace-pre" style={{ maxHeight: 360 }}>
+													{v.source_snapshot || '(empty)'}
+												</pre>
+											</div>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					</div>
+				)}
+
 				{tab === 'meta' && (
 					<div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[12.5px] max-w-[640px]">
 						<div className="text-slate-500">Status</div><div className="text-slate-900"><StatusPill status={execution.status} /></div>
@@ -592,6 +821,18 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 				confirmTone="danger"
 				onCancel={() => setConfirmingAbort(false)}
 				onConfirm={confirmedAbort}
+			/>
+
+			<RunConfirmModal
+				open={Boolean(runConfirm)}
+				title={runConfirm?.title || ''}
+				subtitle={runConfirm?.subtitle || ''}
+				code={runConfirm?.code || ''}
+				version={runConfirm?.version}
+				sourceHash={runConfirm?.sourceHash}
+				loading={runConfirmLoading}
+				onCancel={() => setRunConfirm(null)}
+				onConfirm={confirmedRun}
 			/>
 		</div>
 	);

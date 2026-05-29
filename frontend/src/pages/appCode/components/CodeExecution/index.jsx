@@ -198,30 +198,50 @@ export default function CodeExecution() {
 		}
 	};
 
-	if (view === 'detail' && activeExecutionId) {
-		return (
-			<ExecutionDetail
-				appId={appId}
-				executionId={activeExecutionId}
-				onBack={() => { setView('list'); setActiveExecutionId(null); fetchSnippets(); }}
-				onSelectExecution={(id) => setActiveExecutionId(id)}
-				onEditSnippet={(snippetId) => {
-					// Fetch the snippet then open the editor
-					triggerApi({
-						url: `/api/v1/apps/${appId}/code-execution/snippets/${snippetId}/`,
-						type: 'GET',
-						loader: false,
-					}).then(({ response, success }) => {
-						if (success && response?.snippet) {
-							setEditingSnippet(response.snippet);
-							setEditorOpen(true);
-							setView('list');
-						}
-					});
-				}}
-			/>
-		);
-	}
+	// Helper used both from list (Run button) and from detail (Run/Re-run).
+	// If `payload` is provided, it's a "re-run this version" with a source_override.
+	const triggerRun = async (snippetId, payload = {}) => {
+		setBusyRowId(snippetId);
+		try {
+			const { response, success } = await triggerApi({
+				url: `/api/v1/apps/${appId}/code-execution/snippets/${snippetId}/run/`,
+				type: 'POST',
+				payload: { trigger_kind: 'ui_run', ...payload },
+				loader: false,
+				showErrorModal: false,
+			});
+			if (success && response?.execution) {
+				toast.success('Run queued');
+				fetchSnippets();
+				setActiveExecutionId(response.execution.id);
+				setView('detail');
+				return response.execution;
+			}
+			if (response?.violations) toast.error('Code has validation errors.');
+			else if (response?.execution_id) toast(`Another run is in flight.`);
+			else toast.error(response?.message || 'Run failed.');
+		} catch (e) {
+			toast.error('Run failed.');
+		} finally {
+			setBusyRowId(null);
+		}
+		return null;
+	};
+
+	const openSnippetEditor = async (snippetId) => {
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${snippetId}/`,
+			type: 'GET',
+			loader: false,
+		});
+		if (success && response?.snippet) {
+			setEditingSnippet(response.snippet);
+			setEditorOpen(true);
+			// Note: do NOT setView('list') — preserve current view (list or detail)
+		}
+	};
+
+	const isDetailView = view === 'detail' && activeExecutionId;
 
 	return (
 		<div className="flex flex-col gap-6 pb-24">
@@ -230,10 +250,38 @@ export default function CodeExecution() {
 					from { opacity: 0; transform: translateY(6px); }
 					to   { opacity: 1; transform: translateY(0); }
 				}
+				@keyframes codexecViewFade {
+					from { opacity: 0; transform: translateY(4px); }
+					to   { opacity: 1; transform: translateY(0); }
+				}
 				.codexec-row {
 					animation: codexecFadeUp 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 				}
+				.codexec-view {
+					animation: codexecViewFade 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+				}
 			`}</style>
+
+			{isDetailView ? (
+				<div key={`detail-${activeExecutionId}`} className="codexec-view">
+					<ExecutionDetail
+						appId={appId}
+						executionId={activeExecutionId}
+						onBack={() => { setView('list'); setActiveExecutionId(null); fetchSnippets(); }}
+						onSelectExecution={(id) => setActiveExecutionId(id)}
+						onEditSnippet={openSnippetEditor}
+						onRunCurrent={(snippetId) => triggerRun(snippetId)}
+						onRunVersion={(snippetId, sourceSnapshot, snippetVersion) =>
+							triggerRun(snippetId, {
+								source_override: sourceSnapshot,
+								snippet_version_override: snippetVersion,
+							})
+						}
+					/>
+				</div>
+			) : (
+				<div key="list" className="codexec-view contents">
+
 			{/* Header */}
 			<div className="flex items-end justify-between">
 				<div>
@@ -384,9 +432,11 @@ export default function CodeExecution() {
 						Next →
 					</button>
 				</div>
-			</div>
+				</div>
+				</div>
+			)}
 
-			{/* Editor modal */}
+			{/* Editor modal — rendered outside the view conditional so it overlays either view */}
 			{editorOpen && (
 				<EditorModal
 					appId={appId}
@@ -397,7 +447,7 @@ export default function CodeExecution() {
 						setEditingSnippet(null);
 						fetchSnippets();
 						if (openRun && s) {
-							handleRun(s.id);
+							triggerRun(s.id);
 						}
 					}}
 				/>

@@ -67,6 +67,24 @@ def _bind_tenant(view, app_uuid):
     return tenant
 
 
+def _user_label(request) -> str:
+    """Return the requesting PlatformUserModel's email.
+
+    `request.user` is the Django auth User. The PlatformUserModel lives
+    one hop away via the `platform_user` reverse OneToOne FK.
+    """
+    auth_user = getattr(request, "user", None)
+    if auth_user is None:
+        return "system"
+    platform_user = getattr(auth_user, "platform_user", None)
+    if platform_user is not None:
+        email = (getattr(platform_user, "email", "") or "").strip()
+        if email:
+            return email
+    # Fallback to whatever the auth user carries.
+    return (getattr(auth_user, "email", "") or "").strip() or "system"
+
+
 def _content_disposition(filename: str) -> str:
     """Build a Content-Disposition header that preserves the original name."""
     safe_ascii = filename.encode("ascii", "ignore").decode("ascii") or "download"
@@ -143,7 +161,7 @@ class CodeSnippetListView(
                     200,
                 )
 
-            user = getattr(request.user, "email", str(request.user))
+            user = _user_label(request)
             snippet = CodeSnippet.objects.create(
                 **ser.validated_data,
                 created_by=user,
@@ -223,7 +241,7 @@ class CodeSnippetUpdateView(ZangoGenericPlatformAPIView, TenantMixin):
                 snippet.bump_version()
             for field, value in ser.validated_data.items():
                 setattr(snippet, field, value)
-            snippet.modified_by = getattr(request.user, "email", str(request.user))
+            snippet.modified_by = _user_label(request)
             snippet.save()
             return get_api_response(
                 True,
@@ -309,7 +327,7 @@ class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
                         "message": "Another run for this snippet is already in flight.",
                         "execution_id": str(in_flight.id),
                     },
-                    409,
+                    200,
                 )
 
             # AST recheck before enqueuing.
@@ -324,17 +342,38 @@ class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
                     200,
                 )
 
-            user = getattr(request.user, "email", str(request.user))
+            user = _user_label(request)
             trigger_kind = request.data.get("trigger_kind") or TriggerKind.UI_RUN
+
+            # Optional overrides — used by "Re-run this version" from version history
+            source_override = request.data.get("source_override")
+            version_override = request.data.get("snippet_version_override")
+
+            code_to_run = source_override if source_override is not None else snippet.code
+            version_to_record = (
+                int(version_override) if version_override is not None
+                else snippet.version
+            )
+            source_hash = hashlib.sha256(code_to_run.encode("utf-8")).hexdigest()
+
+            # AST recheck the actual code being run (could be a historical version)
+            violations_for_run = validate(code_to_run)
+            if violations_for_run:
+                return get_api_response(
+                    False,
+                    {
+                        "message": "Code for this version has validation violations.",
+                        "violations": [v.to_dict() for v in violations_for_run],
+                    },
+                    200,
+                )
 
             with transaction.atomic():
                 execution = CodeExecution.objects.create(
                     snippet=snippet,
-                    snippet_version=snippet.version,
-                    source_snapshot=snippet.code,
-                    source_hash=hashlib.sha256(
-                        snippet.code.encode("utf-8")
-                    ).hexdigest(),
+                    snippet_version=version_to_record,
+                    source_snapshot=code_to_run,
+                    source_hash=source_hash,
                     status=ExecStatus.QUEUED,
                     triggered_by=user,
                     trigger_kind=trigger_kind,
@@ -377,6 +416,100 @@ class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
             )
         except Exception as exc:  # noqa: BLE001
             log.exception("codexec: run trigger failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+# ---------------------------------------------------------------------------
+# Snippet versions
+# ---------------------------------------------------------------------------
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
+    """GET /snippets/{id}/versions/
+
+    Returns the distinct snippet_version values this snippet has been run at,
+    along with the frozen source_snapshot for each, run counts, and first/last
+    run timestamps. Useful for a "version history" view in the UI.
+
+    Note: a version that was saved but never run is NOT in the result — we
+    only persist code snapshots via executions. The current `snippet.code`
+    + `snippet.version` is returned as a synthetic "current" entry on top.
+    """
+
+    def get(self, request, app_uuid, snippet_id, *args, **kwargs):
+        try:
+            _bind_tenant(self, app_uuid)
+            try:
+                snippet = CodeSnippet.objects.get(pk=snippet_id)
+            except CodeSnippet.DoesNotExist:
+                return get_api_response(False, {"message": "snippet not found"}, 404)
+
+            from django.db.models import Count, Max, Min
+
+            qs = (
+                CodeExecution.objects.filter(snippet=snippet)
+                .values("snippet_version", "source_hash")
+                .annotate(
+                    run_count=Count("id"),
+                    first_run_at=Min("queued_at"),
+                    last_run_at=Max("queued_at"),
+                )
+                .order_by("-snippet_version")
+            )
+
+            versions = []
+            seen_versions = set()
+            for row in qs:
+                v = row["snippet_version"]
+                if v in seen_versions:
+                    continue
+                seen_versions.add(v)
+                # Find a representative source_snapshot for this version
+                rep = (
+                    CodeExecution.objects.filter(
+                        snippet=snippet, snippet_version=v
+                    )
+                    .only("source_snapshot", "source_hash", "id")
+                    .first()
+                )
+                versions.append({
+                    "version": v,
+                    "source_hash": row["source_hash"],
+                    "source_snapshot": rep.source_snapshot if rep else "",
+                    "run_count": row["run_count"],
+                    "first_run_at": row["first_run_at"].isoformat() if row["first_run_at"] else None,
+                    "last_run_at": row["last_run_at"].isoformat() if row["last_run_at"] else None,
+                    "is_current": v == snippet.version,
+                    "representative_execution_id": str(rep.id) if rep else None,
+                })
+
+            # If the current snippet version has never been run, prepend it as
+            # a "current · unrun" entry so the user still sees it.
+            if snippet.version not in seen_versions:
+                versions.insert(0, {
+                    "version": snippet.version,
+                    "source_hash": snippet.code_hash,
+                    "source_snapshot": snippet.code,
+                    "run_count": 0,
+                    "first_run_at": None,
+                    "last_run_at": None,
+                    "is_current": True,
+                    "representative_execution_id": None,
+                })
+
+            return get_api_response(
+                True,
+                {
+                    "snippet_id": str(snippet.id),
+                    "snippet_name": snippet.name,
+                    "current_version": snippet.version,
+                    "versions": versions,
+                },
+                200,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.exception("codexec: versions endpoint failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 
@@ -787,7 +920,7 @@ class CodeExecutionAbortView(ZangoGenericPlatformAPIView, TenantMixin):
                 return get_api_response(
                     False,
                     {"message": f"Run is already {execution.status}; cannot abort."},
-                    409,
+                    200,
                 )
 
             # Revoke the celery task. terminate=True kills it mid-execution.
@@ -813,7 +946,7 @@ class CodeExecutionAbortView(ZangoGenericPlatformAPIView, TenantMixin):
                 execution.duration_ms = int(delta * 1000)
             execution.exception_type = "AbortedByUser"
             execution.exception_message = (
-                getattr(request.user, "email", str(request.user))
+                _user_label(request)
                 + " aborted the run."
             )
             execution.save()

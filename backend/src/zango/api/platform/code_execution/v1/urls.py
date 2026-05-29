@@ -17,6 +17,7 @@ from .views import (
     CodeSnippetRunView,
     CodeSnippetUpdateView,
     CodeSnippetValidateView,
+    CodeSnippetVersionsView,
 )
 
 
@@ -29,6 +30,7 @@ urlpatterns = [
     path("snippets/<uuid:snippet_id>/update/", CodeSnippetUpdateView.as_view()),
     path("snippets/<uuid:snippet_id>/archive/", CodeSnippetArchiveView.as_view()),
     path("snippets/<uuid:snippet_id>/run/", CodeSnippetRunView.as_view()),
+    path("snippets/<uuid:snippet_id>/versions/", CodeSnippetVersionsView.as_view()),
     # Snippet files
     path("snippets/<uuid:snippet_id>/files/", CodeSnippetFileListView.as_view()),
     path(
