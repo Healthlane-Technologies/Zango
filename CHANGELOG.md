@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0b1] - 2026-05-29
+
+### Added
+* AI Agent Builder — configure LLM providers, build agents, manage prompts, attach tools, and inspect every invocation from the Panel UI [(#556)](https://github.com/Healthlane-Technologies/Zango/pull/556)
+  * **Multi-Provider Support** — connect Anthropic and OpenAI; store and validate API credentials securely; enable/disable providers and individual models independently; set monthly spend budgets with automatic enforcement
+  * **Agent Builder** — create reusable agents with provider, model, system prompt, and tools; automatic tool loop; structured (JSON) output support; test agents directly from the Panel
+  * **Prompt Management** — named prompts with `{{variable}}` templates, full version history, promote any version to active without code changes
+  * **Tool System** — define tools with a `@tool` decorator in your app module; sync to Panel with one click; JSON Schema generated automatically; every tool call logged with inputs, outputs, duration, and status
+  * **File Attachments** — attach files to agent runs from Django model fields, uploads, raw bytes, or public URLs
+  * **Agent Memory** — session-scoped memory across multiple interactions via `session_id`
+  * **Invocation Logs** — every LLM call logged with tokens, cost, status, and full prompt snapshot; multi-round runs grouped under a single `run_id`; filter by date, status, agent, or provider
+  * **Cost Tracking** — per-call cost computed for all providers including Anthropic cache pricing; monthly spend tracked per provider
+
 ## [1.0.5] - 2026-01-28
 
 ### Fixed

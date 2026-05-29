@@ -170,6 +170,23 @@ export default function useApi() {
 						responseStatus: apiRequest.status,
 					};
 				}
+			} else if (apiRequest.status === 409) {
+				try {
+					const { response } = await apiRequest.json();
+					// 409 responses are handled by the caller (dependency blocks, conflicts)
+					// do NOT show the global error modal — caller decides how to surface it
+					return {
+						response,
+						success: false,
+						responseStatus: apiRequest.status,
+					};
+				} catch (error) {
+					return {
+						response: { message: 'Conflict' },
+						success: false,
+						responseStatus: apiRequest.status,
+					};
+				}
 			} else {
 				if(apiDetails.showErrorModal!==false){
 					setErrorMessage('Server Error');

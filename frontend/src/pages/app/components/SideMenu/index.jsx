@@ -76,6 +76,22 @@ export default function SideMenu() {
 					Logs
 				</span>
 			</NavLink>
+			<NavLink
+				data-cy="ai"
+				to={`ai/`}
+				className={({ isActive, isPending }) =>
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
+					}`
+				}
+			>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" stroke="#26210F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+				</svg>
+				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
+					AI
+				</span>
+			</NavLink>
 
 			<NavLink
 				to={`Releases/`}
