@@ -61,6 +61,7 @@ TENANT_APPS = [
     "zango.apps.accesslogs",
     "zango.apps.release",
     "zango.apps.secrets",
+    "zango.apps.ai",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -218,6 +219,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "celery.backend_cleanup",
         "schedule": crontab(minute="0", hour="4"),
         "enabled": False,
+    },
+    "update_tool_usage_stats": {
+        "task": "zango.ai.update_tool_usage_stats",
+        "schedule": crontab(minute="0", hour="2"),
     },
 }
 

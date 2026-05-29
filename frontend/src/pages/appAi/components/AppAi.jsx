@@ -1,0 +1,305 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import BreadCrumbs from '../../app/components/BreadCrumbs';
+import Providers from './Providers';
+import Agents from './Agents';
+import Prompts from './Prompts';
+import Tools from './Tools';
+import InvocationLogs from './InvocationLogs';
+import Guardrails from './Guardrails';
+import {
+	ProvidersListSkeleton,
+	AgentsListSkeleton,
+	PromptsListSkeleton,
+	ToolsListSkeleton,
+	InvocationLogsSkeleton,
+} from './AiSkeletons';
+
+const tabs = [
+	{
+		id: 'agents',
+		label: 'Agents',
+		Skeleton: AgentsListSkeleton,
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<circle cx="8" cy="5" r="3" fillOpacity="0.3" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+				<path d="M3 14C3 11.239 5.239 9 8 9C10.761 9 13 11.239 13 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+			</svg>
+		),
+	},
+	{
+		id: 'providers',
+		label: 'Providers',
+		Skeleton: ProvidersListSkeleton,
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path d="M8 1L2 4V8L8 11L14 8V4L8 1Z" fillOpacity="0.3"/>
+				<path d="M8 1L2 4V8L8 11L14 8V4L8 1Z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+				<path d="M2 4L8 7L14 4" stroke="currentColor" strokeWidth="1.2"/>
+				<path d="M8 7V11" stroke="currentColor" strokeWidth="1.2"/>
+			</svg>
+		),
+	},
+	{
+		id: 'prompts',
+		label: 'Prompts',
+		Skeleton: PromptsListSkeleton,
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path d="M3 3H13V11H8L5 14V11H3V3Z" fillOpacity="0.3"/>
+				<path d="M3 3H13V11H8L5 14V11H3V3Z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round"/>
+			</svg>
+		),
+	},
+	{
+		id: 'tools',
+		label: 'Tools',
+		Skeleton: ToolsListSkeleton,
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path d="M10.5 1.5L14.5 5.5L5.5 14.5H1.5V10.5L10.5 1.5Z" fillOpacity="0.3"/>
+				<path d="M10.5 1.5L14.5 5.5L5.5 14.5H1.5V10.5L10.5 1.5Z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round"/>
+			</svg>
+		),
+	},
+	{
+		id: 'guardrails',
+		label: 'Guardrails',
+		Skeleton: null, // static page, no loading needed
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path d="M8 2L3 5V8C3 11.04 4.88 13.64 8 14C11.12 13.64 13 11.04 13 8V5L8 2Z" fillOpacity="0.3"/>
+				<path d="M8 2L3 5V8C3 11.04 4.88 13.64 8 14C11.12 13.64 13 11.04 13 8V5L8 2Z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+			</svg>
+		),
+	},
+	{
+		id: 'invocation-logs',
+		label: 'Invocation Logs',
+		Skeleton: InvocationLogsSkeleton,
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path d="M2 4H14M2 7H14M2 10H14M2 13H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+			</svg>
+		),
+	},
+];
+
+// Staleness thresholds per tab (ms)
+const STALE_AFTER = {
+	'invocation-logs': 2 * 60 * 1000,  // 2 min — live data
+	'prompts':         3 * 60 * 1000,  // 3 min — collaborative
+	'agents':          5 * 60 * 1000,  // 5 min — user-owned
+	'providers':       5 * 60 * 1000,  // 5 min — user-owned
+	'tools':           5 * 60 * 1000,  // 5 min — user-owned
+};
+
+/**
+ * TabPanel — keeps the child mounted after first visit (avoids re-fetch on tab switch)
+ * but hides inactive panels with display:none. Shows a skeleton until the child
+ * signals it has finished its initial data load via onReady().
+ *
+ * Strategy:
+ * - While not ready AND active: render Skeleton visibly + child off-screen (sr-only)
+ *   so the child can run its useEffect/fetch and call onReady.
+ * - Once ready: render child normally; skeleton is gone.
+ * - When inactive: display:none — child stays mounted but invisible (no re-fetch).
+ */
+function TabPanel({ id, activeTab, Skeleton, isReady, onActivate, children }) {
+	const isActive = activeTab === id;
+	const showSkeleton = isActive && !isReady && !!Skeleton;
+
+	// Fire onActivate when this tab transitions from inactive → active
+	const wasActiveRef = useRef(isActive);
+	useEffect(() => {
+		if (isActive && !wasActiveRef.current) {
+			onActivate?.();
+		}
+		wasActiveRef.current = isActive;
+	}, [isActive]);
+
+	return (
+		<div
+			role="tabpanel"
+			aria-labelledby={`tab-${id}`}
+			style={{ display: isActive ? undefined : 'none' }}
+			className="px-[40px] py-[32px] bg-[#F8FAFC] min-h-[calc(100vh-200px)]"
+		>
+			{/* Skeleton overlay — replaces content appearance until data lands */}
+			{showSkeleton && (
+				<div aria-hidden="true">
+					<Skeleton />
+				</div>
+			)}
+
+			{/*
+			 * Child is always rendered once mounted. While skeleton is shown we push
+			 * the child out of visible flow using sr-only so it can fire useEffects.
+			 * Once ready we remove the sr-only class so content renders normally.
+			 */}
+			<div className={showSkeleton ? 'sr-only' : undefined}>
+				{children}
+			</div>
+		</div>
+	);
+}
+
+export default function AppAi() {
+	const location = useLocation();
+	const navigate = useNavigate();
+
+	const getActiveTab = () => {
+		const hash = location.hash.replace('#', '');
+		return tabs.find((tab) => tab.id === hash) ? hash : 'agents';
+	};
+
+	const [activeTab, setActiveTab] = useState(getActiveTab());
+
+	// Track which tabs have finished their initial data load
+	const [tabReady, setTabReady] = useState({});
+	// Track which tabs have been mounted (we mount lazily on first visit)
+	const [tabMounted, setTabMounted] = useState({ [getActiveTab()]: true });
+
+	// Data freshness tracking
+	// lastFetchedAt[tabId] = timestamp (Date.now()) of last successful fetch
+	const [lastFetchedAt, setLastFetchedAt] = useState({});
+	// tabStaleFlags[tabId] = true means force re-fetch on next activation
+	const [tabStaleFlags, setTabStaleFlags] = useState({});
+	// refreshSignals[tabId] = counter that increments to signal a background re-fetch
+	const [refreshSignals, setRefreshSignals] = useState({});
+
+	// Called by each tab after a successful fetch
+	const markFetched = useCallback((tabId) => {
+		setLastFetchedAt((prev) => ({ ...prev, [tabId]: Date.now() }));
+	}, []);
+
+	// Stable per-tab onFetchComplete callbacks — must not be inline lambdas or they
+	// become new references every render and cause infinite fetch loops via useCallback deps
+	const onFetchCompleteAgents        = useCallback(() => markFetched('agents'),          [markFetched]);
+	const onFetchCompleteProviders     = useCallback(() => markFetched('providers'),        [markFetched]);
+	const onFetchCompletePrompts       = useCallback(() => markFetched('prompts'),          [markFetched]);
+	const onFetchCompleteTools         = useCallback(() => markFetched('tools'),            [markFetched]);
+	const onFetchCompleteInvocations   = useCallback(() => markFetched('invocation-logs'),  [markFetched]);
+
+	// Called to mark a tab's data as stale (e.g. cross-tab invalidation)
+	const markStale = useCallback((tabId) => {
+		setTabStaleFlags((prev) => ({ ...prev, [tabId]: true }));
+	}, []);
+
+	// Called when a tab becomes active — check staleness and signal refresh if needed
+	const handleActivate = useCallback((tabId) => {
+		const threshold = STALE_AFTER[tabId];
+		if (!threshold) return; // guardrails — static tab, no fetch
+		const last = lastFetchedAt[tabId];
+		const isStale = tabStaleFlags[tabId] || !last || (Date.now() - last > threshold);
+		if (isStale) {
+			setRefreshSignals((prev) => ({ ...prev, [tabId]: (prev[tabId] || 0) + 1 }));
+			setTabStaleFlags((prev) => ({ ...prev, [tabId]: false }));
+		}
+	}, [lastFetchedAt, tabStaleFlags]);
+
+	useEffect(() => {
+		const next = getActiveTab();
+		setActiveTab(next);
+		// Mount the tab if it hasn't been mounted yet
+		setTabMounted((prev) => prev[next] ? prev : { ...prev, [next]: true });
+	}, [location]);
+
+	const handleTabChange = (tabId) => {
+		navigate(`#${tabId}`, { replace: true });
+		setActiveTab(tabId);
+		setTabMounted((prev) => prev[tabId] ? prev : { ...prev, [tabId]: true });
+	};
+
+	const makeOnReady = (tabId) => () => {
+		setTabReady((prev) => prev[tabId] ? prev : { ...prev, [tabId]: true });
+	};
+
+	return (
+		<div className="flex min-h-screen grow flex-col bg-[#F8FAFC]">
+			{/* Header */}
+			<div className="bg-white border-b border-[#E5E7EB] px-[40px] py-[20px]">
+				<div className="flex items-center justify-between">
+					<div>
+						<BreadCrumbs />
+						<div className="flex items-center gap-[12px] mt-[8px]">
+							<div className="flex h-[40px] w-[40px] items-center justify-center rounded-[8px] bg-gradient-to-br from-[#F59E0B] to-[#D97706] shadow-lg">
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+									<path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+								</svg>
+							</div>
+							<div>
+								<h1 className="font-source-sans-pro text-[24px] font-semibold leading-[32px] text-[#111827]">
+									Agent Studio
+								</h1>
+								<p className="font-lato text-[14px] leading-[20px] text-[#6B7280]">
+									Setup and Manage compliant agents | Build intelligent agentic apps
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Tab Navigation */}
+			<div className="bg-white border-b border-[#E5E7EB] px-[40px]">
+				<div className="flex gap-[32px]">
+					{tabs.map((tab) => {
+						const Icon = tab.icon;
+						const isActive = activeTab === tab.id;
+
+						return (
+							<button
+								key={tab.id}
+								id={`tab-${tab.id}`}
+								role="tab"
+								aria-selected={isActive}
+								aria-controls={`tabpanel-${tab.id}`}
+								onClick={() => handleTabChange(tab.id)}
+								className={`flex items-center gap-[8px] py-[16px] px-[4px] border-b-[3px] transition-all ${
+									isActive
+										? 'border-[#346BD4] text-[#346BD4]'
+										: 'border-transparent text-[#6B7280] hover:text-[#111827]'
+								}`}
+							>
+								<Icon />
+								<span className="font-lato text-[14px] font-medium">
+									{tab.label}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			{/* Content — all tabs stay mounted after first visit */}
+			<div className="flex-1 overflow-auto">
+				{tabs.map((tab) => {
+					if (!tabMounted[tab.id]) return null;
+
+					const isReady = !!tabReady[tab.id];
+					const onReady = makeOnReady(tab.id);
+					const refreshSignal = refreshSignals[tab.id] || 0;
+
+					return (
+						<TabPanel
+							key={tab.id}
+							id={tab.id}
+							activeTab={activeTab}
+							Skeleton={tab.Skeleton}
+							isReady={isReady}
+							onActivate={() => handleActivate(tab.id)}
+						>
+							{tab.id === 'providers'       && <Providers      onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteProviders} />}
+							{tab.id === 'agents'          && <Agents         onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteAgents} onInvalidate={markStale} />}
+							{tab.id === 'prompts'         && <Prompts        onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompletePrompts} />}
+							{tab.id === 'tools'           && <Tools          onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteTools} />}
+							{tab.id === 'guardrails'      && <Guardrails     onReady={onReady} />}
+							{tab.id === 'invocation-logs' && <InvocationLogs onReady={onReady} refreshSignal={refreshSignal} onFetchComplete={onFetchCompleteInvocations} lastFetchedAt={lastFetchedAt['invocation-logs']} />}
+						</TabPanel>
+					);
+				})}
+			</div>
+		</div>
+	);
+}

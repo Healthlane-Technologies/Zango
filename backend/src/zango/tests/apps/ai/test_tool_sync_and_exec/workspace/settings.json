@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "modules": [
+        {
+            "name": "ai_test_module",
+            "path": "ai_test_module"
+        }
+    ],
+    "app_routes": [
+        {
+            "re_path": "^ai_test/",
+            "module": "ai_test_module",
+            "url": "urls"
+        }
+    ],
+    "package_routes": []
+}

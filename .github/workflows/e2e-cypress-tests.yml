@@ -1,27 +1,29 @@
 name: End to End Cypress Test
 
+# on:
+#   workflow_dispatch:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - "e2e-tests/**"
+#       - "frontend/**"
+#   pull_request:
+#     types:
+#       - opened
+#       - reopened
+#       - synchronize
+#     branches:
+#       - main
+#     paths:
+#       - "frontend/**"
+#       - "e2e-tests/**"
+#   release:
+#     types:
+#       - published
+#       - released
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "e2e-tests/**"
-      - "frontend/**"
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-    branches:
-      - main
-    paths:
-      - "frontend/**"
-      - "e2e-tests/**"
-  release:
-    types:
-      - published
-      - released
 
 jobs:
   cypress-run:

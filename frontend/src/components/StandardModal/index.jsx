@@ -1,11 +1,12 @@
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
-function StandardModal({ 
-	label = '', 
-	show = false, 
-	closeModal, 
+function StandardModal({
+	label = '',
+	show = false,
+	closeModal,
 	ModalBody,
+	ModalFooter,
 	size = 'default' // 'sm', 'default', 'lg', 'xl'
 }) {
 	const sizeClasses = {
@@ -41,9 +42,9 @@ function StandardModal({
 							leaveFrom="opacity-100 scale-100"
 							leaveTo="opacity-0 scale-95"
 						>
-							<Dialog.Panel className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-white shadow-xl transition-all`}>
+							<Dialog.Panel className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-white shadow-xl transition-all flex flex-col max-h-[calc(100vh-80px)]`}>
 								{/* Header */}
-								<div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+								<div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
 									<Dialog.Title className="text-lg font-semibold text-gray-900">
 										{label}
 									</Dialog.Title>
@@ -68,10 +69,17 @@ function StandardModal({
 									</button>
 								</div>
 
-								{/* Body */}
-								<div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+								{/* Body — scrolls independently */}
+								<div className="flex-1 overflow-y-auto">
 									{ModalBody}
 								</div>
+
+								{/* Footer — always pinned at bottom when provided */}
+								{ModalFooter && (
+									<div className="shrink-0 border-t border-gray-200 px-6 py-4">
+										{ModalFooter}
+									</div>
+								)}
 							</Dialog.Panel>
 						</Transition.Child>
 					</div>
