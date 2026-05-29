@@ -283,6 +283,18 @@ class _DenyVisitor(ast.NodeVisitor):
                             "DENY_TENANT_SWITCH",
                             f"Assigning to '{'.'.join(chain)}' is not allowed.",
                         )
+                    elif chain[0] == "settings" or chain[:3] == (
+                        "django",
+                        "conf",
+                        "settings",
+                    ):
+                        self._add(
+                            node.lineno,
+                            node.col_offset,
+                            "DENY_SETTINGS_WRITE",
+                            f"Modifying '{'.'.join(chain)}' is not allowed; "
+                            f"settings are read-only.",
+                        )
         self.generic_visit(node)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
@@ -300,6 +312,18 @@ class _DenyVisitor(ast.NodeVisitor):
                         node.col_offset,
                         "DENY_TENANT_SWITCH",
                         f"Mutating '{'.'.join(resolved)}' is not allowed.",
+                    )
+                elif resolved[0] == "settings" or resolved[:3] == (
+                    "django",
+                    "conf",
+                    "settings",
+                ):
+                    self._add(
+                        node.lineno,
+                        node.col_offset,
+                        "DENY_SETTINGS_WRITE",
+                        f"Modifying '{'.'.join(resolved)}' is not allowed; "
+                        f"settings are read-only.",
                     )
         self.generic_visit(node)
 

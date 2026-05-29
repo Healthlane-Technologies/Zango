@@ -238,11 +238,25 @@ def list_inputs() -> List[FileRef]:
 # ---------------------------------------------------------------------------
 
 
+_ALLOWED_OUTPUT_EXTS = frozenset({
+    "pdf", "doc", "docx", "jpg", "jpeg", "png", "svg",
+    "xls", "xlsx", "mp3", "wav", "ppt", "pptx",
+    "zip", "ico", "mp4", "webm", "csv", "json",
+})
+
+
 def _store_output(name: str, data: Union[bytes, bytearray, str]) -> FileRef:
     from zango.apps.code_execution.models import CodeExecFile, FileKind
 
     name = _sanitize_name(name)
     exec_id = _current_execution_id()
+
+    ext = os.path.splitext(name)[1].lower().lstrip(".")
+    if ext not in _ALLOWED_OUTPUT_EXTS:
+        raise ValueError(
+            f"codexec.write: extension '.{ext}' is not allowed. "
+            f"Pick one of: {', '.join(sorted(_ALLOWED_OUTPUT_EXTS))}"
+        )
 
     if isinstance(data, str):
         payload = data.encode("utf-8")

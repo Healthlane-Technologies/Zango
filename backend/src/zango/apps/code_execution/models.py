@@ -20,6 +20,7 @@ from django.utils.text import slugify
 
 from zango.apps.auditlogs.registry import auditlog
 from zango.core.model_mixins import FullAuditMixin
+from zango.core.storage_utils import ZFileField
 
 
 # ---------------------------------------------------------------------------
@@ -57,14 +58,6 @@ TERMINAL_STATUSES = frozenset(
 # ---------------------------------------------------------------------------
 # Snippet
 # ---------------------------------------------------------------------------
-
-
-def _snippet_file_upload_to(instance: "CodeSnippetFile", filename: str) -> str:
-    return f"codexec/snippets/{instance.snippet_id}/{uuid.uuid4().hex}"
-
-
-def _exec_file_upload_to(instance: "CodeExecFile", filename: str) -> str:
-    return f"codexec/runs/{instance.execution_id}/{instance.kind}/{uuid.uuid4().hex}"
 
 
 class CodeSnippet(FullAuditMixin):
@@ -119,7 +112,7 @@ class CodeSnippetFile(FullAuditMixin):
         CodeSnippet, on_delete=models.CASCADE, related_name="files"
     )
     name = models.CharField(max_length=255)
-    file = models.FileField(upload_to=_snippet_file_upload_to, max_length=512)
+    file = ZFileField(max_length=512)
     size_bytes = models.PositiveBigIntegerField(default=0)
     content_type = models.CharField(max_length=128, blank=True, default="")
     sha256 = models.CharField(max_length=64, blank=True, default="")
@@ -212,7 +205,7 @@ class CodeExecFile(FullAuditMixin):
     )
     kind = models.CharField(max_length=8, choices=FileKind.choices, db_index=True)
     name = models.CharField(max_length=255)
-    file = models.FileField(upload_to=_exec_file_upload_to, max_length=512)
+    file = ZFileField(max_length=512)
     source_snippet_file = models.ForeignKey(
         CodeSnippetFile,
         on_delete=models.SET_NULL,

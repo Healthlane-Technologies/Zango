@@ -3,7 +3,7 @@
 from django.db import migrations, models
 import django.db.models.deletion
 import uuid
-import zango.apps.code_execution.models
+import zango.core.storage_utils
 
 
 class Migration(migrations.Migration):
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('kind', models.CharField(choices=[('input', 'Input'), ('output', 'Output')], db_index=True, max_length=8)),
                 ('name', models.CharField(max_length=255)),
-                ('file', models.FileField(max_length=512, upload_to=zango.apps.code_execution.models._exec_file_upload_to)),
+                ('file', zango.core.storage_utils.ZFileField(max_length=512, upload_to=zango.core.storage_utils.RandomUniqueFileName, validators=[zango.core.storage_utils.validate_file_extension])),
                 ('size_bytes', models.PositiveBigIntegerField(default=0)),
                 ('content_type', models.CharField(blank=True, default='', max_length=128)),
                 ('sha256', models.CharField(blank=True, default='', max_length=64)),
@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
                 ('modified_by', models.CharField(blank=True, editable=False, max_length=255)),
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('name', models.CharField(max_length=255)),
-                ('file', models.FileField(max_length=512, upload_to=zango.apps.code_execution.models._snippet_file_upload_to)),
+                ('file', zango.core.storage_utils.ZFileField(max_length=512, upload_to=zango.core.storage_utils.RandomUniqueFileName, validators=[zango.core.storage_utils.validate_file_extension])),
                 ('size_bytes', models.PositiveBigIntegerField(default=0)),
                 ('content_type', models.CharField(blank=True, default='', max_length=128)),
                 ('sha256', models.CharField(blank=True, default='', max_length=64)),
