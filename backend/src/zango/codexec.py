@@ -18,7 +18,6 @@ module is the only API user code should touch for file I/O.
 
 from __future__ import annotations
 
-import builtins
 import hashlib
 import json
 import os

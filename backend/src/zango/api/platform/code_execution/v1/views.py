@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import traceback
 
 from django.db import connection, transaction
 from django.http import FileResponse, Http404, HttpResponse
