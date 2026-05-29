@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("code_execution", "0001_initial"),
-        ("permissions", "0001_initial"),
+        ("permissions", "0004_policymodel_path_alter_policymodel_name_and_more"),
     ]
 
     operations = [
