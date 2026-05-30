@@ -1,0 +1,54 @@
+# Overview
+
+The AI Agents module is a first-class framework built into Zango for running Large Language Models (LLMs) directly inside your multi-tenant business applications. It handles provider credentials, prompt templating, tool execution, memory, cost tracking, and invocation history — all scoped per tenant and manageable from the App Panel without touching code.
+
+## What the AI Module Provides
+
+**LLM Providers**
+Connect OpenAI or Anthropic by storing an encrypted API key once in the App Panel. All tenants manage their own providers independently.
+
+**Agents**
+A named LLM configuration combining a provider, model, prompts, temperature, token limits, output format, and an attached list of tools. Agents are resolved by name at runtime from the current tenant's schema.
+
+**Tools**
+Python functions in your app code decorated with `@tool`. The LLM can invoke these during a response to fetch live data, run calculations, or update records. Zango automatically executes them inside the correct tenant schema and passes the result back to the LLM.
+
+**Structured Output**
+Configure an agent to return JSON conforming to a schema you define, instead of plain text. Useful for building pipelines that consume agent output programmatically.
+
+**Guardrails** *(coming soon)*
+Attach guardrail rules to an agent to filter or block inputs and outputs that violate defined constraints.
+
+**Short-term Memory**
+Enable per-session conversation history so the agent maintains context across multiple `agent.run()` calls using the same `session_id`. Configure `Max Messages` to control the sliding window of history loaded per call.
+
+**Invocation History**
+Every run is recorded with rendered prompts, tool calls and their arguments/results, the final response, token counts, and USD cost. Queryable from the App Panel.
+
+**Cost Tracking**
+Cumulative cost per agent is tracked in `total_cost_usd`. Each invocation reports its cost via `response.cost_usd`.
+
+## Architecture
+
+```
+Request / Task / Shell
+  └── get_agent("agent-name")          # resolves AppLLMAgent from tenant schema
+        └── agent.run(variables={...}) # renders prompts, calls LLM
+              ├── Tool call → @tool fn  # executed in tenant schema
+              └── Returns AgentResponse
+                    ├── .content
+                    ├── .cost_usd
+                    └── .usage (input_tokens, output_tokens)
+```
+
+Zango's tenant middleware sets the DB schema from the request hostname before your view runs. `get_agent()` and all tool ORM queries automatically use that schema — no manual `connection.set_tenant()` is needed in views or tasks.
+
+## Quick Workflow
+
+1. [Set up an LLM Provider](./setting-up-provider)
+2. [Create an Agent](./creating-an-agent) and configure its model and settings
+3. [Create Prompts](./creating-a-prompt) and attach them to the agent
+4. [Define tools](./defining-tools) using `@tool` in your app code
+5. [Sync tools](./syncing-tools) from the App Panel and attach them to the agent
+6. [Run the agent](./running-agents) from a view, task, or shell
+7. [Monitor invocations](./invocation-history) for debugging and cost analysis
