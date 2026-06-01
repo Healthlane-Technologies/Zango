@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Code Execution — Follow-up Design | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-600:#4549D6; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-100:#CCF2EB; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-100:#E5E7EE; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand: var(--indigo-500);
+  --brand-soft: var(--indigo-50);
+  --accent: var(--teal-500);
+  --accent-soft: var(--teal-50);
+
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06), 0 1px 1px rgba(15,19,36,.03);
+  --shadow-md:
+    0 4px 12px -2px rgba(15,19,36,.08),
+    0 2px 4px rgba(15,19,36,.04),
+    inset 0 1px 0 rgba(255,255,255,.6);
+
+  --ease-out: cubic-bezier(.22,1,.36,1);
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  font-feature-settings: 'cv11','ss01','ss03';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--surface-page);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  max-width: 1280px;
+  margin: 0 auto;
+  gap: 48px;
+  padding: 0 32px 96px;
+}
+.toc { position: sticky; top: 32px; align-self: start; padding-top: 80px; height: calc(100vh - 32px); overflow-y: auto; }
+.toc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.toc-kicker { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 16px; }
+.toc a {
+  display: block; padding: 7px 10px;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px; font-weight: 450;
+  line-height: 1.45;
+  transition: all 180ms var(--ease-out);
+  position: relative;
+}
+.toc a::before {
+  content: ''; position: absolute;
+  left: 0; top: 50%; width: 2px; height: 14px;
+  background: transparent; border-radius: 2px;
+  transform: translateY(-50%);
+  transition: background 180ms var(--ease-out);
+}
+.toc a:hover { color: var(--text-strong); background: var(--surface-sunken); }
+.toc a.active { color: var(--brand); background: var(--brand-soft); font-weight: 530; }
+.toc a.active::before { background: var(--brand); }
+.toc-section + .toc-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+
+main { min-width: 0; padding-top: 56px; }
+
+.hero {
+  position: relative;
+  margin-bottom: 56px;
+  padding: 36px 40px 40px;
+  background:
+    radial-gradient(ellipse 600px 320px at 100% 0%, rgba(89,97,229,.10), transparent 60%),
+    radial-gradient(ellipse 400px 280px at 0% 100%, rgba(17,156,133,.08), transparent 60%),
+    linear-gradient(180deg, #FAFBFE 0%, #F0F2F9 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: fadeUp 480ms var(--ease-out) both;
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+  color: var(--brand); background: rgba(89,97,229,.08);
+  padding: 5px 11px; border-radius: var(--r-pill);
+  margin-bottom: 16px;
+}
+.hero-kicker::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.18);
+}
+.hero h1 { font-size: 32px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; color: var(--text-strong); margin-bottom: 10px; max-width: 720px; }
+.hero .lede { font-size: 14.5px; color: var(--text-muted); line-height: 1.6; max-width: 660px; margin-bottom: 24px; }
+.hero-facts {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.fact { background: var(--surface-card); padding: 12px 16px; }
+.fact .label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 5px; }
+.fact .val { font-size: 13px; color: var(--text-strong); font-weight: 530; }
+.fact .val.brand { color: var(--brand); }
+
+section { margin-bottom: 56px; }
+.section-kicker { display: inline-block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 8px; }
+section h2 {
+  font-size: 22px; font-weight: 700; letter-spacing: -.022em; color: var(--text-strong);
+  margin-bottom: 8px; scroll-margin-top: 24px;
+}
+section .section-intro { font-size: 14px; color: var(--text-muted); max-width: 720px; margin-bottom: 24px; line-height: 1.65; }
+h3 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--text-strong); margin-bottom: 8px; scroll-margin-top: 24px; }
+h4 { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 6px; }
+p { color: var(--text-body); }
+p + p { margin-top: 10px; }
+
+code.inline {
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px;
+  color: var(--text-strong);
+}
+
+.card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 20px 24px; box-shadow: var(--shadow-sm); }
+.card.tinted { background: var(--surface-tinted); border-color: rgba(89,97,229,.18); }
+.card.warn { background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 100%); border-color: var(--amber-100); border-left: 3px solid var(--amber-500); }
+.card.success { background: linear-gradient(180deg, var(--sage-50) 0%, #FFF 100%); border-color: rgba(90,164,91,.2); border-left: 3px solid var(--sage-500); }
+
+.note {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px; color: var(--text-muted);
+  padding: 10px 14px;
+  border-left: 2px solid var(--brand);
+  background: var(--brand-soft);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.note.warn { border-color: var(--amber-500); background: var(--amber-50); }
+.note.warn strong { color: var(--amber-700); }
+
+.code {
+  border: 1px solid #2A2E3A;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #0F1117;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #E1E4ED;
+  margin: 10px 0 14px;
+}
+.code-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 12px;
+  background: #1A1D26;
+  border-bottom: 1px solid #2A2E3A;
+  font-size: 10.5px; color: #8B92A5;
+  font-family: var(--font-mono);
+}
+.code-header .lang { padding: 1px 7px; background: rgba(255,255,255,.06); border-radius: 3px; color: #B7BCC9; }
+.code-header .path { color: #5F6A82; }
+.code-body { padding: 12px 16px; overflow-x: auto; white-space: pre; }
+
+.tok-kw { color: #C792EA; }
+.tok-imp { color: #82AAFF; }
+.tok-fn { color: #82AAFF; }
+.tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; }
+.tok-comment { color: #5F6A82; font-style: italic; }
+.tok-cls { color: #FFCB6B; }
+.tok-self { color: #FF9DBF; }
+.tok-dec { color: #FFCB6B; }
+.tok-op { color: #89DDFF; }
+
+/* Option cards */
+.options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0 20px; }
+.option {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.option.recommended { border-color: rgba(17,156,133,.35); background: linear-gradient(180deg, var(--accent-soft) 0%, #FFF 60%); }
+.option.recommended::before {
+  content: 'RECOMMENDED';
+  position: absolute; top: -8px; right: 16px;
+  font-size: 9.5px; letter-spacing: 0.08em; font-weight: 700;
+  background: var(--accent); color: #fff;
+  padding: 3px 8px; border-radius: 3px;
+}
+.option .opt-tag { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 4px; }
+.option h4 { font-size: 14px; margin-bottom: 8px; }
+.option .body { font-size: 12.5px; color: var(--text-body); line-height: 1.55; margin-bottom: 10px; }
+.option .pros, .option .cons {
+  font-size: 11.5px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  display: flex; align-items: flex-start; gap: 6px;
+  margin-bottom: 4px;
+}
+.option .pros { background: var(--sage-50); color: var(--sage-700); }
+.option .cons { background: var(--amber-50); color: var(--amber-700); }
+.option .pros::before { content: '✓'; font-weight: 700; }
+.option .cons::before { content: '×'; font-weight: 700; }
+
+/* Tables */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin: 8px 0 16px;
+  box-shadow: var(--shadow-sm);
+}
+.tbl thead th {
+  text-align: left;
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  font-weight: 600; color: var(--text-subtle);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #FAFBFD;
+}
+.tbl tbody td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12.5px;
+  color: var(--text-body);
+  vertical-align: top;
+}
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: var(--surface-sunken); }
+.tbl code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; color: var(--text-strong); }
+.tbl .mono { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 530;
+}
+.pill.allow { background: var(--sage-50); color: var(--sage-700); }
+.pill.allow::before { content: '✓'; font-weight: 700; }
+.pill.block { background: var(--crimson-50); color: var(--crimson-700); }
+.pill.block::before { content: '✕'; font-weight: 700; }
+.pill.warn { background: var(--amber-50); color: var(--amber-700); }
+.pill.warn::before { content: '!'; font-weight: 700; }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+main > section { animation: fadeUp 380ms var(--ease-out) both; }
+main > section:nth-of-type(1) { animation-delay: 40ms; }
+main > section:nth-of-type(2) { animation-delay: 80ms; }
+main > section:nth-of-type(3) { animation-delay: 120ms; }
+main > section:nth-of-type(4) { animation-delay: 160ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 1fr; padding: 0 20px 64px; }
+  .toc { display: none; }
+  .hero-facts { grid-template-columns: 1fr; }
+  .options { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <nav class="toc">
+    <div class="toc-kicker">On this page</div>
+    <div class="toc-section">
+      <a href="#overview" class="active">Overview</a>
+    </div>
+    <div class="toc-section">
+      <a href="#zfilefield">1 · ZFileField switch</a>
+      <a href="#zff-what">What it does</a>
+      <a href="#zff-problem">The allowlist issue</a>
+      <a href="#zff-approach">Approach</a>
+      <a href="#zff-migration">Migration plan</a>
+      <a href="#zff-storage">Storage layout</a>
+      <a href="#zff-tests">Test plan</a>
+    </div>
+    <div class="toc-section">
+      <a href="#settings">2 · Block settings writes</a>
+      <a href="#settings-state">Current state</a>
+      <a href="#settings-change">What changes</a>
+      <a href="#settings-bypasses">Reflection bypasses</a>
+      <a href="#settings-tests">Test cases</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============= HERO ============= -->
+    <header class="hero">
+      <div class="hero-kicker">Code Execution · Follow-up Design</div>
+      <h1>Two refinements<br/><span style="color: var(--text-muted); font-weight: 500;">to a shipped feature.</span></h1>
+      <p class="lede">
+        Plan only — no code in this commit. Switch the feature's file columns
+        from <code class="inline">models.FileField</code> to Zango's
+        <code class="inline">ZFileField</code>, and tighten the AST validator
+        so user snippets can read <code class="inline">django.conf.settings</code>
+        but not modify it.
+      </p>
+      <div class="hero-facts">
+        <div class="fact"><div class="label">Status</div><div class="val brand">Design · awaiting approval</div></div>
+        <div class="fact"><div class="label">Migration needed</div><div class="val">Yes · 1 AlterField each</div></div>
+        <div class="fact"><div class="label">Frontend change</div><div class="val">None</div></div>
+      </div>
+    </header>
+
+
+    <!-- ============= OVERVIEW ============= -->
+    <section id="overview">
+      <div class="section-kicker">Overview</div>
+      <h2>What's being proposed</h2>
+      <p class="section-intro">
+        Two independent changes, each small in scope. They can ship together or
+        separately. Both touch the backend only; the React UI requires no work.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <div class="section-kicker" style="margin-bottom: 4px;">Change 1</div>
+          <h3>Use ZFileField for file columns</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Replace <code class="inline">models.FileField</code> on
+            <code class="inline">CodeSnippetFile.file</code> and
+            <code class="inline">CodeExecFile.file</code> with Zango's
+            <code class="inline">ZFileField</code>. Gets tenant-scoped storage
+            paths, private S3 ACL, and Zango's standard upload convention for
+            free.
+          </p>
+        </div>
+        <div class="card">
+          <div class="section-kicker" style="margin-bottom: 4px;">Change 2</div>
+          <h3>Block writes to settings.*</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            User snippets can still <em>read</em>
+            <code class="inline">settings.TIME_ZONE</code> etc. (status quo),
+            but any assignment to a <code class="inline">settings.*</code>
+            attribute becomes a validator violation. About 15 lines added to
+            <code class="inline">validator.py</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============= 1 · ZFILEFIELD ============= -->
+    <section id="zfilefield">
+      <div class="section-kicker">Change 1 · ZFileField</div>
+      <h2>Switch file columns to ZFileField</h2>
+
+      <h3 id="zff-what" style="margin-top: 20px;">What <code class="inline">ZFileField</code> does</h3>
+      <p>
+        <code class="inline">src/zango/core/storage_utils.py:64</code> defines
+        a thin subclass of <code class="inline">models.FileField</code> that
+        opinionates three things:
+      </p>
+
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">zango/core/storage_utils.py</span></div>
+        <div class="code-body"><span class="tok-kw">class</span> <span class="tok-cls">ZFileField</span>(models.<span class="tok-cls">FileField</span>):
+    <span class="tok-kw">def</span> <span class="tok-fn">__init__</span>(self, ..., upload_to=<span class="tok-str">""</span>,
+                 validators=[validate_file_extension], **kw):
+        <span class="tok-kw">super</span>().<span class="tok-fn">__init__</span>(
+            upload_to=(RandomUniqueFileName),       <span class="tok-comment"># always · caller's value ignored</span>
+            validators=[validate_file_extension],   <span class="tok-comment"># always · extension allowlist</span>
+            **kw,
+        )
+        <span class="tok-kw">if</span> make_public <span class="tok-kw">is</span> <span class="tok-kw">False</span>:
+            self.storage.default_acl = <span class="tok-str">"private"</span></div>
+      </div>
+
+      <h4 style="margin-top: 14px;">Three consequences of the swap</h4>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Today (<code>models.FileField</code>)</th>
+            <th>After (<code>ZFileField</code>)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Storage path</td>
+            <td class="mono">codexec/snippets/&lt;sid&gt;/&lt;uuid&gt;<br/>codexec/runs/&lt;eid&gt;/&lt;kind&gt;/&lt;uuid&gt;</td>
+            <td class="mono">&lt;tenant&gt;/CodeSnippetFile/&lt;uuid&gt;.&lt;ext&gt;<br/>&lt;tenant&gt;/CodeExecFile/&lt;uuid&gt;.&lt;ext&gt;</td>
+          </tr>
+          <tr>
+            <td><code>upload_to</code></td>
+            <td>Required, lives in <code>models.py</code></td>
+            <td>Not passed · hard-coded to <code>RandomUniqueFileName</code></td>
+          </tr>
+          <tr>
+            <td>Extension validation</td>
+            <td>None — any extension</td>
+            <td>Allowlist: pdf, doc[x], jpg, jpeg, png, svg, xls[x], mp3, wav, ppt[x], zip, ico, mp4, webm, csv, json</td>
+          </tr>
+          <tr>
+            <td>S3 ACL</td>
+            <td>Whatever the backend sets</td>
+            <td>Forced to <code>private</code> ✓ what we want</td>
+          </tr>
+        </tbody>
+      </table>
+
+
+      <h3 id="zff-problem" style="margin-top: 20px;">The extension-allowlist issue</h3>
+      <p>
+        The only real friction. Two file roles to consider:
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px;">
+        <div class="card">
+          <h4><code class="inline">CodeSnippetFile</code> · user-uploaded inputs</h4>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 6px;">
+            In the allowlist: <code class="inline">.csv</code>,
+            <code class="inline">.json</code>, <code class="inline">.xlsx</code>,
+            <code class="inline">.pdf</code>, <code class="inline">.png</code>,
+            <code class="inline">.zip</code>.
+          </p>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 6px;">
+            NOT allowed: <code class="inline">.txt</code>,
+            <code class="inline">.yaml</code>, <code class="inline">.tsv</code>,
+            <code class="inline">.parquet</code>, <code class="inline">.html</code>,
+            <code class="inline">.md</code>, <code class="inline">.xml</code>,
+            <code class="inline">.log</code>.
+          </p>
+        </div>
+        <div class="card warn">
+          <h4><code class="inline">CodeExecFile</code> · snippet outputs</h4>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 6px;">
+            The user's snippet might do
+            <code class="inline">codexec.write("report.html", …)</code> or write
+            <code class="inline">.parquet</code> / <code class="inline">.log</code> output.
+          </p>
+          <p style="font-size: 12.5px; color: var(--amber-700); margin-top: 6px; font-weight: 530;">
+            ZFileField would reject these at validation time.
+            <strong>This is the harder problem.</strong>
+          </p>
+        </div>
+      </div>
+
+
+      <h3 id="zff-approach" style="margin-top: 28px;">Approach · ZFileField for both columns</h3>
+
+      <div class="options" style="grid-template-columns: 1fr;">
+        <div class="option recommended">
+          <div class="opt-tag">Decision</div>
+          <h4>Use <code class="inline">ZFileField</code> on both <code class="inline">CodeSnippetFile.file</code> and <code class="inline">CodeExecFile.file</code></h4>
+          <div class="body">
+            Symmetric field type across inputs and outputs. The extension
+            allowlist is accepted as the contract — both human-uploaded inputs
+            and snippet-written outputs must land in
+            <code class="inline">pdf · doc[x] · jpg · jpeg · png · svg · xls[x] · mp3 · wav · ppt[x] · zip · ico · mp4 · webm · csv · json</code>.
+          </div>
+          <div class="pros">Symmetric · no subclass · no special cases.</div>
+          <div class="pros">Tenant-scoped path + private ACL for free.</div>
+          <div class="pros">Consistent with how every other Zango model handles uploads.</div>
+          <div class="cons">Snippet outputs in unsupported extensions (<code class="inline">.html</code>, <code class="inline">.parquet</code>, <code class="inline">.log</code>, <code class="inline">.txt</code>) will raise <code class="inline">ValidationError</code> from <code class="inline">file.save()</code>. Documented as a constraint of the helper.</div>
+        </div>
+      </div>
+
+      <h4 style="margin-top: 16px;">User-facing contract for the codexec helper</h4>
+      <p style="font-size: 13px; color: var(--text-muted);">
+        Document in the codexec helper docs that
+        <code class="inline">codexec.write(name, payload)</code> requires
+        <code class="inline">name</code> to end with one of the allowlisted
+        extensions. Calls outside that set fail fast with a clear error rather
+        than landing silently in storage.
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">codexec.py — error surface</span></div>
+        <div class="code-body"><span class="tok-comment"># Inside _store_output, before obj.file.save(...)</span>
+ext = os.path.splitext(name)[<span class="tok-num">1</span>].lower().lstrip(<span class="tok-str">"."</span>)
+<span class="tok-kw">if</span> ext <span class="tok-kw">not</span> <span class="tok-kw">in</span> ALLOWED_OUTPUT_EXTS:
+    <span class="tok-kw">raise</span> <span class="tok-cls">ValueError</span>(
+        <span class="tok-str">f"codexec.write: extension '.{ext}' is not allowed. "</span>
+        <span class="tok-str">f"Pick one of: {', '.join(sorted(ALLOWED_OUTPUT_EXTS))}"</span>,
+    )</div>
+      </div>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        This turns the validator's deep <code class="inline">ValidationError</code>
+        into a friendly error message at the public API boundary. The actual
+        DB-level guard remains <code class="inline">validate_file_extension</code>.
+      </p>
+
+
+      <h3 id="zff-migration" style="margin-top: 24px;">Migration plan</h3>
+
+      <h4>Model changes</h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/code_execution/models.py — replace</span></div>
+        <div class="code-body"><span class="tok-comment"># Before</span>
+<span class="tok-kw">class</span> <span class="tok-cls">CodeSnippetFile</span>(<span class="tok-cls">FullAuditMixin</span>):
+    file = models.<span class="tok-fn">FileField</span>(upload_to=_snippet_file_upload_to, max_length=<span class="tok-num">512</span>)
+
+<span class="tok-kw">class</span> <span class="tok-cls">CodeExecFile</span>(<span class="tok-cls">FullAuditMixin</span>):
+    file = models.<span class="tok-fn">FileField</span>(upload_to=_exec_file_upload_to, max_length=<span class="tok-num">512</span>)
+
+<span class="tok-comment"># After</span>
+<span class="tok-kw">from</span> <span class="tok-imp">zango.core.storage_utils</span> <span class="tok-kw">import</span> <span class="tok-cls">ZFileField</span>
+
+<span class="tok-kw">class</span> <span class="tok-cls">CodeSnippetFile</span>(<span class="tok-cls">FullAuditMixin</span>):
+    file = <span class="tok-fn">ZFileField</span>(max_length=<span class="tok-num">512</span>)
+
+<span class="tok-kw">class</span> <span class="tok-cls">CodeExecFile</span>(<span class="tok-cls">FullAuditMixin</span>):
+    file = <span class="tok-fn">ZFileField</span>(max_length=<span class="tok-num">512</span>)</div>
+      </div>
+
+      <p>
+        Then remove the <code class="inline">_snippet_file_upload_to</code>
+        and <code class="inline">_exec_file_upload_to</code> helpers — no
+        longer used.
+      </p>
+
+      <h4 style="margin-top: 14px;">Generated migration</h4>
+      <p>
+        <code class="inline">python manage.py makemigrations code_execution</code>
+        produces one <code class="inline">AlterField</code> per affected column.
+        Django records it as a plain <code class="inline">FileField</code>
+        (since <code class="inline">ZFileField</code> is a subclass), with the
+        appropriate validator and upload_to attributes.
+      </p>
+
+      <div class="card success">
+        <h4 style="color: var(--sage-700);">No data migration required</h4>
+        <p style="font-size: 12.5px; color: var(--text-body); margin-top: 4px;">
+          Django stores only the path string in the DB. The field-class change
+          doesn't touch existing rows. Old files keep their old paths and
+          continue to resolve — the storage backend just serves whatever
+          string is in the DB. New files written after deploy land at the new
+          layout.
+        </p>
+      </div>
+
+      <h4 style="margin-top: 14px;">Code points that need adjusting</h4>
+      <p>Three places besides the model fields:</p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Location</th>
+            <th>Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>models.py</code></td>
+            <td>Drop <code>_snippet_file_upload_to</code> and <code>_exec_file_upload_to</code> helpers. Import <code>ZFileField</code> and swap both column types.</td>
+          </tr>
+          <tr>
+            <td><code>CodeSnippetRunView.post</code> — snapshot-on-run</td>
+            <td><strong>No change.</strong> Still does <code>file=snip_file.file.name</code> to share the storage path; we're not triggering a new upload, just pointing the new row at the existing blob.</td>
+          </tr>
+          <tr>
+            <td><code>codexec.py _store_output</code></td>
+            <td>Add an extension pre-check that raises a friendly <code>ValueError</code> before <code>obj.file.save(...)</code>. The underlying <code>file.save</code> routes through <code>RandomUniqueFileName</code> and would otherwise raise <code>ValidationError</code> on a disallowed extension.</td>
+          </tr>
+        </tbody>
+      </table>
+
+
+      <h3 id="zff-storage" style="margin-top: 24px;">Storage layout · before and after</h3>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Before</th>
+            <th>After</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">codexec/snippets/&lt;snippet_uuid&gt;/&lt;file_uuid&gt;</td>
+            <td class="mono">&lt;tenant&gt;/CodeSnippetFile/&lt;file_uuid&gt;.&lt;ext&gt;</td>
+          </tr>
+          <tr>
+            <td class="mono">codexec/runs/&lt;exec_uuid&gt;/input/&lt;file_uuid&gt;</td>
+            <td class="mono">&lt;tenant&gt;/CodeExecFile/&lt;file_uuid&gt;.&lt;ext&gt;</td>
+          </tr>
+          <tr>
+            <td class="mono">codexec/runs/&lt;exec_uuid&gt;/output/&lt;file_uuid&gt;</td>
+            <td class="mono">&lt;tenant&gt;/CodeExecFile/&lt;file_uuid&gt;.&lt;ext&gt;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note warn" style="margin-top: 12px;">
+        <span>
+          <strong>Note · we lose the "files for this run live under one prefix" grouping.</strong>
+          Today an S3 <code>ListObjectsV2</code> with prefix
+          <code>codexec/runs/&lt;exec_id&gt;/</code> shows only that run's files.
+          After the switch, we'd query the DB instead. In practice we always do
+          (via the <code>CodeExecFile</code> FK), so this is fine. Bulk GC would
+          delete blob-by-blob instead of with a single prefix delete — marginally
+          slower; not a real problem at our scale.
+        </span>
+      </div>
+
+      <div class="card tinted" style="margin-top: 14px;">
+        <h4 style="margin-bottom: 6px;">Filename preservation — unchanged</h4>
+        <p style="font-size: 12.5px; color: var(--text-body);">
+          The user-facing filename continues to live on
+          <code class="inline">CodeSnippetFile.name</code> /
+          <code class="inline">CodeExecFile.name</code>. The download
+          serializer's <code class="inline">_signed_download_url</code> generates
+          S3 presigned URLs with <code class="inline">ResponseContentDisposition</code>
+          set from that DB column. The actual storage key is the UUID-with-extension
+          produced by <code class="inline">RandomUniqueFileName</code> — never
+          seen by the user.
+        </p>
+      </div>
+
+
+      <h3 id="zff-tests" style="margin-top: 24px;">Test plan</h3>
+
+      <div class="card">
+        <ul style="list-style: none; padding-left: 0;">
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Apply migration to one tenant.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Upload a <code class="inline">.csv</code> snippet file → succeeds; storage path is <code class="inline">&lt;tenant&gt;/CodeSnippetFile/&lt;uuid&gt;.csv</code>.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Upload a <code class="inline">.txt</code> snippet file → rejected with extension-not-allowed error.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Run a snippet that does <code class="inline">codexec.write("out.html", b"hi")</code> → snippet errors with friendly <code class="inline">ValueError</code> from the helper, listing allowed extensions.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Run a snippet that does <code class="inline">codexec.write("out.csv", b"a,b\n1,2")</code> → succeeds.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Verify downloads return with the original filename in <code class="inline">Content-Disposition</code>.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Snapshot-on-run still works: exec input file's storage path equals snippet file's storage path; bytes shared.
+          </li>
+          <li style="padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body);">
+            <span style="position: absolute; left: 4px; top: 11px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Pre-migration rows with old <code class="inline">codexec/…</code> paths still resolve correctly.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+
+    <!-- ============= 2 · SETTINGS WRITES ============= -->
+    <section id="settings">
+      <div class="section-kicker">Change 2 · Validator hardening</div>
+      <h2>Block writes to <code class="inline" style="font-size: 18px;">settings.*</code></h2>
+      <p class="section-intro">
+        User snippets should be able to read any
+        <code class="inline">django.conf.settings.X</code> they want
+        (status quo). Modifying a setting from a snippet must be rejected at
+        save / pickup time. Today only a few specific reads
+        (<code class="inline">settings.SECRET_KEY</code>,
+        <code class="inline">settings.DATABASES</code>) are blocked; writes
+        are not blocked at all.
+      </p>
+
+
+      <h3 id="settings-state">Current state</h3>
+      <p>
+        The validator already blocks two specific attribute reads:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/code_execution/validator.py</span></div>
+        <div class="code-body">BANNED_ATTR_PATHS = {
+    ...
+    (<span class="tok-str">"settings"</span>, <span class="tok-str">"SECRET_KEY"</span>),
+    (<span class="tok-str">"settings"</span>, <span class="tok-str">"DATABASES"</span>),
+    ...
+}</div>
+      </div>
+      <p>
+        These prevent <code class="inline">print(settings.SECRET_KEY)</code> —
+        fine to keep. But nothing blocks
+        <code class="inline">settings.TIME_ZONE = "UTC"</code> or
+        <code class="inline">settings.DEBUG = True</code>.
+      </p>
+
+
+      <h3 id="settings-change" style="margin-top: 22px;">What changes</h3>
+      <p>
+        Extend the existing <code class="inline">visit_Assign</code> and
+        <code class="inline">visit_AugAssign</code> guards to also fire when
+        the assignment target's resolved chain starts with
+        <code class="inline">settings</code> or matches
+        <code class="inline">django.conf.settings.…</code>.
+      </p>
+
+      <h4>Drop-in code</h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">validator.py · inside visit_Assign, after the existing tenant-switch check</span></div>
+        <div class="code-body"><span class="tok-kw">elif</span> chain[<span class="tok-num">0</span>] == <span class="tok-str">"settings"</span> <span class="tok-kw">or</span> chain[:<span class="tok-num">3</span>] == (<span class="tok-str">"django"</span>, <span class="tok-str">"conf"</span>, <span class="tok-str">"settings"</span>):
+    self.<span class="tok-fn">_add</span>(
+        node.lineno, node.col_offset,
+        <span class="tok-str">"DENY_SETTINGS_WRITE"</span>,
+        <span class="tok-str">f"Modifying '{'.'.join(chain)}' is not allowed; "</span>
+        <span class="tok-str">f"settings are read-only."</span>,
+    )
+
+<span class="tok-comment"># same idea inside visit_AugAssign for `settings.X += 1` etc.</span></div>
+      </div>
+
+      <h4 style="margin-top: 12px;">Why the two-prong check works</h4>
+      <p>
+        The <code class="inline">chain[:3] == ("django", "conf", "settings")</code>
+        check covers the <code class="inline">import django.conf</code> path
+        where someone writes
+        <code class="inline">django.conf.settings.TIME_ZONE = "UTC"</code>.
+      </p>
+      <p>
+        The <code class="inline">chain[0] == "settings"</code> check covers
+        the common path:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span></div>
+        <div class="code-body"><span class="tok-kw">from</span> <span class="tok-imp">django.conf</span> <span class="tok-kw">import</span> <span class="tok-imp">settings</span>
+settings.TIME_ZONE = <span class="tok-str">"UTC"</span>        <span class="tok-comment"># caught · chain = ("settings", "TIME_ZONE")</span></div>
+      </div>
+      <p>
+        This works because <code class="inline">visit_ImportFrom</code>
+        already records the alias map:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span></div>
+        <div class="code-body"><span class="tok-kw">if</span> alias.name <span class="tok-kw">in</span> {<span class="tok-str">"os"</span>, <span class="tok-str">"shutil"</span>, <span class="tok-str">"django"</span>, <span class="tok-str">"settings"</span>, <span class="tok-str">"connection"</span>}:
+    self.alias_to_module[local] = alias.name</div>
+      </div>
+      <p>
+        So <code class="inline">from django.conf import settings as cfg</code>
+        is also covered — <code class="inline">cfg.X = Y</code> becomes the
+        chain <code class="inline">("cfg", "X")</code>, gets resolved via the
+        alias map to <code class="inline">("settings", "X")</code>, and is
+        matched.
+      </p>
+
+
+      <h3 id="settings-bypasses" style="margin-top: 22px;">Reflection bypasses — already covered</h3>
+      <p>
+        We don't need new checks for these — existing logic catches them:
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 50%;">Bypass attempt</th>
+            <th>Already blocked by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">setattr(settings, "X", value)</td>
+            <td><code>setattr</code> in <code>BANNED_NAMES</code> → DENY_NAME</td>
+          </tr>
+          <tr>
+            <td class="mono">delattr(settings, "X")</td>
+            <td><code>delattr</code> in <code>BANNED_NAMES</code> → DENY_NAME</td>
+          </tr>
+          <tr>
+            <td class="mono">settings.__dict__["X"] = value</td>
+            <td><code>__dict__</code> in <code>BANNED_DUNDERS</code> → DENY_DUNDER</td>
+          </tr>
+          <tr>
+            <td class="mono">vars(settings)["X"] = value</td>
+            <td><code>vars</code> in <code>BANNED_NAMES</code> → DENY_NAME</td>
+          </tr>
+          <tr>
+            <td class="mono">settings.__class__.X = value</td>
+            <td><code>__class__</code> in <code>BANNED_DUNDERS</code> → DENY_DUNDER</td>
+          </tr>
+          <tr>
+            <td class="mono">settings._wrapped.X = value</td>
+            <td>Caught by the new check — chain starts with <code>settings</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="card tinted" style="margin-top: 14px;">
+        <h4>Bonus catch · Django's LazySettings proxy</h4>
+        <p style="font-size: 12.5px; color: var(--text-body);">
+          Django's <code class="inline">settings</code> is a
+          <code class="inline">LazySettings</code> wrapper that proxies attribute
+          access to an inner <code class="inline">Settings</code> instance
+          stored on <code class="inline">settings._wrapped</code>. A determined
+          attacker could try <code class="inline">settings._wrapped.TIME_ZONE = "UTC"</code>.
+          The chain is
+          <code class="inline">("settings", "_wrapped", "TIME_ZONE")</code> —
+          the prefix-match on <code class="inline">chain[0] == "settings"</code>
+          catches it. No extra logic needed.
+        </p>
+      </div>
+
+
+      <h3 id="settings-tests" style="margin-top: 22px;">Test cases</h3>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 60%;">Snippet</th>
+            <th>Expected</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">print(settings.TIME_ZONE)</td>
+            <td><span class="pill allow">ALLOW</span></td>
+          </tr>
+          <tr>
+            <td class="mono">tz = settings.TIME_ZONE</td>
+            <td><span class="pill allow">ALLOW</span></td>
+          </tr>
+          <tr>
+            <td class="mono">settings.TIME_ZONE = "UTC"</td>
+            <td><span class="pill block">DENY_SETTINGS_WRITE</span></td>
+          </tr>
+          <tr>
+            <td class="mono">settings.NEW_FLAG = True</td>
+            <td><span class="pill block">DENY_SETTINGS_WRITE</span></td>
+          </tr>
+          <tr>
+            <td class="mono">settings.X += 1</td>
+            <td><span class="pill block">DENY_SETTINGS_WRITE</span></td>
+          </tr>
+          <tr>
+            <td class="mono">from django.conf import settings as cfg<br/>cfg.X = 1</td>
+            <td><span class="pill block">DENY_SETTINGS_WRITE</span></td>
+          </tr>
+          <tr>
+            <td class="mono">import django.conf<br/>django.conf.settings.X = 1</td>
+            <td><span class="pill block">DENY_SETTINGS_WRITE</span></td>
+          </tr>
+          <tr>
+            <td class="mono">settings._wrapped.X = 1</td>
+            <td><span class="pill block">DENY_SETTINGS_WRITE</span></td>
+          </tr>
+          <tr>
+            <td class="mono">setattr(settings, "X", 1)</td>
+            <td><span class="pill block">DENY_NAME (existing)</span></td>
+          </tr>
+          <tr>
+            <td class="mono">settings.__dict__["X"] = 1</td>
+            <td><span class="pill block">DENY_DUNDER (existing)</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+
+      <h3 style="margin-top: 22px;">Scope</h3>
+      <div class="card" style="background: var(--surface-sunken); box-shadow: none;">
+        <ul style="list-style: none; padding-left: 0; font-size: 12.5px; color: var(--text-body);">
+          <li style="padding: 4px 0 4px 18px; position: relative;">
+            <span style="position: absolute; left: 4px; top: 10px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            ~15 lines added to <code class="inline">validator.py</code>.
+          </li>
+          <li style="padding: 4px 0 4px 18px; position: relative;">
+            <span style="position: absolute; left: 4px; top: 10px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            No migration needed.
+          </li>
+          <li style="padding: 4px 0 4px 18px; position: relative;">
+            <span style="position: absolute; left: 4px; top: 10px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            No frontend change — violations render through the existing editor UI.
+          </li>
+          <li style="padding: 4px 0 4px 18px; position: relative;">
+            <span style="position: absolute; left: 4px; top: 10px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%;"></span>
+            Add a smoke test exercising the table above.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+
+    <!-- ============= FOOTER ============= -->
+    <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-subtle);">
+        <div>Follow-up Design · Code Execution · Zango Platform</div>
+        <div>Branch <span style="font-family: var(--font-mono); color: var(--text-muted);">feat/zango_codexec</span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+  const targets = tocLinks
+    .map(l => document.querySelector(l.getAttribute('href')))
+    .filter(Boolean);
+
+  function absTop(el) {
+    return el.getBoundingClientRect().top + window.scrollY;
+  }
+
+  function updateActive() {
+    const y = window.scrollY + 120;
+    let currentId = '';
+    targets.forEach(el => { if (absTop(el) <= y) currentId = el.id; });
+    tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + currentId));
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  window.addEventListener('resize', updateActive, { passive: true });
+
+  tocLinks.forEach(l => l.addEventListener('click', (e) => {
+    const target = document.querySelector(l.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      window.scrollTo({ top: absTop(target) - 24, behavior: 'smooth' });
+      tocLinks.forEach(x => x.classList.toggle('active', x === l));
+    }
+  }));
+
+  updateActive();
+</script>
+
+</body>
+</html>

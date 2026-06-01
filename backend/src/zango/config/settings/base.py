@@ -57,6 +57,7 @@ TENANT_APPS = [
     "zango.apps.object_store",
     "zango.apps.dynamic_models",
     "zango.apps.tasks",
+    "zango.apps.code_execution",
     "zango.apps.auditlogs",
     "zango.apps.accesslogs",
     "zango.apps.release",
