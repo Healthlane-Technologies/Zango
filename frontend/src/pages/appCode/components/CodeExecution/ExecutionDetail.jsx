@@ -775,9 +775,9 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 															<span className="text-amber-700">Current code · not yet executed</span>
 														)}
 													</div>
-													{v.representative_execution_id && v.representative_execution_id !== execution.object_uuid && (
+													{v.representative_execution_uuid && v.representative_execution_uuid !== execution.object_uuid && (
 														<button
-															onClick={() => onSelectExecution?.(v.representative_execution_id)}
+															onClick={() => onSelectExecution?.(v.representative_execution_uuid)}
 															className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
 														>
 															Open a run of v{v.version} →

@@ -480,7 +480,7 @@ class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
                     "first_run_at": row["first_run_at"].isoformat() if row["first_run_at"] else None,
                     "last_run_at": row["last_run_at"].isoformat() if row["last_run_at"] else None,
                     "is_current": v == snippet.version,
-                    "representative_execution_id": str(rep.object_uuid) if rep else None,
+                    "representative_execution_uuid": str(rep.object_uuid) if rep else None,
                 })
 
             # If the current snippet version has never been run, prepend it as
@@ -494,7 +494,7 @@ class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
                     "first_run_at": None,
                     "last_run_at": None,
                     "is_current": True,
-                    "representative_execution_id": None,
+                    "representative_execution_uuid": None,
                 })
 
             return get_api_response(
