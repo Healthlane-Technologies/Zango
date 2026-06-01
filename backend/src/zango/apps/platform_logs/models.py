@@ -51,9 +51,20 @@ class LogConnectorConfig(FullAuditMixin):
             "format": "verbose",     // "plain" | "verbose" | "json"
             "role_arn": null
         }
+
+    Identity:
+    - `id` is Django's default auto-increment BigAutoField (for relational
+      integrity and cheap FK joins — not added here, Django provides it).
+    - `object_uuid` is the stable, externally-visible identifier used in
+      URLs and API responses.
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    object_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        db_index=True,
+        editable=False,
+    )
 
     environment = models.CharField(
         max_length=32,

@@ -130,6 +130,7 @@ class LogConnectorConfigSerializer(serializers.ModelSerializer):
         model = LogConnectorConfig
         fields = [
             "id",
+            "object_uuid",
             "environment",
             "component",
             "connector",
@@ -138,7 +139,7 @@ class LogConnectorConfigSerializer(serializers.ModelSerializer):
             "created_at",
             "modified_at",
         ]
-        read_only_fields = ["id", "created_at", "modified_at"]
+        read_only_fields = ["id", "object_uuid", "created_at", "modified_at"]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
