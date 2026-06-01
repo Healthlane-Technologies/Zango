@@ -11,6 +11,9 @@ In-app endpoints (gated by IsPlatformUserAllowedApp via app_uuid):
 Platform admin endpoints (gated by IsSuperAdminPlatformUser):
     GET/POST /api/v1/platform/logs/connectors/
     POST     /api/v1/platform/logs/connectors/test/
+
+All responses go through get_api_response() so the frontend's useApi
+hook can unwrap {success, response} consistently.
 """
 
 from __future__ import annotations
@@ -21,8 +24,6 @@ from typing import List, Optional, Set
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
@@ -46,6 +47,7 @@ from zango.apps.platform_logs.models import (
     LogConnectorConfig,
 )
 from zango.apps.shared.tenancy.models import TenantModel
+from zango.core.api.utils import get_api_response
 from zango.core.permissions import (
     IsPlatformUserAllowedApp,
     IsSuperAdminPlatformUser,
@@ -85,13 +87,25 @@ def _current_environment() -> str:
     return getattr(settings, "ENV", "local")
 
 
-def _get_connector_for(component: str):
-    """Look up the LogConnectorConfig for the current env × component, then
-    instantiate the connector. Returns (cfg, connector) or raises 404."""
-    if component not in {c.value for c in Component}:
-        from rest_framework.exceptions import NotFound
+def _ok(payload, status_code: int = 200):
+    return get_api_response(True, payload, status_code)
 
-        raise NotFound(f"Unknown component '{component}'.")
+
+def _err(message, status_code: int = 400, **extra):
+    response = {"message": str(message)}
+    response.update(extra)
+    return get_api_response(False, response, status_code)
+
+
+def _get_connector_for(component: str):
+    """Resolve (env, component) → connector instance.
+
+    Returns (cfg, connector) on success or raises a tuple-friendly value via
+    the caller's _handle_connector_errors wrapper. For 404-style misses,
+    raises ConnectorNotFound which the wrapper translates to a 404 envelope.
+    """
+    if component not in {c.value for c in Component}:
+        raise ConnectorNotFound(f"Unknown component '{component}'.")
 
     try:
         cfg = LogConnectorConfig.objects.get(
@@ -100,9 +114,7 @@ def _get_connector_for(component: str):
             is_active=True,
         )
     except LogConnectorConfig.DoesNotExist as exc:
-        from rest_framework.exceptions import NotFound
-
-        raise NotFound(
+        raise ConnectorNotFound(
             f"No active connector configured for environment "
             f"'{_current_environment()}' × component '{component}'."
         ) from exc
@@ -111,20 +123,17 @@ def _get_connector_for(component: str):
 
 
 def _tenant_schema_for(app_uuid) -> str:
-    """Resolve an app UUID to the tenant's schema name (used as app_name filter)."""
     tenant = get_object_or_404(TenantModel, uuid=app_uuid)
     return tenant.schema_name
 
 
 def _parse_filters(request, *, default_window: timedelta) -> LogFilters:
-    """Translate query params into a LogFilters."""
     now = datetime.now(timezone.utc)
     since = _parse_iso(request.GET.get("since")) or (now - default_window)
     until = _parse_iso(request.GET.get("until"))
 
-    levels_raw = request.GET.get("levels", "")
     levels: Set[LogLevel] = set()
-    for piece in levels_raw.split(","):
+    for piece in (request.GET.get("levels", "") or "").split(","):
         piece = piece.strip().lower()
         if not piece:
             continue
@@ -133,7 +142,7 @@ def _parse_filters(request, *, default_window: timedelta) -> LogFilters:
         except ValueError:
             pass
 
-    streams_raw = request.GET.get("streams", "")
+    streams_raw = request.GET.get("streams", "") or ""
     streams: Optional[List[str]] = (
         [s.strip() for s in streams_raw.split(",") if s.strip()]
         if streams_raw
@@ -160,7 +169,6 @@ def _parse_iso(s: Optional[str]) -> Optional[datetime]:
     if not s:
         return None
     try:
-        # Accept both naive and aware; treat naive as UTC.
         dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
     except ValueError:
@@ -168,42 +176,36 @@ def _parse_iso(s: Optional[str]) -> Optional[datetime]:
 
 
 def _handle_connector_errors(fn):
-    """Wrap a view method so connector exceptions become proper HTTP responses."""
-
     def wrapper(self, request, *args, **kwargs):
         try:
             return fn(self, request, *args, **kwargs)
         except ConnectorNotFound as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+            return _err(exc, status_code=404)
         except ConnectorUnauthorized as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+            return _err(exc, status_code=403)
         except ConnectorThrottled as exc:
-            resp = Response(
-                {"detail": "Upstream throttled. Try again shortly."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            resp = _err(
+                "Upstream throttled. Try again shortly.",
+                status_code=503,
+                retry_after=int(exc.retry_after_seconds),
             )
             resp["Retry-After"] = str(int(exc.retry_after_seconds))
             return resp
         except ConnectorConfigError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return _err(exc, status_code=400)
         except ConnectorError as exc:
             logger.exception("platform_logs: upstream connector error: %s", exc)
-            return Response(
-                {"detail": f"Upstream connector error: {exc}"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+            return _err(f"Upstream connector error: {exc}", status_code=502)
 
     return wrapper
 
 
 # ---------------------------------------------------------------------------
-# In-app views — gated by IsPlatformUserAllowedApp
+# In-app views
 # ---------------------------------------------------------------------------
 
 
 class ComponentListView(APIView):
-    """List the components that have an active connector for the current env."""
-
     permission_classes = (IsPlatformUserAllowedApp,)
 
     def get(self, request, app_uuid):
@@ -214,19 +216,13 @@ class ComponentListView(APIView):
             ).values_list("component", flat=True)
         )
         components = [
-            {
-                "key": c.value,
-                "label": c.label,
-                "configured": c.value in configured,
-            }
+            {"key": c.value, "label": c.label, "configured": c.value in configured}
             for c in Component
         ]
-        return Response({"environment": env, "components": components})
+        return _ok({"environment": env, "components": components})
 
 
 class LogBrowseView(APIView):
-    """Backward (historical) cursor pagination."""
-
     permission_classes = (IsPlatformUserAllowedApp,)
     throttle_classes = (LogBrowseThrottle,)
 
@@ -243,12 +239,10 @@ class LogBrowseView(APIView):
             else None
         )
         log_page = connector.fetch(filters=filters, page=page)
-        return Response(LogPageSerializer(log_page).data)
+        return _ok(LogPageSerializer(log_page).data)
 
 
 class LogTailView(APIView):
-    """Forward (live tail) cursor pagination."""
-
     permission_classes = (IsPlatformUserAllowedApp,)
     throttle_classes = (LogTailThrottle,)
 
@@ -265,7 +259,7 @@ class LogTailView(APIView):
             else None
         )
         log_page = connector.fetch(filters=filters, page=page)
-        return Response(LogPageSerializer(log_page).data)
+        return _ok(LogPageSerializer(log_page).data)
 
 
 class StreamListView(APIView):
@@ -278,7 +272,7 @@ class StreamListView(APIView):
             datetime.now(timezone.utc) - timedelta(hours=24)
         )
         streams = connector.list_streams(since=since)
-        return Response({"streams": LogStreamSerializer(streams, many=True).data})
+        return _ok({"streams": LogStreamSerializer(streams, many=True).data})
 
 
 class FacetsView(APIView):
@@ -288,7 +282,7 @@ class FacetsView(APIView):
     def get(self, request, app_uuid, component):
         cfg, connector = _get_connector_for(component)
         facets = connector.facets()
-        return Response(
+        return _ok(
             {
                 "levels": sorted(lv.value for lv in facets.levels),
                 "streams": LogStreamSerializer(facets.streams, many=True).data,
@@ -306,27 +300,24 @@ class DeepLinkView(APIView):
         filters.app_name = _tenant_schema_for(app_uuid)
         url = connector.deep_link(filters=filters)
         if not url:
-            return Response(
-                {"detail": "This connector does not provide a deep-link."},
-                status=status.HTTP_404_NOT_FOUND,
+            return _err(
+                "This connector does not provide a deep-link.", status_code=404
             )
-        return Response({"url": url})
+        return _ok({"url": url})
 
 
 # ---------------------------------------------------------------------------
-# Platform admin views — gated by IsSuperAdminPlatformUser
+# Platform admin views
 # ---------------------------------------------------------------------------
 
 
 class ConnectorListUpsertView(APIView):
-    """GET → list all configs.  POST → upsert by (environment, component)."""
-
     permission_classes = (IsSuperAdminPlatformUser,)
 
     def get(self, request):
         env = request.query_params.get("environment") or _current_environment()
         rows = LogConnectorConfig.objects.filter(environment=env)
-        return Response(
+        return _ok(
             {
                 "environment": env,
                 "rows": LogConnectorConfigSerializer(rows, many=True).data,
@@ -339,48 +330,68 @@ class ConnectorListUpsertView(APIView):
         env = request.data.get("environment") or _current_environment()
         component = request.data.get("component")
         if not component:
-            return Response(
-                {"detail": "component is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return _err("component is required.", status_code=400)
 
         instance = LogConnectorConfig.objects.filter(
             environment=env, component=component
         ).first()
         payload = dict(request.data)
         payload["environment"] = env
-        serializer = LogConnectorConfigSerializer(instance, data=payload, partial=False)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK if instance else status.HTTP_201_CREATED,
+
+        serializer = LogConnectorConfigSerializer(
+            instance, data=payload, partial=False
         )
+        if not serializer.is_valid():
+            return _err(
+                "Validation failed.",
+                status_code=400,
+                errors=serializer.errors,
+            )
+        serializer.save()
+        return _ok(serializer.data, status_code=200 if instance else 201)
 
 
 class ConnectorTestView(APIView):
-    """Live-fire test: build the connector from the payload, call
-    list_streams, and return whether it worked."""
-
     permission_classes = (IsSuperAdminPlatformUser,)
 
     @_handle_connector_errors
     def post(self, request):
+        from .serializers import PARTIAL_MASK_KEYS, SECRET_KEYS
+
         payload = dict(request.data)
         connector_type = payload.get("connector")
-        cfg_blob = payload.get("config", {})
+        cfg_blob = dict(payload.get("config", {}) or {})
+        env = payload.get("environment")
+        component = payload.get("component")
+
         if connector_type not in {c.value for c in ConnectorType}:
-            return Response(
-                {"detail": f"Unknown connector type '{connector_type}'."},
-                status=status.HTTP_400_BAD_REQUEST,
+            return _err(
+                f"Unknown connector type '{connector_type}'.", status_code=400
             )
+
+        # If the user is testing edits to an existing row and left the
+        # secret blank (or echoed the masked key), pull from the stored
+        # row so the test uses the real saved credentials.
+        if env and component:
+            existing = LogConnectorConfig.objects.filter(
+                environment=env, component=component
+            ).first()
+            if existing:
+                stored = existing.config or {}
+                for key in SECRET_KEYS:
+                    if not cfg_blob.get(key) and stored.get(key):
+                        cfg_blob[key] = stored[key]
+                for key in PARTIAL_MASK_KEYS:
+                    incoming = cfg_blob.get(key) or ""
+                    if incoming.startswith("*") and stored.get(key):
+                        cfg_blob[key] = stored[key]
 
         stub = LogConnectorConfig(connector=connector_type, config=cfg_blob)
         connector = connector_registry.build(stub)
         streams = connector.list_streams(
             since=datetime.now(timezone.utc) - timedelta(hours=24)
         )
-        return Response(
+        return _ok(
             {
                 "ok": True,
                 "stream_count": len(streams),

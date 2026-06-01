@@ -14,8 +14,8 @@ commit.
 
 > _Update this paragraph after each session._
 
-**Last touched:** 2026-06-01 — P3 complete · backend wired end-to-end · `manage.py check` clean.
-**Next up:** P4 — producer-side fix (settings.py LOGGING dict + celery setup_logging signal) → then P5 frontend Settings page.
+**Last touched:** 2026-06-01 — **all phases (P0-P7) complete**. Backend + frontend + docs + IAM template all committed.
+**Next up:** Manual smoke against staging once IAM role gets the policy attached and a connector row is seeded in `LogConnectorConfig`. Future enhancements live under "P5+ deferred" in the design doc.
 
 ---
 
@@ -105,13 +105,14 @@ commit.
 
 ## P4 · Producer-side fix
 
-- [ ] Edit `config/settings/base.py` LOGGING dict:
-  - [ ] add `"filters": ["tenant_filter"]` to `handlers.console`
-  - [ ] switch `formatter` on `handlers.console` to `verbose` when `ENV in {"staging", "prod"}`
-- [ ] `apps/platform_logs/celery_logging.py` — `@setup_logging.connect` handler re-asserting Django's LOGGING dict
-- [ ] Wire that signal in `apps/platform_logs/apps.py:ready()`
-- [ ] Sanity check on local: `tail -f` shows `[tenant:domain]` prefix
-- [ ] Deploy to staging; CloudWatch lines have prefix
+- [x] Edit `config/settings/base.py` LOGGING dict:
+  - [x] add `"filters": ["tenant_filter"]` to `handlers.console`
+  - [x] switch `formatter` on `handlers.console` to `verbose` when `ENV in {"staging", "prod"}`
+- [x] Make `TenantContextFilter` safe when tenant context isn't bound (boot, mgmt commands without schema)
+- [x] `apps/platform_logs/celery_logging.py` — `@setup_logging.connect` handler re-asserting Django's LOGGING dict
+- [x] Wire that signal in `apps/platform_logs/apps.py:ready()`
+- [ ] Sanity check on local: console shows `[tenant:domain]` prefix when ENV=staging ← validate at deploy
+- [ ] Deploy to staging; CloudWatch lines have prefix ← validate after deploy
 
 ---
 

@@ -4,6 +4,7 @@ import BreadCrumbs from '../../../app/components/BreadCrumbs';
 import AccessLogs from '../AccessLogs';
 import ApplicationLogs from '../ApplicationLogs';
 import FrameworkLogs from '../FrameworkLogs';
+import RuntimeLogs from '../RuntimeLogs';
 
 const tabs = [
 	{
@@ -41,6 +42,17 @@ const tabs = [
 			</svg>
 		),
 		description: 'System and framework changes',
+	},
+	{
+		id: 'runtime',
+		label: 'Runtime Logs',
+		icon: () => (
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+				<path d="M2 3h12M2 8h12M2 13h8" strokeLinecap="round"/>
+				<circle cx="13" cy="13" r="1.5"/>
+			</svg>
+		),
+		description: 'App, Celery and Celery-beat stdout from CloudWatch',
 	},
 ];
 
@@ -128,6 +140,7 @@ export default function AppLogs() {
 				{activeTab === 'access' && <AccessLogs />}
 				{activeTab === 'application' && <ApplicationLogs />}
 				{activeTab === 'framework' && <FrameworkLogs />}
+				{activeTab === 'runtime' && <RuntimeLogs />}
 			</div>
 		</div>
 	);

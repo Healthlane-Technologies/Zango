@@ -87,12 +87,43 @@ class LogPageSerializer(serializers.Serializer):
 # ---------------------------------------------------------------------------
 
 
+SECRET_KEYS = {"aws_secret_access_key"}
+PARTIAL_MASK_KEYS = {"aws_access_key_id"}
+
+
+def _mask_config(cfg: dict) -> dict:
+    """Return a copy of `cfg` with sensitive values masked for read-side use.
+
+    - aws_secret_access_key  → empty string (form treats blank as "keep existing")
+    - aws_access_key_id      → last 4 chars only ("AKIA****6QXJ")
+    """
+    if not isinstance(cfg, dict):
+        return cfg
+    out = dict(cfg)
+    for k in SECRET_KEYS:
+        if k in out and out[k]:
+            out[k] = ""
+    for k in PARTIAL_MASK_KEYS:
+        v = out.get(k)
+        if isinstance(v, str) and len(v) > 4:
+            out[k] = "*" * (len(v) - 4) + v[-4:]
+    return out
+
+
 class LogConnectorConfigSerializer(serializers.ModelSerializer):
     """Serializer for GET/POST on /connectors/.
 
     Validates the `config` JSON by attempting to instantiate the connector
     class against it. A bad payload (missing region, malformed format, etc.)
     is rejected at the API boundary rather than at first read time.
+
+    On read, sensitive fields inside `config` are masked:
+      - aws_secret_access_key returns "" (the form treats blank as
+        "keep existing value" on save)
+      - aws_access_key_id returns its last 4 chars only
+
+    On write, if `aws_secret_access_key` is blank in the payload but a
+    value exists on the stored row, the stored value is preserved.
     """
 
     class Meta:
@@ -108,6 +139,11 @@ class LogConnectorConfigSerializer(serializers.ModelSerializer):
             "modified_at",
         ]
         read_only_fields = ["id", "created_at", "modified_at"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["config"] = _mask_config(data.get("config", {}))
+        return data
 
     def validate_environment(self, value: str) -> str:
         if not value or len(value) > 32:
@@ -132,11 +168,31 @@ class LogConnectorConfigSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Round-trip the config through the connector factory to catch
-        missing fields, bad formats, etc. before persisting."""
+        missing fields, bad formats, etc. before persisting.
+
+        Also: merge sensitive fields from the existing row when they're
+        blank in the incoming payload — that's how "leave the secret
+        field empty to keep the saved value" works.
+        """
         connector_type = attrs.get("connector") or (
             self.instance.connector if self.instance else None
         )
-        cfg = attrs.get("config", {}) or {}
+        cfg = dict(attrs.get("config", {}) or {})
+
+        if self.instance is not None:
+            existing = self.instance.config or {}
+            # If the user submitted a blank/missing value for a secret-type
+            # key but we already have one stored, keep the stored one.
+            for key in SECRET_KEYS:
+                if not cfg.get(key) and existing.get(key):
+                    cfg[key] = existing[key]
+            # The access-key-id field is masked on read — if the payload
+            # echoes back the masked value, treat it as "no change".
+            for key in PARTIAL_MASK_KEYS:
+                incoming = cfg.get(key) or ""
+                if incoming.startswith("*") and existing.get(key):
+                    cfg[key] = existing[key]
+            attrs["config"] = cfg
 
         # Build a transient LogConnectorConfig in memory; do NOT save.
         stub = LogConnectorConfig(

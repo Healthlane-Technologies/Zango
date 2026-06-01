@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowZangoCallersToAssumeThisRole",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::114454670435:user/rajat-bubna"
+        ]
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}

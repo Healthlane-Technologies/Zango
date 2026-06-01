@@ -72,6 +72,15 @@ class CloudWatchConfig:
     log_group_name: str
     stream_prefix: Optional[str] = None
     fmt: str = "plain"  # "plain" | "verbose" | "json"
+    # Authentication — three mutually exclusive modes:
+    #   1. Explicit keys: aws_access_key_id + aws_secret_access_key set
+    #      → boto3 uses them directly. Highest precedence.
+    #   2. role_arn only set → STS AssumeRole using the default credential
+    #      chain to obtain the base creds.
+    #   3. Neither set → boto3 default credential chain (env vars,
+    #      ~/.aws/credentials, instance/task role, etc.).
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
     role_arn: Optional[str] = None
 
     @classmethod
@@ -87,11 +96,23 @@ class CloudWatchConfig:
             raise ConnectorConfigError(
                 f"Unknown CloudWatch format '{fmt}'. Use 'plain', 'verbose', or 'json'."
             )
+
+        akid = (raw.get("aws_access_key_id") or "").strip() or None
+        secret = (raw.get("aws_secret_access_key") or "").strip() or None
+        # Half-set is almost always a typo. Fail clearly rather than silently
+        # falling through to the default chain.
+        if bool(akid) != bool(secret):
+            raise ConnectorConfigError(
+                "aws_access_key_id and aws_secret_access_key must be provided together."
+            )
+
         return cls(
             region=raw["region"],
             log_group_name=raw["log_group_name"],
             stream_prefix=raw.get("stream_prefix") or None,
             fmt=fmt,
+            aws_access_key_id=akid,
+            aws_secret_access_key=secret,
             role_arn=raw.get("role_arn") or None,
         )
 
@@ -101,12 +122,26 @@ class CloudWatchConfig:
 # ---------------------------------------------------------------------------
 
 
-_client_cache: Dict[Tuple[str, Optional[str]], Any] = {}
+_client_cache: Dict[Tuple, Any] = {}
 _client_lock = Lock()
 
 
-def _get_client(region: str, role_arn: Optional[str]):
-    key = (region, role_arn)
+def _get_client(
+    region: str,
+    *,
+    aws_access_key_id: Optional[str] = None,
+    aws_secret_access_key: Optional[str] = None,
+    role_arn: Optional[str] = None,
+):
+    """Get (or create) a memoized CloudWatch Logs client.
+
+    Auth precedence:
+      1. Explicit keys (aws_access_key_id + aws_secret_access_key) — used directly.
+      2. role_arn — assume via STS using the default credential chain.
+      3. Neither — default boto3 credential chain.
+    """
+    # Cache key must distinguish every distinct credential source.
+    key = (region, aws_access_key_id or "", role_arn or "")
     client = _client_cache.get(key)
     if client is not None:
         return client
@@ -122,7 +157,18 @@ def _get_client(region: str, role_arn: Optional[str]):
             read_timeout=12,
         )
 
-        if role_arn:
+        if aws_access_key_id and aws_secret_access_key:
+            # Mode 1 — explicit keys.
+            client = boto3.client(
+                "logs",
+                region_name=region,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+                config=boto_cfg,
+            )
+        elif role_arn:
+            # Mode 2 — STS AssumeRole using whatever default creds the
+            # process has (env vars, instance role, etc.).
             sts = boto3.client("sts", config=boto_cfg)
             assumed = sts.assume_role(
                 RoleArn=role_arn,
@@ -138,6 +184,7 @@ def _get_client(region: str, role_arn: Optional[str]):
                 config=boto_cfg,
             )
         else:
+            # Mode 3 — default credential chain.
             client = boto3.client("logs", region_name=region, config=boto_cfg)
 
         _client_cache[key] = client
@@ -238,7 +285,12 @@ class CloudWatchConnector:
         if cached_streams and (now - cached_at) < 30:
             return cached_streams
 
-        client = _get_client(self.cfg.region, self.cfg.role_arn)
+        client = _get_client(
+            self.cfg.region,
+            aws_access_key_id=self.cfg.aws_access_key_id,
+            aws_secret_access_key=self.cfg.aws_secret_access_key,
+            role_arn=self.cfg.role_arn,
+        )
         since_ms = int(since.timestamp() * 1000)
         kwargs: Dict[str, Any] = {
             "logGroupName": self.cfg.log_group_name,
@@ -286,69 +338,166 @@ class CloudWatchConnector:
         filters: LogFilters,
         page: Optional[Cursor],
     ) -> LogPage:
-        client = _get_client(self.cfg.region, self.cfg.role_arn)
+        client = _get_client(
+            self.cfg.region,
+            aws_access_key_id=self.cfg.aws_access_key_id,
+            aws_secret_access_key=self.cfg.aws_secret_access_key,
+            role_arn=self.cfg.role_arn,
+        )
 
-        # Time bounds — page direction overrides `until`/`since` for tail.
-        start_ms = int(filters.since.timestamp() * 1000)
-        end_ms = int(filters.until.timestamp() * 1000) if filters.until else None
-
-        if page is not None:
-            if page.direction == CursorDirection.FORWARD:
-                # Tail — advance past whatever we last saw.
-                start_ms = max(start_ms, int(page.token))
-                end_ms = None
-            else:
-                # Backward — cap end at the oldest we'd previously fetched.
-                end_ms = int(page.token)
-
-        kwargs: Dict[str, Any] = {
+        base_kwargs: Dict[str, Any] = {
             "logGroupName": self.cfg.log_group_name,
-            "startTime": start_ms,
-            "limit": max(1, min(filters.limit, 500)),
         }
-        if end_ms is not None:
-            kwargs["endTime"] = end_ms
         if filters.streams:
-            kwargs["logStreamNames"] = filters.streams[:100]
+            base_kwargs["logStreamNames"] = filters.streams[:100]
         elif self.cfg.stream_prefix:
-            kwargs["logStreamNamePrefix"] = self.cfg.stream_prefix
+            base_kwargs["logStreamNamePrefix"] = self.cfg.stream_prefix
 
         pattern = self._build_pattern(filters)
         if pattern:
-            kwargs["filterPattern"] = pattern
+            base_kwargs["filterPattern"] = pattern
 
-        resp = _with_retry(client.filter_log_events, **kwargs)
-        events = resp.get("events", [])
+        window_start_ms = int(filters.since.timestamp() * 1000)
+        window_end_ms = (
+            int(filters.until.timestamp() * 1000) if filters.until else None
+        )
+        limit = max(1, min(filters.limit, 500))
 
-        lines: List[LogLine] = []
-        newest_ms = start_ms
-        oldest_ms: Optional[int] = None
-        for ev in events:
-            ts_ms = ev["timestamp"]
-            newest_ms = max(newest_ms, ts_ms)
-            oldest_ms = ts_ms if oldest_ms is None else min(oldest_ms, ts_ms)
-            msg = ev["message"]
-            lines.append(
-                LogLine(
-                    ts=_ms_to_dt(ts_ms),
-                    message=msg.rstrip("\n"),
-                    stream=ev.get("logStreamName", ""),
-                    level=_parse_level(msg),
-                    cursor_token=ev.get("eventId", ""),
-                )
-            )
-
-        # Build next cursor in the direction the caller is paging.
-        next_cursor: Optional[Cursor] = None
-        if page is not None and page.direction == CursorDirection.BACKWARD:
-            if oldest_ms and resp.get("events"):
-                next_cursor = Cursor(token=str(oldest_ms - 1), direction=CursorDirection.BACKWARD)
-        else:
-            # Forward / first page
+        # ─── FORWARD (live tail) ──────────────────────────────────────
+        # Used by /tail/ after the initial browse has seeded a cursor.
+        # FilterLogEvents naturally returns events chronologically, which
+        # is what we want here (oldest-first within the unseen tail).
+        if page is not None and page.direction == CursorDirection.FORWARD:
+            # If the caller bounded the window with `until` (historical
+            # view), refuse to fetch past it. Don't advance the cursor.
+            if window_end_ms is not None and int(page.token) >= window_end_ms:
+                return LogPage(lines=[], next_cursor=page)
+            kwargs = {**base_kwargs, "startTime": int(page.token), "limit": limit}
+            if window_end_ms is not None:
+                kwargs["endTime"] = window_end_ms
+            resp = _with_retry(client.filter_log_events, **kwargs)
+            events = resp.get("events", [])
+            lines = [_to_log_line(ev) for ev in events]
+            next_cursor: Optional[Cursor] = None
             if lines:
-                next_cursor = Cursor(token=str(newest_ms + 1), direction=CursorDirection.FORWARD)
+                newest_ms = max(ev["timestamp"] for ev in events)
+                next_cursor = Cursor(
+                    token=str(newest_ms + 1), direction=CursorDirection.FORWARD
+                )
+            elif window_end_ms is not None:
+                # Stay parked at the existing cursor inside a bounded window.
+                next_cursor = page
+            return LogPage(lines=lines, next_cursor=next_cursor)
+
+        # ─── BACKWARD or INITIAL ──────────────────────────────────────
+        # "Latest N in [start, end_cap]" semantics. Used both for the
+        # initial page (end_cap = until-or-now) and for "Load earlier"
+        # (end_cap = oldest seen so far).
+        end_cap_ms = window_end_ms
+        if page is not None and page.direction == CursorDirection.BACKWARD:
+            end_cap_ms = int(page.token)
+
+        events = self._fetch_latest_events(
+            client,
+            base_kwargs=base_kwargs,
+            start_ms=window_start_ms,
+            end_ms=end_cap_ms,
+            limit=limit,
+        )
+
+        lines = [_to_log_line(ev) for ev in events]
+
+        # Backward cursor for "Load earlier" — set only if we returned
+        # some results AND the oldest is strictly newer than the window
+        # floor (otherwise we're at the bottom).
+        next_cursor = None
+        if events:
+            oldest_ms = min(ev["timestamp"] for ev in events)
+            if oldest_ms > window_start_ms:
+                next_cursor = Cursor(
+                    token=str(oldest_ms - 1),
+                    direction=CursorDirection.BACKWARD,
+                )
 
         return LogPage(lines=lines, next_cursor=next_cursor)
+
+    def _fetch_latest_events(
+        self,
+        client,
+        *,
+        base_kwargs: Dict[str, Any],
+        start_ms: int,
+        end_ms: Optional[int],
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        """Return the most-recent `limit` events in [start_ms, end_ms].
+
+        FilterLogEvents returns events chronologically forward (oldest
+        first) with no native "tail" mode. To get the latest N without
+        paging through the entire window, we start with a small window
+        at the tail (now - 15 min), expand backward each iteration, and
+        stop when we have `limit` events or hit the user's start_ms.
+
+        Bounded by start_ms; never reads before it.
+        """
+        if end_ms is None:
+            end_ms = int(time.time() * 1000)
+
+        # Expanding windows from the end-cap backward: 15m, 1h, 6h, 24h,
+        # then "the rest". Each step asks CloudWatch for up to 3*limit
+        # events to skip the "fewer than limit in a tiny window" case.
+        windows_ms = [
+            15 * 60 * 1000,
+            60 * 60 * 1000,
+            6 * 60 * 60 * 1000,
+            24 * 60 * 60 * 1000,
+        ]
+        collected: List[Dict[str, Any]] = []
+        for win in windows_ms + [None]:
+            slice_start = (
+                start_ms if win is None else max(start_ms, end_ms - win)
+            )
+            collected = self._read_window(
+                client,
+                base_kwargs=base_kwargs,
+                start_ms=slice_start,
+                end_ms=end_ms,
+                soft_cap=limit * 3,
+            )
+            if len(collected) >= limit or slice_start <= start_ms:
+                break
+
+        # Sort by ts desc, keep the latest `limit`.
+        collected.sort(key=lambda ev: ev["timestamp"], reverse=True)
+        return collected[:limit]
+
+    def _read_window(
+        self,
+        client,
+        *,
+        base_kwargs: Dict[str, Any],
+        start_ms: int,
+        end_ms: int,
+        soft_cap: int,
+    ) -> List[Dict[str, Any]]:
+        """Read all events in [start_ms, end_ms] up to a soft cap."""
+        events: List[Dict[str, Any]] = []
+        next_token: Optional[str] = None
+        while True:
+            kwargs = {
+                **base_kwargs,
+                "startTime": start_ms,
+                "endTime": end_ms,
+                "limit": 500,
+            }
+            if next_token:
+                kwargs["nextToken"] = next_token
+            resp = _with_retry(client.filter_log_events, **kwargs)
+            events.extend(resp.get("events", []))
+            next_token = resp.get("nextToken")
+            if not next_token or len(events) >= soft_cap:
+                break
+        return events
 
     # ---- facets -------------------------------------------------------
 
@@ -448,3 +597,14 @@ def _ms_to_dt(ms: Optional[int]) -> Optional[datetime]:
     if ms is None:
         return None
     return datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
+
+
+def _to_log_line(ev: Dict[str, Any]) -> LogLine:
+    msg = ev.get("message", "")
+    return LogLine(
+        ts=_ms_to_dt(ev["timestamp"]),
+        message=msg.rstrip("\n"),
+        stream=ev.get("logStreamName", ""),
+        level=_parse_level(msg),
+        cursor_token=ev.get("eventId", ""),
+    )

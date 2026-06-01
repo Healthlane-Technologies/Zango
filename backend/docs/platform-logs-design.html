@@ -1024,10 +1024,40 @@ app/app/d506d65dc163495787b3728bf4239866</div>
           <tr><td><code>region</code></td><td>string</td><td>AWS region of the log group. Required. E.g. <code>ap-south-1</code>.</td></tr>
           <tr><td><code>log_group_name</code></td><td>string</td><td>Full CloudWatch log group name. Required. E.g. <code>/ecs/zango-india-staging/app</code>.</td></tr>
           <tr><td><code>stream_prefix</code></td><td>string · optional</td><td>If set, restrict reads to streams whose name starts with this prefix. Useful when one group is shared across multiple services.</td></tr>
-          <tr><td><code>format</code></td><td>enum</td><td><code>plain</code> · the current state; <code>json</code> · once the producer fix lands. Drives whether the connector parses <code>structured</code> fields.</td></tr>
-          <tr><td><code>role_arn</code></td><td>string · optional · future</td><td>If set, the connector does an STS <code>AssumeRole</code> before any call. Enables cross-account reads.</td></tr>
+          <tr><td><code>format</code></td><td>enum</td><td><code>plain</code> · the current state; <code>verbose</code> · once the producer fix lands (adds <code>[schema:domain]</code> prefix); <code>json</code> · future. Drives whether the connector parses <code>structured</code> fields and how it builds tenant filter patterns.</td></tr>
+          <tr><td><code>aws_access_key_id</code></td><td>string · optional</td><td>Explicit IAM user / programmatic access key. Use together with <code>aws_secret_access_key</code>. Required for local-dev setups where the process has no ambient AWS credentials. Masked in API reads (last 4 chars only).</td></tr>
+          <tr><td><code>aws_secret_access_key</code></td><td>string · optional</td><td>Paired with the key above. Stored in DB; never returned in API reads. On edit, leave blank to preserve the saved value.</td></tr>
+          <tr><td><code>role_arn</code></td><td>string · optional</td><td>If set without explicit keys, the connector does an STS <code>AssumeRole</code> using the process's default credentials before any call. Enables cross-account reads.</td></tr>
         </tbody>
       </table>
+
+      <h4 style="margin-top: 12px;">Authentication precedence</h4>
+      <p style="font-size: 13px;">
+        The connector picks one of three auth modes per call, in this
+        order:
+      </p>
+      <ol class="bul">
+        <li><strong>Explicit keys</strong> — if both <code class="inline">aws_access_key_id</code> and <code class="inline">aws_secret_access_key</code> are set, they're passed directly to <code class="inline">boto3.client("logs", …)</code>. Highest precedence.</li>
+        <li><strong>Role ARN</strong> — if only <code class="inline">role_arn</code> is set, the process's default credentials are used to call <code class="inline">sts:AssumeRole</code>, and the temporary credentials drive the CloudWatch client.</li>
+        <li><strong>Default chain</strong> — neither set: boto3 looks in env vars, <code class="inline">~/.aws/credentials</code>, and finally the EC2/ECS instance role. This is the right mode for staging/prod where the ECS task role already has the policy attached.</li>
+      </ol>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Half-set credentials (just the key, no secret, or vice versa)
+        are rejected at config validation time rather than silently
+        falling through to the default chain.
+      </p>
+
+      <div class="note warn" style="margin-top: 12px;">
+        <span>
+          <strong>Secret handling.</strong> <code>aws_secret_access_key</code>
+          lives in the connector row's JSON config blob in plaintext for
+          v1. The API serializer masks it on read (blanks the secret,
+          shows only the last 4 chars of the key) so it can't be
+          retrieved by another viewer. A follow-up will move secrets to
+          the Zango Secrets vault so even DB exfiltration of the
+          connector table doesn't expose live AWS creds.
+        </span>
+      </div>
 
       <h3 style="margin-top: 16px;">API calls used</h3>
 

@@ -23,6 +23,16 @@ export default function SelectField() {
 
 	let pathnameArray = location.pathname.split('/').filter((each) => each);
 
+	const currentLabel = (() => {
+		if (pathnameArray.indexOf('apps') > -1) return 'Apps';
+		if (
+			pathnameArray.indexOf('settings') > -1 ||
+			pathnameArray.indexOf('log-connectors') > -1
+		)
+			return 'Settings';
+		return 'User Management';
+	})();
+
 	return (
 		<div className="relative">
 			<Menu as="div" className="relative flex w-[198px]">
@@ -34,7 +44,7 @@ export default function SelectField() {
 					<span
 						className={`block w-[80%] truncate bg-transparent text-left font-lato text-sm font-bold tracking-[0.2px] text-[#212429] outline-0  ring-0 placeholder:text-[#6C747D] `}
 					>
-						{pathnameArray.indexOf('apps') > -1 ? 'Apps' : 'User Management'}
+						{currentLabel}
 					</span>
 					<span className="pointer-events-none absolute inset-y-0 right-[24px] flex items-center">
 						<NavSearchDownArrowIcon aria-hidden="true" />
@@ -133,6 +143,41 @@ export default function SelectField() {
 															isActive ? 'font-bold' : ''
 														}`}
 													></span>
+												</div>
+											);
+										}}
+									/>
+								)}
+							</Menu.Item>
+							<Menu.Item>
+								{({ active }) => (
+									<NavLink
+										exact="true"
+										to={`/platform/settings`}
+										className="relative flex items-center px-[16px] py-[4px]"
+										children={({ isActive }) => {
+											return (
+												<div
+													className={`${
+														active ? '' : ''
+													} relative flex w-full flex-col rounded-[2px]`}
+												>
+													<div className="flex gap-[12px]">
+														<div className="min-w-[12px]">
+															<SelectDynamicCheckIcon
+																className={`${
+																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+																}`}
+															/>
+														</div>
+														<span
+															className={`block font-lato text-[#FFFFFF] ${
+																isActive ? 'font-bold' : ''
+															}`}
+														>
+															Settings
+														</span>
+													</div>
 												</div>
 											);
 										}}

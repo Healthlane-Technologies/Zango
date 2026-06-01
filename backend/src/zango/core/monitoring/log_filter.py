@@ -29,8 +29,18 @@ class TenantContextFilter(logging.Filter):
             record_msg = ""
 
         record.msg = record_msg
-        record.app_name = connection.tenant.schema_name
-        record.domain_url = getattr(connection.tenant, "domain_url", "")
+
+        # Tenant context — safe when called before middleware binds a tenant
+        # (boot, management commands without a schema, celery worker init).
+        # The verbose formatter references these fields, so they MUST exist
+        # on every record we let through.
+        try:
+            tenant = getattr(connection, "tenant", None)
+            record.app_name = getattr(tenant, "schema_name", "") if tenant else ""
+            record.domain_url = getattr(tenant, "domain_url", "") if tenant else ""
+        except Exception:
+            record.app_name = ""
+            record.domain_url = ""
 
         # Formatting logs containing exception traceback into single line
         if record.exc_info:
