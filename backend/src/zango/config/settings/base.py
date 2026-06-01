@@ -46,6 +46,7 @@ SHARED_APPS = [
     "django_recaptcha",
     "zango.apps.shared.tenancy",
     "zango.apps.shared.platformauth",
+    "zango.apps.platform_logs",
 ]
 
 
