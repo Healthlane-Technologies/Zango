@@ -169,11 +169,11 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 	const [runConfirmLoading, setRunConfirmLoading] = useState(false);
 
 	const askRunLatest = async () => {
-		if (!execution?.snippet_id) return;
+		if (!execution?.snippet_object_uuid) return;
 		setRunConfirmLoading(true);
 		// Fetch the snippet's current code
 		const { response, success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/code-execution/snippets/${execution.snippet_id}/`,
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${execution.snippet_object_uuid}/`,
 			type: 'GET',
 			loader: false,
 			showErrorModal: false,
@@ -221,9 +221,9 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 		setRunConfirmLoading(true);
 		try {
 			if (runConfirm.mode === 'latest') {
-				await onRunCurrent?.(execution.snippet_id);
+				await onRunCurrent?.(execution.snippet_object_uuid);
 			} else {
-				await onRunVersion?.(execution.snippet_id, runConfirm.code, runConfirm.version);
+				await onRunVersion?.(execution.snippet_object_uuid, runConfirm.code, runConfirm.version);
 			}
 			setRunConfirm(null);
 		} finally {
@@ -236,10 +236,10 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 	const [expandedVersion, setExpandedVersion] = useState(null);
 
 	const fetchVersions = useCallback(async () => {
-		if (!execution?.snippet_id) return;
+		if (!execution?.snippet_object_uuid) return;
 		setVersionsLoading(true);
 		const { response, success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/code-execution/snippets/${execution.snippet_id}/versions/`,
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${execution.snippet_object_uuid}/versions/`,
 			type: 'GET',
 			loader: false,
 			showErrorModal: false,
@@ -248,7 +248,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 			setVersions(response.versions);
 		}
 		setVersionsLoading(false);
-	}, [appId, execution?.snippet_id, triggerApi]);
+	}, [appId, execution?.snippet_object_uuid, triggerApi]);
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(false);
 	const [historyTotalPages, setHistoryTotalPages] = useState(1);
@@ -261,13 +261,13 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 	// Fetch a specific page. mode='replace' clears the list first; 'append'
 	// pushes onto the end (for infinite scroll).
 	const fetchHistory = useCallback(async (mode = 'replace') => {
-		if (!execution?.snippet_id) return;
+		if (!execution?.snippet_object_uuid) return;
 		if (mode === 'append' && historyLoadingMoreRef.current) return;
 		const targetPage = mode === 'replace' ? 1 : historyPageRef.current + 1;
 		if (mode === 'append') historyLoadingMoreRef.current = true;
 		setHistoryLoading(true);
 		const { response, success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/code-execution/executions/?snippet_id=${execution.snippet_id}&page=${targetPage}&page_size=${HISTORY_PAGE_SIZE}`,
+			url: `/api/v1/apps/${appId}/code-execution/executions/?snippet_uuid=${execution.snippet_object_uuid}&page=${targetPage}&page_size=${HISTORY_PAGE_SIZE}`,
 			type: 'GET',
 			loader: false,
 		});
@@ -277,8 +277,8 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 				setHistory(records);
 			} else {
 				setHistory((prev) => {
-					const seen = new Set(prev.map((r) => r.id));
-					return [...prev, ...records.filter((r) => !seen.has(r.id))];
+					const seen = new Set(prev.map((r) => r.object_uuid));
+					return [...prev, ...records.filter((r) => !seen.has(r.object_uuid))];
 				});
 			}
 			setHistoryTotalPages(response.executions.total_pages || 1);
@@ -287,7 +287,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 		}
 		setHistoryLoading(false);
 		if (mode === 'append') historyLoadingMoreRef.current = false;
-	}, [appId, execution?.snippet_id, triggerApi]);
+	}, [appId, execution?.snippet_object_uuid, triggerApi]);
 
 	const hasMoreHistory = historyPageRef.current < historyTotalPages;
 
@@ -309,12 +309,12 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 	useEffect(() => {
 		historyPageRef.current = 1;
 		setHistory([]);
-		if (execution?.snippet_id) fetchHistory('replace');
-	}, [execution?.snippet_id]); // eslint-disable-line react-hooks/exhaustive-deps
+		if (execution?.snippet_object_uuid) fetchHistory('replace');
+	}, [execution?.snippet_object_uuid]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Auto-fetch the runs list as soon as we know the snippet id, and refresh
 	// after the current run reaches a terminal state so durations show up.
-	useEffect(() => { fetchHistory(); }, [execution?.snippet_id]); // eslint-disable-line react-hooks/exhaustive-deps
+	useEffect(() => { fetchHistory(); }, [execution?.snippet_object_uuid]); // eslint-disable-line react-hooks/exhaustive-deps
 	useEffect(() => {
 		if (execution?.status && !['queued', 'running'].includes(execution.status)) {
 			fetchHistory();
@@ -360,7 +360,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 	// couldn't produce one (e.g., misconfigured storage).
 	const downloadUrl = (f) =>
 		f.download_url
-		|| `/api/v1/apps/${appId}/code-execution/executions/${execution.id}/files/${f.id}/download/`;
+		|| `/api/v1/apps/${appId}/code-execution/executions/${execution.object_uuid}/files/${f.object_uuid}/download/`;
 
 	return (
 		<div className="flex flex-col pb-24">
@@ -390,7 +390,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 					<span className="text-slate-300 px-1.5">/</span>
 					<button onClick={onBack} className="hover:text-slate-700">{execution.snippet_name}</button>
 					<span className="text-slate-300 px-1.5">/</span>
-					<span className="text-slate-900">Run {execution.id.slice(0, 6)}</span>
+					<span className="text-slate-900">Run {execution.object_uuid.slice(0, 6)}</span>
 				</div>
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2.5">
@@ -406,7 +406,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 							← Back
 						</button>
 						<button
-							onClick={() => onEditSnippet?.(execution.snippet_id)}
+							onClick={() => onEditSnippet?.(execution.snippet_object_uuid)}
 							title="Edit the snippet's current (latest) code"
 							className="px-3 h-9 rounded-md text-[12.5px] font-medium bg-white border border-slate-300 text-slate-800 hover:border-slate-400 hover:shadow-sm transition-all active:scale-[0.98]"
 						>
@@ -441,7 +441,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 				<div className="grid grid-cols-5 gap-px bg-slate-200 border border-slate-200 rounded-md overflow-hidden mt-4">
 					<div className="bg-white px-3.5 py-2.5">
 						<div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 mb-1">Run ID</div>
-						<div className="text-[12px] font-mono text-slate-900">{execution.id.slice(0, 8)}</div>
+						<div className="text-[12px] font-mono text-slate-900">{execution.object_uuid.slice(0, 8)}</div>
 					</div>
 					<div className="bg-white px-3.5 py-2.5">
 						<div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 mb-1">Started</div>
@@ -493,11 +493,11 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 							<div className="text-center text-slate-400 py-6 text-[12px]">No runs yet.</div>
 						)}
 						{history.map((r) => {
-							const isCurrent = r.id === execution.id;
+							const isCurrent = r.object_uuid === execution.object_uuid;
 							return (
 								<button
-									key={r.id}
-									onClick={() => { if (!isCurrent) onSelectExecution?.(r.id); }}
+									key={r.object_uuid}
+									onClick={() => { if (!isCurrent) onSelectExecution?.(r.object_uuid); }}
 									className={`codexec-side-row block w-full text-left px-4 py-3 border-b border-slate-200/70 last:border-0 ${
 										isCurrent
 											? 'bg-indigo-50 border-l-2 border-l-indigo-600 -ml-px'
@@ -506,7 +506,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 								>
 									<div className="flex items-center justify-between mb-1">
 										<StatusPill status={r.status} />
-										<span className="font-mono text-[10.5px] text-slate-400">{r.id.slice(0, 6)}</span>
+										<span className="font-mono text-[10.5px] text-slate-400">{r.object_uuid.slice(0, 6)}</span>
 									</div>
 									<div className="text-[12px] text-slate-700 truncate">
 										{formatRelative(r.queued_at)}
@@ -645,7 +645,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 							</div>
 							<div className="px-3 py-2">
 								{inputs.length === 0 ? <div className="text-[12px] text-slate-400 py-2 text-center">(none)</div> : inputs.map((f) => (
-									<div key={f.id} className="grid items-center gap-2 py-1.5" style={{ gridTemplateColumns: '22px 1fr auto auto' }}>
+									<div key={f.object_uuid} className="grid items-center gap-2 py-1.5" style={{ gridTemplateColumns: '22px 1fr auto auto' }}>
 										<span className="w-[22px] h-[22px] bg-slate-100 text-slate-500 rounded font-mono text-[9.5px] uppercase font-semibold grid place-items-center">{extOf(f.name)}</span>
 										<span className="text-[12.5px] text-slate-900">{f.name}</span>
 										<span className="font-mono text-[11px] text-slate-500">{formatBytes(f.size_bytes)}</span>
@@ -665,7 +665,7 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 							</div>
 							<div className="px-3 py-2">
 								{outputs.length === 0 ? <div className="text-[12px] text-slate-400 py-2 text-center">(none)</div> : outputs.map((f) => (
-									<div key={f.id} className="grid items-center gap-2 py-1.5" style={{ gridTemplateColumns: '22px 1fr auto auto' }}>
+									<div key={f.object_uuid} className="grid items-center gap-2 py-1.5" style={{ gridTemplateColumns: '22px 1fr auto auto' }}>
 										<span className="w-[22px] h-[22px] bg-emerald-100 text-emerald-700 rounded font-mono text-[9.5px] uppercase font-semibold grid place-items-center">{extOf(f.name)}</span>
 										<span className="text-[12.5px] text-slate-900">{f.name}</span>
 										<span className="font-mono text-[11px] text-slate-500">{formatBytes(f.size_bytes)}</span>
@@ -775,9 +775,9 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 															<span className="text-amber-700">Current code · not yet executed</span>
 														)}
 													</div>
-													{v.representative_execution_id && v.representative_execution_id !== execution.id && (
+													{v.representative_execution_uuid && v.representative_execution_uuid !== execution.object_uuid && (
 														<button
-															onClick={() => onSelectExecution?.(v.representative_execution_id)}
+															onClick={() => onSelectExecution?.(v.representative_execution_uuid)}
 															className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
 														>
 															Open a run of v{v.version} →

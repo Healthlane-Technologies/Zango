@@ -132,8 +132,8 @@ class LineLogger:
 
     BATCH_SIZE = 16
 
-    def __init__(self, execution_id: str):
-        self.execution_id = execution_id
+    def __init__(self, execution_pk: int):
+        self.execution_pk = execution_pk
         self._seq = 0
         self._pending: list[CodeExecutionLogLine] = []
         # Re-entry guard — set while flushing so the stdlib handler skips
@@ -154,7 +154,7 @@ class LineLogger:
         self._seq += 1
         self._pending.append(
             CodeExecutionLogLine(
-                execution_id=self.execution_id,
+                execution_id=self.execution_pk,
                 seq=self._seq,
                 level=level,
                 message=message,
@@ -292,8 +292,12 @@ def _serialize_return(value: Any) -> tuple[Optional[Any], bool, str]:
 
 
 @shared_task(bind=True, name="zango.code_execution.codexec_executor")
-def codexec_executor(self, execution_id: str, tenant_name: str) -> dict:
-    """Run a single CodeExecution row's snapshotted source."""
+def codexec_executor(self, execution_uuid: str, tenant_name: str) -> dict:
+    """Run a single CodeExecution row's snapshotted source.
+
+    `execution_uuid` is the public object_uuid (stable across PK changes);
+    we look up by that, then use the BigInt pk internally for FK joins.
+    """
     started_at = timezone.now()
     started_perf = time.perf_counter()
 
@@ -303,9 +307,11 @@ def codexec_executor(self, execution_id: str, tenant_name: str) -> dict:
 
     # 2. Load row + mark running
     try:
-        execution = CodeExecution.objects.select_related("snippet").get(pk=execution_id)
+        execution = CodeExecution.objects.select_related("snippet").get(
+            object_uuid=execution_uuid
+        )
     except CodeExecution.DoesNotExist:
-        log.error("codexec: execution %s not found", execution_id)
+        log.error("codexec: execution %s not found", execution_uuid)
         return {"status": "error", "reason": "execution_not_found"}
 
     execution.status = ExecStatus.RUNNING
@@ -343,7 +349,7 @@ def codexec_executor(self, execution_id: str, tenant_name: str) -> dict:
         )
 
     # 5. Set up streams + line logger (shared monotonic seq across stdout/stderr/sys)
-    line_logger = LineLogger(str(execution.id))
+    line_logger = LineLogger(execution.id)
     line_logger.emit(LogLevel.SYS, f"Run picked up · celery_task_id={self.request.id}")
     line_logger.emit(LogLevel.SYS, f"Workspace ready · tenant={tenant_name}")
     line_logger.emit(LogLevel.SYS, "AST recheck OK · 0 violations")

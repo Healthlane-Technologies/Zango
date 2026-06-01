@@ -82,7 +82,7 @@ export default function EditorModal({ appId, snippet, onClose, onSaved }) {
 		if (!isEdit) return;
 		(async () => {
 			const { response, success } = await triggerApi({
-				url: `/api/v1/apps/${appId}/code-execution/snippets/${snippet.id}/files/`,
+				url: `/api/v1/apps/${appId}/code-execution/snippets/${snippet.object_uuid}/files/`,
 				type: 'GET',
 				loader: false,
 			});
@@ -121,17 +121,17 @@ export default function EditorModal({ appId, snippet, onClose, onSaved }) {
 	const askRemoveExistingFile = (file) => setConfirmRemoveFile(file);
 
 	const confirmedRemoveExistingFile = async () => {
-		const fileId = confirmRemoveFile?.id;
+		const fileId = confirmRemoveFile?.object_uuid;
 		setConfirmRemoveFile(null);
 		if (!fileId) return;
 		const { success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/code-execution/snippets/${snippet.id}/files/${fileId}/delete/`,
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${snippet.object_uuid}/files/${fileId}/delete/`,
 			type: 'POST',
 			payload: {},
 			loader: false,
 		});
 		if (success) {
-			setFiles((prev) => prev.filter((f) => f.id !== fileId));
+			setFiles((prev) => prev.filter((f) => f.object_uuid !== fileId));
 			toast.success('File removed');
 		}
 	};
@@ -167,7 +167,7 @@ export default function EditorModal({ appId, snippet, onClose, onSaved }) {
 				timeout_seconds: Number(timeoutSeconds),
 			};
 			const url = isEdit
-				? `/api/v1/apps/${appId}/code-execution/snippets/${snippet.id}/update/`
+				? `/api/v1/apps/${appId}/code-execution/snippets/${snippet.object_uuid}/update/`
 				: `/api/v1/apps/${appId}/code-execution/snippets/`;
 			const { response, success } = await triggerApi({
 				url,
@@ -187,7 +187,7 @@ export default function EditorModal({ appId, snippet, onClose, onSaved }) {
 			}
 			saved = response.snippet;
 
-			await uploadPendingFiles(saved.id);
+			await uploadPendingFiles(saved.object_uuid);
 
 			toast.success(runAfter ? 'Saved · queuing run' : 'Saved');
 			onSaved?.(saved, runAfter);
@@ -330,7 +330,7 @@ export default function EditorModal({ appId, snippet, onClose, onSaved }) {
 							</div>
 							<div className="flex flex-col gap-1.5">
 								{files.map((f) => (
-									<div key={f.id} className="grid items-center gap-2 bg-white border border-slate-200 rounded px-2.5 py-1.5 text-[12px] transition-shadow hover:shadow-sm" style={{ gridTemplateColumns: '22px 1fr auto auto auto' }}>
+									<div key={f.object_uuid} className="grid items-center gap-2 bg-white border border-slate-200 rounded px-2.5 py-1.5 text-[12px] transition-shadow hover:shadow-sm" style={{ gridTemplateColumns: '22px 1fr auto auto auto' }}>
 										<span className="w-[22px] h-[22px] bg-slate-100 text-slate-500 rounded font-mono text-[9.5px] uppercase font-semibold grid place-items-center">{extOf(f.name)}</span>
 										<span className="text-slate-900 font-medium">{f.name}</span>
 										<span className="font-mono text-slate-400 text-[10.5px]">saved</span>
