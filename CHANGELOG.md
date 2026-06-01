@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0b1] - 2026-06-01
+
+### Added
+
+**Code Execution** [(#569)](https://github.com/Healthlane-Technologies/Zango/pull/569)
+
+Developers can now write and run Python snippets directly from the App Panel, with every run executed inside the tenant's background worker. Results, logs, and files are captured per run and accessible from a dedicated history view.
+
+* Write and edit snippets in a full-featured code editor with syntax highlighting and inline validation
+* Attach input files to a snippet and read them inside your script; write output files that are available for download after the run
+* View captured output, return values, and per-line logs for every historical run
+* Abort a running execution at any time; stuck runs are automatically marked as failed
+* Built-in security controls prevent cross-tenant access and block unsafe operations at both parse time and runtime
+
+**Runtime Logs** [(#574)](https://github.com/Healthlane-Technologies/Zango/pull/574)
+
+A new Logs tab inside each app surfaces live and historical output from the app server, task worker, and task scheduler — all scoped to the current tenant.
+
+* Platform admins configure log sources once under Settings → Log Connectors; each app then sees only its own lines
+* Live tail mode streams new log lines automatically with a configurable refresh rate
+* Filter by time range (presets or a custom date/time picker), free-text search, and log stream
+* Load earlier entries by paginating backward through the window
+* Row detail view shows full metadata, with copy and pin actions
+
+
 ## [1.1.0b1] - 2026-05-29
 
 ### Added
