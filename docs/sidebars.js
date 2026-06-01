@@ -67,6 +67,7 @@ const sidebars = {
     {
       type: "category",
       label: "Framework Components",
+      className: "sidebar-beta-parent",
       items: [
         {
           type: "category",
@@ -155,6 +156,7 @@ const sidebars = {
           type: "category",
           label: "AI Agents",
           description: "Integrate LLMs and intelligent agents into your app.",
+          className: "sidebar-beta-item",
           collapsed: true,
           items: [
             "core/ai-agents/overview",
