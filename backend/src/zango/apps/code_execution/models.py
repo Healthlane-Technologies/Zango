@@ -63,7 +63,9 @@ TERMINAL_STATUSES = frozenset(
 class CodeSnippet(FullAuditMixin):
     """A named, versioned executable Python buffer in a tenant's codebase."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    object_uuid = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, editable=False
+    )
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=64, unique=True, db_index=True)
     description = models.TextField(blank=True, default="")
@@ -107,7 +109,9 @@ class CodeSnippetFile(FullAuditMixin):
     `source_snippet_file` FK is `SET_NULL`.
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    object_uuid = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, editable=False
+    )
     snippet = models.ForeignKey(
         CodeSnippet, on_delete=models.CASCADE, related_name="files"
     )
@@ -139,7 +143,9 @@ class CodeSnippetFile(FullAuditMixin):
 class CodeExecution(FullAuditMixin):
     """One row per run. Self-contained history record."""
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    object_uuid = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, editable=False
+    )
     snippet = models.ForeignKey(
         CodeSnippet, on_delete=models.PROTECT, related_name="executions"
     )
@@ -199,7 +205,9 @@ class CodeExecFile(FullAuditMixin):
     storage blob. For outputs, written during the run via the codexec helper.
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    object_uuid = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, editable=False
+    )
     execution = models.ForeignKey(
         CodeExecution, on_delete=models.CASCADE, related_name="files"
     )

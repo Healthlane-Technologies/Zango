@@ -26,40 +26,40 @@ urlpatterns = [
     # Snippets
     path("snippets/", CodeSnippetListView.as_view()),
     path("snippets/validate/", CodeSnippetValidateView.as_view()),
-    path("snippets/<uuid:snippet_id>/", CodeSnippetDetailView.as_view()),
-    path("snippets/<uuid:snippet_id>/update/", CodeSnippetUpdateView.as_view()),
-    path("snippets/<uuid:snippet_id>/archive/", CodeSnippetArchiveView.as_view()),
-    path("snippets/<uuid:snippet_id>/run/", CodeSnippetRunView.as_view()),
-    path("snippets/<uuid:snippet_id>/versions/", CodeSnippetVersionsView.as_view()),
+    path("snippets/<uuid:snippet_uuid>/", CodeSnippetDetailView.as_view()),
+    path("snippets/<uuid:snippet_uuid>/update/", CodeSnippetUpdateView.as_view()),
+    path("snippets/<uuid:snippet_uuid>/archive/", CodeSnippetArchiveView.as_view()),
+    path("snippets/<uuid:snippet_uuid>/run/", CodeSnippetRunView.as_view()),
+    path("snippets/<uuid:snippet_uuid>/versions/", CodeSnippetVersionsView.as_view()),
     # Snippet files
-    path("snippets/<uuid:snippet_id>/files/", CodeSnippetFileListView.as_view()),
+    path("snippets/<uuid:snippet_uuid>/files/", CodeSnippetFileListView.as_view()),
     path(
-        "snippets/<uuid:snippet_id>/files/<uuid:file_id>/delete/",
+        "snippets/<uuid:snippet_uuid>/files/<uuid:file_uuid>/delete/",
         CodeSnippetFileDeleteView.as_view(),
     ),
     path(
-        "snippets/<uuid:snippet_id>/files/<uuid:file_id>/download/",
+        "snippets/<uuid:snippet_uuid>/files/<uuid:file_uuid>/download/",
         CodeSnippetFileDownloadView.as_view(),
     ),
     # Executions
     path("executions/", CodeExecutionListView.as_view()),
     path("executions/export.csv", CodeExecutionExportView.as_view()),
-    path("executions/<uuid:execution_id>/", CodeExecutionDetailView.as_view()),
+    path("executions/<uuid:execution_uuid>/", CodeExecutionDetailView.as_view()),
     path(
-        "executions/<uuid:execution_id>/log-tail/",
+        "executions/<uuid:execution_uuid>/log-tail/",
         CodeExecutionLogTailView.as_view(),
     ),
     path(
-        "executions/<uuid:execution_id>/abort/",
+        "executions/<uuid:execution_uuid>/abort/",
         CodeExecutionAbortView.as_view(),
     ),
     # Execution files
     path(
-        "executions/<uuid:execution_id>/files/",
+        "executions/<uuid:execution_uuid>/files/",
         CodeExecFileListView.as_view(),
     ),
     path(
-        "executions/<uuid:execution_id>/files/<uuid:file_id>/download/",
+        "executions/<uuid:execution_uuid>/files/<uuid:file_uuid>/download/",
         CodeExecFileDownloadView.as_view(),
     ),
 ]

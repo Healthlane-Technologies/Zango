@@ -115,7 +115,7 @@ export default function CodeExecution() {
 	const openEdit = async (snippet) => {
 		// Fetch the full snippet with code body
 		const { response, success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/code-execution/snippets/${snippet.id}/`,
+			url: `/api/v1/apps/${appId}/code-execution/snippets/${snippet.object_uuid}/`,
 			type: 'GET',
 			loader: false,
 		});
@@ -141,14 +141,14 @@ export default function CodeExecution() {
 				// Brief fade before swapping views.
 				setOpeningDetailFor(snippetId);
 				setTimeout(() => {
-					setActiveExecutionId(response.execution.id);
+					setActiveExecutionId(response.execution.object_uuid);
 					setView('detail');
 					setOpeningDetailFor(null);
 				}, 220);
 			} else if (response?.violations) {
 				toast.error('Code has validation errors — open editor to fix.');
-			} else if (response?.execution_id) {
-				toast(`Another run is in flight (id ${response.execution_id.slice(0, 8)}…)`);
+			} else if (response?.execution_uuid) {
+				toast(`Another run is in flight (id ${response.execution_uuid.slice(0, 8)}…)`);
 			} else {
 				toast.error(response?.message || 'Run failed.');
 			}
@@ -162,7 +162,7 @@ export default function CodeExecution() {
 	const askArchive = (snippet) => setConfirmArchive(snippet);
 
 	const confirmedArchive = async () => {
-		const snippetId = confirmArchive?.id;
+		const snippetId = confirmArchive?.object_uuid;
 		setConfirmArchive(null);
 		if (!snippetId) return;
 		const { success } = await triggerApi({
@@ -178,9 +178,9 @@ export default function CodeExecution() {
 	};
 
 	const openLatestRun = async (snippet) => {
-		setOpeningDetailFor(snippet.id);
+		setOpeningDetailFor(snippet.object_uuid);
 		const { response, success } = await triggerApi({
-			url: `/api/v1/apps/${appId}/code-execution/executions/?snippet_id=${snippet.id}&page=1&page_size=1`,
+			url: `/api/v1/apps/${appId}/code-execution/executions/?snippet_uuid=${snippet.object_uuid}&page=1&page_size=1`,
 			type: 'GET',
 			loader: false,
 		});
@@ -188,7 +188,7 @@ export default function CodeExecution() {
 		if (success && exec) {
 			// Smooth swap with a brief fade.
 			setTimeout(() => {
-				setActiveExecutionId(exec.id);
+				setActiveExecutionId(exec.object_uuid);
 				setView('detail');
 				setOpeningDetailFor(null);
 			}, 180);
@@ -213,12 +213,12 @@ export default function CodeExecution() {
 			if (success && response?.execution) {
 				toast.success('Run queued');
 				fetchSnippets();
-				setActiveExecutionId(response.execution.id);
+				setActiveExecutionId(response.execution.object_uuid);
 				setView('detail');
 				return response.execution;
 			}
 			if (response?.violations) toast.error('Code has validation errors.');
-			else if (response?.execution_id) toast(`Another run is in flight.`);
+			else if (response?.execution_uuid) toast(`Another run is in flight.`);
 			else toast.error(response?.message || 'Run failed.');
 		} catch (e) {
 			toast.error('Run failed.');
@@ -348,7 +348,7 @@ export default function CodeExecution() {
 						)}
 						{snippets.map((s, idx) => (
 							<tr
-								key={s.id}
+								key={s.object_uuid}
 								onClick={() => openLatestRun(s)}
 								className="codexec-row border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors"
 								style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }}
@@ -378,7 +378,7 @@ export default function CodeExecution() {
 								<td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
 									<div className="flex gap-1 justify-end">
 										<button
-											onClick={() => handleRun(s.id)}
+											onClick={() => handleRun(s.object_uuid)}
 											title="Run"
 											className="w-7 h-7 rounded grid place-items-center text-emerald-600 hover:bg-emerald-50 hover:border hover:border-emerald-200 transition-colors"
 										>
@@ -447,7 +447,7 @@ export default function CodeExecution() {
 						setEditingSnippet(null);
 						fetchSnippets();
 						if (openRun && s) {
-							triggerRun(s.id);
+							triggerRun(s.object_uuid);
 						}
 					}}
 				/>

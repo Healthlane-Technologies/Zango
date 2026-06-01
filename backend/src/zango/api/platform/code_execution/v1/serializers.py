@@ -58,7 +58,7 @@ class CodeSnippetListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CodeSnippet
         fields = (
-            "id",
+            "object_uuid",
             "name",
             "slug",
             "description",
@@ -130,7 +130,7 @@ class CodeSnippetFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CodeSnippetFile
         fields = (
-            "id",
+            "object_uuid",
             "name",
             "size_bytes",
             "content_type",
@@ -154,7 +154,7 @@ class CodeExecFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CodeExecFile
         fields = (
-            "id",
+            "object_uuid",
             "kind",
             "name",
             "size_bytes",
@@ -170,13 +170,13 @@ class CodeExecFileSerializer(serializers.ModelSerializer):
 
 class CodeExecutionListSerializer(serializers.ModelSerializer):
     snippet_name = serializers.CharField(source="snippet.name", read_only=True)
-    snippet_id = serializers.UUIDField(source="snippet.id", read_only=True)
+    snippet_object_uuid = serializers.UUIDField(source="snippet.object_uuid", read_only=True)
 
     class Meta:
         model = CodeExecution
         fields = (
-            "id",
-            "snippet_id",
+            "object_uuid",
+            "snippet_object_uuid",
             "snippet_name",
             "snippet_version",
             "status",

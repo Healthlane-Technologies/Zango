@@ -185,16 +185,16 @@ class CodeSnippetListView(
 class CodeSnippetDetailView(ZangoGenericPlatformAPIView, TenantMixin):
     parser_classes = (JSONParser,)
 
-    def _get(self, snippet_id):
+    def _get(self, snippet_uuid):
         try:
-            return CodeSnippet.objects.get(pk=snippet_id)
+            return CodeSnippet.objects.get(object_uuid=snippet_uuid)
         except CodeSnippet.DoesNotExist as exc:
             raise Http404("snippet not found") from exc
 
-    def get(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def get(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
-            snippet = self._get(snippet_id)
+            snippet = self._get(snippet_uuid)
             return get_api_response(
                 True,
                 {"snippet": CodeSnippetDetailSerializer(snippet).data},
@@ -215,11 +215,11 @@ class CodeSnippetUpdateView(ZangoGenericPlatformAPIView, TenantMixin):
 
     parser_classes = (JSONParser,)
 
-    def post(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def post(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                snippet = CodeSnippet.objects.get(pk=snippet_id)
+                snippet = CodeSnippet.objects.get(object_uuid=snippet_uuid)
             except CodeSnippet.DoesNotExist:
                 return get_api_response(False, {"message": "snippet not found"}, 404)
 
@@ -258,11 +258,11 @@ class CodeSnippetArchiveView(ZangoGenericPlatformAPIView, TenantMixin):
 
     parser_classes = (JSONParser,)
 
-    def post(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def post(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                snippet = CodeSnippet.objects.get(pk=snippet_id)
+                snippet = CodeSnippet.objects.get(object_uuid=snippet_uuid)
             except CodeSnippet.DoesNotExist:
                 return get_api_response(False, {"message": "snippet not found"}, 404)
             snippet.is_archived = True
@@ -307,11 +307,11 @@ class CodeSnippetValidateView(ZangoGenericPlatformAPIView, TenantMixin):
 class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
     parser_classes = (JSONParser,)
 
-    def post(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def post(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             tenant = _bind_tenant(self, app_uuid)
             try:
-                snippet = CodeSnippet.objects.get(pk=snippet_id, is_archived=False)
+                snippet = CodeSnippet.objects.get(object_uuid=snippet_uuid, is_archived=False)
             except CodeSnippet.DoesNotExist:
                 return get_api_response(False, {"message": "snippet not found"}, 404)
 
@@ -324,7 +324,7 @@ class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
                     False,
                     {
                         "message": "Another run for this snippet is already in flight.",
-                        "execution_id": str(in_flight.id),
+                        "execution_uuid": str(in_flight.object_uuid),
                     },
                     200,
                 )
@@ -395,7 +395,7 @@ class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
             # Enqueue. The celery task does its own AST recheck on pickup.
             try:
                 async_result = codexec_executor.apply_async(
-                    args=[str(execution.id), tenant.name],
+                    args=[str(execution.object_uuid), tenant.name],
                     soft_time_limit=snippet.timeout_seconds,
                     time_limit=snippet.timeout_seconds + 10,
                 )
@@ -436,11 +436,11 @@ class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
     + `snippet.version` is returned as a synthetic "current" entry on top.
     """
 
-    def get(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def get(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                snippet = CodeSnippet.objects.get(pk=snippet_id)
+                snippet = CodeSnippet.objects.get(object_uuid=snippet_uuid)
             except CodeSnippet.DoesNotExist:
                 return get_api_response(False, {"message": "snippet not found"}, 404)
 
@@ -480,7 +480,7 @@ class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
                     "first_run_at": row["first_run_at"].isoformat() if row["first_run_at"] else None,
                     "last_run_at": row["last_run_at"].isoformat() if row["last_run_at"] else None,
                     "is_current": v == snippet.version,
-                    "representative_execution_id": str(rep.id) if rep else None,
+                    "representative_execution_id": str(rep.object_uuid) if rep else None,
                 })
 
             # If the current snippet version has never been run, prepend it as
@@ -500,7 +500,7 @@ class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
             return get_api_response(
                 True,
                 {
-                    "snippet_id": str(snippet.id),
+                    "snippet_uuid": str(snippet.object_uuid),
                     "snippet_name": snippet.name,
                     "current_version": snippet.version,
                     "versions": versions,
@@ -521,10 +521,10 @@ class CodeSnippetVersionsView(ZangoGenericPlatformAPIView, TenantMixin):
 class CodeSnippetFileListView(ZangoGenericPlatformAPIView, TenantMixin):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
-    def get(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def get(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
-            qs = CodeSnippetFile.objects.filter(snippet_id=snippet_id).order_by("name")
+            qs = CodeSnippetFile.objects.filter(snippet__object_uuid=snippet_uuid).order_by("name")
             return get_api_response(
                 True,
                 {"files": CodeSnippetFileSerializer(qs, many=True).data},
@@ -533,11 +533,11 @@ class CodeSnippetFileListView(ZangoGenericPlatformAPIView, TenantMixin):
         except Exception as exc:  # noqa: BLE001
             return get_api_response(False, {"message": str(exc)}, 500)
 
-    def post(self, request, app_uuid, snippet_id, *args, **kwargs):
+    def post(self, request, app_uuid, snippet_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                snippet = CodeSnippet.objects.get(pk=snippet_id, is_archived=False)
+                snippet = CodeSnippet.objects.get(object_uuid=snippet_uuid, is_archived=False)
             except CodeSnippet.DoesNotExist:
                 return get_api_response(False, {"message": "snippet not found"}, 404)
 
@@ -591,15 +591,15 @@ class CodeSnippetFileListView(ZangoGenericPlatformAPIView, TenantMixin):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class CodeSnippetFileDeleteView(ZangoGenericPlatformAPIView, TenantMixin):
-    """POST /snippets/{id}/files/{file_id}/delete/  — hard delete a snippet file row."""
+    """POST /snippets/{id}/files/{file_uuid}/delete/  — hard delete a snippet file row."""
 
     parser_classes = (JSONParser,)
 
-    def post(self, request, app_uuid, snippet_id, file_id, *args, **kwargs):
+    def post(self, request, app_uuid, snippet_uuid, file_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                f = CodeSnippetFile.objects.get(pk=file_id, snippet_id=snippet_id)
+                f = CodeSnippetFile.objects.get(object_uuid=file_uuid, snippet__object_uuid=snippet_uuid)
             except CodeSnippetFile.DoesNotExist:
                 return get_api_response(False, {"message": "file not found"}, 404)
             # Hard delete the row. The blob stays on storage as long as any
@@ -613,11 +613,11 @@ class CodeSnippetFileDeleteView(ZangoGenericPlatformAPIView, TenantMixin):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class CodeSnippetFileDownloadView(ZangoGenericPlatformAPIView, TenantMixin):
-    def get(self, request, app_uuid, snippet_id, file_id, *args, **kwargs):
+    def get(self, request, app_uuid, snippet_uuid, file_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                f = CodeSnippetFile.objects.get(pk=file_id, snippet_id=snippet_id)
+                f = CodeSnippetFile.objects.get(object_uuid=file_uuid, snippet__object_uuid=snippet_uuid)
             except CodeSnippetFile.DoesNotExist:
                 return get_api_response(False, {"message": "file not found"}, 404)
             return _serve_filefield(f.file, f.name)
@@ -640,9 +640,9 @@ class CodeExecutionListView(
         try:
             _bind_tenant(self, app_uuid)
             qs = CodeExecution.objects.select_related("snippet").order_by("-queued_at")
-            snippet_id = request.GET.get("snippet_id")
-            if snippet_id:
-                qs = qs.filter(snippet_id=snippet_id)
+            snippet_uuid = request.GET.get("snippet_uuid")
+            if snippet_uuid:
+                qs = qs.filter(snippet__object_uuid=snippet_uuid)
             status = request.GET.get("status")
             if status:
                 qs = qs.filter(status=status)
@@ -660,14 +660,14 @@ class CodeExecutionListView(
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class CodeExecutionDetailView(ZangoGenericPlatformAPIView, TenantMixin):
-    def get(self, request, app_uuid, execution_id, *args, **kwargs):
+    def get(self, request, app_uuid, execution_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
                 execution = (
                     CodeExecution.objects.select_related("snippet")
                     .prefetch_related("files")
-                    .get(pk=execution_id)
+                    .get(object_uuid=execution_uuid)
                 )
             except CodeExecution.DoesNotExist:
                 return get_api_response(False, {"message": "execution not found"}, 404)
@@ -687,10 +687,10 @@ class CodeExecutionDetailView(ZangoGenericPlatformAPIView, TenantMixin):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class CodeExecFileListView(ZangoGenericPlatformAPIView, TenantMixin):
-    def get(self, request, app_uuid, execution_id, *args, **kwargs):
+    def get(self, request, app_uuid, execution_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
-            qs = CodeExecFile.objects.filter(execution_id=execution_id).order_by(
+            qs = CodeExecFile.objects.filter(execution__object_uuid=execution_uuid).order_by(
                 "kind", "name"
             )
             kind = request.GET.get("kind")
@@ -707,11 +707,11 @@ class CodeExecFileListView(ZangoGenericPlatformAPIView, TenantMixin):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class CodeExecFileDownloadView(ZangoGenericPlatformAPIView, TenantMixin):
-    def get(self, request, app_uuid, execution_id, file_id, *args, **kwargs):
+    def get(self, request, app_uuid, execution_uuid, file_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                f = CodeExecFile.objects.get(pk=file_id, execution_id=execution_id)
+                f = CodeExecFile.objects.get(object_uuid=file_uuid, execution__object_uuid=execution_uuid)
             except CodeExecFile.DoesNotExist:
                 return get_api_response(False, {"message": "file not found"}, 404)
             return _serve_filefield(f.file, f.name)
@@ -726,7 +726,7 @@ class CodeExecFileDownloadView(ZangoGenericPlatformAPIView, TenantMixin):
 
 @method_decorator(set_app_schema_path, name="dispatch")
 class CodeExecutionExportView(ZangoGenericPlatformAPIView, TenantMixin):
-    """GET /executions/export.csv?snippet_id=…&status=…&from=…&to=…
+    """GET /executions/export.csv?snippet_uuid=…&status=…&from=…&to=…
 
     Streams the filtered execution history as CSV. Useful for compliance
     audits and offline analysis.
@@ -739,9 +739,9 @@ class CodeExecutionExportView(ZangoGenericPlatformAPIView, TenantMixin):
 
             _bind_tenant(self, app_uuid)
             qs = CodeExecution.objects.select_related("snippet").order_by("-queued_at")
-            snippet_id = request.GET.get("snippet_id")
-            if snippet_id:
-                qs = qs.filter(snippet_id=snippet_id)
+            snippet_uuid = request.GET.get("snippet_uuid")
+            if snippet_uuid:
+                qs = qs.filter(snippet__object_uuid=snippet_uuid)
             status = request.GET.get("status")
             if status:
                 qs = qs.filter(status=status)
@@ -756,8 +756,8 @@ class CodeExecutionExportView(ZangoGenericPlatformAPIView, TenantMixin):
             writer = csv.writer(buf)
             writer.writerow(
                 [
-                    "execution_id",
-                    "snippet_id",
+                    "execution_uuid",
+                    "snippet_uuid",
                     "snippet_name",
                     "snippet_version",
                     "status",
@@ -774,8 +774,8 @@ class CodeExecutionExportView(ZangoGenericPlatformAPIView, TenantMixin):
             for ex in qs.iterator(chunk_size=200):
                 writer.writerow(
                     [
-                        str(ex.id),
-                        str(ex.snippet_id),
+                        str(ex.object_uuid),
+                        str(ex.snippet.object_uuid),
                         ex.snippet.name if ex.snippet else "",
                         ex.snippet_version,
                         ex.status,
@@ -816,12 +816,12 @@ class CodeExecutionLogTailView(ZangoGenericPlatformAPIView, TenantMixin):
     DEFAULT_PAGE_SIZE = 100
     MAX_PAGE_SIZE = 500
 
-    def get(self, request, app_uuid, execution_id, *args, **kwargs):
+    def get(self, request, app_uuid, execution_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
                 execution = CodeExecution.objects.only("id", "status").get(
-                    pk=execution_id
+                    object_uuid=execution_uuid
                 )
             except CodeExecution.DoesNotExist:
                 return get_api_response(False, {"message": "execution not found"}, 404)
@@ -836,7 +836,7 @@ class CodeExecutionLogTailView(ZangoGenericPlatformAPIView, TenantMixin):
                 limit = self.DEFAULT_PAGE_SIZE
 
             total_count = CodeExecutionLogLine.objects.filter(
-                execution_id=execution_id
+                execution__object_uuid=execution_uuid
             ).count()
 
             if before_seq_raw is not None:
@@ -848,7 +848,7 @@ class CodeExecutionLogTailView(ZangoGenericPlatformAPIView, TenantMixin):
                     before_seq = 0
                 qs = (
                     CodeExecutionLogLine.objects.filter(
-                        execution_id=execution_id, seq__lt=before_seq
+                        execution__object_uuid=execution_uuid, seq__lt=before_seq
                     )
                     .order_by("-seq")
                     .values("seq", "level", "ts", "message")[:limit]
@@ -863,7 +863,7 @@ class CodeExecutionLogTailView(ZangoGenericPlatformAPIView, TenantMixin):
                     after_seq = 0
                 qs = (
                     CodeExecutionLogLine.objects.filter(
-                        execution_id=execution_id, seq__gt=after_seq
+                        execution__object_uuid=execution_uuid, seq__gt=after_seq
                     )
                     .order_by("seq")
                     .values("seq", "level", "ts", "message")[:limit]
@@ -907,11 +907,11 @@ class CodeExecutionAbortView(ZangoGenericPlatformAPIView, TenantMixin):
 
     parser_classes = (JSONParser,)
 
-    def post(self, request, app_uuid, execution_id, *args, **kwargs):
+    def post(self, request, app_uuid, execution_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
             try:
-                execution = CodeExecution.objects.get(pk=execution_id)
+                execution = CodeExecution.objects.get(object_uuid=execution_uuid)
             except CodeExecution.DoesNotExist:
                 return get_api_response(False, {"message": "execution not found"}, 404)
 
@@ -959,7 +959,7 @@ class CodeExecutionAbortView(ZangoGenericPlatformAPIView, TenantMixin):
                 )
                 next_seq = (last.seq + 1) if last else 1
                 CodeExecutionLogLine.objects.create(
-                    execution_id=execution.id,
+                    execution_uuid=execution.id,
                     seq=next_seq,
                     level="sys",
                     message="Run aborted by user.",
