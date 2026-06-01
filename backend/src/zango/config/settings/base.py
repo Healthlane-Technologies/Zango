@@ -46,6 +46,7 @@ SHARED_APPS = [
     "django_recaptcha",
     "zango.apps.shared.tenancy",
     "zango.apps.shared.platformauth",
+    "zango.apps.shared.platform_logs",
 ]
 
 
@@ -279,7 +280,14 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            # Formatter is swapped to "verbose" for staging/prod inside
+            # setup_settings() once ENV is known; local stays "console".
             "formatter": "console",
+            # The tenant_filter decorates every record with app_name +
+            # domain_url so the Platform Logs feature can filter
+            # CloudWatch lines by tenant. Safe-by-default — see
+            # zango.core.monitoring.log_filter.TenantContextFilter.
+            "filters": ["tenant_filter"],
         },
     },
     "loggers": {
@@ -510,6 +518,16 @@ def setup_settings(settings, BASE_DIR):
         "level": "DEBUG",
         "propagate": True,
     }
+
+    # Platform Logs producer-side fix: switch the console handler to the
+    # `verbose` formatter on staging/prod so each line emitted to ECS
+    # stdout (and thence to CloudWatch) carries `[<schema>:<domain>]`.
+    # The Platform Logs CloudWatch connector relies on that prefix to
+    # filter lines per-tenant. Local dev keeps the shorter `console`
+    # formatter so terminal output stays readable.
+    if str(settings.ENV).lower() in {"staging", "prod", "production"}:
+        settings.LOGGING["handlers"]["console"]["formatter"] = "verbose"
+
     # OTEL Settings
     settings.OTEL_IS_ENABLED = env("OTEL_IS_ENABLED")
     settings.OTEL_EXPORT_TO_OTLP = env("OTEL_EXPORT_TO_OTLP")

@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Platform Logs — Connector Design | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-600:#4549D6; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-100:#CCF2EB; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-100:#E5E7EE; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand: var(--indigo-500);
+  --brand-soft: var(--indigo-50);
+  --accent: var(--teal-500);
+  --accent-soft: var(--teal-50);
+
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06), 0 1px 1px rgba(15,19,36,.03);
+  --shadow-md:
+    0 4px 12px -2px rgba(15,19,36,.08),
+    0 2px 4px rgba(15,19,36,.04),
+    inset 0 1px 0 rgba(255,255,255,.6);
+
+  --ease-out: cubic-bezier(.22,1,.36,1);
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  font-feature-settings: 'cv11','ss01','ss03';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--surface-page);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  max-width: 1280px;
+  margin: 0 auto;
+  gap: 48px;
+  padding: 0 32px 96px;
+}
+.toc { position: sticky; top: 32px; align-self: start; padding-top: 80px; height: calc(100vh - 32px); overflow-y: auto; }
+.toc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.toc-kicker { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 16px; }
+.toc a {
+  display: block; padding: 7px 10px;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px; font-weight: 450;
+  line-height: 1.45;
+  transition: all 180ms var(--ease-out);
+  position: relative;
+}
+.toc a::before {
+  content: ''; position: absolute;
+  left: 0; top: 50%; width: 2px; height: 14px;
+  background: transparent; border-radius: 2px;
+  transform: translateY(-50%);
+  transition: background 180ms var(--ease-out);
+}
+.toc a:hover { color: var(--text-strong); background: var(--surface-sunken); }
+.toc a.active { color: var(--brand); background: var(--brand-soft); font-weight: 530; }
+.toc a.active::before { background: var(--brand); }
+.toc-section + .toc-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+
+main { min-width: 0; padding-top: 56px; }
+
+.hero {
+  position: relative;
+  margin-bottom: 56px;
+  padding: 36px 40px 40px;
+  background:
+    radial-gradient(ellipse 600px 320px at 100% 0%, rgba(89,97,229,.10), transparent 60%),
+    radial-gradient(ellipse 400px 280px at 0% 100%, rgba(17,156,133,.08), transparent 60%),
+    linear-gradient(180deg, #FAFBFE 0%, #F0F2F9 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: fadeUp 480ms var(--ease-out) both;
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+  color: var(--brand); background: rgba(89,97,229,.08);
+  padding: 5px 11px; border-radius: var(--r-pill);
+  margin-bottom: 16px;
+}
+.hero-kicker::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.18);
+}
+.hero h1 { font-size: 32px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; color: var(--text-strong); margin-bottom: 10px; max-width: 740px; }
+.hero .lede { font-size: 14.5px; color: var(--text-muted); line-height: 1.6; max-width: 680px; margin-bottom: 24px; }
+.hero-facts {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.fact { background: var(--surface-card); padding: 12px 16px; }
+.fact .label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 5px; }
+.fact .val { font-size: 13px; color: var(--text-strong); font-weight: 530; }
+.fact .val.brand { color: var(--brand); }
+.fact .val.warn { color: var(--amber-700); }
+
+section { margin-bottom: 56px; }
+.section-kicker { display: inline-block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 8px; }
+section h2 {
+  font-size: 22px; font-weight: 700; letter-spacing: -.022em; color: var(--text-strong);
+  margin-bottom: 8px; scroll-margin-top: 24px;
+}
+section .section-intro { font-size: 14px; color: var(--text-muted); max-width: 720px; margin-bottom: 24px; line-height: 1.65; }
+h3 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--text-strong); margin-bottom: 8px; scroll-margin-top: 24px; }
+h4 { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 6px; }
+p { color: var(--text-body); }
+p + p { margin-top: 10px; }
+
+code.inline {
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px;
+  color: var(--text-strong);
+}
+
+.card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 20px 24px; box-shadow: var(--shadow-sm); }
+.card.tinted { background: var(--surface-tinted); border-color: rgba(89,97,229,.18); }
+.card.warn { background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 100%); border-color: var(--amber-100); border-left: 3px solid var(--amber-500); }
+.card.success { background: linear-gradient(180deg, var(--sage-50) 0%, #FFF 100%); border-color: rgba(90,164,91,.2); border-left: 3px solid var(--sage-500); }
+.card.danger { background: linear-gradient(180deg, var(--crimson-50) 0%, #FFF 100%); border-color: var(--crimson-100); border-left: 3px solid var(--crimson-500); }
+
+.note {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px; color: var(--text-muted);
+  padding: 10px 14px;
+  border-left: 2px solid var(--brand);
+  background: var(--brand-soft);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.note.warn { border-color: var(--amber-500); background: var(--amber-50); }
+.note.warn strong { color: var(--amber-700); }
+.note.danger { border-color: var(--crimson-500); background: var(--crimson-50); }
+.note.danger strong { color: var(--crimson-700); }
+
+.code {
+  border: 1px solid #2A2E3A;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #0F1117;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #E1E4ED;
+  margin: 10px 0 14px;
+}
+.code-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 12px;
+  background: #1A1D26;
+  border-bottom: 1px solid #2A2E3A;
+  font-size: 10.5px; color: #8B92A5;
+  font-family: var(--font-mono);
+}
+.code-header .lang { padding: 1px 7px; background: rgba(255,255,255,.06); border-radius: 3px; color: #B7BCC9; }
+.code-header .path { color: #5F6A82; }
+.code-body { padding: 12px 16px; overflow-x: auto; white-space: pre; }
+
+.tok-kw { color: #C792EA; }
+.tok-imp { color: #82AAFF; }
+.tok-fn { color: #82AAFF; }
+.tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; }
+.tok-comment { color: #5F6A82; font-style: italic; }
+.tok-cls { color: #FFCB6B; }
+.tok-self { color: #FF9DBF; }
+.tok-dec { color: #FFCB6B; }
+.tok-op { color: #89DDFF; }
+
+/* Tables */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin: 8px 0 16px;
+  box-shadow: var(--shadow-sm);
+}
+.tbl thead th {
+  text-align: left;
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  font-weight: 600; color: var(--text-subtle);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #FAFBFD;
+}
+.tbl tbody td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12.5px;
+  color: var(--text-body);
+  vertical-align: top;
+}
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: var(--surface-sunken); }
+.tbl code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; color: var(--text-strong); }
+.tbl .mono { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 530;
+}
+.pill.brand { background: var(--brand-soft); color: var(--indigo-700); }
+.pill.accent { background: var(--accent-soft); color: var(--teal-700); }
+.pill.warn { background: var(--amber-50); color: var(--amber-700); }
+.pill.danger { background: var(--crimson-50); color: var(--crimson-700); }
+.pill.sage { background: var(--sage-50); color: var(--sage-700); }
+.pill.slate { background: var(--slate-50); color: var(--slate-700); }
+
+/* Connector card grid */
+.connectors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0 20px; }
+.connector {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.connector.v1 { border-color: rgba(17,156,133,.35); background: linear-gradient(180deg, var(--accent-soft) 0%, #FFF 60%); }
+.connector.v1::before {
+  content: 'V1';
+  position: absolute; top: -8px; right: 16px;
+  font-size: 9.5px; letter-spacing: 0.08em; font-weight: 700;
+  background: var(--accent); color: #fff;
+  padding: 3px 8px; border-radius: 3px;
+}
+.connector.future { opacity: 0.85; }
+.connector .opt-tag { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 4px; }
+.connector h4 { font-size: 14px; margin-bottom: 8px; }
+.connector .body { font-size: 12.5px; color: var(--text-body); line-height: 1.55; margin-bottom: 6px; }
+
+/* Architecture diagram */
+.arch {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+.arch-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+.arch-label {
+  font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+  font-weight: 600; color: var(--text-subtle);
+  display: flex; align-items: center;
+  padding: 14px 0 0 4px;
+}
+.arch-boxes { display: flex; gap: 10px; flex-wrap: wrap; }
+.arch-box {
+  flex: 1; min-width: 0;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.arch-box.brand { background: var(--brand-soft); border-color: rgba(89,97,229,.25); }
+.arch-box.accent { background: var(--accent-soft); border-color: rgba(17,156,133,.25); }
+.arch-box.slate { background: var(--slate-50); border-color: var(--slate-100); }
+.arch-box .ab-title { font-size: 12.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 2px; }
+.arch-box .ab-sub { font-size: 11px; color: var(--text-muted); }
+.arch-arrow {
+  text-align: center; color: var(--text-subtle);
+  font-size: 16px; padding: 4px 0;
+}
+
+/* Bullets */
+.bul { list-style: none; padding-left: 0; }
+.bul li {
+  padding: 5px 0 5px 18px; position: relative;
+  font-size: 12.5px; color: var(--text-body);
+}
+.bul li::before {
+  content: ''; position: absolute; left: 4px; top: 12px;
+  width: 4px; height: 4px; background: var(--brand); border-radius: 50%;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+main > section { animation: fadeUp 380ms var(--ease-out) both; }
+main > section:nth-of-type(1) { animation-delay: 40ms; }
+main > section:nth-of-type(2) { animation-delay: 80ms; }
+main > section:nth-of-type(3) { animation-delay: 120ms; }
+main > section:nth-of-type(4) { animation-delay: 160ms; }
+main > section:nth-of-type(5) { animation-delay: 200ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 1fr; padding: 0 20px 64px; }
+  .toc { display: none; }
+  .hero-facts { grid-template-columns: 1fr 1fr; }
+  .connectors { grid-template-columns: 1fr; }
+  .arch-row { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   MOCKUP STYLES — app panel chrome, settings, table, polling
+   ============================================================ */
+.mk { margin: 16px 0 28px; border: 1px solid var(--border); border-radius: var(--r-2xl); background: var(--surface-card); box-shadow: 0 12px 28px -8px rgba(15,19,36,.10), 0 4px 8px rgba(15,19,36,.04); overflow: hidden; }
+.mk-caption { display: flex; align-items: center; gap: 10px; padding: 9px 18px; background: linear-gradient(180deg, #FAFBFE 0%, #F3F5FB 100%); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-muted); }
+.mk-caption .mk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(17,156,133,.15); }
+.mk-caption .mk-label { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--text-strong); }
+
+.mk-shell { display: grid; grid-template-columns: 200px 1fr; background: var(--surface-page); }
+.mk-shell.fixed { height: 760px; }
+
+.mk-nav { background: var(--text-strong); color: #C9CEDE; padding: 12px 0; display: flex; flex-direction: column; }
+.mk-nav-logo { display: flex; align-items: center; gap: 9px; padding: 0 16px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.mk-nav-mark { width: 26px; height: 26px; background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; }
+.mk-nav-name { font-size: 12px; font-weight: 600; color: #fff; }
+.mk-nav-name small { display: block; font-size: 9.5px; font-weight: 400; color: #6E7488; }
+.mk-nav-app { margin: 10px 12px 14px; padding: 9px 11px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: var(--r-md); }
+.mk-nav-app-label { font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: #6E7488; font-weight: 600; margin-bottom: 3px; }
+.mk-nav-app-n { font-size: 11.5px; font-weight: 530; color: #fff; }
+.mk-nav-app-d { font-family: var(--font-mono); font-size: 10px; color: #8B92A5; margin-top: 1px; }
+.mk-nav-section { padding: 4px 7px; margin-top: 4px; }
+.mk-nav-sec-l { font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: #5A607A; font-weight: 600; padding: 6px 9px 4px; }
+.mk-nav-item { display: flex; align-items: center; gap: 9px; padding: 6px 9px; margin: 1px 0; border-radius: var(--r-sm); font-size: 11.5px; color: #C9CEDE; font-weight: 450; cursor: default; }
+.mk-nav-item:hover { background: rgba(255,255,255,.04); color: #fff; }
+.mk-nav-item.active { background: rgba(89,97,229,.18); color: #fff; font-weight: 530; }
+.mk-nav-item.active::before { content: ''; width: 3px; align-self: stretch; background: var(--brand); margin: -6px 4px -6px -9px; border-radius: 2px; }
+.mk-nav-item svg { width: 13px; height: 13px; opacity: .8; flex-shrink: 0; }
+.mk-nav-item.active svg { opacity: 1; }
+.mk-nav-item .mk-new { margin-left: auto; font-size: 9px; padding: 1px 5px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font-weight: 600; }
+
+.mk-main { display: flex; flex-direction: column; min-width: 0; background: var(--surface-page); }
+.mk-top { display: flex; align-items: center; gap: 12px; padding: 11px 22px; background: var(--surface-card); border-bottom: 1px solid var(--border); }
+.mk-crumb { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); }
+.mk-crumb .sep { color: var(--text-subtle); }
+.mk-crumb .leaf { color: var(--text-strong); font-weight: 530; }
+.mk-env { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: var(--r-pill); font-size: 10.5px; font-weight: 530; background: var(--amber-50); color: var(--amber-700); }
+.mk-env::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--amber-500); }
+.mk-user { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-muted); }
+.mk-av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 600; }
+
+.mk-pagerow { padding: 16px 22px 11px; background: var(--surface-card); border-bottom: 1px solid var(--border); }
+.mk-pagerow h1 { font-size: 16px; font-weight: 600; color: var(--text-strong); letter-spacing: -.018em; }
+.mk-pagerow p { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+/* mk buttons */
+.mkb { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--surface-card); border: 1px solid var(--border-strong); border-radius: var(--r-md); font-family: inherit; font-size: 11.5px; font-weight: 530; color: var(--text-body); cursor: pointer; }
+.mkb:hover { background: var(--surface-sunken); color: var(--text-strong); }
+.mkb svg { width: 12px; height: 12px; opacity: .8; }
+.mkb.primary { background: var(--text-strong); border-color: var(--text-strong); color: #fff; }
+.mkb.ghost { background: none; border-color: transparent; color: var(--text-muted); }
+.mkb.toggle.on { background: var(--sage-50); border-color: rgba(90,164,91,.35); color: var(--sage-700); }
+.mkb.toggle.on .mk-pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--sage-500); box-shadow: 0 0 0 3px rgba(90,164,91,.22); animation: mkpulse 1.6s ease-in-out infinite; }
+.mkb.toggle .mk-int { font-family: var(--font-mono); font-size: 10px; color: var(--sage-700); opacity: 0.85; padding-left: 5px; border-left: 1px solid rgba(90,164,91,.25); margin-left: 1px; }
+@keyframes mkpulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(90,164,91,.22); } 50% { box-shadow: 0 0 0 6px rgba(90,164,91,.05); } }
+
+/* ====== MOCKUP 1 · SETTINGS ====== */
+.mk-set { display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 28px; background: var(--surface-page); }
+.mk-intro { background: linear-gradient(180deg, var(--brand-soft) 0%, #FFFFFF 100%); border: 1px solid rgba(89,97,229,.18); border-radius: var(--r-xl); padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+.mk-intro-i { width: 36px; height: 36px; border-radius: var(--r-md); background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mk-intro h3 { font-size: 13px; color: var(--text-strong); font-weight: 600; margin-bottom: 2px; }
+.mk-intro p { font-size: 11.5px; color: var(--text-body); }
+
+.mk-cc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mk-cc { background: var(--surface-card); border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--r-xl); padding: 14px; display: flex; flex-direction: column; gap: 9px; }
+.mk-cc.active { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.10), var(--shadow-sm); }
+.mk-cc.empty { border-style: dashed; background: var(--surface-rail, #FAFBFD); }
+.mk-cc-h { display: flex; align-items: center; gap: 9px; }
+.mk-cc-i { width: 28px; height: 28px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--brand-soft); color: var(--indigo-700); }
+.mk-cc-i.celery { background: var(--accent); color: #fff; }
+.mk-cc-i.beat { background: var(--amber-100); color: var(--amber-700); }
+.mk-cc-i.empty { background: var(--surface-sunken); color: var(--text-subtle); }
+.mk-cc-t { font-size: 12.5px; font-weight: 600; color: var(--text-strong); }
+.mk-cc-s { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+.mk-cc-st { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: var(--r-pill); font-size: 10px; font-weight: 530; }
+.mk-cc-st.ok { background: var(--sage-50); color: var(--sage-700); }
+.mk-cc-st.ok::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--sage-500); }
+.mk-cc-st.none { background: var(--surface-sunken); color: var(--text-subtle); }
+.mk-cc-rows { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; padding: 9px 11px; background: var(--surface-sunken); border-radius: var(--r-md); font-family: var(--font-mono); font-size: 10.5px; }
+.mk-cc-rows .k { color: var(--text-subtle); }
+.mk-cc-rows .v { color: var(--text-strong); font-weight: 500; }
+.mk-cc-f { display: flex; gap: 6px; padding-top: 4px; border-top: 1px solid var(--border-soft); margin-top: 3px; }
+
+/* form */
+.mk-form { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-md); }
+.mk-form-h { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.mk-form-h h3 { font-size: 13.5px; font-weight: 600; color: var(--text-strong); }
+.mk-form-h .mk-badge { font-size: 10px; padding: 2px 7px; border-radius: var(--r-pill); background: var(--brand-soft); color: var(--indigo-700); font-weight: 530; }
+.mk-form-b { padding: 14px 18px 18px; }
+.mk-fg { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
+.mk-fg.full > .mk-fld { grid-column: 1 / -1; }
+.mk-fld label { display: block; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 4px; }
+.mk-fld label .req { color: var(--crimson-500); margin-left: 2px; }
+.mk-fld input, .mk-fld select, .mk-fld textarea { width: 100%; padding: 6px 9px; background: var(--surface-card); border: 1px solid var(--border-strong); border-radius: var(--r-md); font-family: inherit; font-size: 11.5px; color: var(--text-strong); }
+.mk-fld input:focus, .mk-fld select:focus, .mk-fld textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.10); }
+.mk-fld input[disabled], .mk-fld select[disabled] { background: var(--surface-sunken); color: var(--text-muted); }
+.mk-fld .h { font-size: 10px; color: var(--text-subtle); margin-top: 4px; }
+.mk-form-f { display: flex; align-items: center; gap: 9px; padding: 11px 18px; border-top: 1px solid var(--border); background: #FAFBFD; border-radius: 0 0 var(--r-xl) var(--r-xl); }
+.mk-test { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--sage-700); font-weight: 530; }
+.mk-test::before { content: '✓'; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--sage-500); color: #fff; font-size: 9px; }
+
+/* ====== MOCKUP 2 · TABLE + FILTERS ====== */
+.mk-strip { display: flex; align-items: center; gap: 10px; padding: 11px 22px; background: var(--surface-card); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mk-seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; background: var(--surface-card); }
+.mk-seg button { background: none; border: none; cursor: pointer; padding: 5px 10px; font-family: inherit; font-size: 11.5px; font-weight: 530; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; border-right: 1px solid var(--border-soft); }
+.mk-seg button:last-child { border-right: none; }
+.mk-seg button:hover { color: var(--text-strong); background: var(--surface-sunken); }
+.mk-seg button.active { background: var(--brand-soft); color: var(--indigo-700); }
+.mk-seg .c { font-family: var(--font-mono); font-size: 10px; padding: 1px 5px; border-radius: var(--r-pill); background: rgba(89,97,229,.12); color: var(--indigo-700); }
+
+.mk-search { flex: 1; min-width: 200px; max-width: 320px; position: relative; }
+.mk-search input { width: 100%; padding: 6px 10px 6px 30px; background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--r-md); font-family: inherit; font-size: 11.5px; color: var(--text-strong); }
+.mk-search input:focus { outline: none; background: var(--surface-card); border-color: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.10); }
+.mk-search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; color: var(--text-subtle); }
+
+.mk-body { display: grid; grid-template-columns: 1fr 260px; flex: 1; min-height: 0; }
+.mk-feed { display: flex; flex-direction: column; min-width: 0; background: var(--surface-card); overflow: hidden; }
+.mk-feedmeta { display: flex; align-items: center; gap: 10px; padding: 8px 22px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border-soft); background: var(--surface-rail, #FAFBFD); }
+.mk-lag { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: var(--r-pill); background: var(--sage-50); color: var(--sage-700); font-weight: 530; font-size: 10.5px; }
+.mk-lag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--sage-500); }
+.mk-poll { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--text-subtle); }
+
+.mk-tblw { flex: 1; overflow: auto; }
+.mk-tblw::-webkit-scrollbar { width: 8px; height: 8px; }
+.mk-tblw::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+table.mk-tbl { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 11px; }
+table.mk-tbl thead th { text-align: left; font-family: var(--font); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); padding: 8px 13px; background: var(--surface-rail, #FAFBFD); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2; }
+table.mk-tbl tbody td { padding: 6px 13px; border-bottom: 1px solid var(--border-soft); color: var(--text-body); vertical-align: top; }
+table.mk-tbl tbody tr { cursor: pointer; }
+table.mk-tbl tbody tr:hover { background: var(--surface-sunken); }
+table.mk-tbl tbody tr.expanded td { background: var(--brand-soft); }
+table.mk-tbl tbody tr.new td { animation: mkhl 1.6s var(--ease-out); }
+@keyframes mkhl { 0% { background: rgba(90,164,91,.18); } 100% { background: transparent; } }
+.mk-tbl td.t { color: var(--text-subtle); white-space: nowrap; width: 120px; }
+.mk-tbl td.l { width: 70px; }
+.mk-lv { display: inline-flex; align-items: center; justify-content: center; height: 17px; padding: 0 6px; border-radius: 3px; font-family: var(--font); font-size: 9.5px; font-weight: 600; letter-spacing: .03em; }
+.mk-lv.dbg { background: var(--slate-50); color: var(--slate-700); }
+.mk-lv.inf { background: var(--brand-soft); color: var(--indigo-700); }
+.mk-lv.wrn { background: var(--amber-50); color: var(--amber-700); }
+.mk-lv.err { background: var(--crimson-50); color: var(--crimson-700); }
+.mk-tbl td.s { width: 120px; }
+.mk-stag { font-size: 10px; color: var(--text-subtle); background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid var(--border-soft); display: inline-block; max-width: 100%; }
+.mk-tbl td.m { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+.mk-sch { color: var(--indigo-700); font-weight: 530; background: rgba(89,97,229,.10); padding: 0 4px; border-radius: 3px; margin-right: 4px; }
+.mk-log { color: var(--teal-700); font-weight: 530; margin-right: 4px; }
+.mk-num { color: var(--amber-700); }
+
+tr.mk-detail td { padding: 0 13px 14px; background: var(--brand-soft); border-bottom: 1px solid rgba(89,97,229,.18); }
+.mk-dc { background: var(--surface-card); border: 1px solid rgba(89,97,229,.25); border-radius: var(--r-lg); padding: 13px 15px; box-shadow: var(--shadow-sm); }
+.mk-dm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: var(--r-md); overflow: hidden; margin-bottom: 11px; }
+.mk-dm .i { background: var(--surface-card); padding: 7px 11px; }
+.mk-dm .l { font-family: var(--font); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 2px; }
+.mk-dm .v { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-strong); font-weight: 500; }
+.mk-dml { font-family: var(--font); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 5px; }
+.mk-dmsg { font-family: var(--font-mono); font-size: 11px; background: #0F1117; color: #E1E4ED; padding: 11px 13px; border-radius: var(--r-md); white-space: pre-wrap; line-height: 1.65; margin-bottom: 11px; }
+.mk-dmsg .te { color: #FF8B8B; } .mk-dmsg .ts { color: #C3E88D; } .mk-dmsg .tc { color: #5F6A82; }
+.mk-da { display: flex; gap: 7px; padding-top: 9px; border-top: 1px solid var(--border-soft); }
+
+/* mk rail */
+.mk-rail { background: var(--surface-rail, #FAFBFD); border-left: 1px solid var(--border); padding: 14px 16px; overflow-y: auto; }
+.mk-rb { margin-bottom: 18px; }
+.mk-rh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.mk-rt { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); }
+.mk-rc { font-size: 10px; color: var(--brand); cursor: pointer; }
+.mk-chk { display: flex; align-items: center; gap: 8px; padding: 4px; font-size: 11.5px; color: var(--text-body); border-radius: var(--r-sm); }
+.mk-chk:hover { background: var(--surface-card); }
+.mk-chk .bx { width: 13px; height: 13px; border: 1.5px solid var(--border-strong); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mk-chk.on .bx { background: var(--brand); border-color: var(--brand); }
+.mk-chk.on .bx::after { content: '✓'; color: #fff; font-size: 9px; font-weight: 700; line-height: 1; }
+.mk-chk .lb { flex: 1; }
+.mk-chk .ct { font-family: var(--font-mono); font-size: 10px; color: var(--text-subtle); }
+.mk-rsr { position: relative; margin-bottom: 7px; }
+.mk-rsr input { width: 100%; padding: 5px 9px 5px 24px; background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-sm); font-family: inherit; font-size: 11px; color: var(--text-strong); }
+.mk-rsr svg { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); width: 11px; height: 11px; color: var(--text-subtle); }
+.mk-sr { display: flex; align-items: center; gap: 6px; padding: 4px; font-size: 10.5px; cursor: pointer; border-radius: var(--r-sm); }
+.mk-sr:hover { background: var(--surface-card); }
+.mk-sr .bx { width: 12px; height: 12px; border: 1.5px solid var(--border-strong); border-radius: 3px; flex-shrink: 0; }
+.mk-sr .nm { font-family: var(--font-mono); font-size: 10px; color: var(--text-strong); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-sr .ag { font-size: 9.5px; color: var(--text-subtle); white-space: nowrap; }
+.mk-pa { width: 100%; padding: 7px 9px; background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-sm); font-family: var(--font-mono); font-size: 10.5px; color: var(--text-strong); resize: vertical; min-height: 56px; }
+.mk-pa:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.10); }
+.mk-pah { font-size: 10px; color: var(--text-subtle); margin-top: 4px; }
+
+@media (max-width: 1100px) {
+  .mk-shell { grid-template-columns: 1fr; }
+  .mk-nav { display: none; }
+  .mk-body { grid-template-columns: 1fr; }
+  .mk-rail { border-left: none; border-top: 1px solid var(--border); }
+  .mk-shell.fixed { height: auto; }
+  .mk-cc-grid { grid-template-columns: 1fr; }
+  .mk-fg { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <nav class="toc">
+    <div class="toc-kicker">On this page</div>
+    <div class="toc-section">
+      <a href="#overview" class="active">Overview</a>
+      <a href="#shift">Design shift</a>
+    </div>
+    <div class="toc-section">
+      <a href="#investigation">CloudWatch · what's there today</a>
+      <a href="#tenant-gap">Tenant isolation gap</a>
+    </div>
+    <div class="toc-section">
+      <a href="#connector">Connector abstraction</a>
+      <a href="#config-model">Config storage model</a>
+      <a href="#cloudwatch">CloudWatch connector</a>
+      <a href="#streams">Log streams handling</a>
+    </div>
+    <div class="toc-section">
+      <a href="#api">API surface</a>
+      <a href="#frontend">App-panel UI</a>
+      <a href="#mockup">Mockups</a>
+      <a href="#permissions">Permissions</a>
+    </div>
+    <div class="toc-section">
+      <a href="#local">Local-dev parity</a>
+      <a href="#producer-fix">Producer-side fix</a>
+      <a href="#risks">Risks &amp; guardrails</a>
+      <a href="#phasing">Phasing</a>
+      <a href="#open">Open questions</a>
+    </div>
+    <div class="toc-section">
+      <a href="#impl">Implementation plan</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============= HERO ============= -->
+    <header class="hero">
+      <div class="hero-kicker">Platform Logs · Connector Design</div>
+      <h1>Pluggable log connectors,<br/><span style="color: var(--text-muted); font-weight: 500;">read-only views from existing log stores.</span></h1>
+      <p class="lede">
+        A pluggable <strong>LogConnector</strong> abstraction (CloudWatch
+        in v1; DynamoDB, OTel, others later) configured per environment
+        and per component (app · celery · celery-beat). The app panel
+        reads from whichever connector each component is wired to. How
+        the logs <em>get</em> to those stores is owned by infra and out
+        of scope.
+      </p>
+      <div class="hero-facts">
+        <div class="fact"><div class="label">Status</div><div class="val brand">Design · awaiting approval</div></div>
+        <div class="fact"><div class="label">v1 connector</div><div class="val">CloudWatch Logs</div></div>
+        <div class="fact"><div class="label">Granularity</div><div class="val">per (env × component)</div></div>
+        <div class="fact"><div class="label">Tenant filter</div><div class="val">~5 LOC producer fix — see §3</div></div>
+      </div>
+    </header>
+
+
+    <!-- ============= OVERVIEW ============= -->
+    <section id="overview">
+      <div class="section-kicker">Overview</div>
+      <h2>What we're building</h2>
+      <p class="section-intro">
+        A <strong>Logs</strong> tab in the platform app panel that fetches
+        and displays logs from wherever they happen to live for the
+        current environment. The plumbing that ships them there
+        (CloudWatch Agent, awslogs driver, OTel exporter, Lambda
+        forwarder, etc.) is owned by infra — Zango treats those stores
+        as read-only sources via a connector interface.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <h3>The status quo</h3>
+          <ul class="bul">
+            <li>Containers ship stdout/stderr to CloudWatch via the ECS awslogs driver.</li>
+            <li>One log group per (env × component): <code class="inline">/ecs/&lt;env&gt;/{app,celery,celery-beat,nginx}</code>.</li>
+            <li>Local dev: logs land in the terminal where you ran <code class="inline">runserver</code> / <code class="inline">celery worker</code>.</li>
+            <li>To investigate anything, devs SSH into ECS or open CloudWatch in the AWS console.</li>
+          </ul>
+        </div>
+        <div class="card tinted">
+          <h3>What good looks like</h3>
+          <ul class="bul">
+            <li>Logs tab in the app panel reads live from CloudWatch (or whatever store each component is wired to).</li>
+            <li>Configurable per component — app can be on CloudWatch, celery on DynamoDB, beat on OTel.</li>
+            <li>Search, filter, live tail, time-range, raw <code class="inline">FilterLogEvents</code> pattern for power users.</li>
+            <li>Future: tenant-scoped filtering once the producer side emits structured logs.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============= SHIFT ============= -->
+    <section id="shift">
+      <div class="section-kicker">What changed</div>
+      <h2>From write-side capture to read-side connector</h2>
+      <p class="section-intro">
+        Earlier sketches of this feature had Zango installing a Python
+        <code class="inline">logging.Handler</code> that wrote into a
+        Postgres table. That coupled the app server to log storage and
+        forced every customer to operate Postgres for logs. The shift
+        below decouples Zango from the storage choice entirely.
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 26%;">Dimension</th>
+            <th>Old (write-side capture)</th>
+            <th>New (read-side connector)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Who ships logs</td>
+            <td>Zango — custom handler writes to Postgres.</td>
+            <td>Infra — existing pipelines (awslogs driver, OTel collector, etc.). Out of scope here.</td>
+          </tr>
+          <tr>
+            <td>Storage choice</td>
+            <td>Hard-coded Postgres.</td>
+            <td>Pluggable — CloudWatch (v1), DynamoDB, OTel backends, others.</td>
+          </tr>
+          <tr>
+            <td>Per-component flexibility</td>
+            <td>One model, all sources.</td>
+            <td>Each (env × component) row picks its own connector + config.</td>
+          </tr>
+          <tr>
+            <td>Write amplification risk</td>
+            <td>Hot-tenant write storm in Postgres.</td>
+            <td>None — Zango doesn't write logs.</td>
+          </tr>
+          <tr>
+            <td>Tenant filtering</td>
+            <td>Native (schema isolation).</td>
+            <td>Depends on the producer adding a <code>tenant_schema</code> field — see §3.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ============= INVESTIGATION ============= -->
+    <section id="investigation">
+      <div class="section-kicker">Pre-design investigation</div>
+      <h2>What's actually in CloudWatch today</h2>
+      <p class="section-intro">
+        Findings from inspecting the live staging environment
+        (<code class="inline">ap-south-1</code>) so the plan reflects
+        reality, not assumptions.
+      </p>
+
+      <h3>Log group shape</h3>
+      <p>
+        One log group per (env × component). Confirmed groups in
+        <code class="inline">ap-south-1</code>:
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr><th>Log group</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">/ecs/zango-india-staging/app</td><td>Django app (gunicorn) stdout/stderr</td></tr>
+          <tr><td class="mono">/ecs/zango-india-staging/celery</td><td>Celery worker stdout/stderr</td></tr>
+          <tr><td class="mono">/ecs/zango-india-staging/celery-beat</td><td>Celery beat stdout/stderr</td></tr>
+          <tr><td class="mono">/ecs/zango-india-staging/nginx</td><td>Nginx access &amp; error logs</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Same shape under <code class="inline">/ecs/zango-india-prod/</code>,
+        <code class="inline">/ecs/zango-india-sandbox/</code>,
+        <code class="inline">/ecs/zango-bms-india-prod/</code>. v1 wires
+        up <code class="inline">app</code>, <code class="inline">celery</code>,
+        <code class="inline">celery-beat</code>. Nginx is out of scope.
+      </p>
+
+      <h3 style="margin-top: 20px;">Log streams per group</h3>
+      <p>
+        Each ECS task instance gets its own log stream. A single log
+        group typically has many concurrent streams — one per running
+        task, plus historical streams from previous deploys. Sample names
+        from <code class="inline">/ecs/zango-india-staging/app</code>:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">streams</span></div>
+        <div class="code-body">app/app/ce3ec653b15c4a4ca3906472beeccd63
+app/app/6178e212c1b145f08a9ce2e7af1a97ad
+app/app/a6ea72f2234a46afa7d9ca89cb7b8c23
+app/app/d506d65dc163495787b3728bf4239866</div>
+      </div>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Format: <code class="inline">&lt;container-prefix&gt;/&lt;container-name&gt;/&lt;ecs-task-id&gt;</code>
+        — defined by the ECS task-definition's
+        <code class="inline">awslogs-stream-prefix</code>. New task → new
+        stream. The connector must handle this naturally — see
+        <a href="#streams" style="color: var(--brand);">§ Log streams handling</a>.
+      </p>
+
+      <h3 style="margin-top: 20px;">Log line format</h3>
+      <p>
+        Plain text, not JSON. Examples from staging:
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr><th style="width: 14%;">Source</th><th>Sample line (truncated)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>App · info</td>
+            <td class="mono" style="font-size: 10.5px;">[slack-events] ✓ dispatching → event_type=message subtype=message_changed user=None channel=C070HM60DGD</td>
+          </tr>
+          <tr>
+            <td>App · error</td>
+            <td class="mono" style="font-size: 10.5px;">django.template.base.VariableDoesNotExist: Failed lookup for key [error_message] in [{'True': True, …}, {'csrf_token': &lt;SimpleLazyObject…&gt;, 'request': &lt;WSGIRequest: GET '/auth/login/?next=/platform/'&gt;, …}]</td>
+          </tr>
+          <tr>
+            <td>Celery · info</td>
+            <td class="mono" style="font-size: 10.5px;">[2026-06-01 08:06:00,405: INFO/MainProcess] Task zango.core.tasks.zango_task_executor[df1104ba-…] received</td>
+          </tr>
+          <tr>
+            <td>Celery · success</td>
+            <td class="mono" style="font-size: 10.5px;">[2026-06-01 08:06:07,588: INFO/ForkPoolWorker-1] Task zango.core.tasks.zango_task_executor[df1104ba-…] succeeded in 7.18s: True</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ============= TENANT GAP ============= -->
+    <section id="tenant-gap">
+      <div class="section-kicker">The tenant gap</div>
+      <h2>Tenant isolation in the current log format</h2>
+
+      <div class="card warn" style="margin-bottom: 16px;">
+        <h3 style="color: var(--amber-700);">Updated assessment · the infrastructure exists; it's only wired to the wrong handler.</h3>
+        <p style="font-size: 13px; color: var(--text-body); margin-top: 6px;">
+          <strong>What already exists in the codebase</strong> — found in
+          <code class="inline">zango/config/settings/base.py</code> and
+          <code class="inline">zango/core/monitoring/log_filter.py</code>:
+        </p>
+        <ul class="bul" style="margin-top: 6px;">
+          <li><code class="inline">TenantContextFilter</code> reads <code class="inline">connection.tenant.schema_name</code> and <code class="inline">domain_url</code> and decorates every record with <code class="inline">app_name</code> + <code class="inline">domain_url</code>.</li>
+          <li>A <code class="inline">verbose</code> formatter already embeds those fields: <code class="inline">[%(app_name)s:%(domain_url)s][%(asctime)s] %(levelname)s …</code>.</li>
+          <li>The filter + verbose formatter are attached <strong>only to a rotating file handler</strong>, and only when a log-folder env is configured.</li>
+          <li>The default <code class="inline">console</code> handler — the one ECS ships to CloudWatch — uses the plain <code class="inline">console</code> formatter <em>without</em> the filter, hence the unstructured lines we see in CloudWatch.</li>
+        </ul>
+        <p style="font-size: 13px; color: var(--text-body); margin-top: 8px;">
+          <strong>Implication.</strong> The "producer-side fix" is not new
+          plumbing — it's <em>~5 lines of settings</em> to attach the
+          existing filter + verbose formatter to the console handler.
+          That makes shipping tenant-scoped logs from v1 plausible (see
+          updated Phasing).
+        </p>
+      </div>
+
+      <h3>What can be inferred today (best-effort, not recommended for the UI)</h3>
+      <ul class="bul">
+        <li>App: <code class="inline">WSGIRequest</code> repr in tracebacks contains URL path — sometimes carries an app UUID under <code class="inline">/platform/apps/&lt;uuid&gt;</code>. Not stable; not present on INFO.</li>
+        <li>Celery: task name is logged, tenant is not. Some task argument logs accidentally leak tenant context, but not consistently.</li>
+        <li>Nginx (separate log group): would have the <code class="inline">Host</code> header which maps to a tenant — but Nginx is out of scope for v1.</li>
+      </ul>
+
+      <h3 style="margin-top: 16px;">How the design handles the gap</h3>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 24%;">Option</th>
+            <th>What the user sees</th>
+            <th>What it costs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill warn">A · ship as-is</span></td>
+            <td>All lines for the selected (env × component), no tenant filter, with a banner: <em>"Tenant-scoped log filtering not yet available — producer-side change required."</em> Logs tab gated to platform admins.</td>
+            <td>Zero producer change. v1 ships.</td>
+          </tr>
+          <tr>
+            <td><span class="pill sage">B · land producer fix with v1 (recommended)</span></td>
+            <td>Tenant admin sees only their tenant's lines from day one.</td>
+            <td>~5 LOC of settings — attach the existing <code>tenant_filter</code> to the console handler, swap formatter to <code>verbose</code> in staging/prod, wire Celery's <code>setup_logging</code>. The connector adds <code>[&lt;schema&gt;:</code> to every <code>FilterLogEvents</code> pattern (verbose) or <code>{ $.app_name = … }</code> (if we go JSON).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size: 13px; color: var(--text-body);">
+        Given the producer side is essentially free (the filter is
+        already written), <strong>Option B is the recommended path</strong>.
+        v1 ships tenant-scoped on day one; the banner-and-block-tenant-admins
+        contingency in Option A only comes into play if the producer
+        change blocks for some reason.
+      </p>
+
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+        v1 ships with the gap explicit. The Logs tab is gated behind a
+        <code class="inline">platform.logs.view</code> policy that maps
+        only to platform admins until v2 lands — see
+        <a href="#permissions" style="color: var(--brand);">§ Permissions</a>.
+      </p>
+
+      <div class="note">
+        <span>
+          <strong>Why we don't try to parse tenants out of plain-text lines.</strong>
+          Heuristic parsing (URL regex, WSGIRequest repr matching) is
+          fragile and will both miss lines and leak lines. A banner
+          telling the user "we don't have this yet" is more honest than
+          a filter that silently produces wrong results.
+        </span>
+      </div>
+    </section>
+
+
+    <!-- ============= CONNECTOR ============= -->
+    <section id="connector">
+      <div class="section-kicker">Abstraction</div>
+      <h2>The <code class="inline" style="font-size: 18px;">LogConnector</code> interface</h2>
+      <p class="section-intro">
+        A small Python protocol. Each concrete connector implements the
+        same four operations; the views and the frontend don't care
+        which one is wired up.
+      </p>
+
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">zango/apps/platform_logs/connectors/base.py</span></div>
+        <div class="code-body"><span class="tok-kw">class</span> <span class="tok-cls">LogConnector</span>(<span class="tok-cls">Protocol</span>):
+    <span class="tok-str">"""Read-only interface for fetching log lines from an external store."""</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">list_streams</span>(self, *, since: datetime) -> List[<span class="tok-cls">LogStream</span>]: ...
+    <span class="tok-comment"># Discover the sub-streams (CW log streams, OTel resource streams, etc.)
+    # that exist under this connector since `since`. Powers the optional
+    # stream-picker in the UI.</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">fetch</span>(self, *, filters: <span class="tok-cls">LogFilters</span>, page: <span class="tok-cls">Cursor</span>) -> <span class="tok-cls">LogPage</span>: ...
+    <span class="tok-comment"># Return a bounded page of lines matching `filters`. Backward
+    # pagination via Cursor.before, forward (tail) via Cursor.after.</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">facets</span>(self) -> <span class="tok-cls">FacetSet</span>: ...
+    <span class="tok-comment"># Return values for UI filter dropdowns: known log levels (from
+    # FilterLogEvents stats), recently active streams. Cached 60s.</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">deep_link</span>(self, *, filters: <span class="tok-cls">LogFilters</span>) -> Optional[str]: ...
+    <span class="tok-comment"># Build a "Open in native UI" URL — e.g. a CloudWatch Logs Insights
+    # console link pre-filtered by the same filters. Optional.</span></div>
+      </div>
+
+      <h3 style="margin-top: 16px;">Common types</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span></div>
+        <div class="code-body"><span class="tok-kw">@dataclass</span>
+<span class="tok-kw">class</span> <span class="tok-cls">LogFilters</span>:
+    since: datetime
+    until: Optional[datetime] = <span class="tok-kw">None</span>
+    q: <span class="tok-cls">str</span> = <span class="tok-str">""</span>                       <span class="tok-comment"># free-text substring</span>
+    pattern: <span class="tok-cls">str</span> = <span class="tok-str">""</span>                 <span class="tok-comment"># native filter pattern (CW syntax)</span>
+    levels: Set[<span class="tok-cls">str</span>] = <span class="tok-fn">field</span>(default_factory=<span class="tok-cls">set</span>)
+    streams: Optional[List[<span class="tok-cls">str</span>]] = <span class="tok-kw">None</span>  <span class="tok-comment"># restrict to specific streams</span>
+    tenant_schema: Optional[<span class="tok-cls">str</span>] = <span class="tok-kw">None</span>  <span class="tok-comment"># v2 only; ignored by v1 connector</span>
+    limit: <span class="tok-cls">int</span> = <span class="tok-num">200</span>
+
+<span class="tok-kw">@dataclass</span>
+<span class="tok-kw">class</span> <span class="tok-cls">LogPage</span>:
+    lines: List[<span class="tok-cls">LogLine</span>]
+    next_cursor: Optional[<span class="tok-cls">Cursor</span>]    <span class="tok-comment"># null when exhausted</span>
+
+<span class="tok-kw">@dataclass</span>
+<span class="tok-kw">class</span> <span class="tok-cls">LogLine</span>:
+    ts: datetime
+    message: <span class="tok-cls">str</span>
+    stream: <span class="tok-cls">str</span>                     <span class="tok-comment"># which sub-stream this came from</span>
+    level: Optional[<span class="tok-cls">str</span>] = <span class="tok-kw">None</span>      <span class="tok-comment"># parsed best-effort</span>
+    structured: Optional[<span class="tok-cls">dict</span>] = <span class="tok-kw">None</span> <span class="tok-comment"># populated when source is JSON</span>
+    cursor_token: <span class="tok-cls">str</span> = <span class="tok-str">""</span>          <span class="tok-comment"># opaque, returned with each line</span></div>
+      </div>
+    </section>
+
+
+    <!-- ============= CONFIG MODEL ============= -->
+    <section id="config-model">
+      <div class="section-kicker">Config storage</div>
+      <h2>Connector configuration</h2>
+      <p class="section-intro">
+        Configuration lives in the <strong>public schema</strong> as a
+        single model. One row per (env × component). A platform admin
+        edits these from a platform-admin page; no per-tenant override
+        in v1 (all tenants in an env share the same wiring).
+      </p>
+
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">apps/platform_logs/models.py</span></div>
+        <div class="code-body"><span class="tok-kw">class</span> <span class="tok-cls">Component</span>(models.<span class="tok-cls">TextChoices</span>):
+    APP         = <span class="tok-str">"app"</span>,         <span class="tok-str">"App"</span>
+    CELERY      = <span class="tok-str">"celery"</span>,      <span class="tok-str">"Celery worker"</span>
+    CELERY_BEAT = <span class="tok-str">"celery_beat"</span>, <span class="tok-str">"Celery beat"</span>
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">ConnectorType</span>(models.<span class="tok-cls">TextChoices</span>):
+    CLOUDWATCH = <span class="tok-str">"cloudwatch"</span>, <span class="tok-str">"AWS CloudWatch Logs"</span>
+    <span class="tok-comment"># Future:
+    # DYNAMODB   = "dynamodb",   "AWS DynamoDB"
+    # OTEL_HTTP  = "otel_http",  "OpenTelemetry OTLP/HTTP"
+    # ELASTIC    = "elasticsearch", "Elasticsearch"</span>
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">LogConnectorConfig</span>(<span class="tok-cls">FullAuditMixin</span>):
+    <span class="tok-str">"""One row per (environment × component). Lives in public schema."""</span>
+
+    id          = models.<span class="tok-fn">UUIDField</span>(primary_key=<span class="tok-kw">True</span>, default=uuid.uuid4)
+    environment = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">32</span>)         <span class="tok-comment"># "staging", "prod", "sandbox", "local"</span>
+    component   = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">16</span>, choices=<span class="tok-cls">Component</span>.choices)
+    connector   = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">32</span>, choices=<span class="tok-cls">ConnectorType</span>.choices)
+    config      = models.<span class="tok-fn">JSONField</span>()                       <span class="tok-comment"># type-specific blob; see CW config below</span>
+    is_active   = models.<span class="tok-fn">BooleanField</span>(default=<span class="tok-kw">True</span>)
+
+    <span class="tok-kw">class</span> <span class="tok-cls">Meta</span>:
+        db_table = <span class="tok-str">"platform_log_connector_config"</span>
+        constraints = [
+            models.<span class="tok-fn">UniqueConstraint</span>(
+                fields=[<span class="tok-str">"environment"</span>, <span class="tok-str">"component"</span>],
+                name=<span class="tok-str">"unique_env_component"</span>,
+            ),
+        ]</div>
+      </div>
+
+      <h3 style="margin-top: 14px;">Resolution at request time</h3>
+      <ul class="bul">
+        <li>The Logs view picks the active environment from <code class="inline">settings.ENV</code> (already in the codebase).</li>
+        <li>For each <code class="inline">component</code> the user clicks on, look up the matching row, instantiate the corresponding connector class with the row's <code class="inline">config</code> dict.</li>
+        <li>If no row exists for (env, component), the UI shows an empty state with a "Configure connector" link (no crash, no error).</li>
+      </ul>
+
+      <h3 style="margin-top: 14px;">Sample seed rows</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">0002_seed_connectors.py — RunPython</span></div>
+        <div class="code-body"><span class="tok-fn">LogConnectorConfig</span>.objects.<span class="tok-fn">create</span>(
+    environment=<span class="tok-str">"staging"</span>,
+    component=<span class="tok-cls">Component</span>.APP,
+    connector=<span class="tok-cls">ConnectorType</span>.CLOUDWATCH,
+    config={
+        <span class="tok-str">"region"</span>: <span class="tok-str">"ap-south-1"</span>,
+        <span class="tok-str">"log_group_name"</span>: <span class="tok-str">"/ecs/zango-india-staging/app"</span>,
+        <span class="tok-str">"stream_prefix"</span>: <span class="tok-kw">None</span>,  <span class="tok-comment"># optional restriction</span>
+        <span class="tok-str">"format"</span>: <span class="tok-str">"plain"</span>,    <span class="tok-comment"># "plain" | "json" (v2)</span>
+    },
+)
+<span class="tok-comment"># Repeat for celery, celery-beat, and per environment.</span></div>
+      </div>
+    </section>
+
+
+    <!-- ============= CLOUDWATCH ============= -->
+    <section id="cloudwatch">
+      <div class="section-kicker">v1 connector</div>
+      <h2>CloudWatch connector</h2>
+      <p class="section-intro">
+        Single concrete implementation in v1. Uses <code class="inline">boto3</code>
+        against the <code class="inline">logs</code> service. No
+        cross-account assumption in v1; uses the IAM role attached to
+        the Zango ECS task / EC2 / dev environment.
+      </p>
+
+      <h3>Config shape</h3>
+      <table class="tbl">
+        <thead>
+          <tr><th style="width: 22%;">Field</th><th style="width: 14%;">Type</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>region</code></td><td>string</td><td>AWS region of the log group. Required. E.g. <code>ap-south-1</code>.</td></tr>
+          <tr><td><code>log_group_name</code></td><td>string</td><td>Full CloudWatch log group name. Required. E.g. <code>/ecs/zango-india-staging/app</code>.</td></tr>
+          <tr><td><code>stream_prefix</code></td><td>string · optional</td><td>If set, restrict reads to streams whose name starts with this prefix. Useful when one group is shared across multiple services.</td></tr>
+          <tr><td><code>format</code></td><td>enum</td><td><code>plain</code> · the current state; <code>verbose</code> · once the producer fix lands (adds <code>[schema:domain]</code> prefix); <code>json</code> · future. Drives whether the connector parses <code>structured</code> fields and how it builds tenant filter patterns.</td></tr>
+          <tr><td><code>aws_access_key_id</code></td><td>string · optional</td><td>Explicit IAM user / programmatic access key. Use together with <code>aws_secret_access_key</code>. Required for local-dev setups where the process has no ambient AWS credentials. Masked in API reads (last 4 chars only).</td></tr>
+          <tr><td><code>aws_secret_access_key</code></td><td>string · optional</td><td>Paired with the key above. Stored in DB; never returned in API reads. On edit, leave blank to preserve the saved value.</td></tr>
+          <tr><td><code>role_arn</code></td><td>string · optional</td><td>If set without explicit keys, the connector does an STS <code>AssumeRole</code> using the process's default credentials before any call. Enables cross-account reads.</td></tr>
+        </tbody>
+      </table>
+
+      <h4 style="margin-top: 12px;">Authentication precedence</h4>
+      <p style="font-size: 13px;">
+        The connector picks one of three auth modes per call, in this
+        order:
+      </p>
+      <ol class="bul">
+        <li><strong>Explicit keys</strong> — if both <code class="inline">aws_access_key_id</code> and <code class="inline">aws_secret_access_key</code> are set, they're passed directly to <code class="inline">boto3.client("logs", …)</code>. Highest precedence.</li>
+        <li><strong>Role ARN</strong> — if only <code class="inline">role_arn</code> is set, the process's default credentials are used to call <code class="inline">sts:AssumeRole</code>, and the temporary credentials drive the CloudWatch client.</li>
+        <li><strong>Default chain</strong> — neither set: boto3 looks in env vars, <code class="inline">~/.aws/credentials</code>, and finally the EC2/ECS instance role. This is the right mode for staging/prod where the ECS task role already has the policy attached.</li>
+      </ol>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Half-set credentials (just the key, no secret, or vice versa)
+        are rejected at config validation time rather than silently
+        falling through to the default chain.
+      </p>
+
+      <div class="note warn" style="margin-top: 12px;">
+        <span>
+          <strong>Secret handling.</strong> <code>aws_secret_access_key</code>
+          lives in the connector row's JSON config blob in plaintext for
+          v1. The API serializer masks it on read (blanks the secret,
+          shows only the last 4 chars of the key) so it can't be
+          retrieved by another viewer. A follow-up will move secrets to
+          the Zango Secrets vault so even DB exfiltration of the
+          connector table doesn't expose live AWS creds.
+        </span>
+      </div>
+
+      <h3 style="margin-top: 16px;">API calls used</h3>
+
+      <table class="tbl">
+        <thead>
+          <tr><th style="width: 28%;">Connector op</th><th style="width: 28%;">AWS call</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>list_streams(since)</code></td>
+            <td><code>logs:DescribeLogStreams</code></td>
+            <td>Order by <code>LastEventTime DESCENDING</code>; filter client-side on <code>lastEventTimestamp &gt;= since</code>. Paginate with <code>nextToken</code>. Cached 30s.</td>
+          </tr>
+          <tr>
+            <td><code>fetch(filters, page)</code> — default</td>
+            <td><code>logs:FilterLogEvents</code></td>
+            <td><strong>The workhorse.</strong> Fans out across all streams in the group automatically; supports a CloudWatch filter pattern + time window + <code>nextToken</code>. No per-stream coordination needed in our code.</td>
+          </tr>
+          <tr>
+            <td><code>fetch(filters, page)</code> — stream-restricted</td>
+            <td><code>logs:FilterLogEvents</code> with <code>logStreamNames=[…]</code></td>
+            <td>When the UI's stream-picker is used, pass only the selected streams. Up to 100 streams per call.</td>
+          </tr>
+          <tr>
+            <td><code>fetch</code> — single-stream tail at sub-second</td>
+            <td><code>logs:GetLogEvents</code></td>
+            <td>Optional fast-path when one stream is selected; <code>GetLogEvents</code> returns in-order events with a tighter token model. Not used in v1; document for future.</td>
+          </tr>
+          <tr>
+            <td><code>facets()</code></td>
+            <td><code>logs:DescribeLogStreams</code> + <code>logs:FilterLogEvents</code> sample</td>
+            <td>Sample 200 recent lines, parse out distinct levels client-side. Cached 60s.</td>
+          </tr>
+          <tr>
+            <td><code>deep_link(filters)</code></td>
+            <td>n/a</td>
+            <td>Build a Logs Insights console URL with pre-baked query string. No AWS call — just URL construction.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 16px;">Required IAM permissions</h3>
+      <p>
+        Attach a managed policy or inline policy to the Zango task /
+        execution role:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">json</span><span class="path">iam-policy.json</span></div>
+        <div class="code-body">{
+  <span class="tok-str">"Version"</span>: <span class="tok-str">"2012-10-17"</span>,
+  <span class="tok-str">"Statement"</span>: [{
+    <span class="tok-str">"Effect"</span>: <span class="tok-str">"Allow"</span>,
+    <span class="tok-str">"Action"</span>: [
+      <span class="tok-str">"logs:DescribeLogStreams"</span>,
+      <span class="tok-str">"logs:FilterLogEvents"</span>,
+      <span class="tok-str">"logs:GetLogEvents"</span>
+    ],
+    <span class="tok-str">"Resource"</span>: [
+      <span class="tok-str">"arn:aws:logs:ap-south-1:114454670435:log-group:/ecs/zango-india-staging/*"</span>,
+      <span class="tok-str">"arn:aws:logs:ap-south-1:114454670435:log-group:/ecs/zango-india-prod/*"</span>,
+      <span class="tok-str">"arn:aws:logs:ap-south-1:114454670435:log-group:/ecs/zango-india-sandbox/*"</span>
+    ]
+  }]
+}</div>
+      </div>
+
+      <h3 style="margin-top: 16px;">Level &amp; timestamp parsing (v1 · plain-text)</h3>
+      <p>
+        Since lines today are unstructured, the connector applies a tiny
+        regex pass to lift a level when possible and uses the
+        CloudWatch event timestamp as <code class="inline">ts</code>.
+        Unparseable lines still display with the right timestamp; level
+        shows as <code class="inline">—</code>.
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span></div>
+        <div class="code-body"><span class="tok-comment"># Celery default: "[2026-06-01 08:06:00,405: INFO/MainProcess] …"</span>
+CELERY_RE = re.<span class="tok-fn">compile</span>(<span class="tok-str">r"\[\d{4}-\d{2}-\d{2}[^\]]+:\s*(?P&lt;lvl&gt;DEBUG|INFO|WARNING|ERROR|CRITICAL)/"</span>)
+
+<span class="tok-comment"># Python stdlib default: "INFO 2026-06-01 08:06:00 module: msg"</span>
+STDLIB_RE = re.<span class="tok-fn">compile</span>(<span class="tok-str">r"^(?P&lt;lvl&gt;DEBUG|INFO|WARNING|ERROR|CRITICAL)\s"</span>)</div>
+      </div>
+    </section>
+
+
+    <!-- ============= STREAMS ============= -->
+    <section id="streams">
+      <div class="section-kicker">Streams</div>
+      <h2>Handling one-or-many streams per log group</h2>
+      <p class="section-intro">
+        A log group routinely has 5–50 streams (one per running ECS task
+        plus deploy history). The connector handles this transparently
+        for the default browse path and exposes streams explicitly only
+        when the user wants to drill in.
+      </p>
+
+      <h3>Default browse — group-wide</h3>
+      <ul class="bul">
+        <li><code class="inline">FilterLogEvents</code> with just <code class="inline">logGroupName</code> automatically fans out across all streams in the group and merges events by timestamp.</li>
+        <li>No per-stream code in our connector. Single API call per page.</li>
+        <li>Result lines carry their originating <code class="inline">logStreamName</code>; the UI shows a small "stream" badge so users can tell which task instance produced a line.</li>
+      </ul>
+
+      <h3 style="margin-top: 14px;">Optional stream picker</h3>
+      <ul class="bul">
+        <li>UI offers a "Streams" dropdown populated from <code class="inline">DescribeLogStreams</code> (default: streams with events in the last 24h).</li>
+        <li>Selecting one or more streams passes <code class="inline">logStreamNames=[…]</code> to <code class="inline">FilterLogEvents</code>.</li>
+        <li>Useful when investigating a specific task instance ("which container served this request?").</li>
+      </ul>
+
+      <h3 style="margin-top: 14px;">Live tail behavior across streams</h3>
+      <ul class="bul">
+        <li>Tail polls <code class="inline">FilterLogEvents</code> with <code class="inline">startTime = lastSeenTs + 1ms</code> every 2 seconds.</li>
+        <li>Group-wide tail naturally picks up events from newly-spawned streams (new ECS tasks during a deploy) without any reconfiguration.</li>
+        <li>Per-stream tail is bounded by the picker: if the user pinned a specific stream and it goes away (task replaced), the UI shows a "stream ended" indicator and offers to switch back to group-wide.</li>
+      </ul>
+
+      <h3 style="margin-top: 14px;">Pagination &amp; cursors</h3>
+      <table class="tbl">
+        <thead>
+          <tr><th style="width: 28%;">Direction</th><th>How</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Backward · "Load earlier"</td>
+            <td>Issue <code>FilterLogEvents</code> with <code>endTime = oldestSeenTs - 1ms</code>. Continue until empty.</td>
+          </tr>
+          <tr>
+            <td>Forward · live tail</td>
+            <td><code>startTime = newestSeenTs + 1ms</code> on each poll.</td>
+          </tr>
+          <tr>
+            <td>Within a page</td>
+            <td>CloudWatch's <code>nextToken</code> chained until exhausted or <code>limit</code> hit.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <span>
+          <strong>CloudWatch quirk · eventual ordering across streams.</strong>
+          <code>FilterLogEvents</code> merges streams by event timestamp, but
+          CloudWatch can deliver lines slightly out-of-order across streams
+          (ingestion lag varies per task). The UI surfaces a small "ingestion
+          lag" hint when the newest-line ts trails wall-clock by &gt;5s, so
+          users don't think the tail is broken.
+        </span>
+      </div>
+    </section>
+
+
+    <!-- ============= API ============= -->
+    <section id="api">
+      <div class="section-kicker">REST API</div>
+      <h2>API surface</h2>
+      <p class="section-intro">
+        Thin wrapper over the connector. GET + POST only. Backed by the
+        existing platform DRF router.
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 38%;">Endpoint</th>
+            <th style="width: 14%;">Method</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/components/</td>
+            <td><span class="pill brand">GET</span></td>
+            <td>List configured components for the current env (drives the component picker).</td>
+          </tr>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/&lt;component&gt;/</td>
+            <td><span class="pill brand">GET</span></td>
+            <td>Browse / page through historical logs. Calls <code>connector.fetch</code>.</td>
+          </tr>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/&lt;component&gt;/tail/</td>
+            <td><span class="pill brand">GET</span></td>
+            <td>Forward cursor for live tail.</td>
+          </tr>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/&lt;component&gt;/streams/</td>
+            <td><span class="pill brand">GET</span></td>
+            <td>List sub-streams (CloudWatch log streams) active recently.</td>
+          </tr>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/&lt;component&gt;/facets/</td>
+            <td><span class="pill brand">GET</span></td>
+            <td>Cached levels + recent streams for filter dropdowns.</td>
+          </tr>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/&lt;component&gt;/deep-link/</td>
+            <td><span class="pill brand">GET</span></td>
+            <td>Returns a connector-native console URL pre-filtered with the active filters.</td>
+          </tr>
+          <tr>
+            <td class="mono">/api/v1/platform/logs/connectors/</td>
+            <td><span class="pill brand">GET / POST</span></td>
+            <td>Admin: list / upsert connector configs.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 14px;">Common query params (browse / tail)</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">qs</span></div>
+        <div class="code-body">?since=2026-05-29T11:00:00Z      <span class="tok-comment"># required; defaults to 1h ago in the UI</span>
+&until=2026-05-29T12:00:00Z      <span class="tok-comment"># browse only; tail uses "now"</span>
+&q=traceback                     <span class="tok-comment"># free-text search</span>
+&pattern=%5BERROR%5D             <span class="tok-comment"># native CW filter pattern, URL-encoded</span>
+&levels=ERROR,WARNING            <span class="tok-comment"># client-side post-filter (plain-text logs)</span>
+&streams=app/app/abc123,app/app/def456
+&limit=200
+&before=&lt;cursor&gt;                 <span class="tok-comment"># backward pagination</span>
+&after=&lt;cursor&gt;                  <span class="tok-comment"># forward (tail) pagination</span></div>
+      </div>
+
+      <h3 style="margin-top: 14px;">Throttling</h3>
+      <ul class="bul">
+        <li>Per-user rate limit: 30 requests / minute on browse, 60 / minute on tail.</li>
+        <li>Connector calls are tagged with a request-id passed to <code class="inline">boto3</code> so AWS-side throttling can be correlated.</li>
+        <li>If CloudWatch returns <code class="inline">ThrottlingException</code>, the API returns 503 with <code class="inline">Retry-After</code>; the frontend backs off the tail.</li>
+      </ul>
+    </section>
+
+
+    <!-- ============= FRONTEND ============= -->
+    <section id="frontend">
+      <div class="section-kicker">Frontend</div>
+      <h2>App-panel UI</h2>
+      <p class="section-intro">
+        A platform-level <strong>Logs</strong> tab, sibling to Code
+        Execution. Component picker at the top, virtualized log feed
+        below, filter rail on the right.
+      </p>
+
+      <div class="card">
+        <h3>Header strip</h3>
+        <ul class="bul">
+          <li><strong>Component segmented control</strong>: App · Celery · Celery beat. Reflects which (env × component) rows exist; greys out unconfigured ones.</li>
+          <li><strong>Time-window picker</strong>: 15m · 1h · 6h · 24h · custom.</li>
+          <li><strong>Search input</strong>: free-text substring (passed as <code class="inline">q</code>; server-side for CW it becomes part of the filter pattern).</li>
+          <li><strong>Live tail toggle</strong>.</li>
+          <li><strong>"Open in CloudWatch" link</strong>: uses the <code class="inline">/deep-link/</code> endpoint to open AWS console with the same filters.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="margin-top: 12px;">
+        <h3>Filter rail (right)</h3>
+        <ul class="bul">
+          <li><strong>Levels</strong> — multi-toggle. Note: until producer-side fix lands, level is parsed best-effort from the line text; some lines won't have a level.</li>
+          <li><strong>Streams</strong> — searchable list. Default empty (group-wide). Selecting one or more restricts <code class="inline">FilterLogEvents</code> to those streams.</li>
+          <li><strong>Native pattern</strong> — power-user field; raw CloudWatch filter syntax accepted (e.g. <code class="inline">[ERROR]</code>, <code class="inline">"DoesNotExist"</code>).</li>
+        </ul>
+      </div>
+
+      <div class="card warn" style="margin-top: 12px;">
+        <h3>Tenant filtering banner (v1)</h3>
+        <p style="font-size: 12.5px; color: var(--text-body);">
+          When the Logs tab loads, a yellow banner reads:
+        </p>
+        <p style="font-size: 12.5px; color: var(--amber-700); font-style: italic; margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--amber-500);">
+          Tenant-scoped log filtering is not yet available. Lines below
+          are from every tenant in this environment. The
+          <strong>producer-side fix</strong> documented in this spec
+          will switch app + celery log formatters to JSON with a
+          tenant_schema field; the same connector will then filter by
+          that field automatically. Until then, this view is
+          platform-admin-only.
+        </p>
+      </div>
+
+      <div class="card" style="margin-top: 12px;">
+        <h3>Log feed</h3>
+        <ul class="bul">
+          <li>Virtualized list (react-window).</li>
+          <li>Each row: timestamp · parsed level pill (or em-dash) · stream badge · message (monospace, truncated single-line).</li>
+          <li>Click → expanded card with full message + raw line + originating stream + ts.</li>
+          <li>"Load earlier" at top; "Jump to live" appears when scrolled away from tail.</li>
+          <li>Empty / loading / error / throttled states.</li>
+        </ul>
+      </div>
+    </section>
+
+
+    <!-- ============= MOCKUP ============= -->
+    <section id="mockup">
+      <div class="section-kicker">Mockup</div>
+      <h2>What it looks like in the app panel</h2>
+      <p class="section-intro">
+        Two screens. <strong>State A</strong> is the platform-level
+        <em>Log connectors</em> page — one row per (env × component),
+        configured once by a platform admin. <strong>State B</strong> is
+        the per-app <em>Logs</em> tab — three peer sub-tabs
+        (<em>App · Celery · Celery beat</em>), each showing only that
+        app's lines via <code class="inline">app_name</code> filtering at
+        read time. Settings does not appear inside the app's Logs tab.
+      </p>
+
+      <!-- =========== MOCKUP 1 · PLATFORM SETTINGS · LOG CONNECTORS =========== -->
+      <div class="mk">
+        <div class="mk-caption">
+          <span class="mk-dot"></span>
+          <span class="mk-label">State A · Platform Settings · Log connectors</span>
+          <span style="margin-left:auto;">platform.logs.admin · env: <span style="font-family:var(--font-mono);">staging</span></span>
+        </div>
+
+        <div class="mk-shell">
+          <aside class="mk-nav">
+            <div class="mk-nav-logo">
+              <div class="mk-nav-mark">Z</div>
+              <div class="mk-nav-name">Zango<small>Platform</small></div>
+            </div>
+            <div class="mk-nav-section">
+              <div class="mk-nav-sec-l">Platform</div>
+              <div class="mk-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Apps
+              </div>
+              <div class="mk-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+                Users &amp; roles
+              </div>
+              <div class="mk-nav-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Settings
+              </div>
+            </div>
+            <div class="mk-nav-section">
+              <div class="mk-nav-sec-l">Observability</div>
+              <div class="mk-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Audit log
+              </div>
+            </div>
+          </aside>
+
+          <main class="mk-main">
+            <div class="mk-top">
+              <div class="mk-crumb">
+                <span>Platform</span><span class="sep">/</span>
+                <span>Settings</span><span class="sep">/</span>
+                <span class="leaf">Log connectors</span>
+              </div>
+              <span class="mk-env">Staging · ap-south-1</span>
+              <div class="mk-user"><span>Rajat B.</span><div class="mk-av">RB</div></div>
+            </div>
+
+            <div class="mk-pagerow">
+              <h1>Log connectors</h1>
+              <p>One connector per component per environment. Configured once at platform level — every app reads from the same source, filtered to its own lines.</p>
+            </div>
+
+            <!-- Settings body -->
+            <div class="mk-set">
+              <div class="mk-intro">
+                <div class="mk-intro-i">
+                  <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="6"/></svg>
+                </div>
+                <div>
+                  <h3>Connector-based architecture</h3>
+                  <p>One connector per component. Today CloudWatch; DynamoDB / OTLP later. How logs get there is owned by infra.</p>
+                </div>
+              </div>
+
+              <div class="mk-cc-grid">
+                <div class="mk-cc active">
+                  <div class="mk-cc-h">
+                    <div class="mk-cc-i"><svg style="width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg></div>
+                    <div>
+                      <div class="mk-cc-t">App</div>
+                      <div class="mk-cc-s">Django · gunicorn stdout</div>
+                    </div>
+                    <span class="mk-cc-st ok">Verified</span>
+                  </div>
+                  <div class="mk-cc-rows">
+                    <span class="k">type</span><span class="v">CloudWatch</span>
+                    <span class="k">region</span><span class="v">ap-south-1</span>
+                    <span class="k">group</span><span class="v">/ecs/zango-india-staging/app</span>
+                    <span class="k">format</span><span class="v">verbose</span>
+                  </div>
+                  <div class="mk-cc-f">
+                    <button class="mkb primary" style="flex:1;justify-content:center;">Edit</button>
+                    <button class="mkb ghost">Test</button>
+                  </div>
+                </div>
+
+                <div class="mk-cc">
+                  <div class="mk-cc-h">
+                    <div class="mk-cc-i celery"><svg style="width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                    <div>
+                      <div class="mk-cc-t">Celery worker</div>
+                      <div class="mk-cc-s">Worker tasks · async</div>
+                    </div>
+                    <span class="mk-cc-st ok">Verified</span>
+                  </div>
+                  <div class="mk-cc-rows">
+                    <span class="k">type</span><span class="v">CloudWatch</span>
+                    <span class="k">region</span><span class="v">ap-south-1</span>
+                    <span class="k">group</span><span class="v">/ecs/zango-india-staging/celery</span>
+                    <span class="k">format</span><span class="v">verbose</span>
+                  </div>
+                  <div class="mk-cc-f">
+                    <button class="mkb" style="flex:1;justify-content:center;">Edit</button>
+                    <button class="mkb ghost">Test</button>
+                  </div>
+                </div>
+
+                <div class="mk-cc empty">
+                  <div class="mk-cc-h">
+                    <div class="mk-cc-i empty"><svg style="width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg></div>
+                    <div>
+                      <div class="mk-cc-t">Celery beat</div>
+                      <div class="mk-cc-s">Scheduler</div>
+                    </div>
+                    <span class="mk-cc-st none">Not configured</span>
+                  </div>
+                  <div class="mk-cc-rows" style="opacity:.5;">
+                    <span class="k">type</span><span class="v">—</span>
+                    <span class="k">region</span><span class="v">—</span>
+                    <span class="k">group</span><span class="v">—</span>
+                    <span class="k">format</span><span class="v">—</span>
+                  </div>
+                  <div class="mk-cc-f">
+                    <button class="mkb primary" style="flex:1;justify-content:center;">+ Configure</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mk-form">
+                <div class="mk-form-h">
+                  <h3>Edit · App connector</h3>
+                  <span class="mk-badge">staging × app</span>
+                  <button class="mkb ghost" style="margin-left:auto;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Close
+                  </button>
+                </div>
+                <div class="mk-form-b">
+                  <div class="mk-fg">
+                    <div class="mk-fld">
+                      <label>Environment</label>
+                      <select disabled><option>staging</option></select>
+                      <div class="h">Read-only · inherited from settings.ENV.</div>
+                    </div>
+                    <div class="mk-fld">
+                      <label>Component</label>
+                      <select disabled><option>App</option></select>
+                      <div class="h">Set when the row was created.</div>
+                    </div>
+                    <div class="mk-fld">
+                      <label>Connector type <span class="req">*</span></label>
+                      <select>
+                        <option selected>AWS CloudWatch Logs</option>
+                        <option disabled>AWS DynamoDB · coming soon</option>
+                        <option disabled>OpenTelemetry OTLP · coming soon</option>
+                      </select>
+                    </div>
+                    <div class="mk-fld">
+                      <label>AWS region <span class="req">*</span></label>
+                      <input value="ap-south-1" />
+                    </div>
+                  </div>
+
+                  <div class="mk-fg full" style="margin-top:14px;">
+                    <div class="mk-fld">
+                      <label>Log group name <span class="req">*</span></label>
+                      <input value="/ecs/zango-india-staging/app" />
+                      <div class="h">Validated when you click "Test".</div>
+                    </div>
+                  </div>
+
+                  <div class="mk-fg" style="margin-top:14px;">
+                    <div class="mk-fld">
+                      <label>Stream prefix · optional</label>
+                      <input value="" placeholder="app/app/" />
+                      <div class="h">Restrict reads to streams starting with this prefix.</div>
+                    </div>
+                    <div class="mk-fld">
+                      <label>Line format</label>
+                      <select>
+                        <option selected>verbose · [schema:domain] prefix</option>
+                        <option>plain · no tenant prefix</option>
+                        <option disabled>json · structured (future)</option>
+                      </select>
+                      <div class="h">Drives FilterLogEvents pattern.</div>
+                    </div>
+                  </div>
+
+                  <div class="mk-fg full" style="margin-top:14px;">
+                    <div class="mk-fld">
+                      <label>Role ARN · cross-account · optional</label>
+                      <input value="" placeholder="arn:aws:iam::114454670435:role/zango-logs-reader" />
+                      <div class="h">If set, STS AssumeRole before each read.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mk-form-f">
+                  <button class="mkb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Test connection
+                  </button>
+                  <span class="mk-test">Verified · 5 active streams · last event 2s ago</span>
+                  <button class="mkb ghost" style="margin-left:auto;">Cancel</button>
+                  <button class="mkb primary">Save</button>
+                </div>
+              </div>
+            </div>
+
+          </main>
+        </div>
+      </div>
+
+
+      <!-- =========== MOCKUP 2 · APP > LOGS TAB · TABLE + POLLING =========== -->
+      <div class="mk">
+        <div class="mk-caption">
+          <span class="mk-dot"></span>
+          <span class="mk-label">State B · Inside an app · Logs tab · App component selected</span>
+          <span style="margin-left:auto;">platform.logs.view · tenant: <span style="font-family:var(--font-mono);">newmicare</span></span>
+        </div>
+
+        <div class="mk-shell fixed">
+          <aside class="mk-nav">
+            <div class="mk-nav-logo">
+              <div class="mk-nav-mark">Z</div>
+              <div class="mk-nav-name">Zango<small>Platform</small></div>
+            </div>
+            <div class="mk-nav-app">
+              <div class="mk-nav-app-label">Active app</div>
+              <div class="mk-nav-app-n">Newmi Care</div>
+              <div class="mk-nav-app-d">newmicare.zelthy.com</div>
+            </div>
+            <div class="mk-nav-section">
+              <div class="mk-nav-sec-l">Observability</div>
+              <div class="mk-nav-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M8 16l4-6 3 4 4-8"/></svg>
+                Logs <span class="mk-new">NEW</span>
+              </div>
+              <div class="mk-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+                Metrics
+              </div>
+              <div class="mk-nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Audit log
+              </div>
+            </div>
+          </aside>
+
+          <main class="mk-main">
+            <div class="mk-top">
+              <div class="mk-crumb">
+                <span>Platform</span><span class="sep">/</span>
+                <span>Newmi Care</span><span class="sep">/</span>
+                <span class="leaf">Logs</span>
+              </div>
+              <span class="mk-env">Staging · ap-south-1</span>
+              <div class="mk-user"><span>Rajat B.</span><div class="mk-av">RB</div></div>
+            </div>
+
+            <div class="mk-pagerow">
+              <h1>Logs</h1>
+              <p>App, Celery and Celery-beat logs, sourced via configurable connectors.</p>
+            </div>
+
+            <div class="mk-strip">
+              <div class="mk-seg">
+                <button class="active">App <span class="c">428</span></button>
+                <button>Celery <span class="c">1.2k</span></button>
+                <button>Celery beat <span class="c">38</span></button>
+              </div>
+
+              <button class="mkb">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                Last 1 hour
+              </button>
+
+              <div class="mk-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input placeholder="Search messages, tracebacks, request IDs…" />
+              </div>
+
+              <button class="mkb toggle on">
+                <span class="mk-pulse"></span> Live tail
+                <span class="mk-int">polls 2s</span>
+              </button>
+
+              <button class="mkb">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Open in CloudWatch
+              </button>
+            </div>
+
+            <div class="mk-body">
+              <section class="mk-feed">
+                <div class="mk-feedmeta">
+                  <span><strong style="color:var(--text-strong);">428</strong> lines · 3 streams active</span>
+                  <span class="mk-lag">Tail live · 1.4s lag</span>
+                  <span class="mk-poll">next poll in 1.2s</span>
+                </div>
+
+                <div class="mk-tblw">
+                  <table class="mk-tbl">
+                    <thead>
+                      <tr>
+                        <th style="width:120px;">Time</th>
+                        <th style="width:70px;">Level</th>
+                        <th style="width:120px;">Stream</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="new">
+                        <td class="t">10:42:18.402</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">django.request</span>GET /api/v1/apps/921e83b9/appointments/today → 200 in <span class="mk-num">68</span> ms</td>
+                      </tr>
+                      <tr class="new">
+                        <td class="t">10:42:18.144</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/6178e212…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">zango.cache</span>Cache hit · key=patient_dashboard:42b9…</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:42:17.482</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">slack_events.dispatcher</span>✓ dispatching → event_type=message subtype=message_changed</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:42:16.221</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">django.request</span>GET /api/v1/apps/921e83b9/patients/ → 200 in <span class="mk-num">142</span> ms</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:42:14.880</td>
+                        <td class="l"><span class="mk-lv wrn">WARN</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">zango.cache</span>Cache miss for patient_dashboard:42b9… — falling back to DB (took <span class="mk-num">217</span> ms)</td>
+                      </tr>
+
+                      <tr class="expanded">
+                        <td class="t">10:42:11.097</td>
+                        <td class="l"><span class="mk-lv err">ERROR</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">django.template</span>VariableDoesNotExist: Failed lookup for key [error_message] in template at /login/</td>
+                      </tr>
+                      <tr class="mk-detail">
+                        <td colspan="4">
+                          <div class="mk-dc">
+                            <div class="mk-dm">
+                              <div class="i"><div class="l">Timestamp</div><div class="v">2026-06-01 10:42:11.097 IST</div></div>
+                              <div class="i"><div class="l">Level</div><div class="v"><span class="mk-lv err">ERROR</span></div></div>
+                              <div class="i"><div class="l">Logger</div><div class="v">django.template</div></div>
+                              <div class="i"><div class="l">Tenant</div><div class="v">newmicare</div></div>
+                              <div class="i"><div class="l">Request ID</div><div class="v">3f9a8b21</div></div>
+                              <div class="i"><div class="l">Stream</div><div class="v">app/app/ce3ec653…</div></div>
+                              <div class="i"><div class="l">Source path</div><div class="v">templates.py:128</div></div>
+                              <div class="i"><div class="l">Domain</div><div class="v">newmicare.zelthy.com</div></div>
+                            </div>
+                            <div class="mk-dml">Message + traceback</div>
+                            <div class="mk-dmsg"><span class="tc"># Fetched from CloudWatch /ecs/zango-india-staging/app</span>
+<span class="te">django.template.base.VariableDoesNotExist</span>: Failed lookup for key [error_message] in
+  [{<span class="ts">'True'</span>: True, <span class="ts">'False'</span>: False, <span class="ts">'None'</span>: None},
+   {<span class="ts">'csrf_token'</span>: &lt;SimpleLazyObject: <span class="ts">'mGqRX8vM09rPpu1R…'</span>&gt;,
+    <span class="ts">'request'</span>: &lt;WSGIRequest: GET <span class="ts">'/auth/login/?next=/platform/'</span>&gt;,
+    <span class="ts">'user'</span>: &lt;SimpleLazyObject: AnonymousUser&gt;}]
+
+  File <span class="ts">"/usr/local/lib/python3.10/site-packages/django/template/base.py"</span>, line 905
+    current = current[bit]</div>
+                            <div class="mk-da">
+                              <button class="mkb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy line</button>
+                              <button class="mkb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Copy as JSON</button>
+                              <button class="mkb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Pin stream</button>
+                              <button class="mkb primary" style="margin-left:auto;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open in CloudWatch</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td class="t">10:42:09.840</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/6178e212…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">django.request</span>POST /auth/login/ → 302 in <span class="mk-num">89</span> ms</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:42:08.108</td>
+                        <td class="l"><span class="mk-lv dbg">DEBUG</span></td>
+                        <td class="s"><span class="mk-stag">app/app/6178e212…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">zango.middleware.telemetry</span>OTel span started · trace=4a8e21fc op=request.handler</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:42:05.214</td>
+                        <td class="l"><span class="mk-lv wrn">WARN</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">boto3.s3</span>Slow S3 PUT (took <span class="mk-num">2154</span> ms) — bucket=zango-media-staging</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:41:58.745</td>
+                        <td class="l"><span class="mk-lv err">ERROR</span></td>
+                        <td class="s"><span class="mk-stag">app/app/ce3ec653…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">zango.notifications.email</span>Failed to enqueue welcome email — SMTPException: Connection refused</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:41:53.092</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/6178e212…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log" style="color:var(--text-subtle);">print</span>[appointment_reminder] processing 17 reminders for today</td>
+                      </tr>
+                      <tr>
+                        <td class="t">10:41:50.115</td>
+                        <td class="l"><span class="mk-lv inf">INFO</span></td>
+                        <td class="s"><span class="mk-stag">app/app/d506d65d…</span></td>
+                        <td class="m"><span class="mk-sch">newmicare</span><span class="mk-log">zango.auth.mfa</span>MFA challenge issued · user_id=<span class="mk-num">8217</span> · method=totp</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <aside class="mk-rail">
+                <div class="mk-rb">
+                  <div class="mk-rh"><div class="mk-rt">Levels</div><div class="mk-rc">Reset</div></div>
+                  <div class="mk-chk"><div class="bx"></div><div class="lb">DEBUG</div><div class="ct">94</div></div>
+                  <div class="mk-chk on"><div class="bx"></div><div class="lb">INFO</div><div class="ct">318</div></div>
+                  <div class="mk-chk on"><div class="bx"></div><div class="lb">WARNING</div><div class="ct">12</div></div>
+                  <div class="mk-chk on"><div class="bx"></div><div class="lb">ERROR</div><div class="ct">4</div></div>
+                  <div class="mk-chk on"><div class="bx"></div><div class="lb">CRITICAL</div><div class="ct">0</div></div>
+                </div>
+
+                <div class="mk-rb">
+                  <div class="mk-rh"><div class="mk-rt">Streams</div><div class="mk-rc">Group-wide</div></div>
+                  <div class="mk-rsr">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input placeholder="Search streams" />
+                  </div>
+                  <div class="mk-sr"><div class="bx"></div><div class="nm">app/app/ce3ec653b…</div><div class="ag">2s</div></div>
+                  <div class="mk-sr"><div class="bx"></div><div class="nm">app/app/6178e212c…</div><div class="ag">4s</div></div>
+                  <div class="mk-sr"><div class="bx"></div><div class="nm">app/app/d506d65dc…</div><div class="ag">19s</div></div>
+                  <div class="mk-sr"><div class="bx"></div><div class="nm">app/app/a6ea72f22…</div><div class="ag">3h</div></div>
+                </div>
+
+                <div class="mk-rb">
+                  <div class="mk-rh"><div class="mk-rt">Polling</div></div>
+                  <div class="mk-chk on"><div class="bx"></div><div class="lb">Live tail</div></div>
+                  <div class="mk-chk"><div class="bx"></div><div class="lb">Pause on scroll up</div></div>
+                  <div class="mk-fld" style="margin-top:6px;">
+                    <label>Interval</label>
+                    <select>
+                      <option>1 s</option>
+                      <option selected>2 s</option>
+                      <option>5 s</option>
+                      <option>10 s</option>
+                    </select>
+                    <div class="h">Tail polls /api/…/tail/?after=&lt;cursor&gt;</div>
+                  </div>
+                </div>
+
+                <div class="mk-rb">
+                  <div class="mk-rh"><div class="mk-rt">Native pattern</div></div>
+                  <textarea class="mk-pa" placeholder='e.g.  [ERROR]  or  "DoesNotExist"'></textarea>
+                  <div class="mk-pah">CloudWatch filter syntax.</div>
+                </div>
+              </aside>
+            </div>
+
+          </main>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============= PERMISSIONS ============= -->
+    <section id="permissions">
+      <div class="section-kicker">Access control</div>
+      <h2>Permissions &amp; policies</h2>
+      <p class="section-intro">
+        Two new policies, mapped per phase to match the tenant-filtering
+        reality.
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 22%;">Policy</th>
+            <th style="width: 22%;">Grants</th>
+            <th>v1 mapping</th>
+            <th>v2 mapping</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>platform.logs.view</code></td>
+            <td>View the Logs tab inside an app; browse + tail that app's lines.</td>
+            <td>Platform admin only (UI cannot yet filter to a single app).</td>
+            <td>App users with access to that app — read filtered by <code>app_name</code> at connector time.</td>
+          </tr>
+          <tr>
+            <td><code>platform.logs.admin</code></td>
+            <td>Open the platform-level Log connectors page; edit connector rows.</td>
+            <td>Platform admin only.</td>
+            <td>Unchanged.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+        Settings live exclusively at the platform level — every app reads
+        from the same connector, filtered to its own
+        <code class="inline">app_name</code>. v1 deliberately ships with
+        <code class="inline">platform.logs.view</code> gated to platform
+        admins until the producer-side fix attaches the existing tenant
+        filter onto the console handler, at which point app users see
+        only their app's lines.
+      </p>
+    </section>
+
+
+    <!-- ============= LOCAL ============= -->
+    <section id="local">
+      <div class="section-kicker">Local dev</div>
+      <h2>Parity story</h2>
+      <p class="section-intro">
+        Local dev has no CloudWatch. v1 ships <strong>without</strong>
+        a local connector — the Logs tab shows a friendly empty state
+        on <code class="inline">ENV=local</code> with a "Logs are viewed
+        in your terminal locally" message. A future
+        <code class="inline">FileTailConnector</code> reading
+        rotating log files is an obvious follow-up but out of v1 scope.
+      </p>
+
+      <div class="card success">
+        <h3 style="color: var(--sage-700);">What this means in practice</h3>
+        <ul class="bul">
+          <li>No new infra for local dev to maintain.</li>
+          <li>Connector + admin UI still work locally so the feature can be tested end-to-end against a staging connector config row.</li>
+          <li>If a dev <em>does</em> want local logs in the panel, they can point a local connector row at a staging CloudWatch group (read-only, same IAM role).</li>
+        </ul>
+      </div>
+    </section>
+
+
+    <!-- ============= PRODUCER FIX ============= -->
+    <section id="producer-fix">
+      <div class="section-kicker">Producer-side fix (v2)</div>
+      <h2>Closing the tenant gap</h2>
+      <p class="section-intro">
+        Separate PR after v1 ships. Owned by backend; this section is
+        here so the spec hangs together.
+      </p>
+
+      <h3>What's already in place</h3>
+      <p style="font-size: 13px; color: var(--text-body);">
+        From <code class="inline">zango/core/monitoring/log_filter.py</code>
+        — already implemented, already registered as the
+        <code class="inline">tenant_filter</code> in the LOGGING dict:
+      </p>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">existing · log_filter.py</span></div>
+        <div class="code-body"><span class="tok-kw">class</span> <span class="tok-cls">TenantContextFilter</span>(logging.<span class="tok-cls">Filter</span>):
+    <span class="tok-kw">def</span> <span class="tok-fn">filter</span>(self, record):
+        record.app_name   = connection.tenant.schema_name
+        record.domain_url = <span class="tok-fn">getattr</span>(connection.tenant, <span class="tok-str">"domain_url"</span>, <span class="tok-str">""</span>)
+        <span class="tok-comment"># ... exc_traceback_content, pathname tidy-up ...</span>
+        <span class="tok-kw">return</span> <span class="tok-kw">True</span></div>
+      </div>
+
+      <h3 style="margin-top: 14px;">The change (small)</h3>
+      <ol class="bul">
+        <li><strong>Attach <code class="inline">tenant_filter</code> to the console handler</strong> in <code class="inline">base.py</code> LOGGING dict — currently only the rotating-file handler has it.</li>
+        <li><strong>Switch console formatter</strong> from <code class="inline">console</code> to <code class="inline">verbose</code> in staging + prod (so the <code class="inline">[app_name:domain_url]</code> prefix lands on every line ECS ships to CloudWatch). Keep <code class="inline">console</code> formatter for local dev.</li>
+        <li><strong>Add a JSON formatter</strong> alongside <code class="inline">verbose</code>. Recommended for v2-of-v2: structured JSON makes the CloudWatch <code class="inline">$.app_name = "…"</code> filter pattern trivially precise. Optional for tenant filtering — the verbose bracketed format is parseable with a small regex, JSON is cleaner.</li>
+        <li>Wire the Celery worker's logger config (currently inherits Django root) to also attach the <code class="inline">tenant_filter</code> + verbose / JSON formatter, ideally via celery's <code class="inline">setup_logging</code> signal so it doesn't auto-revert.</li>
+      </ol>
+
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">settings/base.py — proposed diff (~5 LOC)</span></div>
+        <div class="code-body"><span class="tok-comment"># in LOGGING["handlers"]["console"]:</span>
+{
+    <span class="tok-str">"class"</span>: <span class="tok-str">"logging.StreamHandler"</span>,
+    <span class="tok-str">"formatter"</span>: <span class="tok-str">"verbose"</span> <span class="tok-kw">if</span> ENV <span class="tok-kw">in</span> {<span class="tok-str">"staging"</span>, <span class="tok-str">"prod"</span>} <span class="tok-kw">else</span> <span class="tok-str">"console"</span>,
+    <span class="tok-str">"filters"</span>: [<span class="tok-str">"tenant_filter"</span>],  <span class="tok-comment"># <-- new line</span>
+}</div>
+      </div>
+
+      <h3 style="margin-top: 14px;">Celery — note</h3>
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Celery's default behaviour is to <strong>replace</strong> Django's
+        logging config with its own at worker boot. Connect Zango's LOGGING
+        dict via the <code class="inline">@setup_logging.connect</code>
+        signal so the tenant filter survives worker startup. Without this,
+        celery logs in CloudWatch will keep the old plain-text format
+        even after the producer fix.
+      </p>
+
+      <h3 style="margin-top: 14px;">After it ships</h3>
+      <ul class="bul">
+        <li>Every line in CloudWatch starts with <code class="inline">[&lt;schema&gt;:&lt;domain&gt;]</code> (verbose) or carries an <code class="inline">app_name</code> field (JSON).</li>
+        <li>Connector config row: set <code class="inline">format</code> to <code class="inline">verbose</code> (regex-parsed) or <code class="inline">json</code>.</li>
+        <li><code class="inline">FilterLogEvents</code> pattern: <code class="inline">[&lt;schema&gt;:</code> for verbose; <code class="inline">{ $.app_name = "&lt;schema&gt;" }</code> for JSON.</li>
+        <li>UI banner removed; <code class="inline">platform.logs.view</code> opens up to tenant admins.</li>
+      </ul>
+
+      <div class="note">
+        <span>
+          <strong>Already-installed OTel context.</strong> The codebase
+          also has <code class="inline">OtelZangoContextMiddleware</code>
+          and OTLP exporter settings (gated by
+          <code class="inline">OTEL_IS_ENABLED</code>). If staging or
+          prod is already exporting traces, log records likely already
+          carry trace_id / span_id. A future OTel connector could use
+          those for cross-system correlation.
+        </span>
+      </div>
+    </section>
+
+
+    <!-- ============= RISKS ============= -->
+    <section id="risks">
+      <div class="section-kicker">Risks</div>
+      <h2>Risks &amp; guardrails</h2>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 30%;">Risk</th>
+            <th>Mitigation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>CloudWatch API quota / cost</strong><br/><span class="pill warn">spend</span></td>
+            <td>FilterLogEvents is billed per scanned GB. Cache facets 60s, cap browse window to 24h by default, throttle per-user request rate, surface "request count" in dev tools for visibility.</td>
+          </tr>
+          <tr>
+            <td><strong>IAM scope creep</strong><br/><span class="pill warn">security</span></td>
+            <td>Per-environment ARN list in the IAM policy. No <code>logs:*</code> wildcard. Cross-account reads via <code>role_arn</code> deferred to v2 with explicit STS audit.</td>
+          </tr>
+          <tr>
+            <td><strong>Plain-text level parsing miss</strong><br/><span class="pill warn">UX</span></td>
+            <td>Regex falls back gracefully — unparsed level shows as <code>—</code>. Documented; users learn to rely on free-text search until v2.</td>
+          </tr>
+          <tr>
+            <td><strong>Stream churn during deploy</strong><br/><span class="pill slate">UX</span></td>
+            <td>Group-wide default ignores the new stream — events still flow in. Stream-pinned views show "stream ended" when the task is replaced and offer to switch back.</td>
+          </tr>
+          <tr>
+            <td><strong>Tenant info leak (v1)</strong><br/><span class="pill danger">privacy</span></td>
+            <td>v1 is platform-admin-only by policy. Tenant admins explicitly cannot reach the Logs tab until v2 lands.</td>
+          </tr>
+          <tr>
+            <td><strong>Connector config drift</strong><br/><span class="pill slate">ops</span></td>
+            <td>Admin UI validates: log group exists (<code>DescribeLogGroups</code>), IAM call succeeds with a sample <code>DescribeLogStreams</code>. Saves are atomic; failed validation blocks save.</td>
+          </tr>
+          <tr>
+            <td><strong>Boto3 import / start-up cost</strong><br/><span class="pill slate">perf</span></td>
+            <td><code>boto3</code> client created lazily inside the connector class and memoized per (region, role). No global boto3 import outside the platform_logs app.</td>
+          </tr>
+          <tr>
+            <td><strong>Throttling / TooManyRequestsException</strong><br/><span class="pill warn">UX</span></td>
+            <td>Connector wraps every call in a retry-with-jitter (3 attempts) for <code>ThrottlingException</code> / <code>ServiceUnavailable</code>. Beyond that, propagate to UI with backoff.</td>
+          </tr>
+          <tr>
+            <td><strong>Future connector explosion</strong><br/><span class="pill slate">debt</span></td>
+            <td>Strict Protocol; connectors live under one folder; each new type requires a test class that hits a fake / replay fixture before merge.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ============= PHASING ============= -->
+    <section id="phasing">
+      <div class="section-kicker">Phasing</div>
+      <h2>Ship plan</h2>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 12%;">Phase</th>
+            <th style="width: 30%;">Scope</th>
+            <th>What lands</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill accent">P0</span></td>
+            <td>Abstraction + model</td>
+            <td>LogConnector Protocol, types (LogFilters / LogPage / LogLine), <code>LogConnectorConfig</code> public-schema model + migration, seed data.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P1</span></td>
+            <td>CloudWatch connector</td>
+            <td>Concrete class with <code>DescribeLogStreams</code> + <code>FilterLogEvents</code>, plain-text level parser, deep-link URL builder, retry/throttle handling.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P2</span></td>
+            <td>API</td>
+            <td>List components, browse, tail, streams, facets, deep-link, admin upsert. <code>platform.logs.view</code> + <code>.admin</code> policies.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P3</span></td>
+            <td>App-panel UI</td>
+            <td>Logs tab — component picker, time window, search, levels, streams, virtualized feed, live tail, deep-link button, tenant-banner.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P4</span></td>
+            <td>Admin config UI</td>
+            <td>Per-(env × component) connector form. Validate on save by calling <code>DescribeLogStreams</code>. CRUD + "Test connection".</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P1.5</span></td>
+            <td>Producer-side fix (small)</td>
+            <td>Attach existing <code>tenant_filter</code> to console handler in <code>settings/base.py</code>; switch console formatter to <code>verbose</code> in staging/prod; wire celery <code>setup_logging</code>. ~5 LOC + a celery signal. <strong>Lands with or alongside v1</strong> so tenant scope works from day one.</td>
+          </tr>
+          <tr>
+            <td><span class="pill slate">P5</span></td>
+            <td>JSON formatter (optional)</td>
+            <td>Replace verbose with python-json-logger in staging + prod. CloudWatch Insights filters become <code>{ $.app_name = … }</code> instead of bracket regex. Cleaner, but verbose-with-regex already works.</td>
+          </tr>
+          <tr>
+            <td><span class="pill slate">P6+</span></td>
+            <td>Future connectors</td>
+            <td>DynamoDB, OTel/OTLP, Elasticsearch. Add classes; UI gets new "type" options in the admin form. No other code change.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ============= OPEN ============= -->
+    <section id="open">
+      <div class="section-kicker">Open</div>
+      <h2>Questions for the team</h2>
+      <ul class="bul">
+        <li>Confirm CloudWatch is the right v1 connector for both staging and prod (and that no env currently ships logs elsewhere).</li>
+        <li>Should the connector config live in the public schema or per-tenant? Spec assumes public; per-tenant would let different tenants point to different stores but adds setup burden.</li>
+        <li>Cross-account reads: is BMS prod (<code class="inline">/ecs/zango-bms-india-prod/…</code>) the same AWS account as the Zango ECS service? If not, we need <code class="inline">role_arn</code> + STS in v1 instead of v2.</li>
+        <li>Retention / archival on the CloudWatch side — keep current per-group retention, or align them now?</li>
+        <li>Confirm Option B (land producer fix with v1) — it's small and unlocks tenant scoping from day one. Any reason to defer to a follow-up PR?</li>
+        <li>Verbose bracketed format vs JSON for staging/prod console — verbose is parseable today, JSON is cleaner long-term. Pick one for the producer fix.</li>
+        <li>Is OTel already exporting logs (not just traces) in staging/prod? If yes, an OTel/OTLP read connector becomes a viable alternative to CloudWatch sooner than v6+.</li>
+        <li>Should the admin UI live under "Platform settings" or be a sub-tab of the Logs tab itself?</li>
+        <li>Do we want NDJSON export from the connector (limited to N lines) for sharing snapshots in tickets, or is the deep-link enough?</li>
+      </ul>
+    </section>
+
+
+    <!-- ============= IMPLEMENTATION PLAN ============= -->
+    <section id="impl">
+      <div class="section-kicker">Implementation</div>
+      <h2>Implementation plan</h2>
+      <p class="section-intro">
+        Phased plan with the file map, exact endpoints, and acceptance
+        criteria per phase. Progress tracked in
+        <code class="inline">backend/docs/platform-logs-progress.md</code>
+        so any session can pick up where the previous one left off.
+      </p>
+
+      <h3>File map · backend</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">tree</span></div>
+        <div class="code-body">backend/src/zango/apps/platform_logs/
+├── __init__.py
+├── apps.py                              <span class="tok-comment"># AppConfig — SHARED_APP</span>
+├── admin.py                             <span class="tok-comment"># django admin registration</span>
+├── models.py                            <span class="tok-comment"># LogConnectorConfig (public schema)</span>
+├── connectors/
+│   ├── __init__.py                      <span class="tok-comment"># registry: ConnectorType → class</span>
+│   ├── base.py                          <span class="tok-comment"># LogConnector Protocol + LogFilters / LogPage / LogLine / LogStream / Cursor</span>
+│   ├── cloudwatch.py                    <span class="tok-comment"># CloudWatchConnector — boto3-backed, v1 only</span>
+│   └── exceptions.py                    <span class="tok-comment"># ConnectorError / ConnectorThrottled / ConnectorNotFound</span>
+├── migrations/
+│   ├── __init__.py
+│   ├── 0001_initial.py                  <span class="tok-comment"># LogConnectorConfig table</span>
+│   └── 0002_initial_policies.py         <span class="tok-comment"># seed platform.logs.view + .admin</span>
+└── tests/
+    ├── __init__.py
+    ├── test_models.py
+    ├── test_cloudwatch_connector.py     <span class="tok-comment"># with moto / botocore stubber</span>
+    └── test_views.py
+
+backend/src/zango/api/platform/platform_logs/
+├── __init__.py
+└── v1/
+    ├── __init__.py
+    ├── urls.py
+    ├── serializers.py
+    └── views.py                         <span class="tok-comment"># 7 endpoints — see API surface</span></div>
+      </div>
+
+      <h3 style="margin-top: 14px;">File map · frontend</h3>
+      <div class="code">
+        <div class="code-header"><span class="lang">tree</span></div>
+        <div class="code-body">frontend/src/pages/platformSettings/logConnectors/
+├── index.jsx                            <span class="tok-comment"># platform.logs.admin — connector cards + edit modal</span>
+├── ConnectorCard.jsx
+├── ConnectorEditModal.jsx
+└── api.js
+
+frontend/src/pages/appCode/components/Logs/
+├── index.jsx                            <span class="tok-comment"># Logs tab — host + sub-tab switcher</span>
+├── ComponentTabs.jsx
+├── HeaderStrip.jsx                      <span class="tok-comment"># time / search / live tail / deep-link</span>
+├── FilterRail.jsx                       <span class="tok-comment"># levels / streams / polling / pattern</span>
+├── LogsTable.jsx                        <span class="tok-comment"># virtualized table (react-window)</span>
+├── DetailCard.jsx
+├── useLogTail.js                        <span class="tok-comment"># polling hook</span>
+└── api.js</div>
+      </div>
+
+      <h3 style="margin-top: 16px;">Phase order &amp; acceptance criteria</h3>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 9%;">Phase</th>
+            <th style="width: 30%;">Deliverable</th>
+            <th>Acceptance — done when…</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill accent">P0</span></td>
+            <td>Scaffold + model + permissions</td>
+            <td><code>zango.apps.platform_logs</code> in SHARED_APPS. <code>LogConnectorConfig</code> migrates clean. Two policies seeded in admin panel.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P1</span></td>
+            <td>Connector abstraction</td>
+            <td>Importable <code>LogConnector</code> Protocol + types. Registry resolves <code>ConnectorType.CLOUDWATCH</code> to a class. No boto3 import until that class is used.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P2</span></td>
+            <td>CloudWatch connector</td>
+            <td>Against the real <code>/ecs/zango-india-staging/app</code> group: list_streams returns recent streams, fetch returns a page of <code>LogLine</code>s with parsed level, deep_link builds a valid Insights URL, retry kicks in on simulated ThrottlingException.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P3</span></td>
+            <td>API layer</td>
+            <td>All seven endpoints respond. Permissions enforced — non-admin denied on connector upsert. curl against staging returns real lines.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P4</span></td>
+            <td>Producer-side fix</td>
+            <td>Console logs in staging carry <code>[&lt;schema&gt;:&lt;domain&gt;]</code> prefix. Celery worker logs the same after worker restart.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P5</span></td>
+            <td>Frontend · Settings page</td>
+            <td>Platform admin can list connectors, open the edit modal, hit Test, hit Save. Validation surfaces specific error messages.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P6</span></td>
+            <td>Frontend · Logs tab</td>
+            <td>Tab renders inside an app panel. Tail pulses on new rows. Filters work. Detail card expands on click. "Open in CloudWatch" launches correct query.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">P7</span></td>
+            <td>Polish · docs · IAM</td>
+            <td>IAM JSON checked into <code>docs/iam/platform-logs.json</code>. README in app folder. Local-dev empty state copy.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 16px;">Approach by role</h3>
+      <p>
+        Working through this as a senior full-stack engineer would:
+        backend through P0–P4 before any frontend code, so the API
+        contract is stable when the React work begins. Each phase ships
+        as its own commit with a passing test scoped to that phase.
+        Frontend (P5–P6) builds against the real running API on a local
+        dev instance; staging-CloudWatch reads are gated by IAM until
+        the policy is attached.
+      </p>
+
+      <h3 style="margin-top: 16px;">Tracking</h3>
+      <p>
+        <code class="inline">backend/docs/platform-logs-progress.md</code>
+        holds the live checklist. Update it after each task, commit the
+        update alongside the code change. On a fresh session, re-read
+        progress.md and resume at the first unchecked box.
+      </p>
+    </section>
+
+
+    <!-- ============= FOOTER ============= -->
+    <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-subtle);">
+        <div>Platform Logs · Connector Design · Zango Platform</div>
+        <div>Branch <span style="font-family: var(--font-mono); color: var(--text-muted);">feat/zango_logs</span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+  const targets = tocLinks
+    .map(l => document.querySelector(l.getAttribute('href')))
+    .filter(Boolean);
+
+  function absTop(el) {
+    return el.getBoundingClientRect().top + window.scrollY;
+  }
+
+  function updateActive() {
+    const y = window.scrollY + 120;
+    let currentId = '';
+    targets.forEach(el => { if (absTop(el) <= y) currentId = el.id; });
+    tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + currentId));
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  window.addEventListener('resize', updateActive, { passive: true });
+
+  tocLinks.forEach(l => l.addEventListener('click', (e) => {
+    const target = document.querySelector(l.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      window.scrollTo({ top: absTop(target) - 24, behavior: 'smooth' });
+      tocLinks.forEach(x => x.classList.toggle('active', x === l));
+    }
+  }));
+
+  updateActive();
+</script>
+
+</body>
+</html>

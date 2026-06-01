@@ -5,6 +5,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import useApi from '../hooks/useApi';
 import PlatformAppRoutes from '../pages/app/routes';
 import PlatformRoutes from '../pages/platform/routes';
+import PlatformSettingsRoutes from '../pages/platformSettings/routes';
 import { setAppPanelInitialData } from '../pages/platform/slice';
 import PlatformUserManagementRoutes from '../pages/platformUserManagement/routes';
 
@@ -38,6 +39,14 @@ export const AppRoutes = () => {
 				<Route
 					path="/platform/user-managements/*"
 					element={<PlatformUserManagementRoutes />}
+				></Route>
+				<Route
+					path="/platform/settings/*"
+					element={<PlatformSettingsRoutes />}
+				></Route>
+				<Route
+					path="/platform/log-connectors/*"
+					element={<Navigate to="/platform/settings/log-connectors" replace />}
 				></Route>
 				<Route path="/platform/apps/:appId/*" element={<PlatformAppRoutes />} />
 				<Route path="*" element={<Navigate to="./platform/apps" />} />
