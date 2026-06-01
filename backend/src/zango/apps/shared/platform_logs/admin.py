@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from zango.apps.platform_logs.models import LogConnectorConfig
+from zango.apps.shared.platform_logs.models import LogConnectorConfig
 
 
 @admin.register(LogConnectorConfig)

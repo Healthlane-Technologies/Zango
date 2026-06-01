@@ -11,7 +11,7 @@ logging, leave it alone." We re-apply settings.LOGGING via dictConfig so
 the worker uses the exact same config as the web process.
 
 The signal must be connected on import; that happens via
-`apps.py:ready()` calling `import zango.apps.platform_logs.celery_logging`.
+`apps.py:ready()` calling `import zango.apps.shared.platform_logs.celery_logging`.
 """
 
 from __future__ import annotations

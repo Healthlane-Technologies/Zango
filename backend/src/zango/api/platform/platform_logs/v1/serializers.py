@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from zango.apps.platform_logs import connectors as connector_registry
-from zango.apps.platform_logs.connectors.exceptions import ConnectorConfigError
-from zango.apps.platform_logs.models import (
+from zango.apps.shared.platform_logs import connectors as connector_registry
+from zango.apps.shared.platform_logs.connectors.exceptions import ConnectorConfigError
+from zango.apps.shared.platform_logs.models import (
     Component,
     ConnectorType,
     LogConnectorConfig,

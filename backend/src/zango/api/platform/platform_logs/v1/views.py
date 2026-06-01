@@ -27,21 +27,21 @@ from django.shortcuts import get_object_or_404
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
-from zango.apps.platform_logs import connectors as connector_registry
-from zango.apps.platform_logs.connectors.base import (
+from zango.apps.shared.platform_logs import connectors as connector_registry
+from zango.apps.shared.platform_logs.connectors.base import (
     Cursor,
     CursorDirection,
     LogFilters,
     LogLevel,
 )
-from zango.apps.platform_logs.connectors.exceptions import (
+from zango.apps.shared.platform_logs.connectors.exceptions import (
     ConnectorConfigError,
     ConnectorError,
     ConnectorNotFound,
     ConnectorThrottled,
     ConnectorUnauthorized,
 )
-from zango.apps.platform_logs.models import (
+from zango.apps.shared.platform_logs.models import (
     Component,
     ConnectorType,
     LogConnectorConfig,

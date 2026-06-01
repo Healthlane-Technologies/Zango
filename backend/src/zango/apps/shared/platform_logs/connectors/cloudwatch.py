@@ -39,7 +39,7 @@ import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import ClientError
 
-from zango.apps.platform_logs.connectors.base import (
+from zango.apps.shared.platform_logs.connectors.base import (
     Cursor,
     CursorDirection,
     FacetSet,
@@ -49,7 +49,7 @@ from zango.apps.platform_logs.connectors.base import (
     LogPage,
     LogStream,
 )
-from zango.apps.platform_logs.connectors.exceptions import (
+from zango.apps.shared.platform_logs.connectors.exceptions import (
     ConnectorConfigError,
     ConnectorError,
     ConnectorNotFound,

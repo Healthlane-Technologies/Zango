@@ -12,7 +12,7 @@ Live implementation progress: [`backend/docs/platform-logs-progress.md`](../../.
 
 | Concern | Path |
 |---|---|
-| App scaffold (SHARED_APP) | `zango.apps.platform_logs` |
+| App scaffold (SHARED_APP) | `zango.apps.shared.platform_logs` |
 | Config model | `models.py` → `LogConnectorConfig` (public schema, one row per env × component) |
 | Connector abstraction | `connectors/base.py` |
 | Connector registry (lazy) | `connectors/__init__.py` |

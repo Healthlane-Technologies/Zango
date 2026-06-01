@@ -5,8 +5,8 @@ doesn't pay a startup cost when the project only uses a different type.
 
 Usage:
 
-    from zango.apps.platform_logs.connectors import build
-    from zango.apps.platform_logs.models import LogConnectorConfig
+    from zango.apps.shared.platform_logs.connectors import build
+    from zango.apps.shared.platform_logs.models import LogConnectorConfig
 
     cfg = LogConnectorConfig.objects.get(environment="staging", component="app")
     connector = build(cfg)
@@ -17,12 +17,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Dict
 
-from zango.apps.platform_logs.connectors.exceptions import ConnectorConfigError
-from zango.apps.platform_logs.models import ConnectorType, LogConnectorConfig
+from zango.apps.shared.platform_logs.connectors.exceptions import ConnectorConfigError
+from zango.apps.shared.platform_logs.models import ConnectorType, LogConnectorConfig
 
 
 if TYPE_CHECKING:
-    from zango.apps.platform_logs.connectors.base import LogConnector
+    from zango.apps.shared.platform_logs.connectors.base import LogConnector
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 def _cloudwatch_factory(cfg: LogConnectorConfig) -> "LogConnector":
     # Local import keeps boto3 out of the import graph until needed.
-    from zango.apps.platform_logs.connectors.cloudwatch import (
+    from zango.apps.shared.platform_logs.connectors.cloudwatch import (
         CloudWatchConnector,
     )
 
