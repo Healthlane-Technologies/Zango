@@ -285,6 +285,11 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            # Pinned to INFO so DEBUG-level loggers (django.utils.autoreload,
+            # django.db.backends in some configs) don't flood stdout once
+            # other loggers route here. Loggers can still set their own
+            # threshold lower — this just caps what reaches the stream.
+            "level": "INFO",
             # Formatter is swapped to "verbose" for staging/prod inside
             # setup_settings() once ENV is known; local stays "console".
             "formatter": "console",

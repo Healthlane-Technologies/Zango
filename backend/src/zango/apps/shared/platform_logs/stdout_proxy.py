@@ -35,6 +35,14 @@ _active: ContextVar[Optional[str]] = ContextVar(
     "platform_logs_stdout_target", default=None
 )
 
+# Reentrancy guard: when the proxy's own `log.log(...)` call triggers a
+# console handler that writes back to sys.stdout/stderr (i.e. this proxy),
+# we must NOT re-forward. Otherwise every emitted line feeds itself an
+# infinite chain of records. ContextVar so the guard is per-thread / per-task.
+_emitting: ContextVar[bool] = ContextVar(
+    "platform_logs_stdout_emitting", default=False
+)
+
 
 class _Proxy:
     """File-like that forwards line-buffered writes to a logger if a
@@ -57,15 +65,26 @@ class _Proxy:
         except Exception:
             n = len(s)
 
+        # If we're already inside a forwarded emission (the proxy's own
+        # log.log() call is being handled by a console handler that writes
+        # back to us), pass through without re-forwarding. Without this
+        # guard every emit feeds itself.
+        if _emitting.get():
+            return n
+
         if target is not None and isinstance(s, str) and s:
             self._buf.append(s)
             if "\n" in s:
                 full = "".join(self._buf)
                 self._buf.clear()
                 log = logging.getLogger(target)
-                for line in full.splitlines():
-                    if line:
-                        log.log(self._default_level, line)
+                token = _emitting.set(True)
+                try:
+                    for line in full.splitlines():
+                        if line:
+                            log.log(self._default_level, line)
+                finally:
+                    _emitting.reset(token)
         return n
 
     def flush(self):
