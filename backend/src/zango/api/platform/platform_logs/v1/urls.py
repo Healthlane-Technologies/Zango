@@ -16,6 +16,12 @@ from .views import (
     FacetsView,
     LogBrowseView,
     LogTailView,
+    PlatformComponentListView,
+    PlatformFacetsView,
+    PlatformLogBrowseView,
+    PlatformLogTailView,
+    PlatformStreamListView,
+    PlatformTenantsListView,
     StreamListView,
 )
 
@@ -35,4 +41,10 @@ in_app_urls = [
 admin_urls = [
     path("connectors/", ConnectorListUpsertView.as_view(), name="platform-logs-connectors"),
     path("connectors/test/", ConnectorTestView.as_view(), name="platform-logs-connectors-test"),
+    path("components/", PlatformComponentListView.as_view(), name="platform-logs-admin-components"),
+    path("<str:component>/", PlatformLogBrowseView.as_view(), name="platform-logs-admin-browse"),
+    path("<str:component>/tail/", PlatformLogTailView.as_view(), name="platform-logs-admin-tail"),
+    path("<str:component>/streams/", PlatformStreamListView.as_view(), name="platform-logs-admin-streams"),
+    path("<str:component>/facets/", PlatformFacetsView.as_view(), name="platform-logs-admin-facets"),
+    path("<str:component>/tenants/", PlatformTenantsListView.as_view(), name="platform-logs-admin-tenants"),
 ]

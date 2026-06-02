@@ -19,6 +19,7 @@ hook can unwrap {success, response} consistently.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Set
 
@@ -402,3 +403,153 @@ class ConnectorTestView(APIView):
                 ),
             }
         )
+
+
+# ---------------------------------------------------------------------------
+# Platform-admin "all tenants" views
+# ---------------------------------------------------------------------------
+#
+# Mirror the in-app endpoints, but:
+#   - Permission class is IsSuperAdminPlatformUser (only platform admins
+#     should see lines from every tenant).
+#   - filters.app_name is NOT injected — every tenant's lines flow through.
+#   - A new `tenants=newmicare,tntApp,…` query param can narrow to a list
+#     of schemas. Empty / absent = no tenant restriction.
+
+
+_TENANT_RE = re.compile(r"\[([^:\]]+):[^\]]*\]")
+
+
+def _parse_tenants_param(request):
+    """Read `?tenants=a,b,c` into a clean list of schema names."""
+    raw = request.GET.get("tenants", "") or ""
+    out = [s.strip() for s in raw.split(",") if s.strip()]
+    return out or None
+
+
+def _apply_tenant_filter(filters: LogFilters, tenants):
+    """If a tenant list was passed, push it down to the connector via
+    `filters.app_name`. For a single tenant we use the same string the
+    in-app view does; for multiple we comma-join — CloudWatch's filter
+    pattern doesn't support OR natively, so the connector translates
+    single-app cleanly and falls back to client-side filtering for the
+    multi-app case (handled in the connector when needed)."""
+    if not tenants:
+        return filters
+    if len(tenants) == 1:
+        filters.app_name = tenants[0]
+    else:
+        # Comma-separated marker; connector recognizes the multi-form.
+        filters.app_name = ",".join(tenants)
+    return filters
+
+
+class PlatformComponentListView(APIView):
+    permission_classes = (IsSuperAdminPlatformUser,)
+
+    def get(self, request):
+        env = _current_environment()
+        configured = set(
+            LogConnectorConfig.objects.filter(
+                environment=env, is_active=True
+            ).values_list("component", flat=True)
+        )
+        components = [
+            {"key": c.value, "label": c.label, "configured": c.value in configured}
+            for c in Component
+        ]
+        return _ok({"environment": env, "components": components})
+
+
+class PlatformLogBrowseView(APIView):
+    permission_classes = (IsSuperAdminPlatformUser,)
+    throttle_classes = (LogBrowseThrottle,)
+
+    @_handle_connector_errors
+    def get(self, request, component):
+        cfg, connector = _get_connector_for(component)
+        filters = _parse_filters(request, default_window=timedelta(hours=1))
+        _apply_tenant_filter(filters, _parse_tenants_param(request))
+
+        before = request.GET.get("before")
+        page = (
+            Cursor(token=before, direction=CursorDirection.BACKWARD)
+            if before
+            else None
+        )
+        log_page = connector.fetch(filters=filters, page=page)
+        return _ok(LogPageSerializer(log_page).data)
+
+
+class PlatformLogTailView(APIView):
+    permission_classes = (IsSuperAdminPlatformUser,)
+    throttle_classes = (LogTailThrottle,)
+
+    @_handle_connector_errors
+    def get(self, request, component):
+        cfg, connector = _get_connector_for(component)
+        filters = _parse_filters(request, default_window=timedelta(minutes=5))
+        _apply_tenant_filter(filters, _parse_tenants_param(request))
+
+        after = request.GET.get("after")
+        page = (
+            Cursor(token=after, direction=CursorDirection.FORWARD)
+            if after
+            else None
+        )
+        log_page = connector.fetch(filters=filters, page=page)
+        return _ok(LogPageSerializer(log_page).data)
+
+
+class PlatformStreamListView(APIView):
+    permission_classes = (IsSuperAdminPlatformUser,)
+
+    @_handle_connector_errors
+    def get(self, request, component):
+        cfg, connector = _get_connector_for(component)
+        since = _parse_iso(request.GET.get("since")) or (
+            datetime.now(timezone.utc) - timedelta(hours=24)
+        )
+        streams = connector.list_streams(since=since)
+        return _ok({"streams": LogStreamSerializer(streams, many=True).data})
+
+
+class PlatformFacetsView(APIView):
+    permission_classes = (IsSuperAdminPlatformUser,)
+
+    @_handle_connector_errors
+    def get(self, request, component):
+        cfg, connector = _get_connector_for(component)
+        facets = connector.facets()
+        return _ok(
+            {
+                "levels": sorted(lv.value for lv in facets.levels),
+                "streams": LogStreamSerializer(facets.streams, many=True).data,
+            }
+        )
+
+
+class PlatformTenantsListView(APIView):
+    """Distinct tenant schemas seen in recent lines — populates the
+    Tenant filter dropdown in the Platform Logs UI.
+
+    Strategy: pull a sample of recent lines via the connector and parse
+    the `[schema:…]` prefix out of the verbose format. Falls back to an
+    empty list if the connector is plain-format (no prefix to parse)."""
+
+    permission_classes = (IsSuperAdminPlatformUser,)
+
+    @_handle_connector_errors
+    def get(self, request, component):
+        cfg, connector = _get_connector_for(component)
+        since = _parse_iso(request.GET.get("since")) or (
+            datetime.now(timezone.utc) - timedelta(hours=24)
+        )
+        filters = LogFilters(since=since, limit=500)
+        page = connector.fetch(filters=filters, page=None)
+        seen = set()
+        for ln in page.lines:
+            m = _TENANT_RE.match(ln.message or "")
+            if m:
+                seen.add(m.group(1))
+        return _ok({"tenants": sorted(seen)})
