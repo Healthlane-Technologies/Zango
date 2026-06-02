@@ -78,7 +78,21 @@ def _get_tenant_filename(original_name):
 def get_loguru_format(record):
     file_name = _get_tenant_filename(record["name"])
 
+    # Tenant context — safe under unbound state (boot, mgmt commands,
+    # celery worker init before middleware/signals bind a tenant). The
+    # Platform Logs CloudWatch connector uses this `[schema:domain]`
+    # prefix to filter lines per-tenant.
+    try:
+        from django.db import connection
+
+        tenant = getattr(connection, "tenant", None)
+        app_name = getattr(tenant, "schema_name", "") if tenant else ""
+        domain = getattr(tenant, "domain_url", "") if tenant else ""
+    except Exception:
+        app_name, domain = "", ""
+
     loguru_format = (
+        f"<blue>[{app_name}:{domain}]</blue>|"
         f"<magenta>{os.getpid()}|</magenta>"
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>|"
         "<level>{level}</level>|"

@@ -94,6 +94,11 @@ MIDDLEWARE = [
     # 'zango.middleware.context_middleware.SimpleContextMiddleware',
     # 'zango.middleware.tenant_url_switch.url_switch_middleware',
     # 'django_tenants.middleware.main.TenantMainMiddleware',
+    # Capture print()/stdout writes from views & helpers into a logger
+    # so they pick up the verbose formatter + tenant prefix. Placed
+    # immediately after tenant binding so connection.tenant is set by
+    # the time any captured print is forwarded to a logger.
+    "zango.apps.shared.platform_logs.middleware.RequestPrintCaptureMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -514,10 +519,34 @@ def setup_settings(settings, BASE_DIR):
         "filters": ["tenant_filter"],
     }
     settings.LOGGING["loggers"]["django"] = {
-        "handlers": ["file"],
+        # `console` ships to stdout → ECS awslogs driver → CloudWatch with
+        # the verbose formatter (set below for staging/prod); `file` keeps
+        # the rotating on-disk copy.
+        "handlers": ["file", "console"],
         "level": "DEBUG",
-        "propagate": True,
+        # propagate=False so django.* records aren't ALSO processed by the
+        # root logger below — that would double-write every Django line.
+        "propagate": False,
     }
+
+    # Catch every other logger that doesn't have an explicit entry —
+    # workspace code, `zango.apps.*`, third-party libs. Otherwise these
+    # fall through to Python's `lastResort` handler which strips levels
+    # and the tenant prefix.
+    settings.LOGGING["root"] = {
+        "handlers": ["file", "console"],
+        "level": "INFO",
+    }
+
+    # Mute the noisy third-party libs that would otherwise drown CloudWatch
+    # in DEBUG at INFO root level. Empty handlers + propagate keeps them
+    # routed up to root once their level threshold is met.
+    for _noisy in ("botocore", "urllib3", "s3transfer", "boto3"):
+        settings.LOGGING["loggers"][_noisy] = {
+            "level": "WARNING",
+            "handlers": [],
+            "propagate": True,
+        }
 
     # Platform Logs producer-side fix: switch the console handler to the
     # `verbose` formatter on staging/prod so each line emitted to ECS
