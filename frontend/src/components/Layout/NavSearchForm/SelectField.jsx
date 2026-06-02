@@ -30,7 +30,9 @@ export default function SelectField() {
 			pathnameArray.indexOf('log-connectors') > -1
 		)
 			return 'Settings';
-		return 'User Management';
+		if (pathnameArray.indexOf('logs') > -1) return 'Logs';
+		if (pathnameArray.indexOf('user-managements') > -1) return 'User Management';
+		return 'Apps';
 	})();
 
 	return (
@@ -143,6 +145,41 @@ export default function SelectField() {
 															isActive ? 'font-bold' : ''
 														}`}
 													></span>
+												</div>
+											);
+										}}
+									/>
+								)}
+							</Menu.Item>
+							<Menu.Item>
+								{({ active }) => (
+									<NavLink
+										exact="true"
+										to={`/platform/logs`}
+										className="relative flex items-center px-[16px] py-[4px]"
+										children={({ isActive }) => {
+											return (
+												<div
+													className={`${
+														active ? '' : ''
+													} relative flex w-full flex-col rounded-[2px]`}
+												>
+													<div className="flex gap-[12px]">
+														<div className="min-w-[12px]">
+															<SelectDynamicCheckIcon
+																className={`${
+																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+																}`}
+															/>
+														</div>
+														<span
+															className={`block font-lato text-[#FFFFFF] ${
+																isActive ? 'font-bold' : ''
+															}`}
+														>
+															Logs
+														</span>
+													</div>
 												</div>
 											);
 										}}

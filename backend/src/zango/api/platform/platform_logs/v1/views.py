@@ -428,20 +428,34 @@ def _parse_tenants_param(request):
 
 
 def _apply_tenant_filter(filters: LogFilters, tenants):
-    """If a tenant list was passed, push it down to the connector via
-    `filters.app_name`. For a single tenant we use the same string the
-    in-app view does; for multiple we comma-join — CloudWatch's filter
-    pattern doesn't support OR natively, so the connector translates
-    single-app cleanly and falls back to client-side filtering for the
-    multi-app case (handled in the connector when needed)."""
-    if not tenants:
-        return filters
-    if len(tenants) == 1:
+    """Push a single-tenant filter down to the connector for efficiency.
+
+    For the multi-tenant case the CloudWatch FilterLogEvents pattern can't
+    express OR-of-prefixes cleanly, so we leave `filters.app_name` empty
+    here and rely on `_post_filter_tenants` to narrow the fetched page
+    server-side before returning it.
+    """
+    if tenants and len(tenants) == 1:
         filters.app_name = tenants[0]
-    else:
-        # Comma-separated marker; connector recognizes the multi-form.
-        filters.app_name = ",".join(tenants)
     return filters
+
+
+def _post_filter_tenants(log_page, tenants):
+    """Drop lines whose `[<schema>:…]` prefix isn't in the requested set.
+
+    No-op when fewer than two tenants are requested — the single-tenant
+    case is already pushed down to the connector via `_apply_tenant_filter`.
+    """
+    if not tenants or len(tenants) < 2:
+        return log_page
+    wanted = set(tenants)
+    keep = []
+    for ln in log_page.lines:
+        m = _TENANT_RE.match(ln.message or "")
+        if m and m.group(1) in wanted:
+            keep.append(ln)
+    log_page.lines = keep
+    return log_page
 
 
 class PlatformComponentListView(APIView):
@@ -469,7 +483,8 @@ class PlatformLogBrowseView(APIView):
     def get(self, request, component):
         cfg, connector = _get_connector_for(component)
         filters = _parse_filters(request, default_window=timedelta(hours=1))
-        _apply_tenant_filter(filters, _parse_tenants_param(request))
+        tenants = _parse_tenants_param(request)
+        _apply_tenant_filter(filters, tenants)
 
         before = request.GET.get("before")
         page = (
@@ -478,6 +493,7 @@ class PlatformLogBrowseView(APIView):
             else None
         )
         log_page = connector.fetch(filters=filters, page=page)
+        _post_filter_tenants(log_page, tenants)
         return _ok(LogPageSerializer(log_page).data)
 
 
@@ -489,7 +505,8 @@ class PlatformLogTailView(APIView):
     def get(self, request, component):
         cfg, connector = _get_connector_for(component)
         filters = _parse_filters(request, default_window=timedelta(minutes=5))
-        _apply_tenant_filter(filters, _parse_tenants_param(request))
+        tenants = _parse_tenants_param(request)
+        _apply_tenant_filter(filters, tenants)
 
         after = request.GET.get("after")
         page = (
@@ -498,6 +515,7 @@ class PlatformLogTailView(APIView):
             else None
         )
         log_page = connector.fetch(filters=filters, page=page)
+        _post_filter_tenants(log_page, tenants)
         return _ok(LogPageSerializer(log_page).data)
 
 

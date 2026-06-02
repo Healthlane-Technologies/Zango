@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import useApi from '../hooks/useApi';
 import PlatformAppRoutes from '../pages/app/routes';
+import PlatformLogsRoutes from '../pages/platformLogs/routes';
 import PlatformRoutes from '../pages/platform/routes';
 import PlatformSettingsRoutes from '../pages/platformSettings/routes';
 import { setAppPanelInitialData } from '../pages/platform/slice';
@@ -43,6 +44,10 @@ export const AppRoutes = () => {
 				<Route
 					path="/platform/settings/*"
 					element={<PlatformSettingsRoutes />}
+				></Route>
+				<Route
+					path="/platform/logs/*"
+					element={<PlatformLogsRoutes />}
 				></Route>
 				<Route
 					path="/platform/log-connectors/*"
