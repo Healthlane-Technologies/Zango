@@ -14,6 +14,19 @@ class PlatformLogsConfig(AppConfig):
         except ImportError:
             pass
 
+        # `manage.py runserver` doesn't go through wsgi.py / asgi.py, so
+        # the loguru sink with our tenant-prefix format never gets
+        # installed in local dev. Call setup_logging() here too — it's
+        # idempotent (logger.remove() first), so re-invocation from
+        # wsgi/asgi after this is a no-op.
+        try:
+            from zango.core.monitoring import setup_logging
+
+            setup_logging()
+        except Exception:
+            # Never fail app boot because of logging plumbing.
+            pass
+
         # Install the stdout/stderr proxy once. Idempotent — the proxy
         # itself is a no-op until a request middleware or celery task
         # hook binds a target via stdout_proxy.bind(...).
