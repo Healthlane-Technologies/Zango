@@ -61,8 +61,10 @@ class AppLLMTool(FullAuditMixin):
     class Meta:
         ordering = ["section", "name"]
         indexes = [
-            models.Index(fields=["is_active", "section"]),
-            models.Index(fields=["name"]),
+            models.Index(
+                fields=["is_active", "section"], name="ai_appllmto_is_acti_ea744c_idx"
+            ),
+            models.Index(fields=["name"], name="ai_appllmto_name_7e53f7_idx"),
         ]
 
     def __str__(self):
@@ -101,9 +103,17 @@ class AppLLMToolCall(FullAuditMixin):
     class Meta:
         ordering = ["invocation", "round_number", "created_at"]
         indexes = [
-            models.Index(fields=["invocation", "round_number"]),
-            models.Index(fields=["tool_name", "-created_at"]),
-            models.Index(fields=["status", "-created_at"]),
+            models.Index(
+                fields=["invocation", "round_number"],
+                name="ai_appllmto_invocat_a5cba3_idx",
+            ),
+            models.Index(
+                fields=["tool_name", "-created_at"],
+                name="ai_appllmto_tool_na_a0236e_idx",
+            ),
+            models.Index(
+                fields=["status", "-created_at"], name="ai_appllmto_status_f21318_idx"
+            ),
         ]
 
     def __str__(self):
