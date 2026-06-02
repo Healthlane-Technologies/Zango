@@ -152,10 +152,17 @@ class AppLLMInvocation(FullAuditMixin):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["provider", "-created_at"]),
-            models.Index(fields=["agent", "-created_at"]),
-            models.Index(fields=["status", "-created_at"]),
-            models.Index(fields=["-created_at"]),
+            models.Index(
+                fields=["provider", "-created_at"],
+                name="ai_appllmin_provide_fdec95_idx",
+            ),
+            models.Index(
+                fields=["agent", "-created_at"], name="ai_appllmin_agent_i_05a7bc_idx"
+            ),
+            models.Index(
+                fields=["status", "-created_at"], name="ai_appllmin_status_39f2e9_idx"
+            ),
+            models.Index(fields=["-created_at"], name="ai_appllmin_created_0602e1_idx"),
         ]
 
     def __str__(self):
@@ -218,8 +225,10 @@ class AppLLMInvocationFile(FullAuditMixin):
     class Meta:
         ordering = ["invocation_id", "id"]
         indexes = [
-            models.Index(fields=["sha256"]),
-            models.Index(fields=["invocation", "id"]),
+            models.Index(fields=["sha256"], name="ai_appllmin_sha256_8bd66f_idx"),
+            models.Index(
+                fields=["invocation", "id"], name="ai_appllmin_invocat_f9363f_idx"
+            ),
         ]
 
     def __str__(self):
