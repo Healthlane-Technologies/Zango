@@ -27,10 +27,14 @@ class RequestPrintCaptureMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        stdout_token = stdout_proxy.bind("zango.request.stdout")
-        stderr_token = stdout_proxy.bind("zango.request.stderr")
+        # Bind each stream to its own logger via stream-specific
+        # ContextVars. Using one shared ContextVar would let the second
+        # bind() clobber the first — every stdout write would then be
+        # logged under the stderr logger name.
+        stdout_token = stdout_proxy.bind_stdout("zango.request.stdout")
+        stderr_token = stdout_proxy.bind_stderr("zango.request.stderr")
         try:
             return self.get_response(request)
         finally:
-            stdout_proxy.reset(stderr_token)
-            stdout_proxy.reset(stdout_token)
+            stdout_proxy.reset_stderr(stderr_token)
+            stdout_proxy.reset_stdout(stdout_token)

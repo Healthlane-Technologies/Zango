@@ -39,15 +39,20 @@ def _should_skip(task_name: str) -> bool:
 
 @task_prerun.connect
 def _capture(task_id=None, task=None, **kwargs):
+    name = getattr(task, "name", "") or ""
+    if _should_skip(name):
+        return
+    # Bind each stream to its own ContextVar via the stream-specific
+    # helpers — a shared bind() would let the second call clobber the
+    # first. Stage the partial state in `_tokens` between the two
+    # bind() calls so a failure in the second still leaves the first
+    # token recoverable in _restore.
+    stdout_token = None
+    stderr_token = None
     try:
-        name = getattr(task, "name", "") or ""
-        if _should_skip(name):
-            return
-        # The proxy uses the level (INFO / ERROR) configured on the
-        # underlying _Proxy instances at install() time. Logger names
-        # below are what shows up under `name` in the verbose format.
-        stdout_token = stdout_proxy.bind("celery.task.stdout")
-        stderr_token = stdout_proxy.bind("celery.task.stderr")
+        stdout_token = stdout_proxy.bind_stdout("celery.task.stdout")
+        _tokens[task_id] = (stdout_token, None)
+        stderr_token = stdout_proxy.bind_stderr("celery.task.stderr")
         _tokens[task_id] = (stdout_token, stderr_token)
     except Exception:
         logger.exception(
@@ -60,9 +65,12 @@ def _restore(task_id=None, **kwargs):
     pair = _tokens.pop(task_id, None)
     if pair is None:
         return
+    stdout_token, stderr_token = pair
     try:
-        for token in pair:
-            stdout_proxy.reset(token)
+        if stderr_token is not None:
+            stdout_proxy.reset_stderr(stderr_token)
+        if stdout_token is not None:
+            stdout_proxy.reset_stdout(stdout_token)
     except Exception:
         logger.exception(
             "platform_logs: failed to reset stdout proxy after celery task"

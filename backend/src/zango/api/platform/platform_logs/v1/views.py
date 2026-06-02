@@ -427,16 +427,42 @@ def _parse_tenants_param(request):
     return out or None
 
 
-def _apply_tenant_filter(filters: LogFilters, tenants):
+# Hard cap shared with _parse_filters' 500 ceiling — used to widen the
+# fetch when we'll be post-filtering, so the UI doesn't go silent on
+# pages where the selected tenants happen to be a tiny minority of
+# recent traffic.
+_MAX_FETCH_LIMIT = 500
+
+
+def _apply_tenant_filter(filters: LogFilters, tenants, cfg):
     """Push a single-tenant filter down to the connector for efficiency.
 
     For the multi-tenant case the CloudWatch FilterLogEvents pattern can't
     express OR-of-prefixes cleanly, so we leave `filters.app_name` empty
-    here and rely on `_post_filter_tenants` to narrow the fetched page
-    server-side before returning it.
+    and rely on `_post_filter_tenants` to narrow the fetched page
+    server-side. Two adjustments to soften the post-filter's lossiness:
+
+    1. Raise `filters.limit` to its hard cap so a single page is more
+       likely to contain at least some lines from the selected tenants
+       even under high cross-tenant volume.
+    2. Refuse multi-tenant filtering when the connector is not on the
+       verbose format — without the `[schema:domain]` prefix in the
+       message body there's nothing for `_post_filter_tenants` to match,
+       and the UI would silently show zero lines.
     """
-    if tenants and len(tenants) == 1:
+    if not tenants:
+        return filters
+    if len(tenants) == 1:
         filters.app_name = tenants[0]
+        return filters
+    fmt = getattr(cfg, "fmt", "verbose")
+    if fmt != "verbose":
+        raise ConnectorError(
+            "Multi-tenant filtering requires a verbose-formatted connector; "
+            f"this connector uses fmt='{fmt}'. Pick a single tenant or "
+            "switch the connector format."
+        )
+    filters.limit = _MAX_FETCH_LIMIT
     return filters
 
 
@@ -445,6 +471,12 @@ def _post_filter_tenants(log_page, tenants):
 
     No-op when fewer than two tenants are requested — the single-tenant
     case is already pushed down to the connector via `_apply_tenant_filter`.
+
+    Note: `log_page.next_cursor` is left as the connector computed it
+    (against the unfiltered page). That's intentional — the cursor
+    tracks where we are in CloudWatch's timeline, not in our filtered
+    view. The next poll resumes after the unfiltered tail, so we never
+    re-fetch lines we've already inspected.
     """
     if not tenants or len(tenants) < 2:
         return log_page
@@ -454,6 +486,16 @@ def _post_filter_tenants(log_page, tenants):
         m = _TENANT_RE.match(ln.message or "")
         if m and m.group(1) in wanted:
             keep.append(ln)
+    raw_count = len(log_page.lines)
+    if raw_count >= 50 and len(keep) <= raw_count // 20:
+        # Selected tenants are <5% of this page. Worth surfacing — the
+        # UI looks empty but isn't broken.
+        logger.info(
+            "platform_logs: tenant post-filter kept %d / %d lines for tenants=%s",
+            len(keep),
+            raw_count,
+            sorted(wanted),
+        )
     log_page.lines = keep
     return log_page
 
@@ -484,7 +526,7 @@ class PlatformLogBrowseView(APIView):
         cfg, connector = _get_connector_for(component)
         filters = _parse_filters(request, default_window=timedelta(hours=1))
         tenants = _parse_tenants_param(request)
-        _apply_tenant_filter(filters, tenants)
+        _apply_tenant_filter(filters, tenants, cfg)
 
         before = request.GET.get("before")
         page = (
@@ -506,7 +548,7 @@ class PlatformLogTailView(APIView):
         cfg, connector = _get_connector_for(component)
         filters = _parse_filters(request, default_window=timedelta(minutes=5))
         tenants = _parse_tenants_param(request)
-        _apply_tenant_filter(filters, tenants)
+        _apply_tenant_filter(filters, tenants, cfg)
 
         after = request.GET.get("after")
         page = (
