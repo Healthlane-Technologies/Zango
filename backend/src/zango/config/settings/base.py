@@ -514,7 +514,12 @@ def setup_settings(settings, BASE_DIR):
         "filters": ["tenant_filter"],
     }
     settings.LOGGING["loggers"]["django"] = {
-        "handlers": ["file"],
+        # `console` ships to stdout → ECS awslogs driver → CloudWatch with
+        # the verbose formatter (set below for staging/prod); `file` keeps
+        # the rotating on-disk copy. Without `console` in this list,
+        # Django's loggers stay file-only and the Platform Logs Runtime
+        # tab cannot tenant-scope CloudWatch lines.
+        "handlers": ["file", "console"],
         "level": "DEBUG",
         "propagate": True,
     }
