@@ -273,8 +273,13 @@ LOGGING = {
             "datefmt": "%d/%b/%Y %H:%M:%S",
         },
         "console": {
-            "format": "%(levelname)s %(asctime)s %(name)s.%(funcName)s:%(lineno)s- %("
-            "message)s "
+            # `[%(app_name)s:%(domain_url)s]` mirrors the verbose formatter
+            # so the tenant prefix the Platform Logs feature relies on is
+            # visible locally too — useful while validating that the
+            # producer-side capture (middleware / celery hook / loguru)
+            # is actually attaching the tenant context.
+            "format": "[%(app_name)s:%(domain_url)s] %(levelname)s %(asctime)s "
+            "%(name)s.%(funcName)s:%(lineno)s- %(message)s "
         },
     },
     "filters": {
