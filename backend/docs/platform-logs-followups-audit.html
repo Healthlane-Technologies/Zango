@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PR #583 · Audit + fixes | Zango Platform Logs follow-ups</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-rail:     #FAFBFD;
+  --surface-code:     #0F1117;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+  --text-inverse:  #E5E7EE;
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand: var(--indigo-500);
+  --accent: var(--teal-500);
+
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06);
+  --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--font); font-feature-settings: 'cv11','ss01','ss03'; -webkit-font-smoothing: antialiased; background: var(--surface-page); color: var(--text-body); line-height: 1.55; }
+
+.shell { max-width: 1080px; margin: 0 auto; padding: 64px 32px 96px; }
+
+.hero { background: linear-gradient(180deg, #FFFFFF 0%, var(--surface-rail) 100%); border: 1px solid var(--border); border-radius: var(--r-2xl); padding: 36px 40px; margin-bottom: 32px; box-shadow: var(--shadow-md); }
+.hero-kicker { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 10px; }
+.hero h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; color: var(--text-strong); margin-bottom: 14px; line-height: 1.15; }
+.hero p { font-size: 14.5px; color: var(--text-muted); max-width: 720px; }
+.hero-meta { margin-top: 20px; display: flex; gap: 14px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); font-size: 11.5px; font-weight: 500; background: var(--surface-tinted); color: var(--brand); border: 1px solid var(--indigo-100); }
+.chip.teal { background: var(--teal-50); color: var(--teal-700); border-color: rgba(17,156,133,.18); }
+.chip.amber { background: var(--amber-50); color: var(--amber-700); border-color: var(--amber-100); }
+.chip.sage { background: var(--sage-50); color: var(--sage-700); border-color: rgba(90,164,91,.25); }
+
+h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.018em; color: var(--text-strong); margin: 48px 0 6px; padding-top: 12px; }
+h2 .kicker { display: block; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 4px; }
+h3 { font-size: 16px; font-weight: 600; color: var(--text-strong); margin: 24px 0 8px; letter-spacing: -0.01em; }
+p, li { color: var(--text-body); font-size: 13.5px; }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+strong { color: var(--text-strong); font-weight: 600; }
+code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-sunken); padding: 1px 6px; border-radius: var(--r-sm); color: var(--text-strong); }
+
+.intro { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 22px 26px; margin-bottom: 24px; }
+
+.finding {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  margin: 14px 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.finding-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.finding-header.crit { background: linear-gradient(180deg, var(--crimson-50) 0%, #FFF 100%); }
+.finding-header.likely { background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 100%); }
+.finding-header.concern { background: linear-gradient(180deg, var(--indigo-50) 0%, #FFF 100%); }
+.finding-header.nit { background: linear-gradient(180deg, var(--slate-50) 0%, #FFF 100%); }
+
+.finding-title { font-size: 14.5px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.005em; }
+.finding-loc { display: block; margin-top: 3px; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+
+.sev-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; flex-shrink: 0; }
+.sev-pill.crit { background: var(--crimson-100); color: var(--crimson-700); }
+.sev-pill.likely { background: var(--amber-100); color: var(--amber-700); }
+.sev-pill.concern { background: var(--indigo-100); color: var(--indigo-700); }
+.sev-pill.nit { background: var(--slate-50); color: var(--slate-700); border: 1px solid var(--border); }
+
+.status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: var(--r-pill); font-size: 10px; font-weight: 600; margin-left: 6px; }
+.status-pill.fixed { background: var(--sage-50); color: var(--sage-700); border: 1px solid rgba(90,164,91,.3); }
+.status-pill.deferred { background: var(--slate-50); color: var(--slate-700); border: 1px solid var(--border); }
+.status-pill.refuted { background: var(--indigo-50); color: var(--indigo-700); border: 1px solid var(--indigo-100); }
+
+.finding-body { padding: 16px 18px; }
+.finding-body p { font-size: 13px; color: var(--text-body); margin: 4px 0 10px; }
+.finding-body .label { display: block; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin: 12px 0 4px; }
+.finding-body .label:first-child { margin-top: 0; }
+
+pre { background: var(--surface-code); color: var(--text-inverse); padding: 12px 14px; border-radius: var(--r-md); overflow-x: auto; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.55; margin: 6px 0; }
+pre .com { color: #6E748D; font-style: italic; }
+pre .kw { color: #C792EA; }
+pre .str { color: #C3E88D; }
+pre .fn { color: #82AAFF; }
+pre .num { color: #F78C6C; }
+pre .add { color: #A1E89A; }
+pre .del { color: #FF8B9C; }
+pre .del-line { background: rgba(255,139,156,.08); display: block; margin: 0 -14px; padding: 0 14px; }
+pre .add-line { background: rgba(161,232,154,.08); display: block; margin: 0 -14px; padding: 0 14px; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 24px 0; }
+.summary-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 18px 16px; box-shadow: var(--shadow-sm); }
+.summary-card .num { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--text-strong); }
+.summary-card .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-top: 8px; }
+.summary-card.crit .num { color: var(--crimson-700); }
+.summary-card.likely .num { color: var(--amber-700); }
+.summary-card.concern .num { color: var(--indigo-700); }
+.summary-card.nit .num { color: var(--slate-700); }
+
+.method { display: grid; grid-template-columns: 240px 1fr; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--border-soft); }
+.method:last-child { border-bottom: none; }
+.method-key { font-size: 12.5px; font-family: var(--font-mono); font-weight: 600; color: var(--brand); }
+.method-detail { font-size: 13px; color: var(--text-body); }
+
+footer { margin-top: 64px; padding: 24px; text-align: center; color: var(--text-subtle); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<div class="hero">
+  <div class="hero-kicker">Pull request · #583 · cross-codebase audit</div>
+  <h1>What the audit found, and what we did about it</h1>
+  <p>A six-agent parallel audit checked the PR's changes against the rest of Zango — codexec, boot ordering, log consumers, stream wrappers, admin-endpoint security, and async/thread safety. This document summarises every finding, marks the disposition (fixed now / deferred / refuted), and shows the actual diff for each must-fix.</p>
+  <div class="hero-meta">
+    <span class="chip">6 investigation agents</span>
+    <span class="chip teal">1 synthesis agent</span>
+    <span class="chip amber">427k tokens spent</span>
+    <span class="chip sage">7 must-fixes shipped</span>
+  </div>
+</div>
+
+<!-- ============== AT-A-GLANCE ============== -->
+
+<div class="summary-grid">
+  <div class="summary-card crit"><div class="num">3</div><div class="label">Critical</div></div>
+  <div class="summary-card likely"><div class="num">6</div><div class="label">Likely</div></div>
+  <div class="summary-card concern"><div class="num">6</div><div class="label">Concerns</div></div>
+  <div class="summary-card nit"><div class="num">3</div><div class="label">Nits</div></div>
+</div>
+
+<!-- ============== METHODOLOGY ============== -->
+
+<h2><span class="kicker">Section 01</span>How the audit ran</h2>
+<div class="intro">
+  <p>Multi-agent workflow. Six investigators in parallel, each focused on one concern, returning structured findings. A synthesis agent then deduplicated and consolidated.</p>
+</div>
+
+<div class="method">
+  <div class="method-key">codexec</div>
+  <div class="method-detail">Does the stdout proxy compose correctly with the codexec executor, which also swaps <code>sys.stdout</code> for per-execution capture? Are codexec task names correctly skipped by <code>_SKIP_PREFIXES</code>?</div>
+</div>
+<div class="method">
+  <div class="method-key">stream-wrappers</div>
+  <div class="method-detail">Any other code in Zango that swaps streams or adds <code>logging.StreamHandler</code> instances — would it un-wrap our proxy or get double-routed?</div>
+</div>
+<div class="method">
+  <div class="method-key">boot-ordering</div>
+  <div class="method-detail">runserver vs wsgi vs asgi vs celery: does <code>apps.ready()</code> run before <code>setup_logging()</code> in wsgi.py? Does calling <code>setup_logging()</code> twice double-add sinks?</div>
+</div>
+<div class="method">
+  <div class="method-key">log-consumers</div>
+  <div class="method-detail">CloudWatch connector's regex and Logs Insights query — do they still match the modified log format with the new <code>[schema:domain]</code> prefix on the local console formatter?</div>
+</div>
+<div class="method">
+  <div class="method-key">admin-endpoints</div>
+  <div class="method-detail">Permission classes on all 6 new views; URL ordering (literals before catch-all); tenant-name injection into CloudWatch patterns; throttle scope sharing.</div>
+</div>
+<div class="method">
+  <div class="method-key">async-thread-safety</div>
+  <div class="method-detail">ContextVar behaviour under async views, <code>sync_to_async</code> boundaries, threaded gunicorn workers, Celery prefork pool semantics.</div>
+</div>
+
+<!-- ============== CRITICAL ============== -->
+
+<h2><span class="kicker">Section 02 · Critical</span>Three findings, two fixed, one refuted</h2>
+
+<!-- Critical 1: setup_logging silent failure -->
+<div class="finding">
+  <div class="finding-header crit">
+    <div>
+      <div class="finding-title">
+        Orphaned loguru sinks if <code>setup_logging()</code> fails
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/apps.py:22-28</span>
+    </div>
+    <span class="sev-pill crit">Critical</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p><code>logger.remove()</code> runs at the start of <code>setup_logging()</code> before any sink is added. The bare <code>except Exception: pass</code> swallows partial failures — loguru can end up with zero sinks and silently drop everything. Workspace devs would see logs vanish with no diagnostic.</p>
+
+    <span class="label">Fix</span>
+    <p>Surface the exception via stdlib logging (independent of loguru, so it works even when loguru is broken). The boot transcript now records the failure.</p>
+<pre><span class="del-line"><span class="del">-</span>        except Exception:
+</span><span class="del-line"><span class="del">-</span>            <span class="com"># Never fail app boot because of logging plumbing.</span>
+</span><span class="del-line"><span class="del">-</span>            <span class="kw">pass</span>
+</span><span class="add-line"><span class="add">+</span>        except Exception:
+</span><span class="add-line"><span class="add">+</span>            _boot_logger.<span class="fn">exception</span>(
+</span><span class="add-line"><span class="add">+</span>                <span class="str">"platform_logs: setup_logging() failed during ready(); "</span>
+</span><span class="add-line"><span class="add">+</span>                <span class="str">"loguru may have no active sink. Workspace logger calls "</span>
+</span><span class="add-line"><span class="add">+</span>                <span class="str">"will be silently dropped until this is repaired."</span>
+</span><span class="add-line"><span class="add">+</span>            )</span></pre>
+  </div>
+</div>
+
+<!-- Critical 2: tokens dict task_id None -->
+<div class="finding">
+  <div class="finding-header crit">
+    <div>
+      <div class="finding-title">
+        <code>_tokens</code> dict collisions when <code>task_id</code> is <code>None</code>
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/celery_print_capture.py:32-77</span>
+    </div>
+    <span class="sev-pill crit">Critical</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p>If multiple concurrent tasks fire <code>task_prerun</code> with <code>task_id=None</code> (rare but possible with custom signal emission), they all collide on the same <code>_tokens[None]</code> key. Earlier bindings get overwritten without being reset — ContextVar leaks until the worker process exits.</p>
+
+    <span class="label">Fix</span>
+    <p>Skip install entirely when <code>task_id</code> is falsy — no clean way to look the tokens back up at <code>task_postrun</code>, so a no-op is safer than a guaranteed leak. Same guard added to <code>_restore</code>.</p>
+<pre><span class="add-line"><span class="add">+</span>    <span class="com"># Without a task_id we have no way to look the tokens back up at</span>
+</span><span class="add-line"><span class="add">+</span>    <span class="com"># task_postrun — and using a falsy sentinel as a dict key would let</span>
+</span><span class="add-line"><span class="add">+</span>    <span class="com"># multiple concurrent anonymous tasks collide on the same slot,</span>
+</span><span class="add-line"><span class="add">+</span>    <span class="com"># leaking ContextVar bindings. Skip the install in that case.</span>
+</span><span class="add-line"><span class="add">+</span>    <span class="kw">if not</span> task_id:
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">return</span></span></pre>
+    <p>Also added per-token <code>try/finally</code> in <code>_restore</code> so a failure resetting one stream still clears the other.</p>
+  </div>
+</div>
+
+<!-- Critical 3: refuted -->
+<div class="finding">
+  <div class="finding-header crit">
+    <div>
+      <div class="finding-title">
+        Partial bind leak on <code>bind_stderr</code> failure
+        <span class="status-pill refuted">REFUTED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/celery_print_capture.py:52-60</span>
+    </div>
+    <span class="sev-pill crit">Critical</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p>"If <code>bind_stdout()</code> succeeds but <code>bind_stderr()</code> raises, the stdout token is already stored but the exception is swallowed without resetting it."</p>
+
+    <span class="label">Why this is already handled</span>
+    <p>The existing code stages <code>_tokens[task_id] = (stdout_token, None)</code> <em>after</em> the first bind and <em>before</em> the second. When the second bind raises and the outer except clause swallows the exception, <code>task_postrun</code> still fires for the task — <code>_restore</code> retrieves the staged pair and resets the stdout token (stderr is <code>None</code> and skipped). No leak.</p>
+    <p>The audit conflated this case with the genuine "worker dies between prerun and postrun" scenario, which on prefork is moot (process death takes ContextVar with it) but is real for solo/gevent pools. The middleware-side variant of the same concern was fixed by adding per-token <code>try/finally</code> for defence in depth.</p>
+  </div>
+</div>
+
+<!-- ============== LIKELY ============== -->
+
+<h2><span class="kicker">Section 03 · Likely</span>Six findings — four fixed, two deferred</h2>
+
+<!-- Likely 1: cloudwatch json injection -->
+<div class="finding">
+  <div class="finding-header likely">
+    <div>
+      <div class="finding-title">
+        Unescaped <code>app_name</code> in CloudWatch JSON filter pattern
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/connectors/cloudwatch.py:585</span>
+    </div>
+    <span class="sev-pill likely">Likely</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p>The JSON-fmt branch built its filter pattern as <code>f'{{ $.app_name = "{filters.app_name}" }}'</code> — a tenant name containing <code>"</code> or <code>\</code> closes the filter string and injects pattern logic into FilterLogEvents.</p>
+
+    <span class="label">Fix</span>
+    <p>Use <code>json.dumps()</code> so the schema becomes a properly escaped JSON string literal. Same defensive shape the verbose branch already had via the quoted-prefix form.</p>
+<pre><span class="del-line"><span class="del">-</span>        <span class="kw">elif</span> filters.app_name <span class="kw">and</span> self.cfg.fmt == <span class="str">"json"</span>:
+</span><span class="del-line"><span class="del">-</span>            parts.<span class="fn">append</span>(<span class="fn">f</span><span class="str">'{{{{ $.app_name = "{filters.app_name}" }}}}'</span>)
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">elif</span> filters.app_name <span class="kw">and</span> self.cfg.fmt == <span class="str">"json"</span>:
+</span><span class="add-line"><span class="add">+</span>            parts.<span class="fn">append</span>(<span class="fn">f</span><span class="str">"{{ $.app_name = {json.dumps(filters.app_name)} }}"</span>)</span></pre>
+  </div>
+</div>
+
+<!-- Likely 2: tenants allowlist -->
+<div class="finding">
+  <div class="finding-header likely">
+    <div>
+      <div class="finding-title">
+        <code>_parse_tenants_param</code> accepts arbitrary tenant names
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">api/platform/platform_logs/v1/views.py:425-427</span>
+    </div>
+    <span class="sev-pill likely">Likely</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p>Comma-separated tenant names from <code>?tenants=…</code> were passed straight to CloudWatch filters without validation. No SQLi today, but a footgun — and lets clients probe arbitrary strings against the filter API.</p>
+
+    <span class="label">Fix</span>
+    <p>Intersect requested tenants with <code>TenantModel.objects.values_list('schema_name', flat=True)</code>; silently drop unknown names. Defence-in-depth on top of the connector-side escaping.</p>
+<pre><span class="add-line"><span class="add">+</span><span class="kw">def</span> <span class="fn">_known_tenant_schemas</span>() -&gt; <span class="fn">set</span>:
+</span><span class="add-line"><span class="add">+</span>    <span class="kw">return</span> <span class="fn">set</span>(TenantModel.objects.<span class="fn">values_list</span>(<span class="str">"schema_name"</span>, flat=<span class="kw">True</span>))
+</span>
+<span class="kw">def</span> <span class="fn">_parse_tenants_param</span>(request):
+    raw = request.GET.<span class="fn">get</span>(<span class="str">"tenants"</span>, <span class="str">""</span>) <span class="kw">or</span> <span class="str">""</span>
+    requested = [s.<span class="fn">strip</span>() <span class="kw">for</span> s <span class="kw">in</span> raw.<span class="fn">split</span>(<span class="str">","</span>) <span class="kw">if</span> s.<span class="fn">strip</span>()]
+<span class="add-line"><span class="add">+</span>    <span class="kw">if not</span> requested:
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">return</span> <span class="kw">None</span>
+</span><span class="add-line"><span class="add">+</span>    known = <span class="fn">_known_tenant_schemas</span>()
+</span><span class="add-line"><span class="add">+</span>    out = [s <span class="kw">for</span> s <span class="kw">in</span> requested <span class="kw">if</span> s <span class="kw">in</span> known]
+</span>    <span class="kw">return</span> out <span class="kw">or</span> <span class="kw">None</span></pre>
+  </div>
+</div>
+
+<!-- Likely 3: tenants spoofable -->
+<div class="finding">
+  <div class="finding-header likely">
+    <div>
+      <div class="finding-title">
+        Tenant dropdown can be spoofed from workspace code
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">api/platform/platform_logs/v1/views.py:610-614</span>
+    </div>
+    <span class="sev-pill likely">Likely</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p><code>PlatformTenantsListView</code> regex-extracts tenant names from the last ~500 CloudWatch lines. Any workspace user able to run a celery task or print arbitrary text could inject <code>[victim_schema:fake.domain]</code> into a log line and have it appear in the admin dropdown.</p>
+
+    <span class="label">Fix</span>
+    <p>Intersect the regex-discovered set with the <code>TenantModel</code> allowlist before returning — fabricated prefixes never reach the UI.</p>
+<pre><span class="add-line"><span class="add">+</span>        <span class="com"># Intersect with TenantModel so a workspace user can't spoof an</span>
+</span><span class="add-line"><span class="add">+</span>        <span class="com"># entry into the dropdown by printing a fake `[victim_schema:…]`</span>
+</span><span class="add-line"><span class="add">+</span>        <span class="com"># prefix from their own task code.</span>
+</span><span class="add-line"><span class="add">+</span>        known = <span class="fn">_known_tenant_schemas</span>()
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">return</span> <span class="fn">_ok</span>({<span class="str">"tenants"</span>: <span class="fn">sorted</span>(seen &amp; known)})</span></pre>
+  </div>
+</div>
+
+<!-- Likely 4: middleware reset order -->
+<div class="finding">
+  <div class="finding-header likely">
+    <div>
+      <div class="finding-title">
+        Middleware reset order didn't survive partial failures
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/middleware.py:39-40</span>
+    </div>
+    <span class="sev-pill likely">Likely</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p>If <code>reset_stderr</code> raises (and the exception path itself writes to stderr), stdout is still bound and misroutes those writes.</p>
+
+    <span class="label">Fix</span>
+    <p>Each reset wrapped in its own <code>try/finally</code> so either failure still clears the other. Also handle the rare case where <code>bind_stderr</code> raises after <code>bind_stdout</code> succeeded — release the held stdout token before re-raising.</p>
+<pre><span class="add-line"><span class="add">+</span>        stdout_token = stdout_proxy.<span class="fn">bind_stdout</span>(<span class="str">"zango.request.stdout"</span>)
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">try</span>:
+</span><span class="add-line"><span class="add">+</span>            stderr_token = stdout_proxy.<span class="fn">bind_stderr</span>(<span class="str">"zango.request.stderr"</span>)
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">except</span> <span class="fn">Exception</span>:
+</span><span class="add-line"><span class="add">+</span>            stdout_proxy.<span class="fn">reset_stdout</span>(stdout_token)
+</span><span class="add-line"><span class="add">+</span>            <span class="kw">raise</span>
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">try</span>:
+</span><span class="add-line"><span class="add">+</span>            <span class="kw">return</span> self.<span class="fn">get_response</span>(request)
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">finally</span>:
+</span><span class="add-line"><span class="add">+</span>            <span class="kw">try</span>:
+</span><span class="add-line"><span class="add">+</span>                stdout_proxy.<span class="fn">reset_stderr</span>(stderr_token)
+</span><span class="add-line"><span class="add">+</span>            <span class="kw">finally</span>:
+</span><span class="add-line"><span class="add">+</span>                stdout_proxy.<span class="fn">reset_stdout</span>(stdout_token)</span></pre>
+  </div>
+</div>
+
+<!-- Likely 5: deferred codexec stream -->
+<div class="finding">
+  <div class="finding-header likely">
+    <div>
+      <div class="finding-title">
+        Stdlib <code>logging</code> output during codexec bypasses <code>CapturingStream</code>
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">apps/code_execution/tasks.py:406 + config/settings/base.py:546-549</span>
+    </div>
+    <span class="sev-pill likely">Likely</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p>Django's root <code>StreamHandler</code> caches a reference to <code>sys.stderr</code> at LOGGING-dict load time. When codexec swaps in <code>CapturingStream</code>, the cached reference still points at the old stream. So <code>logging.info()</code> from user code lands somewhere other than <code>CodeExecution.stdout/stderr</code>.</p>
+
+    <span class="label">Why deferred</span>
+    <p>Pre-existing in main, not introduced by this PR — the asymmetry exists today on the <code>feat/zango_logs</code> baseline. The right fix (swap the handler's <code>.stream</code> attribute for the duration of execution, or remove+restore the console handler around the codexec block) belongs in a focused PR scoped to <code>code_execution/tasks.py</code>, not bundled into the logs follow-up.</p>
+  </div>
+</div>
+
+<!-- Likely 6: deferred perf -->
+<div class="finding">
+  <div class="finding-header likely">
+    <div>
+      <div class="finding-title">
+        Per-record <code>connection.tenant</code> lookup on the hot path
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">core/monitoring/utils.py:85-92</span>
+    </div>
+    <span class="sev-pill likely">Likely</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p><code>get_loguru_format</code> touches <code>django.db.connection.tenant</code> on every loguru record. Under heavy print/log volume that's a repeated DB-state inspection on the logging hot path.</p>
+
+    <span class="label">Why deferred</span>
+    <p>No measured production impact yet. <code>connection.tenant</code> is an in-memory attribute set by the tenant middleware — not a query — so the cost is one attribute access and a couple of <code>getattr</code> calls per record. Worth optimising if benchmarks show it matters, but premature without numbers. The eventual fix (cache <code>(app_name, domain)</code> in a ContextVar set once at request/task entry) needs the middleware to do the cache write, which is a coordinated change.</p>
+  </div>
+</div>
+
+<!-- ============== CONCERNS ============== -->
+
+<h2><span class="kicker">Section 04 · Concerns</span>Six findings — one fixed, five tracked</h2>
+
+<div class="finding">
+  <div class="finding-header concern">
+    <div>
+      <div class="finding-title">
+        Module-prefix match was too loose
+        <span class="status-pill fixed">FIXED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/stdout_proxy.py</span>
+    </div>
+    <span class="sev-pill concern">Concern</span>
+  </div>
+  <div class="finding-body">
+    <span class="label">What the audit said</span>
+    <p><code>mod.startswith(('loguru', 'logging'))</code> would also match unrelated modules like <code>loggers</code>, <code>loggingconfig</code>, <code>loguruv2</code>, etc., swallowing writes from them.</p>
+    <span class="label">Fix</span>
+<pre><span class="add-line"><span class="add">+</span>_LOGGING_PACKAGE_PREFIXES = <span class="fn">tuple</span>(<span class="fn">f</span><span class="str">"{p}."</span> <span class="kw">for</span> p <span class="kw">in</span> _LOGGING_PACKAGES)
+</span>...
+<span class="del-line"><span class="del">-</span>        <span class="kw">if</span> mod.<span class="fn">startswith</span>(_LOGGING_PACKAGES):
+</span><span class="add-line"><span class="add">+</span>        <span class="kw">if</span> mod <span class="kw">in</span> _LOGGING_PACKAGES <span class="kw">or</span> mod.<span class="fn">startswith</span>(_LOGGING_PACKAGE_PREFIXES):
+</span>            <span class="kw">return</span> <span class="kw">True</span></pre>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header concern">
+    <div>
+      <div class="finding-title">
+        Triple-emission of logging records during codexec
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">apps/code_execution/tasks.py:383</span>
+    </div>
+    <span class="sev-pill concern">Concern</span>
+  </div>
+  <div class="finding-body">
+    <p>Records flow to the file handler, the stale-referenced console handler, AND the codexec <code>stdlib_handler</code>. Functionally OK today but adds I/O and is undocumented. Tracked alongside the codexec stream-swap deferred item above — same fix area.</p>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header concern">
+    <div>
+      <div class="finding-title">
+        Silenced <code>removeHandler</code> exception in codexec teardown
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">apps/code_execution/tasks.py:450</span>
+    </div>
+    <span class="sev-pill concern">Concern</span>
+  </div>
+  <div class="finding-body">
+    <p>If the remove ever fails, the next task in the same worker double-adds and duplicates log lines. Pre-existing codexec issue, not introduced by this PR.</p>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header concern">
+    <div>
+      <div class="finding-title">
+        Celery binding remains active after codexec restores streams
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">apps/code_execution/tasks.py:446</span>
+    </div>
+    <span class="sev-pill concern">Concern</span>
+  </div>
+  <div class="finding-body">
+    <p>The <code>celery_print_capture</code> binding outlives the codexec block. Likely intended — post-codexec teardown code should still be tenant-tagged — but worth a code comment. Adds to the codexec cleanup follow-up.</p>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header concern">
+    <div>
+      <div class="finding-title">
+        Codexec skip relies on naming convention
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/celery_print_capture.py:30</span>
+    </div>
+    <span class="sev-pill concern">Concern</span>
+  </div>
+  <div class="finding-body">
+    <p>Any future task in <code>apps/code_execution/</code> whose registered name doesn't start with <code>zango.code_execution.</code> will silently get the proxy binding installed and break codexec's own capture. Defensible (one prefix is easier to reason about than an explicit registry), but a startup assertion that all tasks under that module match the prefix would catch regressions.</p>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header concern">
+    <div>
+      <div class="finding-title">
+        No tests covering ContextVar behaviour
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">tests/</span>
+    </div>
+    <span class="sev-pill concern">Concern</span>
+  </div>
+  <div class="finding-body">
+    <p>No coverage for <code>ThreadPoolExecutor</code>, async views, or repeated Celery prerun/postrun sequences. The token-leak failure modes flagged by the audit are exactly what such tests would catch. Writing them is its own focused PR.</p>
+  </div>
+</div>
+
+<!-- ============== NITS ============== -->
+
+<h2><span class="kicker">Section 05 · Nits</span>Three findings, all deferred</h2>
+
+<div class="finding">
+  <div class="finding-header nit">
+    <div>
+      <div class="finding-title">
+        Mixed <code>request.query_params</code> vs <code>request.GET</code>
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">api/platform/platform_logs/v1/views.py:319</span>
+    </div>
+    <span class="sev-pill nit">Nit</span>
+  </div>
+  <div class="finding-body">
+    <p>Same file uses both styles. They're equivalent in DRF; style cleanup, not a bug.</p>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header nit">
+    <div>
+      <div class="finding-title">
+        <code>_called_from_logging</code> is a no-op during codexec execution
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">apps/shared/platform_logs/stdout_proxy.py:67-100</span>
+    </div>
+    <span class="sev-pill nit">Nit</span>
+  </div>
+  <div class="finding-body">
+    <p>During codexec runs the streams are swapped to <code>CapturingStream</code>, not our <code>_Proxy</code>, so the frame-inspection guard never gets a chance to run. Correct by design — the guard is for non-codexec contexts. Worth a one-line comment noting the asymmetry.</p>
+  </div>
+</div>
+
+<div class="finding">
+  <div class="finding-header nit">
+    <div>
+      <div class="finding-title">
+        Pre-existing <code>StreamHandler</code> caches <code>sys.stderr</code> at LOGGING load
+        <span class="status-pill deferred">DEFERRED</span>
+      </div>
+      <span class="finding-loc">config/settings/base.py:291-306</span>
+    </div>
+    <span class="sev-pill nit">Nit</span>
+  </div>
+  <div class="finding-body">
+    <p>Not introduced by this PR — Django's <code>LOGGING</code> dict has always cached the stream reference at handler-creation time. The PR exposes the asymmetry but doesn't worsen it. The full fix (restructure handler creation to run after proxy install) is part of the broader stdlib-vs-loguru unification that's a separate cleanup.</p>
+  </div>
+</div>
+
+<!-- ============== CONFIRMED SAFE ============== -->
+
+<h2><span class="kicker">Section 06 · Confirmed safe</span>What the audit looked at and cleared</h2>
+
+<div class="intro">
+  <p>Areas the investigators specifically checked and found no issues with — useful to know we don't need to revisit them.</p>
+  <ul style="margin-top: 10px; padding-left: 22px;">
+    <li><strong>Log-line format compatibility.</strong> Both the local <code>console</code> formatter (<code>[app:domain] …</code>) and the staging/prod <code>verbose</code> formatter (<code>[app:domain][timestamp] …</code>) are matched by <code>_TENANT_RE</code>, by CloudWatch's literal <code>"[{app_name}:"</code> substring filter, and by Logs Insights' <code>re.escape</code> pattern. No existing parser breaks.</li>
+    <li><strong>Permissions on all 6 admin endpoints.</strong> Every Platform*View has <code>permission_classes = (IsSuperAdminPlatformUser,)</code>. URL ordering puts literal paths (<code>connectors/</code>, <code>components/</code>) before the catch-all <code>&lt;str:component&gt;/</code>. Throttle scopes (<code>platform_logs.browse</code>, <code>platform_logs.tail</code>) are unique to platform endpoints — no quota collision with per-app calls.</li>
+    <li><strong>Boot ordering.</strong> <code>settings.ENV</code> is available before <code>apps.ready()</code> fires. <code>setup_logging()</code> starts with <code>logger.remove()</code>, so wsgi/asgi calling it again after <code>ready()</code> is a no-op. Codexec tasks correctly hit the <code>_SKIP_PREFIXES</code> path, so the proxy stays in passthrough mode during codexec runs.</li>
+    <li><strong>Single-tenant vs multi-tenant query flow.</strong> <code>_apply_tenant_filter</code> correctly pushes single-tenant down to CloudWatch and errors out on multi-tenant when the connector isn't on the verbose format.</li>
+  </ul>
+</div>
+
+<!-- ============== VERDICT ============== -->
+
+<h2><span class="kicker">Section 07 · Verdict</span>Ready to merge</h2>
+
+<div class="intro">
+  <p>The audit's three critical items and four highest-impact "likely" items are fixed in commit <code>b7dbb508</code>. The deferred items (codexec logging asymmetry, per-record tenant lookup performance, ContextVar test coverage, codexec triple-emission) are real but pre-existing or non-blocking; each belongs in a focused follow-up PR scoped to its actual problem area rather than bundled into the platform-logs work.</p>
+  <p>PR <a href="https://github.com/Healthlane-Technologies/Zango/pull/583" style="color: var(--brand); font-weight: 500;">#583</a> is mergeable.</p>
+</div>
+
+<footer>
+  Audit run with 6 parallel investigators + 1 synthesis agent · 427k tokens · 7 must-fixes shipped in <code>b7dbb508</code> · Pair with the design and walkthrough docs in <code>backend/docs/</code>
+</footer>
+
+</div>
+</body>
+</html>
