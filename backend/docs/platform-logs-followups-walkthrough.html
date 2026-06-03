@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PR #583 · Line-by-line walkthrough | Zango Platform Logs follow-ups</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-rail:     #FAFBFD;
+  --surface-code:     #0F1117;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+  --text-inverse:  #E5E7EE;
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand: var(--indigo-500);
+  --brand-soft: var(--indigo-50);
+  --accent: var(--teal-500);
+  --accent-soft: var(--teal-50);
+
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06);
+  --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--font); font-feature-settings: 'cv11','ss01','ss03'; -webkit-font-smoothing: antialiased; background: var(--surface-page); color: var(--text-body); line-height: 1.55; }
+
+.shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1320px; margin: 0 auto; gap: 48px; padding: 0 32px 96px; }
+.toc { position: sticky; top: 24px; align-self: start; padding-top: 64px; height: calc(100vh - 24px); overflow-y: auto; }
+.toc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.toc-kicker { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin: 18px 10px 8px; }
+.toc a { display: block; padding: 6px 10px; border-radius: var(--r-sm); color: var(--text-muted); text-decoration: none; font-size: 12.5px; font-weight: 450; line-height: 1.45; transition: all 180ms var(--ease-out); }
+.toc a:hover { background: var(--surface-tinted); color: var(--brand); }
+.toc a.depth-2 { padding-left: 22px; font-size: 12px; color: var(--text-subtle); }
+
+main { padding-top: 64px; min-width: 0; }
+
+.hero { background: linear-gradient(180deg, #FFFFFF 0%, var(--surface-rail) 100%); border: 1px solid var(--border); border-radius: var(--r-2xl); padding: 36px 40px; margin-bottom: 32px; box-shadow: var(--shadow-md); }
+.hero-kicker { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 10px; }
+.hero h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; color: var(--text-strong); margin-bottom: 14px; line-height: 1.15; }
+.hero p { font-size: 14.5px; color: var(--text-muted); max-width: 720px; }
+.hero-meta { margin-top: 20px; display: flex; gap: 14px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); font-size: 11.5px; font-weight: 500; background: var(--surface-tinted); color: var(--brand); border: 1px solid var(--indigo-100); }
+.chip.teal { background: var(--teal-50); color: var(--teal-700); border-color: rgba(17,156,133,.18); }
+.chip.amber { background: var(--amber-50); color: var(--amber-700); border-color: var(--amber-100); }
+
+h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.018em; color: var(--text-strong); margin: 48px 0 6px; padding-top: 12px; }
+h2 .kicker { display: block; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 4px; }
+h3 { font-size: 16px; font-weight: 600; color: var(--text-strong); margin: 24px 0 8px; letter-spacing: -0.01em; }
+h4 { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .05em; }
+p, li { color: var(--text-body); font-size: 13.5px; }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+strong { color: var(--text-strong); font-weight: 600; }
+em { font-style: normal; color: var(--brand); font-weight: 500; }
+
+.intro { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 22px 26px; margin-bottom: 24px; }
+
+.code-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); margin: 14px 0 8px; overflow: hidden; box-shadow: var(--shadow-sm); }
+.code-header { padding: 8px 16px; background: var(--surface-rail); border-bottom: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: space-between; }
+.code-path { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+.code-tag { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); padding: 2px 7px; border-radius: var(--r-sm); background: var(--surface-sunken); }
+.code-tag.new { background: var(--sage-50); color: var(--sage-700); }
+.code-tag.mod { background: var(--amber-50); color: var(--amber-700); }
+pre { background: var(--surface-code); color: var(--text-inverse); padding: 16px 18px; overflow-x: auto; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; }
+pre .com { color: #6E748D; font-style: italic; }
+pre .kw { color: #C792EA; }
+pre .str { color: #C3E88D; }
+pre .fn { color: #82AAFF; }
+pre .num { color: #F78C6C; }
+pre .var { color: #FFCB6B; }
+
+.annot { padding: 14px 18px; background: var(--surface-tinted); border-top: 1px solid var(--indigo-100); }
+.annot-title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 8px; }
+.annot p { font-size: 13px; color: var(--text-body); margin: 6px 0; }
+.annot p strong { color: var(--text-strong); }
+.annot ul { margin: 6px 0 6px 18px; }
+.annot li { font-size: 13px; }
+
+.callout { padding: 16px 20px; border-radius: var(--r-lg); border: 1px solid; margin: 18px 0; }
+.callout.note { background: var(--indigo-50); border-color: var(--indigo-100); }
+.callout.warn { background: var(--amber-50); border-color: var(--amber-100); }
+.callout.bug  { background: var(--crimson-50); border-color: var(--crimson-100); }
+.callout-title { font-weight: 600; font-size: 12.5px; color: var(--text-strong); margin-bottom: 6px; }
+.callout p { font-size: 13px; margin: 4px 0; }
+
+table.commits { width: 100%; border-collapse: collapse; margin: 14px 0 26px; background: var(--surface-card); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border); }
+table.commits th { background: var(--surface-rail); padding: 10px 14px; text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text-subtle); border-bottom: 1px solid var(--border-soft); }
+table.commits td { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); font-size: 13px; color: var(--text-body); vertical-align: top; }
+table.commits tr:last-child td { border-bottom: none; }
+table.commits td.sha { font-family: var(--font-mono); color: var(--text-muted); font-size: 11.5px; }
+
+code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-sunken); padding: 1px 6px; border-radius: var(--r-sm); color: var(--text-strong); }
+
+.gloss { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 24px; }
+.gloss dt { font-weight: 600; color: var(--text-strong); font-family: var(--font-mono); font-size: 12.5px; margin-top: 14px; }
+.gloss dd { color: var(--text-body); font-size: 13px; margin: 4px 0 0 0; }
+
+footer { margin-top: 64px; padding: 24px; text-align: center; color: var(--text-subtle); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<nav class="toc" aria-label="Table of contents">
+  <div class="toc-kicker">PR #583 walkthrough</div>
+  <a href="#intro">Why this PR exists</a>
+  <a href="#commits">The seven commits</a>
+  <div class="toc-kicker">Producer side</div>
+  <a href="#settings" class="depth-2">settings/base.py</a>
+  <a href="#loguru" class="depth-2">monitoring/utils.py</a>
+  <a href="#proxy" class="depth-2">stdout_proxy.py</a>
+  <a href="#middleware" class="depth-2">middleware.py</a>
+  <a href="#celery" class="depth-2">celery_print_capture.py</a>
+  <a href="#apps" class="depth-2">platform_logs/apps.py</a>
+  <div class="toc-kicker">Admin API</div>
+  <a href="#views" class="depth-2">v1/views.py</a>
+  <a href="#urls" class="depth-2">v1/urls.py</a>
+  <div class="toc-kicker">Frontend</div>
+  <a href="#fe-index" class="depth-2">PlatformLogs/index.jsx</a>
+  <a href="#fe-hook" class="depth-2">PlatformLogs/useLogTail.js</a>
+  <a href="#fe-table" class="depth-2">PlatformLogs/LogsTable.jsx</a>
+  <a href="#fe-routes" class="depth-2">routes wiring</a>
+  <a href="#fe-nav" class="depth-2">SelectField nav</a>
+  <div class="toc-kicker">Reference</div>
+  <a href="#glossary">Glossary</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="hero-kicker">Pull request · #583 · Healthlane-Technologies/Zango</div>
+  <h1>Platform Logs follow-ups — line by line</h1>
+  <p>A plain-English walk through every file changed in PR #583. The goal: by the end you can read a code block, look at the explanation underneath, and know <em>why</em> each piece exists — not just what it does. No prior knowledge of Django, ContextVars, or CloudWatch assumed.</p>
+  <div class="hero-meta">
+    <span class="chip">7 commits</span>
+    <span class="chip teal">15 files</span>
+    <span class="chip amber">~2,800 lines</span>
+  </div>
+</div>
+
+<section id="intro" class="intro">
+  <h3 style="margin-top:0">Why this PR exists</h3>
+  <p>PR #574 (the previous one) shipped <strong>Platform Logs</strong>: a way for tenant admins to see their app's CloudWatch logs inside the Zango UI. The whole feature relies on every log line being prefixed with <code>[schema:domain]</code> — that's how the connector knows which tenant a line belongs to.</p>
+  <p>During staging testing four leaks were found where lines reached CloudWatch <em>without</em> that prefix:</p>
+  <ol>
+    <li>Loggers like <code>workspace</code> and <code>zango.apps.*</code> weren't wired up to the formatter that adds the prefix.</li>
+    <li>Loguru (a different logging library Zango uses alongside stdlib logging) had its own format that didn't include the prefix.</li>
+    <li>Third-party libraries (botocore, urllib3) were flooding the logs with DEBUG noise.</li>
+    <li><code>print()</code> calls bypass Python's logging system entirely — no formatter, no prefix.</li>
+  </ol>
+  <p>The other half of the PR adds a <strong>Platform → Logs</strong> page where super-admins can see logs across every tenant on one screen, with a Tenant filter and a Tenant column.</p>
+</section>
+
+<h2 id="commits"><span class="kicker">Section 01</span>The seven commits</h2>
+
+<table class="commits">
+<thead><tr><th>SHA</th><th>Subject</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="sha">f62f1f7d</td><td>producer-side gap fixes from staging testing</td><td>Plumbs the tenant prefix through stdlib logging, loguru, and <code>print()</code> capture.</td></tr>
+<tr><td class="sha">cde09155</td><td>admin endpoints for cross-tenant Platform Logs page</td><td>Six new DRF views under <code>/api/v1/platform/logs/</code> for super-admins.</td></tr>
+<tr><td class="sha">b45b755c</td><td>cross-tenant Platform → Logs page</td><td>Frontend page at <code>/platform/logs</code> with Tenant filter + column.</td></tr>
+<tr><td class="sha">61808edb</td><td>cap console handler at INFO; guard stdout_proxy reentrancy</td><td>Two bugs caught by booting runserver locally.</td></tr>
+<tr><td class="sha">f655f10e</td><td>show tenant prefix in local console formatter</td><td>So devs can verify the prefix without deploying to staging.</td></tr>
+<tr><td class="sha">192d41f1</td><td>install loguru sink in runserver dev path too</td><td>Runserver doesn't run wsgi.py; setup_logging() needed a second invocation point.</td></tr>
+<tr><td class="sha">8d7b9c40</td><td>per-stream ContextVars + safer multi-tenant filter</td><td>Two critical bugs surfaced in code review.</td></tr>
+</tbody>
+</table>
+
+<!-- ===================== SETTINGS ===================== -->
+
+<h2 id="settings"><span class="kicker">Backend · 1 of 8</span><code>config/settings/base.py</code></h2>
+<p>The central Django settings file. This PR makes five changes to the <code>LOGGING</code> dict.</p>
+
+<h3>Change 1 · Pin the console handler at INFO</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">config/settings/base.py · line 286</span><span class="code-tag mod">modified</span></div>
+<pre><span class="str">"console"</span>: {
+    <span class="str">"class"</span>: <span class="str">"logging.StreamHandler"</span>,
+    <span class="com"># Pinned to INFO so DEBUG-level loggers don't flood stdout</span>
+    <span class="com"># once other loggers route here.</span>
+    <span class="str">"level"</span>: <span class="str">"INFO"</span>,
+    <span class="str">"formatter"</span>: <span class="str">"console"</span>,
+    <span class="str">"filters"</span>: [<span class="str">"tenant_filter"</span>],
+},</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>A Python "handler" is the thing that decides where a log line goes (file, console, network). Without a <code>level</code>, a handler accepts every record handed to it. Once we wired the <code>django</code> logger (which is at DEBUG) to also route here, every <code>django.utils.autoreload.tick</code> DEBUG record flooded the screen — hundreds of file-watcher records per second.</p>
+    <p>Pinning the handler at INFO caps what reaches stdout no matter which logger feeds it. Loggers can still set their own threshold lower; this just acts as a final gate.</p>
+  </div>
+</div>
+
+<h3>Change 2 · Include the tenant prefix in the local format</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">config/settings/base.py · line 275</span><span class="code-tag mod">modified</span></div>
+<pre><span class="str">"console"</span>: {
+    <span class="str">"format"</span>: <span class="str">"[%(app_name)s:%(domain_url)s] %(levelname)s %(asctime)s "</span>
+    <span class="str">"%(name)s.%(funcName)s:%(lineno)s- %(message)s "</span>
+},</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>Two formatters exist: <code>verbose</code> (used in staging/prod, has the <code>[schema:domain]</code> prefix) and <code>console</code> (used locally, didn't). That meant running locally couldn't tell you whether the producer-side capture was actually attaching tenant context — you'd only find out after deploying.</p>
+    <p><code>%(app_name)s</code> and <code>%(domain_url)s</code> are values the <code>tenant_filter</code> attaches to every record. Adding them to the local format makes the output look the same shape across environments.</p>
+  </div>
+</div>
+
+<h3>Change 3 · Route the <code>django</code> logger to console + add a root logger</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">config/settings/base.py · line 521</span><span class="code-tag mod">modified</span></div>
+<pre>settings.LOGGING[<span class="str">"loggers"</span>][<span class="str">"django"</span>] = {
+    <span class="com"># `console` ships to stdout → ECS awslogs driver → CloudWatch.</span>
+    <span class="com"># `file` keeps the on-disk copy. `propagate: False` prevents</span>
+    <span class="com"># double-writes via the root logger below.</span>
+    <span class="str">"handlers"</span>: [<span class="str">"file"</span>, <span class="str">"console"</span>],
+    <span class="str">"level"</span>: <span class="str">"DEBUG"</span>,
+    <span class="str">"propagate"</span>: <span class="kw">False</span>,
+}
+
+<span class="com"># Catch every logger that doesn't have an explicit entry —</span>
+<span class="com"># workspace code, zango.apps.*, third-party libs. Otherwise these</span>
+<span class="com"># fall through to Python's `lastResort` handler which strips levels</span>
+<span class="com"># and the tenant prefix.</span>
+settings.LOGGING[<span class="str">"root"</span>] = {
+    <span class="str">"handlers"</span>: [<span class="str">"file"</span>, <span class="str">"console"</span>],
+    <span class="str">"level"</span>: <span class="str">"INFO"</span>,
+}</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>The django logger.</strong> Before: routed only to the rotating file handler. Lines from Django (request log, autoreload, etc.) never reached the console handler — so CloudWatch never saw them with the tenant prefix. Now: routed to both.</p>
+    <p><strong>The root logger.</strong> Python's <code>logging</code> uses a tree. Loggers without their own configuration "fall up" to their parent, all the way to <code>root</code>. Without a root configured, Python uses a built-in fallback that ignores formatters and filters — every workspace <code>logger.warning(...)</code> ended up at CloudWatch with no prefix. Adding an explicit root entry routes those records through our formatter.</p>
+    <p><strong><code>propagate: False</code> on django.</strong> Without this, every django record would be processed twice — once via the django logger's handlers and once via root. Setting it to False says "don't bubble up; my handlers already wrote you to file and console."</p>
+  </div>
+</div>
+
+<h3>Change 4 · Mute noisy third-party libraries</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">config/settings/base.py · line 545</span><span class="code-tag mod">modified</span></div>
+<pre><span class="com"># Mute the noisy third-party libs that would otherwise drown CloudWatch</span>
+<span class="com"># in DEBUG at INFO root level. Empty handlers + propagate keeps them</span>
+<span class="com"># routed up to root once their level threshold is met.</span>
+<span class="kw">for</span> _noisy <span class="kw">in</span> (<span class="str">"botocore"</span>, <span class="str">"urllib3"</span>, <span class="str">"s3transfer"</span>, <span class="str">"boto3"</span>):
+    settings.LOGGING[<span class="str">"loggers"</span>][_noisy] = {
+        <span class="str">"level"</span>: <span class="str">"WARNING"</span>,
+    }</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>boto3 and friends are extremely chatty at DEBUG and INFO — they log every AWS API call, every retry, every signature step. With the root logger now catching them at INFO, they'd flood CloudWatch with thousands of useless lines per minute.</p>
+    <p>Setting <code>level: WARNING</code> on each tells Python: don't process DEBUG/INFO records from these loggers at all. The records get dropped at the source — before they touch any handler, formatter, or filter. Only WARNING and worse from these libraries reaches the root logger.</p>
+  </div>
+</div>
+
+<h3>Change 5 · Register the print-capture middleware</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">config/settings/base.py · line ~100</span><span class="code-tag mod">modified</span></div>
+<pre>MIDDLEWARE = [
+    <span class="str">"zango.middleware.ZangoTenantMainMiddleware"</span>,
+    <span class="str">"zango.apps.shared.platform_logs.middleware.RequestPrintCaptureMiddleware"</span>,
+    <span class="com"># ... rest of the stack ...</span>
+]</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>Django middleware runs in order on the way in, reverse order on the way out — like nested function calls. Registering <code>RequestPrintCaptureMiddleware</code> right after the tenant middleware means by the time it activates, the request already knows which tenant it belongs to, so any <code>print()</code> the view does gets logged with the right context.</p>
+  </div>
+</div>
+
+<!-- ===================== LOGURU UTILS ===================== -->
+
+<h2 id="loguru"><span class="kicker">Backend · 2 of 8</span><code>core/monitoring/utils.py</code></h2>
+<p>This file builds the format string loguru uses for every line. We added the tenant prefix.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">core/monitoring/utils.py · get_loguru_format</span><span class="code-tag mod">modified</span></div>
+<pre><span class="kw">def</span> <span class="fn">get_loguru_format</span>(record):
+    file_name = _get_tenant_filename(record[<span class="str">"name"</span>])
+
+    <span class="com"># Tenant context — safe under unbound state (boot, mgmt commands,</span>
+    <span class="com"># celery worker init before middleware/signals bind a tenant). The</span>
+    <span class="com"># Platform Logs CloudWatch connector uses this `[schema:domain]`</span>
+    <span class="com"># prefix to filter lines per-tenant.</span>
+    <span class="kw">try</span>:
+        <span class="kw">from</span> django.db <span class="kw">import</span> connection
+
+        tenant = <span class="fn">getattr</span>(connection, <span class="str">"tenant"</span>, <span class="kw">None</span>)
+        app_name = <span class="fn">getattr</span>(tenant, <span class="str">"schema_name"</span>, <span class="str">""</span>) <span class="kw">if</span> tenant <span class="kw">else</span> <span class="str">""</span>
+        domain = <span class="fn">getattr</span>(tenant, <span class="str">"domain_url"</span>, <span class="str">""</span>) <span class="kw">if</span> tenant <span class="kw">else</span> <span class="str">""</span>
+    <span class="kw">except</span> <span class="fn">Exception</span>:
+        app_name, domain = <span class="str">""</span>, <span class="str">""</span>
+
+    loguru_format = (
+        <span class="fn">f</span><span class="str">"&lt;blue&gt;[{app_name}:{domain}]&lt;/blue&gt;|"</span>
+        <span class="fn">f</span><span class="str">"&lt;magenta&gt;{os.getpid()}|&lt;/magenta&gt;"</span>
+        <span class="str">"&lt;green&gt;{time:YYYY-MM-DD HH:mm:ss.SSS}&lt;/green&gt;|"</span>
+        <span class="com"># ... level, file, function, line, message ...</span>
+    )
+    <span class="kw">return</span> loguru_format</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Why <code>try/except</code>?</strong> This function runs on every loguru record, including ones emitted very early — during settings load, during management commands, during celery worker boot — when <code>django.db.connection.tenant</code> doesn't exist yet. Any error here would crash the log emit, which would crash the thing that was trying to log. The bare except trades fidelity (we get empty strings) for never crashing.</p>
+    <p><strong><code>schema_name</code> and <code>domain_url</code>.</strong> Two attributes django-tenants adds to the tenant object. The schema name is the database schema (e.g., <code>newmicare</code>); the domain URL is the host the tenant answers on (e.g., <code>newmicare.zango.dev</code>).</p>
+    <p><strong>Loguru's <code>&lt;blue&gt;...&lt;/blue&gt;</code> tags.</strong> Loguru renders ANSI color codes when the sink is a terminal. We wrap the prefix in <code>&lt;blue&gt;</code> so it stands out locally; CloudWatch strips the ANSI on display.</p>
+  </div>
+</div>
+
+<!-- ===================== STDOUT_PROXY ===================== -->
+
+<h2 id="proxy"><span class="kicker">Backend · 3 of 8</span><code>platform_logs/stdout_proxy.py</code> (new)</h2>
+<p>The trickiest file in the PR. Workspace developers use <code>print()</code> a lot — those calls bypass Python's logging entirely, so they reach CloudWatch as raw bytes with no level, no timestamp, no tenant prefix. This module sits between <code>print()</code> and the actual stream, turning every print into a log record.</p>
+
+<h3>Imports and ContextVars</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">stdout_proxy.py · top of file</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">import</span> logging
+<span class="kw">import</span> sys
+<span class="kw">from</span> contextvars <span class="kw">import</span> ContextVar
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+_active_stdout: ContextVar[Optional[<span class="fn">str</span>]] = <span class="fn">ContextVar</span>(
+    <span class="str">"platform_logs_stdout_target"</span>, default=<span class="kw">None</span>
+)
+_active_stderr: ContextVar[Optional[<span class="fn">str</span>]] = <span class="fn">ContextVar</span>(
+    <span class="str">"platform_logs_stderr_target"</span>, default=<span class="kw">None</span>
+)
+
+_emitting: ContextVar[<span class="fn">bool</span>] = <span class="fn">ContextVar</span>(
+    <span class="str">"platform_logs_stdout_emitting"</span>, default=<span class="kw">False</span>
+)</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>What's a ContextVar?</strong> A variable whose value is scoped to the current "execution context" — roughly, the current thread or async task. If thread A sets a ContextVar to "hello", thread B reading the same ContextVar sees the default. This matters because Django serves requests on different threads or different async tasks; we need each request to have its own binding.</p>
+    <p><strong>Why two for stdout/stderr?</strong> An earlier version of this code used <em>one</em> shared ContextVar, and binding stdout then stderr clobbered the first binding — every stdout write was logged under the stderr name. The fix is one var per stream.</p>
+    <p><strong>Why <code>_emitting</code>?</strong> When the proxy forwards a print to the logger, the logger eventually writes the formatted line back to the very stream we're proxying. Without a guard, that write would re-enter <code>write()</code>, forward again, recurse forever. <code>_emitting</code> is a flag that says "I'm currently inside an emission; if you re-enter, just pass through."</p>
+  </div>
+</div>
+
+<h3>The proxy class</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">stdout_proxy.py · class _Proxy</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">class</span> <span class="fn">_Proxy</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, fallback, default_level, active_var):
+        self._fallback = fallback
+        self._default_level = default_level
+        self._active_var = active_var
+        self._buf: <span class="fn">list</span>[<span class="fn">str</span>] = []
+
+    <span class="kw">def</span> <span class="fn">write</span>(self, s):
+        <span class="kw">if</span> _emitting.<span class="fn">get</span>():
+            <span class="kw">try</span>:
+                <span class="kw">return</span> self._fallback.<span class="fn">write</span>(s)
+            <span class="kw">except</span> <span class="fn">Exception</span>:
+                <span class="kw">return</span> <span class="fn">len</span>(s)
+
+        target = self._active_var.<span class="fn">get</span>()
+        <span class="kw">if</span> target <span class="kw">is</span> <span class="kw">None</span> <span class="kw">or</span> <span class="kw">not</span> <span class="fn">isinstance</span>(s, <span class="fn">str</span>) <span class="kw">or</span> <span class="kw">not</span> s:
+            <span class="kw">try</span>:
+                <span class="kw">return</span> self._fallback.<span class="fn">write</span>(s)
+            <span class="kw">except</span> <span class="fn">Exception</span>:
+                <span class="kw">return</span> <span class="fn">len</span>(s)
+
+        self._buf.<span class="fn">append</span>(s)
+        <span class="kw">if</span> <span class="str">"\n"</span> <span class="kw">in</span> s:
+            full = <span class="str">""</span>.<span class="fn">join</span>(self._buf)
+            self._buf.<span class="fn">clear</span>()
+            log = logging.<span class="fn">getLogger</span>(target)
+            token = _emitting.<span class="fn">set</span>(<span class="kw">True</span>)
+            <span class="kw">try</span>:
+                <span class="kw">for</span> line <span class="kw">in</span> full.<span class="fn">splitlines</span>():
+                    <span class="kw">if</span> line:
+                        log.<span class="fn">log</span>(self._default_level, line)
+            <span class="kw">finally</span>:
+                _emitting.<span class="fn">reset</span>(token)
+        <span class="kw">return</span> <span class="fn">len</span>(s)</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English, line by line</div>
+    <p><strong><code>__init__</code></strong> stores three things: the real stream (so we can pass writes through when nothing is bound), the log level to use for forwarded records (INFO for stdout, ERROR for stderr), and which ContextVar to read.</p>
+    <p><strong><code>if _emitting.get()</code></strong> — the reentrancy guard. If we're already inside a forwarded emission, just write to the real stream and stop. This is the loop-breaker.</p>
+    <p><strong><code>target = self._active_var.get()</code></strong> — read the current binding for this stream. If no scope has bound anything, <code>target</code> is <code>None</code>.</p>
+    <p><strong>Passthrough fast path.</strong> If there's no binding, or the input isn't a string, or it's empty, just write to the real stream. This is what happens during boot, in management commands, in shell sessions — anywhere a request middleware or celery hook hasn't bound a logger.</p>
+    <p><strong><code>self._buf.append(s)</code></strong> — buffer the write. <code>print("hello")</code> actually makes two calls: <code>write("hello")</code> and <code>write("\n")</code>. We can't emit a log line on the first call because we don't have a complete line yet.</p>
+    <p><strong><code>if "\n" in s</code></strong> — once we see a newline, join the buffer, clear it, then forward each complete line as a log record.</p>
+    <p><strong><code>token = _emitting.set(True) / finally: _emitting.reset(token)</code></strong> — set the guard before forwarding, reset it after. <code>set()</code> returns a token; <code>reset(token)</code> restores the previous value. Wrapping in <code>try/finally</code> guarantees the guard gets cleared even if logging blows up.</p>
+  </div>
+</div>
+
+<h3>install() and the bind/reset helpers</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">stdout_proxy.py · module functions</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">def</span> <span class="fn">install</span>() -&gt; <span class="kw">None</span>:
+    <span class="kw">if</span> <span class="kw">not</span> <span class="fn">isinstance</span>(sys.stdout, _Proxy):
+        sys.stdout = <span class="fn">_Proxy</span>(sys.stdout, logging.INFO, _active_stdout)
+    <span class="kw">if</span> <span class="kw">not</span> <span class="fn">isinstance</span>(sys.stderr, _Proxy):
+        sys.stderr = <span class="fn">_Proxy</span>(sys.stderr, logging.ERROR, _active_stderr)
+
+<span class="kw">def</span> <span class="fn">bind_stdout</span>(logger_name): <span class="kw">return</span> _active_stdout.<span class="fn">set</span>(logger_name)
+<span class="kw">def</span> <span class="fn">bind_stderr</span>(logger_name): <span class="kw">return</span> _active_stderr.<span class="fn">set</span>(logger_name)
+
+<span class="kw">def</span> <span class="fn">reset_stdout</span>(token):
+    <span class="kw">try</span>: _active_stdout.<span class="fn">reset</span>(token)
+    <span class="kw">except</span> (<span class="fn">LookupError</span>, <span class="fn">ValueError</span>): <span class="kw">pass</span>
+
+<span class="kw">def</span> <span class="fn">reset_stderr</span>(token):
+    <span class="kw">try</span>: _active_stderr.<span class="fn">reset</span>(token)
+    <span class="kw">except</span> (<span class="fn">LookupError</span>, <span class="fn">ValueError</span>): <span class="kw">pass</span></pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong><code>install()</code></strong> replaces <code>sys.stdout</code> and <code>sys.stderr</code> with our proxies. The <code>isinstance</code> check makes it idempotent — calling it twice is harmless. Idempotency matters because multiple boot paths (wsgi.py, asgi.py, runserver, celery) might all call it.</p>
+    <p><strong><code>bind_stdout</code> / <code>bind_stderr</code>.</strong> Set the target logger for the current context. They return a token the caller must hold onto and pass to <code>reset_*</code> later.</p>
+    <p><strong><code>except (LookupError, ValueError)</code> on reset.</strong> Two failure modes: the token might already have been consumed (LookupError), or it might belong to a different context (ValueError) if the request hops threads. Swallowing both is safe because in either case the binding is already gone or doesn't apply here.</p>
+  </div>
+</div>
+
+<!-- ===================== MIDDLEWARE ===================== -->
+
+<h2 id="middleware"><span class="kicker">Backend · 4 of 8</span><code>platform_logs/middleware.py</code> (new)</h2>
+<p>A Django middleware that binds the stdout proxy at the start of every HTTP request and unbinds it at the end.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">middleware.py · entire file</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">from</span> zango.apps.shared.platform_logs <span class="kw">import</span> stdout_proxy
+
+<span class="kw">class</span> <span class="fn">RequestPrintCaptureMiddleware</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, get_response):
+        self.get_response = get_response
+
+    <span class="kw">def</span> <span class="fn">__call__</span>(self, request):
+        stdout_token = stdout_proxy.<span class="fn">bind_stdout</span>(<span class="str">"zango.request.stdout"</span>)
+        stderr_token = stdout_proxy.<span class="fn">bind_stderr</span>(<span class="str">"zango.request.stderr"</span>)
+        <span class="kw">try</span>:
+            <span class="kw">return</span> self.<span class="fn">get_response</span>(request)
+        <span class="kw">finally</span>:
+            stdout_proxy.<span class="fn">reset_stderr</span>(stderr_token)
+            stdout_proxy.<span class="fn">reset_stdout</span>(stdout_token)</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Django middleware shape.</strong> <code>__init__</code> runs once at server boot; <code>__call__</code> runs for every request. <code>get_response</code> is the next middleware or the view itself. Whatever <code>__call__</code> returns becomes the HTTP response.</p>
+    <p><strong>Binding before <code>get_response</code>.</strong> We capture from this point on. Any <code>print()</code> in a view, signal handler, or helper called during the request gets forwarded to the <code>zango.request.stdout</code> logger.</p>
+    <p><strong><code>try/finally</code>.</strong> Even if the view raises, <code>finally</code> guarantees we unbind. Without that, a binding could leak across requests — the next request on the same thread would still be capturing under the previous request's tenant.</p>
+    <p><strong>Reset order.</strong> Reset stderr first, then stdout — same order as bind, in reverse. Doesn't actually matter here because they're independent ContextVars, but the symmetry is conventional.</p>
+  </div>
+</div>
+
+<!-- ===================== CELERY HOOK ===================== -->
+
+<h2 id="celery"><span class="kicker">Backend · 5 of 8</span><code>platform_logs/celery_print_capture.py</code> (new)</h2>
+<p>The Celery equivalent of the middleware. Binds the proxy at task start, unbinds at task end. Uses Celery's signal system.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">celery_print_capture.py · key bits</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">from</span> celery.signals <span class="kw">import</span> task_postrun, task_prerun
+<span class="kw">from</span> zango.apps.shared.platform_logs <span class="kw">import</span> stdout_proxy
+
+_SKIP_PREFIXES = (<span class="str">"zango.code_execution."</span>,)
+_tokens: <span class="fn">dict</span> = {}
+
+<span class="kw">def</span> <span class="fn">_should_skip</span>(task_name):
+    <span class="kw">return</span> <span class="fn">bool</span>(task_name) <span class="kw">and</span> <span class="fn">any</span>(task_name.<span class="fn">startswith</span>(p) <span class="kw">for</span> p <span class="kw">in</span> _SKIP_PREFIXES)
+
+@task_prerun.<span class="fn">connect</span>
+<span class="kw">def</span> <span class="fn">_capture</span>(task_id=<span class="kw">None</span>, task=<span class="kw">None</span>, **kwargs):
+    name = <span class="fn">getattr</span>(task, <span class="str">"name"</span>, <span class="str">""</span>) <span class="kw">or</span> <span class="str">""</span>
+    <span class="kw">if</span> <span class="fn">_should_skip</span>(name):
+        <span class="kw">return</span>
+    stdout_token = <span class="kw">None</span>
+    stderr_token = <span class="kw">None</span>
+    <span class="kw">try</span>:
+        stdout_token = stdout_proxy.<span class="fn">bind_stdout</span>(<span class="str">"celery.task.stdout"</span>)
+        _tokens[task_id] = (stdout_token, <span class="kw">None</span>)
+        stderr_token = stdout_proxy.<span class="fn">bind_stderr</span>(<span class="str">"celery.task.stderr"</span>)
+        _tokens[task_id] = (stdout_token, stderr_token)
+    <span class="kw">except</span> <span class="fn">Exception</span>:
+        logger.<span class="fn">exception</span>(<span class="str">"..."</span>)
+
+@task_postrun.<span class="fn">connect</span>
+<span class="kw">def</span> <span class="fn">_restore</span>(task_id=<span class="kw">None</span>, **kwargs):
+    pair = _tokens.<span class="fn">pop</span>(task_id, <span class="kw">None</span>)
+    <span class="kw">if</span> pair <span class="kw">is</span> <span class="kw">None</span>:
+        <span class="kw">return</span>
+    stdout_token, stderr_token = pair
+    <span class="kw">try</span>:
+        <span class="kw">if</span> stderr_token <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span>:
+            stdout_proxy.<span class="fn">reset_stderr</span>(stderr_token)
+        <span class="kw">if</span> stdout_token <span class="kw">is</span> <span class="kw">not</span> <span class="kw">None</span>:
+            stdout_proxy.<span class="fn">reset_stdout</span>(stdout_token)
+    <span class="kw">except</span> <span class="fn">Exception</span>:
+        logger.<span class="fn">exception</span>(<span class="str">"..."</span>)</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Celery signals.</strong> Celery emits events at well-defined points in a task's lifecycle. <code>task_prerun</code> fires right before the task function runs; <code>task_postrun</code> fires right after. We hook both to bind/unbind the proxy.</p>
+    <p><strong><code>_SKIP_PREFIXES</code>.</strong> The codexec executor (a separate feature that runs user-supplied Python in a sandbox) already swaps stdout for its own per-execution capture. If our proxy also wrapped its stdout, the executor's capture would see our proxy instead of the real stream, and lines would get logged twice. Skipping codexec tasks keeps that executor as the sole owner of its own stdout.</p>
+    <p><strong><code>_tokens</code> dict.</strong> Maps each running task's ID to the pair of tokens we got from binding. <code>task_postrun</code> looks it up to know what to reset. Per-process dict — separate Celery worker processes don't share state, which is correct.</p>
+    <p><strong>Staged assignment to <code>_tokens</code>.</strong> First we bind stdout and immediately record <code>(stdout_token, None)</code>. Then we bind stderr and update to <code>(stdout_token, stderr_token)</code>. If the second bind raises, we still have the first token recorded — <code>_restore</code> can clean it up. Without staging, a half-bound task would leak a stdout token forever.</p>
+    <p><strong>Why catch <code>Exception</code> at top level?</strong> A bug in our logging plumbing should never crash a workspace task. Logging the exception (via <code>logger.exception</code>) records it for us to diagnose without aborting the work.</p>
+  </div>
+</div>
+
+<!-- ===================== APPS.PY ===================== -->
+
+<h2 id="apps"><span class="kicker">Backend · 6 of 8</span><code>platform_logs/apps.py</code> (modified)</h2>
+<p>Django's AppConfig — the place to wire up signals and install side effects at app boot.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">apps.py · ready()</span><span class="code-tag mod">modified</span></div>
+<pre><span class="kw">class</span> <span class="fn">PlatformLogsConfig</span>(<span class="fn">AppConfig</span>):
+    name = <span class="str">"zango.apps.shared.platform_logs"</span>
+
+    <span class="kw">def</span> <span class="fn">ready</span>(self):
+        <span class="kw">try</span>:
+            <span class="kw">from</span> zango.apps.shared.platform_logs <span class="kw">import</span> celery_logging
+        <span class="kw">except</span> <span class="fn">ImportError</span>:
+            <span class="kw">pass</span>
+
+        <span class="kw">try</span>:
+            <span class="kw">from</span> zango.apps.shared.platform_logs <span class="kw">import</span> stdout_proxy
+            stdout_proxy.<span class="fn">install</span>()
+        <span class="kw">except</span> <span class="fn">Exception</span>:
+            <span class="kw">pass</span>
+
+        <span class="kw">try</span>:
+            <span class="kw">from</span> zango.apps.shared.platform_logs <span class="kw">import</span> celery_print_capture
+        <span class="kw">except</span> <span class="fn">ImportError</span>:
+            <span class="kw">pass</span>
+
+        <span class="com"># manage.py runserver bypasses wsgi.py — call setup_logging() here</span>
+        <span class="com"># too so the loguru sink with our format gets installed locally.</span>
+        <span class="kw">try</span>:
+            <span class="kw">from</span> zango.core.monitoring <span class="kw">import</span> setup_logging
+            <span class="fn">setup_logging</span>()
+        <span class="kw">except</span> <span class="fn">Exception</span>:
+            <span class="kw">pass</span></pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Importing for side effects.</strong> <code>celery_print_capture</code> defines <code>@task_prerun.connect</code> at module level. Just importing it is enough to register the signal handlers; that's why we never use the imported name.</p>
+    <p><strong><code>stdout_proxy.install()</code>.</strong> Installs the proxies. Idempotent, so it's safe to run in <code>ready()</code> alongside wsgi.py's call.</p>
+    <p><strong><code>setup_logging()</code>.</strong> Configures loguru. Normally invoked from <code>wsgi.py</code>, <code>asgi.py</code>, and Celery boot. But <code>manage.py runserver</code> bypasses all three — it uses Django's own bootstrap. Without this call in <code>ready()</code>, loguru in local dev keeps its default sink and our <code>get_loguru_format</code> never runs. <code>setup_logging()</code> starts with <code>logger.remove()</code>, so calling it twice (once here, once from wsgi.py later) is a no-op the second time.</p>
+    <p><strong>Bare <code>except</code> everywhere.</strong> App boot must never fail because of logging plumbing. A swallowed exception here is a tradeoff — review feedback flagged it because a real <code>setup_logging</code> failure would now boot silently with no loguru sink at all. A follow-up will log the swallowed exception.</p>
+  </div>
+</div>
+
+<!-- ===================== VIEWS.PY ===================== -->
+
+<h2 id="views"><span class="kicker">Backend · 7 of 8</span><code>api/platform/platform_logs/v1/views.py</code> (modified)</h2>
+<p>Adds six new DRF (Django REST Framework) views that mirror the per-app log endpoints but for super-admins. The frontend Platform Logs page calls these.</p>
+
+<h3>Helpers — parsing the tenants query param</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">views.py · helpers</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">import</span> re
+
+_TENANT_RE = re.<span class="fn">compile</span>(<span class="str">r"\[([^:\]]+):[^\]]*\]"</span>)
+_MAX_FETCH_LIMIT = <span class="num">500</span>
+
+<span class="kw">def</span> <span class="fn">_parse_tenants_param</span>(request):
+    raw = request.GET.<span class="fn">get</span>(<span class="str">"tenants"</span>, <span class="str">""</span>) <span class="kw">or</span> <span class="str">""</span>
+    out = [s.<span class="fn">strip</span>() <span class="kw">for</span> s <span class="kw">in</span> raw.<span class="fn">split</span>(<span class="str">","</span>) <span class="kw">if</span> s.<span class="fn">strip</span>()]
+    <span class="kw">return</span> out <span class="kw">or</span> <span class="kw">None</span>
+
+<span class="kw">def</span> <span class="fn">_apply_tenant_filter</span>(filters, tenants, cfg):
+    <span class="kw">if</span> <span class="kw">not</span> tenants:
+        <span class="kw">return</span> filters
+    <span class="kw">if</span> <span class="fn">len</span>(tenants) == <span class="num">1</span>:
+        filters.app_name = tenants[<span class="num">0</span>]
+        <span class="kw">return</span> filters
+    fmt = <span class="fn">getattr</span>(cfg, <span class="str">"fmt"</span>, <span class="str">"verbose"</span>)
+    <span class="kw">if</span> fmt != <span class="str">"verbose"</span>:
+        <span class="kw">raise</span> <span class="fn">ConnectorError</span>(<span class="str">"Multi-tenant filtering requires verbose fmt..."</span>)
+    filters.limit = _MAX_FETCH_LIMIT
+    <span class="kw">return</span> filters
+
+<span class="kw">def</span> <span class="fn">_post_filter_tenants</span>(log_page, tenants):
+    <span class="kw">if</span> <span class="kw">not</span> tenants <span class="kw">or</span> <span class="fn">len</span>(tenants) &lt; <span class="num">2</span>:
+        <span class="kw">return</span> log_page
+    wanted = <span class="fn">set</span>(tenants)
+    keep = []
+    <span class="kw">for</span> ln <span class="kw">in</span> log_page.lines:
+        m = _TENANT_RE.<span class="fn">match</span>(ln.message <span class="kw">or</span> <span class="str">""</span>)
+        <span class="kw">if</span> m <span class="kw">and</span> m.<span class="fn">group</span>(<span class="num">1</span>) <span class="kw">in</span> wanted:
+            keep.<span class="fn">append</span>(ln)
+    log_page.lines = keep
+    <span class="kw">return</span> log_page</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>The regex <code>\[([^:\]]+):[^\]]*\]</code>.</strong> Matches text shaped like <code>[schemaname:domain]</code> at the start of a log line. <code>([^:\]]+)</code> captures the schema name (everything that isn't <code>:</code> or <code>]</code>). The schema is what we use to decide "is this line from a selected tenant?"</p>
+    <p><strong><code>_parse_tenants_param</code>.</strong> Reads <code>?tenants=a,b,c</code> from the URL, splits on commas, strips whitespace, drops empties. Returns <code>None</code> if nothing valid was passed so callers can short-circuit.</p>
+    <p><strong>Single vs multi-tenant in <code>_apply_tenant_filter</code>.</strong> If exactly one tenant is requested, we push the filter all the way down to the CloudWatch query — the connector adds a pattern that only matches lines starting with <code>[that-schema:</code>. That's efficient: CloudWatch does the work, we get back exactly the lines we want.</p>
+    <p><strong>Multi-tenant is harder.</strong> CloudWatch's filter pattern syntax can't express "match prefix A OR prefix B OR prefix C." So when more than one tenant is selected, we fetch <em>everything</em> in the time window (capped at 500) and filter on the server side after the fact. The fmt check refuses this on connectors that use plain or JSON formats — without the <code>[schema:domain]</code> prefix in the message, there's nothing to match and the UI would silently look empty.</p>
+    <p><strong><code>_post_filter_tenants</code>.</strong> Walks the fetched page, regex-matches the prefix of each line, keeps only those whose schema is in the requested set. <em>The cursor is not adjusted</em> — it still points at the end of the unfiltered page, so the next poll resumes at the correct place in CloudWatch's timeline.</p>
+  </div>
+</div>
+
+<h3>The six new admin views</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">views.py · PlatformLogBrowseView</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">class</span> <span class="fn">PlatformLogBrowseView</span>(<span class="fn">APIView</span>):
+    permission_classes = (IsSuperAdminPlatformUser,)
+    throttle_classes = (LogBrowseThrottle,)
+
+    @_handle_connector_errors
+    <span class="kw">def</span> <span class="fn">get</span>(self, request, component):
+        cfg, connector = <span class="fn">_get_connector_for</span>(component)
+        filters = <span class="fn">_parse_filters</span>(request, default_window=<span class="fn">timedelta</span>(hours=<span class="num">1</span>))
+        tenants = <span class="fn">_parse_tenants_param</span>(request)
+        <span class="fn">_apply_tenant_filter</span>(filters, tenants, cfg)
+
+        before = request.GET.<span class="fn">get</span>(<span class="str">"before"</span>)
+        page = (
+            <span class="fn">Cursor</span>(token=before, direction=CursorDirection.BACKWARD)
+            <span class="kw">if</span> before <span class="kw">else</span> <span class="kw">None</span>
+        )
+        log_page = connector.<span class="fn">fetch</span>(filters=filters, page=page)
+        <span class="fn">_post_filter_tenants</span>(log_page, tenants)
+        <span class="kw">return</span> <span class="fn">_ok</span>(<span class="fn">LogPageSerializer</span>(log_page).data)</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong><code>permission_classes</code>.</strong> DRF checks this before <code>get()</code> runs. <code>IsSuperAdminPlatformUser</code> rejects any user who isn't a platform-level super-admin — that's why this view safely returns lines from every tenant.</p>
+    <p><strong><code>throttle_classes</code>.</strong> Rate-limits browse calls per user per minute, so a runaway frontend can't melt the CloudWatch API quota.</p>
+    <p><strong><code>@_handle_connector_errors</code>.</strong> A decorator (defined elsewhere in the file) that catches the connector's exception types (throttled, unauthorized, not found, etc.) and converts them into appropriate HTTP responses.</p>
+    <p><strong>The body.</strong> Get the connector, parse the URL params into a filter object, apply the tenant filter, read the <code>before</code> cursor for backwards pagination, fetch a page, post-filter for multi-tenant, return as JSON.</p>
+  </div>
+</div>
+
+<h3>The tenants discovery endpoint</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">views.py · PlatformTenantsListView</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">class</span> <span class="fn">PlatformTenantsListView</span>(<span class="fn">APIView</span>):
+    permission_classes = (IsSuperAdminPlatformUser,)
+
+    @_handle_connector_errors
+    <span class="kw">def</span> <span class="fn">get</span>(self, request, component):
+        cfg, connector = <span class="fn">_get_connector_for</span>(component)
+        since = <span class="fn">_parse_iso</span>(request.GET.<span class="fn">get</span>(<span class="str">"since"</span>)) <span class="kw">or</span> (
+            datetime.<span class="fn">now</span>(timezone.utc) - <span class="fn">timedelta</span>(hours=<span class="num">24</span>)
+        )
+        filters = <span class="fn">LogFilters</span>(since=since, limit=<span class="num">500</span>)
+        page = connector.<span class="fn">fetch</span>(filters=filters, page=<span class="kw">None</span>)
+        seen = <span class="fn">set</span>()
+        <span class="kw">for</span> ln <span class="kw">in</span> page.lines:
+            m = _TENANT_RE.<span class="fn">match</span>(ln.message <span class="kw">or</span> <span class="str">""</span>)
+            <span class="kw">if</span> m:
+                seen.<span class="fn">add</span>(m.<span class="fn">group</span>(<span class="num">1</span>))
+        <span class="kw">return</span> <span class="fn">_ok</span>({<span class="str">"tenants"</span>: <span class="fn">sorted</span>(seen)})</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>Populates the Tenant filter dropdown on the frontend. Fetches a recent sample of lines, parses each prefix, returns the unique set of schemas seen.</p>
+    <p>This approach has a known weakness flagged in review: tenants with no recent traffic don't appear in the dropdown. A follow-up will switch to querying the <code>TenantModel</code> table directly, which is both faster and complete.</p>
+  </div>
+</div>
+
+<!-- ===================== URLS ===================== -->
+
+<h2 id="urls"><span class="kicker">Backend · 8 of 8</span><code>api/platform/platform_logs/v1/urls.py</code> (modified)</h2>
+<p>Wires the new view classes to URL patterns.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">urls.py · admin_urls block</span><span class="code-tag mod">modified</span></div>
+<pre>admin_urls = [
+    <span class="fn">path</span>(<span class="str">"connectors/"</span>, ConnectorListUpsertView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"connectors/test/"</span>, ConnectorTestView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"components/"</span>, PlatformComponentListView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"&lt;str:component&gt;/"</span>, PlatformLogBrowseView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"&lt;str:component&gt;/tail/"</span>, PlatformLogTailView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"&lt;str:component&gt;/streams/"</span>, PlatformStreamListView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"&lt;str:component&gt;/facets/"</span>, PlatformFacetsView.<span class="fn">as_view</span>()),
+    <span class="fn">path</span>(<span class="str">"&lt;str:component&gt;/tenants/"</span>, PlatformTenantsListView.<span class="fn">as_view</span>()),
+]</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Order matters.</strong> Django matches routes top-down. The literal <code>connectors/</code> and <code>components/</code> appear before the catch-all <code>&lt;str:component&gt;/</code>, otherwise a request to <code>/connectors/</code> would resolve to <code>PlatformLogBrowseView</code> with <code>component="connectors"</code> — wrong handler.</p>
+    <p><strong><code>&lt;str:component&gt;</code>.</strong> A URL parameter. Whatever the user puts there (e.g., <code>app</code>, <code>celery</code>, <code>celery_beat</code>) becomes the <code>component</code> argument to <code>get(self, request, component)</code>.</p>
+    <p><strong>Mount point.</strong> This <code>admin_urls</code> list is included under <code>/api/v1/platform/logs/</code> by a parent urls.py, so the full route for browse is <code>/api/v1/platform/logs/app/</code>.</p>
+  </div>
+</div>
+
+<!-- ===================== FRONTEND INDEX ===================== -->
+
+<h2 id="fe-index"><span class="kicker">Frontend · 1 of 5</span><code>pages/platformLogs/components/PlatformLogs/index.jsx</code> (new)</h2>
+<p>The page itself — a React component that renders the platform-wide logs view at <code>/platform/logs</code>.</p>
+
+<h3>State shape</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">PlatformLogs/index.jsx · state declarations</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">const</span> [component, setComponent] = <span class="fn">useState</span>(<span class="kw">null</span>);
+<span class="kw">const</span> [availableComponents, setAvailableComponents] = <span class="fn">useState</span>([]);
+
+<span class="kw">const</span> [windowMinutes, setWindowMinutes] = <span class="fn">useState</span>(<span class="num">60</span>);
+<span class="kw">const</span> [customRange, setCustomRange] = <span class="fn">useState</span>(<span class="kw">null</span>);
+
+<span class="kw">const</span> [searchText, setSearchText] = <span class="fn">useState</span>(<span class="str">''</span>);
+<span class="kw">const</span> [debouncedSearch, setDebouncedSearch] = <span class="fn">useState</span>(<span class="str">''</span>);
+<span class="kw">const</span> [levels, setLevels] = <span class="fn">useState</span>([<span class="str">'info'</span>, <span class="str">'warning'</span>, <span class="str">'error'</span>, <span class="str">'critical'</span>]);
+<span class="kw">const</span> [selectedStreams, setSelectedStreams] = <span class="fn">useState</span>([]);
+<span class="kw">const</span> [tenants, setTenants] = <span class="fn">useState</span>([]);
+<span class="kw">const</span> [selectedTenants, setSelectedTenants] = <span class="fn">useState</span>([]);
+<span class="kw">const</span> [paused, setPaused] = <span class="fn">useState</span>(<span class="kw">false</span>);</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong><code>useState</code></strong> is React's way to hold per-component state that triggers re-renders when it changes. Each line declares one piece of state and its setter.</p>
+    <p><strong><code>component</code></strong> — which log component (app / celery / celery_beat) is currently selected.</p>
+    <p><strong><code>windowMinutes</code> / <code>customRange</code></strong> — either a preset window like "last hour" or a custom from/to range.</p>
+    <p><strong><code>searchText</code> / <code>debouncedSearch</code></strong> — the text the user is typing, and a delayed copy that updates 300ms after they stop. Without debouncing, every keystroke would fire a CloudWatch query.</p>
+    <p><strong><code>tenants</code> / <code>selectedTenants</code></strong> — the list of all tenants we know about, and the subset the user has checked.</p>
+    <p><strong><code>paused</code></strong> — whether live tail is suspended.</p>
+  </div>
+</div>
+
+<h3>Discovering components and tenants</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">PlatformLogs/index.jsx · useEffect blocks</span><span class="code-tag new">new</span></div>
+<pre><span class="fn">useEffect</span>(() =&gt; {
+  (<span class="kw">async</span> () =&gt; {
+    <span class="kw">const</span> { response, success } = <span class="kw">await</span> <span class="fn">triggerApi</span>({
+      url: <span class="str">`/api/v1/platform/logs/components/`</span>,
+      type: <span class="str">'GET'</span>,
+    });
+    <span class="kw">if</span> (success &amp;&amp; response) {
+      <span class="fn">setAvailableComponents</span>(response.components || []);
+      <span class="kw">const</span> firstConfigured = (response.components || []).<span class="fn">find</span>(
+        (c) =&gt; c.configured
+      );
+      <span class="kw">if</span> (firstConfigured &amp;&amp; !component) {
+        <span class="fn">setComponent</span>(firstConfigured.key);
+      }
+    }
+  })();
+}, []);
+
+<span class="fn">useEffect</span>(() =&gt; {
+  <span class="kw">if</span> (!component) <span class="kw">return</span>;
+  (<span class="kw">async</span> () =&gt; {
+    <span class="kw">const</span> { response, success } = <span class="kw">await</span> <span class="fn">triggerApi</span>({
+      url: <span class="str">`/api/v1/platform/logs/</span>${component}<span class="str">/tenants/?since=</span>${<span class="fn">encodeURIComponent</span>(since)}<span class="str">`</span>,
+      type: <span class="str">'GET'</span>,
+    });
+    <span class="kw">if</span> (success &amp;&amp; response) {
+      <span class="fn">setTenants</span>(response.tenants || []);
+    }
+  })();
+}, [component, since]);</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong><code>useEffect</code></strong> runs side effects (data fetches, subscriptions) after a render. The second argument — a dependency array — controls when it runs. <code>[]</code> means "once, on mount." <code>[component, since]</code> means "every time component or since changes."</p>
+    <p><strong>Effect 1.</strong> On mount, ask the backend which components have connectors configured. Auto-select the first configured one so the page shows something immediately.</p>
+    <p><strong>Effect 2.</strong> Whenever the component or time window changes, refresh the Tenant dropdown by hitting the <code>/tenants/</code> endpoint.</p>
+    <p><strong>Why the IIFE?</strong> <code>useEffect</code> can't directly be async (it would return a Promise where it should return a cleanup function). The pattern <code>(async () =&gt; { ... })()</code> defines an async function and immediately invokes it.</p>
+  </div>
+</div>
+
+<h3>The tenant filter dropdown</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">PlatformLogs/index.jsx · tenant menu</span><span class="code-tag new">new</span></div>
+<pre>&lt;button onClick={() =&gt; <span class="fn">setShowTenantMenu</span>((v) =&gt; !v)}&gt;
+  {tenantButtonLabel}
+&lt;/button&gt;
+{showTenantMenu &amp;&amp; (
+  &lt;div&gt;
+    {tenants.<span class="fn">map</span>((t) =&gt; (
+      &lt;button onClick={() =&gt; <span class="fn">toggleTenant</span>(t)}&gt;
+        &lt;span&gt;{selectedTenants.<span class="fn">includes</span>(t) &amp;&amp; <span class="str">'✓'</span>}&lt;/span&gt;
+        &lt;span&gt;{t}&lt;/span&gt;
+      &lt;/button&gt;
+    ))}
+  &lt;/div&gt;
+)}
+
+<span class="kw">const</span> tenantButtonLabel =
+  selectedTenants.length === <span class="num">0</span> ? <span class="str">'All tenants'</span>
+  : selectedTenants.length === <span class="num">1</span> ? selectedTenants[<span class="num">0</span>]
+  : <span class="str">`</span>${selectedTenants.length}<span class="str"> tenants`</span>;
+
+<span class="kw">const</span> toggleTenant = (schema) =&gt; {
+  <span class="fn">setSelectedTenants</span>((prev) =&gt; {
+    <span class="kw">const</span> next = <span class="kw">new</span> <span class="fn">Set</span>(prev);
+    <span class="kw">if</span> (next.<span class="fn">has</span>(schema)) next.<span class="fn">delete</span>(schema);
+    <span class="kw">else</span> next.<span class="fn">add</span>(schema);
+    <span class="kw">return</span> <span class="fn">Array</span>.<span class="fn">from</span>(next);
+  });
+};</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>The button label adapts to selection size.</strong> Zero → "All tenants". One → that tenant's name. Multiple → a count, so the button stays narrow.</p>
+    <p><strong><code>toggleTenant</code> using a Set.</strong> Add if missing, remove if present, convert back to array (which is what React state expects). Using a Set avoids the awkward "find the index and splice" dance.</p>
+  </div>
+</div>
+
+<!-- ===================== FRONTEND HOOK ===================== -->
+
+<h2 id="fe-hook"><span class="kicker">Frontend · 2 of 5</span><code>pages/platformLogs/components/PlatformLogs/useLogTail.js</code> (new)</h2>
+<p>A custom React hook that handles the three flows: initial browse, live tail polling, and "load earlier".</p>
+
+<h3>Building the query string</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">useLogTail.js · buildQs</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">const</span> buildQs = <span class="fn">useCallback</span>((extra = {}) =&gt; {
+  <span class="kw">const</span> p = <span class="kw">new</span> <span class="fn">URLSearchParams</span>();
+  <span class="kw">if</span> (filters?.since) p.<span class="fn">set</span>(<span class="str">'since'</span>, filters.since);
+  <span class="kw">if</span> (filters?.until) p.<span class="fn">set</span>(<span class="str">'until'</span>, filters.until);
+  <span class="kw">if</span> (filters?.levels?.length) p.<span class="fn">set</span>(<span class="str">'levels'</span>, filters.levels.<span class="fn">join</span>(<span class="str">','</span>));
+  <span class="kw">if</span> (filters?.streams?.length) p.<span class="fn">set</span>(<span class="str">'streams'</span>, filters.streams.<span class="fn">join</span>(<span class="str">','</span>));
+  <span class="kw">if</span> (filters?.tenants?.length) p.<span class="fn">set</span>(<span class="str">'tenants'</span>, filters.tenants.<span class="fn">join</span>(<span class="str">','</span>));
+  <span class="kw">if</span> (filters?.q) p.<span class="fn">set</span>(<span class="str">'q'</span>, filters.q);
+  p.<span class="fn">set</span>(<span class="str">'limit'</span>, <span class="fn">String</span>(extra.limit || <span class="num">200</span>));
+  <span class="fn">Object</span>.<span class="fn">entries</span>(extra).<span class="fn">forEach</span>(([k, v]) =&gt; {
+    <span class="kw">if</span> (k === <span class="str">'limit'</span>) <span class="kw">return</span>;
+    <span class="kw">if</span> (v !== <span class="kw">undefined</span> &amp;&amp; v !== <span class="kw">null</span> &amp;&amp; v !== <span class="str">''</span>) p.<span class="fn">set</span>(k, <span class="fn">String</span>(v));
+  });
+  <span class="kw">return</span> p.<span class="fn">toString</span>();
+}, [filters]);</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong><code>URLSearchParams</code></strong> handles URL encoding for us — special characters in tenant names or search queries get escaped correctly.</p>
+    <p><strong>The new line vs the in-app variant</strong> is <code>p.set('tenants', ...)</code>. Every other field exists on both sides.</p>
+    <p><strong><code>useCallback</code></strong> wraps the function so React only rebuilds it when <code>filters</code> changes, preventing downstream effects from re-running on every render.</p>
+  </div>
+</div>
+
+<h3>Live tail polling</h3>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">useLogTail.js · pollOnce</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">const</span> pollOnce = <span class="fn">useCallback</span>(<span class="kw">async</span> () =&gt; {
+  <span class="kw">if</span> (!enabled || !component || pausedRef.current || !tailCursorRef.current)
+    <span class="kw">return</span>;
+  <span class="kw">if</span> (<span class="kw">typeof</span> document !== <span class="str">'undefined'</span> &amp;&amp; document.hidden) <span class="kw">return</span>;
+
+  <span class="kw">const</span> qs = <span class="fn">buildQs</span>({ after: tailCursorRef.current });
+  <span class="kw">const</span> { response, success } = <span class="kw">await</span> <span class="fn">triggerApi</span>({
+    url: <span class="str">`/api/v1/platform/logs/</span>${component}<span class="str">/tail/?</span>${qs}<span class="str">`</span>,
+  });
+  <span class="kw">if</span> (pausedRef.current) <span class="kw">return</span>;
+  <span class="kw">if</span> (!success) <span class="kw">return</span>;
+
+  <span class="kw">const</span> fresh = response.lines || [];
+  <span class="kw">if</span> (response.next_cursor?.token) {
+    tailCursorRef.current = response.next_cursor.token;
+  }
+  <span class="kw">if</span> (fresh.length &gt; <span class="num">0</span>) {
+    <span class="fn">setLines</span>((prev) =&gt; {
+      <span class="kw">const</span> tagged = fresh.<span class="fn">map</span>((l) =&gt; ({ ...l, _fresh: <span class="kw">true</span> }));
+      tagged.<span class="fn">reverse</span>();
+      <span class="kw">return</span> [...tagged, ...prev].<span class="fn">slice</span>(<span class="num">0</span>, maxBufferedLines);
+    });
+  }
+}, [<span class="com">/* deps */</span>]);</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Three early returns at the top.</strong> Don't poll if we're paused, no component picked, no cursor (haven't done initial browse yet), or the browser tab is hidden — no point burning CloudWatch quota while the user isn't watching.</p>
+    <p><strong><code>pausedRef.current</code> instead of <code>paused</code>.</strong> A ref is read at call time, so even a "leaked" interval (e.g., from hot-module reload during dev) sees the current value. Reading the state variable directly would close over a stale value.</p>
+    <p><strong>Double-check after fetch.</strong> The user might have paused while the request was in flight. If so, discard the response — don't advance the cursor, don't append lines. Prevents a paused view from suddenly displaying new lines on the next user action.</p>
+    <p><strong><code>_fresh: true</code>.</strong> A flag the table uses to briefly highlight newly arrived lines with a fade animation, so the user notices new content.</p>
+    <p><strong><code>tagged.reverse()</code>.</strong> The API returns lines oldest-first; we store newest-on-top, so we reverse before prepending.</p>
+    <p><strong><code>.slice(0, maxBufferedLines)</code>.</strong> Cap memory at the buffer size (4000 by default). Old lines fall off the bottom.</p>
+  </div>
+</div>
+
+<!-- ===================== FRONTEND TABLE ===================== -->
+
+<h2 id="fe-table"><span class="kicker">Frontend · 3 of 5</span><code>pages/platformLogs/components/PlatformLogs/LogsTable.jsx</code> (new)</h2>
+<p>The table that renders the logs. Identical to the per-app variant except for one extra column: Tenant.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">LogsTable.jsx · prefix parsing</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">const</span> TENANT_RE = <span class="str">/^\[([^:\]]+):([^\]]*)\]\s*/</span>;
+
+<span class="kw">function</span> <span class="fn">parseTenantPrefix</span>(message) {
+  <span class="kw">if</span> (!message) <span class="kw">return</span> { schema: <span class="kw">null</span>, rest: message || <span class="str">''</span> };
+  <span class="kw">const</span> m = TENANT_RE.<span class="fn">exec</span>(message);
+  <span class="kw">if</span> (!m) <span class="kw">return</span> { schema: <span class="kw">null</span>, rest: message };
+  <span class="kw">return</span> { schema: m[<span class="num">1</span>], domain: m[<span class="num">2</span>], rest: message.<span class="fn">slice</span>(m[<span class="num">0</span>].length) };
+}</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>Same regex idea as the backend's <code>_TENANT_RE</code>, in JavaScript. Captures schema and domain separately, and returns the message with the prefix stripped — so the Message column doesn't show the prefix twice (once in the Tenant column, once at the start of the message).</p>
+  </div>
+</div>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">LogsTable.jsx · the row render</span><span class="code-tag new">new</span></div>
+<pre>{showTenant &amp;&amp; (
+  &lt;td&gt;
+    {schema ? (
+      &lt;span title={domain ? <span class="str">`</span>${schema}<span class="str"> · </span>${domain}<span class="str">`</span> : schema}&gt;
+        {schema}
+      &lt;/span&gt;
+    ) : (
+      &lt;span&gt;—&lt;/span&gt;
+    )}
+  &lt;/td&gt;
+)}
+&lt;td&gt;{showTenant &amp;&amp; schema ? rest : line.message}&lt;/td&gt;</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p><strong>Conditional rendering.</strong> <code>{showTenant &amp;&amp; ...}</code> means "render the cell only when the column is enabled in the View menu."</p>
+    <p><strong>Ternary inside the cell.</strong> If we parsed out a schema, show it as a pill with the full <code>schema · domain</code> as a hover tooltip. If we didn't (e.g., a log line that genuinely lacks a prefix), show an em-dash placeholder.</p>
+    <p><strong>Message column trimming.</strong> When the Tenant column is on AND we parsed a prefix, show <code>rest</code> (the message without the prefix). Otherwise show the original message untouched.</p>
+  </div>
+</div>
+
+<!-- ===================== FRONTEND ROUTES ===================== -->
+
+<h2 id="fe-routes"><span class="kicker">Frontend · 4 of 5</span>Routes wiring</h2>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">pages/platformLogs/routes/index.js</span><span class="code-tag new">new</span></div>
+<pre><span class="kw">import</span> { Navigate, Route, Routes } <span class="kw">from</span> <span class="str">'react-router-dom'</span>;
+<span class="kw">import</span> Layout <span class="kw">from</span> <span class="str">'../../../components/Layout'</span>;
+<span class="kw">import</span> PlatformLogs <span class="kw">from</span> <span class="str">'../components/PlatformLogs'</span>;
+
+<span class="kw">const</span> PlatformLogsRoutes = () =&gt; (
+  &lt;Layout&gt;
+    &lt;Routes&gt;
+      &lt;Route path=<span class="str">""</span> element={&lt;PlatformLogs /&gt;} /&gt;
+      &lt;Route path=<span class="str">"*"</span> element={&lt;Navigate to=<span class="str">"."</span> /&gt;} /&gt;
+    &lt;/Routes&gt;
+  &lt;/Layout&gt;
+);</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>A nested router. <code>&lt;Layout&gt;</code> wraps the page in the standard Zango chrome (sidebar, top nav). The empty path matches the parent mount point (<code>/platform/logs</code>). The catch-all redirects unknown sub-paths back to the index — so <code>/platform/logs/anything</code> doesn't 404.</p>
+  </div>
+</div>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">src/routes/index.js · main router</span><span class="code-tag mod">modified</span></div>
+<pre>&lt;Route
+  path=<span class="str">"/platform/logs/*"</span>
+  element={&lt;PlatformLogsRoutes /&gt;}
+&gt;&lt;/Route&gt;</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>The top-level router hands every URL starting with <code>/platform/logs/</code> to the new nested router. The trailing <code>*</code> is React Router's way of saying "match this and any further sub-paths."</p>
+  </div>
+</div>
+
+<!-- ===================== NAV ===================== -->
+
+<h2 id="fe-nav"><span class="kicker">Frontend · 5 of 5</span><code>Layout/NavSearchForm/SelectField.jsx</code> (modified)</h2>
+<p>The top-bar dropdown that lets a super-admin switch between Apps, User Management, Settings — and now Logs.</p>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">SelectField.jsx · currentLabel computation</span><span class="code-tag mod">modified</span></div>
+<pre><span class="kw">const</span> currentLabel = (() =&gt; {
+  <span class="kw">if</span> (pathnameArray.<span class="fn">indexOf</span>(<span class="str">'apps'</span>) &gt; -<span class="num">1</span>) <span class="kw">return</span> <span class="str">'Apps'</span>;
+  <span class="kw">if</span> (
+    pathnameArray.<span class="fn">indexOf</span>(<span class="str">'settings'</span>) &gt; -<span class="num">1</span> ||
+    pathnameArray.<span class="fn">indexOf</span>(<span class="str">'log-connectors'</span>) &gt; -<span class="num">1</span>
+  )
+    <span class="kw">return</span> <span class="str">'Settings'</span>;
+  <span class="kw">if</span> (pathnameArray.<span class="fn">indexOf</span>(<span class="str">'logs'</span>) &gt; -<span class="num">1</span>) <span class="kw">return</span> <span class="str">'Logs'</span>;
+  <span class="kw">if</span> (pathnameArray.<span class="fn">indexOf</span>(<span class="str">'user-managements'</span>) &gt; -<span class="num">1</span>) <span class="kw">return</span> <span class="str">'User Management'</span>;
+  <span class="kw">return</span> <span class="str">'Apps'</span>;
+})();</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>Picks the right label for the dropdown button based on the current URL. Order matters: <code>settings</code> is checked before <code>logs</code> because some settings subpages include both words. Final fallback is <code>'Apps'</code>.</p>
+  </div>
+</div>
+
+<div class="code-card">
+  <div class="code-header"><span class="code-path">SelectField.jsx · new menu entry</span><span class="code-tag mod">modified</span></div>
+<pre>&lt;Menu.Item&gt;
+  {({ active }) =&gt; (
+    &lt;NavLink to={<span class="str">`/platform/logs`</span>}&gt;
+      Logs
+    &lt;/NavLink&gt;
+  )}
+&lt;/Menu.Item&gt;</pre>
+  <div class="annot">
+    <div class="annot-title">Plain English</div>
+    <p>Adds "Logs" as a sibling menu entry. <code>NavLink</code> (from React Router) is like <code>&lt;a&gt;</code> but automatically applies an active style when the URL matches.</p>
+  </div>
+</div>
+
+<!-- ===================== GLOSSARY ===================== -->
+
+<h2 id="glossary"><span class="kicker">Reference</span>Glossary</h2>
+
+<div class="gloss">
+  <dl>
+    <dt>ContextVar</dt>
+    <dd>A Python primitive (from <code>contextvars</code>) for storing values that are scoped to the current execution context — typically a thread or async task. Used in <code>stdout_proxy.py</code> so per-request bindings don't bleed across threads.</dd>
+
+    <dt>django-tenants</dt>
+    <dd>The library Zango uses for multi-tenancy. Each tenant lives in its own Postgres schema; the active schema is set at the start of every request based on the domain. <code>connection.tenant</code> is the active tenant model.</dd>
+
+    <dt>ECS awslogs driver</dt>
+    <dd>The Docker log driver Amazon ECS uses to ship container stdout/stderr straight to CloudWatch Logs. Anything our containers write to stdout shows up in CloudWatch within seconds.</dd>
+
+    <dt>FilterLogEvents</dt>
+    <dd>The CloudWatch Logs API for querying log lines. Supports a "pattern" expression with limited operators — notably <em>no</em> OR over prefixes, which is why our multi-tenant filter does post-fetch filtering.</dd>
+
+    <dt>get_response</dt>
+    <dd>In Django middleware, the callable that runs the next middleware in the chain (or the view itself). You're sandwiched between the request coming in and the response going out.</dd>
+
+    <dt>handler / formatter / filter</dt>
+    <dd>Python logging primitives. A logger sends a record to its handlers. Each handler runs the record through its filters (to decide whether to emit at all) and its formatter (to produce a string). Handlers can be a file, stream, network socket, etc.</dd>
+
+    <dt>idempotent</dt>
+    <dd>Safe to call multiple times — the second and subsequent calls do nothing new. <code>stdout_proxy.install()</code> is idempotent so multiple boot paths can call it without doubling up.</dd>
+
+    <dt>loguru</dt>
+    <dd>A third-party Python logging library Zango uses for some logging in addition to stdlib <code>logging</code>. It has its own format string and sink system, independent of <code>LOGGING</code>.</dd>
+
+    <dt>propagate</dt>
+    <dd>A logger setting. When True (default), records bubble up to the parent logger's handlers after being processed by this logger's handlers. We set <code>django.propagate = False</code> so django records don't get processed twice.</dd>
+
+    <dt>react-router-dom</dt>
+    <dd>The library that maps URLs to React components. <code>&lt;Routes&gt;</code> contains <code>&lt;Route&gt;</code> entries; the first that matches wins. <code>useParams</code> and <code>useNavigate</code> are the hooks for reading params and navigating.</dd>
+
+    <dt>schema name</dt>
+    <dd>The Postgres schema for a tenant (e.g., <code>newmicare</code>, <code>tntapp</code>). Each tenant gets its own schema; queries run in that schema's namespace. Used as the tenant identifier throughout this PR.</dd>
+
+    <dt>task_prerun / task_postrun</dt>
+    <dd>Celery signals fired immediately before and after a task function executes. Reliable hook points for setting up and tearing down per-task state.</dd>
+
+    <dt>throttle (DRF)</dt>
+    <dd>Django REST Framework's rate-limiting mechanism. <code>UserRateThrottle</code> caps requests per user per time window — we cap browse at 30/min, tail at 60/min to protect CloudWatch quota.</dd>
+
+    <dt>wsgi.py / asgi.py</dt>
+    <dd>The standard entry points for Django apps running under a production server (gunicorn, uvicorn). <code>manage.py runserver</code> bypasses both — which is why we had to install the loguru sink from AppConfig.ready() as well.</dd>
+  </dl>
+</div>
+
+<footer>
+  PR <a href="https://github.com/Healthlane-Technologies/Zango/pull/583" style="color: var(--brand);">#583</a> · Generated walkthrough · Pair this with the design doc at <code>backend/docs/platform-logs-followups-design.html</code>.
+</footer>
+
+</main>
+</div>
+
+</body>
+</html>
