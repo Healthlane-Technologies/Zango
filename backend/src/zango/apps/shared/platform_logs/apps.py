@@ -1,4 +1,9 @@
+import logging
+
 from django.apps import AppConfig
+
+
+_boot_logger = logging.getLogger(__name__)
 
 
 class PlatformLogsConfig(AppConfig):
@@ -19,13 +24,24 @@ class PlatformLogsConfig(AppConfig):
         # installed in local dev. Call setup_logging() here too — it's
         # idempotent (logger.remove() first), so re-invocation from
         # wsgi/asgi after this is a no-op.
+        #
+        # If setup_logging() raises, loguru is left in a sinkless state
+        # (`logger.remove()` ran but no `logger.add()` followed). Without
+        # an explicit log of the failure, every workspace `logger.info()`
+        # call would silently drop and we'd notice only in CloudWatch.
+        # Surface the exception through stdlib logging (which is wired
+        # up via Django's LOGGING dict and is independent of loguru) so
+        # the boot transcript records it.
         try:
             from zango.core.monitoring import setup_logging
 
             setup_logging()
         except Exception:
-            # Never fail app boot because of logging plumbing.
-            pass
+            _boot_logger.exception(
+                "platform_logs: setup_logging() failed during ready(); "
+                "loguru may have no active sink. Workspace logger calls "
+                "will be silently dropped until this is repaired."
+            )
 
         # Install the stdout/stderr proxy once. Idempotent — the proxy
         # itself is a no-op until a request middleware or celery task

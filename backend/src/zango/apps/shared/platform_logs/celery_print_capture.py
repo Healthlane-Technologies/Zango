@@ -42,6 +42,13 @@ def _capture(task_id=None, task=None, **kwargs):
     name = getattr(task, "name", "") or ""
     if _should_skip(name):
         return
+    # Without a task_id we have no way to look the tokens back up at
+    # task_postrun — and using a falsy sentinel as a dict key would let
+    # multiple concurrent anonymous tasks collide on the same slot,
+    # leaking ContextVar bindings. Skip the install in that case;
+    # callers without an id can't be reliably cleaned up.
+    if not task_id:
+        return
     # Bind each stream to its own ContextVar via the stream-specific
     # helpers — a shared bind() would let the second call clobber the
     # first. Stage the partial state in `_tokens` between the two
@@ -62,16 +69,27 @@ def _capture(task_id=None, task=None, **kwargs):
 
 @task_postrun.connect
 def _restore(task_id=None, **kwargs):
+    if not task_id:
+        return
     pair = _tokens.pop(task_id, None)
     if pair is None:
         return
     stdout_token, stderr_token = pair
+    # Reset each in its own try/finally so a failure on stderr still
+    # clears stdout (or vice versa) — neither binding gets stuck.
     try:
         if stderr_token is not None:
-            stdout_proxy.reset_stderr(stderr_token)
+            try:
+                stdout_proxy.reset_stderr(stderr_token)
+            except Exception:
+                logger.exception(
+                    "platform_logs: failed to reset stderr proxy after celery task"
+                )
+    finally:
         if stdout_token is not None:
-            stdout_proxy.reset_stdout(stdout_token)
-    except Exception:
-        logger.exception(
-            "platform_logs: failed to reset stdout proxy after celery task"
-        )
+            try:
+                stdout_proxy.reset_stdout(stdout_token)
+            except Exception:
+                logger.exception(
+                    "platform_logs: failed to reset stdout proxy after celery task"
+                )

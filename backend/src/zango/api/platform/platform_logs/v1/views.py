@@ -420,10 +420,31 @@ class ConnectorTestView(APIView):
 _TENANT_RE = re.compile(r"\[([^:\]]+):[^\]]*\]")
 
 
+def _known_tenant_schemas() -> set:
+    """Set of every schema_name registered in TenantModel.
+
+    Used as an allowlist for tenant-name query params and tenant-name
+    discovery so an attacker (or a stray log line with a fake prefix)
+    can't drive arbitrary strings into CloudWatch filter patterns or
+    surface fabricated tenant entries in the admin dropdown.
+    """
+    return set(
+        TenantModel.objects.values_list("schema_name", flat=True)
+    )
+
+
 def _parse_tenants_param(request):
-    """Read `?tenants=a,b,c` into a clean list of schema names."""
+    """Read `?tenants=a,b,c` and intersect with the known tenant schemas.
+
+    Unknown names are silently dropped. If the result is empty the caller
+    treats it as "no tenant restriction" (same as not passing the param).
+    """
     raw = request.GET.get("tenants", "") or ""
-    out = [s.strip() for s in raw.split(",") if s.strip()]
+    requested = [s.strip() for s in raw.split(",") if s.strip()]
+    if not requested:
+        return None
+    known = _known_tenant_schemas()
+    out = [s for s in requested if s in known]
     return out or None
 
 
@@ -612,4 +633,8 @@ class PlatformTenantsListView(APIView):
             m = _TENANT_RE.match(ln.message or "")
             if m:
                 seen.add(m.group(1))
-        return _ok({"tenants": sorted(seen)})
+        # Intersect with TenantModel so a workspace user can't spoof an
+        # entry into the dropdown by printing a fake `[victim_schema:…]`
+        # prefix from their own task code.
+        known = _known_tenant_schemas()
+        return _ok({"tenants": sorted(seen & known)})

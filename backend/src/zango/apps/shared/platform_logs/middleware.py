@@ -32,9 +32,19 @@ class RequestPrintCaptureMiddleware:
         # bind() clobber the first — every stdout write would then be
         # logged under the stderr logger name.
         stdout_token = stdout_proxy.bind_stdout("zango.request.stdout")
-        stderr_token = stdout_proxy.bind_stderr("zango.request.stderr")
+        try:
+            stderr_token = stdout_proxy.bind_stderr("zango.request.stderr")
+        except Exception:
+            stdout_proxy.reset_stdout(stdout_token)
+            raise
         try:
             return self.get_response(request)
         finally:
-            stdout_proxy.reset_stderr(stderr_token)
-            stdout_proxy.reset_stdout(stdout_token)
+            # LIFO of bind order: stderr first, stdout last. Wrap each
+            # reset in its own try/finally so a failure resetting stderr
+            # (or anything that writes to stderr during teardown) still
+            # leaves stdout cleared.
+            try:
+                stdout_proxy.reset_stderr(stderr_token)
+            finally:
+                stdout_proxy.reset_stdout(stdout_token)

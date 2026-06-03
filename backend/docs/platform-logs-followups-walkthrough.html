@@ -340,16 +340,22 @@ settings.LOGGING[<span class="str">"root"</span>] = {
 <!-- ===================== STDOUT_PROXY ===================== -->
 
 <h2 id="proxy"><span class="kicker">Backend · 3 of 8</span><code>platform_logs/stdout_proxy.py</code> (new)</h2>
-<p>The trickiest file in the PR. Workspace developers use <code>print()</code> a lot — those calls bypass Python's logging entirely, so they reach CloudWatch as raw bytes with no level, no timestamp, no tenant prefix. This module sits between <code>print()</code> and the actual stream, turning every print into a log record.</p>
+<p>The trickiest file in the PR. Workspace developers use <code>print()</code> a lot — those calls bypass the logging system entirely, so they reach CloudWatch as raw bytes with no level, no timestamp, no tenant prefix. This module sits between <code>print()</code> and the actual stream, turning every print into a loguru log record so it ends up shape-identical to a deliberate <code>logger.info()</code> call.</p>
+
+<div class="callout note">
+  <div class="callout-title">Why loguru, not stdlib logging?</div>
+  <p>Zango's project convention is loguru — workspace code is told to use <code>from loguru import logger</code>. Routing captured prints through loguru means a stray <code>print("...")</code> looks identical in CloudWatch to an intentional <code>logger.info("...")</code>: same tenant prefix, same format, same file/function/line columns. Routing through stdlib would create two visually-different shapes for the same kind of output.</p>
+</div>
 
 <h3>Imports and ContextVars</h3>
 
 <div class="code-card">
   <div class="code-header"><span class="code-path">stdout_proxy.py · top of file</span><span class="code-tag new">new</span></div>
-<pre><span class="kw">import</span> logging
-<span class="kw">import</span> sys
+<pre><span class="kw">import</span> sys
 <span class="kw">from</span> contextvars <span class="kw">import</span> ContextVar
 <span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+<span class="kw">from</span> loguru <span class="kw">import</span> logger <span class="kw">as</span> _loguru_logger
 
 _active_stdout: ContextVar[Optional[<span class="fn">str</span>]] = <span class="fn">ContextVar</span>(
     <span class="str">"platform_logs_stdout_target"</span>, default=<span class="kw">None</span>
@@ -360,12 +366,28 @@ _active_stderr: ContextVar[Optional[<span class="fn">str</span>]] = <span class=
 
 _emitting: ContextVar[<span class="fn">bool</span>] = <span class="fn">ContextVar</span>(
     <span class="str">"platform_logs_stdout_emitting"</span>, default=<span class="kw">False</span>
-)</pre>
+)
+
+_LOGGING_PACKAGES = (<span class="str">"loguru"</span>, <span class="str">"logging"</span>)
+
+<span class="kw">def</span> <span class="fn">_called_from_logging</span>() -&gt; <span class="fn">bool</span>:
+    <span class="str">"""True if any of the closest frames live inside a logging package."""</span>
+    frame = sys._getframe(<span class="num">2</span>)
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="num">8</span>):
+        <span class="kw">if</span> frame <span class="kw">is</span> <span class="kw">None</span>:
+            <span class="kw">return</span> <span class="kw">False</span>
+        mod = frame.f_globals.<span class="fn">get</span>(<span class="str">"__name__"</span>, <span class="str">""</span>)
+        <span class="kw">if</span> mod.<span class="fn">startswith</span>(_LOGGING_PACKAGES):
+            <span class="kw">return</span> <span class="kw">True</span>
+        frame = frame.f_back
+    <span class="kw">return</span> <span class="kw">False</span></pre>
   <div class="annot">
     <div class="annot-title">Plain English</div>
     <p><strong>What's a ContextVar?</strong> A variable whose value is scoped to the current "execution context" — roughly, the current thread or async task. If thread A sets a ContextVar to "hello", thread B reading the same ContextVar sees the default. This matters because Django serves requests on different threads or different async tasks; we need each request to have its own binding.</p>
     <p><strong>Why two for stdout/stderr?</strong> An earlier version of this code used <em>one</em> shared ContextVar, and binding stdout then stderr clobbered the first binding — every stdout write was logged under the stderr name. The fix is one var per stream.</p>
-    <p><strong>Why <code>_emitting</code>?</strong> When the proxy forwards a print to the logger, the logger eventually writes the formatted line back to the very stream we're proxying. Without a guard, that write would re-enter <code>write()</code>, forward again, recurse forever. <code>_emitting</code> is a flag that says "I'm currently inside an emission; if you re-enter, just pass through."</p>
+    <p><strong>Why <code>_emitting</code>?</strong> The first of two reentrancy guards. Covers the case where <em>we</em> initiated the loguru call: proxy → loguru → sink → stream → proxy. Setting <code>_emitting=True</code> before calling loguru.log makes the second proxy entry a passthrough.</p>
+    <p><strong>Why <code>_called_from_loguru()</code>?</strong> The second guard, covering the case where loguru is called <em>directly</em> by workspace code while a binding is active: <code>logger.error("foo")</code> → loguru → sink → stream → proxy. Here <code>_emitting</code> is <code>False</code> (we never started this emission), so the proxy would forward loguru's formatted output back into loguru — tripping loguru's lock and triggering "Could not acquire internal lock because it was already in use". The frame check spots that the immediate caller of <code>write()</code> is inside the loguru package and passes through instead of forwarding.</p>
+    <p><strong>Why frame inspection at all?</strong> Loguru doesn't expose a "currently emitting" flag we can read. The cheapest reliable signal is the call stack: when loguru's sink calls <code>sys.stderr.write(formatted_text)</code>, there will always be a loguru frame two or three steps up. Walking eight frames is bounded and adds microseconds per write.</p>
   </div>
 </div>
 
@@ -374,9 +396,9 @@ _emitting: ContextVar[<span class="fn">bool</span>] = <span class="fn">ContextVa
 <div class="code-card">
   <div class="code-header"><span class="code-path">stdout_proxy.py · class _Proxy</span><span class="code-tag new">new</span></div>
 <pre><span class="kw">class</span> <span class="fn">_Proxy</span>:
-    <span class="kw">def</span> <span class="fn">__init__</span>(self, fallback, default_level, active_var):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, fallback, default_level_name, active_var):
         self._fallback = fallback
-        self._default_level = default_level
+        self._default_level_name = default_level_name  <span class="com"># "INFO" / "ERROR"</span>
         self._active_var = active_var
         self._buf: <span class="fn">list</span>[<span class="fn">str</span>] = []
 
@@ -394,28 +416,37 @@ _emitting: ContextVar[<span class="fn">bool</span>] = <span class="fn">ContextVa
             <span class="kw">except</span> <span class="fn">Exception</span>:
                 <span class="kw">return</span> <span class="fn">len</span>(s)
 
+        <span class="kw">if</span> <span class="fn">_called_from_loguru</span>():
+            <span class="kw">try</span>:
+                <span class="kw">return</span> self._fallback.<span class="fn">write</span>(s)
+            <span class="kw">except</span> <span class="fn">Exception</span>:
+                <span class="kw">return</span> <span class="fn">len</span>(s)
+
         self._buf.<span class="fn">append</span>(s)
         <span class="kw">if</span> <span class="str">"\n"</span> <span class="kw">in</span> s:
             full = <span class="str">""</span>.<span class="fn">join</span>(self._buf)
             self._buf.<span class="fn">clear</span>()
-            log = logging.<span class="fn">getLogger</span>(target)
             token = _emitting.<span class="fn">set</span>(<span class="kw">True</span>)
             <span class="kw">try</span>:
+                emit = _loguru_logger.<span class="fn">bind</span>(source=target).<span class="fn">opt</span>(depth=<span class="num">1</span>)
                 <span class="kw">for</span> line <span class="kw">in</span> full.<span class="fn">splitlines</span>():
                     <span class="kw">if</span> line:
-                        log.<span class="fn">log</span>(self._default_level, line)
+                        emit.<span class="fn">log</span>(self._default_level_name, line)
             <span class="kw">finally</span>:
                 _emitting.<span class="fn">reset</span>(token)
         <span class="kw">return</span> <span class="fn">len</span>(s)</pre>
   <div class="annot">
     <div class="annot-title">Plain English, line by line</div>
-    <p><strong><code>__init__</code></strong> stores three things: the real stream (so we can pass writes through when nothing is bound), the log level to use for forwarded records (INFO for stdout, ERROR for stderr), and which ContextVar to read.</p>
+    <p><strong><code>__init__</code></strong> stores three things: the real stream (so we can pass writes through when nothing is bound), the loguru level name to use for forwarded records ("INFO" for stdout, "ERROR" for stderr), and which ContextVar to read.</p>
     <p><strong><code>if _emitting.get()</code></strong> — the reentrancy guard. If we're already inside a forwarded emission, just write to the real stream and stop. This is the loop-breaker.</p>
     <p><strong><code>target = self._active_var.get()</code></strong> — read the current binding for this stream. If no scope has bound anything, <code>target</code> is <code>None</code>.</p>
-    <p><strong>Passthrough fast path.</strong> If there's no binding, or the input isn't a string, or it's empty, just write to the real stream. This is what happens during boot, in management commands, in shell sessions — anywhere a request middleware or celery hook hasn't bound a logger.</p>
+    <p><strong>Passthrough fast path.</strong> If there's no binding, or the input isn't a string, or it's empty, just write to the real stream. This is what happens during boot, in management commands, in shell sessions — anywhere a request middleware or celery hook hasn't bound a source.</p>
     <p><strong><code>self._buf.append(s)</code></strong> — buffer the write. <code>print("hello")</code> actually makes two calls: <code>write("hello")</code> and <code>write("\n")</code>. We can't emit a log line on the first call because we don't have a complete line yet.</p>
-    <p><strong><code>if "\n" in s</code></strong> — once we see a newline, join the buffer, clear it, then forward each complete line as a log record.</p>
-    <p><strong><code>token = _emitting.set(True) / finally: _emitting.reset(token)</code></strong> — set the guard before forwarding, reset it after. <code>set()</code> returns a token; <code>reset(token)</code> restores the previous value. Wrapping in <code>try/finally</code> guarantees the guard gets cleared even if logging blows up.</p>
+    <p><strong><code>if "\n" in s</code></strong> — once we see a newline, join the buffer, clear it, then forward each complete line as a loguru record.</p>
+    <p><strong><code>_loguru_logger.bind(source=target)</code></strong> — stashes the stream label (<code>"zango.request.stdout"</code>, <code>"celery.task.stdout"</code>, …) into the record's <code>extra</code> dict so format strings can surface it if needed.</p>
+    <p><strong><code>.opt(depth=1)</code></strong> — shifts loguru's reported caller frame one step up the stack, past <code>_Proxy.write</code>. Without this, every captured line's file/function/line columns would point at the proxy itself; with it, they point at the real <code>print()</code> site in the workspace code.</p>
+    <p><strong><code>emit.log(self._default_level_name, line)</code></strong> — the actual emission. Loguru takes the level by name ("INFO" / "ERROR"). The record now has: tenant prefix (via <code>get_loguru_format</code>), correct caller frame (via opt depth), source extra (via bind), level (INFO for stdout, ERROR for stderr).</p>
+    <p><strong><code>token = _emitting.set(True) / finally: _emitting.reset(token)</code></strong> — set the guard before forwarding, reset it after. <code>set()</code> returns a token; <code>reset(token)</code> restores the previous value. Wrapping in <code>try/finally</code> guarantees the guard gets cleared even if loguru blows up.</p>
   </div>
 </div>
 
@@ -425,9 +456,9 @@ _emitting: ContextVar[<span class="fn">bool</span>] = <span class="fn">ContextVa
   <div class="code-header"><span class="code-path">stdout_proxy.py · module functions</span><span class="code-tag new">new</span></div>
 <pre><span class="kw">def</span> <span class="fn">install</span>() -&gt; <span class="kw">None</span>:
     <span class="kw">if</span> <span class="kw">not</span> <span class="fn">isinstance</span>(sys.stdout, _Proxy):
-        sys.stdout = <span class="fn">_Proxy</span>(sys.stdout, logging.INFO, _active_stdout)
+        sys.stdout = <span class="fn">_Proxy</span>(sys.stdout, <span class="str">"INFO"</span>, _active_stdout)
     <span class="kw">if</span> <span class="kw">not</span> <span class="fn">isinstance</span>(sys.stderr, _Proxy):
-        sys.stderr = <span class="fn">_Proxy</span>(sys.stderr, logging.ERROR, _active_stderr)
+        sys.stderr = <span class="fn">_Proxy</span>(sys.stderr, <span class="str">"ERROR"</span>, _active_stderr)
 
 <span class="kw">def</span> <span class="fn">bind_stdout</span>(logger_name): <span class="kw">return</span> _active_stdout.<span class="fn">set</span>(logger_name)
 <span class="kw">def</span> <span class="fn">bind_stderr</span>(logger_name): <span class="kw">return</span> _active_stderr.<span class="fn">set</span>(logger_name)
