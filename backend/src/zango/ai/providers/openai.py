@@ -283,6 +283,10 @@ class OpenAIProvider(BaseLLMProvider):
         elif response_format == "json":
             api_kwargs["response_format"] = {"type": "json_object"}
 
+        timeout = kwargs.get("timeout_seconds")
+        if timeout is not None:
+            api_kwargs["timeout"] = timeout
+
         start = time.monotonic()
         try:
             response = self._client.chat.completions.create(**api_kwargs)
@@ -348,6 +352,10 @@ class OpenAIProvider(BaseLLMProvider):
             api_kwargs["tools"] = self.format_tools_for_api(tools)
         if stop_sequences:
             api_kwargs["stop"] = stop_sequences
+
+        timeout = kwargs.get("timeout_seconds")
+        if timeout is not None:
+            api_kwargs["timeout"] = timeout
 
         try:
             stream = self._client.chat.completions.create(**api_kwargs)

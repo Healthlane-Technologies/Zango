@@ -223,6 +223,10 @@ class ProviderClient:
         agent_kwargs = {k: kwargs.pop(k) for k in agent_fields if k in kwargs}
         return agent_kwargs
 
+    def _extract_timeout(self, kwargs):
+        """Pop and return timeout_seconds from kwargs (default None = provider default)."""
+        return kwargs.pop("timeout_seconds", None)
+
     def complete(
         self,
         messages: list[LLMMessage],
@@ -240,6 +244,7 @@ class ProviderClient:
         """
         # Extract agent tracking kwargs before passing rest to provider
         agent_kwargs = self._extract_agent_kwargs(kwargs)
+        timeout_seconds = self._extract_timeout(kwargs)
 
         model = self._resolve_model(model)
         self._check_model_enabled(model)
@@ -252,6 +257,10 @@ class ProviderClient:
         if stop_sequences:
             params["stop_sequences"] = stop_sequences
 
+        provider_kwargs = dict(kwargs)
+        if timeout_seconds is not None:
+            provider_kwargs["timeout_seconds"] = timeout_seconds
+
         try:
             response = client.complete(
                 messages=messages,
@@ -261,7 +270,7 @@ class ProviderClient:
                 max_tokens=max_tokens,
                 system=system,
                 stop_sequences=stop_sequences,
-                **kwargs,
+                **provider_kwargs,
             )
 
             # Compute cost

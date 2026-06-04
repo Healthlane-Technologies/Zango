@@ -306,15 +306,17 @@ class AnthropicProvider(BaseLLMProvider):
             )
 
         uses_files_beta = self._needs_files_beta(kwargs_api["messages"])
+        timeout = kwargs.get("timeout_seconds")
 
         start = time.monotonic()
         try:
+            create_kwargs = {"timeout": timeout} if timeout is not None else {}
             if uses_files_beta:
                 response = self._client.beta.messages.create(
-                    **kwargs_api, betas=["files-api-2025-04-14"]
+                    **kwargs_api, betas=["files-api-2025-04-14"], **create_kwargs
                 )
             else:
-                response = self._client.messages.create(**kwargs_api)
+                response = self._client.messages.create(**kwargs_api, **create_kwargs)
         except self._anthropic.RateLimitError as e:
             raise RateLimitExceeded(str(e)) from e
         except self._anthropic.APITimeoutError as e:
@@ -386,14 +388,16 @@ class AnthropicProvider(BaseLLMProvider):
             )
 
         uses_files_beta = self._needs_files_beta(kwargs_api["messages"])
+        timeout = kwargs.get("timeout_seconds")
+        stream_kwargs = {"timeout": timeout} if timeout is not None else {}
 
         try:
             _stream_ctx = (
                 self._client.beta.messages.stream(
-                    **kwargs_api, betas=["files-api-2025-04-14"]
+                    **kwargs_api, betas=["files-api-2025-04-14"], **stream_kwargs
                 )
                 if uses_files_beta
-                else self._client.messages.stream(**kwargs_api)
+                else self._client.messages.stream(**kwargs_api, **stream_kwargs)
             )
             with _stream_ctx as stream:
                 for event in stream:

@@ -451,6 +451,7 @@ class AgentClient:
                 run_id=run_id,
                 round_number=round_number,
                 request_files_meta=files_meta if round_number == 1 else None,
+                timeout_seconds=self._agent.timeout_seconds,
                 **{**agent_tracking},
                 **response_format_kwarg,
                 **kwargs,
