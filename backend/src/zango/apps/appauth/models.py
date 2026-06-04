@@ -86,10 +86,13 @@ class AppUserModel(
             expiry=expiry,
             prefix=knox_settings.TOKEN_PREFIX,
         )
-        if isinstance(role, str):
-            role = UserRoleModel.objects.get(name=role)
-        elif isinstance(role, int):
+        if isinstance(role, int):
             role = UserRoleModel.objects.get(id=role)
+        elif isinstance(role, str):
+            if role.isdigit():
+                role = UserRoleModel.objects.get(id=int(role))
+            else:
+                role = UserRoleModel.objects.get(name=role)
         else:
             raise Exception("Specify Role ID or Role name")
         inst.role = role
