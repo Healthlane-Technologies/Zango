@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0b3] - 2026-06-05
+
+### Added
+
+* Platform Logs: producer-side fixes + cross-tenant Platform Logs page [(#583)](https://github.com/Healthlane-Technologies/Zango/pull/583)
+
+### Fixed
+
+* Fix audit log gap for direct-imported workspace models [(#584)](https://github.com/Healthlane-Technologies/Zango/pull/584)
+* Fix app auth to handle numeric string role id in generate_auth_token [(#585)](https://github.com/Healthlane-Technologies/Zango/pull/585)
+* Fix AI agent timeout_seconds wiring through to provider API calls [(#586)](https://github.com/Healthlane-Technologies/Zango/pull/586)
+
 ## [1.2.0b2] - 2026-06-02
 
 ### Fixed
