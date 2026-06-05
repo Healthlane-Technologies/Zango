@@ -1,11 +1,7 @@
 name: Push build to Main
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "frontend/**"
+  workflow_dispatch:
 
 jobs:
   build:
