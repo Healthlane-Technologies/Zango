@@ -20,6 +20,84 @@ function notify(type, title, description) {
 	);
 }
 
+function SearchableSelect({ value, options, onChange, placeholder = 'Select…' }) {
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState('');
+	const wrapRef = useRef(null);
+	const inputRef = useRef(null);
+
+	useEffect(() => {
+		if (!open) return;
+		const handler = (e) => {
+			if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+		};
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
+	}, [open]);
+
+	useEffect(() => {
+		if (open && inputRef.current) inputRef.current.focus();
+	}, [open]);
+
+	const selected = options.find((o) => o.value === value);
+	const filtered = query.trim()
+		? options.filter((o) =>
+				o.label.toLowerCase().includes(query.toLowerCase()) ||
+				String(o.value).toLowerCase().includes(query.toLowerCase())
+		  )
+		: options;
+
+	return (
+		<div ref={wrapRef} className="relative mt-[4px]">
+			<button
+				type="button"
+				onClick={() => setOpen((v) => !v)}
+				className="flex w-full items-center justify-between rounded-[6px] border border-[#DDE2E5] bg-white px-[16px] py-[14px] font-lato text-[14px] text-[#111827] focus:outline-0 focus:border-[#5048ED]"
+			>
+				<span className={selected ? '' : 'text-[#9A9A9A]'}>{selected?.label || placeholder}</span>
+				<svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`text-[#6B7280] transition-transform ${open ? 'rotate-180' : ''}`}>
+					<path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+				</svg>
+			</button>
+			{open && (
+				<div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-[260px] overflow-hidden rounded-[6px] border border-[#DDE2E5] bg-white shadow-lg">
+					<div className="border-b border-[#F3F4F6] p-[8px]">
+						<input
+							ref={inputRef}
+							type="text"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							placeholder="Search…"
+							className="w-full rounded-[4px] border border-[#E5E7EB] px-[10px] py-[6px] font-lato text-[13px] placeholder:text-[#9CA3AF] focus:outline-0 focus:border-[#5048ED]"
+						/>
+					</div>
+					<div className="max-h-[200px] overflow-y-auto">
+						{filtered.length === 0 ? (
+							<div className="px-[12px] py-[10px] font-lato text-[12px] text-[#9CA3AF]">No matches</div>
+						) : (
+							filtered.map((opt) => (
+								<button
+									key={opt.value}
+									type="button"
+									onClick={() => { onChange(opt.value); setOpen(false); setQuery(''); }}
+									className={`flex w-full items-center justify-between px-[12px] py-[8px] text-left font-lato text-[13px] hover:bg-[#F9FAFB] ${opt.value === value ? 'bg-[#EEF2FF] text-[#5048ED]' : 'text-[#111827]'}`}
+								>
+									<span>{opt.label}</span>
+									{opt.value === value && (
+										<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+											<path d="M2.5 6L5 8.5L9.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+										</svg>
+									)}
+								</button>
+							))
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 function StatusBadge({ status }) {
 	const isActive = status === 'active';
 	if (isActive) {
@@ -193,7 +271,7 @@ const PROVIDER_META = {
 	bedrock:      { bg: '#FFFBEB', border: '#FDE68A', accent: '#D97706', description: 'AWS-managed foundation models' },
 };
 
-const COMING_SOON_PROVIDERS = ['bedrock', 'azure_openai'];
+const COMING_SOON_PROVIDERS = ['azure_openai'];
 
 function CapabilityChip({ label, active }) {
 	if (!active) return null;
@@ -207,26 +285,46 @@ function CapabilityChip({ label, active }) {
 function ModelCard({ model, selected, onClick }) {
 	const contextK = model.context_window ? `${Math.round(model.context_window / 1000)}K ctx` : null;
 	const maxOut = model.max_output_tokens ? `${Math.round(model.max_output_tokens / 1000)}K out` : null;
+	const isDisabled = !!model.disabled;
 	return (
 		<button
 			type="button"
-			onClick={onClick}
+			onClick={isDisabled ? undefined : onClick}
+			disabled={isDisabled}
+			title={isDisabled ? model.disabled_reason : undefined}
 			className={`w-full rounded-[8px] border p-[12px] text-left transition-all ${
-				selected
-					? 'border-[#5048ED] bg-[#F5F3FF] ring-1 ring-[#5048ED]'
-					: 'border-[#E5E7EB] bg-white hover:border-[#C4B5FD] hover:bg-[#FAFAFA]'
+				isDisabled
+					? 'border-[#E5E7EB] bg-[#F9FAFB] opacity-60 cursor-not-allowed'
+					: selected
+						? 'border-[#5048ED] bg-[#F5F3FF] ring-1 ring-[#5048ED]'
+						: 'border-[#E5E7EB] bg-white hover:border-[#C4B5FD] hover:bg-[#FAFAFA]'
 			}`}
 		>
 			<div className="flex items-start justify-between gap-[8px]">
 				<div className="min-w-0 flex-1">
-					<p className="truncate font-lato text-[13px] font-semibold text-[#111827]">
-						{model.name && model.name !== model.id ? model.name : model.id}
-					</p>
+					<div className="flex flex-wrap items-center gap-[6px]">
+						<p className="truncate font-lato text-[13px] font-semibold text-[#111827]">
+							{model.name && model.name !== model.id ? model.name : model.id}
+						</p>
+						{model.inference_profile && (
+							<span
+								className="rounded-[4px] border border-[#C4B5FD] bg-[#EDE9FE] px-[6px] py-[1px] font-lato text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5B21B6]"
+								title="Routed via an AWS cross-region inference profile (the resolved ID is what's sent to AWS)."
+							>
+								{model.inference_profile}
+							</span>
+						)}
+					</div>
 					{model.name && model.name !== model.id && (
 						<p className="mt-[1px] truncate font-mono text-[11px] text-[#9CA3AF]">{model.id}</p>
 					)}
+					{isDisabled && model.disabled_reason && (
+						<p className="mt-[4px] font-lato text-[11px] leading-[16px] text-[#B45309]">
+							{model.disabled_reason}
+						</p>
+					)}
 				</div>
-				{selected && (
+				{selected && !isDisabled && (
 					<span className="mt-[1px] shrink-0">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
 							<circle cx="8" cy="8" r="7" fill="#5048ED"/>
@@ -317,9 +415,14 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 	);
 	const optionalFields = configFields.filter((f) => f.type === 'integer');
 
-	// Reset everything when provider changes
+	// Reset everything when provider changes; seed defaults for select fields
 	useEffect(() => {
-		setCredentials({});
+		const provider = availableProviders.find((p) => p.slug === selectedSlug);
+		const defaults = {};
+		(provider?.config_fields || []).forEach((f) => {
+			if (f.type === 'select' && f.default !== undefined) defaults[f.name] = f.default;
+		});
+		setCredentials(defaults);
 		setFetchState({ status: 'idle', models: [], error: null });
 		setSelectedModel('');
 		setModelSearch('');
@@ -356,7 +459,8 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 			// Valid key + models returned — advance
 			const models = response.models;
 			setFetchState({ status: 'success', models, error: null });
-			setSelectedModel(models[0].id);
+			const firstEnabled = models.find((m) => !m.disabled) || models[0];
+			setSelectedModel(firstEnabled.id);
 			setStep(2);
 		} else {
 			const message = response?.message || 'Could not fetch models from the provider.';
@@ -434,7 +538,11 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 							Select a Provider
 						</label>
 						<div className="mt-[10px] grid grid-cols-2 gap-[10px]">
-							{availableProviders.map((p) => {
+							{[...availableProviders].sort((a, b) => {
+							const aSoon = COMING_SOON_PROVIDERS.includes(a.slug) ? 1 : 0;
+							const bSoon = COMING_SOON_PROVIDERS.includes(b.slug) ? 1 : 0;
+							return aSoon - bSoon;
+						}).map((p) => {
 								const meta = PROVIDER_META[p.slug] || { bg: '#F9FAFB', border: '#E5E7EB', accent: '#6B7280', description: '' };
 								const Logo = PROVIDER_LOGOS[p.slug];
 								const isSelected = selectedSlug === p.slug;
@@ -497,6 +605,24 @@ function AddProviderWizard({ onSubmit, availableProviders, appId, triggerApi }) 
 								Credentials
 							</p>
 							{credentialFields.map((field) => {
+								if (field.type === 'select') {
+									return (
+										<div key={field.name}>
+											<label className="font-lato text-[12px] font-semibold text-[#A3ABB1]">
+												{field.label}{field.required && <span className="ml-[2px] text-[#EF4444]">*</span>}
+											</label>
+											<SearchableSelect
+												value={credentials[field.name] ?? field.default ?? ''}
+												options={field.options || []}
+												onChange={(val) => setCredentials((prev) => ({ ...prev, [field.name]: val }))}
+												placeholder={`Select ${field.label.toLowerCase()}`}
+											/>
+											{field.help_text && (
+												<p className="mt-[3px] font-lato text-[11px] text-[#9CA3AF]">{field.help_text}</p>
+											)}
+										</div>
+									);
+								}
 								const inputType = field.type === 'secret' ? 'password' : 'text';
 								return (
 									<div key={field.name}>
@@ -844,10 +970,18 @@ function EditProviderForm({ provider, availableProviders, onSave, onClose, appId
 	const [modelSearch, setModelSearch] = useState('');
 	const [modelPickerOpen, setModelPickerOpen] = useState(false);
 	const [models, setModels] = useState(provider.enabled_models || []);
-	// Secret fields start empty — user must re-enter to update, blank = keep existing
+	// Secret fields start empty (user must re-enter to update, blank = keep existing).
+	// Non-secret fields (e.g. select dropdowns like aws_region) are pre-filled from masked_config.
 	const [credentials, setCredentials] = useState(() => {
+		const maskedConfig = provider.masked_config || {};
 		const init = {};
-		credentialFields.forEach((f) => { init[f.name] = ''; });
+		credentialFields.forEach((f) => {
+			if (f.type === 'secret') {
+				init[f.name] = '';
+			} else {
+				init[f.name] = maskedConfig[f.name] ?? f.default ?? '';
+			}
+		});
 		return init;
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -927,18 +1061,36 @@ function EditProviderForm({ provider, availableProviders, onSave, onClose, appId
 					<p className="font-lato text-[12px] text-[#9CA3AF]">
 						Leave blank to keep existing credentials. Only fill in what you want to update.
 					</p>
-					{credentialFields.map((field) => (
-						<div key={field.name}>
-							<label className="font-lato text-[12px] font-semibold text-[#A3ABB1]">{field.label}</label>
-							<input
-								type={field.type === 'secret' ? 'password' : 'text'}
-								value={credentials[field.name] || ''}
-								onChange={(e) => setCredentials((prev) => ({ ...prev, [field.name]: e.target.value }))}
-								placeholder="Leave blank to keep existing"
-								className="mt-[4px] w-full rounded-[6px] border border-[#DDE2E5] px-[16px] py-[12px] font-lato text-[14px] placeholder:text-[#9A9A9A] focus:outline-0 focus:border-[#5048ED]"
-							/>
-						</div>
-					))}
+					{credentialFields.map((field) => {
+						if (field.type === 'select') {
+							return (
+								<div key={field.name}>
+									<label className="font-lato text-[12px] font-semibold text-[#A3ABB1]">{field.label}</label>
+									<SearchableSelect
+										value={credentials[field.name] ?? field.default ?? ''}
+										options={field.options || []}
+										onChange={(val) => setCredentials((prev) => ({ ...prev, [field.name]: val }))}
+										placeholder={`Select ${field.label.toLowerCase()}`}
+									/>
+									{field.help_text && (
+										<p className="mt-[3px] font-lato text-[11px] text-[#9CA3AF]">{field.help_text}</p>
+									)}
+								</div>
+							);
+						}
+						return (
+							<div key={field.name}>
+								<label className="font-lato text-[12px] font-semibold text-[#A3ABB1]">{field.label}</label>
+								<input
+									type={field.type === 'secret' ? 'password' : 'text'}
+									value={credentials[field.name] || ''}
+									onChange={(e) => setCredentials((prev) => ({ ...prev, [field.name]: e.target.value }))}
+									placeholder="Leave blank to keep existing"
+									className="mt-[4px] w-full rounded-[6px] border border-[#DDE2E5] px-[16px] py-[12px] font-lato text-[14px] placeholder:text-[#9A9A9A] focus:outline-0 focus:border-[#5048ED]"
+								/>
+							</div>
+						);
+					})}
 				</>
 			)}
 
@@ -1179,13 +1331,26 @@ function ProviderRow({ provider, onEdit, onToggleStatus, onTestConnection, onDel
 				<div className="border-t border-[#E5E7EB]">
 					{/* Stats row */}
 					<div className="grid grid-cols-5 gap-0 border-b border-[#F3F4F6]">
-						{[
-							{ label: 'API Key', value: maskedConfig.api_key || maskedConfig.aws_access_key_id || '****', mono: true },
-							{ label: 'Fallback Model', value: provider.default_model || '—', mono: true, hint: 'Used when no model is specified in direct API calls' },
-							{ label: 'Monthly Budget', value: provider.monthly_budget_usd ? `$${parseFloat(provider.monthly_budget_usd).toFixed(2)}` : 'Unlimited' },
-							{ label: 'Total Cost', value: `$${parseFloat(provider.total_cost_usd || 0).toFixed(4)}` },
-							{ label: 'Total Tokens', value: ((provider.total_input_tokens || 0) + (provider.total_output_tokens || 0)).toLocaleString() },
-						].map((stat, i) => (
+						{(() => {
+							const credentialCell = provider.provider_slug === 'bedrock'
+								? {
+									label: 'AWS Credentials',
+									mono: true,
+									multi: [
+										{ k: 'Access Key', v: maskedConfig.aws_access_key_id || '****' },
+										{ k: 'Secret Key', v: maskedConfig.aws_secret_access_key || '****' },
+										{ k: 'Region', v: maskedConfig.aws_region || '—' },
+									],
+								}
+								: { label: 'API Key', value: maskedConfig.api_key || '****', mono: true };
+							return [
+								credentialCell,
+								{ label: 'Fallback Model', value: provider.default_model || '—', mono: true, hint: 'Used when no model is specified in direct API calls' },
+								{ label: 'Monthly Budget', value: provider.monthly_budget_usd ? `$${parseFloat(provider.monthly_budget_usd).toFixed(2)}` : 'Unlimited' },
+								{ label: 'Total Cost', value: `$${parseFloat(provider.total_cost_usd || 0).toFixed(4)}` },
+								{ label: 'Total Tokens', value: ((provider.total_input_tokens || 0) + (provider.total_output_tokens || 0)).toLocaleString() },
+							];
+						})().map((stat, i) => (
 							<div key={i} className={`px-[20px] py-[14px] ${i < 4 ? 'border-r border-[#F3F4F6]' : ''}`}>
 								<div className="flex items-center gap-[4px]">
 									<p className="font-lato text-[10px] font-bold uppercase tracking-[0.6px] text-[#9CA3AF]">{stat.label}</p>
@@ -1202,7 +1367,18 @@ function ProviderRow({ provider, onEdit, onToggleStatus, onTestConnection, onDel
 										</span>
 									)}
 								</div>
-								<p className={`mt-[2px] truncate text-[13px] text-[#111827] ${stat.mono ? 'font-mono' : 'font-lato'}`}>{stat.value}</p>
+								{stat.multi ? (
+									<div className="mt-[2px] flex flex-col gap-[2px]">
+										{stat.multi.map((row, j) => (
+											<div key={j} className="flex items-baseline gap-[6px]">
+												<span className="font-lato text-[10px] text-[#9CA3AF] shrink-0">{row.k}</span>
+												<span className={`truncate text-[12px] text-[#111827] ${stat.mono ? 'font-mono' : 'font-lato'}`}>{row.v}</span>
+											</div>
+										))}
+									</div>
+								) : (
+									<p className={`mt-[2px] truncate text-[13px] text-[#111827] ${stat.mono ? 'font-mono' : 'font-lato'}`}>{stat.value}</p>
+								)}
 							</div>
 						))}
 					</div>
