@@ -25,6 +25,7 @@ Tenant filtering:
 
 from __future__ import annotations
 
+import json
 import logging
 import random
 import re
@@ -580,9 +581,15 @@ class CloudWatchConnector:
             parts.append(f'"{filters.q}"')
 
         if filters.app_name and self.cfg.fmt == "verbose":
+            # Tenant schema is validated upstream against TenantModel, so it
+            # can't contain CloudWatch metacharacters. The quoted form treats
+            # the bracketed prefix as a literal substring.
             parts.append(f'"[{filters.app_name}:"')
         elif filters.app_name and self.cfg.fmt == "json":
-            parts.append(f'{{ $.app_name = "{filters.app_name}" }}')
+            # json.dumps quotes and escapes any special characters; without
+            # it a tenant name containing `"` or `\` would close the filter
+            # string and inject pattern logic into FilterLogEvents.
+            parts.append(f"{{ $.app_name = {json.dumps(filters.app_name)} }}")
         # plain format: no app_name filter possible (documented gap)
 
         return " ".join(parts)

@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Platform Logs · Follow-ups | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-rail:     #FAFBFD;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-100:#E5E7EE; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand: var(--indigo-500);
+  --brand-soft: var(--indigo-50);
+  --accent: var(--teal-500);
+  --accent-soft: var(--teal-50);
+
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06), 0 1px 1px rgba(15,19,36,.03);
+  --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--font); font-feature-settings: 'cv11','ss01','ss03'; -webkit-font-smoothing: antialiased; background: var(--surface-page); color: var(--text-body); line-height: 1.55; }
+
+.shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); max-width: 1280px; margin: 0 auto; gap: 48px; padding: 0 32px 96px; }
+.toc { position: sticky; top: 32px; align-self: start; padding-top: 80px; height: calc(100vh - 32px); overflow-y: auto; }
+.toc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.toc-kicker { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 16px; }
+.toc a { display: block; padding: 7px 10px; border-radius: var(--r-sm); color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 450; line-height: 1.45; transition: all 180ms var(--ease-out); position: relative; }
+.toc a::before { content: ''; position: absolute; left: 0; top: 50%; width: 2px; height: 14px; background: transparent; border-radius: 2px; transform: translateY(-50%); transition: background 180ms var(--ease-out); }
+.toc a:hover { color: var(--text-strong); background: var(--surface-sunken); }
+.toc a.active { color: var(--brand); background: var(--brand-soft); font-weight: 530; }
+.toc a.active::before { background: var(--brand); }
+.toc-section + .toc-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+
+main { min-width: 0; padding-top: 56px; }
+
+.hero { margin-bottom: 56px; padding: 36px 40px 40px; background: radial-gradient(ellipse 600px 320px at 100% 0%, rgba(89,97,229,.10), transparent 60%), radial-gradient(ellipse 400px 280px at 0% 100%, rgba(17,156,133,.08), transparent 60%), linear-gradient(180deg, #FAFBFE 0%, #F0F2F9 100%); border: 1px solid var(--border); border-radius: var(--r-2xl); box-shadow: var(--shadow-md); animation: fadeUp 480ms var(--ease-out) both; }
+.hero-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--brand); background: rgba(89,97,229,.08); padding: 5px 11px; border-radius: var(--r-pill); margin-bottom: 16px; }
+.hero-kicker::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px rgba(89,97,229,.18); }
+.hero h1 { font-size: 32px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; color: var(--text-strong); margin-bottom: 10px; max-width: 760px; }
+.hero .lede { font-size: 14.5px; color: var(--text-muted); line-height: 1.6; max-width: 700px; margin-bottom: 24px; }
+.hero-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.fact { background: var(--surface-card); padding: 12px 16px; }
+.fact .label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 5px; }
+.fact .val { font-size: 13px; color: var(--text-strong); font-weight: 530; }
+.fact .val.brand { color: var(--brand); }
+.fact .val.warn { color: var(--amber-700); }
+
+section { margin-bottom: 56px; }
+.section-kicker { display: inline-block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; color: var(--brand); margin-bottom: 8px; }
+section h2 { font-size: 22px; font-weight: 700; letter-spacing: -.022em; color: var(--text-strong); margin-bottom: 8px; scroll-margin-top: 24px; }
+section .section-intro { font-size: 14px; color: var(--text-muted); max-width: 720px; margin-bottom: 24px; line-height: 1.65; }
+h3 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--text-strong); margin-bottom: 8px; scroll-margin-top: 24px; }
+h4 { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 6px; }
+
+code.inline { font-family: var(--font-mono); font-size: 12px; background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px; color: var(--text-strong); }
+
+.card { background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 20px 24px; box-shadow: var(--shadow-sm); }
+.card.tinted { background: var(--surface-tinted); border-color: rgba(89,97,229,.18); }
+.card.warn { background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 100%); border-color: var(--amber-100); border-left: 3px solid var(--amber-500); }
+.card.success { background: linear-gradient(180deg, var(--sage-50) 0%, #FFF 100%); border-color: rgba(90,164,91,.2); border-left: 3px solid var(--sage-500); }
+.card.danger { background: linear-gradient(180deg, var(--crimson-50) 0%, #FFF 100%); border-color: var(--crimson-100); border-left: 3px solid var(--crimson-500); }
+
+.note { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: var(--text-muted); padding: 10px 14px; border-left: 2px solid var(--brand); background: var(--brand-soft); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.note.warn { border-color: var(--amber-500); background: var(--amber-50); }
+.note.warn strong { color: var(--amber-700); }
+
+.code { border: 1px solid #2A2E3A; border-radius: var(--r-md); overflow: hidden; background: #0F1117; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; color: #E1E4ED; margin: 10px 0 14px; }
+.code-header { display: flex; align-items: center; gap: 10px; padding: 5px 12px; background: #1A1D26; border-bottom: 1px solid #2A2E3A; font-size: 10.5px; color: #8B92A5; font-family: var(--font-mono); }
+.code-header .lang { padding: 1px 7px; background: rgba(255,255,255,.06); border-radius: 3px; color: #B7BCC9; }
+.code-header .path { color: #5F6A82; }
+.code-body { padding: 12px 16px; overflow-x: auto; white-space: pre; }
+
+.tok-kw { color: #C792EA; }
+.tok-imp { color: #82AAFF; }
+.tok-fn { color: #82AAFF; }
+.tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; }
+.tok-comment { color: #5F6A82; font-style: italic; }
+.tok-cls { color: #FFCB6B; }
+.tok-self { color: #FF9DBF; }
+.tok-add { color: #A2E957; background: rgba(162,233,87,.08); display: block; }
+.tok-del { color: #FF8B8B; background: rgba(255,139,139,.08); display: block; }
+.tok-op { color: #89DDFF; }
+
+.tbl { width: 100%; border-collapse: collapse; background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin: 8px 0 16px; box-shadow: var(--shadow-sm); }
+.tbl thead th { text-align: left; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); padding: 10px 16px; border-bottom: 1px solid var(--border); background: #FAFBFD; }
+.tbl tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; color: var(--text-body); vertical-align: top; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: var(--surface-sunken); }
+.tbl code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; color: var(--text-strong); }
+.tbl .mono { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: var(--r-pill); font-size: 11px; font-weight: 530; }
+.pill.brand { background: var(--brand-soft); color: var(--indigo-700); }
+.pill.accent { background: var(--accent-soft); color: var(--teal-700); }
+.pill.warn { background: var(--amber-50); color: var(--amber-700); }
+.pill.danger { background: var(--crimson-50); color: var(--crimson-700); }
+.pill.sage { background: var(--sage-50); color: var(--sage-700); }
+.pill.slate { background: var(--slate-50); color: var(--slate-700); }
+
+.bul { list-style: none; padding-left: 0; }
+.bul li { padding: 5px 0 5px 18px; position: relative; font-size: 12.5px; color: var(--text-body); }
+.bul li::before { content: ''; position: absolute; left: 4px; top: 12px; width: 4px; height: 4px; background: var(--brand); border-radius: 50%; }
+
+/* Mockup styling */
+.mk { margin: 16px 0 28px; border: 1px solid var(--border); border-radius: var(--r-2xl); background: var(--surface-card); box-shadow: 0 12px 28px -8px rgba(15,19,36,.10), 0 4px 8px rgba(15,19,36,.04); overflow: hidden; }
+.mk-caption { display: flex; align-items: center; gap: 10px; padding: 9px 18px; background: linear-gradient(180deg, #FAFBFE 0%, #F3F5FB 100%); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-muted); }
+.mk-caption .mk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(17,156,133,.15); }
+.mk-caption .mk-label { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--text-strong); }
+.mk-body { padding: 22px 26px; background: var(--surface-page); }
+
+.mk-nav { display: grid; grid-template-columns: 200px 1fr; height: 540px; background: var(--surface-page); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border); }
+.mk-sidebar { background: var(--text-strong); color: #C9CEDE; padding: 12px 0; display: flex; flex-direction: column; }
+.mk-side-logo { display: flex; align-items: center; gap: 9px; padding: 0 16px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.mk-side-mark { width: 26px; height: 26px; background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; }
+.mk-side-name { font-size: 12px; font-weight: 600; color: #fff; }
+.mk-side-name small { display: block; font-size: 9.5px; font-weight: 400; color: #6E7488; }
+.mk-side-section { padding: 4px 7px; margin-top: 4px; }
+.mk-side-secl { font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: #5A607A; font-weight: 600; padding: 6px 9px 4px; }
+.mk-side-item { display: flex; align-items: center; gap: 9px; padding: 6px 9px; margin: 1px 0; border-radius: var(--r-sm); font-size: 11.5px; color: #C9CEDE; font-weight: 450; cursor: default; }
+.mk-side-item.active { background: rgba(89,97,229,.18); color: #fff; font-weight: 530; position: relative; }
+.mk-side-item.active::before { content: ''; width: 3px; align-self: stretch; background: var(--brand); margin: -6px 4px -6px -9px; border-radius: 2px; }
+.mk-side-item svg { width: 13px; height: 13px; opacity: .8; flex-shrink: 0; }
+.mk-side-item.active svg { opacity: 1; }
+.mk-side-item .mk-new { margin-left: auto; font-size: 9px; padding: 1px 5px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font-weight: 600; }
+
+.mk-main { display: flex; flex-direction: column; min-width: 0; background: var(--surface-page); }
+.mk-top { display: flex; align-items: center; gap: 12px; padding: 11px 22px; background: var(--surface-card); border-bottom: 1px solid var(--border); }
+.mk-crumb { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); }
+.mk-crumb .sep { color: var(--text-subtle); }
+.mk-crumb .leaf { color: var(--text-strong); font-weight: 530; }
+.mk-env { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: var(--r-pill); font-size: 10.5px; font-weight: 530; background: var(--amber-50); color: var(--amber-700); }
+.mk-env::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--amber-500); }
+
+.mk-pagerow { padding: 16px 22px 11px; background: var(--surface-card); border-bottom: 1px solid var(--border); }
+.mk-pagerow h1 { font-size: 16px; font-weight: 600; color: var(--text-strong); letter-spacing: -.018em; }
+.mk-pagerow p { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+.mk-strip { display: flex; align-items: center; gap: 10px; padding: 11px 22px; background: var(--surface-card); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mk-seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; background: var(--surface-card); }
+.mk-seg button { background: none; border: none; padding: 5px 10px; font-family: inherit; font-size: 11.5px; font-weight: 530; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; border-right: 1px solid var(--border-soft); cursor: default; }
+.mk-seg button:last-child { border-right: none; }
+.mk-seg button.active { background: var(--brand-soft); color: var(--indigo-700); }
+.mk-seg .c { font-family: var(--font-mono); font-size: 10px; padding: 1px 5px; border-radius: var(--r-pill); background: rgba(89,97,229,.12); color: var(--indigo-700); }
+.mkb { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--surface-card); border: 1px solid var(--border-strong); border-radius: var(--r-md); font-family: inherit; font-size: 11.5px; font-weight: 530; color: var(--text-body); cursor: default; }
+.mkb svg { width: 12px; height: 12px; opacity: .8; }
+
+.mk-tblw { flex: 1; overflow: auto; }
+table.mk-tbl { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 11px; }
+table.mk-tbl thead th { text-align: left; font-family: var(--font); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); padding: 8px 13px; background: var(--surface-rail); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2; }
+table.mk-tbl tbody td { padding: 6px 13px; border-bottom: 1px solid var(--border-soft); color: var(--text-body); vertical-align: top; }
+.mk-tbl td.t { color: var(--text-subtle); white-space: nowrap; width: 110px; }
+.mk-tbl td.l { width: 64px; }
+.mk-lv { display: inline-flex; align-items: center; justify-content: center; height: 17px; padding: 0 6px; border-radius: 3px; font-family: var(--font); font-size: 9.5px; font-weight: 600; }
+.mk-lv.inf { background: var(--brand-soft); color: var(--indigo-700); }
+.mk-lv.wrn { background: var(--amber-50); color: var(--amber-700); }
+.mk-lv.err { background: var(--crimson-50); color: var(--crimson-700); }
+.mk-tn-chip { font-family: var(--font-mono); font-size: 10.5px; color: var(--indigo-700); background: rgba(89,97,229,.10); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.mk-cmp-chip { font-family: var(--font-mono); font-size: 10px; color: var(--teal-700); background: var(--accent-soft); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.mk-stag { font-size: 10px; color: var(--text-subtle); background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid var(--border-soft); display: inline-block; max-width: 100%; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+main > section { animation: fadeUp 380ms var(--ease-out) both; }
+main > section:nth-of-type(1) { animation-delay: 40ms; }
+main > section:nth-of-type(2) { animation-delay: 80ms; }
+main > section:nth-of-type(3) { animation-delay: 120ms; }
+main > section:nth-of-type(4) { animation-delay: 160ms; }
+main > section:nth-of-type(5) { animation-delay: 200ms; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 1fr; padding: 0 20px 64px; }
+  .toc { display: none; }
+  .hero-facts { grid-template-columns: 1fr 1fr; }
+  .mk-nav { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <nav class="toc">
+    <div class="toc-kicker">On this page</div>
+    <div class="toc-section">
+      <a href="#overview" class="active">Overview</a>
+      <a href="#findings">Staging findings</a>
+    </div>
+    <div class="toc-section">
+      <a href="#fix1">Fix 1 · Root logger</a>
+      <a href="#fix2">Fix 2 · Noise muters</a>
+      <a href="#fix3">Fix 3 · Loguru tenant prefix</a>
+      <a href="#fix4">Fix 4 · Celery print() capture</a>
+      <a href="#fix5">Fix 5 · App print() capture</a>
+    </div>
+    <div class="toc-section">
+      <a href="#platform-view">New · Platform Logs page</a>
+      <a href="#platform-mockup">Mockup</a>
+      <a href="#platform-api">API surface</a>
+      <a href="#platform-perm">Permissions</a>
+    </div>
+    <div class="toc-section">
+      <a href="#scope">Scope &amp; phasing</a>
+      <a href="#open">Open questions</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <header class="hero">
+      <div class="hero-kicker">Platform Logs · Follow-ups</div>
+      <h1>Close the gaps surfaced on staging<br/><span style="color: var(--text-muted); font-weight: 500;">and add a platform-wide log viewer.</span></h1>
+      <p class="lede">
+        PR #574 shipped the connector + per-app Runtime Logs tab. Testing on
+        staging revealed four real gaps in the producer side: stdlib loggers
+        outside the <code class="inline">django.*</code> family stay file-only,
+        loguru output bypasses our LOGGING dict entirely, third-party DEBUG
+        floods CloudWatch, and Celery <code class="inline">print()</code> calls
+        from workspace tasks land raw. This doc collects each fix, then adds
+        a new platform-admin view that mirrors the Logs tab but without app
+        scoping.
+      </p>
+      <div class="hero-facts">
+        <div class="fact"><div class="label">Status</div><div class="val brand">Design · awaiting approval</div></div>
+        <div class="fact"><div class="label">Fixes</div><div class="val">4 producer-side + 1 new view</div></div>
+        <div class="fact"><div class="label">Scope</div><div class="val">Mostly settings + 1 small celery hook</div></div>
+        <div class="fact"><div class="label">UI change</div><div class="val">1 new top-level Platform page</div></div>
+      </div>
+    </header>
+
+
+    <!-- ============= OVERVIEW ============= -->
+    <section id="overview">
+      <div class="section-kicker">Overview</div>
+      <h2>What this PR adds</h2>
+      <p class="section-intro">
+        Five pieces of work — four small producer-side patches that close the
+        gaps we found while testing on staging, and one new platform-level
+        view that lets platform admins see every tenant's lines in one place.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <h3>Producer fixes (settings + 1 hook)</h3>
+          <ul class="bul">
+            <li><strong>Fix 1</strong> · Add <code class="inline">LOGGING["root"]</code> so workspace and zango app loggers reach CloudWatch.</li>
+            <li><strong>Fix 2</strong> · Mute <code class="inline">botocore</code> / <code class="inline">urllib3</code> / etc. DEBUG noise.</li>
+            <li><strong>Fix 3</strong> · Tenant-aware loguru format so every loguru call carries the <code class="inline">[schema:domain]</code> prefix.</li>
+            <li><strong>Fix 4</strong> · Celery <code class="inline">task_prerun</code> stdout/stderr wrapper so <code class="inline">print()</code> from workspace tasks becomes a logger call.</li>
+          </ul>
+        </div>
+        <div class="card tinted">
+          <h3>New feature</h3>
+          <ul class="bul">
+            <li>A new <strong>Platform → Logs</strong> page (sibling of Apps, User Management, Settings) that shows every tenant's lines.</li>
+            <li>Gated to platform superadmins.</li>
+            <li>Same connector pipeline; just no <code class="inline">app_name</code> filter applied at read time.</li>
+            <li>Adds a <strong>Tenant</strong> column so admins can correlate across schemas.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============= FINDINGS ============= -->
+    <section id="findings">
+      <div class="section-kicker">What we saw on staging</div>
+      <h2>The four producer-side gaps</h2>
+      <p class="section-intro">
+        With PR #574 deployed and the staging override
+        (<code class="inline">LOGGING["loggers"]["django"]["handlers"] = ["file", "console"]</code>),
+        the Django request/security/template loggers showed up in CloudWatch
+        with the verbose <code class="inline">[schema:domain]</code> prefix.
+        But the test sample turned up four kinds of lines that <em>didn't</em>
+        get the prefix:
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 18%;">Symptom</th>
+            <th style="width: 30%;">Sample line in CloudWatch</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Workspace logger.X()</strong></td>
+            <td class="mono" style="font-size: 10.5px;">Policy 'OperationsAPIView' not found during auto-role attachment …</td>
+            <td>Logger <code>workspaces.…</code> has no handlers; propagates to root; no root config → Python's <code>lastResort</code> stderr handler with <code>%(message)s</code> only. No prefix.</td>
+          </tr>
+          <tr>
+            <td><strong>Third-party DEBUG</strong></td>
+            <td class="mono" style="font-size: 10.5px;">DEBUG:urllib3.connectionpool:https://o116615…</td>
+            <td>Same path as above. Adds a flood — bottocore/urllib3 emit hundreds of DEBUG lines per request.</td>
+          </tr>
+          <tr>
+            <td><strong>Loguru</strong></td>
+            <td class="mono" style="font-size: 10.5px;">34|2026-06-02 11:13:20.556|INFO|__codexec__:&lt;module&gt;:7 - hello, codexec!</td>
+            <td>Loguru is a separate ecosystem. <code>core/monitoring/logging.py</code> configures it with <code>get_loguru_format</code> from <code>core/monitoring/utils.py</code>. That format has no tenant prefix.</td>
+          </tr>
+          <tr>
+            <td><strong>Celery print()</strong></td>
+            <td class="mono" style="font-size: 10.5px;">Error while processsing Traceback (most recent call last): / r.status = res_text['results'][0]…</td>
+            <td><code>print()</code> writes directly to <code>sys.stdout</code> — bypasses Python's logging system entirely. No LOGGING dict change can intercept it.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note warn">
+        <span><strong>Validation already in flight:</strong> the staging override at
+          <a href="https://github.com/Healthlane-Technologies/zango-india-staging-deployment/pull/1262" target="_blank" style="color: var(--amber-700);">staging-deployment#1262</a>
+          adds Fix 1 + Fix 2 as a quick check. This PR moves those settings into the
+          platform code and adds Fix 3 + Fix 4 + the new Platform Logs view.</span>
+      </div>
+    </section>
+
+
+    <!-- ============= FIX 1 ============= -->
+    <section id="fix1">
+      <div class="section-kicker">Fix 1 · Settings</div>
+      <h2>Root logger catches everything not explicitly routed</h2>
+      <p class="section-intro">
+        Currently <code class="inline">LOGGING["loggers"]["django"]</code> is the only
+        logger explicitly attached to the console handler. Every other logger in the
+        process (workspace code, <code class="inline">zango.apps.*</code>,
+        third-party libs) falls through to Python's <code class="inline">lastResort</code>
+        handler with a bare <code class="inline">%(message)s</code> format. Adding a
+        root entry redirects them all to the console handler — which already has the
+        <code class="inline">tenant_filter</code> + <code class="inline">verbose</code>
+        formatter.
+      </p>
+
+      <h4>Code change · <code class="inline">backend/src/zango/config/settings/base.py</code> (inside <code class="inline">setup_settings</code>)</h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">after the existing django logger configuration</span></div>
+        <div class="code-body"><span class="tok-add">    # Catch every logger that doesn't have an explicit entry —
+    # workspace code, zango.apps.*, third-party libs. Otherwise these
+    # fall through to Python's lastResort handler which strips levels
+    # and the tenant prefix.
+    settings.LOGGING["root"] = {
+        "handlers": ["file", "console"],
+        "level": "INFO",
+    }</span></div>
+      </div>
+
+      <h4>Acceptance</h4>
+      <ul class="bul">
+        <li>A workspace <code class="inline">logger.warning(...)</code> call shows up in CloudWatch as <code class="inline">[schema:domain][asctime] WARNING [path:func:line] message</code>.</li>
+        <li>The Runtime Logs tab filters those lines correctly to the current app.</li>
+      </ul>
+    </section>
+
+
+    <!-- ============= FIX 2 ============= -->
+    <section id="fix2">
+      <div class="section-kicker">Fix 2 · Settings</div>
+      <h2>Mute noisy third-party loggers</h2>
+      <p class="section-intro">
+        With root at <code class="inline">INFO</code>, third-party libs that emit DEBUG
+        floods (botocore signing every S3 PUT, urllib3 every connection pool checkout)
+        would drown CloudWatch. Raise their threshold to WARNING but leave them
+        propagating — so genuine warnings still get the tenant prefix.
+      </p>
+
+      <h4>Code change · same file, right after Fix 1</h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">settings/base.py</span></div>
+        <div class="code-body"><span class="tok-add">    for noisy in ("botocore", "urllib3", "s3transfer", "boto3"):
+        settings.LOGGING["loggers"][noisy] = {
+            "level": "WARNING",
+            "handlers": [],
+            "propagate": True,
+        }</span></div>
+      </div>
+
+      <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 8px;">
+        <code class="inline">handlers: []</code> + <code class="inline">propagate: True</code>
+        means "no direct handlers, but my records still bubble up to root once they
+        pass the WARNING threshold." Effectively a pre-filter.
+      </p>
+
+      <h4>Acceptance</h4>
+      <ul class="bul">
+        <li>No <code class="inline">DEBUG:botocore.auth:StringToSign:…</code> lines in CloudWatch.</li>
+        <li>Genuine botocore WARNINGs still appear, with the tenant prefix.</li>
+        <li>CloudWatch volume drops ~10× based on staging samples.</li>
+      </ul>
+    </section>
+
+
+    <!-- ============= FIX 3 ============= -->
+    <section id="fix3">
+      <div class="section-kicker">Fix 3 · Loguru</div>
+      <h2>Tenant-aware loguru format</h2>
+      <p class="section-intro">
+        Loguru is a separate ecosystem — it doesn't use Python's stdlib logging
+        machinery. So adding <code class="inline">tenant_filter</code> to console
+        does nothing for loguru output. Zango already centralizes loguru config via
+        <code class="inline">core/monitoring/utils.py:get_loguru_format</code>. The
+        cleanest patch is to inject the tenant context directly into that format.
+      </p>
+
+      <h4>Code change · <code class="inline">backend/src/zango/core/monitoring/utils.py</code></h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">get_loguru_format</span></div>
+        <div class="code-body"><span class="tok-kw">def</span> <span class="tok-fn">get_loguru_format</span>(record):
+    file_name = _get_tenant_filename(record[<span class="tok-str">"name"</span>])
+<span class="tok-add">    # Tenant context — safe under unbound state (boot, mgmt cmds,
+    # celery worker init before middleware binds a tenant).
+    try:
+        from django.db import connection
+        tenant = getattr(connection, "tenant", None)
+        app_name = getattr(tenant, "schema_name", "") if tenant else ""
+        domain   = getattr(tenant, "domain_url", "") if tenant else ""
+    except Exception:
+        app_name, domain = "", ""</span>
+
+    loguru_format = (
+<span class="tok-add">        f"<blue>[{app_name}:{domain}]</blue>|"</span>
+        f"<magenta>{os.getpid()}|</magenta>"
+        <span class="tok-str">"&lt;green&gt;{time:YYYY-MM-DD HH:mm:ss.SSS}&lt;/green&gt;|"</span>
+        <span class="tok-str">"&lt;level&gt;{level}&lt;/level&gt;|"</span>
+        f<span class="tok-str">"&lt;cyan&gt;{file_name}&lt;/cyan&gt;:"</span>
+        <span class="tok-str">"&lt;cyan&gt;{function}&lt;/cyan&gt;:"</span>
+        <span class="tok-str">"&lt;cyan&gt;{line}&lt;/cyan&gt; - "</span>
+        <span class="tok-str">"&lt;level&gt;{message}&lt;/level&gt;\n"</span>
+    )
+    <span class="tok-kw">return</span> loguru_format</div>
+      </div>
+
+      <h4>Why this and not "bridge loguru to stdlib"</h4>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px;">
+        <div class="card">
+          <h4 style="margin-bottom: 6px;">Option A · Modify format <span class="pill accent" style="margin-left: 4px;">recommended</span></h4>
+          <p style="font-size: 12px;">~10 lines, surgical, doesn't touch existing rotation/OTel sinks. Loguru output stays in loguru-land but gets the prefix.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-bottom: 6px;">Option B · Bridge loguru → stdlib</h4>
+          <p style="font-size: 12px;">Conceptually cleaner (one pipeline) but breaks the rotation sink, drops color codes, and the OTel exporter setup needs adjustment. Larger change.</p>
+        </div>
+      </div>
+
+      <h4>Acceptance</h4>
+      <ul class="bul">
+        <li>Codexec snippet <code class="inline">logger.info("hello, codexec!")</code> emits as <code class="inline">[tntApp:zel3-…]|34|… - hello, codexec!</code> in CloudWatch.</li>
+        <li>Workspace tasks using loguru get the prefix.</li>
+        <li><code class="inline">log/zango.log</code> on disk also gets the prefix (same format used by both sinks).</li>
+        <li>Mgmt commands run without a tenant: prefix is <code class="inline">[:]</code> (empty) but doesn't crash.</li>
+      </ul>
+    </section>
+
+
+    <!-- ============= FIX 4 ============= -->
+    <section id="fix4">
+      <div class="section-kicker">Fix 4 · Celery hook</div>
+      <h2><code class="inline" style="font-size: 18px;">print()</code> from celery tasks → logger</h2>
+      <p class="section-intro">
+        Workspace tasks use <code class="inline">print()</code> liberally for ad-hoc
+        debugging. Those writes go straight to <code class="inline">sys.stdout</code>
+        — no logging hook can catch them. The pattern we used in the codexec
+        executor works here too: swap stdout/stderr inside the task lifecycle
+        with a stream that forwards lines to a logger.
+      </p>
+
+      <h4>Code change · new file <code class="inline">apps/shared/platform_logs/celery_print_capture.py</code></h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">new file</span></div>
+        <div class="code-body"><span class="tok-comment">"""Swap sys.stdout/stderr inside a celery task scope so print()
+calls become logger.info()/error() calls — which means they pick up
+the verbose formatter + tenant_filter and end up in CloudWatch with
+the [schema:domain] prefix instead of as raw bare text."""</span>
+
+<span class="tok-kw">import</span> <span class="tok-imp">logging</span>
+<span class="tok-kw">import</span> <span class="tok-imp">sys</span>
+<span class="tok-kw">from</span> <span class="tok-imp">celery.signals</span> <span class="tok-kw">import</span> task_prerun, task_postrun
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">_PrintStream</span>:
+    <span class="tok-kw">def</span> <span class="tok-fn">__init__</span>(self, original, logger_name, level):
+        self._original = original
+        self._log = logging.<span class="tok-fn">getLogger</span>(logger_name)
+        self._level = level
+        self._buf = []
+
+    <span class="tok-kw">def</span> <span class="tok-fn">write</span>(self, s):
+        self._original.<span class="tok-fn">write</span>(s)  <span class="tok-comment"># preserve normal stdout</span>
+        self._buf.<span class="tok-fn">append</span>(s)
+        <span class="tok-kw">if</span> <span class="tok-str">"\n"</span> <span class="tok-kw">in</span> s:
+            full = <span class="tok-str">""</span>.<span class="tok-fn">join</span>(self._buf); self._buf.<span class="tok-fn">clear</span>()
+            <span class="tok-kw">for</span> line <span class="tok-kw">in</span> full.<span class="tok-fn">splitlines</span>():
+                <span class="tok-kw">if</span> line:
+                    self._log.<span class="tok-fn">log</span>(self._level, line)
+
+    <span class="tok-kw">def</span> <span class="tok-fn">flush</span>(self): self._original.<span class="tok-fn">flush</span>()
+
+
+_orig = {}  <span class="tok-comment"># task_id → (orig_stdout, orig_stderr)</span>
+
+
+<span class="tok-dec">@task_prerun.connect</span>
+<span class="tok-kw">def</span> <span class="tok-fn">_capture</span>(task_id=<span class="tok-kw">None</span>, **kw):
+    _orig[task_id] = (sys.stdout, sys.stderr)
+    sys.stdout = <span class="tok-fn">_PrintStream</span>(sys.stdout, <span class="tok-str">"celery.task.stdout"</span>, logging.INFO)
+    sys.stderr = <span class="tok-fn">_PrintStream</span>(sys.stderr, <span class="tok-str">"celery.task.stderr"</span>, logging.ERROR)
+
+
+<span class="tok-dec">@task_postrun.connect</span>
+<span class="tok-kw">def</span> <span class="tok-fn">_restore</span>(task_id=<span class="tok-kw">None</span>, **kw):
+    pair = _orig.<span class="tok-fn">pop</span>(task_id, <span class="tok-kw">None</span>)
+    <span class="tok-kw">if</span> pair: sys.stdout, sys.stderr = pair</div>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-body);">
+        Wire it from the same place we already wire celery_logging — add
+        <code class="inline">from . import celery_print_capture  # noqa</code> to
+        <code class="inline">apps/shared/platform_logs/apps.py:ready()</code>.
+      </p>
+
+      <h4>Acceptance</h4>
+      <ul class="bul">
+        <li>Workspace task doing <code class="inline">print(traceback.format_exc())</code> now appears as proper ERROR log lines with the prefix.</li>
+        <li>The 5-line <code class="inline">print()</code> burst from <code class="inline">ildspsp/reports/tasks.py:266</code> becomes 5 log records all tagged with <code class="inline">[ildspsp:zel3-…]</code>.</li>
+        <li>Direct stdout writes (rare) still pass through unmodified — we preserve via <code class="inline">self._original.write(s)</code>.</li>
+      </ul>
+
+    </section>
+
+
+    <!-- ============= FIX 5 ============= -->
+    <section id="fix5">
+      <div class="section-kicker">Fix 5 · Django middleware</div>
+      <h2><code class="inline" style="font-size: 18px;">print()</code> from app views &amp; helpers → logger</h2>
+      <p class="section-intro">
+        Same problem as Fix 4 — workspace devs <code class="inline">print()</code>
+        in views, model methods, helpers — but the gunicorn web worker side
+        needs a different mechanic because of threading. Fix 4's signal-based
+        stdout swap is safe in celery (one task per worker process at a time);
+        a sync gunicorn worker is the same shape (one request per process at
+        a time), but a thread-based or async worker handles multiple concurrent
+        requests. A naive <code class="inline">sys.stdout</code> swap from one
+        thread would intercept writes from every other thread.
+      </p>
+
+      <h4>Approach · request-bound contextvar + a thread-aware stdout proxy</h4>
+      <p style="font-size: 13px; color: var(--text-body);">
+        Install a process-wide <code class="inline">sys.stdout</code> /
+        <code class="inline">sys.stderr</code> proxy <strong>once at startup</strong>.
+        The proxy reads a <code class="inline">contextvars.ContextVar</code>
+        on every <code class="inline">write()</code> — if a request is active,
+        forward to the per-request logger; if not, fall through to the real
+        stdout/stderr. The middleware just sets and clears the ContextVar
+        around the request. No per-thread global swap.
+      </p>
+
+      <h4>Code change · new file <code class="inline">apps/shared/platform_logs/stdout_proxy.py</code></h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span><span class="path">new file — installed once at module import</span></div>
+        <div class="code-body"><span class="tok-kw">import</span> <span class="tok-imp">logging</span>
+<span class="tok-kw">import</span> <span class="tok-imp">sys</span>
+<span class="tok-kw">from</span> <span class="tok-imp">contextvars</span> <span class="tok-kw">import</span> ContextVar
+
+
+<span class="tok-comment"># Set by middleware (Fix 5b) and the celery task hook (Fix 4) so the
+# proxy knows which logger to forward to for the current "scope".
+# When None, writes pass straight through to the real stdout/stderr.</span>
+_active: <span class="tok-cls">ContextVar</span> = <span class="tok-fn">ContextVar</span>(<span class="tok-str">"platform_logs_stdout_target"</span>, default=<span class="tok-kw">None</span>)
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">_Proxy</span>:
+    <span class="tok-kw">def</span> <span class="tok-fn">__init__</span>(self, fallback, default_level):
+        self._fallback = fallback
+        self._default_level = default_level
+        self._buf = []
+
+    <span class="tok-kw">def</span> <span class="tok-fn">write</span>(self, s):
+        target = _active.<span class="tok-fn">get</span>()
+        <span class="tok-kw">if</span> target <span class="tok-kw">is</span> <span class="tok-kw">None</span>:
+            <span class="tok-kw">return</span> self._fallback.<span class="tok-fn">write</span>(s)
+        <span class="tok-comment"># Pass through too — preserves normal terminal/CloudWatch visibility
+        # at the raw stream level (so dev tooling that follows stdout
+        # still sees the output).</span>
+        self._fallback.<span class="tok-fn">write</span>(s)
+        self._buf.<span class="tok-fn">append</span>(s)
+        <span class="tok-kw">if</span> <span class="tok-str">"\n"</span> <span class="tok-kw">in</span> s:
+            full = <span class="tok-str">""</span>.<span class="tok-fn">join</span>(self._buf); self._buf.<span class="tok-fn">clear</span>()
+            log = logging.<span class="tok-fn">getLogger</span>(target)
+            <span class="tok-kw">for</span> line <span class="tok-kw">in</span> full.<span class="tok-fn">splitlines</span>():
+                <span class="tok-kw">if</span> line:
+                    log.<span class="tok-fn">log</span>(self._default_level, line)
+        <span class="tok-kw">return</span> <span class="tok-fn">len</span>(s)
+
+    <span class="tok-kw">def</span> <span class="tok-fn">flush</span>(self): self._fallback.<span class="tok-fn">flush</span>()
+    <span class="tok-kw">def</span> <span class="tok-fn">isatty</span>(self): <span class="tok-kw">return</span> self._fallback.<span class="tok-fn">isatty</span>()
+
+
+<span class="tok-kw">def</span> <span class="tok-fn">install</span>():
+    <span class="tok-str">"""Wrap sys.stdout/sys.stderr once. Safe to call from app.ready()."""</span>
+    <span class="tok-kw">if</span> <span class="tok-kw">not</span> <span class="tok-fn">isinstance</span>(sys.stdout, _Proxy):
+        sys.stdout = <span class="tok-fn">_Proxy</span>(sys.stdout, logging.INFO)
+    <span class="tok-kw">if</span> <span class="tok-kw">not</span> <span class="tok-fn">isinstance</span>(sys.stderr, _Proxy):
+        sys.stderr = <span class="tok-fn">_Proxy</span>(sys.stderr, logging.ERROR)
+
+
+<span class="tok-kw">def</span> <span class="tok-fn">bind</span>(logger_name: <span class="tok-cls">str</span>):
+    <span class="tok-str">"""Returns a token suitable for `_active.reset(token)` after the scope ends."""</span>
+    <span class="tok-kw">return</span> _active.<span class="tok-fn">set</span>(logger_name)
+
+
+<span class="tok-kw">def</span> <span class="tok-fn">reset</span>(token):
+    _active.<span class="tok-fn">reset</span>(token)</div>
+      </div>
+
+      <h4>Wire-up</h4>
+      <ol class="bul">
+        <li><strong>Install the proxy once</strong> from <code class="inline">apps/shared/platform_logs/apps.py:ready()</code> — calls <code class="inline">stdout_proxy.install()</code>.</li>
+        <li><strong>App side</strong> — Django middleware that calls <code class="inline">stdout_proxy.bind("zango.request.stdout")</code> at request start, <code class="inline">stdout_proxy.reset(token)</code> in <code class="inline">finally</code>.</li>
+        <li><strong>Celery side</strong> — Fix 4's <code class="inline">task_prerun</code> handler does the same: <code class="inline">stdout_proxy.bind("celery.task.stdout")</code> at start, reset at <code class="inline">task_postrun</code>. This <em>replaces</em> Fix 4's <code class="inline">_PrintStream</code> entirely — single primitive for both sides.</li>
+      </ol>
+
+      <h4>Why this is thread-safe</h4>
+      <ul class="bul">
+        <li><code class="inline">contextvars.ContextVar</code> is per-execution-context (per-thread <em>and</em> per-async-task). Each request running concurrently has its own value.</li>
+        <li>The proxy reads the ContextVar lazily on every <code class="inline">write()</code>. A thread without a binding falls through to the real fallback stream untouched.</li>
+        <li><code class="inline">sys.stdout</code> swap happens <strong>once</strong> at process start — no concurrent mutation, no race.</li>
+      </ul>
+
+      <h4>Code change · new file <code class="inline">apps/shared/platform_logs/middleware.py</code></h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span></div>
+        <div class="code-body"><span class="tok-kw">from</span> <span class="tok-imp">zango.apps.shared.platform_logs</span> <span class="tok-kw">import</span> stdout_proxy
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">RequestPrintCaptureMiddleware</span>:
+    <span class="tok-kw">def</span> <span class="tok-fn">__init__</span>(self, get_response):
+        self.get_response = get_response
+
+    <span class="tok-kw">def</span> <span class="tok-fn">__call__</span>(self, request):
+        token = stdout_proxy.<span class="tok-fn">bind</span>(<span class="tok-str">"zango.request.stdout"</span>)
+        <span class="tok-kw">try</span>:
+            <span class="tok-kw">return</span> self.<span class="tok-fn">get_response</span>(request)
+        <span class="tok-kw">finally</span>:
+            stdout_proxy.<span class="tok-fn">reset</span>(token)</div>
+      </div>
+
+      <h4>Add to <code class="inline">MIDDLEWARE</code> in <code class="inline">settings/base.py</code></h4>
+      <div class="code">
+        <div class="code-header"><span class="lang">py</span></div>
+        <div class="code-body">MIDDLEWARE = [
+    <span class="tok-comment"># at or near the top — before any middleware whose own
+    # print()/log calls we want captured. After SecurityMiddleware is fine.</span>
+<span class="tok-add">    "zango.apps.shared.platform_logs.middleware.RequestPrintCaptureMiddleware",</span>
+    ...
+]</div>
+      </div>
+
+      <h4>Acceptance</h4>
+      <ul class="bul">
+        <li>A workspace view doing <code class="inline">print("debug:", thing)</code> appears in CloudWatch as a proper INFO line with the <code class="inline">[schema:domain]</code> prefix.</li>
+        <li>Two concurrent requests on a thread-based gunicorn worker don't cross-pollute — each gets its own ContextVar binding.</li>
+        <li>Boot-time / mgmt-command <code class="inline">print()</code> calls (no ContextVar set) still go to real stdout unmodified.</li>
+        <li>The "preserve normal stdout" path in <code class="inline">_Proxy.write</code> means <code class="inline">tail -f /proc/&lt;gunicorn-pid&gt;/fd/1</code> in the container still shows the raw print, in addition to the formatted log line.</li>
+      </ul>
+
+      <div class="note">
+        <span>
+          <strong>Fix 4 collapses into this.</strong> Once the proxy + ContextVar
+          primitive exists, the celery <code class="inline">task_prerun</code>
+          hook just calls the same <code class="inline">bind</code> /
+          <code class="inline">reset</code>. Drop the separate
+          <code class="inline">_PrintStream</code> class. One implementation,
+          two scopes (request and task).
+        </span>
+      </div>
+    </section>
+
+
+    <!-- ============= PLATFORM-LEVEL VIEW ============= -->
+    <section id="platform-view">
+      <div class="section-kicker">New feature</div>
+      <h2>Platform → Logs page</h2>
+      <p class="section-intro">
+        The per-app Runtime Logs tab is good for an app developer poking at their
+        own app's behavior. For a platform admin investigating an incident across
+        multiple tenants, they currently need to either open every app or go to
+        CloudWatch. A top-level <strong>Platform → Logs</strong> page (sibling of
+        <em>Apps</em> / <em>User Management</em> / <em>Settings</em>) uses the same
+        connector pipeline but drops the per-app filter and adds a Tenant column.
+      </p>
+
+      <h3>What's different from the per-app view</h3>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Per-app Runtime Logs</th>
+            <th>Platform Logs (new)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Route</td>
+            <td class="mono">/apps/&lt;uuid&gt;/logs/#runtime</td>
+            <td class="mono">/platform/logs</td>
+          </tr>
+          <tr>
+            <td>Permission</td>
+            <td><code>IsPlatformUserAllowedApp</code> (platform user with access to that app)</td>
+            <td><code>IsSuperAdminPlatformUser</code> (platform superadmin only)</td>
+          </tr>
+          <tr>
+            <td>Tenant filter</td>
+            <td>Backend injects <code>filters.app_name = tenant.schema_name</code> from the URL's app_uuid</td>
+            <td>No <code>app_name</code> filter — every tenant's lines come through</td>
+          </tr>
+          <tr>
+            <td>Tenant column</td>
+            <td>Not needed (single tenant)</td>
+            <td>Visible by default — shows the <code>schema</code> parsed from the verbose prefix</td>
+          </tr>
+          <tr>
+            <td>Tenant filter dropdown</td>
+            <td>n/a</td>
+            <td>Multi-select in the filter rail: "show only these tenants"</td>
+          </tr>
+          <tr>
+            <td>Everything else</td>
+            <td colspan="2" style="text-align: center; color: var(--text-muted);">Same — component picker, time range, live tail, table, search, view options</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ============= MOCKUP ============= -->
+    <section id="platform-mockup">
+      <div class="section-kicker">Mockup</div>
+      <h2>What it looks like</h2>
+
+      <div class="mk">
+        <div class="mk-caption">
+          <span class="mk-dot"></span>
+          <span class="mk-label">Platform · Logs · App component selected · live tail</span>
+          <span style="margin-left:auto;">platform superadmin</span>
+        </div>
+        <div class="mk-body">
+          <div class="mk-nav">
+            <aside class="mk-sidebar">
+              <div class="mk-side-logo">
+                <div class="mk-side-mark">Z</div>
+                <div class="mk-side-name">Zango<small>Platform</small></div>
+              </div>
+              <div class="mk-side-section">
+                <div class="mk-side-secl">Platform</div>
+                <div class="mk-side-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  Apps
+                </div>
+                <div class="mk-side-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
+                  Users &amp; roles
+                </div>
+                <div class="mk-side-item active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M8 16l4-6 3 4 4-8"/></svg>
+                  Logs <span class="mk-new">NEW</span>
+                </div>
+                <div class="mk-side-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+                  Settings
+                </div>
+              </div>
+            </aside>
+
+            <main class="mk-main">
+              <div class="mk-top">
+                <div class="mk-crumb">
+                  <span>Platform</span><span class="sep">/</span><span class="leaf">Logs</span>
+                </div>
+                <span class="mk-env">Staging · ap-south-1</span>
+              </div>
+              <div class="mk-pagerow">
+                <h1>Platform Logs</h1>
+                <p>App, Celery and Celery-beat output across <strong>every</strong> tenant in this environment.</p>
+              </div>
+              <div class="mk-strip">
+                <div class="mk-seg">
+                  <button class="active">App <span class="c">14.2k</span></button>
+                  <button>Celery <span class="c">3.4k</span></button>
+                  <button>Celery beat <span class="c">182</span></button>
+                </div>
+                <button class="mkb">Last 1 hour</button>
+                <button class="mkb" style="background: var(--surface-tinted); color: var(--indigo-700);">Tenant: <strong style="font-family: var(--font-mono);">all</strong> ▼</button>
+                <button class="mkb" style="background: var(--sage-50); color: var(--sage-700); border-color: rgba(90,164,91,0.35);">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--sage-500); box-shadow: 0 0 0 3px rgba(90,164,91,.22);"></span>
+                  Live tail · 10s
+                </button>
+              </div>
+              <div class="mk-tblw">
+                <table class="mk-tbl">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Level</th>
+                      <th>Tenant</th>
+                      <th>Stream</th>
+                      <th>Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="t">10:42:18.402</td>
+                      <td class="l"><span class="mk-lv inf">INFO</span></td>
+                      <td><span class="mk-tn-chip">newmicare</span></td>
+                      <td><span class="mk-stag">app/app/ce3ec653…</span></td>
+                      <td>GET /api/v1/apps/921e83b9/patients/ → 200 in 68 ms</td>
+                    </tr>
+                    <tr>
+                      <td class="t">10:42:18.144</td>
+                      <td class="l"><span class="mk-lv inf">INFO</span></td>
+                      <td><span class="mk-tn-chip">tntApp</span></td>
+                      <td><span class="mk-stag">app/app/6178e212…</span></td>
+                      <td>Cache hit · key=patient_dashboard:42b9…</td>
+                    </tr>
+                    <tr>
+                      <td class="t">10:42:17.482</td>
+                      <td class="l"><span class="mk-lv wrn">WARN</span></td>
+                      <td><span class="mk-tn-chip">ildspsp</span></td>
+                      <td><span class="mk-stag">app/app/ce3ec653…</span></td>
+                      <td>Policy 'OperationsAPIView' not found during auto-role attachment</td>
+                    </tr>
+                    <tr>
+                      <td class="t">10:42:16.221</td>
+                      <td class="l"><span class="mk-lv err">ERROR</span></td>
+                      <td><span class="mk-tn-chip">opdyta_call_agent</span></td>
+                      <td><span class="mk-stag">app/app/ce3ec653…</span></td>
+                      <td>django.template.base.VariableDoesNotExist: Failed lookup for key [error_message] …</td>
+                    </tr>
+                    <tr>
+                      <td class="t">10:42:14.880</td>
+                      <td class="l"><span class="mk-lv inf">INFO</span></td>
+                      <td><span class="mk-tn-chip">newmicare</span></td>
+                      <td><span class="mk-stag">app/app/d506d65d…</span></td>
+                      <td>Patient profile updated · id=8217 · fields=[phone, dob]</td>
+                    </tr>
+                    <tr>
+                      <td class="t">10:42:09.840</td>
+                      <td class="l"><span class="mk-lv inf">INFO</span></td>
+                      <td><span class="mk-tn-chip">visitiq</span></td>
+                      <td><span class="mk-stag">app/app/6178e212…</span></td>
+                      <td>POST /auth/login/ → 302 in 89 ms</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size: 12.5px; color: var(--text-muted);">
+        Everything else carries over from the per-app view — expand on click,
+        Load earlier at the bottom, View menu (column hide, wrap, filter rail),
+        custom date range, live tail polling cadence.
+      </p>
+    </section>
+
+
+    <!-- ============= API ============= -->
+    <section id="platform-api">
+      <div class="section-kicker">API</div>
+      <h2>Endpoints</h2>
+      <p class="section-intro">
+        Mirror the in-app endpoints but at <code class="inline">/api/v1/platform/logs/</code>
+        with the admin permission class and no <code class="inline">app_name</code>
+        injection.
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 44%;">Endpoint</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">GET /api/v1/platform/logs/components/</td><td>List configured components for the current env (drives the picker).</td></tr>
+          <tr><td class="mono">GET /api/v1/platform/logs/&lt;component&gt;/</td><td>Browse — latest N in window, no tenant filter.</td></tr>
+          <tr><td class="mono">GET /api/v1/platform/logs/&lt;component&gt;/tail/</td><td>Live tail forward cursor, no tenant filter.</td></tr>
+          <tr><td class="mono">GET /api/v1/platform/logs/&lt;component&gt;/streams/</td><td>List sub-streams for the picker.</td></tr>
+          <tr><td class="mono">GET /api/v1/platform/logs/&lt;component&gt;/facets/</td><td>Cached levels + tenant set parsed from recent lines.</td></tr>
+          <tr><td class="mono">GET /api/v1/platform/logs/&lt;component&gt;/tenants/</td><td>Optional · distinct tenants seen in the last 24h (drives the Tenant dropdown).</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Query parameters</h4>
+      <p style="font-size: 13px;">
+        All the same as the in-app endpoints plus one addition:
+      </p>
+      <ul class="bul">
+        <li><code class="inline">&amp;tenants=newmicare,tntApp,ildspsp</code> — when present, the connector restricts to lines whose <code class="inline">app_name</code> matches one of the listed schemas. When absent, no tenant restriction.</li>
+      </ul>
+
+      <p style="font-size: 13px; color: var(--text-muted);">
+        Reuses the existing CloudWatch connector. The only change is the view layer:
+        instead of <code class="inline">filters.app_name = _tenant_schema_for(app_uuid)</code>,
+        it passes <code class="inline">filters.app_name = None</code> (or honors the
+        tenants list if present and translates it into CloudWatch filter pattern
+        ORs).
+      </p>
+    </section>
+
+
+    <!-- ============= PERMISSIONS ============= -->
+    <section id="platform-perm">
+      <div class="section-kicker">Access control</div>
+      <h2>Permissions</h2>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 30%;">Endpoint</th>
+            <th>Permission class</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>/api/v1/apps/&lt;uuid&gt;/logs/* (existing)</td>
+            <td><code>IsPlatformUserAllowedApp</code></td>
+            <td>Lines are tenant-scoped; user has access to that one app.</td>
+          </tr>
+          <tr>
+            <td>/api/v1/platform/logs/* (new)</td>
+            <td><code>IsSuperAdminPlatformUser</code></td>
+            <td>Lines span every tenant. Only platform superadmins should see other tenants' data.</td>
+          </tr>
+          <tr>
+            <td>/api/v1/platform/logs/connectors/ (existing)</td>
+            <td><code>IsSuperAdminPlatformUser</code></td>
+            <td>Already admin-gated.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+
+    <!-- ============= SCOPE ============= -->
+    <section id="scope">
+      <div class="section-kicker">Scope</div>
+      <h2>Phasing</h2>
+      <p class="section-intro">
+        Single PR — small surface area, related changes. Order of commits below
+        lets reviewers eyeball each piece independently.
+      </p>
+
+      <table class="tbl">
+        <thead>
+          <tr><th style="width:14%;">Commit</th><th style="width:40%;">Scope</th><th>Impact</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill accent">1</span></td>
+            <td>Settings · root logger + noise muters</td>
+            <td>Workspace + zango.apps.* loggers reach CloudWatch with tenant prefix. botocore/urllib3 noise stays out.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">2</span></td>
+            <td>Loguru format · tenant prefix in <code>get_loguru_format</code></td>
+            <td>Every loguru call (platform + workspace) carries <code>[schema:domain]</code> from now on.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">3</span></td>
+            <td>Stdout proxy primitive · new <code>stdout_proxy.py</code> with ContextVar-based switch</td>
+            <td>Foundation for Fix 4 + Fix 5. Installed once at app <code>ready()</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">4</span></td>
+            <td>Celery print() capture · <code>task_prerun</code>/<code>task_postrun</code> hooks calling <code>stdout_proxy.bind/reset</code></td>
+            <td>Workspace task <code>print()</code> calls become tenant-tagged log records.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">5</span></td>
+            <td>App print() capture · <code>RequestPrintCaptureMiddleware</code> + <code>MIDDLEWARE</code> entry</td>
+            <td>Workspace view <code>print()</code> calls do the same. Thread-safe via ContextVar.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">6</span></td>
+            <td>Platform Logs API · new views, urls, permission gate, tenants endpoint</td>
+            <td>Backend ready for the new page.</td>
+          </tr>
+          <tr>
+            <td><span class="pill accent">7</span></td>
+            <td>Platform Logs frontend · new page at <code>/platform/logs</code></td>
+            <td>Reuses Runtime Logs components — adds Tenant column + Tenant filter dropdown. Sidebar nav entry.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="card success" style="margin-top: 14px;">
+        <h3 style="color: var(--sage-700);">No data migration. No infra change. No new dependency.</h3>
+        <p style="font-size: 13px; color: var(--text-body);">
+          Everything is settings-side or component-additive. Deployment is a normal
+          push + restart.
+        </p>
+      </div>
+    </section>
+
+
+    <!-- ============= OPEN ============= -->
+    <section id="open">
+      <div class="section-kicker">Open</div>
+      <h2>Decisions to make before coding</h2>
+      <ul class="bul">
+        <li>Root logger <strong>INFO</strong> vs <strong>WARNING</strong> as the default level. INFO surfaces useful zango app lines but adds volume; WARNING is quieter but hides "patient saved" / "task scheduled" kinds of breadcrumbs. Recommend <strong>INFO</strong> with the noise muters as a starting point.</li>
+        <li>Loguru fix path — confirm <strong>Option A</strong> (modify format) over Option B (bridge to stdlib). Recommend A.</li>
+        <li>Celery print capture · should it apply to the codexec executor too, or stay turned off for codexec tasks since the executor already has its own CapturingStream? Recommend: <strong>skip when task name starts with <code class="inline">zango.code_execution.</code></strong>.</li>
+        <li>Platform Logs · Tenant column visible by default, or hidden by default and shown only when a tenant filter is active? Recommend: <strong>visible always</strong>, hideable from the View menu.</li>
+        <li>Multi-tenant filter pattern — how many <code class="inline">[name:</code> ORs can CloudWatch handle in a single FilterLogEvents pattern? AWS doc says ~1024 chars per pattern. May need to chunk for &gt;30 selected tenants. Worth confirming.</li>
+        <li>The new Platform Logs page navigation — do we want it inside the existing Settings shell (as a fourth tab next to Log Connectors), or as a separate top-level nav item? Recommend <strong>separate top-level</strong> — viewing logs is a different mental task from configuring connectors.</li>
+      </ul>
+    </section>
+
+
+    <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-subtle);">
+        <div>Platform Logs · Follow-ups · Zango Platform</div>
+        <div>Branch <span style="font-family: var(--font-mono); color: var(--text-muted);">feat/logs_followups</span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+  const targets = tocLinks.map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
+  function absTop(el) { return el.getBoundingClientRect().top + window.scrollY; }
+  function updateActive() {
+    const y = window.scrollY + 120;
+    let currentId = '';
+    targets.forEach(el => { if (absTop(el) <= y) currentId = el.id; });
+    tocLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + currentId));
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  tocLinks.forEach(l => l.addEventListener('click', (e) => {
+    const target = document.querySelector(l.getAttribute('href'));
+    if (target) { e.preventDefault(); window.scrollTo({ top: absTop(target) - 24, behavior: 'smooth' }); }
+  }));
+  updateActive();
+</script>
+
+</body>
+</html>
