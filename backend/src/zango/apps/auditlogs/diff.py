@@ -13,8 +13,10 @@ from django.db.models import (
     Model,
     OneToOneField,
 )
+from django.db.utils import DatabaseError
 from django.utils import timezone as django_timezone
 from django.utils.encoding import smart_str
+from loguru import logger
 
 from zango.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
 
@@ -34,6 +36,19 @@ def track_field(field):
 
     # Do not track many to many relations
     if field.many_to_many:
+        return False
+
+    # Do not track REVERSE relations (auto-created accessors on the target
+    # side of a FK / OneToOne). These point at OTHER rows; their changes
+    # belong to the audit log of the model that holds the FK. Including
+    # them here triggers eager DB lookups on every save which in
+    # multi-tenant dynamic-model setups can hit tables that don't exist
+    # in the current schema. The `auto_created=True, concrete=False`
+    # pair is Django's canonical marker for these auto-generated
+    # reverse descriptors.
+    if getattr(field, "auto_created", False) and not getattr(
+        field, "concrete", True
+    ):
         return False
 
     # Do not track relations to LogEntry
@@ -123,6 +138,18 @@ def get_field_value(obj, field):
             if getattr(field, "default", NOT_PROVIDED) is not NOT_PROVIDED
             else None
         )
+    except DatabaseError as e:
+        # Tenant-scoped dynamic model not migrated in this schema, or any
+        # other DB-level read failure surfacing through a lazy descriptor.
+        # Audit log must not break the host operation — degrade to None
+        # with a warning so the failure is observable but non-fatal.
+        logger.warning(
+            "Audit-log field read failed for {}.{}: {}",
+            type(obj).__name__,
+            getattr(field, "name", "?"),
+            e,
+        )
+        value = None
 
     return value
 

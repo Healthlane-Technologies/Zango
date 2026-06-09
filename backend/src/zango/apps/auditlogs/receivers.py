@@ -1,6 +1,7 @@
 from functools import wraps
 
 from django.conf import settings
+from loguru import logger
 
 from zango.apps.auditlogs.context import auditlog_disabled
 from zango.apps.auditlogs.diff import model_instance_diff
@@ -143,7 +144,20 @@ def _create_log_entry(
                 log_created=log_entry is not None,
             )
         if error:
-            raise error
+            # Audit log is a trace, not a transactional dependency. A
+            # missing log row is far less serious than aborting the host
+            # operation, so we log the failure as a warning and swallow.
+            # Dev environments can flip AUDITLOG_RAISE_ERRORS=True in
+            # settings to surface internal failures loudly.
+            logger.opt(exception=True).warning(
+                "Audit-log {} failed for {} pk={}: {}",
+                action,
+                sender.__name__,
+                getattr(instance, "pk", "?"),
+                error,
+            )
+            if getattr(settings, "AUDITLOG_RAISE_ERRORS", False):
+                raise error
 
 
 def make_log_m2m_changes(field_name):
