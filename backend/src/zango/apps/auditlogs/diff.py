@@ -1,5 +1,4 @@
 import json
-import logging
 
 from datetime import timezone
 from typing import Optional
@@ -17,11 +16,9 @@ from django.db.models import (
 from django.db.utils import DatabaseError
 from django.utils import timezone as django_timezone
 from django.utils.encoding import smart_str
+from loguru import logger
 
 from zango.apps.dynamic_models.fields import ZForeignKey, ZOneToOneField
-
-
-logger = logging.getLogger("zango.auditlogs")
 
 
 def track_field(field):
@@ -147,7 +144,7 @@ def get_field_value(obj, field):
         # Audit log must not break the host operation — degrade to None
         # with a warning so the failure is observable but non-fatal.
         logger.warning(
-            "Audit-log field read failed for %s.%s: %s",
+            "Audit-log field read failed for {}.{}: {}",
             type(obj).__name__,
             getattr(field, "name", "?"),
             e,

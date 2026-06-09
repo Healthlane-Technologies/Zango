@@ -1,16 +1,12 @@
-import logging
-
 from functools import wraps
 
 from django.conf import settings
+from loguru import logger
 
 from zango.apps.auditlogs.context import auditlog_disabled
 from zango.apps.auditlogs.diff import model_instance_diff
 from zango.apps.auditlogs.models import LogEntry
 from zango.apps.auditlogs.signals import post_log, pre_log
-
-
-logger = logging.getLogger("zango.auditlogs")
 
 
 def check_disable(signal_handler):
@@ -153,13 +149,12 @@ def _create_log_entry(
             # operation, so we log the failure as a warning and swallow.
             # Dev environments can flip AUDITLOG_RAISE_ERRORS=True in
             # settings to surface internal failures loudly.
-            logger.warning(
-                "Audit-log %s failed for %s pk=%s: %s",
+            logger.opt(exception=True).warning(
+                "Audit-log {} failed for {} pk={}: {}",
                 action,
                 sender.__name__,
                 getattr(instance, "pk", "?"),
                 error,
-                exc_info=True,
             )
             if getattr(settings, "AUDITLOG_RAISE_ERRORS", False):
                 raise error
