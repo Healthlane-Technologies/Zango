@@ -6,7 +6,7 @@
 
 <hr>
 
-### **✨ Django framework to build enterprise-ready business applications. Rapid development. Multiple applications as independently deployable units on a single monolith ✨** 
+### **✨ Django framework to build Agentic AI business applications. Multi-tenant and enterprise-ready by default. ✨** 
 <hr>  
 <p align="center">
   <a href="#">
@@ -19,22 +19,22 @@
 
 <p align="center">
   <a href="https://www.zango.dev" target="_blank">Website</a> |
-  <a href="https://www.zango.dev/docs/category/getting-started" target="_blank">Getting Started </a>|
+  <a href="https://www.zango.dev/docs/get-started/quick-start-with-claude" target="_blank">Quick Start</a> |
   <a href="https://zango.dev/docs" target="_blank">Docs</a> |
   <a href="https://discord.com/invite/WHvVjU23e7" target="_blank">Discord</a>
 </p> 
 
 
 
-**Zango** is a web application development framework built upon Django, designed to enable rapid development of enterprise-ready business applications. 
-
+**Zango** is a vertically integrated backend + frontend + operations platform built on Django, designed for rapid development of **Agentic AI business applications**. It is multi-tenant by default and enterprise-ready from day one.
 
 - Leverage the strengths of Django, an already proven and battle-tested web framework
-- Make available the basics of business web apps/ microservices as part of the framework
-- Host multiple apps or microservices on a single monolith under the hood.
-- Security & Compliances are built in.
-- Suite of essential packages to serve as the building blocks of apps
-- Use case packages to build the industry-specific use cases
+- Multi-tenant SaaS built in: one deployment, data isolated per tenant, zero leakage
+- Auth is configured, not coded: OTP, MFA, SAML 2.0, session control, password policy, account lockout
+- Compliance-ready: access logs, audit trails, and policy management on from day one
+- Native AI module: agents, tools, and prompts with per-tenant context, workflow state, and cost tracking
+- Suite of essential packages — AppBuilder, CRUD, Workflow, Communication — as building blocks
+- Host multiple apps or microservices on a single monolith with full data isolation
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/Zango/)
 
@@ -62,17 +62,35 @@ Star Zango on GitHub and be instantly notified of new releases.
 
 
 ####  🚀 Getting Started:
-- [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
+- [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude) ← recommended
 - [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
 - [Manual](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual)
 
 
-#### 📦 Free Packages
-A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
-- [Basic Auth](https://www.zango.dev/docs/basic-auth/introduction)
-- [Frames](https://www.zango.dev/docs/frame/introduction)
-- [CRUD](https://www.zango.dev/docs/crud/introduction) 
-- [Workflow](https://www.zango.dev/docs/workflow/overview)
+#### ⚡ Quick Start with Claude Code
+
+The fastest way into Zango is through the `zango-app-developer` plugin for [Claude Code](https://claude.ai/code). Install it once, describe your app in plain English, and the plugin generates the code, runs migrations, syncs policies, and configures the platform — no separate "click through the App Panel" step.
+
+```bash
+# Add the marketplace and install the plugin
+claude plugin marketplace add Healthlane-Technologies/zelthy-claude-skills
+claude plugin install zango-app-developer@zelthy
+```
+
+Then open Claude Code in an empty folder and run `/zango-app-developer`. The plugin bootstraps a full local environment (Docker or virtualenv), creates your app, installs packages, and builds the first version of your feature from a plain-language description.
+
+Full walkthrough: [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
+
+
+#### 📦 Packages
+
+Packages are installed from the App Panel. The core three must be installed in order: **AppBuilder → CRUD → Workflow**.
+
+- [AppBuilder](https://www.zango.dev/docs/core/getting-started) — React shell with routing, navigation, themes, and auth UI
+- [CRUD](https://www.zango.dev/docs/crud/introduction) — `BaseCrudView` + `ModelTable` + `BaseForm` + `CrudHandler` for data-management screens
+- [Workflow](https://www.zango.dev/docs/workflow/overview) — lifecycle management: statuses, transitions, tags, audit trail
+- [Communication](https://www.zango.dev/docs/communication/overview) — SMS, email, audio & video via configurable providers
+- Appointment — scheduling vertical with types, hosts, reminders, and custom workflows
 
 
 #### 🌟 Get Involved and Make a Difference
