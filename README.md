@@ -4,7 +4,7 @@
     </a>
 </h1>
 
-<p align="center"><strong>✨ Django framework to build Agentic AI business applications✨</strong></p>
+<h3 align="center">✨ Django framework to build Agentic AI business applications ✨</h3>
 <hr>  
 <p align="center">
   <a href="#">
