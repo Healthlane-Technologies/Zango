@@ -4,9 +4,7 @@
     </a>
 </h1>
 
-<hr>
-
-### **✨ Django framework to build Agentic AI business applications. Multi-tenant and enterprise-ready by default. ✨** 
+<p align="center"><strong>✨ Django framework to build Agentic AI business applications. Multi-tenant and enterprise-ready by default. ✨</strong></p>
 <hr>  
 <p align="center">
   <a href="#">
