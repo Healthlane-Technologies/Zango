@@ -93,8 +93,8 @@ Packages are installed from the App Panel. The core three must be installed in o
 
 - [AppBuilder](https://www.zango.dev/docs/platform-internals/packages/appbuilder/introduction) — React shell with routing, navigation, themes, and auth UI
 - [CRUD](https://www.zango.dev/docs/platform-internals/packages/crud/introduction) — `BaseCrudView` + `ModelTable` + `BaseForm` + `CrudHandler` for data-management screens
-- [Workflow](https://www.zango.dev/docs/platform-internals/packages/workflow/introduction) — lifecycle management: statuses, transitions, tags, audit trail
-- [Communication](https://www.zango.dev/docs/platform-internals/packages/communication/introduction) — SMS, email, audio & video via configurable providers
+- [Workflow](https://www.zango.dev/docs/platform-internals/packages/workflow/overview) — lifecycle management: statuses, transitions, tags, audit trail
+- [Communication](https://www.zango.dev/docs/platform-internals/packages/communication/overview) — SMS, email, audio & video via configurable providers
 
 
 #### 🌟 Get Involved and Make a Difference
