@@ -59,17 +59,9 @@ Star Zango on GitHub and be instantly notified of new releases.
 ![star us](https://github.com/Healthlane-Technologies/Zango/assets/12683350/15b97240-c381-472b-a112-7c701a29ccda)
 
 
+#### ⚡ [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
 
-
-####  🚀 Getting Started:
-- [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude) ← recommended
-- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
-- [Manual](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual)
-
-
-#### ⚡ Quick Start with Claude Code
-
-The fastest way into Zango is through the `zango-app-developer` plugin for [Claude Code](https://claude.ai/code). Install it once, describe your app in plain English, and the plugin generates the code, runs migrations, syncs policies, and configures the platform — no separate "click through the App Panel" step.
+The fastest way into Zango is through the `zango-app-developer` plugin for [Claude Code](https://claude.com/product/claude-code). Install it once, describe your app in plain English, and the plugin generates the code, runs migrations, syncs policies, and configures the platform — no separate "click through the App Panel" step.
 
 ```bash
 # Add the marketplace and install the plugin
@@ -86,11 +78,10 @@ Full walkthrough: [Quick Start with Claude Code](https://www.zango.dev/docs/get-
 
 Packages are installed from the App Panel. The core three must be installed in order: **AppBuilder → CRUD → Workflow**.
 
-- [AppBuilder](https://www.zango.dev/docs/core/getting-started) — React shell with routing, navigation, themes, and auth UI
-- [CRUD](https://www.zango.dev/docs/crud/introduction) — `BaseCrudView` + `ModelTable` + `BaseForm` + `CrudHandler` for data-management screens
-- [Workflow](https://www.zango.dev/docs/workflow/overview) — lifecycle management: statuses, transitions, tags, audit trail
-- [Communication](https://www.zango.dev/docs/communication/overview) — SMS, email, audio & video via configurable providers
-- Appointment — scheduling vertical with types, hosts, reminders, and custom workflows
+- [AppBuilder](https://www.zango.dev/docs/platform-internals/packages/appbuilder/introduction) — React shell with routing, navigation, themes, and auth UI
+- [CRUD](https://www.zango.dev/docs/platform-internals/packages/crud/introduction) — `BaseCrudView` + `ModelTable` + `BaseForm` + `CrudHandler` for data-management screens
+- [Workflow](https://www.zango.dev/docs/platform-internals/packages/workflow/introduction) — lifecycle management: statuses, transitions, tags, audit trail
+- [Communication](https://www.zango.dev/docs/platform-internals/packages/communication/introduction) — SMS, email, audio & video via configurable providers
 
 
 #### 🌟 Get Involved and Make a Difference
