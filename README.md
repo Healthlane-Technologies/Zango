@@ -4,7 +4,7 @@
     </a>
 </h1>
 
-<p align="center"><strong>✨ Django framework to build Agentic AI business applications. Multi-tenant and enterprise-ready by default. ✨</strong></p>
+<p align="center"><strong>✨ Django framework to build Agentic AI business applications✨</strong></p>
 <hr>  
 <p align="center">
   <a href="#">
@@ -72,9 +72,11 @@ Then open Claude Code in an empty folder and run `/zango-app-developer`. The plu
 Full walkthrough: [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
 
 
-#### 🤖 Native AI Module
+#### 🤖 Agent Studio
 
 Zango has a first-class AI module built in — not a bolt-on. Define agents, attach tools, and call them from any view, background task, or scheduled job. Because the module runs inside the platform, every agent automatically operates in the correct tenant's data, respects the same role-based permissions as the rest of the app, and logs every invocation with token counts and cost.
+
+![Zango Agent Studio](assets/agent-studio.png)
 
 **What this means in practice:**
 - An agent reading or writing data always sees the right tenant's records — no manual scoping
