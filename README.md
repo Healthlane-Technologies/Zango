@@ -74,6 +74,21 @@ Then open Claude Code in an empty folder and run `/zango-app-developer`. The plu
 Full walkthrough: [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
 
 
+#### 🤖 Native AI Module
+
+Zango has a first-class AI module built in — not a bolt-on. Define agents, attach tools, and call them from any view, background task, or scheduled job. Because the module runs inside the platform, every agent automatically operates in the correct tenant's data, respects the same role-based permissions as the rest of the app, and logs every invocation with token counts and cost.
+
+**What this means in practice:**
+- An agent reading or writing data always sees the right tenant's records — no manual scoping
+- Agent endpoints are policy-gated like any other view — no separate auth layer to build
+- Run `agent.run()` inside a Celery task and it becomes a fully autonomous background worker
+- Every run is logged: prompt rendered, tools called, response, tokens used, USD cost — per tenant
+
+**Supported providers:** OpenAI and Anthropic, with more coming soon. API keys are stored encrypted in the App Panel; no secrets in code.
+
+[Read the AI module docs →](https://www.zango.dev/docs/ai-module/)
+
+
 #### 📦 Packages
 
 Packages are installed from the App Panel. The core three must be installed in order: **AppBuilder → CRUD → Workflow**.
