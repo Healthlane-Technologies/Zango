@@ -129,3 +129,4 @@ def update_tool_usage_stats():
             logger.error(
                 f"Error updating tool usage stats for tenant {tenant.schema_name}: {e}"
             )
+            raise
