@@ -2,12 +2,8 @@
 Celery tasks for async LLM completions.
 """
 
-import logging
-
 from celery import shared_task
-
-
-logger = logging.getLogger("zango.ai")
+from loguru import logger
 
 @shared_task(bind=True, name="zango.ai.async_llm_complete")
 def async_llm_complete(
