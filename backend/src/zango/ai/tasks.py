@@ -2,13 +2,8 @@
 Celery tasks for async LLM completions.
 """
 
-import logging
-
 from celery import shared_task
-
-
-logger = logging.getLogger("zango.ai")
-
+from loguru import logger
 
 @shared_task(bind=True, name="zango.ai.async_llm_complete")
 def async_llm_complete(
@@ -81,41 +76,53 @@ def update_tool_usage_stats():
     Periodic task — run daily at 2 AM.
     Aggregates AppLLMToolCall records to update usage stats on AppLLMTool.
     avg_execution_ms is computed over the last 24 hours of successful calls.
+    Runs across all active tenants.
     """
     from datetime import timedelta
 
     from django.db.models import Avg, Count, Max, Q
     from django.utils import timezone
+    from django_tenants.utils import schema_context
 
-    from zango.apps.ai.models.tool import AppLLMTool, AppLLMToolCall
+    from zango.apps.shared.tenancy.models import TenantModel
 
     cutoff_24h = timezone.now() - timedelta(hours=24)
 
-    for tool_record in AppLLMTool.objects.filter(is_active=True):
-        calls = AppLLMToolCall.objects.filter(tool=tool_record)
+    for tenant in TenantModel.objects.exclude(schema_name="public"):
+        try:
+            with schema_context(tenant.schema_name):
+                from zango.apps.ai.models.tool import AppLLMTool, AppLLMToolCall
 
-        stats = calls.aggregate(
-            total=Count("id"),
-            errors=Count("id", filter=Q(status="error")),
-            timeouts=Count("id", filter=Q(status="timeout")),
-            last_called=Max("created_at"),
-        )
+                for tool_record in AppLLMTool.objects.filter(is_active=True):
+                    calls = AppLLMToolCall.objects.filter(tool=tool_record)
 
-        avg_ms = calls.filter(status="success", created_at__gte=cutoff_24h).aggregate(
-            avg=Avg("execution_time_ms")
-        )["avg"]
+                    stats = calls.aggregate(
+                        total=Count("id"),
+                        errors=Count("id", filter=Q(status="error")),
+                        timeouts=Count("id", filter=Q(status="timeout")),
+                        last_called=Max("created_at"),
+                    )
 
-        tool_record.total_calls = stats["total"] or 0
-        tool_record.total_errors = stats["errors"] or 0
-        tool_record.total_timeouts = stats["timeouts"] or 0
-        tool_record.avg_execution_ms = int(avg_ms) if avg_ms else 0
-        tool_record.last_called_at = stats["last_called"]
-        tool_record.save(
-            update_fields=[
-                "total_calls",
-                "total_errors",
-                "total_timeouts",
-                "avg_execution_ms",
-                "last_called_at",
-            ]
-        )
+                    avg_ms = calls.filter(
+                        status="success", created_at__gte=cutoff_24h
+                    ).aggregate(avg=Avg("execution_time_ms"))["avg"]
+
+                    tool_record.total_calls = stats["total"] or 0
+                    tool_record.total_errors = stats["errors"] or 0
+                    tool_record.total_timeouts = stats["timeouts"] or 0
+                    tool_record.avg_execution_ms = int(avg_ms) if avg_ms else 0
+                    tool_record.last_called_at = stats["last_called"]
+                    tool_record.save(
+                        update_fields=[
+                            "total_calls",
+                            "total_errors",
+                            "total_timeouts",
+                            "avg_execution_ms",
+                            "last_called_at",
+                        ]
+                    )
+        except Exception as e:
+            logger.error(
+                f"Error updating tool usage stats for tenant {tenant.schema_name}: {e}"
+            )
+            raise
