@@ -34,7 +34,6 @@
 - Suite of essential packages — AppBuilder, CRUD, Workflow, Communication — as building blocks
 - Host multiple apps or microservices on a single monolith with full data isolation
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/Zango/)
 
 #### ⚡ [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
 
