@@ -9,10 +9,6 @@ from celery import shared_task
 
 logger = logging.getLogger("zango.ai")
 
-_tool_stats_skip_tenants: set = set()
-
-
-
 @shared_task(bind=True, name="zango.ai.async_llm_complete")
 def async_llm_complete(
     self,
@@ -130,6 +126,6 @@ def update_tool_usage_stats():
                         ]
                     )
         except Exception as e:
-            if tenant.schema_name not in _tool_stats_skip_tenants:
-                logger.error(f"update_tool_usage_stats failed for tenant {tenant.schema_name}: {e}")
-                _tool_stats_skip_tenants.add(tenant.schema_name)
+            logger.error(
+                f"Error updating tool usage stats for tenant {tenant.schema_name}: {e}"
+            )
