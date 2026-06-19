@@ -4,9 +4,7 @@
     </a>
 </h1>
 
-<hr>
-
-### **✨ Django framework to build enterprise-ready business applications. Rapid development. Multiple applications as independently deployable units on a single monolith ✨** 
+<h3 align="center">✨ Django framework to build Agentic AI business applications ✨</h3>
 <hr>  
 <p align="center">
   <a href="#">
@@ -19,24 +17,43 @@
 
 <p align="center">
   <a href="https://www.zango.dev" target="_blank">Website</a> |
-  <a href="https://www.zango.dev/docs/category/getting-started" target="_blank">Getting Started </a>|
+  <a href="https://www.zango.dev/docs/get-started/quick-start-with-claude" target="_blank">Quick Start</a> |
   <a href="https://zango.dev/docs" target="_blank">Docs</a> |
   <a href="https://discord.com/invite/WHvVjU23e7" target="_blank">Discord</a>
 </p> 
 
 
 
-**Zango** is a web application development framework built upon Django, designed to enable rapid development of enterprise-ready business applications. 
-
+**Zango** is a vertically integrated backend + frontend + operations platform built on Django, designed for rapid development of **Agentic AI business applications**. It is multi-tenant by default and enterprise-ready from day one.
 
 - Leverage the strengths of Django, an already proven and battle-tested web framework
-- Make available the basics of business web apps/ microservices as part of the framework
-- Host multiple apps or microservices on a single monolith under the hood.
-- Security & Compliances are built in.
-- Suite of essential packages to serve as the building blocks of apps
-- Use case packages to build the industry-specific use cases
+- Multi-tenant SaaS built in: one deployment, data isolated per tenant, zero leakage
+- Auth is configured, not coded: OTP, MFA, SAML 2.0, session control, password policy, account lockout
+- Compliance-ready: access logs, audit trails, and policy management on from day one
+- Native AI module: agents, tools, and prompts with per-tenant context, workflow state, and cost tracking
+- Suite of essential packages — AppBuilder, CRUD, Workflow, Communication — as building blocks
+- Host multiple apps or microservices on a single monolith with full data isolation
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Healthlane-Technologies/Zango/)
+
+## 🚀 Get Started
+
+#### ⚡ [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
+
+The fastest way into Zango is through the `zango-app-developer` plugin for [Claude Code](https://claude.com/product/claude-code). Install it once, describe your app in plain English, and the plugin generates the code, runs migrations, syncs policies, and configures the platform — no separate "click through the App Panel" step.
+
+```bash
+# Add the marketplace and install the plugin
+claude plugin marketplace add Healthlane-Technologies/zelthy-claude-skills
+claude plugin install zango-app-developer@zelthy
+```
+
+Then open Claude Code in an empty folder and run `/zango-app-developer`. The plugin bootstraps a full local environment (Docker or virtualenv), creates your app, installs packages, and builds the first version of your feature from a plain-language description.
+
+Full walkthrough: [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
+
+Prefer a manual setup? Choose your method:
+- 🐍 [Python Virtualenv Setup](https://www.zango.dev/docs/installing-zango/python-venv)
+- 🐳 [Docker Setup](https://www.zango.dev/docs/installing-zango/docker)
 
 
 #### App Panel - Central hub to manage all your apps/ microservices
@@ -45,34 +62,38 @@ Perform tasks such as configuring permissions, managing user roles, and much mor
 ![Zango App Panel](https://github.com/Healthlane-Technologies/Zango/assets/22682748/69f42dec-4ca1-4d19-974f-e83c2ddb7324)
 
 
+#### 🤖 Agent Studio
+
+Zango has a first-class AI module built in — not a bolt-on. Define agents, attach tools, and call them from any view, background task, or scheduled job. Because the module runs inside the platform, every agent automatically operates in the correct tenant's data, respects the same role-based permissions as the rest of the app, and logs every invocation with token counts and cost.
+
+![Zango Agent Studio](assets/agent-studio.png)
+
+**What this means in practice:**
+- An agent reading or writing data always sees the right tenant's records — no manual scoping
+- Agent endpoints are policy-gated like any other view — no separate auth layer to build
+- Run `agent.run()` inside a Celery task and it becomes a fully autonomous background worker
+- Every run is logged: prompt rendered, tools called, response, tokens used, USD cost — per tenant
+
+**Supported providers:** OpenAI and Anthropic, with more coming soon. API keys are stored encrypted in the App Panel; no secrets in code.
+
+[Read the AI module docs →](https://www.zango.dev/docs/ai-module/)
+
+
+#### 📦 Packages
+
+Packages are installed from the App Panel. The core three must be installed in order: **AppBuilder → CRUD → Workflow**.
+
+- [AppBuilder](https://www.zango.dev/docs/platform-internals/packages/appbuilder/introduction) — React shell with routing, navigation, themes, and auth UI
+- [CRUD](https://www.zango.dev/docs/platform-internals/packages/crud/introduction) — `BaseCrudView` + `ModelTable` + `BaseForm` + `CrudHandler` for data-management screens
+- [Workflow](https://www.zango.dev/docs/platform-internals/packages/workflow/overview) — lifecycle management: statuses, transitions, tags, audit trail
+- [Communication](https://www.zango.dev/docs/platform-internals/packages/communication/overview) — SMS, email, audio & video via configurable providers
+
+
 #### Drastically reduce your infrastructural and operational overheads by hosting multiple apps/ microservices on a single deployment:
 
 Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
 
 ![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
-
-
-#### Staying ahead
-
-Star Zango on GitHub and be instantly notified of new releases.
-
-![star us](https://github.com/Healthlane-Technologies/Zango/assets/12683350/15b97240-c381-472b-a112-7c701a29ccda)
-
-
-
-
-####  🚀 Getting Started:
-- [Gitpod](https://www.zango.dev/docs/core/getting-started/installing-zelthy/gitpod)
-- [Docker](https://www.zango.dev/docs/core/getting-started/installing-zelthy/docker) 
-- [Manual](https://www.zango.dev/docs/core/getting-started/installing-zelthy/manual)
-
-
-#### 📦 Free Packages
-A few essential packages are freely available. These packages enable development of a wide variety of applications and are available for installation from the App Panel.  
-- [Basic Auth](https://www.zango.dev/docs/basic-auth/introduction)
-- [Frames](https://www.zango.dev/docs/frame/introduction)
-- [CRUD](https://www.zango.dev/docs/crud/introduction) 
-- [Workflow](https://www.zango.dev/docs/workflow/overview)
 
 
 #### 🌟 Get Involved and Make a Difference
