@@ -35,6 +35,8 @@
 - Host multiple apps or microservices on a single monolith with full data isolation
 
 
+## 🚀 Get Started
+
 #### ⚡ [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
 
 The fastest way into Zango is through the `zango-app-developer` plugin for [Claude Code](https://claude.com/product/claude-code). Install it once, describe your app in plain English, and the plugin generates the code, runs migrations, syncs policies, and configures the platform — no separate "click through the App Panel" step.
@@ -48,6 +50,10 @@ claude plugin install zango-app-developer@zelthy
 Then open Claude Code in an empty folder and run `/zango-app-developer`. The plugin bootstraps a full local environment (Docker or virtualenv), creates your app, installs packages, and builds the first version of your feature from a plain-language description.
 
 Full walkthrough: [Quick Start with Claude Code](https://www.zango.dev/docs/get-started/quick-start-with-claude)
+
+Prefer a manual setup? Choose your method:
+- 🐍 [Python Virtualenv Setup](https://www.zango.dev/docs/installing-zango/python-venv)
+- 🐳 [Docker Setup](https://www.zango.dev/docs/installing-zango/docker)
 
 
 #### App Panel - Central hub to manage all your apps/ microservices
