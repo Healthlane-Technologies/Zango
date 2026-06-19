@@ -62,19 +62,6 @@ Perform tasks such as configuring permissions, managing user roles, and much mor
 ![Zango App Panel](https://github.com/Healthlane-Technologies/Zango/assets/22682748/69f42dec-4ca1-4d19-974f-e83c2ddb7324)
 
 
-#### Drastically reduce your infrastructural and operational overheads by hosting multiple apps/ microservices on a single deployment:
-
-Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
-
-![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
-
-
-#### Staying ahead
-
-Star Zango on GitHub and be instantly notified of new releases.
-
-![star us](https://github.com/Healthlane-Technologies/Zango/assets/12683350/15b97240-c381-472b-a112-7c701a29ccda)
-
 #### 🤖 Agent Studio
 
 Zango has a first-class AI module built in — not a bolt-on. Define agents, attach tools, and call them from any view, background task, or scheduled job. Because the module runs inside the platform, every agent automatically operates in the correct tenant's data, respects the same role-based permissions as the rest of the app, and logs every invocation with token counts and cost.
@@ -100,6 +87,13 @@ Packages are installed from the App Panel. The core three must be installed in o
 - [CRUD](https://www.zango.dev/docs/platform-internals/packages/crud/introduction) — `BaseCrudView` + `ModelTable` + `BaseForm` + `CrudHandler` for data-management screens
 - [Workflow](https://www.zango.dev/docs/platform-internals/packages/workflow/overview) — lifecycle management: statuses, transitions, tags, audit trail
 - [Communication](https://www.zango.dev/docs/platform-internals/packages/communication/overview) — SMS, email, audio & video via configurable providers
+
+
+#### Drastically reduce your infrastructural and operational overheads by hosting multiple apps/ microservices on a single deployment:
+
+Zango redefines multi-tenancy by enabling multiple different apps to run on a single server. Say goodbye to the limitations of traditional scaling methods. With our platform, you can run multiple different applications on a single server, which helps in keeping the cost in check.
+
+![Scaling](https://github.com/Healthlane-Technologies/Zango/assets/52698821/497837f7-5210-4cfd-8f36-961327c9c405)
 
 
 #### 🌟 Get Involved and Make a Difference
