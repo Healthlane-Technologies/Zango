@@ -25,37 +25,26 @@ from zango.ai.providers.base import (
 from zango.ai.providers.registry import register_provider
 
 
-# Exact regions that can CALL cross-region inference profiles.
+# Region prefix → geography mapping for cross-region inference profiles.
 # Source: https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
-# Note: ap-south-1 (Mumbai) and other ap-* regions CAN list_inference_profiles
-# but CANNOT call Converse with apac. prefixed model IDs — only the four regions
-# below are valid calling regions for APAC cross-region profiles.
-_REGION_INFERENCE_PREFIX = {
-    # US
-    "us-east-1": "us.",
-    "us-east-2": "us.",
-    "us-west-2": "us.",
-    # EU
-    "eu-west-1": "eu.",
-    "eu-west-3": "eu.",
-    "eu-central-1": "eu.",
-    # APAC — only these four regions can call apac. profiles
-    "ap-northeast-1": "apac.",
-    "ap-northeast-2": "apac.",
-    "ap-southeast-1": "apac.",
-    "ap-southeast-2": "apac.",
+_REGION_GEOGRAPHY_PREFIX = {
+    "us": "us.",
+    "eu": "eu.",
+    "ap": "apac.",
 }
 
 
 def _geography_prefix_for_region(region: str):
-    """Return the Bedrock cross-region inference profile prefix for a region.
+    """Map an AWS region to a Bedrock cross-region inference profile prefix.
 
-    Returns ``None`` for regions that cannot call cross-region inference profiles
-    (e.g. ap-south-1/Mumbai, ca-central-1, sa-east-1).
+    Returns ``None`` for regions with no geography (``ca-central-1``,
+    ``sa-east-1``) — those have no cross-region profile and must not be used
+    with models that require one.
     """
     if not region:
         return None
-    return _REGION_INFERENCE_PREFIX.get(region)
+    head = region.split("-", 1)[0]
+    return _REGION_GEOGRAPHY_PREFIX.get(head)
 
 
 @register_provider("bedrock", "AWS Bedrock", icon="aws.svg")
@@ -330,21 +319,8 @@ class BedrockProvider(BaseLLMProvider):
         - Pass-through for IDs not in the catalog (user override) or models
           that don't require a profile.
         """
-        # Already a resolved profile ID — validate that the configured region can
-        # actually call this geography's profiles before passing through.
+        # Already a resolved profile ID — pass through unchanged.
         if model.startswith(("us.", "eu.", "apac.", "global.")):
-            geo = model.split(".", 1)[0]  # "us" | "eu" | "apac" | "global"
-            if geo != "global":
-                region = self.config.get("aws_region", "us-east-1")
-                supported_prefix = _geography_prefix_for_region(region)
-                expected_geo = (supported_prefix or "").rstrip(".")
-                if expected_geo != geo:
-                    raise LLMAPIError(
-                        f"Model '{model}' is an {geo.upper()} cross-region inference profile "
-                        f"but region '{region}' cannot call {geo.upper()} profiles. "
-                        f"Switch to a supported {geo.upper()} region "
-                        f"(e.g. {'us-east-1' if geo == 'us' else 'eu-west-1' if geo == 'eu' else 'ap-northeast-1'})."
-                    )
             return model
 
         info = next((m for m in self.supported_models if m["id"] == model), None)
@@ -951,45 +927,21 @@ class BedrockProvider(BaseLLMProvider):
             )
             if entry.get("requires_inference_profile"):
                 if matched_profile_id:
+                    # Use the exact profile ID returned by AWS (may be apac. or global.)
                     resolved_id = matched_profile_id
-                    profile_geo = (
-                        matched_profile_id.split(".", 1)[0]
+                    geo_label = (
+                        matched_profile_id.split(".")[0].upper()
                         if "." in matched_profile_id
-                        else ""
+                        else "Cross-region"
                     )
-                    geo_label = profile_geo.upper() if profile_geo else "Cross-region"
-
-                    # Even if AWS listed this profile, the current region may not
-                    # be able to call it (e.g. ap-south-1 lists apac. profiles but
-                    # cannot invoke them via Converse).
-                    profile_callable = (
-                        profile_geo == "global"
-                        or _geography_prefix_for_region(region) == f"{profile_geo}."
+                    models.append(
+                        {
+                            **entry,
+                            "id": resolved_id,
+                            "name": name,
+                            "inference_profile": f"{geo_label} cross-region",
+                        }
                     )
-                    if not profile_callable:
-                        models.append(
-                            {
-                                **entry,
-                                "id": resolved_id,
-                                "name": name,
-                                "disabled": True,
-                                "disabled_reason": (
-                                    f"'{resolved_id}' is an {geo_label} cross-region profile "
-                                    f"but region '{region}' cannot call {geo_label} profiles. "
-                                    f"Switch to a supported {geo_label} region to use this model."
-                                ),
-                                "inference_profile": f"{geo_label} cross-region",
-                            }
-                        )
-                    else:
-                        models.append(
-                            {
-                                **entry,
-                                "id": resolved_id,
-                                "name": name,
-                                "inference_profile": f"{geo_label} cross-region",
-                            }
-                        )
                 elif prefix is None:
                     resolved_id = bare_id
                     models.append(
@@ -1084,7 +1036,7 @@ class BedrockProvider(BaseLLMProvider):
             # Strip any geography prefix the admin may have supplied so we look
             # up the bare ID in the catalog.
             bare = default_model
-            for p in ("us.", "eu.", "apac."):
+            for p in ("us.", "eu.", "apac.", "global."):
                 if bare.startswith(p):
                     bare = bare[len(p) :]
                     break
@@ -1146,9 +1098,9 @@ class BedrockProvider(BaseLLMProvider):
     def compute_cost(self, usage, model):
         """Cost lookup keyed by the bare model ID (strip any geography prefix)."""
         bare = model
-        for p in ("us.", "eu.", "apac.", "global."):
+        for p in ("us.", "eu.", "apac."):
             if bare.startswith(p):
-                bare = bare[len(p):]
+                bare = bare[len(p) :]
                 break
         info = next((m for m in self.supported_models if m["id"] == bare), None)
         if not info:
