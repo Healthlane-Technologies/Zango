@@ -59,7 +59,7 @@ Prefer a manual setup? Choose your method:
 #### App Panel - Central hub to manage all your apps/ microservices
 Perform tasks such as configuring permissions, managing user roles, and much more. 
 
-![Zango App Panel](https://github.com/Healthlane-Technologies/Zango/assets/22682748/69f42dec-4ca1-4d19-974f-e83c2ddb7324)
+![Zango App Panel](assets/launchapp.gif)
 
 
 #### 🤖 Agent Studio
