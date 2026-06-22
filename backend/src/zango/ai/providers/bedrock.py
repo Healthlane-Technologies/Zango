@@ -1098,7 +1098,7 @@ class BedrockProvider(BaseLLMProvider):
     def compute_cost(self, usage, model):
         """Cost lookup keyed by the bare model ID (strip any geography prefix)."""
         bare = model
-        for p in ("us.", "eu.", "apac."):
+        for p in ("us.", "eu.", "apac.", "global."):
             if bare.startswith(p):
                 bare = bare[len(p) :]
                 break
