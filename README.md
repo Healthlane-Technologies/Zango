@@ -56,7 +56,7 @@ Prefer a manual setup? Choose your method:
 - 🐳 [Docker Setup](https://www.zango.dev/docs/installing-zango/docker)
 
 
-#### App Panel - Central hub to manage all your apps/ microservices
+#### App Panel - Central hub to manage all your apps
 Perform tasks such as configuring permissions, managing user roles, and much more. 
 
 ![Zango App Panel](assets/launchapp.gif)
