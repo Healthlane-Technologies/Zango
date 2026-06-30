@@ -392,19 +392,34 @@ class CodeSnippetRunView(ZangoGenericPlatformAPIView, TenantMixin):
                         sha256=snip_file.sha256,
                     )
 
-            # Enqueue. The celery task does its own AST recheck on pickup.
-            try:
-                async_result = codexec_executor.apply_async(
-                    args=[str(execution.object_uuid), tenant.name],
-                    soft_time_limit=snippet.timeout_seconds,
-                    time_limit=snippet.timeout_seconds + 10,
-                )
-                execution.celery_task_id = (async_result.id or "")[:64]
-                execution.save(update_fields=["celery_task_id", "modified_at"])
-            except Exception:  # noqa: BLE001
-                # Couldn't reach the broker — mark queued anyway so the row is
-                # visible; user can re-enqueue. Don't 500 the whole request.
-                log.exception("codexec: failed to enqueue celery task")
+            # Enqueue AFTER the outer transaction commits. Django's
+            # ATOMIC_REQUESTS wraps every view in a transaction; the inner
+            # `transaction.atomic()` above is just a savepoint inside it.
+            # Without on_commit, codexec_executor.apply_async can land the
+            # task in the broker before the outer txn commits, and the
+            # worker — which polls the broker in milliseconds — will then
+            # SELECT for `object_uuid` against a snapshot that doesn't yet
+            # include the new CodeExecution row. The task body raises
+            # "codexec: execution <uuid> not found" and the run is lost.
+            # Deferring dispatch via on_commit guarantees the row is
+            # visible to every connection by the time the task is enqueued.
+            def _dispatch():
+                try:
+                    async_result = codexec_executor.apply_async(
+                        args=[str(execution.object_uuid), tenant.name],
+                        soft_time_limit=snippet.timeout_seconds,
+                        time_limit=snippet.timeout_seconds + 10,
+                    )
+                    execution.celery_task_id = (async_result.id or "")[:64]
+                    execution.save(
+                        update_fields=["celery_task_id", "modified_at"]
+                    )
+                except Exception:  # noqa: BLE001
+                    # Couldn't reach the broker — the execution row is
+                    # already committed, user can re-enqueue from the UI.
+                    log.exception("codexec: failed to enqueue celery task")
+
+            transaction.on_commit(_dispatch)
 
             return get_api_response(
                 True,
