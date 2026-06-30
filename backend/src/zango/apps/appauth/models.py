@@ -18,7 +18,7 @@ from zango.apps.shared.platformauth.abstract_model import (
     AbstractZangoUserModel,
 )
 from zango.core.model_mixins import FullAuditMixin
-from zango.core.utils import get_auth_priority
+from zango.core.utils import get_app_token_ttl, get_auth_priority
 
 from ..permissions.mixin import PermissionMixin
 
@@ -72,11 +72,32 @@ class AppUserModel(
     app_objects = models.JSONField(null=True)
     auth_config = models.JSONField(default=get_default_app_user_auth_config)
 
-    def generate_auth_token(self, role, expiry=knox_settings.TOKEN_TTL):
+    def generate_auth_token(self, role, expiry=None):
         try:
             AppUserAuthToken.objects.filter(user=self).delete()
         except Exception:
             pass
+
+        # Resolve role to a model instance first so its auth_config is available
+        # when resolving the token TTL below.
+        if isinstance(role, UserRoleModel):
+            pass
+        elif isinstance(role, int):
+            role = UserRoleModel.objects.get(id=role)
+        elif isinstance(role, str):
+            if role.isdigit():
+                role = UserRoleModel.objects.get(id=int(role))
+            else:
+                role = UserRoleModel.objects.get(name=role)
+        else:
+            raise Exception("Specify Role ID or Role name")
+
+        # When no explicit expiry is passed, resolve it via the auth precedence
+        # (user_role > tenant > platform default). The helper returns a timedelta
+        # or None ("no expiry") -- never a raw 0 -- so the int branch below is
+        # only hit for explicit integer-seconds callers.
+        if expiry is None:
+            expiry = get_app_token_ttl(user=self, user_role=role)
 
         if isinstance(expiry, int):
             expiry = timedelta(seconds=expiry)
@@ -86,15 +107,6 @@ class AppUserModel(
             expiry=expiry,
             prefix=knox_settings.TOKEN_PREFIX,
         )
-        if isinstance(role, int):
-            role = UserRoleModel.objects.get(id=role)
-        elif isinstance(role, str):
-            if role.isdigit():
-                role = UserRoleModel.objects.get(id=int(role))
-            else:
-                role = UserRoleModel.objects.get(name=role)
-        else:
-            raise Exception("Specify Role ID or Role name")
         inst.role = role
         inst.save()
         return (inst, token)

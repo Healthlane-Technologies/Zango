@@ -496,6 +496,32 @@ def get_auth_priority(
         return ""
 
 
+def get_app_token_ttl(user=None, user_role=None, tenant=None):
+    """Resolve the auth token TTL using the standard auth precedence
+    (user_role > tenant > platform default).
+
+    Returns a ``timedelta``, or ``None`` for "no expiry".
+
+    Note: ``token_ttl == 0`` is the Zango convention for "never expires" and is
+    translated to ``None`` here, before the value reaches Knox. Knox only treats
+    ``None`` as never-expires; a ``timedelta(0)`` would expire the token immediately.
+    """
+    from datetime import timedelta
+
+    from knox.settings import knox_settings
+
+    session_policy = get_auth_priority(
+        policy="session_policy",
+        user=user,
+        user_role=user_role,
+        tenant=tenant,
+    )
+    ttl = (session_policy or {}).get("token_ttl")
+    if ttl is None:
+        return knox_settings.TOKEN_TTL  # platform default (timedelta or None)
+    return None if ttl == 0 else timedelta(seconds=ttl)
+
+
 def mask_email(email):
     """Masks an email address, showing only the first and last character before the '@' and the domain."""
     if "@" not in email:

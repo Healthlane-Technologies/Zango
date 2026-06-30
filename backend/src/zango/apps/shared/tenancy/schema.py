@@ -97,8 +97,9 @@ class TwoFactorAuth(TypedDict, total=False):
     sms_hook: str
 
 
-class SessionPolicy(TypedDict):
+class SessionPolicy(TypedDict, total=False):
     max_concurrent_sessions: int
+    token_ttl: int  # seconds; 0 = no expiry; absent = inherit platform default
 
 
 class AuthConfigSchema(TypedDict, total=False):

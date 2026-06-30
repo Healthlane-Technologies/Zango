@@ -45,6 +45,11 @@ const AuthConfigurationForm = () => {
 		session_policy: Yup.object({
 			max_concurrent_sessions: Yup.number().min(0, "Cannot be negative"),
 			force_logout_on_password_change: Yup.boolean(),
+			token_ttl: Yup.number()
+				.integer("Must be a whole number of seconds")
+				.min(0, "Cannot be negative")
+				.max(31536000, "Cannot exceed 31536000 seconds (1 year)")
+				.nullable(),
 		}),
 		password_policy: Yup.object({
 			min_length: Yup.number().min(4, "Minimum length must be at least 4").max(128, "Maximum length is 128"),
@@ -64,7 +69,17 @@ const AuthConfigurationForm = () => {
 
 	let onSubmit = (values) => {
 		const cleanedAuthConfig = values;
-		
+
+		// token_ttl: a blank value means "inherit the app / platform default", so
+		// drop the key entirely rather than persisting an empty/0 value (0 would
+		// mean "never expires").
+		const tokenTtl = cleanedAuthConfig?.session_policy?.token_ttl;
+		if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
+			if (cleanedAuthConfig?.session_policy) {
+				delete cleanedAuthConfig.session_policy.token_ttl;
+			}
+		}
+
 		if (Object.keys(cleanedAuthConfig).length === 0) {
 			console.warn('No configuration changes to save');
 			return;
@@ -773,6 +788,25 @@ const AuthConfigurationForm = () => {
 															value={values?.session_policy?.max_concurrent_sessions}
 															onChange={(e) => setFieldValue("session_policy.max_concurrent_sessions", parseInt(e.target.value) || 0)}
 														/>
+														<div>
+															<InputField
+																name="session_policy.token_ttl"
+																label="Token Expiry (seconds)"
+																type="number"
+																placeholder="Inherit platform default"
+																value={values?.session_policy?.token_ttl ?? ""}
+																onChange={(e) => {
+																	const raw = e.target.value;
+																	setFieldValue(
+																		"session_policy.token_ttl",
+																		raw === "" ? "" : parseInt(raw)
+																	);
+																}}
+															/>
+															<p className="mt-[6px] font-lato text-form-xs text-[#A3ABB1]">
+																Lifetime of API auth tokens. 0 = never expires. Leave blank to inherit the platform default.
+															</p>
+														</div>
 														<ToggleCard
 															title="Force Logout on Password Change"
 															description="Automatically log out all sessions when password changes"
