@@ -1036,7 +1036,7 @@ class BedrockProvider(BaseLLMProvider):
             # Strip any geography prefix the admin may have supplied so we look
             # up the bare ID in the catalog.
             bare = default_model
-            for p in ("us.", "eu.", "apac."):
+            for p in ("us.", "eu.", "apac.", "global."):
                 if bare.startswith(p):
                     bare = bare[len(p) :]
                     break
@@ -1098,7 +1098,7 @@ class BedrockProvider(BaseLLMProvider):
     def compute_cost(self, usage, model):
         """Cost lookup keyed by the bare model ID (strip any geography prefix)."""
         bare = model
-        for p in ("us.", "eu.", "apac."):
+        for p in ("us.", "eu.", "apac.", "global."):
             if bare.startswith(p):
                 bare = bare[len(p) :]
                 break
