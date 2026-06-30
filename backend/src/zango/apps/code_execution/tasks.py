@@ -286,6 +286,56 @@ def _serialize_return(value: Any) -> tuple[Optional[Any], bool, str]:
     return json.loads(payload), False, ""
 
 
+def _alias_workspace_models_in_sys_modules(workspace) -> None:
+    """Make `from workspaces.<tenant>.<path>.models import X` inside a
+    codexec snippet return the SAME class object that pluginbase loaded
+    during `Workspace.ready()`.
+
+    Background:
+    Workspace models are loaded twice in the same Python process under
+    different namespaces — pluginbase's private internal_space (which is
+    where Django, signals, and FKs get registered) and Python's regular
+    import machinery (which a snippet's `from workspaces…import X`
+    triggers). Same source file, two distinct class objects in memory.
+
+    The mismatch surfaces whenever Django does an instance-type check
+    against an FK target — most commonly during cascade collection on
+    `.delete()`, where the user's direct-import instance is rejected
+    because it's not an instance of the pluginbase class the FK was
+    registered against:
+
+        ValueError: Cannot query "WorkflowTransaction object (12555)":
+                    Must be "WorkflowTransaction" instance.
+
+    Fix: pre-populate sys.modules with the pluginbase-loaded module
+    object under the direct-import path. Python's import machinery
+    checks sys.modules before walking the filesystem, so the snippet's
+    `from workspaces.<tenant>.<path>.models import X` short-circuits to
+    the pluginbase module — and X is the registered class object.
+
+    This only aliases modules that `workspace.get_models()` returns
+    (i.e. workspace-defined models.py files). Non-model modules continue
+    to load normally and aren't affected.
+    """
+    for module_path in workspace.get_models():
+        # module_path looks like 'workspaces.<tenant>.<package_or_module>.models'
+        split = module_path.split(".")
+        if len(split) < 3 or split[0] != "workspaces":
+            continue
+        # Pluginbase relative path drops the 'workspaces.<tenant>.' prefix
+        # to match what Workspace.load_models() passes to load_plugin().
+        plugin_relative = ".".join(split[2:])
+        try:
+            pb_module = workspace.plugin_source.load_plugin(plugin_relative)
+        except Exception:  # noqa: BLE001
+            log.debug(
+                "codexec: could not load %s via pluginbase for sys.modules alias",
+                plugin_relative,
+            )
+            continue
+        sys.modules[module_path] = pb_module
+
+
 # ---------------------------------------------------------------------------
 # Celery task
 # ---------------------------------------------------------------------------
@@ -334,6 +384,13 @@ def codexec_executor(self, execution_uuid: str, tenant_name: str) -> dict:
             traceback.format_exc(),
             started_perf,
         )
+
+    # 3b. Make `from workspaces.<tenant>…import X` in the snippet resolve
+    #     to the pluginbase-loaded class objects (the ones Django + signals
+    #     + FKs are registered against). Without this, snippets that take
+    #     the direct-import path hit class-identity mismatches on `.delete()`
+    #     cascades and instance-based FK queries. See helper docstring.
+    _alias_workspace_models_in_sys_modules(ws)
 
     # 4. AST recheck (L1) — catches deny-list updates between save and pickup
     violations = validate(execution.source_snapshot)
