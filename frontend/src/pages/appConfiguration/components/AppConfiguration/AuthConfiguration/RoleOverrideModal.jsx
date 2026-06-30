@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import TokenTtlField from './TokenTtlField';
 
 const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig = {}, currentOverrides = {}, initialSelectedRoleId = null }) => {
 	const [selectedRoleId, setSelectedRoleId] = useState(null);
@@ -79,7 +80,14 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 				cleanedOverride.two_factor_auth = overrideConfig.two_factor_auth;
 			}
 			if (overrideConfig.session_policy) {
-				cleanedOverride.session_policy = overrideConfig.session_policy;
+				const sessionPolicy = { ...overrideConfig.session_policy };
+				// A blank token_ttl means "inherit the app / platform default";
+				// drop the key rather than persisting an empty/0 value.
+				const tokenTtl = sessionPolicy.token_ttl;
+				if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
+					delete sessionPolicy.token_ttl;
+				}
+				cleanedOverride.session_policy = sessionPolicy;
 			}
 			// Include enforce_sso
 			cleanedOverride.enforce_sso = overrideConfig.enforce_sso ?? false;
@@ -547,7 +555,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 														</div>
 
 													{enableSessionPolicyOverride && (
-														<div className="mt-[20px] bg-white rounded-[8px] p-[16px]">
+														<div className="mt-[20px] bg-white rounded-[8px] p-[16px] space-y-[16px]">
 															<div>
 																<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
 																	Maximum Concurrent Sessions (0 = unlimited)
@@ -565,6 +573,35 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																	}))}
 																	className="w-full px-[12px] py-[8px] border border-[#E5E7EB] rounded-[8px] text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
 																/>
+															</div>
+															<div>
+																<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
+																	Token Expiry
+																</label>
+																{(() => {
+																	// A role inherits the app-level token_ttl when the app
+																	// has set one; otherwise it inherits the platform default.
+																	const appTtl = globalAuthConfig?.session_policy?.token_ttl;
+																	const appHasOverride = appTtl !== undefined && appTtl !== null;
+																	return (
+																		<TokenTtlField
+																			key={selectedRoleId}
+																			value={overrideConfig.session_policy?.token_ttl}
+																			inheritedValue={appHasOverride ? appTtl : globalAuthConfig?.session_policy?.platform_token_ttl}
+																			inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
+																			onChange={(next) => setOverrideConfig(prev => ({
+																				...prev,
+																				session_policy: {
+																					...prev.session_policy,
+																					token_ttl: next
+																				}
+																			}))}
+																		/>
+																	);
+																})()}
+																<p className="mt-[6px] text-[12px] text-[#6B7280]">
+																	Overrides the app-level token expiry for users logging in with this role. Choose <span className="font-medium">Platform default</span> to inherit.
+																</p>
 															</div>
 														</div>
 													)}

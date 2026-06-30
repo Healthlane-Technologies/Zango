@@ -12,6 +12,50 @@ from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfi
 from zango.core.utils import get_auth_priority, get_datetime_str_in_tenant_timezone
 
 
+# Upper bound for a configurable token TTL: 1 year in seconds. Guards against an
+# accidental huge value being mistaken for the explicit 0 ("never expires") sentinel.
+MAX_TOKEN_TTL_SECONDS = 31536000
+
+
+def get_platform_token_ttl_seconds():
+    """Platform-wide default token TTL in seconds (0 means "never expires").
+
+    Derived from the Knox setting so it matches the actual fallback used when an
+    app/role does not configure its own ``token_ttl``.
+    """
+    from knox.settings import knox_settings
+
+    ttl = knox_settings.TOKEN_TTL
+    return 0 if ttl is None else int(ttl.total_seconds())
+
+
+def validate_session_policy_token_ttl(auth_config):
+    """Validate ``session_policy.token_ttl`` if present in an auth_config dict.
+
+    ``token_ttl`` is seconds (int). ``0`` means "never expires". Absence means
+    "inherit" and is always valid. Raises ``serializers.ValidationError`` otherwise.
+    """
+    session_policy = (auth_config or {}).get("session_policy")
+    if not session_policy or "token_ttl" not in session_policy:
+        return
+    ttl = session_policy["token_ttl"]
+    # bool is a subclass of int -- reject it explicitly.
+    if isinstance(ttl, bool) or not isinstance(ttl, int):
+        raise serializers.ValidationError(
+            "session_policy.token_ttl must be an integer number of seconds "
+            "(0 means the token never expires)."
+        )
+    if ttl < 0:
+        raise serializers.ValidationError(
+            "session_policy.token_ttl cannot be negative."
+        )
+    if ttl > MAX_TOKEN_TTL_SECONDS:
+        raise serializers.ValidationError(
+            f"session_policy.token_ttl cannot exceed {MAX_TOKEN_TTL_SECONDS} "
+            "seconds (1 year). Use 0 for a token that never expires."
+        )
+
+
 class DomainSerializerModel(serializers.ModelSerializer):
     class Meta:
         model = Domain
@@ -76,7 +120,23 @@ class TenantSerializerModel(serializers.ModelSerializer):
     def get_date_format_display(self, obj):
         return obj.get_date_format_display()
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Surface the platform-wide default token TTL alongside the app's
+        # auth_config so the UI can show the effective value when an app/role
+        # inherits ("Platform default"). Read-only, ignored on write.
+        auth_config = data.get("auth_config")
+        if isinstance(auth_config, dict):
+            session_policy = dict(auth_config.get("session_policy") or {})
+            session_policy["platform_token_ttl"] = get_platform_token_ttl_seconds()
+            auth_config["session_policy"] = session_policy
+        return data
+
     def validate_auth_config(self, value: TenantAuthConfigSchema):
+        # platform_token_ttl is a read-only, server-computed hint; never persist it.
+        if isinstance(value, dict) and isinstance(value.get("session_policy"), dict):
+            value["session_policy"].pop("platform_token_ttl", None)
+        validate_session_policy_token_ttl(value)
         return value
 
     def update(self, instance, validated_data):
@@ -185,6 +245,8 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
         return data
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
+        validate_session_policy_token_ttl(value)
+
         tenant = self.context.get("tenant")
         if not tenant:
             return value

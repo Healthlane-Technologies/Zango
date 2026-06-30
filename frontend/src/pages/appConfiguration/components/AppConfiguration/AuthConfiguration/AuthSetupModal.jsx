@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import { humanizeTokenTtl } from '../../../../../utils/tokenTtl';
+import TokenTtlField from './TokenTtlField';
 
 // JSON Key-Value Pair Input Component (moved outside to prevent recreation on every render)
 const JsonKeyValueInput = React.memo(({ value, onChange, placeholder = "Add key-value pairs" }) => {
@@ -134,7 +136,7 @@ const JsonKeyValueInput = React.memo(({ value, onChange, placeholder = "Add key-
 
 const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles = [] }) => {
 	const [currentStep, setCurrentStep] = useState(1);
-	const totalSteps = 4;
+	const totalSteps = 5;
 
 	// Default setup data
 	const defaultSetupData = {
@@ -286,7 +288,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	// Step components
 	const StepIndicator = () => (
 		<div className="flex items-center justify-center mb-[32px]">
-			{[1, 2, 3, 4].map((step) => (
+			{[1, 2, 3, 4, 5].map((step) => (
 				<div key={step} className="flex items-center">
 					<div
 						className={`w-[40px] h-[40px] rounded-full flex items-center justify-center font-medium text-[14px] transition-all ${
@@ -305,7 +307,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							step
 						)}
 					</div>
-					{step < 4 && (
+					{step < 5 && (
 						<div className={`w-[60px] h-[2px] mx-[8px] transition-all ${
 							step < currentStep ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'
 						}`} />
@@ -1264,8 +1266,38 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		</div>
 	), [setupData.two_factor_auth]);
 
-	// Step 4: Review
-	const Step4Review = useMemo(() => (
+	// Step 4: Session & Tokens
+	const Step4SessionTokens = useMemo(() => (
+		<div className="space-y-[24px]">
+			<div>
+				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Session &amp; Tokens</h3>
+				<p className="text-[14px] text-[#6B7280]">Configure session and token settings for this app</p>
+			</div>
+
+			<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+				<label className="block text-[14px] font-medium text-[#111827] mb-[8px]">
+					Token expiry
+				</label>
+				<TokenTtlField
+					value={setupData.session_policy.token_ttl}
+					inheritedValue={setupData.session_policy.platform_token_ttl}
+					onChange={(next) => setSetupData(prev => ({
+						...prev,
+						session_policy: {
+							...prev.session_policy,
+							token_ttl: next
+						}
+					}))}
+				/>
+				<p className="mt-[8px] text-[12px] text-[#6B7280]">
+					Lifetime of API auth tokens issued on login. Choose <span className="font-medium">Platform default</span> to inherit the global setting.
+				</p>
+			</div>
+		</div>
+	), [setupData.session_policy.token_ttl]);
+
+	// Step 5: Review
+	const Step5Review = useMemo(() => (
 		<div className="space-y-[24px]">
 			<div>
 				<h3 className="text-[20px] font-semibold text-[#111827] mb-[4px]">Review Configuration</h3>
@@ -1354,6 +1386,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					<div className="space-y-[8px] text-[14px] text-[#111827]">
 						<div>Maximum concurrent sessions: {setupData.session_policy.max_concurrent_sessions === 0 ? 'Unlimited' : setupData.session_policy.max_concurrent_sessions}</div>
 						<div>Force logout on password change: {setupData.session_policy.force_logout_on_password_change ? 'Yes' : 'No'}</div>
+						<div>Token expiry: {humanizeTokenTtl(setupData.session_policy.token_ttl)}</div>
 					</div>
 				</div>
 
@@ -1447,7 +1480,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 			case 3:
 				return Step3TwoFactor;
 			case 4:
-				return Step4Review;
+				return Step4SessionTokens;
+			case 5:
+				return Step5Review;
 			default:
 				return null;
 		}

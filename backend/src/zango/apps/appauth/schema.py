@@ -6,7 +6,7 @@ try:
 except ImportError:
     from typing_extensions import Required
 
-from zango.apps.shared.tenancy.schema import PasswordPolicy
+from zango.apps.shared.tenancy.schema import PasswordPolicy, SessionPolicy
 
 
 class TwoFactorAuth(TypedDict, total=False):
@@ -18,6 +18,7 @@ class UserRoleAuthConfig(TypedDict, total=False):
     password_policy: PasswordPolicy
     two_factor_auth: TwoFactorAuth
     enforce_sso: bool
+    session_policy: SessionPolicy  # only token_ttl is meaningful at role level
 
 
 class SSOIdentity(TypedDict):

@@ -5,6 +5,7 @@ import * as Yup from 'yup';
 import { selectAppConfigurationData, toggleRerenderPage } from '../../../slice';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
+import { humanizeTokenTtl, humanizeTokenTtlWithDefault } from '../../../../../utils/tokenTtl';
 import { useParams, useNavigate } from 'react-router-dom';
 import InputField from '../../../../../components/Form/InputField';
 import AuthSetupModal from './AuthSetupModal';
@@ -167,6 +168,7 @@ const ModernAuthConfig = () => {
 							},
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
+								token_ttl: authData.session_policy.token_ttl ?? '',
 							},
 							password_policy: {
 								min_length: authData.password_policy.min_length,
@@ -211,6 +213,13 @@ const ModernAuthConfig = () => {
 								sms_hook: authData.two_factor_auth.sms_hook || '',
 							},
 						};
+
+						// token_ttl: a blank value means "inherit the platform default",
+						// so drop the key rather than persisting an empty/0 value.
+						const tokenTtl = authConfig.session_policy.token_ttl;
+						if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
+							delete authConfig.session_policy.token_ttl;
+						}
 
 						// Save the configuration
 						const tempValues = {
@@ -278,6 +287,11 @@ const ModernAuthConfig = () => {
 		}),
 		session_policy: Yup.object({
 			max_concurrent_sessions: Yup.number().min(0, "Cannot be negative"),
+			token_ttl: Yup.number()
+				.integer("Must be a whole number of seconds")
+				.min(0, "Cannot be negative")
+				.max(31536000, "Cannot exceed 31536000 seconds (1 year)")
+				.nullable(),
 		}),
 		password_policy: Yup.object({
 			min_length: Yup.number().min(4, "Minimum length must be at least 4").max(128, "Maximum length is 128"),
@@ -298,8 +312,18 @@ const ModernAuthConfig = () => {
 	// Handle form submission
 	const handleSubmit = async (values) => {
 		setIsSaving(true);
-		
+
 		const cleanedAuthConfig = values;
+
+		// token_ttl: a blank value means "inherit the platform default", so drop
+		// the key rather than persisting an empty/0 value (0 = never expires).
+		const tokenTtl = cleanedAuthConfig?.session_policy?.token_ttl;
+		if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
+			if (cleanedAuthConfig?.session_policy) {
+				delete cleanedAuthConfig.session_policy.token_ttl;
+			}
+		}
+
 		const tempValues = {
 			auth_config: JSON.stringify(cleanedAuthConfig)
 		};
@@ -739,6 +763,17 @@ const ModernAuthConfig = () => {
 														onChange={(e) => setFieldValue("session_policy.max_concurrent_sessions", parseInt(e.target.value) || 0)}
 													/>
 												</div>
+												<div>
+													<InputField
+														name="session_policy.token_ttl"
+														label="Token expiry in seconds (0 = never expires)"
+														type="number"
+														placeholder="Inherit platform default"
+														value={values?.session_policy?.token_ttl ?? ''}
+														onChange={(e) => setFieldValue("session_policy.token_ttl", e.target.value === '' ? '' : parseInt(e.target.value))}
+													/>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">Lifetime of API auth tokens. Leave blank to inherit the platform default.</p>
+												</div>
 												<div className="flex items-center justify-between">
 													<div>
 														<p className="text-[14px] font-medium text-[#111827]">Force logout on password change</p>
@@ -884,6 +919,11 @@ const ModernAuthConfig = () => {
 									color="purple"
 								/>
 								<QuickStat
+									label="Token Expiry"
+									value={humanizeTokenTtlWithDefault(authConfig.session_policy?.token_ttl, authConfig.session_policy?.platform_token_ttl)}
+									color="blue"
+								/>
+								<QuickStat
 									label="Password Expiry"
 									value={`${authConfig.password_policy?.password_expiry_days || 90} days`}
 									color="amber"
@@ -1003,6 +1043,12 @@ const ModernAuthConfig = () => {
 													{authConfig.session_policy?.max_concurrent_sessions || 'Unlimited'}
 												</span>
 											</div>
+											<div className="flex items-center justify-between mb-[4px]">
+												<p className="text-[13px] font-medium text-[#111827]">Token Expiry</p>
+												<span className="px-[8px] py-[2px] bg-[#DBEAFE] text-[#1E40AF] rounded-[6px] text-[11px] font-medium">
+													{humanizeTokenTtlWithDefault(authConfig.session_policy?.token_ttl, authConfig.session_policy?.platform_token_ttl)}
+												</span>
+											</div>
 											<p className="text-[12px] text-[#6B7280]">
 												{authConfig.session_policy?.force_logout_on_password_change
 													? 'Force logout on password change'
@@ -1080,9 +1126,14 @@ const ModernAuthConfig = () => {
 															2FA Required
 														</span>
 													)}
-													{role.auth_config.session_policy && (
+													{role.auth_config.session_policy?.max_concurrent_sessions !== undefined && role.auth_config.session_policy?.max_concurrent_sessions !== null && (
 														<span className="px-[6px] py-[2px] bg-[#FEF3C7] text-[#92400E] rounded-[4px] text-[10px] font-medium">
-															Session
+															Max sessions: {role.auth_config.session_policy.max_concurrent_sessions || 'Unlimited'}
+														</span>
+													)}
+													{role.auth_config.session_policy?.token_ttl !== undefined && role.auth_config.session_policy?.token_ttl !== null && (
+														<span className="px-[6px] py-[2px] bg-[#DBEAFE] text-[#1E40AF] rounded-[4px] text-[10px] font-medium">
+															Token: {humanizeTokenTtl(role.auth_config.session_policy.token_ttl)}
 														</span>
 													)}
 												</div>
@@ -1197,8 +1248,16 @@ const ModernAuthConfig = () => {
 											</span>
 										</div>
 									</div>
-									<ConfigToggle 
-										label="Force logout on password change" 
+									<div>
+										<p className="text-[13px] text-[#6B7280] mb-[4px]">Token expiry</p>
+										<div className="flex items-center gap-[8px]">
+											<span className="text-[20px] font-semibold text-[#111827]">
+												{humanizeTokenTtlWithDefault(authConfig.session_policy?.token_ttl, authConfig.session_policy?.platform_token_ttl)}
+											</span>
+										</div>
+									</div>
+									<ConfigToggle
+										label="Force logout on password change"
 										enabled={authConfig.session_policy?.force_logout_on_password_change}
 										description="Terminate all sessions when password is changed"
 									/>
@@ -1547,6 +1606,7 @@ const ModernAuthConfig = () => {
 							},
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
+								token_ttl: authData.session_policy.token_ttl ?? '',
 							},
 							password_policy: {
 								min_length: authData.password_policy.min_length,
@@ -1591,6 +1651,13 @@ const ModernAuthConfig = () => {
 								sms_hook: authData.two_factor_auth.sms_hook || '',
 							},
 						};
+
+						// token_ttl: a blank value means "inherit the platform default",
+						// so drop the key rather than persisting an empty/0 value.
+						const tokenTtl = updatedAuthConfig.session_policy.token_ttl;
+						if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
+							delete updatedAuthConfig.session_policy.token_ttl;
+						}
 
 						// Save the configuration
 						const tempValues = {
