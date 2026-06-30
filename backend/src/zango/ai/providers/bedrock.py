@@ -306,18 +306,84 @@ class BedrockProvider(BaseLLMProvider):
         self._client = boto3.client("bedrock-runtime", config=bcfg, **common_kwargs)
         self._schema_client = self._client
 
+        # Lazily-built control-plane client + cached live inference-profile map.
+        # The control-plane ("bedrock") API exposes list_inference_profiles,
+        # which is the authoritative source for which cross-region profile IDs
+        # actually exist in this region. bedrock-runtime cannot list them.
+        self._boto3 = boto3
+        self._control_kwargs = common_kwargs
+        self._control_client = None
+        # bare model ID → live profile ID (e.g. "anthropic.claude-..." →
+        # "apac.anthropic.claude-..."). None until first resolved; {} means
+        # "fetched, but the API returned nothing usable / was unavailable".
+        self._profile_map = None
+
     # ------------------------------------------------------------------ #
     # Model-ID resolution                                                #
     # ------------------------------------------------------------------ #
 
-    def _resolve_model_id(self, model: str) -> str:
-        """Prepend the geography prefix when the model requires a cross-region profile.
+    def _live_profile_map(self) -> dict:
+        """Return a cached ``{bare_id: profile_id}`` map from the live AWS API.
 
-        - Look the bare ID up in supported_models.
-        - If ``requires_inference_profile`` is True, prepend ``us.`` / ``eu.`` /
-          ``apac.`` derived from ``aws_region``.
-        - Pass-through for IDs not in the catalog (user override) or models
-          that don't require a profile.
+        Calls ``list_inference_profiles`` (control-plane) once per provider
+        instance and caches the result. This is the authoritative list of which
+        cross-region profile IDs actually exist in the configured region, so we
+        never fabricate an ID AWS doesn't offer (e.g. a non-existent
+        ``apac.anthropic.claude-opus-4-1-...``). Degrades to ``{}`` if the API
+        is unavailable or denied, in which case the caller falls back to prefix
+        construction.
+        """
+        if self._profile_map is not None:
+            return self._profile_map
+
+        profile_map = {}
+        try:
+            if self._control_client is None:
+                self._control_client = self._boto3.client(
+                    "bedrock", **self._control_kwargs
+                )
+            resp = self._control_client.list_inference_profiles(
+                typeEquals="SYSTEM_DEFINED"
+            )
+            for profile in resp.get("inferenceProfileSummaries", []):
+                profile_id = profile.get("inferenceProfileId", "")
+                if not profile_id:
+                    continue
+                bare_id = profile_id
+                for geo in ("us.", "eu.", "apac.", "global."):
+                    if bare_id.startswith(geo):
+                        bare_id = bare_id[len(geo) :]
+                        break
+                # Prefer a geo-specific profile over "global." for the same model.
+                existing = profile_map.get(bare_id)
+                if (
+                    existing
+                    and existing.startswith("global.")
+                    and not profile_id.startswith("global.")
+                ):
+                    profile_map[bare_id] = profile_id
+                elif bare_id not in profile_map:
+                    profile_map[bare_id] = profile_id
+        except Exception:
+            # list_inference_profiles unavailable (region/SDK/permissions) —
+            # cache empty so we don't retry on every call; caller falls back.
+            profile_map = {}
+
+        self._profile_map = profile_map
+        return profile_map
+
+    def _resolve_model_id(self, model: str) -> str:
+        """Resolve a bare model ID to the inference-profile ID AWS actually offers.
+
+        - Pass through IDs that are already resolved profile IDs (``us.`` /
+          ``eu.`` / ``apac.`` / ``global.``) or that don't require a profile.
+        - For models requiring a cross-region profile, prefer the *live* profile
+          ID from ``list_inference_profiles`` (so we never invent an ID that
+          doesn't exist in this region). Fall back to prefix construction only
+          when the live list is unavailable.
+        - Raise a clear ``LLMAPIError`` when no profile exists for the model in
+          the configured geography, instead of letting AWS return an opaque
+          ``ValidationException``.
         """
         # Already a resolved profile ID — pass through unchanged.
         if model.startswith(("us.", "eu.", "apac.", "global.")):
@@ -328,12 +394,31 @@ class BedrockProvider(BaseLLMProvider):
             return model
 
         region = self.config.get("aws_region", "us-east-1")
+
+        # Authoritative: use the exact profile ID AWS reports for this region.
+        live_profile = self._live_profile_map().get(model)
+        if live_profile:
+            return live_profile
+
         prefix = _geography_prefix_for_region(region)
         if prefix is None:
             raise LLMAPIError(
                 f"{model} requires a US, EU, or APAC region; "
                 f"{region} is not in a supported geography."
             )
+
+        # The live profile list was reachable but did not include this model —
+        # AWS does not offer it in this region. Fail clearly rather than
+        # fabricating an ID that will be rejected with a ValidationException.
+        if self._profile_map:
+            geo = _REGION_GEOGRAPHY_PREFIX.get(region.split("-", 1)[0], "").rstrip(".")
+            raise LLMAPIError(
+                f"{model} is not available as a cross-region inference profile in "
+                f"the {geo.upper() or region} geography ({region}). Choose a "
+                f"different model or switch the provider's AWS region."
+            )
+
+        # Live list unavailable (degraded) — fall back to prefix construction.
         return f"{prefix}{model}"
 
     # ------------------------------------------------------------------ #
@@ -929,11 +1014,18 @@ class BedrockProvider(BaseLLMProvider):
                 if matched_profile_id:
                     # Use the exact profile ID returned by AWS (may be apac. or global.)
                     resolved_id = matched_profile_id
-                    geo_label = (
-                        matched_profile_id.split(".")[0].upper()
+                    # Label from the profile's own prefix (global. → Global, etc.).
+                    geo_prefix = (
+                        matched_profile_id.split(".", 1)[0]
                         if "." in matched_profile_id
-                        else "Cross-region"
+                        else ""
                     )
+                    geo_label = {
+                        "us": "US",
+                        "eu": "EU",
+                        "apac": "APAC",
+                        "global": "Global",
+                    }.get(geo_prefix, "Cross-region")
                     models.append(
                         {
                             **entry,
@@ -958,7 +1050,16 @@ class BedrockProvider(BaseLLMProvider):
                             "inference_profile": "Cross-region",
                         }
                     )
+                elif profile_by_profile_id:
+                    # The live profile list was reachable but contains no profile
+                    # for this model in this region — AWS does not offer it here
+                    # (e.g. Opus 4.1 has no apac. profile). Skip it entirely so it
+                    # never appears as a selectable option; otherwise a user could
+                    # pick an ID that fails at invoke time with a ValidationException.
+                    continue
                 else:
+                    # Live profile list unavailable (permissions / SDK / region) —
+                    # fall back to deriving the prefix so the catalog still works.
                     resolved_id = f"{prefix}{bare_id}"
                     models.append(
                         {
@@ -978,6 +1079,15 @@ class BedrockProvider(BaseLLMProvider):
             if profile_id in seen_ids:
                 continue
             profile_name = profile.get("inferenceProfileName", profile_id)
+            # Derive the label from the profile's OWN prefix, not the region —
+            # a "global." profile is GLOBAL even when called from an APAC region.
+            geo_prefix = profile_id.split(".", 1)[0] if "." in profile_id else ""
+            profile_geo_label = {
+                "us": "US",
+                "eu": "EU",
+                "apac": "APAC",
+                "global": "Global",
+            }.get(geo_prefix, "Cross-region")
             models.append(
                 {
                     "id": profile_id,
@@ -990,7 +1100,7 @@ class BedrockProvider(BaseLLMProvider):
                     "supports_vision": True,
                     "supports_streaming": True,
                     "requires_inference_profile": True,
-                    "inference_profile": f"{geography_label} cross-region",
+                    "inference_profile": f"{profile_geo_label} cross-region",
                 }
             )
             seen_ids.add(profile_id)
@@ -1049,6 +1159,34 @@ class BedrockProvider(BaseLLMProvider):
                         f"{default_model} requires a US, EU, or APAC region; "
                         f"{region} is not in a supported geography.",
                     )
+
+                # Confirm AWS actually offers an inference profile for this model
+                # in this region — a mapped geography is not enough (e.g. Opus 4.1
+                # has no apac. profile). Catches the misconfiguration up front
+                # rather than as a runtime ValidationException at invoke time.
+                try:
+                    ip_resp = bedrock_client.list_inference_profiles(
+                        typeEquals="SYSTEM_DEFINED"
+                    )
+                    available_bare = set()
+                    for prof in ip_resp.get("inferenceProfileSummaries", []):
+                        pid = prof.get("inferenceProfileId", "")
+                        for p in ("us.", "eu.", "apac.", "global."):
+                            if pid.startswith(p):
+                                pid = pid[len(p) :]
+                                break
+                        available_bare.add(pid)
+                    if available_bare and bare not in available_bare:
+                        return (
+                            False,
+                            f"{default_model} is not available as a cross-region "
+                            f"inference profile in {region}. Choose a different "
+                            f"model or switch the provider's AWS region.",
+                        )
+                except Exception:
+                    # list_inference_profiles unavailable — skip the deeper check
+                    # rather than blocking validation on a degraded API.
+                    pass
 
         return (True, None)
 

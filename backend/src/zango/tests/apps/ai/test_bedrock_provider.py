@@ -85,17 +85,22 @@ def _make_provider(region="us-east-1"):
 
 
 class ResolveModelIdTest(SimpleTestCase):
-    def test_us_region_prefix(self):
+    # ── Degraded fallback: live list unavailable → prefix construction ──────
+    # The fake control-plane client returns a MagicMock for
+    # list_inference_profiles, so _live_profile_map() degrades to {} and the
+    # resolver falls back to deriving the prefix from the region.
+
+    def test_us_region_prefix_fallback(self):
         p = _make_provider(region="us-east-1")
         resolved = p._resolve_model_id("anthropic.claude-3-5-sonnet-20241022-v2:0")
         self.assertEqual(resolved, "us.anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    def test_eu_region_prefix(self):
+    def test_eu_region_prefix_fallback(self):
         p = _make_provider(region="eu-west-1")
         resolved = p._resolve_model_id("anthropic.claude-3-5-sonnet-20241022-v2:0")
         self.assertEqual(resolved, "eu.anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    def test_ap_region_uses_apac_prefix(self):
+    def test_ap_region_uses_apac_prefix_fallback(self):
         p = _make_provider(region="ap-northeast-1")
         resolved = p._resolve_model_id("anthropic.claude-3-5-sonnet-20241022-v2:0")
         self.assertEqual(resolved, "apac.anthropic.claude-3-5-sonnet-20241022-v2:0")
@@ -116,6 +121,63 @@ class ResolveModelIdTest(SimpleTestCase):
         p = _make_provider(region="us-east-1")
         prefixed = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
         self.assertEqual(p._resolve_model_id(prefixed), prefixed)
+
+    # ── Live resolution: list_inference_profiles is authoritative ───────────
+
+    def test_live_profile_id_is_used_verbatim(self):
+        """When AWS reports a profile, use its exact ID (not prefix guessing)."""
+        p = _make_provider(region="ap-northeast-1")
+        p._profile_map = {
+            "anthropic.claude-sonnet-4-5-20250929-v1:0": (
+                "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
+            ),
+        }
+        self.assertEqual(
+            p._resolve_model_id("anthropic.claude-sonnet-4-5-20250929-v1:0"),
+            "apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        )
+
+    def test_model_missing_from_live_list_raises_clear_error(self):
+        """A model AWS does not offer in this geography must fail clearly,
+        not be fabricated into a ValidationException-bound ID (the original bug:
+        apac.anthropic.claude-opus-4-1-...)."""
+        p = _make_provider(region="ap-south-1")
+        # Live list reachable but does NOT contain Opus 4.1.
+        p._profile_map = {
+            "anthropic.claude-sonnet-4-5-20250929-v1:0": (
+                "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
+            ),
+        }
+        with self.assertRaises(LLMAPIError) as ctx:
+            p._resolve_model_id("anthropic.claude-opus-4-1-20250805-v1:0")
+        self.assertIn("not available", str(ctx.exception).lower())
+
+    def test_live_map_prefers_geo_profile_over_global(self):
+        p = _make_provider(region="us-east-1")
+        p._control_client = MagicMock()
+        p._control_client.list_inference_profiles.return_value = {
+            "inferenceProfileSummaries": [
+                {"inferenceProfileId": "global.anthropic.claude-opus-4-1-20250805-v1:0"},
+                {"inferenceProfileId": "us.anthropic.claude-opus-4-1-20250805-v1:0"},
+            ]
+        }
+        self.assertEqual(
+            p._resolve_model_id("anthropic.claude-opus-4-1-20250805-v1:0"),
+            "us.anthropic.claude-opus-4-1-20250805-v1:0",
+        )
+
+    def test_live_map_is_cached(self):
+        """list_inference_profiles is called at most once per provider."""
+        p = _make_provider(region="us-east-1")
+        p._control_client = MagicMock()
+        p._control_client.list_inference_profiles.return_value = {
+            "inferenceProfileSummaries": [
+                {"inferenceProfileId": "us.anthropic.claude-sonnet-4-5-20250929-v1:0"},
+            ]
+        }
+        p._resolve_model_id("anthropic.claude-sonnet-4-5-20250929-v1:0")
+        p._resolve_model_id("anthropic.claude-sonnet-4-5-20250929-v1:0")
+        self.assertEqual(p._control_client.list_inference_profiles.call_count, 1)
 
 
 class CompletePayloadTest(SimpleTestCase):
@@ -363,6 +425,74 @@ class GetModelsTest(SimpleTestCase):
         )
         self.assertEqual(sonnet["inference_profile"], "APAC cross-region")
         self.assertFalse(sonnet.get("disabled"))
+
+    def test_model_without_live_profile_is_omitted(self):
+        """When list_inference_profiles is reachable but lacks a profile for a
+        catalog model in this region, that model must NOT appear in the list
+        (the original bug: a selectable apac.anthropic.claude-opus-4-1-... that
+        AWS rejects at invoke time)."""
+        _install_fake_boto3()
+        from zango.ai.providers.bedrock import BedrockProvider
+
+        with patch("boto3.client") as mock_client:
+            inst = mock_client.return_value
+            inst.list_foundation_models.return_value = {"modelSummaries": []}
+            # AWS only offers Sonnet 4.5 in APAC — no Opus 4.1 profile.
+            inst.list_inference_profiles.return_value = {
+                "inferenceProfileSummaries": [
+                    {
+                        "inferenceProfileId": (
+                            "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
+                        ),
+                        "inferenceProfileName": "Claude Sonnet 4.5",
+                    },
+                ]
+            }
+            models = BedrockProvider.fetch_models(
+                {
+                    "aws_access_key_id": "x",
+                    "aws_secret_access_key": "y",  # pragma: allowlist secret
+                    "aws_region": "ap-south-1",
+                }
+            )
+        ids = {m["id"] for m in models}
+        # Opus 4.1 has no live APAC profile → omitted entirely (no apac./bare id).
+        self.assertNotIn("apac.anthropic.claude-opus-4-1-20250805-v1:0", ids)
+        self.assertNotIn("anthropic.claude-opus-4-1-20250805-v1:0", ids)
+        # Sonnet 4.5 has a live profile → present.
+        self.assertIn("apac.anthropic.claude-sonnet-4-5-20250929-v1:0", ids)
+
+    def test_global_profile_labelled_global_not_region(self):
+        """A global. profile must be labelled 'Global cross-region' from its own
+        prefix, NOT 'APAC' derived from the calling region (display bug)."""
+        _install_fake_boto3()
+        from zango.ai.providers.bedrock import BedrockProvider
+
+        with patch("boto3.client") as mock_client:
+            inst = mock_client.return_value
+            inst.list_foundation_models.return_value = {"modelSummaries": []}
+            # A live profile not in the static catalog, with a global. prefix,
+            # surfaced while calling from an APAC region.
+            inst.list_inference_profiles.return_value = {
+                "inferenceProfileSummaries": [
+                    {
+                        "inferenceProfileId": "global.anthropic.claude-sonnet-4-6",
+                        "inferenceProfileName": "Global Anthropic Claude Sonnet 4.6",
+                    },
+                ]
+            }
+            models = BedrockProvider.fetch_models(
+                {
+                    "aws_access_key_id": "x",
+                    "aws_secret_access_key": "y",  # pragma: allowlist secret
+                    "aws_region": "ap-south-1",
+                }
+            )
+        sonnet46 = next(
+            m for m in models if m["id"] == "global.anthropic.claude-sonnet-4-6"
+        )
+        self.assertEqual(sonnet46["inference_profile"], "Global cross-region")
+        self.assertNotIn("APAC", sonnet46["inference_profile"])
 
 
 class ValidateConfigTest(SimpleTestCase):
