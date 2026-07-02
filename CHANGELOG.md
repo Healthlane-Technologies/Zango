@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0b6] - 2026-07-02
+
+### Added
+
+* App- and role-level auth token TTL configuration [(#601)](https://github.com/Healthlane-Technologies/Zango/pull/601)
+* Raise code execution timeout upper bound from 300s to 24h [(#602)](https://github.com/Healthlane-Technologies/Zango/pull/602)
+
+### Fixed
+
+* Dispatch code execution task after transaction commit + alias workspace imports [(#600)](https://github.com/Healthlane-Technologies/Zango/pull/600)
+* Fix AI cost calculation for global model IDs [(#597)](https://github.com/Healthlane-Technologies/Zango/pull/597)
+
 ## [1.2.0b5] - 2026-06-18
 
 ### Fixed
