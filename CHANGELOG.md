@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Dispatch code execution task after transaction commit + alias workspace imports [(#600)](https://github.com/Healthlane-Technologies/Zango/pull/600)
-* Fix AI cost calculation for global model IDs [(#597)](https://github.com/Healthlane-Technologies/Zango/pull/597)
 
 ## [1.2.0b5] - 2026-06-18
 
