@@ -112,9 +112,12 @@ class CodeSnippetWriteSerializer(serializers.ModelSerializer):
         fields = ("name", "description", "code", "timeout_seconds")
 
     def validate_timeout_seconds(self, value):
-        if value < 5 or value > 300:
+        # 24-hour upper bound covers realistic long-running batch snippets
+        # while still capping a rogue snippet from tying up a celery slot
+        # indefinitely.
+        if value < 5 or value > 86400:
             raise serializers.ValidationError(
-                "timeout_seconds must be between 5 and 300."
+                "timeout_seconds must be between 5 and 86400."
             )
         return value
 

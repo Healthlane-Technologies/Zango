@@ -299,7 +299,7 @@ export default function EditorModal({ appId, snippet, onClose, onSaved }) {
 										<input
 											type="number"
 											min={5}
-											max={300}
+											max={86400}
 											value={timeoutSeconds}
 											onChange={(e) => setTimeoutSeconds(e.target.value)}
 											className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded-md focus:outline-none focus:border-[#346BD4]"
