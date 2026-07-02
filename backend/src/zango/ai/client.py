@@ -53,6 +53,41 @@ class ProviderClient:
             return model
         return self._app_provider.default_model
 
+    def _compute_cost(self, usage, model: str) -> float:
+        """Compute invocation cost, preferring per-model DB rate overrides.
+
+        A pure DB read (no network) — the AWS live pricing refresh task keeps the
+        ``AppLLMProviderModel`` override rows warm out of band. If a row carries
+        override rates they win; otherwise we fall back to the provider's own
+        ``compute_cost`` (static ``supported_models`` rates → 0.0).
+
+        Bedrock model IDs may arrive with a cross-region geography prefix
+        (``us.`` / ``eu.`` / ``apac.`` / ``global.``); override rows are keyed by
+        the bare ID, so we strip it before the lookup.
+        """
+        bare = model
+        for prefix in ("us.", "eu.", "apac.", "global."):
+            if bare.startswith(prefix):
+                bare = bare[len(prefix) :]
+                break
+
+        override = (
+            self._app_provider.enabled_models.filter(model_id=bare)
+            .exclude(
+                input_cost_per_mtok_override__isnull=True,
+                output_cost_per_mtok_override__isnull=True,
+            )
+            .first()
+        )
+        if override is not None:
+            input_rate = float(override.input_cost_per_mtok_override or 0)
+            output_rate = float(override.output_cost_per_mtok_override or 0)
+            input_cost = (usage.input_tokens / 1_000_000) * input_rate
+            output_cost = (usage.output_tokens / 1_000_000) * output_rate
+            return round(input_cost + output_cost, 6)
+
+        return self._get_client().compute_cost(usage, model)
+
     def _check_model_enabled(self, model: str):
         """Check if the requested model is enabled for this provider."""
         enabled = self._app_provider.enabled_models.filter(
@@ -273,8 +308,8 @@ class ProviderClient:
                 **provider_kwargs,
             )
 
-            # Compute cost
-            cost = client.compute_cost(response.usage, model)
+            # Compute cost (DB rate overrides preferred; pure read, no network)
+            cost = self._compute_cost(response.usage, model)
             response.cost_usd = cost
 
             # Log invocation
@@ -387,7 +422,7 @@ class ProviderClient:
             latency_ms = int((time.monotonic() - start) * 1000)
             cost = 0
             if final_usage:
-                cost = client.compute_cost(final_usage, model)
+                cost = self._compute_cost(final_usage, model)
                 self._app_provider.record_usage(final_usage, cost)
 
             from zango.ai.providers.base import LLMResponse, LLMUsage

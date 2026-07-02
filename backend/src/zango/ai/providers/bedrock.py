@@ -1234,7 +1234,15 @@ class BedrockProvider(BaseLLMProvider):
             return out
 
     def compute_cost(self, usage, model):
-        """Cost lookup keyed by the bare model ID (strip any geography prefix)."""
+        """Static fallback cost lookup keyed by the bare model ID.
+
+        This is the fallback tier: ``ProviderClient._compute_cost`` first consults
+        per-model ``AppLLMProviderModel`` rate overrides (kept warm by the live
+        AWS pricing refresh task) and only calls this when no override exists.
+        Pure computation — no network, no boto3 — so it never blocks the request
+        path. Strips any cross-region geography prefix; returns 0.0 for models
+        absent from the static catalog.
+        """
         bare = model
         for p in ("us.", "eu.", "apac.", "global."):
             if bare.startswith(p):

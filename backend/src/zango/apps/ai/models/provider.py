@@ -225,6 +225,32 @@ class AppLLMProviderModel(FullAuditMixin):
         help_text="Override output cost per million tokens. Null = use default.",
     )
 
+    # Provenance of the override rates above (provider-agnostic). "manual" = an
+    # admin set them (e.g. an enterprise agreement); any automated pricing
+    # refresh must NOT overwrite these. "aws_live" = populated automatically
+    # from the AWS Price List API (Bedrock). Null = never set / use class defaults.
+    PRICING_SOURCE_MANUAL = "manual"
+    PRICING_SOURCE_AWS_LIVE = "aws_live"
+    PRICING_SOURCE_CHOICES = [
+        (PRICING_SOURCE_MANUAL, "Manual override"),
+        (PRICING_SOURCE_AWS_LIVE, "AWS live pricing"),
+    ]
+    pricing_source = models.CharField(
+        max_length=20,
+        choices=PRICING_SOURCE_CHOICES,
+        null=True,
+        blank=True,
+        help_text=(
+            "Where the cost overrides came from. 'manual' is never overwritten "
+            "by automated pricing refresh; 'aws_live' is refreshed automatically."
+        ),
+    )
+    rates_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the cost overrides were last updated by an automated pricing refresh.",
+    )
+
     is_enabled = models.BooleanField(default=True)
 
     # Per-model rate limits (more granular than provider-level)

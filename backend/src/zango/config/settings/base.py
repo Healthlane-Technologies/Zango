@@ -232,6 +232,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "zango.ai.update_tool_usage_stats",
         "schedule": crontab(minute="0", hour="2"),
     },
+    "refresh_bedrock_pricing": {
+        "task": "zango.ai.refresh_bedrock_pricing",
+        "schedule": crontab(minute="0", hour="3"),
+    },
 }
 
 X_FRAME_OPTIONS = "ALLOW"

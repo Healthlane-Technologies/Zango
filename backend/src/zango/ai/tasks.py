@@ -5,6 +5,7 @@ Celery tasks for async LLM completions.
 from celery import shared_task
 from loguru import logger
 
+
 @shared_task(bind=True, name="zango.ai.async_llm_complete")
 def async_llm_complete(
     self,
@@ -80,9 +81,10 @@ def update_tool_usage_stats():
     """
     from datetime import timedelta
 
+    from django_tenants.utils import schema_context
+
     from django.db.models import Avg, Count, Max, Q
     from django.utils import timezone
-    from django_tenants.utils import schema_context
 
     from zango.apps.shared.tenancy.models import TenantModel
 
@@ -126,3 +128,107 @@ def update_tool_usage_stats():
                 f"Error updating tool usage stats for tenant {tenant.schema_name}: {e}"
             )
             raise
+
+
+@shared_task(name="zango.ai.refresh_bedrock_pricing")
+def refresh_bedrock_pricing(provider_id=None):
+    """Refresh AWS Bedrock cost rates from the live Price List API.
+
+    Runs off the request path (daily beat + on provider create/validate). The
+    public price list is fetched **once** using the platform-level
+    ``settings.AWS_*`` credentials, then fanned out to every tenant's enabled
+    Bedrock providers by writing ``AppLLMProviderModel`` override rows.
+
+    Rows whose ``pricing_source`` is ``"manual"`` (an admin-set enterprise rate)
+    are never overwritten. If the pricing API is unavailable or the credentials
+    lack ``pricing:GetProducts``, ``fetch_bedrock_rates`` returns ``{}`` and this
+    task exits without writing anything.
+
+    Args:
+        provider_id: When given, only that provider is refreshed (used by the
+            create/validate trigger). The fetch itself is still global.
+    """
+    from django_tenants.utils import schema_context
+
+    from django.utils import timezone
+
+    from zango.ai.bedrock_pricing import fetch_bedrock_rates
+    from zango.apps.shared.tenancy.models import TenantModel
+
+    # 1. Fetch once — global, settings creds, tenant-independent.
+    rates_by_region = fetch_bedrock_rates()
+    if not rates_by_region:
+        logger.info(
+            "[refresh_bedrock_pricing] no live rates available "
+            "(missing/unauthorised AWS credentials or empty price list) — nothing written."
+        )
+        return
+
+    now = timezone.now()
+    updated = 0
+
+    # 2. Fan out across tenant schemas.
+    for tenant in TenantModel.objects.exclude(schema_name="public"):
+        try:
+            with schema_context(tenant.schema_name):
+                updated += _apply_rates_for_tenant(rates_by_region, now, provider_id)
+        except Exception as e:
+            logger.error(
+                f"[refresh_bedrock_pricing] tenant {tenant.schema_name} failed: {e}"
+            )
+            # Keep going — one bad tenant should not abort the whole refresh.
+
+    logger.info(f"[refresh_bedrock_pricing] updated {updated} model rate row(s).")
+
+
+def _apply_rates_for_tenant(rates_by_region, now, provider_id=None):
+    """Write fetched rates onto AppLLMProviderModel rows for one tenant schema.
+
+    Returns the number of rows updated. Only touches Bedrock providers, only
+    models we have a rate for, and never overwrites a ``manual`` override.
+    """
+    from zango.apps.ai.models.provider import AppLLMProvider, AppLLMProviderModel
+
+    providers = AppLLMProvider.objects.filter(provider_slug="bedrock", is_enabled=True)
+    if provider_id is not None:
+        providers = providers.filter(id=provider_id)
+
+    updated = 0
+    for provider in providers:
+        region = provider._decrypt_config().get("aws_region", "us-east-1")
+        region_rates = rates_by_region.get(region)
+        if not region_rates:
+            continue
+
+        for bare_id, rate in region_rates.items():
+            input_rate = rate.get("input_per_mtok")
+            output_rate = rate.get("output_per_mtok")
+            if input_rate is None and output_rate is None:
+                continue
+
+            row, _ = AppLLMProviderModel.objects.get_or_create(
+                provider=provider,
+                model_id=bare_id,
+                defaults={"display_name": bare_id},
+            )
+            # Never clobber an admin-set enterprise rate.
+            if row.pricing_source == AppLLMProviderModel.PRICING_SOURCE_MANUAL:
+                continue
+
+            if input_rate is not None:
+                row.input_cost_per_mtok_override = input_rate
+            if output_rate is not None:
+                row.output_cost_per_mtok_override = output_rate
+            row.pricing_source = AppLLMProviderModel.PRICING_SOURCE_AWS_LIVE
+            row.rates_updated_at = now
+            row.save(
+                update_fields=[
+                    "input_cost_per_mtok_override",
+                    "output_cost_per_mtok_override",
+                    "pricing_source",
+                    "rates_updated_at",
+                ]
+            )
+            updated += 1
+
+    return updated

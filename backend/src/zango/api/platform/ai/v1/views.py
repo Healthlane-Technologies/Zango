@@ -91,6 +91,23 @@ def _classify_fetch_error(message: str) -> str:
     return "unknown_error"
 
 
+def _trigger_bedrock_pricing_refresh(provider):
+    """Fire-and-forget: refresh live Bedrock pricing for a just-saved provider.
+
+    Enqueued (never run inline) so the slow AWS Price List fetch stays off the
+    request path. No-op for non-Bedrock providers. A broker/enqueue failure is
+    swallowed — pricing will still refresh on the daily beat.
+    """
+    if getattr(provider, "provider_slug", None) != "bedrock":
+        return
+    try:
+        from zango.ai.tasks import refresh_bedrock_pricing
+
+        refresh_bedrock_pricing.delay(provider_id=provider.id)
+    except Exception:
+        pass
+
+
 @method_decorator(set_app_schema_path, name="dispatch")
 class AvailableProvidersViewAPIV1(ZangoGenericPlatformAPIView):
     """
@@ -202,6 +219,7 @@ class ProvidersListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             serializer = AppLLMProviderCreateSerializer(data=request.data)
             if serializer.is_valid():
                 provider = serializer.save()
+                _trigger_bedrock_pricing_refresh(provider)
                 return get_api_response(
                     True,
                     {
@@ -351,6 +369,7 @@ class ProviderValidateViewAPIV1(ZangoGenericPlatformAPIView):
             provider.save()
 
             if is_valid:
+                _trigger_bedrock_pricing_refresh(provider)
                 return get_api_response(
                     True,
                     {"message": "Provider credentials validated successfully"},

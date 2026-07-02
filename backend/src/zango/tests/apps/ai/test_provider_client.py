@@ -42,6 +42,9 @@ def _make_app_provider(slug="anthropic", default_model="claude-sonnet-4-20250514
     p.default_model = default_model
     # No enabled_models restrictions by default
     p.enabled_models.exists.return_value = False
+    # No per-model DB rate override by default → _compute_cost delegates to the
+    # raw provider's compute_cost().
+    p.enabled_models.filter.return_value.exclude.return_value.first.return_value = None
     raw = MagicMock()
     raw.complete.return_value = _make_raw_response()
     raw.compute_cost.return_value = 0.005
@@ -137,6 +140,51 @@ class SuccessPathTest(SimpleTestCase):
         )
 
         self.assertAlmostEqual(response.cost_usd, 0.007)
+
+    @patch(_INV_PATH)
+    def test_db_override_rates_preferred_over_provider(self, mock_inv):
+        # A per-model override row wins over the raw provider's compute_cost,
+        # and the raw compute_cost is never consulted (pure DB read, no network).
+        mock_inv.objects.create.return_value = MagicMock(pk=1)
+        app_provider = _make_app_provider()
+
+        override = MagicMock()
+        override.input_cost_per_mtok_override = 2.0
+        override.output_cost_per_mtok_override = 8.0
+        app_provider.enabled_models.filter.return_value.exclude.return_value.first.return_value = (
+            override
+        )
+        raw = app_provider.get_client.return_value
+        raw.compute_cost.return_value = 0.999  # should be ignored
+
+        response = ProviderClient(app_provider).complete(
+            messages=[LLMMessage(role="user", content="hi")]
+        )
+
+        # usage = 100 input, 50 output → 100/1e6*2 + 50/1e6*8 = 0.0002 + 0.0004
+        self.assertAlmostEqual(response.cost_usd, 0.0006)
+        raw.compute_cost.assert_not_called()
+
+    @patch(_INV_PATH)
+    def test_geography_prefix_stripped_for_override_lookup(self, mock_inv):
+        # A Bedrock geo-prefixed model resolves to the bare model_id in the query.
+        mock_inv.objects.create.return_value = MagicMock(pk=1)
+        app_provider = _make_app_provider(
+            slug="bedrock",
+            default_model="us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        )
+        app_provider.enabled_models.filter.return_value.exclude.return_value.first.return_value = (
+            None
+        )
+
+        ProviderClient(app_provider).complete(
+            messages=[LLMMessage(role="user", content="hi")]
+        )
+
+        _, kwargs = app_provider.enabled_models.filter.call_args
+        self.assertEqual(
+            kwargs.get("model_id"), "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        )
 
     @patch(_INV_PATH)
     def test_invocation_id_attached_from_created_pk(self, mock_inv):
