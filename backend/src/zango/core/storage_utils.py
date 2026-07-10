@@ -75,6 +75,20 @@ def _validate_json_content(value):
         raise ValidationError("This file is not valid JSON.")
 
 
+def _validate_csv_content(value):
+    # CSV is plain text with no magic-byte signature of its own, so
+    # `filetype` can't confirm the content genuinely is CSV - but a real
+    # CSV should never match any of filetype's known binary signatures,
+    # so this still catches a binary file (zip, png, ...) renamed to .csv.
+    value.seek(0)
+    kind = filetype.guess(value)
+    value.seek(0)
+    if kind is not None:
+        raise ValidationError(
+            "The file content does not match its extension. Upload rejected."
+        )
+
+
 def _validate_binary_signature(value, ext):
     # `filetype` (pure-Python, content-based magic-byte detection - no
     # system dependency like libmagic) has no separate "jpeg" type, only
@@ -122,7 +136,7 @@ def validate_file_extension(value):
     elif ext == ".json":
         _validate_json_content(value)
     elif ext == ".csv":
-        pass  # plain text, no reliable binary signature to check
+        _validate_csv_content(value)
     else:
         _validate_binary_signature(value, ext)
 
