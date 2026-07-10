@@ -1,3 +1,5 @@
+import os
+
 from zango.apps.appauth.models import AppUserAuthToken
 from zango.apps.appauth.serializers import AppUserAuthTokenSerializer
 from zango.core.api import (
@@ -7,6 +9,11 @@ from zango.core.api import (
 from zango.core.utils import get_auth_priority, get_current_role
 
 from .serializers import ProfileSerializer
+
+# A profile picture is a display image, not a general-purpose upload - only
+# accept extensions that are actually images, ahead of the deeper
+# content-based check that ZFileField/update_user already performs.
+PROFILE_PIC_EXTENSIONS = {".png", ".jpg", ".jpeg", ".svg", ".ico"}
 
 
 class ProfileViewAPIV1(ZangoGenericAppAPIView):
@@ -49,6 +56,17 @@ class ProfileViewAPIV1(ZangoGenericAppAPIView):
 
     def put(self, request, *args, **kwargs):
         profile_image = request.FILES.get("profile_pic")
+        if profile_image:
+            ext = os.path.splitext(profile_image.name)[-1].lower()
+            if ext not in PROFILE_PIC_EXTENSIONS:
+                return get_api_response(
+                    False,
+                    {
+                        "message": "Profile picture must be an image file "
+                        "(png, jpg, jpeg, svg, ico)."
+                    },
+                    400,
+                )
         response = request.user.update_user(request.data, profile_image=profile_image)
         success = response.pop("success")
         if success:
