@@ -3,6 +3,7 @@ import os
 import re
 import uuid
 
+import filetype
 from storages.backends.s3boto3 import S3Boto3Storage
 
 from django.conf import settings
@@ -34,25 +35,27 @@ def RandomUniqueFileName(instance, filename):
         return
 
 
-# Magic-byte signatures for binary file types. The submitted filename
-# extension and Content-Type header are both attacker-controlled, so the
-# actual bytes are checked against the extension the upload claims to be.
-_BINARY_SIGNATURES = {
-    ".pdf": [b"%PDF-"],
-    ".png": [b"\x89PNG\r\n\x1a\n"],
-    ".jpg": [b"\xff\xd8\xff"],
-    ".jpeg": [b"\xff\xd8\xff"],
-    ".ico": [b"\x00\x00\x01\x00"],
-    ".zip": [b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"],
-    ".docx": [b"PK\x03\x04"],
-    ".xlsx": [b"PK\x03\x04"],
-    ".pptx": [b"PK\x03\x04"],
-    ".doc": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
-    ".xls": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
-    ".ppt": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
-    ".mp3": [b"ID3", b"\xff\xfb", b"\xff\xf3", b"\xff\xf2"],
-    ".wav": [b"RIFF"],
-    ".webm": [b"\x1a\x45\xdf\xa3"],
+# Binary file types are verified with `filetype` (pure-Python, content-based
+# magic-byte detection - no system dependency like libmagic). The submitted
+# filename extension and Content-Type header are both attacker-controlled,
+# so the actual bytes are checked against the extension the upload claims.
+_FILETYPE_EXTENSION_MAP = {
+    ".pdf": "pdf",
+    ".doc": "doc",
+    ".docx": "docx",
+    ".jpg": "jpg",
+    ".jpeg": "jpg",
+    ".png": "png",
+    ".xls": "xls",
+    ".xlsx": "xlsx",
+    ".mp3": "mp3",
+    ".wav": "wav",
+    ".ppt": "ppt",
+    ".pptx": "pptx",
+    ".zip": "zip",
+    ".ico": "ico",
+    ".mp4": "mp4",
+    ".webm": "webm",
 }
 
 # SVG is XML/text, so it has no fixed magic-byte signature. It is instead
@@ -95,20 +98,14 @@ def _validate_json_content(value):
         raise ValidationError("This file is not valid JSON.")
 
 
-def _validate_mp4_signature(value):
-    head = _read_head(value, 16)
-    if len(head) < 8 or head[4:8] != b"ftyp":
-        raise ValidationError(
-            "The file content does not match its extension. Upload rejected."
-        )
-
-
 def _validate_binary_signature(value, ext):
-    signatures = _BINARY_SIGNATURES.get(ext)
-    if not signatures:
+    expected = _FILETYPE_EXTENSION_MAP.get(ext)
+    if not expected:
         return
-    head = _read_head(value, 16)
-    if not any(head.startswith(sig) for sig in signatures):
+    value.seek(0)
+    kind = filetype.guess(value)
+    value.seek(0)
+    if kind is None or kind.extension != expected:
         raise ValidationError(
             "The file content does not match its extension. Upload rejected."
         )
@@ -146,8 +143,6 @@ def validate_file_extension(value):
         _validate_svg_content(value)
     elif ext == ".json":
         _validate_json_content(value)
-    elif ext == ".mp4":
-        _validate_mp4_signature(value)
     elif ext == ".csv":
         pass  # plain text, no reliable binary signature to check
     else:
