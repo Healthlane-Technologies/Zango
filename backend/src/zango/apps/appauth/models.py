@@ -9,6 +9,7 @@ from knox.settings import knox_settings
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import connection, models
 from django.utils import timezone
 
@@ -21,6 +22,7 @@ from zango.apps.shared.platformauth.abstract_model import (
     AbstractZangoUserModel,
 )
 from zango.core.model_mixins import FullAuditMixin
+from zango.core.storage_utils import validate_file_extension
 from zango.core.utils import get_auth_priority
 
 from ..permissions.mixin import PermissionMixin
@@ -505,6 +507,13 @@ class AppUserModel(
 
             # Handle profile picture update
             if profile_image:
+                # self.save() below does not call full_clean(), so field
+                # validators are never invoked automatically - validate
+                # content explicitly before accepting the upload.
+                try:
+                    validate_file_extension(profile_image)
+                except DjangoValidationError as e:
+                    return {"success": False, "message": " ".join(e.messages)}
                 # Delete old profile pic if exists
                 if self.profile_pic:
                     self.profile_pic.delete(save=False)

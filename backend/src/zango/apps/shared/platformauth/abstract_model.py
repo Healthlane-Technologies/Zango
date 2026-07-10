@@ -12,7 +12,7 @@ from django.utils import timezone
 from zango.core.model_mixins import FullAuditMixin
 
 # from backend.core.storage_utils import S3PrivateFileField, RandomUniqueFileName
-from zango.core.storage_utils import RandomUniqueFileName
+from zango.core.storage_utils import RandomUniqueFileName, validate_file_extension
 
 
 class AbstractZangoUserModel(AbstractBaseUser, FullAuditMixin):
@@ -44,6 +44,7 @@ class AbstractZangoUserModel(AbstractBaseUser, FullAuditMixin):
         verbose_name="user profile pic",
         null=True,
         blank=True,
+        validators=[validate_file_extension],
     )
     extra_data = JSONField(null=True)
     USERNAME_FIELD = "email"
