@@ -35,29 +35,6 @@ def RandomUniqueFileName(instance, filename):
         return
 
 
-# Binary file types are verified with `filetype` (pure-Python, content-based
-# magic-byte detection - no system dependency like libmagic). The submitted
-# filename extension and Content-Type header are both attacker-controlled,
-# so the actual bytes are checked against the extension the upload claims.
-_FILETYPE_EXTENSION_MAP = {
-    ".pdf": "pdf",
-    ".doc": "doc",
-    ".docx": "docx",
-    ".jpg": "jpg",
-    ".jpeg": "jpg",
-    ".png": "png",
-    ".xls": "xls",
-    ".xlsx": "xlsx",
-    ".mp3": "mp3",
-    ".wav": "wav",
-    ".ppt": "ppt",
-    ".pptx": "pptx",
-    ".zip": "zip",
-    ".ico": "ico",
-    ".mp4": "mp4",
-    ".webm": "webm",
-}
-
 # SVG is XML/text, so it has no fixed magic-byte signature. It is instead
 # scanned for embedded script/event-handler content, the classic stored-XSS
 # vector for image-upload features (a valid SVG can carry <script> tags).
@@ -99,9 +76,10 @@ def _validate_json_content(value):
 
 
 def _validate_binary_signature(value, ext):
-    expected = _FILETYPE_EXTENSION_MAP.get(ext)
-    if not expected:
-        return
+    # `filetype` (pure-Python, content-based magic-byte detection - no
+    # system dependency like libmagic) has no separate "jpeg" type, only
+    # "jpg" - every other extension we allow matches its naming exactly.
+    expected = "jpg" if ext == ".jpeg" else ext[1:]
     value.seek(0)
     kind = filetype.guess(value)
     value.seek(0)
