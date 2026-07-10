@@ -1,6 +1,7 @@
 import json
 
 from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCodeView
+from axes.handlers.proxy import AxesProxyHandler
 from django_redis import get_redis_connection
 from ipware import get_client_ip
 
@@ -12,6 +13,7 @@ from django.http import HttpResponse
 from zango.apps.appauth.exceptions import OTPRateLimitExceeded
 from zango.apps.appauth.models import AppUserModel, OTPCode
 from zango.core.api import get_api_response
+from zango.core.utils import generate_lockout_response
 
 
 def _check_ip_rate_limit(request, otp_type):
@@ -121,21 +123,32 @@ class ConfirmLoginCodeViewAPIV1(ConfirmLoginCodeView):
     def dispatch(self, request, *args, **kwargs):
         data = json.loads(request.body)
         code = data.get("code")
+
+        # Resolve the target user (if any) so the axes lockout check also
+        # covers the username+user_agent dimension, not just IP - axes
+        # can't infer a username here on its own since this is a JSON body,
+        # not a form post, so request.POST/request.data are both empty.
+        otp_code = None
+        credentials = {}
         if code:
-            try:
-                otp_code = OTPCode.objects.get(code=code, otp_type="login_code")
-                if not otp_code.is_valid():
-                    response = {
-                        "status": 400,
-                        "errors": [
-                            {
-                                "message": "Login code has expired or has already been used",
-                            }
-                        ],
-                    }
-                    return HttpResponse(json.dumps(response), status=400)
-            except OTPCode.DoesNotExist:
-                return super().dispatch(request, *args, **kwargs)
+            otp_code = OTPCode.objects.filter(code=code, otp_type="login_code").first()
+            if otp_code:
+                credentials = {settings.AXES_USERNAME_FORM_FIELD: otp_code.user.email}
+
+        if not AxesProxyHandler.is_allowed(request, credentials):
+            return generate_lockout_response(request, credentials)
+
+        if code and otp_code:
+            if not otp_code.is_valid():
+                response = {
+                    "status": 400,
+                    "errors": [
+                        {
+                            "message": "Login code has expired or has already been used",
+                        }
+                    ],
+                }
+                return HttpResponse(json.dumps(response), status=400)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
