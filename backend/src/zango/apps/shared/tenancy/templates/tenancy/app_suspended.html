@@ -1,0 +1,168 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App unavailable — {{ tenant.name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --surface-page: #F6F7FB;
+            --surface-card: #FFFFFF;
+            --text-strong: #0B0D14;
+            --text-body: #2C3047;
+            --text-muted: #5A607A;
+            --text-subtle: #8389A3;
+            --border: #E3E6EF;
+            --border-soft: #ECEEF5;
+            --amber-50: #FEF6E7;
+            --amber-100: #FCEAC4;
+            --amber-500: #DA9011;
+            --amber-700: #8A5A07;
+            --amber-900: #5A3B04;
+            --indigo-500: #5961E5;
+            --shadow-amber: 0 8px 24px -6px rgba(218,144,17,.22), 0 2px 4px rgba(218,144,17,.08);
+            --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-feature-settings: 'cv11', 'ss01', 'ss03';
+            font-optical-sizing: auto;
+            -webkit-font-smoothing: antialiased;
+            background: var(--surface-page);
+            color: var(--text-body);
+            line-height: 1.55;
+            display: grid;
+            place-items: center;
+            padding: 32px 20px;
+        }
+        .suspended-page {
+            background: var(--surface-card);
+            border-radius: 16px;
+            padding: 64px 56px 44px;
+            max-width: 560px;
+            width: 100%;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 460ms cubic-bezier(.22, 1, .36, 1) both;
+        }
+        .suspended-page::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--amber-500) 0%, var(--indigo-500) 100%);
+        }
+        .suspended-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--amber-50);
+            border: 1px solid var(--amber-100);
+            font-size: 11px;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--amber-700);
+            margin-bottom: 24px;
+        }
+        .suspended-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--amber-500);
+            box-shadow: 0 0 0 3px rgba(218, 144, 17, .24);
+        }
+        .suspended-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 22px;
+            border-radius: 20px;
+            background: linear-gradient(140deg, #FEF6E7 0%, #FCEAC4 100%);
+            border: 1px solid var(--amber-100);
+            display: grid;
+            place-items: center;
+            color: var(--amber-700);
+            box-shadow: var(--shadow-amber);
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.028em;
+            line-height: 1.1;
+            color: var(--text-strong);
+            margin-bottom: 12px;
+        }
+        h1 em {
+            font-family: 'Instrument Serif', 'Times New Roman', serif;
+            font-style: italic;
+            font-weight: 400;
+            color: var(--amber-700);
+        }
+        .msg {
+            font-size: 14.5px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 42ch;
+            margin: 0 auto 24px;
+        }
+        .support-line {
+            font-size: 13px;
+            color: var(--text-body);
+            padding-top: 24px;
+            border-top: 1px solid var(--border-soft);
+        }
+        .support-line a {
+            color: var(--indigo-500);
+            font-weight: 500;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(89, 97, 229, .3);
+        }
+        .support-line a:hover { border-bottom-color: var(--indigo-500); }
+        .meta {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border);
+            font-size: 11.5px;
+            color: var(--text-subtle);
+            font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="suspended-page">
+        <div class="suspended-badge">App unavailable</div>
+        <div class="suspended-icon">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="10" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+        </div>
+        <h1>This app is currently <em>suspended</em></h1>
+        <p class="msg">
+            Access to this application has been paused by the platform administrator. Your data is preserved and unchanged.
+        </p>
+        <p class="support-line">
+            Please contact <a href="mailto:{{ support_email }}">support</a> if you believe this is in error.
+        </p>
+        <div class="meta">Reference · {{ tenant.domain_url|default:tenant.name }} · 404</div>
+    </div>
+</body>
+</html>

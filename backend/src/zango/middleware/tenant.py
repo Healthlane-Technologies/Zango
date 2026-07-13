@@ -15,11 +15,22 @@ from django.conf import settings
 from django.core.exceptions import DisallowedHost
 from django.db import connection
 from django.http import Http404
+from django.shortcuts import render
 from django.urls import set_urlconf
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 
 from zango.core.utils import get_region_from_timezone
+
+
+# Paths that continue to work when a tenant is suspended. Two categories
+# matter: (a) health checks, so load balancers don't mark the app as
+# unhealthy; (b) the platform-admin API, so operators can unsuspend from
+# the admin UI.
+_SUSPEND_EXEMPT_PATH_PREFIXES = (
+    "/api/v1/health/",
+    "/api/v1/platform/",
+)
 
 
 class ZangoTenantMainMiddleware(TenantMainMiddleware):
@@ -97,9 +108,37 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
         request.tenant = tenant
         request.internal_routing = False
         connection.set_tenant(request.tenant)
+
+        # Suspend guard — short-circuit any request to a suspended tenant.
+        # Health check + platform-admin routes are exempt so the load
+        # balancer stays green and operators can still unsuspend.
+        if (
+            getattr(tenant, "status", None) == "suspended"
+            and not self._is_suspend_exempt(request)
+        ):
+            return render(
+                request,
+                "tenancy/app_suspended.html",
+                {
+                    "tenant": tenant,
+                    "support_email": getattr(
+                        settings, "SUPPORT_EMAIL", "support@zango.dev"
+                    ),
+                },
+                status=404,
+            )
+
         self.setup_url_routing(request)
 
         return self.get_response(request)
+
+    @staticmethod
+    def _is_suspend_exempt(request):
+        """Whether this request bypasses the suspend guard."""
+        return any(
+            request.path.startswith(prefix)
+            for prefix in _SUSPEND_EXEMPT_PATH_PREFIXES
+        )
 
     def no_tenant_found(self, request, hostname):
         """

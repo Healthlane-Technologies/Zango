@@ -132,6 +132,17 @@ class TenantModel(TenantMixin, FullAuditMixin):
         self.suspended_on = timezone.now()
         self.save()
 
+    def unsuspend(self):
+        """Restore a suspended tenant to deployed status.
+
+        Traffic resumes immediately on the next request; queued Celery
+        tasks that were rejected while suspended are gone — they need to
+        be re-dispatched by the caller if desired.
+        """
+        self.status = "deployed"
+        self.suspended_on = None
+        self.save()
+
     @classmethod
     def create(
         cls,

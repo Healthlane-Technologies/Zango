@@ -354,6 +354,14 @@ def codexec_executor(self, execution_uuid: str, tenant_name: str) -> dict:
     # 1. Bind tenant context
     tenant = TenantModel.objects.get(name=tenant_name)
     connection.set_tenant(tenant)
+    # Framework-level suspend guard. Codexec has its own Celery task
+    # that doesn't route through `zango_task_executor`, so the assertion
+    # is repeated here. Catches the case where a run was enqueued before
+    # the tenant was suspended and the flip happened while the task
+    # waited in the queue.
+    from zango.apps.shared.tenancy.utils import assert_tenant_active
+
+    assert_tenant_active(tenant)
 
     # 2. Load row + mark running
     try:
