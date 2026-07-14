@@ -354,14 +354,6 @@ def codexec_executor(self, execution_uuid: str, tenant_name: str) -> dict:
     # 1. Bind tenant context
     tenant = TenantModel.objects.get(name=tenant_name)
     connection.set_tenant(tenant)
-    # Framework-level suspend guard. Codexec has its own Celery task
-    # that doesn't route through `zango_task_executor`, so the assertion
-    # is repeated here. Catches the case where a run was enqueued before
-    # the tenant was suspended and the flip happened while the task
-    # waited in the queue.
-    from zango.apps.shared.tenancy.utils import assert_tenant_active
-
-    assert_tenant_active(tenant)
 
     # 2. Load row + mark running
     try:
@@ -371,6 +363,41 @@ def codexec_executor(self, execution_uuid: str, tenant_name: str) -> dict:
     except CodeExecution.DoesNotExist:
         log.error("codexec: execution %s not found", execution_uuid)
         return {"status": "error", "reason": "execution_not_found"}
+
+    # 2b. Framework-level suspend guard. Codexec has its own Celery task
+    # that doesn't route through `zango_task_executor`, so the assertion
+    # is repeated here. Catches the case where a run was enqueued before
+    # the tenant was suspended and the flip happened while the task
+    # waited in the queue. Order matters: we load the execution row first
+    # so we can mark it ABORTED — otherwise the row stays at QUEUED
+    # forever and the UI never learns the run was skipped.
+    if getattr(tenant, "status", None) == "suspended":
+        log.info(
+            "codexec: skipping execution %s — tenant '%s' is suspended",
+            execution_uuid,
+            tenant.name,
+        )
+        execution.status = ExecStatus.ABORTED
+        execution.exception_type = "TenantSuspended"
+        execution.exception_message = (
+            f"Tenant '{tenant.name}' is suspended. Run was skipped without "
+            f"executing user code. Unsuspend the app and re-run to try again."
+        )
+        execution.ended_at = timezone.now()
+        execution.duration_ms = int(
+            (time.perf_counter() - started_perf) * 1000
+        )
+        execution.save(
+            update_fields=[
+                "status",
+                "exception_type",
+                "exception_message",
+                "ended_at",
+                "duration_ms",
+                "modified_at",
+            ]
+        )
+        return {"status": "skipped", "reason": "tenant_suspended"}
 
     execution.status = ExecStatus.RUNNING
     execution.started_at = started_at
