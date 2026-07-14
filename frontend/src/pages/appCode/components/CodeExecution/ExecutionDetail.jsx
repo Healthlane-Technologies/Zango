@@ -605,6 +605,45 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 								</div>
 							)}
 						</div>
+						{(execution.exception_type || execution.exception_message) && (
+							(() => {
+								const isSuspended = execution.exception_type === 'TenantSuspended';
+								const palette = isSuspended
+									? {
+											labelColor: 'text-amber-800',
+											boxBg: 'bg-amber-50',
+											boxBorder: 'border-amber-200',
+											boxText: 'text-amber-900',
+											label: 'App suspended',
+									  }
+									: {
+											labelColor: 'text-rose-700',
+											boxBg: 'bg-rose-50',
+											boxBorder: 'border-rose-200',
+											boxText: 'text-rose-800',
+											label: 'Reason',
+									  };
+								return (
+									<>
+										<div className={`mt-4 mb-2 text-[12px] font-semibold ${palette.labelColor}`}>
+											{palette.label}
+										</div>
+										<div className={`${palette.boxBg} border ${palette.boxBorder} rounded-md p-3.5 text-[12px] ${palette.boxText}`}>
+											{execution.exception_type && (
+												<div className="font-mono text-[11px] font-semibold mb-1.5">
+													{execution.exception_type}
+												</div>
+											)}
+											{execution.exception_message && (
+												<div className="whitespace-pre-wrap">
+													{execution.exception_message}
+												</div>
+											)}
+										</div>
+									</>
+								);
+							})()
+						)}
 						{execution.exception_traceback && (
 							<>
 								<div className="mt-4 mb-2 text-[12px] font-semibold text-rose-700">Traceback</div>
@@ -806,6 +845,12 @@ export default function ExecutionDetail({ appId, executionId, onBack, onEditSnip
 						<div className="text-slate-500">Duration</div><div className="text-slate-900 font-mono">{formatDuration(execution.duration_ms)}</div>
 						<div className="text-slate-500">Celery task</div><div className="text-slate-900 font-mono break-all">{execution.celery_task_id || '—'}</div>
 						<div className="text-slate-500">Exception</div><div className="text-slate-900 font-mono">{execution.exception_type || '—'}</div>
+						{execution.exception_message ? (
+							<>
+								<div className="text-slate-500">Message</div>
+								<div className="text-slate-900 whitespace-pre-wrap">{execution.exception_message}</div>
+							</>
+						) : null}
 					</div>
 				)}
 			</div>
