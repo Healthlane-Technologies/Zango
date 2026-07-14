@@ -433,6 +433,13 @@ export default function Table({ tableData }) {
 		dispatch(setAppAccessLogsTableData(data));
 	}, 500);
 
+	// Request versioning refs — see the audit doc (search-race-audit.html)
+	// for background. Bump before each fetch, discard responses whose
+	// seq is behind. Closes the race that fires when a filter change
+	// races the debounced search fetch.
+	const requestSeqRef = React.useRef(0);
+	const lastAppliedSeqRef = React.useRef(0);
+
 	useEffect(() => {
 		let { pageIndex, pageSize } = pagination;
 
@@ -468,6 +475,7 @@ export default function Table({ tableData }) {
 			: '';
 
 		const makeApiCall = async () => {
+			const seq = ++requestSeqRef.current;
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/access-logs/?page=${
 					pageIndex + 1
@@ -477,8 +485,13 @@ export default function Table({ tableData }) {
 				type: 'GET',
 				loader: true,
 			});
+			// Discard stale responses so a slow earlier request can't
+			// overwrite a fresh one.
+			if (seq <= lastAppliedSeqRef.current) return;
+			if (seq !== requestSeqRef.current) return;
 			if (success && response) {
 				updateAppAccessLogsData(response);
+				lastAppliedSeqRef.current = seq;
 			}
 		};
 
