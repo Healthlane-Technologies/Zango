@@ -31,25 +31,10 @@ class TaskSerializer(serializers.ModelSerializer):
     run_history = serializers.SerializerMethodField()
     created_at = serializers.SerializerMethodField()
     modified_at = serializers.SerializerMethodField()
-    # Runtime state (from the linked PeriodicTask). Diverges from
-    # `is_enabled` when the tenant is suspended — `is_enabled` stays as
-    # the operator set it, but `runtime_enabled` reflects whether beat
-    # will actually fire the task.
-    runtime_enabled = serializers.SerializerMethodField()
 
     class Meta:
         model = AppTask
         fields = "__all__"
-
-    def get_runtime_enabled(self, obj):
-        try:
-            if obj.master_task_id:
-                return PeriodicTask.objects.filter(
-                    id=obj.master_task_id
-                ).values_list("enabled", flat=True).first()
-        except Exception:
-            pass
-        return None
 
     def update(self, instance, validated_data):
         if self.context.get("cronexp"):

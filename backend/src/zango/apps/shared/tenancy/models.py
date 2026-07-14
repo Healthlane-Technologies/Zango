@@ -150,43 +150,58 @@ class TenantModel(TenantMixin, FullAuditMixin):
         self._set_scheduled_tasks_enabled(True)
 
     def _set_scheduled_tasks_enabled(self, enabled: bool) -> None:
-        """Enable / disable every AppTask scheduled from the panel for
-        this tenant.
+        """Toggle every AppTask on/off exactly like the operator would from
+        the Async Tasks modal.
 
-        Each ``AppTask`` has a linked ``PeriodicTask`` (django-celery-beat).
-        Flipping ``PeriodicTask.enabled`` is what actually causes the beat
-        scheduler to stop firing the task; the ``AppTask.is_enabled`` flag
-        stays as the operator set it so we can restore intent on unsuspend.
-        Runs inside a ``schema_context`` because ``AppTask`` is a tenant
-        model.
+        Sets ``AppTask.is_enabled`` and calls ``save()`` — that path in
+        ``AppTask.save()`` already syncs ``PeriodicTask.enabled`` to
+        ``is_enabled``, so we get identical behaviour to a manual toggle.
+
+        On suspend we remember which task ids we disabled in
+        ``extra_config['tasks_disabled_by_suspend']`` so unsuspend only
+        re-enables tasks that were on before — tasks the operator had
+        deliberately turned off stay off.
         """
         # Local import: avoids a circular import at module load time.
         from django_tenants.utils import schema_context
 
         try:
-            with schema_context(self.schema_name):
-                from django_celery_beat.models import PeriodicTask
+            extra_config = self.extra_config or {}
+            if not enabled:
+                # Suspend: disable every AppTask that's currently on.
+                # Record what we touched so unsuspend can restore only
+                # those.
+                with schema_context(self.schema_name):
+                    from zango.apps.tasks.models import AppTask
 
-                from zango.apps.tasks.models import AppTask
-
-                if enabled:
-                    # Re-enable only the tasks the operator had marked
-                    # is_enabled=True before we touched them.
-                    task_ids = list(
+                    to_disable = list(
                         AppTask.objects.filter(is_enabled=True).values_list(
-                            "master_task_id", flat=True
+                            "id", flat=True
                         )
                     )
-                else:
-                    task_ids = list(
-                        AppTask.objects.exclude(master_task__isnull=True).values_list(
-                            "master_task_id", flat=True
-                        )
-                    )
-                if task_ids:
-                    PeriodicTask.objects.filter(id__in=task_ids).update(
-                        enabled=enabled
-                    )
+                    for app_task in AppTask.objects.filter(id__in=to_disable):
+                        app_task.is_enabled = False
+                        app_task.save()
+                if to_disable:
+                    extra_config["tasks_disabled_by_suspend"] = list(to_disable)
+                    self.extra_config = extra_config
+                    self.save(update_fields=["extra_config", "modified_at"])
+            else:
+                # Unsuspend: re-enable only the ids we disabled on suspend.
+                # If nothing was recorded (e.g. suspend predates this
+                # feature or extra_config was reset) we do nothing rather
+                # than turning on tasks the operator meant to leave off.
+                to_enable = extra_config.get("tasks_disabled_by_suspend") or []
+                if to_enable:
+                    with schema_context(self.schema_name):
+                        from zango.apps.tasks.models import AppTask
+
+                        for app_task in AppTask.objects.filter(id__in=to_enable):
+                            app_task.is_enabled = True
+                            app_task.save()
+                    extra_config.pop("tasks_disabled_by_suspend", None)
+                    self.extra_config = extra_config
+                    self.save(update_fields=["extra_config", "modified_at"])
         except Exception:
             # Never let scheduled-task cleanup abort the status change —
             # the middleware guard is the primary defence. Log and move on.
