@@ -177,7 +177,8 @@ export default function UnifiedAppSettings() {
 									<h1 className="font-source-sans-pro text-[24px] font-semibold leading-[32px] text-[#111827]">
 										App Settings
 									</h1>
-									{appConfigurationData?.status === 'suspended' ? (
+									{(appConfigurationData?.app?.status ||
+										appConfigurationData?.status) === 'suspended' ? (
 										<span
 											className="inline-flex items-center gap-[6px] rounded-full border px-[9px] py-[3px] font-lato text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.08em]"
 											style={{
