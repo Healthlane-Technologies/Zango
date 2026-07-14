@@ -4,18 +4,19 @@ Mounted under /api/v1/apps/<app_uuid>/exports/.
 
 - POST /<kind>/ — validate + count + create + dispatch
 - GET  /       — list current user's jobs (paginated, newest first)
-- GET  /<uuid>/ — job detail
-- GET  /<uuid>/download/ — stream / redirect to the CSV file
-- DELETE /<uuid>/ — delete (cancel semantics if still queued/running)
+- GET  /job/<uuid>/ — job detail
+- DELETE /job/<uuid>/ — delete (cancel semantics if still queued/running)
+
+Downloads: the serialized job carries `file_url` — a presigned URL with
+the download disposition baked in — so the client fetches the file
+directly from the storage backend. No proxy view.
 """
 
 from __future__ import annotations
 
 import logging
-from urllib.parse import quote as _url_quote
 
 from django.db import connection, transaction
-from django.http import FileResponse, HttpResponse
 from django.utils.decorators import method_decorator
 
 from zango.apps.exports.builders import get_builder
@@ -24,7 +25,6 @@ from zango.apps.exports.models import (
     MAX_EXPORT_ROWS,
     ExportJob,
     ExportKind,
-    ExportStatus,
 )
 from zango.apps.exports.tasks import run_export
 from zango.core.api import (
@@ -57,57 +57,6 @@ def _platform_user(request):
     if auth_user is None:
         return None
     return getattr(auth_user, "platform_user", None)
-
-
-def _content_disposition(filename: str) -> str:
-    safe_ascii = filename.encode("ascii", "ignore").decode("ascii") or "export.csv"
-    quoted = _url_quote(filename)
-    return f"attachment; filename=\"{safe_ascii}\"; filename*=UTF-8''{quoted}"
-
-
-def _serve_filefield(file_field, name: str) -> HttpResponse:
-    """Return a signed-URL redirect for remote storage, direct stream otherwise.
-
-    For S3-backed storage, bake `Content-Disposition: attachment` into the
-    presigned URL (via `ResponseContentDisposition`). Without it, S3 serves
-    the CSV inline and the browser renders it as text in a new tab instead
-    of downloading.
-    """
-    storage = file_field.storage
-    disposition = _content_disposition(name)
-
-    # Try to build a presigned URL that forces the download disposition.
-    url = None
-    try:
-        url = storage.url(
-            file_field.name,
-            parameters={
-                "ResponseContentDisposition": disposition,
-                "ResponseContentType": "text/csv",
-            },
-        )
-    except TypeError:
-        # Storage backend doesn't accept `parameters` — fall back to plain url.
-        try:
-            url = file_field.url
-        except Exception:  # noqa: BLE001
-            url = None
-    except Exception:  # noqa: BLE001
-        try:
-            url = file_field.url
-        except Exception:  # noqa: BLE001
-            url = None
-
-    if url and (url.startswith("http://") or url.startswith("https://")):
-        resp = HttpResponse(status=302)
-        resp["Location"] = url
-        resp["Content-Disposition"] = disposition
-        return resp
-
-    fh = file_field.open("rb")
-    resp = FileResponse(fh, as_attachment=True, filename=name)
-    resp["Content-Disposition"] = disposition
-    return resp
 
 
 # ---------------------------------------------------------------------------
@@ -293,32 +242,3 @@ class ExportJobDetailView(ZangoGenericPlatformAPIView, TenantMixin):
             return get_api_response(False, {"message": str(exc)}, 500)
 
 
-# ---------------------------------------------------------------------------
-# Download
-# ---------------------------------------------------------------------------
-
-
-@method_decorator(set_app_schema_path, name="dispatch")
-class ExportJobDownloadView(ZangoGenericPlatformAPIView, TenantMixin):
-    """GET /exports/<job_uuid>/download/  — stream/redirect to CSV."""
-
-    def get(self, request, app_uuid, job_uuid, *args, **kwargs):
-        try:
-            _bind_tenant(self, app_uuid)
-            platform_user = _platform_user(request)
-            qs = ExportJob.objects.filter(object_uuid=job_uuid)
-            if platform_user is not None:
-                qs = qs.filter(requested_by=platform_user)
-            job = qs.first()
-            if not job:
-                return get_api_response(False, {"message": "Job not found"}, 404)
-            if job.status != ExportStatus.SUCCESS or not job.file or not job.file.name:
-                return get_api_response(
-                    False,
-                    {"message": "Export file is not yet available"},
-                    409,
-                )
-            return _serve_filefield(job.file, job.filename or "export.csv")
-        except Exception as exc:  # noqa: BLE001
-            log.exception("exports: download failed")
-            return get_api_response(False, {"message": str(exc)}, 500)

@@ -224,11 +224,17 @@ export default function AppDownloads() {
 	};
 
 	const handleDownload = (job) => {
-		if (job.status !== 'success' || !job.has_file) return;
-		window.open(
-			`/api/v1/apps/${appId}/exports/job/${job.object_uuid}/download/`,
-			'_blank'
-		);
+		if (job.status !== 'success' || !job.file_url) return;
+		// Same-origin (dev): the `download` attribute forces the filename.
+		// S3: the presigned URL already carries response-content-disposition=
+		// attachment so the browser downloads instead of rendering inline.
+		const a = document.createElement('a');
+		a.href = job.file_url;
+		a.download = job.filename || 'export.csv';
+		a.rel = 'noopener noreferrer';
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
 	};
 
 	const jobs = data?.exports?.records || [];
@@ -336,7 +342,7 @@ export default function AppDownloads() {
 											type="button"
 											onClick={() => handleDownload(job)}
 											disabled={
-												job.status !== 'success' || !job.has_file
+												job.status !== 'success' || !job.file_url
 											}
 											title={
 												job.status === 'success'
