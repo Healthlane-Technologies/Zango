@@ -131,17 +131,72 @@ class TenantModel(TenantMixin, FullAuditMixin):
         self.status = "suspended"
         self.suspended_on = timezone.now()
         self.save()
+        self._set_scheduled_tasks_enabled(False)
 
     def unsuspend(self):
         """Restore a suspended tenant to deployed status.
 
         Traffic resumes immediately on the next request; queued Celery
         tasks that were rejected while suspended are gone — they need to
-        be re-dispatched by the caller if desired.
+        be re-dispatched by the caller if desired. Panel-scheduled tasks
+        (AppTask) that were disabled by ``suspend()`` are re-enabled here,
+        but only ones the operator had marked ``is_enabled=True`` before
+        the suspension — we don't accidentally start tasks the user had
+        deliberately turned off.
         """
         self.status = "deployed"
         self.suspended_on = None
         self.save()
+        self._set_scheduled_tasks_enabled(True)
+
+    def _set_scheduled_tasks_enabled(self, enabled: bool) -> None:
+        """Enable / disable every AppTask scheduled from the panel for
+        this tenant.
+
+        Each ``AppTask`` has a linked ``PeriodicTask`` (django-celery-beat).
+        Flipping ``PeriodicTask.enabled`` is what actually causes the beat
+        scheduler to stop firing the task; the ``AppTask.is_enabled`` flag
+        stays as the operator set it so we can restore intent on unsuspend.
+        Runs inside a ``schema_context`` because ``AppTask`` is a tenant
+        model.
+        """
+        # Local import: avoids a circular import at module load time.
+        from django_tenants.utils import schema_context
+
+        try:
+            with schema_context(self.schema_name):
+                from django_celery_beat.models import PeriodicTask
+
+                from zango.apps.tasks.models import AppTask
+
+                if enabled:
+                    # Re-enable only the tasks the operator had marked
+                    # is_enabled=True before we touched them.
+                    task_ids = list(
+                        AppTask.objects.filter(is_enabled=True).values_list(
+                            "master_task_id", flat=True
+                        )
+                    )
+                else:
+                    task_ids = list(
+                        AppTask.objects.exclude(master_task__isnull=True).values_list(
+                            "master_task_id", flat=True
+                        )
+                    )
+                if task_ids:
+                    PeriodicTask.objects.filter(id__in=task_ids).update(
+                        enabled=enabled
+                    )
+        except Exception:
+            # Never let scheduled-task cleanup abort the status change —
+            # the middleware guard is the primary defence. Log and move on.
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Failed to %s scheduled tasks for tenant %s",
+                "enable" if enabled else "disable",
+                self.schema_name,
+            )
 
     @classmethod
     def create(
