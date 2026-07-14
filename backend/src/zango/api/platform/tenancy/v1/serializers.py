@@ -16,6 +16,23 @@ from zango.core.utils import get_auth_priority, get_datetime_str_in_tenant_timez
 # accidental huge value being mistaken for the explicit 0 ("never expires") sentinel.
 MAX_TOKEN_TTL_SECONDS = 31536000
 
+# Upper bound for the idle-session timeout: 24 hours in seconds. An idle window
+# longer than a day is almost certainly a misconfiguration.
+MAX_SESSION_TIMEOUT_SECONDS = 86400
+
+
+def get_platform_session_timeout_seconds():
+    """Platform-wide default idle-session timeout as ``(warn_after, expire_after)``.
+
+    Mirrors the fallback used by ``get_app_session_timeout`` so the UI can show
+    the effective value when an app/role inherits ("Platform default").
+    """
+    from django.conf import settings
+
+    warn = int(getattr(settings, "SESSION_SECURITY_WARN_AFTER", 1700))
+    expire = int(getattr(settings, "SESSION_SECURITY_EXPIRE_AFTER", 1800))
+    return warn, expire
+
 
 def get_platform_token_ttl_seconds():
     """Platform-wide default token TTL in seconds (0 means "never expires").
@@ -54,6 +71,82 @@ def validate_session_policy_token_ttl(auth_config):
             f"session_policy.token_ttl cannot exceed {MAX_TOKEN_TTL_SECONDS} "
             "seconds (1 year). Use 0 for a token that never expires."
         )
+
+
+def _validate_positive_seconds(session_policy, key):
+    """Validate an optional positive-int-seconds ``key`` in ``session_policy``.
+
+    Absence = inherit = valid. bool is rejected explicitly (it subclasses int).
+    Returns the value (or ``None`` if absent) for cross-field checks.
+    """
+    if key not in session_policy:
+        return None
+    val = session_policy[key]
+    if isinstance(val, bool) or not isinstance(val, int):
+        raise serializers.ValidationError(
+            f"session_policy.{key} must be an integer number of seconds."
+        )
+    if val <= 0:
+        raise serializers.ValidationError(
+            f"session_policy.{key} must be a positive number of seconds."
+        )
+    if val > MAX_SESSION_TIMEOUT_SECONDS:
+        raise serializers.ValidationError(
+            f"session_policy.{key} cannot exceed {MAX_SESSION_TIMEOUT_SECONDS} "
+            "seconds (24 hours)."
+        )
+    return val
+
+
+def validate_session_policy_timeout(auth_config):
+    """Validate ``session_policy.session_warn_after`` / ``session_expire_after``.
+
+    Both are optional seconds (positive int); absence = inherit. When both are
+    set, ``warn_after`` must be strictly less than ``expire_after``.
+    """
+    session_policy = (auth_config or {}).get("session_policy")
+    if not session_policy:
+        return
+    warn = _validate_positive_seconds(session_policy, "session_warn_after")
+    expire = _validate_positive_seconds(session_policy, "session_expire_after")
+    if warn is not None and expire is not None and warn >= expire:
+        raise serializers.ValidationError(
+            "session_policy.session_warn_after must be less than "
+            "session_expire_after."
+        )
+
+
+# Read-only, server-computed hint keys added on read and stripped on write.
+_PLATFORM_HINT_KEYS = (
+    "platform_token_ttl",
+    "platform_session_warn_after",
+    "platform_session_expire_after",
+)
+
+
+def inject_platform_session_hints(data):
+    """Add read-only platform-default hints under ``auth_config.session_policy``.
+
+    Lets the UI show the effective inherited value ("Platform default") for token
+    TTL and idle timeout. Read-only: stripped again on write. Mutates and returns
+    ``data`` (a serialized dict) for convenience.
+    """
+    auth_config = data.get("auth_config")
+    if isinstance(auth_config, dict):
+        session_policy = dict(auth_config.get("session_policy") or {})
+        warn, expire = get_platform_session_timeout_seconds()
+        session_policy["platform_token_ttl"] = get_platform_token_ttl_seconds()
+        session_policy["platform_session_warn_after"] = warn
+        session_policy["platform_session_expire_after"] = expire
+        auth_config["session_policy"] = session_policy
+    return data
+
+
+def strip_platform_session_hints(value):
+    """Remove read-only platform hint keys from an inbound auth_config dict."""
+    if isinstance(value, dict) and isinstance(value.get("session_policy"), dict):
+        for key in _PLATFORM_HINT_KEYS:
+            value["session_policy"].pop(key, None)
 
 
 class DomainSerializerModel(serializers.ModelSerializer):
@@ -122,21 +215,16 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Surface the platform-wide default token TTL alongside the app's
-        # auth_config so the UI can show the effective value when an app/role
+        # Surface platform-wide defaults (token TTL + idle timeout) alongside the
+        # app's auth_config so the UI can show the effective value when an app/role
         # inherits ("Platform default"). Read-only, ignored on write.
-        auth_config = data.get("auth_config")
-        if isinstance(auth_config, dict):
-            session_policy = dict(auth_config.get("session_policy") or {})
-            session_policy["platform_token_ttl"] = get_platform_token_ttl_seconds()
-            auth_config["session_policy"] = session_policy
-        return data
+        return inject_platform_session_hints(data)
 
     def validate_auth_config(self, value: TenantAuthConfigSchema):
-        # platform_token_ttl is a read-only, server-computed hint; never persist it.
-        if isinstance(value, dict) and isinstance(value.get("session_policy"), dict):
-            value["session_policy"].pop("platform_token_ttl", None)
+        # platform_* hints are read-only, server-computed; never persist them.
+        strip_platform_session_hints(value)
         validate_session_policy_token_ttl(value)
+        validate_session_policy_timeout(value)
         return value
 
     def update(self, instance, validated_data):
@@ -242,10 +330,15 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
                 data["auth_config"]["two_factor_auth"]["required"] = True
             else:
                 data["auth_config"]["two_factor_auth"] = {"required": True}
+        # Surface platform-default token TTL + idle timeout so the role override
+        # UI can show the inherited value. Read-only, stripped on write.
+        inject_platform_session_hints(data)
         return data
 
     def validate_auth_config(self, value: UserRoleAuthConfig):
+        strip_platform_session_hints(value)
         validate_session_policy_token_ttl(value)
+        validate_session_policy_timeout(value)
 
         tenant = self.context.get("tenant")
         if not tenant:

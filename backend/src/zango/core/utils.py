@@ -522,6 +522,53 @@ def get_app_token_ttl(user=None, user_role=None, tenant=None):
     return None if ttl == 0 else timedelta(seconds=ttl)
 
 
+def get_app_session_timeout(request=None, user=None, user_role=None, tenant=None):
+    """Resolve the idle-session timeout (warn/expire, in seconds) using the
+    standard auth precedence (user_role > tenant > platform default).
+
+    Returns a ``(warn_after, expire_after)`` tuple of ints (seconds).
+
+    Config lives under ``session_policy.session_warn_after`` /
+    ``session_policy.session_expire_after``. A missing key inherits the platform
+    default (``settings.SESSION_SECURITY_WARN_AFTER`` /
+    ``SESSION_SECURITY_EXPIRE_AFTER``). All resolution args are optional and
+    auto-resolved by ``get_auth_priority`` (it reads ``role_id`` from the session,
+    so this works even before the user-role middleware has run).
+
+    Guard: if the resolved values are inconsistent (``expire <= warn``, or a
+    non-positive value), fall back to the platform defaults so the countdown UX
+    never breaks.
+    """
+    from django.conf import settings
+
+    platform_warn = int(getattr(settings, "SESSION_SECURITY_WARN_AFTER", 1700))
+    platform_expire = int(getattr(settings, "SESSION_SECURITY_EXPIRE_AFTER", 1800))
+
+    session_policy = (
+        get_auth_priority(
+            policy="session_policy",
+            request=request,
+            user=user,
+            user_role=user_role,
+            tenant=tenant,
+        )
+        or {}
+    )
+
+    warn = session_policy.get("session_warn_after")
+    expire = session_policy.get("session_expire_after")
+
+    warn = platform_warn if not isinstance(warn, int) else warn
+    expire = platform_expire if not isinstance(expire, int) else expire
+
+    # Defensive: an inverted or non-positive pair would break the client
+    # countdown (warning window = expire - warn). Fall back to platform defaults.
+    if warn <= 0 or expire <= 0 or expire <= warn:
+        return platform_warn, platform_expire
+
+    return warn, expire
+
+
 def mask_email(email):
     """Masks an email address, showing only the first and last character before the '@' and the domain."""
     if "@" not in email:

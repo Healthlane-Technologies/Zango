@@ -105,7 +105,7 @@ MIDDLEWARE = [
     "zango.middleware.token.TokenMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "session_security.middleware.SessionSecurityMiddleware",
+    "zango.middleware.session_security.SessionSecurityMiddleware",
     "zango.middleware.request.UserRoleAndAppObjectAssignmentMiddleware",
     # 'zango.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -240,8 +240,19 @@ PACKAGE_BUCKET_NAME = "zelthy3-packages"
 
 # Session Security
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# Platform-default idle timeout (seconds). Apps/roles can override these via
+# Auth Config (session_policy.session_warn_after / session_expire_after); see
+# zango.core.utils.get_app_session_timeout and the SessionSecurityMiddleware /
+# session_security_tags overrides.
 SESSION_SECURITY_WARN_AFTER = 1700
 SESSION_SECURITY_EXPIRE_AFTER = 1800
+
+# We intentionally override django-session-security's ``session_security_tags``
+# library (in zango.apps.shared.tenancy.templatetags) so legacy, template-based
+# apps pick up per-app/role idle-timeout values. Django's template-library
+# registry resolves ours (the later-installed app wins), but its system check
+# still warns about the duplicate library name -- silence that expected warning.
+SILENCED_SYSTEM_CHECKS = ["templates.E003"]
 
 # List of url names that should be ignored by the session security middleware.
 # For example the request of history_sidebar is made without user intervention,

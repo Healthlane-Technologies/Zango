@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import TokenTtlField from './TokenTtlField';
+import SessionTimeoutField from './SessionTimeoutField';
 
 const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig = {}, currentOverrides = {}, initialSelectedRoleId = null }) => {
 	const [selectedRoleId, setSelectedRoleId] = useState(null);
@@ -81,12 +82,12 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			}
 			if (overrideConfig.session_policy) {
 				const sessionPolicy = { ...overrideConfig.session_policy };
-				// A blank token_ttl means "inherit the app / platform default";
-				// drop the key rather than persisting an empty/0 value.
-				const tokenTtl = sessionPolicy.token_ttl;
-				if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
-					delete sessionPolicy.token_ttl;
-				}
+				// A blank value means "inherit the app / platform default"; drop the
+				// key rather than persisting an empty value (token_ttl 0 = never).
+				['token_ttl', 'session_warn_after', 'session_expire_after'].forEach((key) => {
+					const v = sessionPolicy[key];
+					if (v === '' || v === null || v === undefined) delete sessionPolicy[key];
+				});
 				cleanedOverride.session_policy = sessionPolicy;
 			}
 			// Include enforce_sso
@@ -601,6 +602,41 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																})()}
 																<p className="mt-[6px] text-[12px] text-[#6B7280]">
 																	Overrides the app-level token expiry for users logging in with this role. Choose <span className="font-medium">Platform default</span> to inherit.
+																</p>
+															</div>
+															<div>
+																<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
+																	Idle Session Timeout
+																</label>
+																{(() => {
+																	// A role inherits the app-level idle timeout when the
+																	// app has set one; otherwise the platform default.
+																	const appWarn = globalAuthConfig?.session_policy?.session_warn_after;
+																	const appExpire = globalAuthConfig?.session_policy?.session_expire_after;
+																	const appHasOverride =
+																		(appWarn !== undefined && appWarn !== null) ||
+																		(appExpire !== undefined && appExpire !== null);
+																	return (
+																		<SessionTimeoutField
+																			key={selectedRoleId}
+																			warnValue={overrideConfig.session_policy?.session_warn_after}
+																			expireValue={overrideConfig.session_policy?.session_expire_after}
+																			inheritedWarn={appHasOverride ? appWarn : globalAuthConfig?.session_policy?.platform_session_warn_after}
+																			inheritedExpire={appHasOverride ? appExpire : globalAuthConfig?.session_policy?.platform_session_expire_after}
+																			inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
+																			onChange={({ warn, expire }) => setOverrideConfig(prev => ({
+																				...prev,
+																				session_policy: {
+																					...prev.session_policy,
+																					session_warn_after: warn,
+																					session_expire_after: expire
+																				}
+																			}))}
+																		/>
+																	);
+																})()}
+																<p className="mt-[6px] text-[12px] text-[#6B7280]">
+																	Overrides the app-level idle warning and auto-logout timing for this role. Choose <span className="font-medium">inherit</span> to use the app / platform default.
 																</p>
 															</div>
 														</div>

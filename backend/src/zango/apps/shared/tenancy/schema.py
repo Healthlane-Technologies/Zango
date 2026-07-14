@@ -100,6 +100,12 @@ class TwoFactorAuth(TypedDict, total=False):
 class SessionPolicy(TypedDict, total=False):
     max_concurrent_sessions: int
     token_ttl: int  # seconds; 0 = no expiry; absent = inherit platform default
+    # Idle session timeout (django-session-security). Seconds; absent = inherit
+    # platform default (SESSION_SECURITY_WARN_AFTER / SESSION_SECURITY_EXPIRE_AFTER).
+    # warn_after must be < expire_after. Applies to both the appbuilder (React)
+    # and legacy (Django template) frontends and to server-side logout.
+    session_warn_after: int
+    session_expire_after: int
 
 
 class AuthConfigSchema(TypedDict, total=False):
