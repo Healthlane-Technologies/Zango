@@ -25,7 +25,7 @@ from zango.core.api import (
 )
 from zango.core.api.utils import ZangoAPIPagination
 from zango.core.common_utils import set_app_schema_path
-from zango.core.permissions import IsPlatformUserAllowedApp
+from zango.core.permissions import IsPlatformUserAllowedApp, IsSuperAdminPlatformUser
 from zango.core.utils import (
     get_country_code_for_tenant,
     get_search_columns,
@@ -991,3 +991,42 @@ class SAMLProviderDetailViewAPIV1(ZangoGenericPlatformAPIView, TenantMixin):
             status_code = 500
 
         return get_api_response(success, result, status_code)
+
+
+class AppStatusActionView(ZangoGenericPlatformAPIView):
+    """Flip an app's operational status.
+
+    ``POST /api/v1/platform/apps/<app_uuid>/status/<action>/``
+    where ``action`` is one of ``suspend`` or ``unsuspend``.
+
+    Suspend blocks all HTTP traffic to the tenant (see
+    ``ZangoTenantMainMiddleware``'s suspend guard) and causes any Celery
+    task routed through ``zango_task_executor`` or ``codexec_executor``
+    to raise ``TenantSuspended``. Unsuspend restores the tenant to
+    ``deployed`` status; the next request succeeds normally.
+    """
+
+    permission_classes = (IsSuperAdminPlatformUser,)
+
+    _ALLOWED_ACTIONS = ("suspend", "unsuspend")
+
+    def post(self, request, app_uuid, action, *args, **kwargs):
+        if action not in self._ALLOWED_ACTIONS:
+            return get_api_response(
+                False,
+                {"message": f"Unknown action '{action}'."},
+                400,
+            )
+        try:
+            tenant = TenantModel.objects.get(uuid=app_uuid)
+        except TenantModel.DoesNotExist:
+            return get_api_response(
+                False, {"message": "App not found."}, 404
+            )
+        # `tenant.suspend()` / `tenant.unsuspend()` — one line each.
+        getattr(tenant, action)()
+        return get_api_response(
+            True,
+            {"tenant": TenantSerializerModel(tenant).data},
+            200,
+        )

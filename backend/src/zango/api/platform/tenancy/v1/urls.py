@@ -11,6 +11,7 @@ from zango.api.platform.tasks.v1 import urls as tasks_v1_urls
 
 from .views import (
     AppDetailViewAPIV1,
+    AppStatusActionView,
     AppViewAPIV1,
     SAMLProviderDetailViewAPIV1,
     SAMLProvidersViewAPIV1,
@@ -29,6 +30,11 @@ urlpatterns = [
         r"^(?P<app_uuid>[\w-]+)/$",
         AppDetailViewAPIV1.as_view(),
         name="apps-apiv1-appdetailview",
+    ),
+    re_path(
+        r"^(?P<app_uuid>[\w-]+)/status/(?P<action>[\w-]+)/$",
+        AppStatusActionView.as_view(),
+        name="apps-apiv1-appstatusaction",
     ),
     re_path(
         r"^(?P<app_uuid>[\w-]+)/roles/$",

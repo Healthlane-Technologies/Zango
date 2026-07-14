@@ -11,11 +11,16 @@ def zango_task_executor(tenant_name, task_name, *args, timezone_name=None, **kwa
 
     from zango.apps.dynamic_models.workspace.base import Workspace
     from zango.apps.shared.tenancy.models import TenantModel
+    from zango.apps.shared.tenancy.utils import assert_tenant_active
     from zango.apps.tasks.models import AppTask
 
     tenant = TenantModel.objects.get(name=tenant_name)
 
     connection.set_tenant(tenant)
+    # Framework-level suspend guard — every workspace-scoped task routes
+    # through this wrapper, so one assertion covers HTTP-dispatched,
+    # beat-scheduled, chained, and retried tasks alike.
+    assert_tenant_active(tenant)
     with connection.cursor() as c:
         task_obj = AppTask.objects.get(name=task_name)
 

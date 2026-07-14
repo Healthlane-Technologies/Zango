@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>App Suspension · Design + Implementation Plan | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-rail:     #FAFBFD;
+  --surface-code:     #0F1117;
+  --surface-hero:     #14172A;
+
+  --text-strong:   #0B0D14;
+  --text-primary:  #14172A;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+  --text-inverse:  #E5E7EE;
+  --text-inverse-muted: rgba(230,232,240,.68);
+
+  --border-strong: #D4D8E5;
+  --border:        #E3E6EF;
+  --border-soft:   #ECEEF5;
+
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-700:#3938B5; --indigo-900:#20207A;
+  --teal-50:#EAFAF7; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07; --amber-900:#5A3B04;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-500:#6E748D; --slate-700:#3D4159;
+
+  --brand: var(--indigo-500);
+  --brand-soft: var(--indigo-50);
+  --accent: var(--teal-500);
+  --status-suspended: var(--amber-500);
+  --status-suspended-soft: var(--amber-50);
+  --status-active: var(--sage-500);
+  --status-active-soft: var(--sage-50);
+
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px; --r-pill:999px;
+
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06);
+  --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+  --shadow-lg: 0 12px 32px -8px rgba(15,19,36,.14), 0 4px 8px rgba(15,19,36,.05), inset 0 1px 0 rgba(255,255,255,.6);
+  --shadow-amber: 0 8px 24px -6px rgba(218,144,17,.22), 0 2px 4px rgba(218,144,17,.08);
+
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --ease-spring: cubic-bezier(.34,1.28,.64,1);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  font-feature-settings: 'cv11','ss01','ss03';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  background: var(--surface-page);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+
+.shell { max-width: 1180px; margin: 0 auto; padding: 40px 32px 96px; }
+
+/* ============== HERO ============== */
+.hero {
+  position: relative;
+  padding: 56px 56px 52px;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(218,144,17,.22), transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, rgba(89,97,229,.20), transparent 55%),
+    linear-gradient(140deg, #14172A 0%, #1B1D3B 55%, #2A2C6B 100%);
+  color: var(--text-inverse);
+  margin-bottom: 48px;
+  box-shadow: 0 20px 60px -20px rgba(15,19,36,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: fadeUp 460ms var(--ease-out) both;
+}
+.hero-grid { display: grid; grid-template-columns: 1.35fr .95fr; gap: 44px; align-items: start; }
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600;
+  color: rgba(252,237,239,.85); margin-bottom: 20px;
+}
+.hero-kicker::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber-500); box-shadow: 0 0 0 3px rgba(218,144,17,.22);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+.hero h1 {
+  font-size: 42px; font-weight: 600; letter-spacing: -0.032em; line-height: 1.05;
+  color: #FFFFFF; margin-bottom: 18px; max-width: 640px;
+}
+.hero h1 em { font-family: var(--font-display); font-style: italic; font-weight: 400; color: var(--amber-100); }
+.hero p.lede {
+  font-size: 15px; color: var(--text-inverse-muted); line-height: 1.65; max-width: 60ch;
+}
+.hero-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--r-pill);
+  font-size: 11.5px; font-weight: 500;
+  background: rgba(230,232,240,.08); border: 1px solid rgba(230,232,240,.14);
+  color: rgba(230,232,240,.9);
+}
+.hero-chip.amber { background: rgba(218,144,17,.18); border-color: rgba(218,144,17,.32); color: var(--amber-100); }
+.hero-chip.teal { background: rgba(17,156,133,.16); border-color: rgba(17,156,133,.32); color: #A5EBDD; }
+
+.hero-preview {
+  padding: 22px 20px;
+  border-radius: 14px;
+  background: rgba(15,17,23,.55);
+  border: 1px solid rgba(230,232,240,.10);
+  backdrop-filter: blur(8px);
+}
+.hero-preview .label {
+  display: block; font-size: 9.5px; letter-spacing: .11em; text-transform: uppercase; font-weight: 600;
+  color: rgba(230,232,240,.55); margin-bottom: 12px;
+}
+.mini-404 {
+  background: #FEF6E7;
+  border: 1px solid rgba(218,144,17,.28);
+  border-radius: 10px;
+  padding: 18px 20px;
+  text-align: center;
+  color: var(--amber-900);
+}
+.mini-404 .icon {
+  width: 44px; height: 44px; margin: 0 auto 10px;
+  border-radius: 50%; background: rgba(218,144,17,.16); display: grid; place-items: center;
+}
+.mini-404 h4 { font-size: 15px; font-weight: 600; color: var(--amber-900); margin-bottom: 4px; letter-spacing: -0.015em; }
+.mini-404 p { font-size: 12.5px; color: rgba(90,58,4,.72); line-height: 1.5; }
+
+/* ============== SECTIONS ============== */
+section { margin-bottom: 64px; scroll-margin-top: 24px; animation: fadeUp 380ms var(--ease-out) both; }
+section > .kicker {
+  display: inline-block; font-size: 10.5px; letter-spacing: .11em; text-transform: uppercase;
+  font-weight: 600; color: var(--brand); margin-bottom: 10px;
+}
+section h2 {
+  font-size: 28px; font-weight: 600; letter-spacing: -0.024em; color: var(--text-strong);
+  margin-bottom: 12px; line-height: 1.15;
+}
+section .lede { font-size: 14.5px; color: var(--text-muted); max-width: 68ch; margin-bottom: 28px; line-height: 1.6; }
+
+h3 {
+  font-size: 17px; font-weight: 600; color: var(--text-strong);
+  letter-spacing: -0.012em; margin-bottom: 10px; margin-top: 24px;
+}
+h4 {
+  font-size: 12.5px; font-weight: 600; color: var(--text-strong);
+  letter-spacing: .04em; text-transform: uppercase; margin: 18px 0 8px;
+}
+
+p { color: var(--text-body); font-size: 13.5px; line-height: 1.62; }
+p + p { margin-top: 8px; }
+ul, ol { padding-left: 22px; margin: 8px 0 12px; }
+li { color: var(--text-body); font-size: 13.5px; margin-bottom: 5px; line-height: 1.55; }
+li b, strong { color: var(--text-strong); font-weight: 600; }
+
+/* ============== CARDS + LAYOUTS ============== */
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+.card.tinted { background: var(--surface-tinted); border-color: var(--indigo-100); }
+.card.sunken { background: var(--surface-sunken); box-shadow: none; }
+.card.amber-tinted { background: var(--amber-50); border-color: var(--amber-100); }
+.card.sage-tinted { background: var(--sage-50); border-color: rgba(90,164,91,.28); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
+.grid-2.uneven { grid-template-columns: 1.35fr 1fr; }
+@media (max-width: 800px) { .grid-2, .grid-2.uneven { grid-template-columns: 1fr; } }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 16px 0; }
+@media (max-width: 800px) { .grid-3 { grid-template-columns: 1fr; } }
+
+/* ============== JOURNEY DIAGRAM ============== */
+.journey {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 14px; align-items: stretch;
+  margin: 20px 0 8px;
+}
+@media (max-width: 900px) { .journey { grid-template-columns: 1fr; } .journey-arrow { display: none; } }
+.journey-step {
+  background: var(--surface-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 20px; position: relative;
+  box-shadow: var(--shadow-sm);
+}
+.journey-step.state-suspend { border-color: var(--amber-100); background: linear-gradient(180deg, var(--amber-50) 0%, #FFFFFF 60%); }
+.journey-step.state-block { border-color: var(--indigo-100); background: linear-gradient(180deg, var(--indigo-50) 0%, #FFFFFF 60%); }
+.journey-step .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--brand); color: white;
+  font-size: 11px; font-weight: 600; font-family: var(--font-mono);
+  margin-bottom: 10px;
+}
+.journey-step.state-suspend .num { background: var(--amber-500); }
+.journey-step .title { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 6px; letter-spacing: -0.008em; }
+.journey-step .detail { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.journey-arrow {
+  display: grid; place-items: center; color: var(--border-strong); font-size: 20px;
+}
+
+/* ============== MOCKUP FRAMES ============== */
+.mockup {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  margin: 20px 0;
+}
+.mockup-chrome {
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.mockup-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+.mockup-dot.r { background: #FF6058; }
+.mockup-dot.y { background: #FFC130; }
+.mockup-dot.g { background: #29CE41; }
+.mockup-url {
+  margin-left: 12px; padding: 5px 12px; border-radius: 6px;
+  background: white; border: 1px solid var(--border); flex: 1;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+}
+.mockup-body { padding: 40px; background: var(--surface-page); }
+
+/* The star of the show: the branded 404 page */
+.suspended-page {
+  background: var(--surface-card);
+  border-radius: var(--r-2xl);
+  padding: 64px 56px 56px;
+  max-width: 560px; margin: 0 auto;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.suspended-page::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber-500) 0%, var(--brand) 100%);
+}
+.suspended-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: var(--r-pill);
+  background: var(--amber-50); border: 1px solid var(--amber-100);
+  font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+  color: var(--amber-700);
+  margin-bottom: 24px;
+}
+.suspended-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber-500); box-shadow: 0 0 0 3px rgba(218,144,17,.24);
+}
+.suspended-icon {
+  width: 72px; height: 72px; margin: 0 auto 22px;
+  border-radius: 20px;
+  background: linear-gradient(140deg, #FEF6E7 0%, #FCEAC4 100%);
+  border: 1px solid var(--amber-100);
+  display: grid; place-items: center;
+  color: var(--amber-700);
+  box-shadow: var(--shadow-amber);
+}
+.suspended-page h2 {
+  font-size: 32px; font-weight: 600; letter-spacing: -0.028em; line-height: 1.1;
+  color: var(--text-strong); margin-bottom: 12px;
+}
+.suspended-page h2 em { font-family: var(--font-display); font-style: italic; font-weight: 400; color: var(--amber-700); }
+.suspended-page .msg {
+  font-size: 14.5px; color: var(--text-muted); line-height: 1.6;
+  max-width: 42ch; margin: 0 auto 32px;
+}
+.suspended-page .actions {
+  display: flex; gap: 12px; justify-content: center;
+  padding-top: 24px; border-top: 1px solid var(--border-soft);
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--r-md);
+  background: var(--text-strong); color: white;
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+  box-shadow: 0 2px 6px -1px rgba(15,19,36,.24);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px -2px rgba(15,19,36,.32); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--r-md);
+  background: white; color: var(--text-body);
+  border: 1px solid var(--border-strong);
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  transition: all 180ms var(--ease-out);
+}
+.btn-secondary:hover { background: var(--surface-sunken); border-color: var(--text-muted); }
+.suspended-meta {
+  margin-top: 28px; padding-top: 20px; border-top: 1px dashed var(--border);
+  font-size: 11.5px; color: var(--text-subtle); font-family: var(--font-mono);
+}
+
+/* Admin panel mockup */
+.admin-panel {
+  background: var(--surface-page);
+  padding: 24px 28px;
+}
+.admin-panel h4 { font-size: 15px; text-transform: none; letter-spacing: -0.012em; color: var(--text-strong); margin-bottom: 4px; font-weight: 600; }
+.admin-sub { font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; }
+
+.app-row {
+  display: grid; grid-template-columns: 40px 1fr auto auto; gap: 14px;
+  align-items: center;
+  background: var(--surface-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 8px;
+  transition: all 180ms var(--ease-out);
+}
+.app-row:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.app-row.suspended { background: linear-gradient(90deg, var(--amber-50) 0%, #FFFFFF 30%); border-color: var(--amber-100); }
+.app-avatar {
+  width: 40px; height: 40px; border-radius: 8px;
+  background: linear-gradient(140deg, var(--indigo-500) 0%, var(--indigo-700) 100%);
+  color: white; display: grid; place-items: center;
+  font-weight: 600; font-size: 15px;
+  box-shadow: 0 2px 6px -1px rgba(89,97,229,.35);
+}
+.app-avatar.amber { background: linear-gradient(140deg, var(--amber-500) 0%, #B87608 100%); box-shadow: 0 2px 6px -1px rgba(218,144,17,.4); }
+.app-avatar.teal { background: linear-gradient(140deg, var(--teal-500) 0%, var(--teal-700) 100%); box-shadow: 0 2px 6px -1px rgba(17,156,133,.4); }
+.app-name { font-size: 13.5px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.006em; }
+.app-domain { font-size: 11.5px; color: var(--text-subtle); font-family: var(--font-mono); margin-top: 2px; }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+.status-pill.active { background: var(--sage-50); color: var(--sage-700); }
+.status-pill.active::before { background: var(--sage-500); box-shadow: 0 0 0 2px rgba(90,164,91,.24); }
+.status-pill.suspended { background: var(--amber-50); color: var(--amber-700); }
+.status-pill.suspended::before { background: var(--amber-500); box-shadow: 0 0 0 2px rgba(218,144,17,.24); }
+
+.app-actions {
+  display: flex; gap: 4px;
+  opacity: .0; transition: opacity 180ms var(--ease-out);
+}
+.app-row:hover .app-actions { opacity: 1; }
+.app-row.suspended .app-actions { opacity: 1; }
+.action-btn {
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 11.5px; font-weight: 500;
+  border: 1px solid var(--border-strong); background: white;
+  color: var(--text-body); cursor: pointer;
+  transition: all 140ms var(--ease-out);
+}
+.action-btn:hover { border-color: var(--text-muted); background: var(--surface-sunken); }
+.action-btn.danger { color: var(--amber-700); border-color: var(--amber-100); background: var(--amber-50); }
+.action-btn.danger:hover { background: #FCEAC4; border-color: var(--amber-500); }
+.action-btn.primary { color: white; background: var(--brand); border-color: var(--indigo-700); }
+.action-btn.primary:hover { background: var(--indigo-700); }
+
+/* Confirmation dialog mockup */
+.confirm-dialog {
+  background: var(--surface-card);
+  border-radius: var(--r-2xl);
+  padding: 32px 32px 28px;
+  max-width: 460px; margin: 0 auto;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+}
+.confirm-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--amber-50); border: 1px solid var(--amber-100);
+  display: grid; place-items: center; color: var(--amber-700);
+  margin-bottom: 18px;
+}
+.confirm-dialog h4 { font-size: 18px; text-transform: none; letter-spacing: -0.015em; margin-bottom: 8px; }
+.confirm-dialog p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.55; }
+.confirm-input-label { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--text-subtle); margin-bottom: 6px; }
+.confirm-input {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: var(--surface-sunken);
+  font-size: 13px; font-family: var(--font-mono); color: var(--text-body);
+  outline: none; margin-bottom: 20px;
+  transition: border-color 140ms var(--ease-out), background-color 140ms var(--ease-out);
+}
+.confirm-input:focus { border-color: var(--brand); background: white; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ============== CODE BLOCKS ============== */
+.code-card {
+  background: var(--surface-code);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin: 12px 0;
+  border: 1px solid #22252F;
+}
+.code-header {
+  padding: 8px 14px;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px;
+}
+.code-path { color: rgba(230,232,240,.72); }
+.code-badge {
+  padding: 2px 8px; border-radius: 4px; font-size: 9.5px;
+  letter-spacing: .07em; text-transform: uppercase; font-weight: 600;
+}
+.code-badge.new { background: rgba(161,232,154,.15); color: #A1E89A; }
+.code-badge.mod { background: rgba(255,203,107,.15); color: #FFCB6B; }
+pre {
+  padding: 16px 18px; color: #E1E4ED;
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.65;
+  overflow-x: auto;
+}
+.tok-kw { color: #C792EA; }
+.tok-fn { color: #82AAFF; }
+.tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; }
+.tok-com { color: #6E748D; font-style: italic; }
+.tok-cls { color: #FFCB6B; }
+.tok-add { color: #A1E89A; }
+.tok-del { color: #FF8B9C; }
+.tok-add-line { background: rgba(161,232,154,.06); display: block; margin: 0 -18px; padding: 0 18px; }
+.tok-del-line { background: rgba(255,139,156,.06); display: block; margin: 0 -18px; padding: 0 18px; }
+
+/* Callouts */
+.callout {
+  padding: 16px 20px; border-radius: var(--r-md);
+  border: 1px solid; margin: 18px 0;
+  font-size: 13px;
+}
+.callout.note { background: var(--indigo-50); border-color: var(--indigo-100); color: var(--text-body); }
+.callout.warn { background: var(--amber-50); border-color: var(--amber-100); color: var(--amber-900); }
+.callout.tip { background: var(--sage-50); border-color: rgba(90,164,91,.28); color: var(--sage-700); }
+.callout-title { font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+.callout.note .callout-title { color: var(--indigo-700); }
+.callout.warn .callout-title { color: var(--amber-700); }
+.callout.tip .callout-title { color: var(--sage-700); }
+
+/* Impact tiles */
+.impact-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 12px; margin: 20px 0 12px; }
+@media (max-width: 800px) { .impact-row { grid-template-columns: 1fr 1fr; } }
+.impact-tile {
+  background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 16px 18px 14px; box-shadow: var(--shadow-sm);
+}
+.impact-tile.hero-tile {
+  background: linear-gradient(140deg, var(--indigo-500) 0%, var(--indigo-700) 100%);
+  color: white; border-color: transparent;
+  box-shadow: 0 6px 20px -4px rgba(89,97,229,.4), inset 0 1px 0 rgba(255,255,255,.15);
+}
+.impact-tile .label {
+  font-size: 10px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+  color: var(--text-subtle); margin-bottom: 8px;
+}
+.impact-tile.hero-tile .label { color: rgba(255,255,255,.72); }
+.impact-tile .value { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-strong); line-height: 1; }
+.impact-tile.hero-tile .value { color: white; font-size: 24px; }
+.impact-tile .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+.impact-tile.hero-tile .sub { color: rgba(255,255,255,.7); }
+
+/* Timeline */
+.rollout {
+  display: grid; grid-template-columns: 20px 1fr; gap: 16px;
+  margin: 24px 0;
+  position: relative;
+}
+.rollout-item {
+  display: grid; grid-template-columns: 20px 1fr; gap: 16px;
+  padding-bottom: 24px;
+  position: relative;
+}
+.rollout-item:not(:last-child)::before {
+  content: ''; position: absolute; left: 9px; top: 20px; bottom: -4px;
+  width: 2px; background: var(--border);
+}
+.rollout-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: white; border: 3px solid var(--brand);
+  margin-top: 2px; z-index: 1; position: relative;
+  box-shadow: 0 0 0 4px rgba(89,97,229,.10);
+}
+.rollout-body h4 { text-transform: none; letter-spacing: -0.008em; font-size: 14.5px; margin-top: 0; }
+.rollout-body p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* Test plan checklist */
+.test-list { list-style: none; padding: 0; }
+.test-list li {
+  padding: 10px 14px; margin-bottom: 6px;
+  background: var(--surface-card); border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 12.5px; color: var(--text-body);
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.test-list li::before {
+  content: ''; width: 14px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--border-strong); flex-shrink: 0; margin-top: 1px;
+}
+
+footer {
+  margin-top: 72px; padding: 32px 0 0;
+  border-top: 1px solid var(--border);
+  text-align: center; font-size: 12px; color: var(--text-subtle);
+}
+footer code { font-family: var(--font-mono); background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px; color: var(--text-body); }
+
+/* Inline code */
+code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px; color: var(--text-strong); }
+
+/* Motion */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ============== HERO ============== -->
+<div class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-kicker">Zango Platform · design + implementation plan</div>
+      <h1>App suspension — block traffic to <em>suspended</em> tenants, gracefully.</h1>
+      <p class="lede">
+        Platform admins should be able to suspend an app and instantly stop all traffic — HTTP requests, background tasks, worker jobs — while keeping the schema and data intact. Users who try to reach a suspended app see a calm, branded message telling them to contact support. This is a plan document: what to build, how the UX reads, and the exact code changes needed.
+      </p>
+      <div class="hero-meta">
+        <span class="hero-chip amber">Status field exists · enforcement missing</span>
+        <span class="hero-chip">2 backend files · 3 frontend files</span>
+        <span class="hero-chip teal">~180 LOC total</span>
+      </div>
+    </div>
+
+    <div class="hero-preview">
+      <span class="label">Preview · the 404 page</span>
+      <div class="mini-404">
+        <div class="icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h4>This app is suspended</h4>
+        <p>Please contact support for access. Data is preserved.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== IMPACT AT-A-GLANCE ============== -->
+<section>
+  <span class="kicker">01 · At a glance</span>
+  <h2>Scope + impact</h2>
+  <div class="impact-row">
+    <div class="impact-tile hero-tile">
+      <div class="label">One-line summary</div>
+      <div class="value" style="font-size:15px; line-height:1.35;">Enforce suspend at the middleware boundary. Show a branded 404 page. Add a suspend action in the platform apps list.</div>
+    </div>
+    <div class="impact-tile">
+      <div class="label">Backend files</div>
+      <div class="value">2</div>
+      <div class="sub">Middleware + template</div>
+    </div>
+    <div class="impact-tile">
+      <div class="label">Frontend files</div>
+      <div class="value">3</div>
+      <div class="sub">List row + dialog + action</div>
+    </div>
+    <div class="impact-tile">
+      <div class="label">DB migrations</div>
+      <div class="value">0</div>
+      <div class="sub">Model already supports it</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== WHAT'S ALREADY THERE ============== -->
+<section>
+  <span class="kicker">02 · Foundation</span>
+  <h2>What already exists — and what doesn't</h2>
+  <p class="lede">
+    The <code>TenantModel</code> already carries a <code>status</code> field with <code>"suspended"</code> as one of the values, a <code>suspended_on</code> timestamp, and a <code>suspend()</code> method. What's missing is <strong>enforcement</strong>, <strong>the branded landing page</strong>, and <strong>the admin action</strong>.
+  </p>
+
+  <div class="grid-2 uneven">
+    <div class="card sage-tinted">
+      <h4 style="margin-top:0; color: var(--sage-700);">Already in place</h4>
+      <ul style="margin-top: 10px;">
+        <li><code>TenantModel.status</code> — enum with <code>Staged</code>, <code>Deployed</code>, <code>Suspended</code>, <code>Deleted</code></li>
+        <li><code>TenantModel.suspended_on</code> — datetime, nullable</li>
+        <li><code>TenantModel.suspend()</code> — sets status + timestamp, saves</li>
+        <li>Tenant resolution middleware (<code>ZangoTenantMainMiddleware</code>) that identifies the tenant per request</li>
+        <li>Platform apps list API + frontend page for admins</li>
+      </ul>
+    </div>
+    <div class="card amber-tinted">
+      <h4 style="margin-top:0; color: var(--amber-700);">What's missing</h4>
+      <ul style="margin-top: 10px;">
+        <li>Middleware check on <code>tenant.status</code> — currently traffic flows through regardless</li>
+        <li>The branded 404 template</li>
+        <li>An <code>unsuspend()</code> method (symmetric with <code>suspend()</code>)</li>
+        <li>Platform admin API for suspend / unsuspend</li>
+        <li>Frontend suspend action, confirmation dialog, and status badge</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============== USER JOURNEY ============== -->
+<section>
+  <span class="kicker">03 · User journey</span>
+  <h2>Two flows, one graceful outcome</h2>
+
+  <h3>Flow A — Admin suspends an app</h3>
+  <div class="journey">
+    <div class="journey-step">
+      <div class="num">1</div>
+      <div class="title">Admin visits Platform Apps</div>
+      <div class="detail">Sees the app list with status badges. Active apps show a green pill; suspended apps show an amber pill.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step state-suspend">
+      <div class="num">2</div>
+      <div class="title">Clicks Suspend</div>
+      <div class="detail">A confirmation dialog appears. Requires typing the app name to prevent misclicks. Explains that data is preserved.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step">
+      <div class="num">3</div>
+      <div class="title">Status flips instantly</div>
+      <div class="detail">Row updates with the amber pill. From this moment, all traffic to the app hits the branded 404 page.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 40px;">Flow B — End user visits a suspended app</h3>
+  <div class="journey">
+    <div class="journey-step">
+      <div class="num">1</div>
+      <div class="title">User visits app URL</div>
+      <div class="detail">Any path — login, dashboard, API endpoint, deep link — resolves the tenant as usual.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step state-block">
+      <div class="num">2</div>
+      <div class="title">Middleware short-circuits</div>
+      <div class="detail">Before the URL resolver runs, the middleware sees <code>status == "suspended"</code> and returns the suspended-page response with HTTP 404.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step state-suspend">
+      <div class="num">3</div>
+      <div class="title">User sees a calm message</div>
+      <div class="detail">Not a scary error — a branded page saying "this app is suspended" with a support contact CTA.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== THE 404 PAGE MOCKUP ============== -->
+<section>
+  <span class="kicker">04 · The suspended page</span>
+  <h2>A calm, branded 404 — not a hostile error</h2>
+  <p class="lede">
+    HTTP 404 with a designed body. Amber accents, not red. Icon suggests "locked, but recoverable." Copy avoids blame. A single primary CTA to contact support keeps the page uncluttered. Data preservation is stated explicitly so anxious users don't panic.
+  </p>
+
+  <div class="mockup">
+    <div class="mockup-chrome">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <div class="mockup-url">https://myapp.zango.io/dashboard</div>
+    </div>
+    <div class="mockup-body">
+      <div class="suspended-page">
+        <div class="suspended-badge">App unavailable</div>
+        <div class="suspended-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h2>This app is currently <em>suspended</em></h2>
+        <p class="msg">
+          Access to this application has been paused by the platform administrator. Your data is preserved and unchanged. Please contact support if you believe this is in error.
+        </p>
+        <div class="suspended-meta">Reference · myapp.zango.io · 404</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-title">Design decisions</div>
+    <p><strong>Amber not red:</strong> red reads as "system error" or "danger." Amber says "attention needed" without alarm. <strong>Serif italic on "suspended":</strong> the one word that carries the meaning gets typographic weight. <strong>"Your data is preserved":</strong> the most common panic — "did I lose my data?" — answered before the user asks. <strong>No CTA:</strong> a "contact support" button is tempting but the support channel is out-of-band (email, phone). The message tells users to contact support; the URL bar is where they go to another destination. Keeping the page action-free preserves calm and avoids stale mailto: links.</p>
+  </div>
+</section>
+
+<!-- ============== ADMIN PANEL MOCKUP ============== -->
+<section>
+  <span class="kicker">05 · Admin UX</span>
+  <h2>Suspending an app from Platform → Apps</h2>
+  <p class="lede">
+    Suspension lives inline in the existing apps list, not on a separate settings page. Admins see status at a glance via colored pills, and the action is one hover + one click + one confirmation away. The confirmation dialog requires typing the app name — enough friction to prevent accidents without being annoying.
+  </p>
+
+  <div class="grid-2 uneven">
+    <div>
+      <h4>The apps list</h4>
+      <div class="mockup">
+        <div class="mockup-chrome">
+          <span class="mockup-dot r"></span>
+          <span class="mockup-dot y"></span>
+          <span class="mockup-dot g"></span>
+          <div class="mockup-url">/platform/apps</div>
+        </div>
+        <div class="admin-panel">
+          <h4>Apps</h4>
+          <div class="admin-sub">All tenant applications in this workspace.</div>
+
+          <div class="app-row">
+            <div class="app-avatar">P</div>
+            <div>
+              <div class="app-name">Pharmacovigilance</div>
+              <div class="app-domain">pv.zango.io</div>
+            </div>
+            <span class="status-pill active">Active</span>
+            <div class="app-actions">
+              <button class="action-btn">Open</button>
+              <button class="action-btn danger">Suspend</button>
+            </div>
+          </div>
+
+          <div class="app-row suspended">
+            <div class="app-avatar amber">C</div>
+            <div>
+              <div class="app-name">Cadence</div>
+              <div class="app-domain">cadence.zango.io</div>
+            </div>
+            <span class="status-pill suspended">Suspended</span>
+            <div class="app-actions">
+              <button class="action-btn primary">Unsuspend</button>
+            </div>
+          </div>
+
+          <div class="app-row">
+            <div class="app-avatar teal">M</div>
+            <div>
+              <div class="app-name">MedRec Portal</div>
+              <div class="app-domain">medrec.zango.io</div>
+            </div>
+            <span class="status-pill active">Active</span>
+            <div class="app-actions">
+              <button class="action-btn">Open</button>
+              <button class="action-btn danger">Suspend</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h4>Confirmation dialog</h4>
+      <div class="confirm-dialog">
+        <div class="confirm-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <h4>Suspend "Cadence"?</h4>
+        <p>
+          All traffic to <strong>cadence.zango.io</strong> will be blocked with a support-contact message. Data is preserved and can be restored anytime by unsuspending.
+        </p>
+        <label class="confirm-input-label">Type the app name to confirm</label>
+        <input class="confirm-input" placeholder="Cadence" value="Cadence">
+        <div class="confirm-actions">
+          <button class="btn-secondary">Cancel</button>
+          <button class="btn-primary" style="background: var(--amber-500); box-shadow: 0 2px 6px -1px rgba(218,144,17,.4);">Suspend app</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout note">
+    <div class="callout-title">Why type-to-confirm</div>
+    <p>Modal confirmations get click-through rates near 100% when they're just "Are you sure?" buttons. Requiring the exact app name adds ~2 seconds of friction but essentially eliminates accidental suspensions. Same pattern as GitHub's repo-deletion flow. The button stays disabled until the input matches.</p>
+  </div>
+</section>
+
+<!-- ============== BACKEND IMPLEMENTATION ============== -->
+<section>
+  <span class="kicker">06 · Backend implementation</span>
+  <h2>Middleware guard + branded template</h2>
+  <p class="lede">
+    Enforcement lives in <code>ZangoTenantMainMiddleware.__call__</code>, right after tenant resolution and before URL routing. A single conditional check on <code>tenant.status</code> short-circuits the request. The response is a rendered template returned with HTTP 404 so it's cacheable by CDNs and consistent with how other "resource unavailable" cases behave.
+  </p>
+
+  <h3>Change 1 · Middleware guard</h3>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/middleware/tenant.py · ~line 96</span>
+      <span class="code-badge mod">modified</span>
+    </div>
+<pre><span class="tok-kw">def</span> <span class="tok-fn">__call__</span>(<span class="tok-cls">self</span>, request):
+    connection.set_schema_to_public()
+    <span class="tok-com"># ... existing hostname + tenant resolution ...</span>
+
+    tenant.domain_url = hostname
+    request.tenant = tenant
+    request.internal_routing = <span class="tok-num">False</span>
+    connection.set_tenant(request.tenant)
+
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-com"># Suspend guard — short-circuit any request to a suspended tenant.</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-com"># Health check + platform-admin routes are exempt so the platform</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-com"># operator can still unsuspend from the admin UI.</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-kw">if</span> tenant.status == <span class="tok-str">"suspended"</span> <span class="tok-kw">and</span> <span class="tok-kw">not</span> <span class="tok-cls">self</span>._is_exempt_path(request):</span>
+<span class="tok-add-line"><span class="tok-add">+</span>        <span class="tok-kw">return</span> render(</span>
+<span class="tok-add-line"><span class="tok-add">+</span>            request,</span>
+<span class="tok-add-line"><span class="tok-add">+</span>            <span class="tok-str">"tenancy/app_suspended.html"</span>,</span>
+<span class="tok-add-line"><span class="tok-add">+</span>            {<span class="tok-str">"tenant"</span>: tenant, <span class="tok-str">"support_email"</span>: settings.SUPPORT_EMAIL},</span>
+<span class="tok-add-line"><span class="tok-add">+</span>            status=<span class="tok-num">404</span>,</span>
+<span class="tok-add-line"><span class="tok-add">+</span>        )</span>
+
+    <span class="tok-cls">self</span>.setup_url_routing(request)
+    <span class="tok-kw">return</span> <span class="tok-cls">self</span>.get_response(request)
+
+<span class="tok-add-line"><span class="tok-add">+</span><span class="tok-kw">def</span> <span class="tok-fn">_is_exempt_path</span>(<span class="tok-cls">self</span>, request):</span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-str">"""Paths that continue to work even when a tenant is suspended:</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-str">health checks (so load balancers don't mark the app as down)</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-str">and platform-admin API endpoints (so the operator can unsuspend)."""</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    exempt_prefixes = (</span>
+<span class="tok-add-line"><span class="tok-add">+</span>        <span class="tok-str">"/api/v1/health/"</span>,</span>
+<span class="tok-add-line"><span class="tok-add">+</span>        <span class="tok-str">"/api/v1/platform/"</span>,</span>
+<span class="tok-add-line"><span class="tok-add">+</span>    )</span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-kw">return</span> <span class="tok-fn">any</span>(request.path.<span class="tok-fn">startswith</span>(p) <span class="tok-kw">for</span> p <span class="tok-kw">in</span> exempt_prefixes)</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-title">Exempt paths are load-bearing</div>
+    <p>Two exemptions matter: (a) <strong>health checks</strong> — if <code>/api/v1/health/</code> returns 404, your load balancer marks the app as unhealthy and pages someone at 3am; (b) <strong>platform admin API</strong> — if <code>/api/v1/platform/*</code> returns 404, the operator can't unsuspend from the admin UI they just navigated to. Both exemptions must ship together with the middleware change.</p>
+  </div>
+
+  <h3>Change 2 · Suspended-page template</h3>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/shared/tenancy/templates/tenancy/app_suspended.html</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-com">{% load static %}</span>
+<span class="tok-cls">&lt;!DOCTYPE html&gt;</span>
+<span class="tok-cls">&lt;html lang="en"&gt;</span>
+<span class="tok-cls">&lt;head&gt;</span>
+    <span class="tok-cls">&lt;meta charset="UTF-8"&gt;</span>
+    <span class="tok-cls">&lt;title&gt;</span>App unavailable — <span class="tok-com">{{ tenant.name }}</span><span class="tok-cls">&lt;/title&gt;</span>
+    <span class="tok-cls">&lt;link rel="icon" href="{% static 'favicon.ico' %}"&gt;</span>
+    <span class="tok-cls">&lt;style&gt;</span>
+        <span class="tok-com">/* Inline the entire suspended-page component from the mockup above.</span>
+        <span class="tok-com">   No external CSS — must work even if static files are misconfigured. */</span>
+    <span class="tok-cls">&lt;/style&gt;</span>
+<span class="tok-cls">&lt;/head&gt;</span>
+<span class="tok-cls">&lt;body&gt;</span>
+    <span class="tok-cls">&lt;div</span> class=<span class="tok-str">"suspended-page"</span><span class="tok-cls">&gt;</span>
+        <span class="tok-com">{# amber badge, lock icon, headline, message, CTA — see mockup #}</span>
+    <span class="tok-cls">&lt;/div&gt;</span>
+<span class="tok-cls">&lt;/body&gt;</span>
+<span class="tok-cls">&lt;/html&gt;</span></pre>
+  </div>
+
+  <h3>Change 3 · <code>unsuspend()</code> method (symmetric with existing <code>suspend()</code>)</h3>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/shared/tenancy/models.py · after line 133</span>
+      <span class="code-badge mod">modified</span>
+    </div>
+<pre><span class="tok-kw">def</span> <span class="tok-fn">suspend</span>(<span class="tok-cls">self</span>):
+    <span class="tok-cls">self</span>.status = <span class="tok-str">"suspended"</span>
+    <span class="tok-cls">self</span>.suspended_on = timezone.<span class="tok-fn">now</span>()
+    <span class="tok-cls">self</span>.<span class="tok-fn">save</span>()
+
+<span class="tok-add-line"><span class="tok-add">+</span><span class="tok-kw">def</span> <span class="tok-fn">unsuspend</span>(<span class="tok-cls">self</span>):</span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-str">"""Restore a suspended tenant to deployed status. Traffic resumes</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-str">immediately on the next request."""</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-cls">self</span>.status = <span class="tok-str">"deployed"</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-cls">self</span>.suspended_on = <span class="tok-num">None</span></span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-cls">self</span>.<span class="tok-fn">save</span>()</span></pre>
+  </div>
+
+  <h3>Change 4 · Platform admin API endpoint</h3>
+
+  <p>
+    Single view for both actions. The action name lives in the URL — so logs, curl invocations, and audit trails all read at a glance without body inspection. Symmetric suspend / unsuspend collapse into one <code>getattr(tenant, action)()</code> call. Adding a future status action (<code>archive</code>, <code>rotate-keys</code>) is a one-line addition to the allowlist.
+  </p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/api/platform/apps/v1/views.py</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">class</span> <span class="tok-cls">AppStatusActionView</span>(<span class="tok-cls">ZangoGenericPlatformAPIView</span>):
+    <span class="tok-str">"""POST /api/v1/platform/apps/&lt;app_uuid&gt;/status/&lt;action&gt;/</span>
+
+    <span class="tok-str">action ∈ {"suspend", "unsuspend"}.</span>
+    <span class="tok-str">"""</span>
+    permission_classes = (<span class="tok-cls">IsSuperAdminPlatformUser</span>,)
+
+    _ALLOWED_ACTIONS = (<span class="tok-str">"suspend"</span>, <span class="tok-str">"unsuspend"</span>)
+
+    <span class="tok-kw">def</span> <span class="tok-fn">post</span>(<span class="tok-cls">self</span>, request, app_uuid, action):
+        <span class="tok-kw">if</span> action <span class="tok-kw">not in</span> <span class="tok-cls">self</span>._ALLOWED_ACTIONS:
+            <span class="tok-kw">return</span> <span class="tok-fn">get_api_response</span>(
+                <span class="tok-num">False</span>,
+                {<span class="tok-str">"message"</span>: <span class="tok-fn">f</span><span class="tok-str">"Unknown action '{action}'."</span>},
+                <span class="tok-num">400</span>,
+            )
+        tenant = <span class="tok-fn">get_object_or_404</span>(<span class="tok-cls">TenantModel</span>, uuid=app_uuid)
+        <span class="tok-fn">getattr</span>(tenant, action)()  <span class="tok-com"># tenant.suspend() or tenant.unsuspend()</span>
+        <span class="tok-kw">return</span> <span class="tok-fn">get_api_response</span>(
+            <span class="tok-num">True</span>,
+            {<span class="tok-str">"tenant"</span>: <span class="tok-cls">TenantSerializer</span>(tenant).data},
+            <span class="tok-num">200</span>,
+        )</pre>
+  </div>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/api/platform/apps/v1/urls.py</span>
+      <span class="code-badge mod">modified</span>
+    </div>
+<pre><span class="tok-fn">path</span>(
+    <span class="tok-str">"apps/&lt;uuid:app_uuid&gt;/status/&lt;str:action&gt;/"</span>,
+    <span class="tok-cls">AppStatusActionView</span>.<span class="tok-fn">as_view</span>(),
+    name=<span class="tok-str">"platform-app-status-action"</span>,
+),</pre>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-title">Why one view, not two</div>
+    <p><strong>Read at a glance:</strong> \`POST /apps/&lt;uuid&gt;/status/suspend/\` reads as a command in logs, curl, and API docs. <strong>DRY body:</strong> the only difference between suspend and unsuspend is which method is called — <code>getattr</code> collapses that into a single line, no if/else duplication. <strong>Extensible:</strong> adding <code>archive</code> or <code>rotate-keys</code> in the future is one line in <code>_ALLOWED_ACTIONS</code> plus the matching method on the model. <strong>Auditable:</strong> the URL path is enough to distinguish suspend from unsuspend in access logs — no body parsing needed.</p>
+  </div>
+</section>
+
+<!-- ============== FRONTEND IMPLEMENTATION ============== -->
+<section>
+  <span class="kicker">07 · Frontend implementation</span>
+  <h2>Inline suspend action + status badge</h2>
+  <p class="lede">
+    Three surgical changes in the existing apps list — no new page, no route. Status badges appear next to app names, hover reveals a Suspend button on active apps and an Unsuspend button on suspended ones, and the confirmation dialog matches Zango's existing modal pattern.
+  </p>
+
+  <h3>Change 1 · Status badge component</h3>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">frontend/src/pages/platform/components/StatusPill.jsx</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">export function</span> <span class="tok-fn">StatusPill</span>({ status }) {
+  <span class="tok-kw">const</span> variant = {
+    deployed:  { label: <span class="tok-str">'Active'</span>,    cls: <span class="tok-str">'active'</span> },
+    suspended: { label: <span class="tok-str">'Suspended'</span>, cls: <span class="tok-str">'suspended'</span> },
+    staged:    { label: <span class="tok-str">'Staged'</span>,    cls: <span class="tok-str">'staged'</span> },
+    deleted:   { label: <span class="tok-str">'Deleted'</span>,   cls: <span class="tok-str">'deleted'</span> },
+  }[status] || { label: status, cls: <span class="tok-str">'default'</span> };
+
+  <span class="tok-kw">return</span> (
+    &lt;span className={<span class="tok-str">`status-pill ${variant.cls}`</span>}&gt;
+      {variant.label}
+    &lt;/span&gt;
+  );
+}</pre>
+  </div>
+
+  <h3>Change 2 · Suspend action + confirmation dialog</h3>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">frontend/src/pages/platform/components/SuspendAppDialog.jsx</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">export function</span> <span class="tok-fn">SuspendAppDialog</span>({ app, onClose, onSuspended }) {
+  <span class="tok-kw">const</span> [typedName, setTypedName] = <span class="tok-fn">useState</span>(<span class="tok-str">''</span>);
+  <span class="tok-kw">const</span> [busy, setBusy] = <span class="tok-fn">useState</span>(<span class="tok-num">false</span>);
+  <span class="tok-kw">const</span> triggerApi = <span class="tok-fn">useApi</span>();
+
+  <span class="tok-kw">const</span> matches = typedName.<span class="tok-fn">trim</span>() === app.name;
+
+  <span class="tok-kw">const</span> handleSuspend = <span class="tok-kw">async</span> () => {
+    <span class="tok-kw">if</span> (!matches || busy) <span class="tok-kw">return</span>;
+    <span class="tok-fn">setBusy</span>(<span class="tok-num">true</span>);
+    <span class="tok-kw">const</span> { success } = <span class="tok-kw">await</span> <span class="tok-fn">triggerApi</span>({
+      url: <span class="tok-str">`/api/v1/platform/apps/${app.uuid}/suspend/`</span>,
+      type: <span class="tok-str">'POST'</span>,
+    });
+    <span class="tok-kw">if</span> (success) <span class="tok-fn">onSuspended</span>();
+    <span class="tok-fn">setBusy</span>(<span class="tok-num">false</span>);
+  };
+
+  <span class="tok-com">// Render the confirm-dialog mockup from section 05.</span>
+  <span class="tok-com">// Primary button disabled unless matches === true.</span>
+}</pre>
+  </div>
+
+  <h3>Change 3 · Wire into the apps list row</h3>
+
+  <p>In the existing apps list (<code>pages/platform/…/AppList.jsx</code> or equivalent), add the status pill to each row and the Suspend / Unsuspend action to the hover-revealed action cluster. The Suspend action opens <code>SuspendAppDialog</code>; the Unsuspend action fires the unsuspend API directly (no confirmation — resuming service is low-risk).</p>
+</section>
+
+<!-- ============== EDGE CASES ============== -->
+<section>
+  <span class="kicker">08 · Edge cases</span>
+  <h2>What happens when…</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4 style="margin-top:0;">Platform admin themselves visits the suspended app?</h4>
+      <p style="font-size: 13px; margin-top: 6px;">They still see the 404 page for the app's public URL. To interact with the tenant, they use the platform-admin API endpoints (which are exempt) — this includes the unsuspend action.</p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin-top:0;">An API client with cached auth token calls a suspended app?</h4>
+      <p style="font-size: 13px; margin-top: 6px;">They get HTTP 404 with the branded HTML body. If the client only reads status codes, a 404 correctly signals "not available." If they parse HTML, they see the same page a browser sees.</p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin-top:0;">A load balancer health check hits the app?</h4>
+      <p style="font-size: 13px; margin-top: 6px;"><code>/api/v1/health/</code> is exempt from the suspend guard, returns 200 as normal. Load balancers don't mark suspended apps as unhealthy.</p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin-top:0;">CDN caches the suspended page?</h4>
+      <p style="font-size: 13px; margin-top: 6px;">HTTP 404 is cacheable but short-TTL by default. If your CDN caches longer, add <code>Cache-Control: max-age=60</code> to the response so unsuspend takes effect within a minute rather than hours.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============== CELERY / BACKGROUND WORK ============== -->
+<section>
+  <span class="kicker">09 · Celery + background work</span>
+  <h2>Blocking traffic isn't enough — background work needs its own guard</h2>
+  <p class="lede">
+    HTTP middleware only sees HTTP requests. Celery tasks execute in worker processes and don't touch the middleware chain, so a middleware-only fix leaves several task sources unblocked: scheduled Celery Beat jobs, task chains that spawn from other tasks, workspace tasks (defined in <code>workspaces/&lt;tenant&gt;/…/tasks.py</code>), and codexec runs enqueued before the tenant was suspended. Each source has a different failure mode and a different fix.
+  </p>
+
+  <h3>The four sources — and what happens to each</h3>
+
+  <div class="grid-2" style="margin-top: 18px;">
+    <div class="card">
+      <h4 style="margin-top:0;">A · HTTP-dispatched tasks</h4>
+      <p style="font-size: 13px; margin-top: 6px;">A view calls <code>my_task.apply_async(...)</code>. Because the suspend guard returns 404 before the view body runs, the dispatch never happens. <b>No additional work needed — middleware already covers this.</b></p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin-top:0;">B · Celery Beat scheduled tasks</h4>
+      <p style="font-size: 13px; margin-top: 6px;">Zango has <code>health_check_periodic_task</code>, <code>update_tool_usage_stats</code>, and workspace beat schedules. These fire on a cron regardless of HTTP traffic. If the tenant is suspended, they'd still execute against the tenant's schema — writing data, sending emails, whatever the task does. <b>Needs a task-entry guard.</b></p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin-top:0;">C · Task chains + retries</h4>
+      <p style="font-size: 13px; margin-top: 6px;">A task that finishes with <code>next_task.apply_async(...)</code> spawns the next one from inside a worker. If the tenant is suspended between the parent and child, the child would still run. Same for retries scheduled with <code>self.retry(countdown=...)</code>. <b>Needs a task-entry guard.</b></p>
+    </div>
+
+    <div class="card">
+      <h4 style="margin-top:0;">D · In-flight tasks at the moment of suspension</h4>
+      <p style="font-size: 13px; margin-top: 6px;">A codexec run halfway through, or an email task that's mid-SMTP-send. Killing these mid-execution would leave DB rows in inconsistent states. <b>Let them complete — no kill.</b></p>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 32px;">Framework-level enforcement — two chokepoints, no decorators</h3>
+  <p style="font-size: 13px; color: var(--text-muted); max-width: 68ch;">
+    Requiring every task author to remember a decorator is fragile — someone will forget and the guarantee silently breaks. Instead, enforce the check in the two places every tenant-scoped task naturally passes through. Both are single-line additions in Zango core code. Task authors don't need to know this exists.
+  </p>
+
+  <div class="grid-2" style="margin-top: 20px;">
+    <div class="card sage-tinted">
+      <h4 style="margin-top:0; color: var(--sage-700);">Chokepoint 1 · zango_task_executor</h4>
+      <p style="font-size: 12.5px; margin-top: 6px;"><b>Every workspace task</b> runs through <code>zango.core.tasks.zango_task_executor</code> — email/OTP/SMS sends, workspace-defined tasks, beat-scheduled workspace tasks, task chains, retries. The wrapper sets the tenant, then invokes the workspace-defined function via <code>plugin_source.load_plugin</code>. Adding the assertion right after <code>connection.set_tenant(tenant)</code> covers 100% of these.</p>
+    </div>
+    <div class="card sage-tinted">
+      <h4 style="margin-top:0; color: var(--sage-700);">Chokepoint 2 · codexec_executor</h4>
+      <p style="font-size: 12.5px; margin-top: 6px;">Codexec has its own task that sets the tenant and runs the user's snippet — it doesn't route through <code>zango_task_executor</code>. Add the same assertion here, immediately after <code>set_tenant</code>. One line.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 32px;">The shared utility</h3>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/shared/tenancy/utils.py</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">from</span> django.db <span class="tok-kw">import</span> connection
+<span class="tok-kw">from</span> loguru <span class="tok-kw">import</span> logger
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">TenantSuspended</span>(<span class="tok-cls">Exception</span>):
+    <span class="tok-str">"""Raised when a Celery task is invoked against a suspended tenant.</span>
+    <span class="tok-str">Celery treats this as a task failure — the broker acknowledges the</span>
+    <span class="tok-str">message and the failure is recorded. A future dispatch after</span>
+    <span class="tok-str">unsuspend runs normally."""</span>
+
+
+<span class="tok-kw">def</span> <span class="tok-fn">assert_tenant_active</span>(tenant=<span class="tok-num">None</span>):
+    <span class="tok-str">"""Raise TenantSuspended if the (given or current-connection) tenant</span>
+    <span class="tok-str">is suspended. Cheap — one attribute lookup, no DB roundtrip."""</span>
+    tenant = tenant <span class="tok-kw">or</span> <span class="tok-fn">getattr</span>(connection, <span class="tok-str">"tenant"</span>, <span class="tok-num">None</span>)
+    <span class="tok-kw">if</span> tenant <span class="tok-kw">is not</span> <span class="tok-num">None</span> <span class="tok-kw">and</span> tenant.status == <span class="tok-str">"suspended"</span>:
+        logger.<span class="tok-fn">info</span>(
+            <span class="tok-str">"Task skipped: tenant '{}' is suspended"</span>,
+            tenant.schema_name,
+        )
+        <span class="tok-kw">raise</span> <span class="tok-cls">TenantSuspended</span>(tenant.schema_name)</pre>
+  </div>
+
+  <h3 style="margin-top: 32px;">Chokepoint 1 · zango_task_executor</h3>
+  <p style="font-size: 13px; color: var(--text-muted); max-width: 68ch;">
+    Reading the actual <code>zango.core.tasks:zango_task_executor</code>: it accepts <code>tenant_name</code> as its first argument, sets the connection to that tenant, then loads the workspace and dispatches to the workspace-defined function. Every workspace task — regardless of how it was enqueued (HTTP view, beat schedule, chain, retry) — passes through this wrapper. One assertion right after <code>set_tenant</code> covers all of them.
+  </p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/core/tasks.py</span>
+      <span class="code-badge mod">modified</span>
+    </div>
+<pre>@<span class="tok-fn">shared_task</span>
+<span class="tok-kw">def</span> <span class="tok-fn">zango_task_executor</span>(tenant_name, task_name, *args, timezone_name=<span class="tok-num">None</span>, **kwargs):
+    <span class="tok-com"># ... existing imports ...</span>
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-kw">from</span> zango.apps.shared.tenancy.utils <span class="tok-kw">import</span> assert_tenant_active</span>
+
+    tenant = <span class="tok-cls">TenantModel</span>.objects.<span class="tok-fn">get</span>(name=tenant_name)
+    connection.<span class="tok-fn">set_tenant</span>(tenant)
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-fn">assert_tenant_active</span>(tenant)  <span class="tok-com"># framework-level suspend guard</span></span>
+
+    <span class="tok-kw">with</span> connection.<span class="tok-fn">cursor</span>() <span class="tok-kw">as</span> c:
+        task_obj = <span class="tok-cls">AppTask</span>.objects.<span class="tok-fn">get</span>(name=task_name)
+        <span class="tok-com"># ... rest of the executor ...</span></pre>
+  </div>
+
+  <h3 style="margin-top: 24px;">Chokepoint 2 · codexec_executor</h3>
+  <p style="font-size: 13px; color: var(--text-muted); max-width: 68ch;">
+    Codexec has its own Celery task that doesn't route through <code>zango_task_executor</code>. Same one-line assertion, immediately after <code>set_tenant</code>. If a snippet was enqueued before the tenant was suspended and the flip happens while the task waited in the queue, the assertion catches it on pickup.
+  </p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/code_execution/tasks.py — codexec_executor</span>
+      <span class="code-badge mod">modified</span>
+    </div>
+<pre>@<span class="tok-fn">shared_task</span>(bind=<span class="tok-num">True</span>, name=<span class="tok-str">"zango.code_execution.codexec_executor"</span>)
+<span class="tok-kw">def</span> <span class="tok-fn">codexec_executor</span>(<span class="tok-cls">self</span>, execution_uuid, tenant_name):
+    tenant = <span class="tok-cls">TenantModel</span>.objects.<span class="tok-fn">get</span>(name=tenant_name)
+    connection.<span class="tok-fn">set_tenant</span>(tenant)
+<span class="tok-add-line"><span class="tok-add">+</span>    <span class="tok-fn">assert_tenant_active</span>(tenant)  <span class="tok-com"># catches flip between enqueue and pickup</span></span>
+    execution = <span class="tok-cls">CodeExecution</span>.objects.<span class="tok-fn">get</span>(object_uuid=execution_uuid)
+    <span class="tok-com"># ... rest of the executor ...</span></pre>
+  </div>
+
+  <h3 style="margin-top: 28px;">What we do not do</h3>
+  <ul>
+    <li><b>We don't use a <code>task_prerun</code> signal.</b> Every tenant-scoped task in Zango passes through one of the two chokepoints above — the signal would be redundant, would need a platform-task skip-list to keep in sync with the actual task inventory, and would fire after Celery had already imported workspace code. The two explicit assertions are cheaper and clearer.</li>
+    <li><b>We don't purge the broker queue.</b> Tasks enqueued before suspension stay in Redis. Each is caught on pickup by one of the two chokepoints — <code>TenantSuspended</code> propagates as a task failure, the broker acknowledges the message, no retry loop.</li>
+    <li><b>We don't kill in-flight tasks.</b> Cancelling a mid-execution task with <code>revoke(terminate=True)</code> leaves the tenant's DB rows in whatever partial state the task had reached. Better to let a codexec run finish; the next dispatch is blocked.</li>
+    <li><b>We don't rely on per-task decorators.</b> Task authors don't have to remember anything. The framework enforces the guard at the two natural chokepoints.</li>
+  </ul>
+
+  <div class="callout tip">
+    <div class="callout-title">Why two chokepoints is enough</div>
+    <p>Every workspace task — email, OTP, SMS, workspace-defined, beat-scheduled, chained, retried — is routed to <code>zango_task_executor</code> by Zango's task registration machinery. The only exception is <code>codexec_executor</code>, which is a Zango core task that manages its own tenant context. Cover those two and there's nothing left to catch.</p>
+  </div>
+</section>
+
+<footer>
+  Design doc · Zango app suspension · uses <code>TenantModel.status</code> already in place ·
+  ~180 LOC across <code>middleware/tenant.py</code>, <code>tenancy/models.py</code>, <code>tenancy/utils.py</code>, <code>api/platform/apps/</code>, and <code>frontend/pages/platform/</code>.
+</footer>
+
+</div>
+</body>
+</html>

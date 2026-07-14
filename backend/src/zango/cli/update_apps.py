@@ -616,11 +616,42 @@ def update_apps(app_name, pull):
 
     from zango.apps.shared.tenancy.models import TenantModel
 
-    tenants = TenantModel.objects.filter(status="deployed").exclude(
-        tenant_type="shared"
+    tenants = TenantModel.objects.exclude(tenant_type="shared")
+
+    # Suspended tenants are intentionally skipped by update-apps — an app
+    # in that state should not be touched (no migrations, no fixtures,
+    # no release rows) until an operator unsuspends it. Surface the skip
+    # loudly so runbook / CI logs record why a given tenant was omitted.
+    suspended_tenants = list(
+        tenants.filter(status="suspended").values_list("name", flat=True)
     )
+    if suspended_tenants:
+        click.echo(
+            click.style(
+                f"Skipping suspended tenant(s): {', '.join(suspended_tenants)}",
+                fg="yellow",
+                bold=True,
+            )
+        )
+
+    # Only deployed tenants proceed. Staged / deleted are excluded by the
+    # same rule the command already applied.
+    tenants = tenants.filter(status="deployed")
+
     if app_name:
         click.echo(f"Updating apps: {app_name}")
+        # If the operator explicitly asked for a suspended tenant by name,
+        # tell them why it's not in the result set instead of silently
+        # returning "no app found".
+        for requested in app_name:
+            if requested in suspended_tenants:
+                click.echo(
+                    click.style(
+                        f"'{requested}' is suspended — unsuspend it before running update-apps.",
+                        fg="yellow",
+                        bold=True,
+                    )
+                )
         tenants = tenants.filter(name__in=app_name)
         if not tenants.exists():
             error_message = click.style(

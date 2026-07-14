@@ -1,16 +1,54 @@
 import { NavLink } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { ReactComponent as AppSettingsIcon } from '../../../../assets/images/svg/app-settings-icon.svg';
 import { ReactComponent as AppUserManagementIcon } from '../../../../assets/images/svg/app-user-management-icon.svg';
 import { ReactComponent as AppSecretsIcon } from '../../../../assets/images/svg/app-secrets-icon.svg';
 import { ReactComponent as DashboardIcon } from '../../../../assets/images/svg/app-settings-icon.svg';
+import { selectAppConfigurationData } from '../../../appConfiguration/slice';
 
 export default function SideMenu() {
+	const appConfigurationData = useSelector(selectAppConfigurationData);
+	const isSuspended =
+		(appConfigurationData?.app?.status ||
+			appConfigurationData?.status) === 'suspended';
+
 	return (
 		<div
 			data-cy="menu_section"
-			className="z-[3] w-[88px] min-w-[88px] max-w-[88px] bg-secondary pt-[12px] sticky top-0 overflow-y-auto"
+			className="z-[3] flex w-[88px] min-w-[88px] max-w-[88px] flex-col bg-secondary pt-[12px] sticky top-0 overflow-y-auto"
 			style={{ height: 'calc(100vh - var(--navHeight, 64px))' }}
 		>
+			{isSuspended ? (
+				<div
+					className="mx-[8px] mb-[10px] flex flex-col items-center gap-[4px] rounded-[8px] border px-[4px] py-[8px]"
+					style={{
+						backgroundColor: '#FEF6E7',
+						borderColor: 'rgba(218,144,17,0.32)',
+					}}
+					title="This app is suspended — end users see a 404 page"
+					data-cy="app_suspended_badge"
+				>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="#8A5A07"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<rect x="3" y="11" width="18" height="10" rx="2" />
+						<path d="M7 11V7a5 5 0 0 1 10 0v4" />
+					</svg>
+					<span
+						className="text-center font-lato text-[9px] font-bold uppercase leading-[11px] tracking-[0.06em]"
+						style={{ color: '#8A5A07' }}
+					>
+						Suspended
+					</span>
+				</div>
+			) : null}
 			<NavLink
 				data-cy="app_settings"
 				to={`app-settings/app-configuration/`}

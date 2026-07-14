@@ -88,9 +88,13 @@ export default function AsyncTasks() {
 		}));
 	};
 
-	// Get status badge
-	const getStatusBadge = (isEnabled) => {
-		if (isEnabled) {
+	// Get status badge from is_enabled — when the app is suspended,
+	// AppTask.is_enabled is flipped to False by the tenant suspend logic
+	// (same effect as the operator toggling it Disabled in this modal),
+	// so this single field is the source of truth. On unsuspend, the ids
+	// we flipped are restored to True.
+	const getStatusBadge = (task) => {
+		if (task?.is_enabled) {
 			return (
 				<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
 					<span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
@@ -412,7 +416,7 @@ export default function AsyncTasks() {
 														</div>
 													</td>
 													<td className="px-6 py-4 whitespace-nowrap">
-														{getStatusBadge(task.is_enabled)}
+														{getStatusBadge(task)}
 													</td>
 													<td className="px-6 py-4 whitespace-nowrap">
 														<code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">

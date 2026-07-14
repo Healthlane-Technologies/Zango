@@ -1,13 +1,45 @@
 import pytz
 
+from django.db import connection
 from django_tenants.utils import schema_context
+from loguru import logger
 
 
 __all__ = [
     "TIMEZONES",
     "DATEFORMAT",
     "DATETIMEFORMAT",
+    "TenantSuspended",
+    "assert_tenant_active",
 ]
+
+
+class TenantSuspended(Exception):
+    """Raised when a Celery task is invoked against a suspended tenant.
+
+    Celery treats this as a task failure — the broker acknowledges the
+    message and the failure is recorded. A future dispatch after the
+    tenant is unsuspended runs normally.
+    """
+
+
+def assert_tenant_active(tenant=None):
+    """Raise ``TenantSuspended`` if the (given or current-connection) tenant
+    is suspended.
+
+    Cheap — one attribute lookup, no DB roundtrip. Called from
+    ``zango_task_executor`` and ``codexec_executor`` right after
+    ``connection.set_tenant(...)`` so the two chokepoints where every
+    tenant-scoped Celery task passes through catch a suspended tenant
+    before any workspace code loads.
+    """
+    tenant = tenant or getattr(connection, "tenant", None)
+    if tenant is not None and getattr(tenant, "status", None) == "suspended":
+        logger.info(
+            "Task skipped: tenant '{}' is suspended",
+            getattr(tenant, "schema_name", "?"),
+        )
+        raise TenantSuspended(getattr(tenant, "schema_name", "?"))
 
 TIMEZONES = [(tz, tz) for tz in pytz.all_timezones]
 
