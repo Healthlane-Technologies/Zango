@@ -122,12 +122,7 @@ class ZangoTenantMainMiddleware(TenantMainMiddleware):
             return render(
                 request,
                 "tenancy/app_suspended.html",
-                {
-                    "tenant": tenant,
-                    "support_email": getattr(
-                        settings, "SUPPORT_EMAIL", "support@zango.dev"
-                    ),
-                },
+                {"tenant": tenant},
                 status=404,
             )
 
