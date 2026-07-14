@@ -96,7 +96,7 @@ function columns({ debounceSearch, localTableData }) {
 				</div>
 			),
 		}),
-		columnHelper.accessor((row) => row.is_enabled, {
+		columnHelper.accessor((row) => row, {
 			id: 'is_enabled',
 			header: () => (
 				<div className="flex h-full items-start justify-start gap-[16px] border-b-[4px] border-[#F0F3F4] px-[20px] py-[12px] text-start">
@@ -137,17 +137,42 @@ function columns({ debounceSearch, localTableData }) {
 					</div>
 				</div>
 			),
-			cell: (info) => (
-				<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
-					<span
-						className={`w-fit min-w-[77px] rounded-[15px] px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${
-							info.getValue() ? 'bg-[#E4F9F2]' : 'bg-[#FBE0DD]'
-						}`}
-					>
-						{info.getValue() ? 'Scheduled' : 'Disabled'}
-					</span>
-				</div>
-			),
+			cell: (info) => {
+				const row = info.getValue() || {};
+				const isEnabled = row.is_enabled;
+				const runtimeEnabled = row.runtime_enabled;
+				// Three visible states:
+				//  - Scheduled: is_enabled=true AND runtime_enabled=true
+				//  - Paused: is_enabled=true BUT runtime_enabled=false (tenant suspended)
+				//  - Disabled: is_enabled=false (operator turned it off)
+				let label;
+				let className;
+				let title;
+				if (!isEnabled) {
+					label = 'Disabled';
+					className = 'bg-[#FBE0DD]';
+					title = 'Task is disabled — operator turned it off';
+				} else if (runtimeEnabled === false) {
+					label = 'Paused';
+					className = 'bg-[#FEF6E7]';
+					title =
+						'Task is paused because the app is suspended — will resume on unsuspend';
+				} else {
+					label = 'Scheduled';
+					className = 'bg-[#E4F9F2]';
+					title = 'Task is scheduled — beat will fire on the cron';
+				}
+				return (
+					<div className="flex h-full flex-col border-b border-[#F0F3F4] px-[20px] py-[14px]">
+						<span
+							title={title}
+							className={`w-fit min-w-[77px] rounded-[15px] px-[4px] py-[3px] text-center font-lato text-[12px] font-normal capitalize leading-[16px] tracking-[0.2px] text-[#1C1E27] ${className}`}
+						>
+							{label}
+						</span>
+					</div>
+				);
+			},
 		}),
 	];
 
