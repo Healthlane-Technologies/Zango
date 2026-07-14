@@ -173,9 +173,34 @@ export default function UnifiedAppSettings() {
 								</svg>
 							</div>
 							<div>
-								<h1 className="font-source-sans-pro text-[24px] font-semibold leading-[32px] text-[#111827]">
-									App Settings
-								</h1>
+								<div className="flex items-center gap-[10px]">
+									<h1 className="font-source-sans-pro text-[24px] font-semibold leading-[32px] text-[#111827]">
+										App Settings
+									</h1>
+									{appConfigurationData?.status === 'suspended' ? (
+										<span
+											className="inline-flex items-center gap-[6px] rounded-full border px-[9px] py-[3px] font-lato text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.08em]"
+											style={{
+												backgroundColor: '#FEF6E7',
+												borderColor: 'rgba(218,144,17,0.28)',
+												color: '#8A5A07',
+											}}
+											title="This app is suspended — end users see a 404 page"
+										>
+											<span
+												aria-hidden
+												style={{
+													width: 6,
+													height: 6,
+													borderRadius: 999,
+													backgroundColor: '#DA9011',
+													boxShadow: '0 0 0 2px rgba(218,144,17,0.22)',
+												}}
+											/>
+											Suspended
+										</span>
+									) : null}
+								</div>
 								<p className="font-lato text-[14px] leading-[20px] text-[#6B7280]">
 									Manage your application configuration, authentication, and themes
 								</p>
