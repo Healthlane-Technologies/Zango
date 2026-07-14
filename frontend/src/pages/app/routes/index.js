@@ -17,6 +17,7 @@ import { selectAppPanelInitialData } from '../../platform/slice';
 import Chatbot from '../components/Chatbot';
 import DragablePopover from '../components/Chatbot/DragablePopover';
 import SideMenu from '../components/SideMenu';
+import { AppDownloadsRoutes } from '../../appDownloads/routes';
 import { AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
 import appCodeRoutes from '../../appCode/routes';
 import { AppLogsRoutes } from '../../appLogs/routes';
@@ -101,6 +102,7 @@ const PlatformAppRoutes = () => {
 				/>
 				<Route path="/logs/*" element={<AppLogsRoutes />} />
 				<Route path="/ai/*" element={<AppAiRoutes />} />
+				<Route path="/downloads/*" element={<AppDownloadsRoutes />} />
 				<Route path="/Releases//*" element={<AppReleasesRoutes />} />
 				<Route
 					path="*"

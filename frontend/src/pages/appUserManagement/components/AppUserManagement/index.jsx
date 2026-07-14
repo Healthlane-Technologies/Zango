@@ -13,6 +13,7 @@ import {
 	selectRerenderPage,
 	setAppUserManagementData,
 } from '../../slice';
+import ExportButton from '../../../../components/ExportButton';
 import ActivateUserModal from '../Modals/ActivateUserModal';
 import AddNewUserModal from '../Modals/AddNewUserModal';
 import DeactivateUserModal from '../Modals/DeactivateUserModal';
@@ -287,6 +288,18 @@ export default function AppUserManagement() {
 											</svg>
 										</button>
 									</div>
+
+									{/* Export CSV */}
+									<ExportButton
+										kind="app_users"
+										filters={{
+											search: searchTerm || '',
+											columns: filters.is_active
+												? { is_active: filters.is_active }
+												: {},
+										}}
+										className="h-9"
+									/>
 
 									{/* Add User Button */}
 									<button

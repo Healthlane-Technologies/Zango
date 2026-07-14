@@ -1,6 +1,7 @@
 import debounce from 'just-debounce-it';
 import * as React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import ExportButton from '../../../../components/ExportButton';
 import Table from '../../../../components/Table';
 import {
 	selectAppFrameworkObjectsLogsData,
@@ -8,6 +9,16 @@ import {
 	setAppFrameworkObjectsLogsTableData,
 } from '../../slice';
 import columns from './columns';
+
+function columnsArrayToDict(columnsArr) {
+	const out = {};
+	(columnsArr || []).forEach(({ id, value }) => {
+		if (value !== undefined && value !== null && value !== '') {
+			out[id] = value;
+		}
+	});
+	return out;
+}
 
 export default function AppTable() {
 	const appFrameworkObjectsLogsTableData = useSelector(
@@ -27,6 +38,11 @@ export default function AppTable() {
 		dispatch(setAppFrameworkObjectsLogsTableData(data));
 	}, 500);
 
+	const exportFilters = {
+		search: appFrameworkObjectsLogsTableData?.searchValue || '',
+		columns: columnsArrayToDict(appFrameworkObjectsLogsTableData?.columns),
+	};
+
 	return (
 		<Table
 			localTableData={appFrameworkObjectsLogsTableData}
@@ -40,6 +56,9 @@ export default function AppTable() {
 				tableData: appFrameworkObjectsLogsData,
 			})}
 			updateLocalTableData={updateLocalTableData}
+			SearchFilters={
+				<ExportButton kind="audit_logs_framework" filters={exportFilters} />
+			}
 		/>
 	);
 }

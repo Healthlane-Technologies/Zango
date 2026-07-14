@@ -3,6 +3,7 @@ from django.urls import include, path, re_path
 from zango.api.platform.accesslogs.v1 import urls as accesslog_v1_urls
 from zango.api.platform.ai.v1 import urls as ai_v1_urls
 from zango.api.platform.auditlogs.v1 import urls as auditlog_v1_urls
+from zango.api.platform.exports.v1 import urls as exports_v1_urls
 from zango.api.platform.packages.v1 import urls as packages_v1_urls
 from zango.api.platform.permissions.v1 import urls as permissions_v1_urls
 from zango.api.platform.releases.v1 import urls as releases_v1_urls
@@ -80,6 +81,7 @@ urlpatterns = [
     re_path(r"^(?P<app_uuid>[\w-]+)/tasks/", include(tasks_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/auditlog/", include(auditlog_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/access-logs/", include(accesslog_v1_urls)),
+    re_path(r"^(?P<app_uuid>[\w-]+)/exports/", include(exports_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/releases/", include(releases_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/secrets/", include(secrets_v1_urls)),
     re_path(r"^(?P<app_uuid>[\w-]+)/ai/", include(ai_v1_urls)),

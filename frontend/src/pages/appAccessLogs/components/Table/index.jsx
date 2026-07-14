@@ -13,6 +13,7 @@ import { useParams } from 'react-router-dom';
 import { ReactComponent as TablePaginationNextIcon } from '../../../../assets/images/svg/table-pagination-next-icon.svg';
 import { ReactComponent as TablePaginationPreviousIcon } from '../../../../assets/images/svg/table-pagination-previous-icon.svg';
 import { ReactComponent as TableSearchIcon } from '../../../../assets/images/svg/table-search-icon.svg';
+import ExportButton from '../../../../components/ExportButton';
 import PageCountSelectField from '../../../../components/Table/PageCountSelectField';
 import ResizableInput from '../../../../components/Table/ResizableInput';
 import TableDateRangeFilter from '../../../../components/Table/TableDateRangeFilter';
@@ -518,6 +519,22 @@ export default function Table({ tableData }) {
 							onChange={(e) => handleSearch(e.target.value)}
 						/>
 					</div>
+					<ExportButton
+						kind="access_logs"
+						filters={{
+							search: appAccessLogsTableData?.searchValue || '',
+							columns: (appAccessLogsTableData?.columns || [])
+								.filter(({ value }) =>
+									value !== undefined &&
+									value !== null &&
+									value !== ''
+								)
+								.reduce((acc, { id, value }) => {
+									acc[id] = value;
+									return acc;
+								}, {}),
+						}}
+					/>
 				</div>
 			</div>
 			<div className="relative flex max-w-[calc(100vw_-_88px)] grow overflow-x-auto overflow-y-auto">
