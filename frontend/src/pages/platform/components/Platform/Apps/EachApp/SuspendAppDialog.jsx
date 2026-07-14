@@ -36,7 +36,7 @@ export default function SuspendAppDialog({ app, onClose, onSuspended }) {
 		if (!matches || busy) return;
 		setBusy(true);
 		const { success, response } = await triggerApi({
-			url: `/api/v1/platform/apps/${app.uuid}/status/suspend/`,
+			url: `/api/v1/apps/${app.uuid}/status/suspend/`,
 			type: 'POST',
 			loader: false,
 			showErrorModal: false,

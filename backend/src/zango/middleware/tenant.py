@@ -26,10 +26,13 @@ from zango.core.utils import get_region_from_timezone
 # Paths that continue to work when a tenant is suspended. Two categories
 # matter: (a) health checks, so load balancers don't mark the app as
 # unhealthy; (b) the platform-admin API, so operators can unsuspend from
-# the admin UI.
+# the admin UI. The platform apps API lives at /api/v1/apps/ (mounted by
+# `zango.api.platform.urls` under `urls_public.py`), not at
+# /api/v1/platform/apps/ — matching the real URL structure here.
 _SUSPEND_EXEMPT_PATH_PREFIXES = (
     "/api/v1/health/",
-    "/api/v1/platform/",
+    "/api/v1/apps/",
+    "/platform/",
 )
 
 

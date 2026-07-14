@@ -46,7 +46,7 @@ export default function StatusActionMenu({ app, onStatusChanged }) {
 		if (busy) return;
 		setBusy(true);
 		const { success, response } = await triggerApi({
-			url: `/api/v1/platform/apps/${app.uuid}/status/unsuspend/`,
+			url: `/api/v1/apps/${app.uuid}/status/unsuspend/`,
 			type: 'POST',
 			loader: false,
 			showErrorModal: false,
