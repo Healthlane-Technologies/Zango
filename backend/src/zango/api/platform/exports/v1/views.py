@@ -66,19 +66,47 @@ def _content_disposition(filename: str) -> str:
 
 
 def _serve_filefield(file_field, name: str) -> HttpResponse:
-    """Return a signed-URL redirect for remote storage, direct stream otherwise."""
+    """Return a signed-URL redirect for remote storage, direct stream otherwise.
+
+    For S3-backed storage, bake `Content-Disposition: attachment` into the
+    presigned URL (via `ResponseContentDisposition`). Without it, S3 serves
+    the CSV inline and the browser renders it as text in a new tab instead
+    of downloading.
+    """
+    storage = file_field.storage
+    disposition = _content_disposition(name)
+
+    # Try to build a presigned URL that forces the download disposition.
+    url = None
     try:
-        url = file_field.url
+        url = storage.url(
+            file_field.name,
+            parameters={
+                "ResponseContentDisposition": disposition,
+                "ResponseContentType": "text/csv",
+            },
+        )
+    except TypeError:
+        # Storage backend doesn't accept `parameters` — fall back to plain url.
+        try:
+            url = file_field.url
+        except Exception:  # noqa: BLE001
+            url = None
     except Exception:  # noqa: BLE001
-        url = None
+        try:
+            url = file_field.url
+        except Exception:  # noqa: BLE001
+            url = None
+
     if url and (url.startswith("http://") or url.startswith("https://")):
         resp = HttpResponse(status=302)
         resp["Location"] = url
-        resp["Content-Disposition"] = _content_disposition(name)
+        resp["Content-Disposition"] = disposition
         return resp
+
     fh = file_field.open("rb")
     resp = FileResponse(fh, as_attachment=True, filename=name)
-    resp["Content-Disposition"] = _content_disposition(name)
+    resp["Content-Disposition"] = disposition
     return resp
 
 
