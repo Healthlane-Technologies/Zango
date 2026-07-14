@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import csv
 import json
-from typing import Any, Iterable
+from typing import Any
+
+from django.utils import timezone
 
 
 # ---------------------------------------------------------------------------
@@ -23,7 +25,7 @@ from typing import Any, Iterable
 
 class ExportBuilder:
     """Common interface. Concrete builders override `queryset`, `row_for`,
-    `summarise`, and set `HEADERS`."""
+    `pairs`, and set `HEADERS`."""
 
     HEADERS: list[str] = []
 
@@ -33,9 +35,17 @@ class ExportBuilder:
     def count(self, filters: dict, tenant) -> int:
         return self.queryset(filters, tenant).count()
 
+    def pairs(self, filters: dict) -> list[tuple[str, str]]:
+        """Human-readable [(label, value), ...] pairs for the filter payload.
+
+        Powers both the My Downloads one-line summary and the CSV footer.
+        """
+        raise NotImplementedError
+
     def summarise(self, filters: dict) -> str:
         """One-line summary of the filter payload for My Downloads."""
-        raise NotImplementedError
+        parts = [f"{label}: {value}" for label, value in self.pairs(filters)]
+        return " · ".join(parts) if parts else "No filters"
 
     def row_for(self, obj) -> list:
         raise NotImplementedError
@@ -47,7 +57,23 @@ class ExportBuilder:
         for row in self.queryset(filters, tenant).iterator(chunk_size=1000):
             writer.writerow(self.row_for(row))
             count += 1
+        self._write_footer(writer, filters, count)
         return count
+
+    def _write_footer(self, writer, filters: dict, row_count: int) -> None:
+        """Append filter metadata after the data rows so an Excel viewer sees
+        what filters produced the export."""
+        writer.writerow([])
+        writer.writerow(["Filters applied"])
+        pairs = self.pairs(filters)
+        if pairs:
+            for label, value in pairs:
+                writer.writerow([f"{label}: {value}"])
+        else:
+            writer.writerow(["No filters"])
+        writer.writerow([])
+        writer.writerow([f"Exported at: {timezone.now():%Y-%m-%d %H:%M:%S %Z}"])
+        writer.writerow([f"Rows exported: {row_count}"])
 
 
 # ---------------------------------------------------------------------------
@@ -59,18 +85,17 @@ def _fmt_dt(dt) -> str:
     return dt.isoformat() if dt else ""
 
 
-def _summarise_parts(parts: Iterable[str]) -> str:
-    parts = [p for p in parts if p]
-    return " · ".join(parts) if parts else "no filter"
-
-
 def _fmt_daterange(v: Any) -> str:
-    """Render a table-date-range column filter compactly for the summary."""
+    """Render a table-date-range column filter for humans."""
     if isinstance(v, dict):
         start = v.get("startDate") or v.get("start") or ""
         end = v.get("endDate") or v.get("end") or ""
-        if start or end:
-            return f"{start}..{end}"
+        if start and end:
+            return f"{start} → {end}"
+        if start:
+            return f"from {start}"
+        if end:
+            return f"until {end}"
     if isinstance(v, str) and v:
         return v
     return ""
@@ -93,6 +118,14 @@ class AppUsersBuilder(ExportBuilder):
         "Date Joined",
     ]
 
+    _COLUMN_LABELS = {
+        "user_name": "Name",
+        "email": "Email",
+        "mobile": "Mobile",
+        "user_id": "User ID",
+        "roles_access": "Role",
+    }
+
     def queryset(self, filters, tenant):
         from zango.api.platform.tenancy.v1.views import UserViewAPIV1
 
@@ -102,22 +135,22 @@ class AppUsersBuilder(ExportBuilder):
             filters.get("columns", {}) or {},
         )
 
-    def summarise(self, filters):
-        parts = []
+    def pairs(self, filters):
+        out: list[tuple[str, str]] = []
         search = (filters.get("search") or "").strip()
         if search:
-            parts.append(f'search "{search}"')
+            out.append(("Search", f'"{search}"'))
         columns = filters.get("columns", {}) or {}
         is_active = columns.get("is_active")
         if is_active == "true":
-            parts.append("active only")
+            out.append(("Status", "Active only"))
         elif is_active == "false":
-            parts.append("inactive only")
-        for key in ("email", "mobile", "user_name", "user_id", "roles_access"):
+            out.append(("Status", "Inactive only"))
+        for key, label in self._COLUMN_LABELS.items():
             v = columns.get(key)
             if v not in (None, ""):
-                parts.append(f"{key} {v}")
-        return _summarise_parts(parts)
+                out.append((label, str(v)))
+        return out
 
     def row_for(self, u):
         return [
@@ -135,6 +168,19 @@ class AppUsersBuilder(ExportBuilder):
 # ---------------------------------------------------------------------------
 # Access Logs
 # ---------------------------------------------------------------------------
+
+
+_ATTEMPT_TYPE_LABELS = {
+    "login": "Login",
+    "switch_role": "Switch Role",
+}
+
+_LOGIN_SUCCESS_LABELS = {
+    "successful": "Successful",
+    "failed": "Failed",
+    "true": "Successful",
+    "false": "Failed",
+}
 
 
 class AccessLogsBuilder(ExportBuilder):
@@ -161,23 +207,27 @@ class AccessLogsBuilder(ExportBuilder):
             filters.get("columns", {}) or {},
         )
 
-    def summarise(self, filters):
-        parts = []
+    def pairs(self, filters):
+        out: list[tuple[str, str]] = []
         search = (filters.get("search") or "").strip()
         if search:
-            parts.append(f'search "{search}"')
+            out.append(("Search", f'"{search}"'))
         columns = filters.get("columns", {}) or {}
         if columns.get("attempt_type"):
-            parts.append(f"attempt_type {columns['attempt_type']}")
+            v = columns["attempt_type"]
+            out.append(("Attempt Type", _ATTEMPT_TYPE_LABELS.get(str(v), str(v))))
         if columns.get("is_login_successful"):
-            parts.append(columns["is_login_successful"])
+            v = columns["is_login_successful"]
+            out.append(("Result", _LOGIN_SUCCESS_LABELS.get(str(v), str(v))))
         if columns.get("role"):
-            parts.append(f"role {columns['role']}")
-        for date_col in ("attempt_time", "session_expired_at"):
-            rng = _fmt_daterange(columns.get(date_col))
-            if rng:
-                parts.append(f"{date_col} {rng}")
-        return _summarise_parts(parts)
+            out.append(("Role", str(columns["role"])))
+        rng = _fmt_daterange(columns.get("attempt_time"))
+        if rng:
+            out.append(("Attempt Time", rng))
+        rng = _fmt_daterange(columns.get("session_expired_at"))
+        if rng:
+            out.append(("Session Expired", rng))
+        return out
 
     def row_for(self, log):
         return [
@@ -229,21 +279,39 @@ class _AuditLogsBuilderBase(ExportBuilder):
             self.MODEL_TYPE,
         )
 
-    def summarise(self, filters):
-        parts = []
+    def _object_type_label(self, tenant, value) -> str:
+        # `object_type` filter carries a content_type id — try to resolve it
+        # to the model's short name for a human label. Falls back to the raw
+        # id if lookup fails.
+        try:
+            from django.contrib.contenttypes.models import ContentType
+
+            ct = ContentType.objects.filter(id=int(value)).first()
+            if ct is not None:
+                return ct.model
+        except (TypeError, ValueError):
+            pass
+        except Exception:
+            pass
+        return str(value)
+
+    def pairs(self, filters):
+        out: list[tuple[str, str]] = []
         search = (filters.get("search") or "").strip()
         if search:
-            parts.append(f'search "{search}"')
+            out.append(("Search", f'"{search}"'))
         columns = filters.get("columns", {}) or {}
         action = columns.get("action")
         if action is not None and action != "":
-            parts.append(f"action {_ACTION_LABELS.get(str(action), action)}")
+            out.append(("Action", _ACTION_LABELS.get(str(action), str(action))))
         if columns.get("object_type"):
-            parts.append(f"object_type {columns['object_type']}")
+            out.append(
+                ("Object Type", self._object_type_label(None, columns["object_type"]))
+            )
         rng = _fmt_daterange(columns.get("timestamp"))
         if rng:
-            parts.append(f"timestamp {rng}")
-        return _summarise_parts(parts)
+            out.append(("Timestamp", rng))
+        return out
 
     def _actor(self, entry) -> tuple[str, str]:
         # Guard against dangling FKs so a stale actor never breaks the export.
