@@ -38,20 +38,6 @@ Keep this in sync with upstream all.html if django-session-security is upgraded.
     {# Bootstrap a SessionSecurity instance as the sessionSecurity global variable #}
     {% zango_session_security_config as zango_ss_config %}
 
-    {# ---- TEMPORARY DEBUG BANNER (remove before release) ---- #}
-    {% localize off %}
-    <div id="zango_ss_debug" style="position:fixed;bottom:0;left:0;z-index:99999;background:#111;color:#0f0;font:12px/1.4 monospace;padding:6px 10px;border-top-right-radius:6px;">
-        <h2 style="margin:0;font-size:13px;color:#fff;">SESSION SECURITY DEBUG</h2>
-        schema=<b>{{ zango_ss_config.schema }}</b>
-        &nbsp;warnAfter=<b>{{ zango_ss_config.warn_after|unlocalize }}</b>s
-        &nbsp;expireAfter=<b>{{ zango_ss_config.expire_after|unlocalize }}</b>s
-        &nbsp;pingUrl=<b>{% url 'session_security_ping' %}</b>
-        <div id="zango_ss_debug_runtime" style="color:#ff0;">runtime: (script did not run)</div>
-        <div id="zango_ss_debug_idle" style="color:#0ff;"></div>
-    </div>
-    {% endlocalize %}
-    {# ---- END DEBUG BANNER (runtime probe runs after construction, below) ---- #}
-
     {% localize off %}
         <script type="text/javascript">
             var sessionSecurity = new yourlabs.SessionSecurity({
@@ -62,39 +48,4 @@ Keep this in sync with upstream all.html if django-session-security is upgraded.
             });
         </script>
     {% endlocalize %}
-
-    {# ---- TEMPORARY DEBUG PROBE (remove before release) ---- #}
-    <script type="text/javascript">
-        (function () {
-            var el = document.getElementById('zango_ss_debug_runtime');
-            if (!el) { return; }
-            var jq = (typeof window.jQuery !== 'undefined');
-            var ns = (typeof window.yourlabs !== 'undefined' && !!window.yourlabs.SessionSecurity);
-            var inst = (typeof window.sessionSecurity !== 'undefined' && !!window.sessionSecurity);
-            var dlg = !!document.getElementById('session_security_warning');
-            el.innerHTML = 'jQuery=<b>' + jq + '</b> yourlabs=<b>' + ns +
-                           '</b> instance=<b>' + inst + '</b> dialogEl=<b>' + dlg + '</b>';
-            if (!jq || !ns || !inst || !dlg) { el.style.color = '#f33'; }
-
-            // Surface any JS error on the page -- a thrown error elsewhere (e.g. in
-            // the React bundle) can stop these scripts from ever running.
-            window.addEventListener('error', function (e) {
-                var d = document.getElementById('zango_ss_debug_idle');
-                if (d) { d.innerHTML = '<b style="color:#f33">JS ERROR: ' + e.message + '</b>'; }
-            });
-
-            setInterval(function () {
-                var s = window.sessionSecurity;
-                var d = document.getElementById('zango_ss_debug_idle');
-                if (!d) { return; }
-                if (!s) { d.innerHTML = '<b style="color:#f33">sessionSecurity MISSING</b>'; return; }
-                var idle = Math.floor((new Date() - s.lastActivity) / 1000);
-                var vis = s.$warning && s.$warning.length ? s.$warning.is(':visible') : 'no-el';
-                d.innerHTML = 'idleFor=<b>' + idle + '</b>s warnAt=<b>' + s.warnAfter +
-                              '</b> expireAt=<b>' + s.expireAfter +
-                              '</b> warningVisible=<b>' + vis + '</b> expired=<b>' + !!s.expired + '</b>';
-            }, 1000);
-        })();
-    </script>
-    {# ---- END DEBUG PROBE ---- #}
 {% endif %}

@@ -31,12 +31,9 @@ def zango_session_security_config(context):
     Resolved per app (tenant) and user role, falling back to the platform
     ``SESSION_SECURITY_WARN_AFTER`` / ``SESSION_SECURITY_EXPIRE_AFTER``.
     """
-    from django.db import connection
-
     request = context.get("request")
     warn_after, expire_after = get_app_session_timeout(request=request)
     return {
         "warn_after": warn_after,
         "expire_after": expire_after,
-        "schema": connection.schema_name,
     }
