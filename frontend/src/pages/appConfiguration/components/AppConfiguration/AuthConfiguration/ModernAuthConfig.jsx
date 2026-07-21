@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -28,6 +28,17 @@ const ModernAuthConfig = () => {
 	const [activeSection, setActiveSection] = useState('overview');
 	const [isEditMode, setIsEditMode] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	// Each idle-timeout SessionTimeoutField reports completeness; a "Custom" field
+	// left empty is incomplete and must block Save.
+	const [sessionFieldsValid, setSessionFieldsValid] = useState({ expire: true, warn: true });
+	const setExpireValid = useCallback(
+		(v) => setSessionFieldsValid((p) => (p.expire === v ? p : { ...p, expire: v })),
+		[]
+	);
+	const setWarnValid = useCallback(
+		(v) => setSessionFieldsValid((p) => (p.warn === v ? p : { ...p, warn: v })),
+		[]
+	);
 	const [roles, setRoles] = useState([]);
 	const [loadingRoles, setLoadingRoles] = useState(true);
 	const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
@@ -342,6 +353,11 @@ const ModernAuthConfig = () => {
 
 	// Handle form submission
 	const handleSubmit = async (values) => {
+		// A "Custom" idle-timeout field left empty is incomplete; don't submit.
+		if (!sessionFieldsValid.expire || !sessionFieldsValid.warn) {
+			return;
+		}
+
 		setIsSaving(true);
 
 		const cleanedAuthConfig = values;
@@ -735,7 +751,7 @@ const ModernAuthConfig = () => {
 											</button>
 											<button
 												type="submit"
-												disabled={isSaving}
+												disabled={isSaving || !sessionFieldsValid.expire || !sessionFieldsValid.warn}
 												className="px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{isSaving ? 'Saving...' : 'Save Changes'}
@@ -810,6 +826,7 @@ const ModernAuthConfig = () => {
 																value={values?.session_policy?.session_expire_after ?? ''}
 																inheritedValue={values?.session_policy?.platform_session_expire_after}
 																placeholder="e.g. 30"
+																onValidityChange={setExpireValid}
 																onChange={(next) => setFieldValue("session_policy.session_expire_after", next)}
 															/>
 														</div>
@@ -819,6 +836,7 @@ const ModernAuthConfig = () => {
 																value={values?.session_policy?.session_warn_after ?? ''}
 																inheritedValue={values?.session_policy?.platform_session_warn_after}
 																placeholder="e.g. 25"
+																onValidityChange={setWarnValid}
 																onChange={(next) => setFieldValue("session_policy.session_warn_after", next)}
 															/>
 															<p className="text-[12px] text-[#6B7280] mt-[6px]">Must be shorter than the sign-out time.</p>
@@ -852,7 +870,7 @@ const ModernAuthConfig = () => {
 											</button>
 											<button
 												type="submit"
-												disabled={isSaving}
+												disabled={isSaving || !sessionFieldsValid.expire || !sessionFieldsValid.warn}
 												className="px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{isSaving ? 'Saving...' : 'Save Changes'}
@@ -932,7 +950,7 @@ const ModernAuthConfig = () => {
 											</button>
 											<button
 												type="submit"
-												disabled={isSaving}
+												disabled={isSaving || !sessionFieldsValid.expire || !sessionFieldsValid.warn}
 												className="px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{isSaving ? 'Saving...' : 'Save Changes'}

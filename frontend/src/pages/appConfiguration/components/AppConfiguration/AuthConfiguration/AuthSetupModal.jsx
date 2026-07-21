@@ -257,6 +257,18 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 
 	const [setupData, setSetupData] = useState(getInitialData());
 
+	// Each SessionTimeoutField reports whether it is complete (a "Custom" field
+	// with no value entered is incomplete). Both must be valid to leave the step.
+	const [sessionFieldsValid, setSessionFieldsValid] = useState({ expire: true, warn: true });
+	const setExpireValid = React.useCallback(
+		(v) => setSessionFieldsValid((p) => (p.expire === v ? p : { ...p, expire: v })),
+		[]
+	);
+	const setWarnValid = React.useCallback(
+		(v) => setSessionFieldsValid((p) => (p.warn === v ? p : { ...p, warn: v })),
+		[]
+	);
+
 	// Reset data when modal opens
 	React.useEffect(() => {
 		if (show) {
@@ -1319,6 +1331,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							value={setupData.session_policy.session_expire_after}
 							inheritedValue={setupData.session_policy.platform_session_expire_after}
 							placeholder="e.g. 30"
+							onValidityChange={setExpireValid}
 							onChange={(next) => setSetupData(prev => ({
 								...prev,
 								session_policy: {
@@ -1337,6 +1350,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 							value={setupData.session_policy.session_warn_after}
 							inheritedValue={setupData.session_policy.platform_session_warn_after}
 							placeholder="e.g. 25"
+							onValidityChange={setWarnValid}
 							onChange={(next) => setSetupData(prev => ({
 								...prev,
 								session_policy: {
@@ -1367,6 +1381,8 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		setupData.session_policy.platform_session_warn_after,
 		setupData.session_policy.platform_session_expire_after,
 		sessionTimeoutError,
+		setExpireValid,
+		setWarnValid,
 	]);
 
 	// Step 5: Review
@@ -1581,8 +1597,9 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				setupData.login_methods.otp.enabled;
 		}
 		// Block leaving the session/tokens step (and completing setup) while the
-		// idle-timeout pair is invalid, so it never reaches the server.
-		if (sessionTimeoutError) {
+		// idle-timeout pair is invalid (warn >= expire) or a "Custom" field was
+		// selected but left empty -- so neither ever reaches the server.
+		if (sessionTimeoutError || !sessionFieldsValid.expire || !sessionFieldsValid.warn) {
 			return false;
 		}
 		return true;

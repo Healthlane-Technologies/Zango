@@ -67,15 +67,25 @@ const isBlank = (v) => v === '' || v === null || v === undefined;
 // inheritedValue: seconds this level inherits when not overridden, shown on the
 //   inherit option so admins see the effective value.
 // inheritLabel: wording for the inherit option ("Platform default" / "App default").
+// onValidityChange(isValid): notified whenever this field's validity changes.
+//   The field is invalid only when "Custom" is selected but no value is entered
+//   -- so the parent form can block submit immediately. The inline error text,
+//   however, only appears once the input has been blurred while empty, or when
+//   the parent forces it via forceShowError (a submit attempt) -- so we don't
+//   accuse the user of an empty field the instant they pick "Custom".
 export default function SessionTimeoutField({
 	value,
 	onChange,
 	inheritedValue,
 	inheritLabel = 'Platform default',
 	placeholder = 'e.g. 30',
+	onValidityChange,
+	forceShowError = false,
 }) {
 	const [mode, setMode] = useState(() => (isBlank(value) ? 'default' : 'custom'));
 	const [unit, setUnit] = useState(() => splitTimeoutSeconds(value).unit);
+	// Whether the custom input has been blurred while empty; gates the inline error.
+	const [touched, setTouched] = useState(false);
 	// Tracks the value this component last emitted, so the sync effect can tell a
 	// self-induced change (e.g. picking "custom" -> '') apart from an external
 	// reset (role switch / modal reopen) and only force-resync on the latter.
@@ -105,6 +115,7 @@ export default function SessionTimeoutField({
 
 	const handleModeChange = (nextMode) => {
 		setMode(nextMode);
+		setTouched(false); // fresh selection: don't show "empty" error until blur
 		emit(''); // both inherit and custom start blank; custom waits for input
 	};
 
@@ -123,31 +134,69 @@ export default function SessionTimeoutField({
 		return value / u.seconds;
 	})();
 
+	// "Custom" selected but nothing typed -> incomplete, so the form must not
+	// submit. Inherit mode (blank) is fine; a filled custom value is fine.
+	const isEmptyCustom = mode === 'custom' && isBlank(value);
+	// Show the inline error only once the user has blurred the empty input or the
+	// parent forces it on a submit attempt -- not the instant "Custom" is picked.
+	const showError = isEmptyCustom && (touched || forceShowError);
+
+	useEffect(() => {
+		if (onValidityChange) onValidityChange(!isEmptyCustom);
+		// On unmount (e.g. switching away from this config section) report valid,
+		// so a stale "incomplete" state can't keep the form's Save button disabled.
+		return () => {
+			if (onValidityChange) onValidityChange(true);
+		};
+	}, [isEmptyCustom, onValidityChange]);
+
 	return (
-		<div className="flex flex-wrap items-center gap-[8px]">
-			<Dropdown
-				value={mode}
-				options={modeOptions}
-				onChange={handleModeChange}
-				className={mode === 'custom' ? 'w-[150px]' : 'min-w-[260px] flex-1 max-w-[340px]'}
-			/>
-			{mode === 'custom' && (
-				<>
-					<input
-						type="number"
-						min="1"
-						placeholder={placeholder}
-						value={numberValue}
-						onChange={(e) => emit(e.target.value === '' ? '' : timeoutToSeconds(e.target.value, unit))}
-						className="w-[110px] rounded-[8px] border border-[#E5E7EB] px-[12px] py-[8px] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
-					/>
-					<Dropdown
-						value={unit}
-						options={TIMEOUT_UNITS.map((u) => ({ key: u.key, label: u.label }))}
-						onChange={handleUnitChange}
-						className="w-[130px]"
-					/>
-				</>
+		<div>
+			<div className="flex flex-wrap items-center gap-[8px]">
+				<Dropdown
+					value={mode}
+					options={modeOptions}
+					onChange={handleModeChange}
+					className={mode === 'custom' ? 'w-[150px]' : 'min-w-[260px] flex-1 max-w-[340px]'}
+				/>
+				{mode === 'custom' && (
+					<>
+						<input
+							type="number"
+							min="1"
+							step="1"
+							placeholder={placeholder}
+							value={numberValue}
+							onKeyDown={(e) => {
+								// Block characters that would make a zero/negative/decimal value:
+								// '-' (negative), 'e'/'E' (exponent), '.' (fractional).
+								if (['-', 'e', 'E', '.', '+'].includes(e.key)) e.preventDefault();
+							}}
+							onChange={(e) => {
+								const raw = e.target.value;
+								if (raw === '') return emit('');
+								// Only accept a positive whole number; a 0 or negative entry
+								// is ignored so it can never reach the config or the server.
+								const n = parseInt(raw, 10);
+								if (Number.isNaN(n) || n < 1) return;
+								emit(timeoutToSeconds(n, unit));
+							}}
+							onBlur={() => setTouched(true)}
+							className="w-[110px] rounded-[8px] border border-[#E5E7EB] px-[12px] py-[8px] text-[14px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#5048ED] focus:border-transparent"
+						/>
+						<Dropdown
+							value={unit}
+							options={TIMEOUT_UNITS.map((u) => ({ key: u.key, label: u.label }))}
+							onChange={handleUnitChange}
+							className="w-[130px]"
+						/>
+					</>
+				)}
+			</div>
+			{showError && (
+				<p className="mt-[6px] text-[12px] text-[#DC2626]">
+					Enter a value or choose {inheritLabel.toLowerCase()}.
+				</p>
 			)}
 		</div>
 	);

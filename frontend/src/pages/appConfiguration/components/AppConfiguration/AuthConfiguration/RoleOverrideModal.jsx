@@ -15,6 +15,17 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 		enforce_sso: false,
 	});
 	const [sessionTimeoutError, setSessionTimeoutError] = useState('');
+	// Each SessionTimeoutField reports completeness; a "Custom" field left empty
+	// is incomplete and must block the save.
+	const [sessionFieldsValid, setSessionFieldsValid] = useState({ expire: true, warn: true });
+	const setExpireValid = React.useCallback(
+		(v) => setSessionFieldsValid((p) => (p.expire === v ? p : { ...p, expire: v })),
+		[]
+	);
+	const setWarnValid = React.useCallback(
+		(v) => setSessionFieldsValid((p) => (p.warn === v ? p : { ...p, warn: v })),
+		[]
+	);
 
 	// Initialize role override states from currentOverrides
 	useEffect(() => {
@@ -82,6 +93,12 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 			if (overrideConfig.two_factor_auth) {
 				cleanedOverride.two_factor_auth = overrideConfig.two_factor_auth;
 			}
+			// A "Custom" idle-timeout field with no value entered is incomplete.
+			if (!sessionFieldsValid.expire || !sessionFieldsValid.warn) {
+				setSessionTimeoutError('Enter a value or choose the default for the idle timeout.');
+				return;
+			}
+
 			if (overrideConfig.session_policy) {
 				const sessionPolicy = { ...overrideConfig.session_policy };
 				// A blank value means "inherit the app / platform default"; drop the
@@ -641,6 +658,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																					inheritedValue={appHasOverride ? appExpire : globalAuthConfig?.session_policy?.platform_session_expire_after}
 																					inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
 																					placeholder="e.g. 30"
+																					onValidityChange={setExpireValid}
 																					onChange={(next) => {
 																						setSessionTimeoutError('');
 																						setOverrideConfig(prev => ({
@@ -669,6 +687,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																					inheritedValue={appHasOverride ? appWarn : globalAuthConfig?.session_policy?.platform_session_warn_after}
 																					inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
 																					placeholder="e.g. 25"
+																					onValidityChange={setWarnValid}
 																					onChange={(next) => {
 																						setSessionTimeoutError('');
 																						setOverrideConfig(prev => ({
