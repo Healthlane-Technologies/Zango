@@ -6,7 +6,7 @@ import { selectAppConfigurationData, toggleRerenderPage } from '../../../slice';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
 import { humanizeTokenTtl, humanizeTokenTtlWithDefault } from '../../../../../utils/tokenTtl';
-import { humanizeSessionTimeout } from '../../../../../utils/sessionTimeout';
+import { humanizeSessionExpiry, humanizeSessionWarning } from '../../../../../utils/sessionTimeout';
 import { useParams, useNavigate } from 'react-router-dom';
 import InputField from '../../../../../components/Form/InputField';
 import AuthSetupModal from './AuthSetupModal';
@@ -800,19 +800,30 @@ const ModernAuthConfig = () => {
 													/>
 													<p className="text-[12px] text-[#6B7280] mt-[2px]">Lifetime of API auth tokens. Leave blank to inherit the platform default.</p>
 												</div>
-												<div>
-													<p className="text-[14px] font-medium text-[#111827] mb-[6px]">Idle session timeout</p>
-													<SessionTimeoutField
-														warnValue={values?.session_policy?.session_warn_after ?? ''}
-														expireValue={values?.session_policy?.session_expire_after ?? ''}
-														inheritedWarn={values?.session_policy?.platform_session_warn_after}
-														inheritedExpire={values?.session_policy?.platform_session_expire_after}
-														onChange={({ warn, expire }) => {
-															setFieldValue("session_policy.session_warn_after", warn);
-															setFieldValue("session_policy.session_expire_after", expire);
-														}}
-													/>
-													<p className="text-[12px] text-[#6B7280] mt-[4px]">Warns the user, then auto-logs-out after inactivity. Leave on inherit to use the platform default. Applies to both app frontends.</p>
+												<div className="rounded-[8px] border border-[#E5E7EB] p-[16px]">
+													<p className="text-[14px] font-medium text-[#111827]">Session idle timeout</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">Warns the user, then signs them out after a period of inactivity. Leave either on inherit to use the platform default.</p>
+													<div className="mt-[16px] space-y-[16px]">
+														<div>
+															<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">Sign out after</label>
+															<SessionTimeoutField
+																value={values?.session_policy?.session_expire_after ?? ''}
+																inheritedValue={values?.session_policy?.platform_session_expire_after}
+																placeholder="e.g. 30"
+																onChange={(next) => setFieldValue("session_policy.session_expire_after", next)}
+															/>
+														</div>
+														<div className="border-t border-[#E5E7EB] pt-[16px]">
+															<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">Show warning after</label>
+															<SessionTimeoutField
+																value={values?.session_policy?.session_warn_after ?? ''}
+																inheritedValue={values?.session_policy?.platform_session_warn_after}
+																placeholder="e.g. 25"
+																onChange={(next) => setFieldValue("session_policy.session_warn_after", next)}
+															/>
+															<p className="text-[12px] text-[#6B7280] mt-[6px]">Must be shorter than the sign-out time.</p>
+														</div>
+													</div>
 												</div>
 												<div className="flex items-center justify-between">
 													<div>
@@ -964,11 +975,9 @@ const ModernAuthConfig = () => {
 									color="blue"
 								/>
 								<QuickStat
-									label="Idle Timeout"
-									value={humanizeSessionTimeout(
-										authConfig.session_policy?.session_warn_after,
+									label="Session Idle Timeout"
+									value={humanizeSessionExpiry(
 										authConfig.session_policy?.session_expire_after,
-										authConfig.session_policy?.platform_session_warn_after,
 										authConfig.session_policy?.platform_session_expire_after
 									)}
 									color="purple"
@@ -1099,14 +1108,22 @@ const ModernAuthConfig = () => {
 													{humanizeTokenTtlWithDefault(authConfig.session_policy?.token_ttl, authConfig.session_policy?.platform_token_ttl)}
 												</span>
 											</div>
-											<div className="flex items-center justify-between mb-[4px]">
-												<p className="text-[13px] font-medium text-[#111827]">Idle Timeout</p>
+											<p className="text-[13px] font-medium text-[#111827] mt-[8px] mb-[4px]">Session Idle Timeout</p>
+											<div className="flex items-center justify-between mb-[4px] pl-[10px]">
+												<p className="text-[13px] text-[#6B7280]">Sign out after</p>
 												<span className="px-[8px] py-[2px] bg-[#EDE9FE] text-[#6B21A8] rounded-[6px] text-[11px] font-medium">
-													{humanizeSessionTimeout(
-														authConfig.session_policy?.session_warn_after,
+													{humanizeSessionExpiry(
 														authConfig.session_policy?.session_expire_after,
-														authConfig.session_policy?.platform_session_warn_after,
 														authConfig.session_policy?.platform_session_expire_after
+													)}
+												</span>
+											</div>
+											<div className="flex items-center justify-between mb-[4px] pl-[10px]">
+												<p className="text-[13px] text-[#6B7280]">Show warning after</p>
+												<span className="px-[8px] py-[2px] bg-[#EDE9FE] text-[#6B21A8] rounded-[6px] text-[11px] font-medium">
+													{humanizeSessionWarning(
+														authConfig.session_policy?.session_warn_after,
+														authConfig.session_policy?.platform_session_warn_after
 													)}
 												</span>
 											</div>

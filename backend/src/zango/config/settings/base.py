@@ -240,25 +240,29 @@ PACKAGE_BUCKET_NAME = "zelthy3-packages"
 
 # Session Security
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-# Platform-default idle timeout (seconds). Apps/roles can override these via
-# Auth Config (session_policy.session_warn_after / session_expire_after); see
-# zango.core.utils.get_app_session_timeout and the SessionSecurityMiddleware /
-# session_security_tags overrides.
+# Platform-default idle timeout (seconds), used when an app/role does not
+# override it via Auth Config (session_policy.session_warn_after /
+# session_expire_after). Resolution: zango.core.utils.get_app_session_timeout.
+# Enforced by zango.middleware.session_security.SessionSecurityMiddleware
+# (logout) and surfaced to clients by zango/templates/session_security/all.html
+# (legacy apps) and appbuilder's AppInitializeAPI (React apps).
 SESSION_SECURITY_WARN_AFTER = 1700
 SESSION_SECURITY_EXPIRE_AFTER = 1800
-
-# We intentionally override django-session-security's ``session_security_tags``
-# library (in zango.apps.shared.tenancy.templatetags) so legacy, template-based
-# apps pick up per-app/role idle-timeout values. Django's template-library
-# registry resolves ours (the later-installed app wins), but its system check
-# still warns about the duplicate library name -- silence that expected warning.
-SILENCED_SYSTEM_CHECKS = ["templates.E003"]
 
 # List of url names that should be ignored by the session security middleware.
 # For example the request of history_sidebar is made without user intervention,
 # as such it should not be used to update the user’s last activity datetime.
+#
+# Anything the UI polls on a timer MUST be listed here: a background request
+# resets the "last activity" timestamp, so the user can never go idle and the
+# warning / auto-logout never fire. celery-status is polled continuously by the
+# app panel, which is why the panel never used to time out.
+#
+# Note: the URL must have a name= in its urlconf for this to work, and
+# session_security snapshots this list at import -- a restart is required.
 SESSION_SECURITY_PASSIVE_URL_NAMES = [
     "history_sidebar",
+    "celery-status",
 ]
 
 AXES_BEHIND_REVERSE_PROXY = True

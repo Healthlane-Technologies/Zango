@@ -604,40 +604,68 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																	Overrides the app-level token expiry for users logging in with this role. Choose <span className="font-medium">Platform default</span> to inherit.
 																</p>
 															</div>
-															<div>
-																<label className="block text-[13px] font-medium text-[#111827] mb-[8px]">
-																	Idle Session Timeout
-																</label>
-																{(() => {
-																	// A role inherits the app-level idle timeout when the
-																	// app has set one; otherwise the platform default.
-																	const appWarn = globalAuthConfig?.session_policy?.session_warn_after;
-																	const appExpire = globalAuthConfig?.session_policy?.session_expire_after;
-																	const appHasOverride =
-																		(appWarn !== undefined && appWarn !== null) ||
-																		(appExpire !== undefined && appExpire !== null);
-																	return (
-																		<SessionTimeoutField
-																			key={selectedRoleId}
-																			warnValue={overrideConfig.session_policy?.session_warn_after}
-																			expireValue={overrideConfig.session_policy?.session_expire_after}
-																			inheritedWarn={appHasOverride ? appWarn : globalAuthConfig?.session_policy?.platform_session_warn_after}
-																			inheritedExpire={appHasOverride ? appExpire : globalAuthConfig?.session_policy?.platform_session_expire_after}
-																			inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
-																			onChange={({ warn, expire }) => setOverrideConfig(prev => ({
-																				...prev,
-																				session_policy: {
-																					...prev.session_policy,
-																					session_warn_after: warn,
-																					session_expire_after: expire
-																				}
-																			}))}
-																		/>
-																	);
-																})()}
-																<p className="mt-[6px] text-[12px] text-[#6B7280]">
-																	Overrides the app-level idle warning and auto-logout timing for this role. Choose <span className="font-medium">inherit</span> to use the app / platform default.
+															<div className="rounded-[8px] border border-[#E5E7EB] p-[16px]">
+																<p className="text-[13px] font-medium text-[#111827]">Session Idle Timeout</p>
+																<p className="mt-[2px] text-[12px] text-[#6B7280]">
+																	Overrides the app-level idle warning and sign-out timing for this role. Choose <span className="font-medium">inherit</span> on either to use the app / platform default.
 																</p>
+																<div className="mt-[16px] space-y-[16px]">
+																	<div>
+																		<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">
+																			Sign out after
+																		</label>
+																		{(() => {
+																			// Each field inherits the app-level value when the app
+																			// has set one; otherwise the platform default.
+																			const appExpire = globalAuthConfig?.session_policy?.session_expire_after;
+																			const appHasOverride = appExpire !== undefined && appExpire !== null;
+																			return (
+																				<SessionTimeoutField
+																					key={selectedRoleId}
+																					value={overrideConfig.session_policy?.session_expire_after}
+																					inheritedValue={appHasOverride ? appExpire : globalAuthConfig?.session_policy?.platform_session_expire_after}
+																					inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
+																					placeholder="e.g. 30"
+																					onChange={(next) => setOverrideConfig(prev => ({
+																						...prev,
+																						session_policy: {
+																							...prev.session_policy,
+																							session_expire_after: next
+																						}
+																					}))}
+																				/>
+																			);
+																		})()}
+																	</div>
+																	<div className="border-t border-[#E5E7EB] pt-[16px]">
+																		<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">
+																			Show warning after
+																		</label>
+																		{(() => {
+																			const appWarn = globalAuthConfig?.session_policy?.session_warn_after;
+																			const appHasOverride = appWarn !== undefined && appWarn !== null;
+																			return (
+																				<SessionTimeoutField
+																					key={selectedRoleId}
+																					value={overrideConfig.session_policy?.session_warn_after}
+																					inheritedValue={appHasOverride ? appWarn : globalAuthConfig?.session_policy?.platform_session_warn_after}
+																					inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
+																					placeholder="e.g. 25"
+																					onChange={(next) => setOverrideConfig(prev => ({
+																						...prev,
+																						session_policy: {
+																							...prev.session_policy,
+																							session_warn_after: next
+																						}
+																					}))}
+																				/>
+																			);
+																		})()}
+																		<p className="mt-[6px] text-[12px] text-[#6B7280]">
+																			Must be shorter than the sign-out time.
+																		</p>
+																	</div>
+																</div>
 															</div>
 														</div>
 													)}

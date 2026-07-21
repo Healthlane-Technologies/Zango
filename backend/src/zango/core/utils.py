@@ -522,6 +522,12 @@ def get_app_token_ttl(user=None, user_role=None, tenant=None):
     return None if ttl == 0 else timedelta(seconds=ttl)
 
 
+# How long the "session expiring" warning should show for when an app/role
+# configures a logout time short enough that the inherited warning wouldn't fit
+# inside it. Only used to derive a warning, never to override a configured one.
+DEFAULT_SESSION_WARNING_WINDOW = 60  # seconds
+
+
 def get_app_session_timeout(request=None, user=None, user_role=None, tenant=None):
     """Resolve the idle-session timeout (warn/expire, in seconds) using the
     standard auth precedence (user_role > tenant > platform default).
@@ -529,8 +535,8 @@ def get_app_session_timeout(request=None, user=None, user_role=None, tenant=None
     Returns a ``(warn_after, expire_after)`` tuple of ints (seconds).
 
     Config lives under ``session_policy.session_warn_after`` /
-    ``session_policy.session_expire_after``. A missing key inherits the platform
-    default (``settings.SESSION_SECURITY_WARN_AFTER`` /
+    ``session_policy.session_expire_after``, each set independently. A missing key
+    inherits the platform default (``settings.SESSION_SECURITY_WARN_AFTER`` /
     ``SESSION_SECURITY_EXPIRE_AFTER``). All resolution args are optional and
     auto-resolved by ``get_auth_priority`` (it reads ``role_id`` from the session,
     so this works even before the user-role middleware has run).
@@ -538,32 +544,67 @@ def get_app_session_timeout(request=None, user=None, user_role=None, tenant=None
     Guard: if the resolved values are inconsistent (``expire <= warn``, or a
     non-positive value), fall back to the platform defaults so the countdown UX
     never breaks.
+
+    On the public schema (the platform app panel) there is no tenant auth_config
+    to read, and ``get_auth_priority`` queries tenant-only tables (SAMLModel), so
+    the platform defaults are returned without attempting resolution.
     """
+    from django_tenants.utils import get_public_schema_name
+
     from django.conf import settings
+    from django.db import connection
 
     platform_warn = int(getattr(settings, "SESSION_SECURITY_WARN_AFTER", 1700))
     platform_expire = int(getattr(settings, "SESSION_SECURITY_EXPIRE_AFTER", 1800))
 
-    session_policy = (
-        get_auth_priority(
-            policy="session_policy",
-            request=request,
-            user=user,
-            user_role=user_role,
-            tenant=tenant,
+    if connection.schema_name == get_public_schema_name():
+        return platform_warn, platform_expire
+
+    try:
+        session_policy = (
+            get_auth_priority(
+                policy="session_policy",
+                request=request,
+                user=user,
+                user_role=user_role,
+                tenant=tenant,
+            )
+            or {}
         )
-        or {}
-    )
+    except Exception:
+        # Never let auth-config resolution break session security / page render.
+        return platform_warn, platform_expire
 
     warn = session_policy.get("session_warn_after")
     expire = session_policy.get("session_expire_after")
 
-    warn = platform_warn if not isinstance(warn, int) else warn
-    expire = platform_expire if not isinstance(expire, int) else expire
+    # Each key is configured independently, so one may be set while the other
+    # inherits. Treat anything that isn't a positive int (absent, wrong type, or
+    # a non-positive value that predates validation) as "inherit", so one bad
+    # key never discards the other's valid, explicit value.
+    def _clean(val):
+        if isinstance(val, bool) or not isinstance(val, int) or val <= 0:
+            return None
+        return val
 
-    # Defensive: an inverted or non-positive pair would break the client
-    # countdown (warning window = expire - warn). Fall back to platform defaults.
-    if warn <= 0 or expire <= 0 or expire <= warn:
+    warn = _clean(warn)
+    expire = _clean(expire)
+
+    if expire is None:
+        expire = platform_expire
+    if warn is None:
+        warn = platform_warn
+        # The inherited warning may not fit inside an explicitly-configured
+        # (shorter) logout window -- e.g. logout=5min with the platform's
+        # 28min warning. Keep the admin's explicit logout and derive a warning
+        # inside it rather than discarding both.
+        if warn >= expire:
+            warn = max(expire - DEFAULT_SESSION_WARNING_WINDOW, expire // 2)
+
+    if warn >= expire:
+        # Both explicitly set but inverted (the serializer rejects this, so it
+        # means pre-existing/hand-edited config): fall back rather than ship a
+        # broken countdown.
         return platform_warn, platform_expire
 
     return warn, expire

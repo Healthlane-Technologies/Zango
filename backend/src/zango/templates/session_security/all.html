@@ -1,0 +1,100 @@
+{% comment %}
+Zango's replacement for django-session-security's session_security/all.html.
+
+Legacy (non-appbuilder) apps include this the usual way:
+
+    {% include 'session_security/all.html' %}
+
+It is resolved ahead of the library's copy by the filesystem template loader
+configured in TEMPLATES["OPTIONS"]["loaders"] (which points at zango/templates and
+runs before app_directories.Loader), so **no workspace template needs to change**.
+
+The only difference from the library's version is where warnAfter / expireAfter come
+from: the library hardcodes the platform-global SESSION_SECURITY_* settings via its own
+filters, whereas we resolve them per app (tenant) and user role from Auth Config
+(session_policy.session_warn_after / session_expire_after), falling back to the platform
+defaults. Server-side logout is enforced independently by
+zango.middleware.session_security.SessionSecurityMiddleware.
+
+Keep this in sync with upstream all.html if django-session-security is upgraded.
+{% endcomment %}
+
+{% load zango_session_security %}
+{% load i18n l10n %}
+{% load static %}
+
+{# If the user is not authenticated then there is no session to secure ! #}
+{% if request.user.is_authenticated %}
+
+    {# The modal dialog stylesheet, it's pretty light so it should be easy to hack #}
+    <link rel="stylesheet" type="text/css" href="{% static 'session_security/style.css' %}">
+
+    {# Include the template that actually contains the modal dialog #}
+    {% include 'session_security/dialog.html' %}
+
+    {# Load SessionSecurity javascript 'class', jquery should be loaded - by you - at this point #}
+    <script type="text/javascript" src="{% static 'session_security/script.js' %}"></script>
+
+    {# Bootstrap a SessionSecurity instance as the sessionSecurity global variable #}
+    {% zango_session_security_config as zango_ss_config %}
+
+    {# ---- TEMPORARY DEBUG BANNER (remove before release) ---- #}
+    {% localize off %}
+    <div id="zango_ss_debug" style="position:fixed;bottom:0;left:0;z-index:99999;background:#111;color:#0f0;font:12px/1.4 monospace;padding:6px 10px;border-top-right-radius:6px;">
+        <h2 style="margin:0;font-size:13px;color:#fff;">SESSION SECURITY DEBUG</h2>
+        schema=<b>{{ zango_ss_config.schema }}</b>
+        &nbsp;warnAfter=<b>{{ zango_ss_config.warn_after|unlocalize }}</b>s
+        &nbsp;expireAfter=<b>{{ zango_ss_config.expire_after|unlocalize }}</b>s
+        &nbsp;pingUrl=<b>{% url 'session_security_ping' %}</b>
+        <div id="zango_ss_debug_runtime" style="color:#ff0;">runtime: (script did not run)</div>
+        <div id="zango_ss_debug_idle" style="color:#0ff;"></div>
+    </div>
+    {% endlocalize %}
+    {# ---- END DEBUG BANNER (runtime probe runs after construction, below) ---- #}
+
+    {% localize off %}
+        <script type="text/javascript">
+            var sessionSecurity = new yourlabs.SessionSecurity({
+                pingUrl: '{% url 'session_security_ping' %}',
+                warnAfter: {{ zango_ss_config.warn_after|unlocalize }},
+                expireAfter: {{ zango_ss_config.expire_after|unlocalize }},
+                confirmFormDiscard: "{% trans 'You have unsaved changes in a form of this page.' %}"
+            });
+        </script>
+    {% endlocalize %}
+
+    {# ---- TEMPORARY DEBUG PROBE (remove before release) ---- #}
+    <script type="text/javascript">
+        (function () {
+            var el = document.getElementById('zango_ss_debug_runtime');
+            if (!el) { return; }
+            var jq = (typeof window.jQuery !== 'undefined');
+            var ns = (typeof window.yourlabs !== 'undefined' && !!window.yourlabs.SessionSecurity);
+            var inst = (typeof window.sessionSecurity !== 'undefined' && !!window.sessionSecurity);
+            var dlg = !!document.getElementById('session_security_warning');
+            el.innerHTML = 'jQuery=<b>' + jq + '</b> yourlabs=<b>' + ns +
+                           '</b> instance=<b>' + inst + '</b> dialogEl=<b>' + dlg + '</b>';
+            if (!jq || !ns || !inst || !dlg) { el.style.color = '#f33'; }
+
+            // Surface any JS error on the page -- a thrown error elsewhere (e.g. in
+            // the React bundle) can stop these scripts from ever running.
+            window.addEventListener('error', function (e) {
+                var d = document.getElementById('zango_ss_debug_idle');
+                if (d) { d.innerHTML = '<b style="color:#f33">JS ERROR: ' + e.message + '</b>'; }
+            });
+
+            setInterval(function () {
+                var s = window.sessionSecurity;
+                var d = document.getElementById('zango_ss_debug_idle');
+                if (!d) { return; }
+                if (!s) { d.innerHTML = '<b style="color:#f33">sessionSecurity MISSING</b>'; return; }
+                var idle = Math.floor((new Date() - s.lastActivity) / 1000);
+                var vis = s.$warning && s.$warning.length ? s.$warning.is(':visible') : 'no-el';
+                d.innerHTML = 'idleFor=<b>' + idle + '</b>s warnAt=<b>' + s.warnAfter +
+                              '</b> expireAt=<b>' + s.expireAfter +
+                              '</b> warningVisible=<b>' + vis + '</b> expired=<b>' + !!s.expired + '</b>';
+            }, 1000);
+        })();
+    </script>
+    {# ---- END DEBUG PROBE ---- #}
+{% endif %}
