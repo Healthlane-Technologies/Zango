@@ -77,6 +77,24 @@ export const humanizeSessionWarning = (warn, platformWarn, inheritLabel) =>
 // display as inherited rather than app-specific).
 export const isSessionTimeoutInherited = (warn, expire) => isBlank(warn) && isBlank(expire);
 
+// Client-side check that mirrors the backend serializer's
+// `validate_session_policy_timeout`: warn must be strictly less than expire.
+// Both are optional/independent, so it only fires when BOTH are set at this level
+// (a blank means "inherit", which the backend resolves and validates separately).
+//
+// Returns an error message string when invalid, or '' when OK. Callers can block
+// submit on a non-empty return and show the message inline.
+export const validateSessionTimeout = (warn, expire) => {
+	if (isBlank(warn) || isBlank(expire)) return '';
+	const w = Number(warn);
+	const e = Number(expire);
+	if (Number.isNaN(w) || Number.isNaN(e)) return '';
+	if (w >= e) {
+		return 'Warning time must be shorter than the sign-out time.';
+	}
+	return '';
+};
+
 // One-line summary of the effective idle timeout, e.g.
 // "30 minutes (warn at 25 minutes)", or "Platform default (30 minutes)" when
 // nothing is overridden at this level.

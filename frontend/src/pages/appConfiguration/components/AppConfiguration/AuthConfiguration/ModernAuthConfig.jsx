@@ -822,6 +822,9 @@ const ModernAuthConfig = () => {
 																onChange={(next) => setFieldValue("session_policy.session_warn_after", next)}
 															/>
 															<p className="text-[12px] text-[#6B7280] mt-[6px]">Must be shorter than the sign-out time.</p>
+											{errors?.session_policy?.session_expire_after && (
+												<p className="text-[12px] text-[#DC2626] mt-[6px]">{errors.session_policy.session_expire_after}</p>
+											)}
 														</div>
 													</div>
 												</div>

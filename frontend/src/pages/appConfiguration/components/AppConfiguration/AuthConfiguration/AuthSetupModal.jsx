@@ -4,7 +4,7 @@ import { Fragment } from 'react';
 import { humanizeTokenTtl } from '../../../../../utils/tokenTtl';
 import TokenTtlField from './TokenTtlField';
 import SessionTimeoutField from './SessionTimeoutField';
-import { humanizeSessionTimeout } from '../../../../../utils/sessionTimeout';
+import { humanizeSessionTimeout, validateSessionTimeout } from '../../../../../utils/sessionTimeout';
 
 // JSON Key-Value Pair Input Component (moved outside to prevent recreation on every render)
 const JsonKeyValueInput = React.memo(({ value, onChange, placeholder = "Add key-value pairs" }) => {
@@ -1268,6 +1268,14 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		</div>
 	), [setupData.two_factor_auth]);
 
+	// When both idle-timeout values are set, warn must be < expire (mirrors the
+	// backend serializer). Empty message = valid. Used to gate the wizard and show
+	// the error inline on the session/tokens step.
+	const sessionTimeoutError = validateSessionTimeout(
+		setupData.session_policy.session_warn_after,
+		setupData.session_policy.session_expire_after
+	);
+
 	// Step 4: Session & Tokens
 	const Step4SessionTokens = useMemo(() => (
 		<div className="space-y-[24px]">
@@ -1340,6 +1348,11 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 						<p className="mt-[6px] text-[12px] text-[#6B7280]">
 							Must be shorter than the sign-out time.
 						</p>
+						{sessionTimeoutError && (
+							<p className="mt-[6px] text-[12px] text-[#DC2626]">
+								{sessionTimeoutError}
+							</p>
+						)}
 					</div>
 				</div>
 			</div>
@@ -1353,6 +1366,7 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		setupData.session_policy.platform_token_ttl,
 		setupData.session_policy.platform_session_warn_after,
 		setupData.session_policy.platform_session_expire_after,
+		sessionTimeoutError,
 	]);
 
 	// Step 5: Review
@@ -1565,6 +1579,11 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				setupData.login_methods.sso.enabled ||
 				setupData.login_methods.oidc.enabled ||
 				setupData.login_methods.otp.enabled;
+		}
+		// Block leaving the session/tokens step (and completing setup) while the
+		// idle-timeout pair is invalid, so it never reaches the server.
+		if (sessionTimeoutError) {
+			return false;
 		}
 		return true;
 	};

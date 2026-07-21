@@ -3,6 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import TokenTtlField from './TokenTtlField';
 import SessionTimeoutField from './SessionTimeoutField';
+import { validateSessionTimeout } from '../../../../../utils/sessionTimeout';
 
 const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig = {}, currentOverrides = {}, initialSelectedRoleId = null }) => {
 	const [selectedRoleId, setSelectedRoleId] = useState(null);
@@ -13,6 +14,7 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 		session_policy: null,
 		enforce_sso: false,
 	});
+	const [sessionTimeoutError, setSessionTimeoutError] = useState('');
 
 	// Initialize role override states from currentOverrides
 	useEffect(() => {
@@ -88,6 +90,19 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 					const v = sessionPolicy[key];
 					if (v === '' || v === null || v === undefined) delete sessionPolicy[key];
 				});
+
+				// Match the backend serializer: when both idle-timeout values are set
+				// on this override, warn must be < expire. Block the save and show the
+				// error inline rather than letting the server reject it.
+				const timeoutError = validateSessionTimeout(
+					sessionPolicy.session_warn_after,
+					sessionPolicy.session_expire_after
+				);
+				if (timeoutError) {
+					setSessionTimeoutError(timeoutError);
+					return;
+				}
+
 				cleanedOverride.session_policy = sessionPolicy;
 			}
 			// Include enforce_sso
@@ -626,13 +641,16 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																					inheritedValue={appHasOverride ? appExpire : globalAuthConfig?.session_policy?.platform_session_expire_after}
 																					inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
 																					placeholder="e.g. 30"
-																					onChange={(next) => setOverrideConfig(prev => ({
-																						...prev,
-																						session_policy: {
-																							...prev.session_policy,
-																							session_expire_after: next
-																						}
-																					}))}
+																					onChange={(next) => {
+																						setSessionTimeoutError('');
+																						setOverrideConfig(prev => ({
+																							...prev,
+																							session_policy: {
+																								...prev.session_policy,
+																								session_expire_after: next
+																							}
+																						}));
+																					}}
 																				/>
 																			);
 																		})()}
@@ -651,19 +669,27 @@ const RoleOverrideModal = ({ show, onClose, onSave, roles = [], globalAuthConfig
 																					inheritedValue={appHasOverride ? appWarn : globalAuthConfig?.session_policy?.platform_session_warn_after}
 																					inheritLabel={appHasOverride ? 'App default' : 'Platform default'}
 																					placeholder="e.g. 25"
-																					onChange={(next) => setOverrideConfig(prev => ({
-																						...prev,
-																						session_policy: {
-																							...prev.session_policy,
-																							session_warn_after: next
-																						}
-																					}))}
+																					onChange={(next) => {
+																						setSessionTimeoutError('');
+																						setOverrideConfig(prev => ({
+																							...prev,
+																							session_policy: {
+																								...prev.session_policy,
+																								session_warn_after: next
+																							}
+																						}));
+																					}}
 																				/>
 																			);
 																		})()}
 																		<p className="mt-[6px] text-[12px] text-[#6B7280]">
 																			Must be shorter than the sign-out time.
 																		</p>
+																		{sessionTimeoutError && (
+																			<p className="mt-[6px] text-[12px] text-[#DC2626]">
+																				{sessionTimeoutError}
+																			</p>
+																		)}
 																	</div>
 																</div>
 															</div>
