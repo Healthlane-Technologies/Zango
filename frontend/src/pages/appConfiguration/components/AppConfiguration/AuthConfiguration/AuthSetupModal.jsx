@@ -3,6 +3,8 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { humanizeTokenTtl } from '../../../../../utils/tokenTtl';
 import TokenTtlField from './TokenTtlField';
+import SessionTimeoutField from './SessionTimeoutField';
+import { humanizeSessionTimeout, validateSessionTimeout } from '../../../../../utils/sessionTimeout';
 
 // JSON Key-Value Pair Input Component (moved outside to prevent recreation on every render)
 const JsonKeyValueInput = React.memo(({ value, onChange, placeholder = "Add key-value pairs" }) => {
@@ -254,6 +256,18 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 	};
 
 	const [setupData, setSetupData] = useState(getInitialData());
+
+	// Each SessionTimeoutField reports whether it is complete (a "Custom" field
+	// with no value entered is incomplete). Both must be valid to leave the step.
+	const [sessionFieldsValid, setSessionFieldsValid] = useState({ expire: true, warn: true });
+	const setExpireValid = React.useCallback(
+		(v) => setSessionFieldsValid((p) => (p.expire === v ? p : { ...p, expire: v })),
+		[]
+	);
+	const setWarnValid = React.useCallback(
+		(v) => setSessionFieldsValid((p) => (p.warn === v ? p : { ...p, warn: v })),
+		[]
+	);
 
 	// Reset data when modal opens
 	React.useEffect(() => {
@@ -1266,6 +1280,14 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 		</div>
 	), [setupData.two_factor_auth]);
 
+	// When both idle-timeout values are set, warn must be < expire (mirrors the
+	// backend serializer). Empty message = valid. Used to gate the wizard and show
+	// the error inline on the session/tokens step.
+	const sessionTimeoutError = validateSessionTimeout(
+		setupData.session_policy.session_warn_after,
+		setupData.session_policy.session_expire_after
+	);
+
 	// Step 4: Session & Tokens
 	const Step4SessionTokens = useMemo(() => (
 		<div className="space-y-[24px]">
@@ -1293,8 +1315,75 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 					Lifetime of API auth tokens issued on login. Choose <span className="font-medium">Platform default</span> to inherit the global setting.
 				</p>
 			</div>
+
+			<div className="bg-[#F8FAFC] rounded-[12px] p-[20px]">
+				<h4 className="text-[14px] font-medium text-[#111827]">Session idle timeout</h4>
+				<p className="mt-[2px] text-[12px] text-[#6B7280]">
+					Warns the user, then signs them out after a period of inactivity. Choose <span className="font-medium">Platform default</span> on either to inherit the global setting.
+				</p>
+
+				<div className="mt-[16px] space-y-[16px]">
+					<div>
+						<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">
+							Sign out after
+						</label>
+						<SessionTimeoutField
+							value={setupData.session_policy.session_expire_after}
+							inheritedValue={setupData.session_policy.platform_session_expire_after}
+							placeholder="e.g. 30"
+							onValidityChange={setExpireValid}
+							onChange={(next) => setSetupData(prev => ({
+								...prev,
+								session_policy: {
+									...prev.session_policy,
+									session_expire_after: next
+								}
+							}))}
+						/>
+					</div>
+
+					<div className="border-t border-[#E5E7EB] pt-[16px]">
+						<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">
+							Show warning after
+						</label>
+						<SessionTimeoutField
+							value={setupData.session_policy.session_warn_after}
+							inheritedValue={setupData.session_policy.platform_session_warn_after}
+							placeholder="e.g. 25"
+							onValidityChange={setWarnValid}
+							onChange={(next) => setSetupData(prev => ({
+								...prev,
+								session_policy: {
+									...prev.session_policy,
+									session_warn_after: next
+								}
+							}))}
+						/>
+						<p className="mt-[6px] text-[12px] text-[#6B7280]">
+							Must be shorter than the sign-out time.
+						</p>
+						{sessionTimeoutError && (
+							<p className="mt-[6px] text-[12px] text-[#DC2626]">
+								{sessionTimeoutError}
+							</p>
+						)}
+					</div>
+				</div>
+			</div>
 		</div>
-	), [setupData.session_policy.token_ttl]);
+	), [
+		setupData.session_policy.token_ttl,
+		setupData.session_policy.session_warn_after,
+		setupData.session_policy.session_expire_after,
+		// platform_* are the inherited-default hints from the API; they arrive
+		// with the loaded config, so the inherit labels must re-render on them.
+		setupData.session_policy.platform_token_ttl,
+		setupData.session_policy.platform_session_warn_after,
+		setupData.session_policy.platform_session_expire_after,
+		sessionTimeoutError,
+		setExpireValid,
+		setWarnValid,
+	]);
 
 	// Step 5: Review
 	const Step5Review = useMemo(() => (
@@ -1387,6 +1476,12 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 						<div>Maximum concurrent sessions: {setupData.session_policy.max_concurrent_sessions === 0 ? 'Unlimited' : setupData.session_policy.max_concurrent_sessions}</div>
 						<div>Force logout on password change: {setupData.session_policy.force_logout_on_password_change ? 'Yes' : 'No'}</div>
 						<div>Token expiry: {humanizeTokenTtl(setupData.session_policy.token_ttl)}</div>
+						<div>Session idle timeout: {humanizeSessionTimeout(
+							setupData.session_policy.session_warn_after,
+							setupData.session_policy.session_expire_after,
+							setupData.session_policy.platform_session_warn_after,
+							setupData.session_policy.platform_session_expire_after
+						)}</div>
 					</div>
 				</div>
 
@@ -1500,6 +1595,12 @@ const AuthSetupModal = ({ show, onClose, onComplete, initialData = null, roles =
 				setupData.login_methods.sso.enabled ||
 				setupData.login_methods.oidc.enabled ||
 				setupData.login_methods.otp.enabled;
+		}
+		// Block leaving the session/tokens step (and completing setup) while the
+		// idle-timeout pair is invalid (warn >= expire) or a "Custom" field was
+		// selected but left empty -- so neither ever reaches the server.
+		if (sessionTimeoutError || !sessionFieldsValid.expire || !sessionFieldsValid.warn) {
+			return false;
 		}
 		return true;
 	};

@@ -1,0 +1,51 @@
+{% comment %}
+Zango's replacement for django-session-security's session_security/all.html.
+
+Legacy (non-appbuilder) apps include this the usual way:
+
+    {% include 'session_security/all.html' %}
+
+It is resolved ahead of the library's copy by the filesystem template loader
+configured in TEMPLATES["OPTIONS"]["loaders"] (which points at zango/templates and
+runs before app_directories.Loader), so **no workspace template needs to change**.
+
+The only difference from the library's version is where warnAfter / expireAfter come
+from: the library hardcodes the platform-global SESSION_SECURITY_* settings via its own
+filters, whereas we resolve them per app (tenant) and user role from Auth Config
+(session_policy.session_warn_after / session_expire_after), falling back to the platform
+defaults. Server-side logout is enforced independently by
+zango.middleware.session_security.SessionSecurityMiddleware.
+
+Keep this in sync with upstream all.html if django-session-security is upgraded.
+{% endcomment %}
+
+{% load zango_session_security %}
+{% load i18n l10n %}
+{% load static %}
+
+{# If the user is not authenticated then there is no session to secure ! #}
+{% if request.user.is_authenticated %}
+
+    {# The modal dialog stylesheet, it's pretty light so it should be easy to hack #}
+    <link rel="stylesheet" type="text/css" href="{% static 'session_security/style.css' %}">
+
+    {# Include the template that actually contains the modal dialog #}
+    {% include 'session_security/dialog.html' %}
+
+    {# Load SessionSecurity javascript 'class', jquery should be loaded - by you - at this point #}
+    <script type="text/javascript" src="{% static 'session_security/script.js' %}"></script>
+
+    {# Bootstrap a SessionSecurity instance as the sessionSecurity global variable #}
+    {% zango_session_security_config as zango_ss_config %}
+
+    {% localize off %}
+        <script type="text/javascript">
+            var sessionSecurity = new yourlabs.SessionSecurity({
+                pingUrl: '{% url 'session_security_ping' %}',
+                warnAfter: {{ zango_ss_config.warn_after|unlocalize }},
+                expireAfter: {{ zango_ss_config.expire_after|unlocalize }},
+                confirmFormDiscard: "{% trans 'You have unsaved changes in a form of this page.' %}"
+            });
+        </script>
+    {% endlocalize %}
+{% endif %}

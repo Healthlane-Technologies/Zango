@@ -132,3 +132,6 @@ package-lock.json
 **/plugins/
 
 .docusaurus
+
+# Local planning / scratch docs (kept out of git)
+.claude/plans/

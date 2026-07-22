@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -6,16 +6,39 @@ import { selectAppConfigurationData, toggleRerenderPage } from '../../../slice';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
 import { humanizeTokenTtl, humanizeTokenTtlWithDefault } from '../../../../../utils/tokenTtl';
+import { humanizeSessionExpiry, humanizeSessionWarning } from '../../../../../utils/sessionTimeout';
 import { useParams, useNavigate } from 'react-router-dom';
 import InputField from '../../../../../components/Form/InputField';
 import AuthSetupModal from './AuthSetupModal';
 import RoleOverrideModal from './RoleOverrideModal';
 import SAMLProviderModal from './SAMLProviderModal';
+import SessionTimeoutField from './SessionTimeoutField';
+
+// A blank session_policy value means "inherit the default", so drop the key
+// rather than persisting an empty value. Mutates the passed session_policy.
+const dropBlankSessionPolicyKeys = (sessionPolicy) => {
+	if (!sessionPolicy) return;
+	['token_ttl', 'session_warn_after', 'session_expire_after'].forEach((key) => {
+		const v = sessionPolicy[key];
+		if (v === '' || v === null || v === undefined) delete sessionPolicy[key];
+	});
+};
 
 const ModernAuthConfig = () => {
 	const [activeSection, setActiveSection] = useState('overview');
 	const [isEditMode, setIsEditMode] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	// Each idle-timeout SessionTimeoutField reports completeness; a "Custom" field
+	// left empty is incomplete and must block Save.
+	const [sessionFieldsValid, setSessionFieldsValid] = useState({ expire: true, warn: true });
+	const setExpireValid = useCallback(
+		(v) => setSessionFieldsValid((p) => (p.expire === v ? p : { ...p, expire: v })),
+		[]
+	);
+	const setWarnValid = useCallback(
+		(v) => setSessionFieldsValid((p) => (p.warn === v ? p : { ...p, warn: v })),
+		[]
+	);
 	const [roles, setRoles] = useState([]);
 	const [loadingRoles, setLoadingRoles] = useState(true);
 	const [showAuthSetupModal, setShowAuthSetupModal] = useState(false);
@@ -169,6 +192,8 @@ const ModernAuthConfig = () => {
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
 								token_ttl: authData.session_policy.token_ttl ?? '',
+								session_warn_after: authData.session_policy.session_warn_after ?? '',
+								session_expire_after: authData.session_policy.session_expire_after ?? '',
 							},
 							password_policy: {
 								min_length: authData.password_policy.min_length,
@@ -214,12 +239,9 @@ const ModernAuthConfig = () => {
 							},
 						};
 
-						// token_ttl: a blank value means "inherit the platform default",
-						// so drop the key rather than persisting an empty/0 value.
-						const tokenTtl = authConfig.session_policy.token_ttl;
-						if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
-							delete authConfig.session_policy.token_ttl;
-						}
+						// Blank session_policy values mean "inherit the default", so drop
+						// the keys rather than persisting empty values.
+						dropBlankSessionPolicyKeys(authConfig.session_policy);
 
 						// Save the configuration
 						const tempValues = {
@@ -292,6 +314,26 @@ const ModernAuthConfig = () => {
 				.min(0, "Cannot be negative")
 				.max(31536000, "Cannot exceed 31536000 seconds (1 year)")
 				.nullable(),
+			session_warn_after: Yup.number()
+				.integer("Must be a whole number of seconds")
+				.min(1, "Must be a positive number of seconds")
+				.max(86400, "Cannot exceed 86400 seconds (24 hours)")
+				.nullable(),
+			session_expire_after: Yup.number()
+				.integer("Must be a whole number of seconds")
+				.min(1, "Must be a positive number of seconds")
+				.max(86400, "Cannot exceed 86400 seconds (24 hours)")
+				.nullable()
+				.test(
+					'warn-lt-expire',
+					'Auto-logout must be greater than warn',
+					function (expire) {
+						const warn = this.parent?.session_warn_after;
+						if (warn === '' || warn === null || warn === undefined) return true;
+						if (expire === '' || expire === null || expire === undefined) return true;
+						return Number(warn) < Number(expire);
+					}
+				),
 		}),
 		password_policy: Yup.object({
 			min_length: Yup.number().min(4, "Minimum length must be at least 4").max(128, "Maximum length is 128"),
@@ -311,18 +353,18 @@ const ModernAuthConfig = () => {
 
 	// Handle form submission
 	const handleSubmit = async (values) => {
+		// A "Custom" idle-timeout field left empty is incomplete; don't submit.
+		if (!sessionFieldsValid.expire || !sessionFieldsValid.warn) {
+			return;
+		}
+
 		setIsSaving(true);
 
 		const cleanedAuthConfig = values;
 
-		// token_ttl: a blank value means "inherit the platform default", so drop
-		// the key rather than persisting an empty/0 value (0 = never expires).
-		const tokenTtl = cleanedAuthConfig?.session_policy?.token_ttl;
-		if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
-			if (cleanedAuthConfig?.session_policy) {
-				delete cleanedAuthConfig.session_policy.token_ttl;
-			}
-		}
+		// Blank session_policy values mean "inherit the default", so drop the keys
+		// rather than persisting empty values (token_ttl 0 = never expires).
+		dropBlankSessionPolicyKeys(cleanedAuthConfig?.session_policy);
 
 		const tempValues = {
 			auth_config: JSON.stringify(cleanedAuthConfig)
@@ -709,7 +751,7 @@ const ModernAuthConfig = () => {
 											</button>
 											<button
 												type="submit"
-												disabled={isSaving}
+												disabled={isSaving || !sessionFieldsValid.expire || !sessionFieldsValid.warn}
 												className="px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{isSaving ? 'Saving...' : 'Save Changes'}
@@ -774,6 +816,36 @@ const ModernAuthConfig = () => {
 													/>
 													<p className="text-[12px] text-[#6B7280] mt-[2px]">Lifetime of API auth tokens. Leave blank to inherit the platform default.</p>
 												</div>
+												<div className="rounded-[8px] border border-[#E5E7EB] p-[16px]">
+													<p className="text-[14px] font-medium text-[#111827]">Session idle timeout</p>
+													<p className="text-[12px] text-[#6B7280] mt-[2px]">Warns the user, then signs them out after a period of inactivity. Leave either on inherit to use the platform default.</p>
+													<div className="mt-[16px] space-y-[16px]">
+														<div>
+															<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">Sign out after</label>
+															<SessionTimeoutField
+																value={values?.session_policy?.session_expire_after ?? ''}
+																inheritedValue={values?.session_policy?.platform_session_expire_after}
+																placeholder="e.g. 30"
+																onValidityChange={setExpireValid}
+																onChange={(next) => setFieldValue("session_policy.session_expire_after", next)}
+															/>
+														</div>
+														<div className="border-t border-[#E5E7EB] pt-[16px]">
+															<label className="block text-[13px] font-medium text-[#374151] mb-[6px]">Show warning after</label>
+															<SessionTimeoutField
+																value={values?.session_policy?.session_warn_after ?? ''}
+																inheritedValue={values?.session_policy?.platform_session_warn_after}
+																placeholder="e.g. 25"
+																onValidityChange={setWarnValid}
+																onChange={(next) => setFieldValue("session_policy.session_warn_after", next)}
+															/>
+															<p className="text-[12px] text-[#6B7280] mt-[6px]">Must be shorter than the sign-out time.</p>
+											{errors?.session_policy?.session_expire_after && (
+												<p className="text-[12px] text-[#DC2626] mt-[6px]">{errors.session_policy.session_expire_after}</p>
+											)}
+														</div>
+													</div>
+												</div>
 												<div className="flex items-center justify-between">
 													<div>
 														<p className="text-[14px] font-medium text-[#111827]">Force logout on password change</p>
@@ -798,7 +870,7 @@ const ModernAuthConfig = () => {
 											</button>
 											<button
 												type="submit"
-												disabled={isSaving}
+												disabled={isSaving || !sessionFieldsValid.expire || !sessionFieldsValid.warn}
 												className="px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{isSaving ? 'Saving...' : 'Save Changes'}
@@ -878,7 +950,7 @@ const ModernAuthConfig = () => {
 											</button>
 											<button
 												type="submit"
-												disabled={isSaving}
+												disabled={isSaving || !sessionFieldsValid.expire || !sessionFieldsValid.warn}
 												className="px-[16px] py-[8px] bg-[#5048ED] text-white rounded-[8px] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 											>
 												{isSaving ? 'Saving...' : 'Save Changes'}
@@ -922,6 +994,14 @@ const ModernAuthConfig = () => {
 									label="Token Expiry"
 									value={humanizeTokenTtlWithDefault(authConfig.session_policy?.token_ttl, authConfig.session_policy?.platform_token_ttl)}
 									color="blue"
+								/>
+								<QuickStat
+									label="Session Idle Timeout"
+									value={humanizeSessionExpiry(
+										authConfig.session_policy?.session_expire_after,
+										authConfig.session_policy?.platform_session_expire_after
+									)}
+									color="purple"
 								/>
 								<QuickStat
 									label="Password Expiry"
@@ -1047,6 +1127,25 @@ const ModernAuthConfig = () => {
 												<p className="text-[13px] font-medium text-[#111827]">Token Expiry</p>
 												<span className="px-[8px] py-[2px] bg-[#DBEAFE] text-[#1E40AF] rounded-[6px] text-[11px] font-medium">
 													{humanizeTokenTtlWithDefault(authConfig.session_policy?.token_ttl, authConfig.session_policy?.platform_token_ttl)}
+												</span>
+											</div>
+											<p className="text-[13px] font-medium text-[#111827] mt-[8px] mb-[4px]">Session Idle Timeout</p>
+											<div className="flex items-center justify-between mb-[4px] pl-[10px]">
+												<p className="text-[13px] text-[#6B7280]">Sign out after</p>
+												<span className="px-[8px] py-[2px] bg-[#EDE9FE] text-[#6B21A8] rounded-[6px] text-[11px] font-medium">
+													{humanizeSessionExpiry(
+														authConfig.session_policy?.session_expire_after,
+														authConfig.session_policy?.platform_session_expire_after
+													)}
+												</span>
+											</div>
+											<div className="flex items-center justify-between mb-[4px] pl-[10px]">
+												<p className="text-[13px] text-[#6B7280]">Show warning after</p>
+												<span className="px-[8px] py-[2px] bg-[#EDE9FE] text-[#6B21A8] rounded-[6px] text-[11px] font-medium">
+													{humanizeSessionWarning(
+														authConfig.session_policy?.session_warn_after,
+														authConfig.session_policy?.platform_session_warn_after
+													)}
 												</span>
 											</div>
 											<p className="text-[12px] text-[#6B7280]">
@@ -1607,6 +1706,8 @@ const ModernAuthConfig = () => {
 							session_policy: {
 								max_concurrent_sessions: authData.session_policy.max_concurrent_sessions,
 								token_ttl: authData.session_policy.token_ttl ?? '',
+								session_warn_after: authData.session_policy.session_warn_after ?? '',
+								session_expire_after: authData.session_policy.session_expire_after ?? '',
 							},
 							password_policy: {
 								min_length: authData.password_policy.min_length,
@@ -1654,10 +1755,7 @@ const ModernAuthConfig = () => {
 
 						// token_ttl: a blank value means "inherit the platform default",
 						// so drop the key rather than persisting an empty/0 value.
-						const tokenTtl = updatedAuthConfig.session_policy.token_ttl;
-						if (tokenTtl === '' || tokenTtl === null || tokenTtl === undefined) {
-							delete updatedAuthConfig.session_policy.token_ttl;
-						}
+						dropBlankSessionPolicyKeys(updatedAuthConfig.session_policy);
 
 						// Save the configuration
 						const tempValues = {
