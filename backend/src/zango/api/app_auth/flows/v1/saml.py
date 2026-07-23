@@ -129,9 +129,13 @@ def acs(request, *args, **kwargs):
             request.session.pop("saml", None)
         enhanced_resp = AuthenticationResponse(request)
         resp_data = json.loads(enhanced_resp.content.decode("utf-8"))
-        return HttpResponseRedirect(
-            f"/app/login/?token={signing.dumps(resp_data, key=in_response_to)}&request_id={in_response_to}"
-        )
+
+        relay_state = request.POST.get("RelayState", None)
+        redirect_url = f"/app/login/?token={signing.dumps(resp_data, key=in_response_to)}&request_id={in_response_to}"
+        if "/api/v1/appauth/saml/init/" not in relay_state:
+            redirect_url = f"{redirect_url}&next={relay_state}"
+
+        return HttpResponseRedirect(redirect_url)
     else:
         url = f"/app/login/?token={signing.dumps({'error': errors}, key=in_response_to)}&request_id={in_response_to}"
         return HttpResponseRedirect(url)
@@ -224,7 +228,8 @@ class SAMLLoginInitViewV1(APIView, SAMLLoginMixin):
                     ],
                 }
                 return HttpResponse(json.dumps(resp), status=400)
-            return self.execute_sso_redirect(request, saml_config.id)
+            next_url = self.request.data.get("next", None)
+            return self.execute_sso_redirect(request, saml_config.id, next_url=next_url)
         except SAMLModel.DoesNotExist:
             resp = {
                 "status": 400,
