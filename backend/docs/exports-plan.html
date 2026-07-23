@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Downloads · Exports · Design + Implementation Plan | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-code:     #0F1117;
+  --text-strong:   #0B0D14;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+  --text-inverse:  #E5E7EE;
+  --border:        #E3E6EF;
+  --border-strong: #D4D8E5;
+  --border-soft:   #ECEEF5;
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --slate-50:#F4F5F8; --slate-500:#6E748D; --slate-700:#3D4159;
+  --brand: var(--indigo-500);
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px;
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06);
+  --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+  --shadow-lg: 0 12px 32px -8px rgba(15,19,36,.14), 0 4px 8px rgba(15,19,36,.05), inset 0 1px 0 rgba(255,255,255,.6);
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  font-feature-settings: 'cv11','ss01','ss03';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  background: var(--surface-page);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+.shell { max-width: 1140px; margin: 0 auto; padding: 40px 32px 96px; }
+
+/* Hero */
+.hero {
+  position: relative;
+  padding: 48px 52px 44px;
+  border-radius: var(--r-2xl);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(17,156,133,.20), transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, rgba(89,97,229,.20), transparent 55%),
+    linear-gradient(140deg, #14172A 0%, #1B1D3B 55%, #2A2C6B 100%);
+  color: var(--text-inverse);
+  margin-bottom: 40px;
+  box-shadow: 0 20px 60px -20px rgba(15,19,36,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: fadeUp 460ms var(--ease-out) both;
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600;
+  color: rgba(230,232,240,.85); margin-bottom: 20px;
+}
+.hero-kicker::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--teal-500); box-shadow: 0 0 0 3px rgba(17,156,133,.24);
+}
+.hero h1 {
+  font-size: 40px; font-weight: 600; letter-spacing: -0.030em; line-height: 1.05;
+  color: #FFFFFF; margin-bottom: 16px; max-width: 640px;
+}
+.hero h1 em { font-family: var(--font-display); font-style: italic; font-weight: 400; color: #A5EBDD; }
+.hero p.lede {
+  font-size: 15px; color: rgba(230,232,240,.72); line-height: 1.65; max-width: 64ch;
+}
+.hero-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 500;
+  background: rgba(230,232,240,.08); border: 1px solid rgba(230,232,240,.14);
+  color: rgba(230,232,240,.9);
+}
+.hero-chip.teal { background: rgba(17,156,133,.16); border-color: rgba(17,156,133,.32); color: #A5EBDD; }
+.hero-chip.amber { background: rgba(218,144,17,.18); border-color: rgba(218,144,17,.32); color: #FCEAC4; }
+
+/* Section */
+section { margin-bottom: 56px; scroll-margin-top: 24px; animation: fadeUp 380ms var(--ease-out) both; }
+section > .kicker {
+  display: inline-block; font-size: 10.5px; letter-spacing: .11em; text-transform: uppercase;
+  font-weight: 600; color: var(--brand); margin-bottom: 10px;
+}
+section h2 {
+  font-size: 26px; font-weight: 600; letter-spacing: -0.022em; color: var(--text-strong);
+  margin-bottom: 10px; line-height: 1.15;
+}
+section .lede { font-size: 14.5px; color: var(--text-muted); max-width: 68ch; margin-bottom: 26px; line-height: 1.6; }
+
+h3 {
+  font-size: 17px; font-weight: 600; color: var(--text-strong);
+  letter-spacing: -0.012em; margin-bottom: 10px; margin-top: 24px;
+}
+h4 {
+  font-size: 12.5px; font-weight: 600; color: var(--text-strong);
+  letter-spacing: .04em; text-transform: uppercase; margin: 18px 0 6px;
+}
+p, li { color: var(--text-body); font-size: 13.5px; line-height: 1.6; }
+p + p { margin-top: 8px; }
+ul, ol { padding-left: 22px; margin: 8px 0 12px; }
+li { margin-bottom: 5px; }
+strong, li b { color: var(--text-strong); font-weight: 600; }
+
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 22px 26px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+.card.teal { border-color: rgba(17,156,133,.26); background: linear-gradient(180deg, var(--teal-50) 0%, #FFF 65%); }
+.card.tinted { background: var(--surface-tinted); border-color: var(--indigo-100); }
+.card.sunken { background: var(--surface-sunken); box-shadow: none; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 16px 0; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 16px 0; }
+@media (max-width: 800px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Journey */
+.journey {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; gap: 14px; align-items: stretch;
+  margin: 20px 0 8px;
+}
+@media (max-width: 900px) { .journey { grid-template-columns: 1fr; } .journey-arrow { display: none; } }
+.journey-step {
+  background: var(--surface-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 18px 20px; position: relative;
+  box-shadow: var(--shadow-sm);
+}
+.journey-step.done { border-color: rgba(90,164,91,.26); background: linear-gradient(180deg, var(--sage-50) 0%, #FFF 60%); }
+.journey-step.wait { border-color: rgba(218,144,17,.28); background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 60%); }
+.journey-step .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--brand); color: white;
+  font-size: 11px; font-weight: 600; font-family: var(--font-mono);
+  margin-bottom: 10px;
+}
+.journey-step.done .num { background: var(--sage-500); }
+.journey-step.wait .num { background: var(--amber-500); }
+.journey-step .title { font-size: 13.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 6px; letter-spacing: -0.008em; }
+.journey-step .detail { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.journey-arrow { display: grid; place-items: center; color: var(--border-strong); font-size: 20px; }
+
+/* Mockups */
+.mockup {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  margin: 20px 0;
+}
+.mockup-chrome {
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.mockup-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+.mockup-dot.r { background: #FF6058; }
+.mockup-dot.y { background: #FFC130; }
+.mockup-dot.g { background: #29CE41; }
+.mockup-url {
+  margin-left: 12px; padding: 5px 12px; border-radius: 6px;
+  background: white; border: 1px solid var(--border); flex: 1;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+}
+.mockup-body { padding: 32px 36px; background: var(--surface-page); }
+
+/* Downloads table mock */
+.dl-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.dl-panel-header {
+  padding: 20px 24px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+}
+.dl-panel-header h3 { margin: 0 0 4px 0; letter-spacing: -0.015em; }
+.dl-panel-header .desc { font-size: 13px; color: var(--text-muted); }
+.refresh-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: white;
+  font-size: 13px; font-weight: 500; color: var(--text-body);
+  cursor: pointer; transition: all 140ms var(--ease-out);
+}
+.refresh-btn:hover { background: var(--surface-sunken); border-color: var(--text-muted); }
+
+.dl-row {
+  display: grid;
+  grid-template-columns: 155px 1fr 120px 130px 90px 100px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.dl-row.header {
+  background: var(--surface-sunken);
+  padding: 10px 24px;
+  font-size: 10px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+.dl-row:last-child { border-bottom: none; }
+.dl-kind { display: flex; align-items: center; gap: 10px; }
+.dl-kind-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(140deg, var(--indigo-500), var(--indigo-700));
+  display: grid; place-items: center; color: white;
+  font-size: 14px; font-weight: 600;
+  box-shadow: 0 2px 6px -1px rgba(89,97,229,.35);
+}
+.dl-kind-icon.audit { background: linear-gradient(140deg, var(--teal-500), var(--teal-700)); box-shadow: 0 2px 6px -1px rgba(17,156,133,.35); }
+.dl-kind-icon.access { background: linear-gradient(140deg, var(--amber-500), #B87608); box-shadow: 0 2px 6px -1px rgba(218,144,17,.35); }
+.dl-kind-label {
+  font-size: 13px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.005em;
+}
+.dl-kind-sub { font-size: 11.5px; color: var(--text-subtle); font-family: var(--font-mono); margin-top: 2px; }
+.dl-filters {
+  font-size: 12.5px; color: var(--text-body); line-height: 1.45;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.dl-filters .k { color: var(--text-subtle); font-weight: 500; font-family: var(--font-mono); font-size: 11px; }
+.dl-filters .v { color: var(--text-strong); font-weight: 500; }
+.dl-when { font-size: 12.5px; color: var(--text-body); }
+.dl-when .rel { color: var(--text-subtle); font-size: 11px; margin-top: 2px; display: block; }
+.dl-size { font-size: 12.5px; font-family: var(--font-mono); color: var(--text-body); }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600;
+  white-space: nowrap;
+}
+.status-pill.queued { background: var(--slate-50); color: var(--slate-700); }
+.status-pill.running { background: var(--amber-50); color: var(--amber-700); }
+.status-pill.success { background: var(--sage-50); color: var(--sage-700); }
+.status-pill.failed { background: var(--crimson-50); color: var(--crimson-700); }
+.status-pill::before { content: ''; width: 5px; height: 5px; border-radius: 999px; }
+.status-pill.queued::before { background: var(--slate-500); }
+.status-pill.running::before { background: var(--amber-500); animation: pulseDot 1.5s ease-in-out infinite; }
+.status-pill.success::before { background: var(--sage-500); }
+.status-pill.failed::before { background: var(--crimson-500); }
+
+.dl-actions {
+  display: flex; align-items: center; gap: 6px;
+  justify-content: flex-end;
+}
+.action-icon-btn {
+  width: 30px; height: 30px; border-radius: 6px;
+  background: white; border: 1px solid var(--border);
+  display: grid; place-items: center;
+  color: var(--text-muted); cursor: pointer;
+  transition: all 140ms var(--ease-out);
+}
+.action-icon-btn:hover { background: var(--surface-tinted); border-color: var(--indigo-100); color: var(--brand); }
+.action-icon-btn.danger:hover { background: var(--crimson-50); border-color: rgba(211,66,78,.28); color: var(--crimson-700); }
+.action-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.action-icon-btn:disabled:hover { background: white; border-color: var(--border); color: var(--text-muted); }
+
+/* Export button */
+.export-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: white;
+  font-size: 13px; font-weight: 500; color: var(--text-body);
+  cursor: pointer; transition: all 140ms var(--ease-out);
+}
+.export-btn:hover { background: var(--surface-sunken); border-color: var(--text-muted); }
+.export-btn.primary { background: var(--brand); color: white; border-color: transparent; box-shadow: 0 2px 6px -1px rgba(89,97,229,.35); }
+.export-btn.primary:hover { background: var(--indigo-700); }
+
+/* Toolbar mockup */
+.toolbar-mock {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.search-input-mock {
+  flex: 1;
+  padding: 8px 12px 8px 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px; color: var(--text-muted);
+  background: var(--surface-sunken) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235A607A' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+}
+
+/* Code */
+.code-card {
+  background: var(--surface-code);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin: 12px 0;
+}
+.code-header {
+  padding: 8px 14px;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px;
+}
+.code-path { color: rgba(230,232,240,.72); }
+.code-badge {
+  padding: 2px 8px; border-radius: 4px; font-size: 9.5px;
+  letter-spacing: .07em; text-transform: uppercase; font-weight: 600;
+}
+.code-badge.new { background: rgba(161,232,154,.15); color: #A1E89A; }
+.code-badge.mod { background: rgba(255,203,107,.15); color: #FFCB6B; }
+pre {
+  padding: 16px 18px; color: #E1E4ED;
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.65;
+  overflow-x: auto;
+}
+.tok-kw { color: #C792EA; } .tok-fn { color: #82AAFF; } .tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; } .tok-com { color: #6E748D; font-style: italic; }
+.tok-cls { color: #FFCB6B; } .tok-self { color: #FF9DBF; }
+
+.callout {
+  padding: 16px 20px; border-radius: var(--r-md);
+  border: 1px solid; margin: 18px 0; font-size: 13px;
+}
+.callout.note { background: var(--indigo-50); border-color: var(--indigo-100); color: var(--text-body); }
+.callout.tip { background: var(--sage-50); border-color: rgba(90,164,91,.28); color: var(--sage-700); }
+.callout.warn { background: var(--amber-50); border-color: var(--amber-100); color: #5A3B04; }
+.callout-title { font-weight: 600; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+.callout.note .callout-title { color: var(--indigo-700); }
+.callout.tip .callout-title { color: var(--sage-700); }
+.callout.warn .callout-title { color: var(--amber-700); }
+
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 12.5px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; background: var(--surface-sunken); }
+tr:last-child td { border-bottom: none; }
+td code { font-size: 11.5px; }
+
+code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px; color: var(--text-strong); }
+.path { font-family: var(--font-mono); font-size: 12px; background: rgba(17,156,133,.08); color: var(--teal-700); padding: 1px 6px; border-radius: 4px; }
+
+footer {
+  margin-top: 64px; padding: 28px 0 0;
+  border-top: 1px solid var(--border);
+  text-align: center; font-size: 12px; color: var(--text-subtle);
+}
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ============== HERO ============== -->
+<div class="hero">
+  <div class="hero-kicker">Zango platform · exports + my downloads</div>
+  <h1>Users and logs, exported — <em>asynchronously</em> and safely capped.</h1>
+  <p class="lede">
+    Operators can now export any list surface (App Users, Access Logs, Audit Logs) as CSV via a small Export button next to the search box. Jobs run through Celery under the existing tenant-suspend guard. A new "My Downloads" page lists every job with its filters, status, and a per-row Download / Delete. Files live for as long as the operator wants them — no auto-expiry, per-row control instead.
+  </p>
+  <div class="hero-meta">
+    <span class="hero-chip teal">4 export kinds, 1 model, 1 downloads page</span>
+    <span class="hero-chip amber">30,000-row cap · pre-dispatch validation</span>
+    <span class="hero-chip">CSV only · streaming · no third-party deps</span>
+  </div>
+</div>
+
+<!-- ============== LOCKED DECISIONS ============== -->
+<section>
+  <span class="kicker">01 · What we agreed</span>
+  <h2>Locked spec</h2>
+  <table>
+    <thead>
+      <tr><th>Decision</th><th>Choice</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Sync or async</td><td>Async — Celery task via <code>zango_task_executor</code></td></tr>
+      <tr><td>Notification</td><td>None — user refreshes My Downloads manually</td></tr>
+      <tr><td>Format</td><td>CSV only in v1</td></tr>
+      <tr><td>Row cap</td><td>30,000 rows · enforced pre-dispatch via <code>COUNT(*)</code></td></tr>
+      <tr><td>Retention</td><td>Lifetime · per-row Delete button on My Downloads</td></tr>
+      <tr><td>Rate limit</td><td>One <code>QUEUED</code> or <code>RUNNING</code> job per (user, kind)</td></tr>
+      <tr><td>New Django app</td><td><code>zango.apps.exports</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <div class="callout-title">Why async when 30k rows fits in 8 seconds</div>
+    <p>Even though every export could finish sync-fast under the cap, async gives us: (a) a persistent audit trail of who exported what with what filters — real value on a multi-tenant pharma platform, (b) tenant-suspend guard for free via the Celery chokepoint, (c) a UX where the operator clicks once and comes back later, and (d) parity with codexec's job pattern that operators already understand.</p>
+  </div>
+</section>
+
+<!-- ============== USER JOURNEY ============== -->
+<section>
+  <span class="kicker">02 · User journey</span>
+  <h2>Export → refresh → download</h2>
+  <div class="journey">
+    <div class="journey-step">
+      <div class="num">1</div>
+      <div class="title">User filters the list</div>
+      <div class="detail">On App Users / Access Logs / Audit Logs, they set search + column filters as they normally would. Table shows filtered results.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step">
+      <div class="num">2</div>
+      <div class="title">Clicks Export</div>
+      <div class="detail">POST goes out with the exact filter payload. If the pre-count is over 30k, they see a clear error naming the row count.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step wait">
+      <div class="num">3</div>
+      <div class="title">Toast confirms queued</div>
+      <div class="detail">"Export queued. Track it in <b>My Downloads</b>." Link to the downloads page. UI stays responsive.</div>
+    </div>
+    <div class="journey-arrow">→</div>
+    <div class="journey-step done">
+      <div class="num">4</div>
+      <div class="title">Refresh My Downloads → Download</div>
+      <div class="detail">When the operator revisits and refreshes, the row shows <b>Success</b> with a Download icon. Click → CSV lands in their browser.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== EXPORT BUTTON UX ============== -->
+<section>
+  <span class="kicker">03 · Export button</span>
+  <h2>Where the button lives on each list</h2>
+  <p class="lede">
+    One small button next to the search box. Same spot, same look on App Users, Access Logs, and both Audit Logs pages. Uses the current filter state at click time.
+  </p>
+
+  <h4>App Users, Access Logs, Audit Logs — top toolbar</h4>
+  <div class="toolbar-mock">
+    <div class="search-input-mock" style="flex: 1;">Search users…</div>
+    <button class="export-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export CSV
+    </button>
+  </div>
+
+  <h4>Rate-limit response</h4>
+  <p style="font-size: 13px; color: var(--text-muted); max-width: 62ch;">
+    If the user already has a <code>QUEUED</code> or <code>RUNNING</code> export of the same kind, clicking Export again shows a toast:
+    <br><br>
+    <span style="display: block; padding: 12px 16px; background: var(--indigo-50); border: 1px solid var(--indigo-100); border-radius: 8px; color: var(--indigo-700); font-size: 12.5px;">
+      <b>Export already in progress.</b> An export of App Users is running — <u>check My Downloads</u>.
+    </span>
+  </p>
+
+  <h4>Row cap exceeded</h4>
+  <p style="font-size: 13px; color: var(--text-muted); max-width: 62ch;">
+    If the pre-dispatch <code>COUNT(*)</code> is over 30,000, no job is created. The button shows an inline error:
+    <br><br>
+    <span style="display: block; padding: 12px 16px; background: var(--amber-50); border: 1px solid var(--amber-100); border-radius: 8px; color: var(--amber-700); font-size: 12.5px;">
+      <b>Too many rows to export.</b> Your filters match <b>87,214</b> rows (max 30,000). Try adding a date range or narrower search.
+    </span>
+  </p>
+</section>
+
+<!-- ============== MY DOWNLOADS PAGE ============== -->
+<section>
+  <span class="kicker">04 · My Downloads</span>
+  <h2>One page, four kinds, everything traceable</h2>
+  <p class="lede">
+    Lives at <code>/platform/apps/&lt;uuid&gt;/downloads/</code>, in the sidebar between "Logs" and "Releases". Lists every export the user has requested, newest first. Filters render as a compact one-line summary so scanning is fast.
+  </p>
+
+  <div class="mockup">
+    <div class="mockup-chrome">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <div class="mockup-url">localhost:3001/platform/apps/…/downloads/</div>
+    </div>
+    <div class="mockup-body">
+      <div class="dl-panel">
+        <div class="dl-panel-header">
+          <div>
+            <h3>My Downloads</h3>
+            <div class="desc">Exports you've requested from list pages · newest first · click ↻ to check for updates</div>
+          </div>
+          <button class="refresh-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="dl-row header">
+          <div>Kind</div>
+          <div>Filters</div>
+          <div>Requested</div>
+          <div>Status</div>
+          <div>Size</div>
+          <div style="text-align: right;">Actions</div>
+        </div>
+
+        <div class="dl-row">
+          <div class="dl-kind">
+            <div class="dl-kind-icon audit">A</div>
+            <div>
+              <div class="dl-kind-label">Audit Logs</div>
+              <div class="dl-kind-sub">application</div>
+            </div>
+          </div>
+          <div class="dl-filters">
+            <span class="k">search</span> <span class="v">"smith"</span> · <span class="k">action</span> <span class="v">Update</span> · <span class="k">timestamp</span> <span class="v">last 7d</span>
+          </div>
+          <div class="dl-when">
+            Jul 14, 09:42
+            <span class="rel">3 minutes ago</span>
+          </div>
+          <div><span class="status-pill success">Success</span></div>
+          <div class="dl-size">2.4 MB</div>
+          <div class="dl-actions">
+            <button class="action-icon-btn" title="Download CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="action-icon-btn danger" title="Delete this export">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="dl-row">
+          <div class="dl-kind">
+            <div class="dl-kind-icon access">L</div>
+            <div>
+              <div class="dl-kind-label">Access Logs</div>
+              <div class="dl-kind-sub">login attempts</div>
+            </div>
+          </div>
+          <div class="dl-filters">
+            <span class="k">ip_address</span> <span class="v">"10.0.1.4"</span> · <span class="k">attempt_type</span> <span class="v">Failed</span>
+          </div>
+          <div class="dl-when">
+            Jul 14, 09:38
+            <span class="rel">7 minutes ago</span>
+          </div>
+          <div><span class="status-pill running">Running</span></div>
+          <div class="dl-size">—</div>
+          <div class="dl-actions">
+            <button class="action-icon-btn" disabled title="Available when the job completes">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="action-icon-btn danger" title="Cancel this job">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="dl-row">
+          <div class="dl-kind">
+            <div class="dl-kind-icon">U</div>
+            <div>
+              <div class="dl-kind-label">App Users</div>
+              <div class="dl-kind-sub">directory</div>
+            </div>
+          </div>
+          <div class="dl-filters">
+            <span class="k">search</span> <span class="v">"smith"</span> · <span class="k">is_active</span> <span class="v">Active only</span>
+          </div>
+          <div class="dl-when">
+            Jul 14, 09:03
+            <span class="rel">42 minutes ago</span>
+          </div>
+          <div><span class="status-pill success">Success</span></div>
+          <div class="dl-size">18 KB</div>
+          <div class="dl-actions">
+            <button class="action-icon-btn" title="Download CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="action-icon-btn danger" title="Delete this export">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="dl-row">
+          <div class="dl-kind">
+            <div class="dl-kind-icon audit">A</div>
+            <div>
+              <div class="dl-kind-label">Audit Logs</div>
+              <div class="dl-kind-sub">framework</div>
+            </div>
+          </div>
+          <div class="dl-filters">
+            <span class="k">object_type</span> <span class="v">AppUser</span> · <span class="k">action</span> <span class="v">Delete</span>
+          </div>
+          <div class="dl-when">
+            Jul 13, 22:11
+            <span class="rel">12 hours ago</span>
+          </div>
+          <div><span class="status-pill failed">Failed</span></div>
+          <div class="dl-size">—</div>
+          <div class="dl-actions">
+            <button class="action-icon-btn" title="View error details">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </button>
+            <button class="action-icon-btn danger" title="Delete this entry">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout note">
+    <div class="callout-title">Design decisions</div>
+    <p><strong>One-line filter summary</strong> beats a JSON blob — operators scan by "was this the one I ran with the timestamp filter?" not by reading dictionaries. <strong>Manual refresh button</strong> because we agreed no polling; a small pulse animation on the Running dot signals "still working". <strong>Delete on Failed rows</strong> stays enabled so the user can clean up their history. <strong>No expiry column</strong> since we don't auto-expire; the column set stays tight.</p>
+  </div>
+</section>
+
+<!-- ============== BACKEND MODEL ============== -->
+<section>
+  <span class="kicker">05 · Backend model</span>
+  <h2>One table for all four kinds</h2>
+  <p class="lede">
+    Lives in the new <code>zango.apps.exports</code> app. Tenant-scoped (in <code>TENANT_APPS</code>). All four export types share this schema — kind is a discriminator field.
+  </p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/exports/models.py</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">from</span> uuid <span class="tok-kw">import</span> uuid4
+<span class="tok-kw">from</span> django.db <span class="tok-kw">import</span> models
+
+<span class="tok-kw">from</span> zango.core.model_mixins <span class="tok-kw">import</span> FullAuditMixin
+<span class="tok-kw">from</span> zango.core.storage_utils <span class="tok-kw">import</span> ZFileField
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">ExportJob</span>(<span class="tok-cls">FullAuditMixin</span>):
+    <span class="tok-str">"""A user-requested CSV export of one of the platform list surfaces."""</span>
+
+    <span class="tok-kw">class</span> <span class="tok-cls">Kind</span>(models.TextChoices):
+        APP_USERS            = <span class="tok-str">"app_users"</span>,            <span class="tok-str">"App Users"</span>
+        ACCESS_LOGS          = <span class="tok-str">"access_logs"</span>,          <span class="tok-str">"Access Logs"</span>
+        AUDIT_LOGS_APP       = <span class="tok-str">"audit_logs_app"</span>,       <span class="tok-str">"Application Audit Logs"</span>
+        AUDIT_LOGS_FRAMEWORK = <span class="tok-str">"audit_logs_framework"</span>, <span class="tok-str">"Framework Audit Logs"</span>
+
+    <span class="tok-kw">class</span> <span class="tok-cls">Status</span>(models.TextChoices):
+        QUEUED  = <span class="tok-str">"queued"</span>,  <span class="tok-str">"Queued"</span>
+        RUNNING = <span class="tok-str">"running"</span>, <span class="tok-str">"Running"</span>
+        SUCCESS = <span class="tok-str">"success"</span>, <span class="tok-str">"Success"</span>
+        FAILED  = <span class="tok-str">"failed"</span>,  <span class="tok-str">"Failed"</span>
+
+    object_uuid   = models.<span class="tok-fn">UUIDField</span>(default=uuid4, unique=<span class="tok-num">True</span>, editable=<span class="tok-num">False</span>)
+    kind          = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">32</span>, choices=Kind.choices)
+    status        = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">16</span>, choices=Status.choices, default=Status.QUEUED)
+
+    <span class="tok-com"># Full filter payload captured at request time. Used by the celery</span>
+    <span class="tok-com"># builder to reconstruct the queryset AND rendered on My Downloads.</span>
+    filters       = models.<span class="tok-fn">JSONField</span>(default=<span class="tok-fn">dict</span>)
+    <span class="tok-com"># Server-built one-line summary of `filters` for the UI.</span>
+    filters_summary = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">512</span>, blank=<span class="tok-num">True</span>, default=<span class="tok-str">""</span>)
+
+    row_count     = models.<span class="tok-fn">PositiveIntegerField</span>(null=<span class="tok-num">True</span>, blank=<span class="tok-num">True</span>)
+    file          = <span class="tok-fn">ZFileField</span>(null=<span class="tok-num">True</span>, blank=<span class="tok-num">True</span>)
+    filename      = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">256</span>, blank=<span class="tok-num">True</span>, default=<span class="tok-str">""</span>)
+    size_bytes    = models.<span class="tok-fn">PositiveBigIntegerField</span>(null=<span class="tok-num">True</span>, blank=<span class="tok-num">True</span>)
+
+    error_message   = models.<span class="tok-fn">TextField</span>(blank=<span class="tok-num">True</span>, default=<span class="tok-str">""</span>)
+    celery_task_id  = models.<span class="tok-fn">CharField</span>(max_length=<span class="tok-num">64</span>, blank=<span class="tok-num">True</span>, default=<span class="tok-str">""</span>)
+
+    requested_by  = models.<span class="tok-fn">ForeignKey</span>(
+        <span class="tok-str">"platformauth.PlatformUserModel"</span>,
+        on_delete=models.SET_NULL,
+        null=<span class="tok-num">True</span>,
+        related_name=<span class="tok-str">"+"</span>,
+    )
+    started_at   = models.<span class="tok-fn">DateTimeField</span>(null=<span class="tok-num">True</span>, blank=<span class="tok-num">True</span>)
+    completed_at = models.<span class="tok-fn">DateTimeField</span>(null=<span class="tok-num">True</span>, blank=<span class="tok-num">True</span>)
+
+    <span class="tok-kw">class</span> <span class="tok-cls">Meta</span>:
+        ordering = [<span class="tok-str">"-created_at"</span>]
+        indexes = [
+            models.<span class="tok-fn">Index</span>(fields=[<span class="tok-str">"requested_by"</span>, <span class="tok-str">"-created_at"</span>]),
+            models.<span class="tok-fn">Index</span>(fields=[<span class="tok-str">"kind"</span>, <span class="tok-str">"status"</span>]),
+        ]</pre>
+  </div>
+
+  <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 8px;">
+    <strong>Terminal statuses</strong> are <code>SUCCESS</code> and <code>FAILED</code>. The rate-limit check queries <code>status__in=[QUEUED, RUNNING]</code>.
+  </p>
+</section>
+
+<!-- ============== ENDPOINTS ============== -->
+<section>
+  <span class="kicker">06 · API endpoints</span>
+  <h2>Four routes, one router</h2>
+
+  <table>
+    <thead>
+      <tr><th style="width: 55%;">Route</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>POST /api/v1/apps/&lt;uuid&gt;/exports/&lt;kind&gt;/</code></td>
+        <td>Create a new export job for the given kind. Body carries the filter payload. Returns 201 with job details, 400 on cap exceed, 409 on rate-limit hit.</td>
+      </tr>
+      <tr>
+        <td><code>GET  /api/v1/apps/&lt;uuid&gt;/exports/</code></td>
+        <td>List all jobs the current user has requested for this app. Paginated. Newest first.</td>
+      </tr>
+      <tr>
+        <td><code>GET  /api/v1/apps/&lt;uuid&gt;/exports/&lt;job_uuid&gt;/</code></td>
+        <td>Detail — used for the failed-job "view error" popover.</td>
+      </tr>
+      <tr>
+        <td><code>GET  /api/v1/apps/&lt;uuid&gt;/exports/&lt;job_uuid&gt;/download/</code></td>
+        <td>Stream the CSV. Only when <code>status=success</code> and <code>file</code> is populated. Returns a signed URL when S3, direct stream when local FS.</td>
+      </tr>
+      <tr>
+        <td><code>DELETE /api/v1/apps/&lt;uuid&gt;/exports/&lt;job_uuid&gt;/</code></td>
+        <td>Delete a job (row + file). Cancel semantics when the job is still running: sets a "cancelled" flag the celery task polls.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Rate-limit + cap enforcement</h3>
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/exports/views.py — ExportJobCreateView</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">def</span> <span class="tok-fn">post</span>(<span class="tok-cls">self</span>, request, app_uuid, kind):
+    <span class="tok-com"># 1 — Validate kind</span>
+    <span class="tok-kw">if</span> kind <span class="tok-kw">not in</span> <span class="tok-cls">ExportJob</span>.Kind.values:
+        <span class="tok-kw">return</span> <span class="tok-fn">get_api_response</span>(<span class="tok-num">False</span>, {<span class="tok-str">"message"</span>: <span class="tok-fn">f</span><span class="tok-str">"Unknown export kind '{kind}'"</span>}, <span class="tok-num">400</span>)
+
+    <span class="tok-com"># 2 — Rate limit: one QUEUED/RUNNING per (user, kind)</span>
+    active_qs = <span class="tok-cls">ExportJob</span>.objects.<span class="tok-fn">filter</span>(
+        requested_by=request.user.platform_user,
+        kind=kind,
+        status__in=[<span class="tok-cls">ExportJob</span>.Status.QUEUED, <span class="tok-cls">ExportJob</span>.Status.RUNNING],
+    )
+    <span class="tok-kw">if</span> active_qs.<span class="tok-fn">exists</span>():
+        <span class="tok-kw">return</span> <span class="tok-fn">get_api_response</span>(
+            <span class="tok-num">False</span>,
+            {<span class="tok-str">"message"</span>: <span class="tok-str">"An export of this kind is already in progress. "</span>
+                        <span class="tok-str">"Check My Downloads."</span>},
+            <span class="tok-num">409</span>,
+        )
+
+    <span class="tok-com"># 3 — Pre-count against the actual queryset the builder will use</span>
+    filters = request.data.<span class="tok-fn">get</span>(<span class="tok-str">"filters"</span>, {})
+    builder = EXPORT_BUILDERS[kind]
+    row_count = builder.<span class="tok-fn">count</span>(filters)   <span class="tok-com"># fast COUNT(*)</span>
+
+    <span class="tok-kw">if</span> row_count > MAX_EXPORT_ROWS:  <span class="tok-com"># MAX_EXPORT_ROWS = 30_000</span>
+        <span class="tok-kw">return</span> <span class="tok-fn">get_api_response</span>(
+            <span class="tok-num">False</span>,
+            {
+                <span class="tok-str">"message"</span>: <span class="tok-fn">f</span><span class="tok-str">"Too many rows to export. Your filters match "</span>
+                           <span class="tok-fn">f</span><span class="tok-str">"{row_count:,} rows (max {MAX_EXPORT_ROWS:,}). "</span>
+                           <span class="tok-fn">f</span><span class="tok-str">"Try adding a date range or narrower search."</span>,
+                <span class="tok-str">"row_count"</span>: row_count,
+                <span class="tok-str">"max_rows"</span>: MAX_EXPORT_ROWS,
+            },
+            <span class="tok-num">400</span>,
+        )
+
+    <span class="tok-com"># 4 — Create + dispatch</span>
+    job = <span class="tok-cls">ExportJob</span>.objects.<span class="tok-fn">create</span>(
+        kind=kind,
+        filters=filters,
+        filters_summary=builder.<span class="tok-fn">summarise</span>(filters),
+        row_count=row_count,
+        requested_by=request.user.platform_user,
+    )
+    <span class="tok-com"># Route through zango_task_executor so suspend guard applies.</span>
+    run_export.<span class="tok-fn">apply_async</span>(args=[tenant.name, <span class="tok-fn">str</span>(job.object_uuid)])
+
+    <span class="tok-kw">return</span> <span class="tok-fn">get_api_response</span>(<span class="tok-num">True</span>, {<span class="tok-str">"job"</span>: <span class="tok-cls">ExportJobSerializer</span>(job).data}, <span class="tok-num">201</span>)</pre>
+  </div>
+</section>
+
+<!-- ============== CELERY TASK ============== -->
+<section>
+  <span class="kicker">07 · The Celery task</span>
+  <h2>Streams rows through a builder and writes to storage</h2>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/exports/tasks.py</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre>@<span class="tok-fn">shared_task</span>(bind=<span class="tok-num">True</span>, name=<span class="tok-str">"zango.exports.run_export"</span>)
+<span class="tok-kw">def</span> <span class="tok-fn">run_export</span>(<span class="tok-self">self</span>, tenant_name, job_uuid):
+    <span class="tok-kw">from</span> zango.apps.shared.tenancy.utils <span class="tok-kw">import</span> assert_tenant_active
+
+    tenant = <span class="tok-cls">TenantModel</span>.objects.<span class="tok-fn">get</span>(name=tenant_name)
+    connection.<span class="tok-fn">set_tenant</span>(tenant)
+    <span class="tok-fn">assert_tenant_active</span>(tenant)   <span class="tok-com"># existing framework guard</span>
+
+    job = <span class="tok-cls">ExportJob</span>.objects.<span class="tok-fn">get</span>(object_uuid=job_uuid)
+    job.status = <span class="tok-cls">ExportJob</span>.Status.RUNNING
+    job.started_at = timezone.<span class="tok-fn">now</span>()
+    job.celery_task_id = (<span class="tok-self">self</span>.request.id <span class="tok-kw">or</span> <span class="tok-str">""</span>)[:<span class="tok-num">64</span>]
+    job.<span class="tok-fn">save</span>(update_fields=[<span class="tok-str">"status"</span>, <span class="tok-str">"started_at"</span>, <span class="tok-str">"celery_task_id"</span>, <span class="tok-str">"modified_at"</span>])
+
+    <span class="tok-kw">try</span>:
+        builder = EXPORT_BUILDERS[job.kind]
+        <span class="tok-kw">with</span> tempfile.<span class="tok-fn">NamedTemporaryFile</span>(mode=<span class="tok-str">"w"</span>, suffix=<span class="tok-str">".csv"</span>, delete=<span class="tok-num">False</span>) <span class="tok-kw">as</span> tmp:
+            row_count = builder.<span class="tok-fn">write_csv</span>(job.filters, tmp)
+        <span class="tok-kw">with</span> <span class="tok-fn">open</span>(tmp.name, <span class="tok-str">"rb"</span>) <span class="tok-kw">as</span> fp:
+            job.file.<span class="tok-fn">save</span>(<span class="tok-fn">f</span><span class="tok-str">"exports/{job.object_uuid}.csv"</span>, <span class="tok-cls">File</span>(fp))
+        os.<span class="tok-fn">unlink</span>(tmp.name)
+
+        job.filename   = <span class="tok-fn">f</span><span class="tok-str">"{job.kind}-{timezone.now():%Y%m%d-%H%M%S}.csv"</span>
+        job.row_count  = row_count
+        job.size_bytes = job.file.size
+        job.status     = <span class="tok-cls">ExportJob</span>.Status.SUCCESS
+    <span class="tok-kw">except</span> <span class="tok-cls">Exception</span> <span class="tok-kw">as</span> exc:
+        log.<span class="tok-fn">exception</span>(<span class="tok-str">"export job %s failed"</span>, job_uuid)
+        job.status = <span class="tok-cls">ExportJob</span>.Status.FAILED
+        job.error_message = <span class="tok-fn">str</span>(exc)[:<span class="tok-num">1000</span>]
+    <span class="tok-kw">finally</span>:
+        job.completed_at = timezone.<span class="tok-fn">now</span>()
+        job.<span class="tok-fn">save</span>()</pre>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-title">Why <code>.iterator(chunk_size=1000)</code> matters</div>
+    <p>Each builder uses <code>qs.iterator(chunk_size=1000)</code> so Django never materialises the whole queryset in memory. Even 30k audit-log rows with big <code>changes</code> JSON columns stay under 50 MB peak worker RAM. Without this, one large export would OOM the worker.</p>
+  </div>
+</section>
+
+<!-- ============== BUILDERS ============== -->
+<section>
+  <span class="kicker">08 · Builders</span>
+  <h2>Four small classes, one interface</h2>
+  <p class="lede">
+    Each builder wraps the existing <code>get_queryset</code> logic from the list view so the export filters match the browse UI byte for byte — no drift possible. Same search, same column filters, same behaviour.
+  </p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">backend/src/zango/apps/exports/builders.py</span>
+      <span class="code-badge new">new</span>
+    </div>
+<pre><span class="tok-kw">class</span> <span class="tok-cls">ExportBuilder</span>:
+    <span class="tok-str">"""Common interface for all export kinds."""</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">queryset</span>(<span class="tok-self">self</span>, filters):
+        <span class="tok-kw">raise</span> <span class="tok-cls">NotImplementedError</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">count</span>(<span class="tok-self">self</span>, filters) -> <span class="tok-fn">int</span>:
+        <span class="tok-kw">return</span> <span class="tok-self">self</span>.<span class="tok-fn">queryset</span>(filters).<span class="tok-fn">count</span>()
+
+    <span class="tok-kw">def</span> <span class="tok-fn">summarise</span>(<span class="tok-self">self</span>, filters) -> <span class="tok-fn">str</span>:
+        <span class="tok-str">"""One-line summary rendered on My Downloads."""</span>
+        <span class="tok-kw">raise</span> <span class="tok-cls">NotImplementedError</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">write_csv</span>(<span class="tok-self">self</span>, filters, fp) -> <span class="tok-fn">int</span>:
+        writer = csv.<span class="tok-fn">writer</span>(fp)
+        writer.<span class="tok-fn">writerow</span>(<span class="tok-self">self</span>.HEADERS)
+        count = <span class="tok-num">0</span>
+        <span class="tok-kw">for</span> row <span class="tok-kw">in</span> <span class="tok-self">self</span>.<span class="tok-fn">queryset</span>(filters).<span class="tok-fn">iterator</span>(chunk_size=<span class="tok-num">1000</span>):
+            writer.<span class="tok-fn">writerow</span>(<span class="tok-self">self</span>.<span class="tok-fn">row_for</span>(row))
+            count += <span class="tok-num">1</span>
+        <span class="tok-kw">return</span> count
+
+
+<span class="tok-kw">class</span> <span class="tok-cls">AppUsersBuilder</span>(<span class="tok-cls">ExportBuilder</span>):
+    HEADERS = [<span class="tok-str">"ID"</span>, <span class="tok-str">"Name"</span>, <span class="tok-str">"Email"</span>, <span class="tok-str">"Mobile"</span>, <span class="tok-str">"Roles"</span>, <span class="tok-str">"Active"</span>, <span class="tok-str">"Last Login"</span>, <span class="tok-str">"Created"</span>]
+
+    <span class="tok-kw">def</span> <span class="tok-fn">queryset</span>(<span class="tok-self">self</span>, filters):
+        <span class="tok-kw">from</span> zango.api.platform.tenancy.v1.views <span class="tok-kw">import</span> UserViewAPIV1
+        view = <span class="tok-fn">UserViewAPIV1</span>()
+        <span class="tok-kw">return</span> view.<span class="tok-fn">get_queryset</span>(
+            filters.<span class="tok-fn">get</span>(<span class="tok-str">"search"</span>, <span class="tok-str">""</span>),
+            filters.<span class="tok-fn">get</span>(<span class="tok-str">"columns"</span>, {}),
+        )
+
+    <span class="tok-kw">def</span> <span class="tok-fn">summarise</span>(<span class="tok-self">self</span>, filters):
+        parts = []
+        <span class="tok-kw">if</span> filters.<span class="tok-fn">get</span>(<span class="tok-str">"search"</span>):
+            parts.<span class="tok-fn">append</span>(<span class="tok-fn">f</span><span class="tok-str">'search "{filters[\"search\"]}"'</span>)
+        <span class="tok-kw">if</span> filters.<span class="tok-fn">get</span>(<span class="tok-str">"columns"</span>, {}).<span class="tok-fn">get</span>(<span class="tok-str">"is_active"</span>):
+            parts.<span class="tok-fn">append</span>(<span class="tok-str">"active only"</span> <span class="tok-kw">if</span> filters[<span class="tok-str">"columns"</span>][<span class="tok-str">"is_active"</span>] == <span class="tok-str">"true"</span> <span class="tok-kw">else</span> <span class="tok-str">"inactive only"</span>)
+        <span class="tok-kw">return</span> <span class="tok-str">" · "</span>.<span class="tok-fn">join</span>(parts) <span class="tok-kw">or</span> <span class="tok-str">"no filter"</span>
+
+    <span class="tok-kw">def</span> <span class="tok-fn">row_for</span>(<span class="tok-self">self</span>, u):
+        <span class="tok-kw">return</span> [
+            u.id, u.name, u.email, u.mobile,
+            <span class="tok-str">", "</span>.<span class="tok-fn">join</span>(r.name <span class="tok-kw">for</span> r <span class="tok-kw">in</span> u.roles.<span class="tok-fn">all</span>()),
+            <span class="tok-str">"Yes"</span> <span class="tok-kw">if</span> u.is_active <span class="tok-kw">else</span> <span class="tok-str">"No"</span>,
+            u.last_login.<span class="tok-fn">isoformat</span>() <span class="tok-kw">if</span> u.last_login <span class="tok-kw">else</span> <span class="tok-str">""</span>,
+            u.created_at.<span class="tok-fn">isoformat</span>(),
+        ]
+
+
+<span class="tok-com"># AccessLogsBuilder, AuditLogsAppBuilder, AuditLogsFrameworkBuilder</span>
+<span class="tok-com"># — all follow the same shape.</span>
+
+EXPORT_BUILDERS = {
+    <span class="tok-cls">ExportJob</span>.Kind.APP_USERS            : <span class="tok-fn">AppUsersBuilder</span>(),
+    <span class="tok-cls">ExportJob</span>.Kind.ACCESS_LOGS          : <span class="tok-fn">AccessLogsBuilder</span>(),
+    <span class="tok-cls">ExportJob</span>.Kind.AUDIT_LOGS_APP       : <span class="tok-fn">AuditLogsAppBuilder</span>(),
+    <span class="tok-cls">ExportJob</span>.Kind.AUDIT_LOGS_FRAMEWORK : <span class="tok-fn">AuditLogsFrameworkBuilder</span>(),
+}</pre>
+  </div>
+
+  <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 8px;">
+    <strong>Zero drift:</strong> because each builder calls the list view's <code>get_queryset</code> directly, whatever the operator sees in the browse UI is exactly what they get in the CSV. When we fix a filter bug in one place, both surfaces get the fix automatically.
+  </p>
+</section>
+
+<!-- ============== SIDEBAR + ROUTING ============== -->
+<section>
+  <span class="kicker">09 · Sidebar + routing</span>
+  <h2>My Downloads slots between Logs and Releases</h2>
+  <p class="lede">
+    New menu entry in the app sidebar (<code>frontend/src/pages/app/components/SideMenu</code>). Route lives at <code>/platform/apps/&lt;uuid&gt;/downloads/*</code> and mounts <code>AppDownloadsRoutes</code>.
+  </p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4 style="margin-top: 0;">Sidebar entry</h4>
+      <p style="font-size: 13px;">
+        Icon: <code>download</code> (Lucide-style, matches the button icon).<br>
+        Label: <b>Downloads</b>.<br>
+        Position: between Logs and Releases.<br>
+        Active-state highlighting reuses the existing NavLink pattern.
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">Route mount</h4>
+      <p style="font-size: 13px;">
+        <code>frontend/src/pages/appDownloads/routes/index.js</code> exports <code>AppDownloadsRoutes</code>, wired into <code>PlatformAppRoutes</code> at <code>/downloads/*</code>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FILES + SCOPE ============== -->
+<section>
+  <span class="kicker">10 · Files + scope</span>
+  <h2>What lands in the PR</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 46%;">File</th>
+        <th style="width: 26%;">Purpose</th>
+        <th>LOC</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="3" style="background: var(--surface-sunken); font-weight: 600; color: var(--text-strong); padding: 8px 14px;">Backend — new app <code>zango.apps.exports</code></td>
+      </tr>
+      <tr>
+        <td><code>apps/exports/apps.py</code></td>
+        <td>AppConfig</td>
+        <td>10</td>
+      </tr>
+      <tr>
+        <td><code>apps/exports/models.py</code></td>
+        <td>ExportJob</td>
+        <td>60</td>
+      </tr>
+      <tr>
+        <td><code>apps/exports/migrations/0001_initial.py</code></td>
+        <td>Model migration</td>
+        <td>60</td>
+      </tr>
+      <tr>
+        <td><code>apps/exports/builders.py</code></td>
+        <td>Four builders, one interface</td>
+        <td>220</td>
+      </tr>
+      <tr>
+        <td><code>apps/exports/tasks.py</code></td>
+        <td>Celery task</td>
+        <td>60</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="background: var(--surface-sunken); font-weight: 600; color: var(--text-strong); padding: 8px 14px;">Backend — API surface</td>
+      </tr>
+      <tr>
+        <td><code>api/platform/exports/v1/views.py</code></td>
+        <td>Create / list / detail / download / delete</td>
+        <td>180</td>
+      </tr>
+      <tr>
+        <td><code>api/platform/exports/v1/serializers.py</code></td>
+        <td>ExportJobSerializer</td>
+        <td>40</td>
+      </tr>
+      <tr>
+        <td><code>api/platform/exports/v1/urls.py</code></td>
+        <td>Routes</td>
+        <td>20</td>
+      </tr>
+      <tr>
+        <td><code>api/platform/tenancy/v1/urls.py</code></td>
+        <td>Mount exports under <code>&lt;app_uuid&gt;/exports/</code></td>
+        <td>+3</td>
+      </tr>
+      <tr>
+        <td><code>config/settings/base.py</code></td>
+        <td>Add <code>exports</code> to <code>TENANT_APPS</code></td>
+        <td>+1</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="background: var(--surface-sunken); font-weight: 600; color: var(--text-strong); padding: 8px 14px;">Frontend — Export button on each list page</td>
+      </tr>
+      <tr>
+        <td><code>appUserManagement/…/AppUserManagement/index.jsx</code></td>
+        <td>Export button next to search</td>
+        <td>+35</td>
+      </tr>
+      <tr>
+        <td><code>appAccessLogs/…/Table/index.jsx</code></td>
+        <td>Same</td>
+        <td>+35</td>
+      </tr>
+      <tr>
+        <td><code>appApplicationObjectsLogs/…/AppApplicationObjectsLogs/index.js</code></td>
+        <td>Same</td>
+        <td>+35</td>
+      </tr>
+      <tr>
+        <td><code>appFrameworkObjectsLogs/…/AppFrameworkObjectsLogs/index.js</code></td>
+        <td>Same</td>
+        <td>+35</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="background: var(--surface-sunken); font-weight: 600; color: var(--text-strong); padding: 8px 14px;">Frontend — My Downloads page</td>
+      </tr>
+      <tr>
+        <td><code>pages/appDownloads/components/AppDownloads/index.jsx</code></td>
+        <td>Main page (table, refresh, delete)</td>
+        <td>200</td>
+      </tr>
+      <tr>
+        <td><code>pages/appDownloads/components/AppDownloads/StatusPill.jsx</code></td>
+        <td>Queued/Running/Success/Failed pill</td>
+        <td>50</td>
+      </tr>
+      <tr>
+        <td><code>pages/appDownloads/routes/index.js</code></td>
+        <td>Route mount</td>
+        <td>14</td>
+      </tr>
+      <tr>
+        <td><code>pages/appDownloads/slice/index.js</code></td>
+        <td>Redux slice for downloads list</td>
+        <td>40</td>
+      </tr>
+      <tr>
+        <td><code>pages/app/routes/index.js</code></td>
+        <td>Wire <code>/downloads/*</code></td>
+        <td>+4</td>
+      </tr>
+      <tr>
+        <td><code>pages/app/components/SideMenu/index.jsx</code></td>
+        <td>Sidebar entry</td>
+        <td>+22</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="font-size: 13px; margin-top: 12px;">
+    <strong>Total: ~1,120 LOC.</strong> No third-party dependencies. One DB migration.
+  </p>
+</section>
+
+<!-- ============== EDGE CASES ============== -->
+<section>
+  <span class="kicker">11 · Edge cases</span>
+  <h2>What happens when…</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4 style="margin-top: 0;">The app is suspended while an export is running?</h4>
+      <p style="font-size: 12.5px;">The Celery task routes through <code>zango_task_executor</code>, which calls <code>assert_tenant_active()</code> at pickup. If the flip happened mid-queue, the task raises <code>TenantSuspended</code> before doing any work; the finally-block marks the job <code>failed</code> with a clear message. Same pattern codexec already uses.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">The user closes the tab mid-export?</h4>
+      <p style="font-size: 12.5px;">Nothing to worry about. The Celery task keeps running; the row moves through <code>RUNNING → SUCCESS</code> in the background. The file is waiting on My Downloads next time they visit.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">The user deletes a job that's still Running?</h4>
+      <p style="font-size: 12.5px;">DELETE marks the row for cancellation. The celery task polls its own row every ~1000 iterations and bails if the row is missing or marked cancelled. Storage cleanup happens automatically.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">A superadmin views another user's downloads?</h4>
+      <p style="font-size: 12.5px;">Scoped by <code>requested_by</code>. My Downloads only shows your own jobs. If a cross-user view is needed later, we add a superadmin-only "All exports" tab — not in v1.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">The pre-count says 29,998 but the actual query returns 30,003 by the time the worker runs?</h4>
+      <p style="font-size: 12.5px;">Rare — happens only if new rows landed between count and execution. The builder still writes them all; the CSV is a snapshot of what matched when the worker ran. We don't re-check the cap in the worker to avoid failing jobs the user already committed to.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">The CSV contains PII — is that logged anywhere?</h4>
+      <p style="font-size: 12.5px;">The <code>ExportJob</code> row is auditable (via existing <code>FullAuditMixin</code>) — creation, edits, deletion tracked. The file contents themselves aren't logged. Consider adding an <code>auditlog.register(ExportJob)</code> line as a follow-up so exports show up in the audit log.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Plan doc · Exports + My Downloads · New app <code>zango.apps.exports</code> · ~1,120 LOC · 30k-row cap · lifetime retention · manual refresh
+</footer>
+
+</div>
+</body>
+</html>

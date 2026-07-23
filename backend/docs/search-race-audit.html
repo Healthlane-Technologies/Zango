@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Search race audit · fix plan | Zango Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --surface-page:     #F6F7FB;
+  --surface-card:     #FFFFFF;
+  --surface-sunken:   #F0F2F7;
+  --surface-tinted:   #EEF1FE;
+  --surface-code:     #0F1117;
+  --text-strong:   #0B0D14;
+  --text-body:     #2C3047;
+  --text-muted:    #5A607A;
+  --text-subtle:   #8389A3;
+  --text-inverse:  #E5E7EE;
+  --border:        #E3E6EF;
+  --border-strong: #D4D8E5;
+  --border-soft:   #ECEEF5;
+  --indigo-50:#EEF1FE; --indigo-100:#DCE3FD; --indigo-500:#5961E5; --indigo-700:#3938B5;
+  --teal-50:#EAFAF7; --teal-500:#119C85; --teal-700:#0D6555;
+  --sage-50:#EFF7EE; --sage-500:#5AA45B; --sage-700:#36713A;
+  --amber-50:#FEF6E7; --amber-100:#FCEAC4; --amber-500:#DA9011; --amber-700:#8A5A07;
+  --crimson-50:#FCEDEF; --crimson-100:#F8D5D9; --crimson-500:#D3424E; --crimson-700:#931F2A;
+  --brand: var(--indigo-500);
+  --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:12px; --r-2xl:16px;
+  --shadow-sm: 0 1px 2px rgba(15,19,36,.06);
+  --shadow-md: 0 4px 12px -2px rgba(15,19,36,.08), 0 2px 4px rgba(15,19,36,.04), inset 0 1px 0 rgba(255,255,255,.6);
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  --font-display: 'Instrument Serif', 'Times New Roman', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  font-feature-settings: 'cv11','ss01','ss03';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  background: var(--surface-page);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+.shell { max-width: 1120px; margin: 0 auto; padding: 40px 32px 96px; }
+
+/* Hero */
+.hero {
+  position: relative;
+  padding: 48px 52px 44px;
+  border-radius: var(--r-2xl);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(211,66,78,.18), transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, rgba(89,97,229,.20), transparent 55%),
+    linear-gradient(140deg, #14172A 0%, #1B1D3B 55%, #2A2C6B 100%);
+  color: var(--text-inverse);
+  margin-bottom: 40px;
+  box-shadow: 0 20px 60px -20px rgba(15,19,36,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: fadeUp 460ms var(--ease-out) both;
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600;
+  color: rgba(252,237,239,.86); margin-bottom: 20px;
+}
+.hero-kicker::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--crimson-500); box-shadow: 0 0 0 3px rgba(211,66,78,.24);
+}
+.hero h1 {
+  font-size: 40px; font-weight: 600; letter-spacing: -0.030em; line-height: 1.05;
+  color: #FFFFFF; margin-bottom: 16px; max-width: 640px;
+}
+.hero h1 em { font-family: var(--font-display); font-style: italic; font-weight: 400; color: #F5C97A; }
+.hero p.lede {
+  font-size: 15px; color: rgba(230,232,240,.72); line-height: 1.65; max-width: 62ch;
+}
+.hero-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 500;
+  background: rgba(230,232,240,.08); border: 1px solid rgba(230,232,240,.14);
+  color: rgba(230,232,240,.9);
+}
+.hero-chip.crimson { background: rgba(211,66,78,.18); border-color: rgba(211,66,78,.32); color: #F8D5D9; }
+.hero-chip.amber { background: rgba(218,144,17,.18); border-color: rgba(218,144,17,.32); color: #FCEAC4; }
+.hero-chip.teal { background: rgba(17,156,133,.16); border-color: rgba(17,156,133,.32); color: #A5EBDD; }
+
+/* Section */
+section { margin-bottom: 56px; scroll-margin-top: 24px; animation: fadeUp 380ms var(--ease-out) both; }
+section > .kicker {
+  display: inline-block; font-size: 10.5px; letter-spacing: .11em; text-transform: uppercase;
+  font-weight: 600; color: var(--brand); margin-bottom: 10px;
+}
+section h2 {
+  font-size: 26px; font-weight: 600; letter-spacing: -0.022em; color: var(--text-strong);
+  margin-bottom: 10px; line-height: 1.15;
+}
+section .lede { font-size: 14.5px; color: var(--text-muted); max-width: 68ch; margin-bottom: 26px; line-height: 1.6; }
+
+h3 {
+  font-size: 17px; font-weight: 600; color: var(--text-strong);
+  letter-spacing: -0.012em; margin-bottom: 10px; margin-top: 24px;
+}
+h4 {
+  font-size: 12.5px; font-weight: 600; color: var(--text-strong);
+  letter-spacing: .04em; text-transform: uppercase; margin: 18px 0 6px;
+}
+p, li { color: var(--text-body); font-size: 13.5px; line-height: 1.6; }
+p + p { margin-top: 8px; }
+ul, ol { padding-left: 22px; margin: 8px 0 12px; }
+li { margin-bottom: 5px; }
+strong, li b { color: var(--text-strong); font-weight: 600; }
+
+/* Cards */
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 22px 26px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+.card.crimson { border-color: rgba(211,66,78,.22); background: linear-gradient(180deg, var(--crimson-50) 0%, #FFF 65%); }
+.card.amber { border-color: rgba(218,144,17,.28); background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 60%); }
+.card.sage { border-color: rgba(90,164,91,.26); background: linear-gradient(180deg, var(--sage-50) 0%, #FFF 60%); }
+.card.tinted { background: var(--surface-tinted); border-color: var(--indigo-100); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 16px 0; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 16px 0; }
+@media (max-width: 800px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Severity + finding cards */
+.severity-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 22px 0;
+}
+@media (max-width: 800px) { .severity-row { grid-template-columns: 1fr; } }
+.severity-tile {
+  padding: 20px 22px; border-radius: var(--r-lg);
+  border: 1px solid; position: relative; overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.severity-tile::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+}
+.severity-tile.crit { background: linear-gradient(180deg, var(--crimson-50) 0%, #FFF 80%); border-color: rgba(211,66,78,.22); }
+.severity-tile.crit::before { background: var(--crimson-500); }
+.severity-tile.warn { background: linear-gradient(180deg, var(--amber-50) 0%, #FFF 80%); border-color: rgba(218,144,17,.28); }
+.severity-tile.warn::before { background: var(--amber-500); }
+.severity-tile.info { background: linear-gradient(180deg, var(--sage-50) 0%, #FFF 80%); border-color: rgba(90,164,91,.26); }
+.severity-tile.info::before { background: var(--sage-500); }
+.severity-label {
+  font-size: 10px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+  color: var(--text-subtle); margin-bottom: 8px;
+}
+.severity-tile.crit .severity-label { color: var(--crimson-700); }
+.severity-tile.warn .severity-label { color: var(--amber-700); }
+.severity-tile.info .severity-label { color: var(--sage-700); }
+.severity-tile .title {
+  font-size: 15.5px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.008em;
+  line-height: 1.3; margin-bottom: 6px;
+}
+.severity-tile .count { font-size: 26px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.02em; line-height: 1; }
+.severity-tile .sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+
+/* Finding cards */
+.finding {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 22px 26px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.finding-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--border-soft); margin-bottom: 14px;
+}
+.finding-title {
+  font-size: 15px; font-weight: 600; color: var(--text-strong); letter-spacing: -0.008em;
+  line-height: 1.35;
+}
+.finding-path {
+  display: block; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600;
+  white-space: nowrap; flex-shrink: 0;
+}
+.pill.crit { background: var(--crimson-100); color: var(--crimson-700); }
+.pill.warn { background: var(--amber-100); color: var(--amber-700); }
+.pill.info { background: var(--sage-50); color: var(--sage-700); }
+.pill.crit::before, .pill.warn::before, .pill.info::before {
+  content: ''; width: 5px; height: 5px; border-radius: 999px;
+}
+.pill.crit::before { background: var(--crimson-500); }
+.pill.warn::before { background: var(--amber-500); }
+.pill.info::before { background: var(--sage-500); }
+
+/* Code */
+.code-card {
+  background: var(--surface-code);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin: 12px 0;
+}
+.code-header {
+  padding: 8px 14px;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px;
+}
+.code-path { color: rgba(230,232,240,.72); }
+.code-badge {
+  padding: 2px 8px; border-radius: 4px; font-size: 9.5px;
+  letter-spacing: .07em; text-transform: uppercase; font-weight: 600;
+}
+.code-badge.bug { background: rgba(255,139,156,.15); color: #FF9DBF; }
+.code-badge.fix { background: rgba(161,232,154,.15); color: #A1E89A; }
+pre {
+  padding: 16px 18px; color: #E1E4ED;
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.65;
+  overflow-x: auto;
+}
+.tok-kw { color: #C792EA; } .tok-fn { color: #82AAFF; } .tok-str { color: #C3E88D; }
+.tok-num { color: #F78C6C; } .tok-com { color: #6E748D; font-style: italic; }
+.tok-cls { color: #FFCB6B; } .tok-add { color: #A1E89A; } .tok-del { color: #FF8B9C; }
+
+/* Callout */
+.callout {
+  padding: 16px 20px; border-radius: var(--r-md);
+  border: 1px solid; margin: 18px 0; font-size: 13px;
+}
+.callout.note { background: var(--indigo-50); border-color: var(--indigo-100); color: var(--text-body); }
+.callout.tip { background: var(--sage-50); border-color: rgba(90,164,91,.28); color: var(--sage-700); }
+.callout.warn { background: var(--amber-50); border-color: var(--amber-100); color: var(--amber-900, #5A3B04); }
+.callout-title { font-weight: 600; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px; }
+.callout.note .callout-title { color: var(--indigo-700); }
+.callout.tip .callout-title { color: var(--sage-700); }
+.callout.warn .callout-title { color: var(--amber-700); }
+
+/* Timeline diagram */
+.timeline {
+  display: grid; grid-template-columns: 100px 40px 1fr; gap: 12px 16px;
+  margin: 14px 0; padding: 18px 20px;
+  background: var(--surface-code); color: var(--text-inverse);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.5;
+}
+.timeline .t { color: #FFCB6B; }
+.timeline .who { color: #82AAFF; }
+.timeline .event { color: #E1E4ED; }
+.timeline .warn { color: #FF9DBF; font-weight: 500; }
+
+/* Inline code */
+code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-sunken); padding: 1px 6px; border-radius: 4px; color: var(--text-strong); }
+.path { font-family: var(--font-mono); font-size: 12px; background: rgba(17,156,133,.08); color: var(--teal-700); padding: 1px 6px; border-radius: 4px; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 12.5px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; background: var(--surface-sunken); }
+tr:last-child td { border-bottom: none; }
+td code { font-size: 11.5px; }
+
+footer {
+  margin-top: 64px; padding: 28px 0 0;
+  border-top: 1px solid var(--border);
+  text-align: center; font-size: 12px; color: var(--text-subtle);
+}
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ============== HERO ============== -->
+<div class="hero">
+  <div class="hero-kicker">Zango platform · frontend search audit</div>
+  <h1>Search is <em>racing</em> on the frontend and <em>wrong</em> on the backend.</h1>
+  <p class="lede">
+    Two independent classes of bug in the same feature. On the frontend, App Users shows results for the previous keystroke because two requests race and last-write-wins; Access Logs and Audit Logs debounce this away most of the time but still hit it under filter changes. On the backend, the queries themselves mis-treat integer IDs as text search targets, fire an extra 2 count() queries per keystroke on App Users, and re-run distinct+order_by on every keystroke against unindexed joins. Racing a slow, sometimes-wrong query is worse than either alone.
+  </p>
+  <div class="hero-meta">
+    <span class="hero-chip crimson">1 critical race · 3 correctness bugs</span>
+    <span class="hero-chip amber">3 perf issues</span>
+    <span class="hero-chip teal">~40 LOC frontend + ~30 LOC backend</span>
+  </div>
+</div>
+
+<!-- ============== AT A GLANCE ============== -->
+<section>
+  <span class="kicker">01 · At a glance</span>
+  <h2>Three pages, three flavors of the same bug</h2>
+  <div class="severity-row">
+    <div class="severity-tile crit">
+      <div class="severity-label">Critical — user-visible</div>
+      <div class="title">App Users</div>
+      <div class="count">1</div>
+      <div class="sub">No debounce, no cancel. Every keystroke fires. Fast typing reliably lands stale results.</div>
+    </div>
+    <div class="severity-tile warn">
+      <div class="severity-label">Latent — hits under load</div>
+      <div class="title">Access Logs</div>
+      <div class="count">1</div>
+      <div class="sub">Debounced 500 ms. Cancel-free. Filter changes racing search still land stale results.</div>
+    </div>
+    <div class="severity-tile warn">
+      <div class="severity-label">Latent — hits under load</div>
+      <div class="title">Audit Logs</div>
+      <div class="count">2</div>
+      <div class="sub">Two pages (application + framework objects). Same debounce-only shape as Access Logs.</div>
+    </div>
+  </div>
+  <p style="font-size: 13px; color: var(--text-muted);">
+    All four are the same underlying issue: <strong>the <code>useApi</code> hook has no way to cancel a request in flight.</strong> When two requests are outstanding, whichever server response arrives last is displayed — regardless of which one the user actually asked for.
+  </p>
+</section>
+
+<!-- ============== HOW THE RACE FIRES ============== -->
+<section>
+  <span class="kicker">02 · Anatomy of the race</span>
+  <h2>Why "the previous response overrides" happens</h2>
+  <p class="lede">
+    Real-world example — the user types "sm" into the App Users search, then continues to "smit". Both keystrokes trigger a fetch. The correct response for "smit" happens to be fast (rows are indexed well), but the "sm" query does a full-table scan on a slow join. Timeline:
+  </p>
+
+  <div class="timeline">
+    <span class="t">t=0ms</span><span class="who">user</span><span class="event">types "sm" → useEffect fires → GET /users?search=sm</span>
+    <span class="t">t=60ms</span><span class="who">user</span><span class="event">types "smit" → useEffect fires → GET /users?search=smit</span>
+    <span class="t">t=90ms</span><span class="who">server</span><span class="event">200 OK for "smit" (12 rows)</span>
+    <span class="t">t=100ms</span><span class="who">react</span><span class="event">setState(smit results) → UI shows the 12 rows ✓</span>
+    <span class="t">t=340ms</span><span class="who">server</span><span class="event">200 OK for "sm" (413 rows)</span>
+    <span class="t">t=340ms</span><span class="who">react</span><span class="event warn">setState(sm results) → UI overwrites with 413 rows ✗</span>
+    <span class="t">t=340ms+</span><span class="who">user</span><span class="event warn">sees rows that don't match what the input shows</span>
+  </div>
+
+  <p style="font-size: 13px; color: var(--text-muted); margin-top: 14px;">
+    The user's input still says "smit" but the table now shows all 413 matches for "sm". Sometimes reloading fixes it. Sometimes typing another character fixes it. Sometimes it doesn't. This intermittence is what makes the bug hard to reproduce and easy to blame on caching or backend flakiness.
+  </p>
+
+  <div class="callout note">
+    <div class="callout-title">Why debounce helps but doesn't fix it</div>
+    <p>Debouncing collapses many keystrokes into one request. If the user types "smit" in 200 ms and debounce is 500 ms, only the "smit" request ever fires. Great. But <strong>debouncing doesn't help when the user changes a filter OR clears the search field OR pastes text</strong> — those actions frequently coincide with a still-in-flight request and produce the same overwrite. Also, if the user pauses briefly (500+ ms), types more, pauses again — two requests can be in flight legitimately.</p>
+  </div>
+</section>
+
+<!-- ============== APP USERS DEEP DIVE ============== -->
+<section>
+  <span class="kicker">03 · App Users — the critical case</span>
+  <h2>No debounce, no cancel — the worst of both worlds</h2>
+  <p class="lede">
+    <span class="path">frontend/src/pages/appUserManagement/components/AppUserManagement/index.jsx</span> · <code>fetchUsers</code>
+  </p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">appUserManagement/…/AppUserManagement/index.jsx · lines 51–95</span>
+      <span class="code-badge bug">Current — buggy</span>
+    </div>
+<pre><span class="tok-kw">const</span> fetchUsers = <span class="tok-kw">async</span> () => {
+    <span class="tok-fn">setLoading</span>(<span class="tok-num">true</span>);
+    <span class="tok-kw">const</span> queryParams = <span class="tok-kw">new</span> <span class="tok-cls">URLSearchParams</span>({
+        page: page.<span class="tok-fn">toString</span>(),
+        page_size: pageSize.<span class="tok-fn">toString</span>(),
+        include_dropdown_options: <span class="tok-str">'true'</span>,
+        search: searchTerm,   <span class="tok-com">// ← every keystroke changes this</span>
+    });
+    <span class="tok-kw">const</span> { response, success } = <span class="tok-kw">await</span> <span class="tok-fn">triggerApi</span>({
+        url: <span class="tok-str">`/api/v1/apps/${appId}/users/?${queryParams.<span class="tok-fn">toString</span>()}`</span>,
+        type: <span class="tok-str">'GET'</span>,
+    });
+    <span class="tok-kw">if</span> (success && response) {
+        <span class="tok-fn">updateAppUserManagementData</span>(response);   <span class="tok-com">// ← last write wins, regardless of order</span>
+    }
+};
+
+<span class="tok-fn">useEffect</span>(() => {
+    <span class="tok-fn">fetchUsers</span>();
+}, [appId, page, pageSize, <span class="tok-str">searchTerm</span>, filters, rerenderPage]);
+<span class="tok-com">// ↑ fires on EVERY keystroke — no debounce, no abort, no versioning</span></pre>
+  </div>
+
+  <p>Three problems compound:</p>
+  <ol>
+    <li><strong>No debounce.</strong> Typing "smith" (5 keystrokes) fires 5 requests. Every character.</li>
+    <li><strong>No cancellation.</strong> The 4 obsolete requests continue to completion server-side and their responses still get processed client-side.</li>
+    <li><strong>No response versioning.</strong> The 5th response's arrival order isn't guaranteed to be last. If request #2 was slower (e.g. broader query), its late-arriving response calls <code>updateAppUserManagementData</code> and wipes out the correct #5 result.</li>
+  </ol>
+</section>
+
+<!-- ============== ACCESS + AUDIT LOGS ============== -->
+<section>
+  <span class="kicker">04 · Access Logs + Audit Logs</span>
+  <h2>Debounce present, cancellation missing</h2>
+  <p class="lede">These pages debounce the search box so the "type quickly" case is largely handled. But debouncing doesn't cover filters, direct <code>searchValue</code> mutations, or paged navigation firing while a search is in flight. Same underlying race, less frequently triggered.</p>
+
+  <div class="grid-2">
+    <div class="card amber">
+      <h3 style="margin-top: 0;">Access Logs</h3>
+      <p style="font-size: 13px; margin-bottom: 8px;"><span class="path">appAccessLogs/components/Table/index.jsx</span> · line 432</p>
+      <ul style="margin-top: 8px;">
+        <li>Debounced 500 ms on search input</li>
+        <li>Filter dropdown changes trigger the SAME <code>useEffect</code> immediately — no delay</li>
+        <li>Rapid filter clicks or "clear all" while a search is in flight → race</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <h3 style="margin-top: 0;">Audit Logs (both pages)</h3>
+      <p style="font-size: 13px; margin-bottom: 8px;"><span class="path">appApplicationObjectsLogs/…</span> and <span class="path">appFrameworkObjectsLogs/…</span></p>
+      <ul style="margin-top: 8px;">
+        <li>Both pages have identical shape</li>
+        <li>Same 500 ms debounce, same missing cancellation</li>
+        <li>Same race window on filter changes</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">appAccessLogs/components/Table/index.jsx · lines 432–486</span>
+      <span class="code-badge bug">Current — race remains behind the debounce</span>
+    </div>
+<pre><span class="tok-kw">const</span> debounceSearch = <span class="tok-fn">debounce</span>((data) => {
+    <span class="tok-fn">dispatch</span>(<span class="tok-fn">setAppAccessLogsTableData</span>(data));
+}, <span class="tok-num">500</span>);
+
+<span class="tok-fn">useEffect</span>(() => {
+    <span class="tok-com">// ... build columnFilter query string ...</span>
+
+    <span class="tok-kw">const</span> makeApiCall = <span class="tok-kw">async</span> () => {
+        <span class="tok-kw">const</span> { response, success } = <span class="tok-kw">await</span> <span class="tok-fn">triggerApi</span>({
+            url: <span class="tok-str">`/api/v1/apps/${appId}/access-logs/?page=${...}&search=${appAccessLogsTableData?.searchValue}...`</span>,
+            type: <span class="tok-str">'GET'</span>,
+            loader: <span class="tok-num">true</span>,
+        });
+        <span class="tok-kw">if</span> (success && response) {
+            <span class="tok-fn">updateAppAccessLogsData</span>(response);   <span class="tok-com">// ← same last-write-wins pattern</span>
+        }
+    };
+    <span class="tok-fn">makeApiCall</span>();
+}, [appAccessLogsTableData]);</pre>
+  </div>
+</section>
+
+<!-- ============== FIX STRATEGY ============== -->
+<section>
+  <span class="kicker">05 · Fix strategy</span>
+  <h2>One pattern, applied to all four surfaces</h2>
+  <p class="lede">
+    Two viable approaches. The one below wins on <strong>surgical footprint</strong> — it doesn't touch the shared <code>useApi</code> hook, it doesn't need a new abstraction, and it fixes each page independently.
+  </p>
+
+  <h3>Option A · Per-page request-ID versioning <span style="font-weight: 400; color: var(--text-muted);">(recommended)</span></h3>
+  <p>Track an incrementing counter in a <code>useRef</code>. Before starting a request, capture the counter's current value. After the request resolves, only apply the response if the counter still matches — meaning no newer request has been kicked off since.</p>
+
+  <div class="code-card">
+    <div class="code-header">
+      <span class="code-path">Pattern — 6 lines added around each fetch</span>
+      <span class="code-badge fix">Proposed</span>
+    </div>
+<pre><span class="tok-kw">const</span> requestSeqRef = <span class="tok-fn">useRef</span>(<span class="tok-num">0</span>);
+<span class="tok-kw">const</span> lastAppliedSeqRef = <span class="tok-fn">useRef</span>(<span class="tok-num">0</span>);
+
+<span class="tok-kw">const</span> fetchUsers = <span class="tok-kw">async</span> () => {
+    <span class="tok-kw">const</span> seq = ++requestSeqRef.current;   <span class="tok-com">// bump + capture</span>
+    <span class="tok-fn">setLoading</span>(<span class="tok-num">true</span>);
+
+    <span class="tok-kw">const</span> { response, success } = <span class="tok-kw">await</span> <span class="tok-fn">triggerApi</span>({ ... });
+
+    <span class="tok-com">// Discard stale responses: an older request landed after we</span>
+    <span class="tok-com">// already applied a newer one, or a newer one is still coming.</span>
+    <span class="tok-kw">if</span> (seq <= lastAppliedSeqRef.current) <span class="tok-kw">return</span>;
+    <span class="tok-kw">if</span> (seq !== requestSeqRef.current) <span class="tok-kw">return</span>;   <span class="tok-com">// a newer one is in flight</span>
+
+    <span class="tok-kw">if</span> (success && response) {
+        <span class="tok-fn">updateAppUserManagementData</span>(response);
+        lastAppliedSeqRef.current = seq;
+    }
+    <span class="tok-fn">setLoading</span>(<span class="tok-num">false</span>);
+};</pre>
+  </div>
+
+  <p style="margin-top: 10px;"><strong>Cost:</strong> ~10 lines per page. Four pages. ~40 LOC total.</p>
+  <p><strong>Wins:</strong> Fully local. Doesn't require touching the shared <code>useApi</code> hook. Works with the existing debounce (they compose — debounce reduces request count, versioning eliminates race). Doesn't leave server requests hanging (they complete server-side, we just ignore the response).</p>
+
+  <h3 style="margin-top: 28px;">Option B · AbortController via <code>useApi</code></h3>
+  <p>Modify <code>useApi</code> to accept an <code>AbortSignal</code>, plumb it through <code>callGetApi</code> and friends, add per-page controllers. Cleaner conceptually, but three costs: (a) touches shared code that every caller uses, (b) requires each page to wire up controllers correctly, (c) server-side requests actually get cancelled which means the operator has to be careful about idempotency for POST/PUT.</p>
+
+  <p style="margin-top: 6px;">Recommend saving Option B for a future refactor if we later want true request cancellation. Option A fixes the visible bug today.</p>
+
+  <h3 style="margin-top: 28px;">Add debounce to App Users while we're there</h3>
+  <p>App Users has no debounce today, so every keystroke fires a request. Even with versioning, that's wasteful and increases server load. Add a 300 ms debounce alongside the versioning fix.</p>
+
+  <div class="callout tip">
+    <div class="callout-title">Bonus — no more flicker</div>
+    <p>A nice side effect of versioning: when a stale response would have overwritten the good one, we now skip the <code>setState</code> entirely. No brief flicker of wrong data. The UI stays stable throughout the race window.</p>
+  </div>
+</section>
+
+<!-- ============== CHANGES ============== -->
+<section>
+  <span class="kicker">06 · The actual changes</span>
+  <h2>What lands in the PR</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 42%;">File</th>
+        <th style="width: 24%;">Change</th>
+        <th>LOC delta</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>appUserManagement/components/AppUserManagement/index.jsx</code></td>
+        <td>Add versioning refs + guard around <code>updateAppUserManagementData</code>. Add 300 ms debounce on <code>searchTerm</code>.</td>
+        <td>+14 / -2</td>
+      </tr>
+      <tr>
+        <td><code>appAccessLogs/components/Table/index.jsx</code></td>
+        <td>Add versioning refs + guard around <code>updateAppAccessLogsData</code>.</td>
+        <td>+10 / -0</td>
+      </tr>
+      <tr>
+        <td><code>appApplicationObjectsLogs/components/AppApplicationObjectsLogs/index.js</code></td>
+        <td>Add versioning refs + guard around <code>updateAppApplicationObjectsLogsData</code>.</td>
+        <td>+10 / -0</td>
+      </tr>
+      <tr>
+        <td><code>appFrameworkObjectsLogs/components/AppFrameworkObjectsLogs/index.js</code></td>
+        <td>Same pattern.</td>
+        <td>+10 / -0</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout note">
+    <div class="callout-title">What we do NOT touch</div>
+    <ul style="margin-top: 6px;">
+      <li>The shared <code>useApi</code> hook — stays as-is</li>
+      <li>The Redux slices — no reducer changes needed, the guard sits between fetch and dispatch</li>
+      <li>The <code>&lt;Table&gt;</code> component — versioning lives in the page-level fetch effect, not the presentational layer</li>
+      <li>The backend — no API changes needed</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============== VERIFICATION ============== -->
+<section>
+  <span class="kicker">07 · Verification</span>
+  <h2>How we know the fix works</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4 style="margin-top: 0;">Manual repro — App Users</h4>
+      <ol style="margin-top: 8px;">
+        <li>Open Chrome DevTools → Network tab, set throttling to "Slow 3G"</li>
+        <li>Open App Users on a workspace with 500+ users</li>
+        <li>Type "s", pause 100 ms, type "smith" — this reliably reproduces the race today</li>
+        <li>Before fix: table shows all 200 "s" rows even though input reads "smith"</li>
+        <li>After fix: table shows the ~5 "smith" rows regardless of network jitter</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h4 style="margin-top: 0;">Manual repro — Logs</h4>
+      <ol style="margin-top: 8px;">
+        <li>Same throttling setup</li>
+        <li>On Access Logs, type into the search box, then immediately click a filter dropdown</li>
+        <li>Before fix: filter results and search results race; often the search result "wins" and the filter appears not to have been applied</li>
+        <li>After fix: whatever action fired last is always the one displayed</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-title">Regression check</div>
+    <p>Add a console log inside the guard so that during dev, the browser console prints <code>[search-race] skipping stale response (seq=3, current=5)</code> when a stale response is discarded. Leave it in for one deploy cycle so we can measure how often the race actually fires in real usage.</p>
+  </div>
+</section>
+
+<!-- ============== BACKEND CORRECTNESS AUDIT ============== -->
+<section>
+  <span class="kicker">08 · Backend audit — is the search itself correct?</span>
+  <h2>Access Logs + Audit Logs — search coverage + correctness</h2>
+  <p class="lede">
+    Beyond the race condition, the underlying <code>get_queryset</code> methods on the Access Logs, Audit Logs, and (spot-checked) App Users endpoints share several correctness and performance issues. Fixing the frontend race without fixing these leaves a fast UI on a slow, sometimes-wrong query.
+  </p>
+
+  <div class="severity-row">
+    <div class="severity-tile crit">
+      <div class="severity-label">Critical — wrong results</div>
+      <div class="title">Int fields OR'd into text search</div>
+      <div class="count">3</div>
+      <div class="sub">Audit logs (2 places), Access logs, App Users all mix int-typed columns with text search — silent no-op filters or wrong casts.</div>
+    </div>
+    <div class="severity-tile warn">
+      <div class="severity-label">Performance</div>
+      <div class="title">distinct() + order_by scan</div>
+      <div class="count">3</div>
+      <div class="sub">Every list endpoint appends <code>.distinct()</code> after an OR of icontains filters — for a workspace with 500k audit rows, this is measurably slow per keystroke.</div>
+    </div>
+    <div class="severity-tile warn">
+      <div class="severity-label">Performance</div>
+      <div class="title">Two extra count() queries per fetch</div>
+      <div class="count">1</div>
+      <div class="sub">App Users hits <code>.count()</code> twice more just to compute the "active" and "inactive" tile headers — 3 queries per keystroke.</div>
+    </div>
+  </div>
+
+  <h3>Finding B1 — Int fields treated as text (Audit Logs)</h3>
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">Audit log free-text search silently misfilters when the term isn't numeric</div>
+        <span class="finding-path">backend/src/zango/api/platform/auditlogs/v1/views.py · lines 29–65 · <code>AuditLogViewAPIV1.get_queryset</code></span>
+      </div>
+      <span class="pill crit">Critical</span>
+    </div>
+    <p><strong>What happens.</strong> The mapping OR's every field into one <code>Q()</code>:</p>
+    <div class="code-card">
+      <div class="code-header">
+        <span class="code-path">views.py</span>
+        <span class="code-badge bug">bug</span>
+      </div>
+<pre>field_name_query_mapping = {
+    <span class="tok-str">"tenant_actor"</span>: <span class="tok-str">"tenant_actor__name__icontains"</span>,
+    <span class="tok-str">"object_id"</span>: <span class="tok-str">"object_id"</span>,            <span class="tok-com"># int comparison — no icontains</span>
+    <span class="tok-str">"id"</span>: <span class="tok-str">"id"</span>,                          <span class="tok-com"># same</span>
+    <span class="tok-str">"object_repr"</span>: <span class="tok-str">"object_repr__icontains"</span>,
+    <span class="tok-str">"changes"</span>: <span class="tok-str">"changes__icontains"</span>,
+    <span class="tok-str">"object_uuid"</span>: <span class="tok-str">"object_ref__object_uuid__icontains"</span>,
+}
+search_filters = {
+    <span class="tok-str">"id"</span>: self.process_id,
+    <span class="tok-str">"object_id"</span>: self.process_id,      <span class="tok-com"># returns None on ValueError</span>
+}
+<span class="tok-kw">for</span> field_name, query <span class="tok-kw">in</span> field_name_query_mapping.<span class="tok-fn">items</span>():
+    <span class="tok-kw">if</span> search:
+        <span class="tok-kw">if</span> search_filters.<span class="tok-fn">get</span>(field_name, <span class="tok-num">None</span>):
+            filters |= Q(**{query: search_filters[field_name](search)})   <span class="tok-com"># Q(id=None) when user typed "abc"</span>
+        <span class="tok-kw">else</span>:
+            filters |= Q(**{query: search})</pre>
+    </div>
+    <p>When the user types <code>"smith"</code>: <code>process_id("smith")</code> returns <code>None</code>, and <code>Q(id=None)</code> gets OR'd into the filter chain. Django treats this as <code>WHERE id IS NULL</code> — matches no rows (fine, because <code>id</code> is never null), but still <strong>gets planned and executed</strong> as part of the OR, adding cost to every keystroke.</p>
+    <p><strong>The real bug.</strong> When the user types <code>"12"</code> (a plausible object_id), <code>process_id("12")</code> returns <code>12</code>. The generated SQL includes <code>OR id = 12 OR object_id = 12 OR ...text-fields LIKE '%12%'</code>. The user probably meant one of those but gets all of them. That's semantically wrong for a free-text search — an object_repr containing "abc123" matches, an unrelated row with id=12 also matches, and there's no way to tell them apart in the result set.</p>
+    <p><strong>Fix.</strong> Split integer fields into an explicit "advanced filter" panel (numeric input, one field at a time) OR drop them from the free-text OR chain and rely on the existing column-specific filters (<code>?search_id=12</code>) for numeric lookup.</p>
+  </div>
+
+  <h3>Finding B2 — Same shape in Access Logs</h3>
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">Access log free-text search silently mis-includes id + user_id</div>
+        <span class="finding-path">backend/src/zango/api/platform/accesslogs/v1/views.py · lines 27–60 · <code>AccessLogViewAPIV1.get_queryset</code></span>
+      </div>
+      <span class="pill crit">Critical</span>
+    </div>
+    <p>Same pattern — <code>id</code> is int, <code>user_id</code> is int, both are OR'd into the text search chain. If the user types a numeric string like <code>"42"</code>, they get an incorrect superset of rows.</p>
+    <p><strong>Fix.</strong> Same as B1 — remove int columns from the OR chain, let column-specific filters handle them.</p>
+  </div>
+
+  <h3>Finding B3 — App Users abuses <code>id__icontains</code></h3>
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">Casting BigInt PK to text on every icontains match</div>
+        <span class="finding-path">backend/src/zango/api/platform/tenancy/v1/views.py · line 433</span>
+      </div>
+      <span class="pill warn">Performance</span>
+    </div>
+    <p>App Users maps <code>"user_id"</code> to <code>"id__icontains"</code>. For every row, Postgres casts the BigInt PK to text before comparing:</p>
+    <div class="code-card">
+      <div class="code-header">
+        <span class="code-path">generated SQL (approximate)</span>
+        <span class="code-badge bug">bug</span>
+      </div>
+<pre><span class="tok-kw">WHERE</span> <span class="tok-fn">CAST</span>(id <span class="tok-kw">AS</span> text) <span class="tok-kw">ILIKE</span> <span class="tok-str">'%42%'</span>
+   <span class="tok-kw">OR</span> <span class="tok-kw">LOWER</span>(email) <span class="tok-kw">LIKE</span> <span class="tok-str">'%42%'</span>
+   <span class="tok-kw">OR</span> ...</pre>
+    </div>
+    <p>The <code>CAST … ILIKE</code> can't use the BigInt PK index. On a workspace with 100k users, a single keystroke becomes a table scan (~100 ms in the best case). Multiply by keystrokes-per-second and the DB pool saturates.</p>
+    <p><strong>Fix.</strong> Drop <code>id__icontains</code>. Either use exact <code>id=</code> match when the search string is numeric, or provide a separate "Filter by ID" input that only fires on exact match.</p>
+  </div>
+
+  <h3>Finding B4 — <code>.distinct()</code> after OR of joined-field icontains</h3>
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">Distinct + order_by triggers full result-set sort per query</div>
+        <span class="finding-path">audit views.py:66 · access views.py:61 · users views.py:454</span>
+      </div>
+      <span class="pill warn">Performance</span>
+    </div>
+    <p>All three endpoints do <code>records.filter(filters).distinct()</code> after OR'ing icontains predicates that traverse FK joins (e.g. <code>tenant_actor__name__icontains</code>, <code>roles__name__icontains</code>). The join produces duplicate rows; <code>distinct()</code> deduplicates them. But combined with <code>ORDER BY id DESC</code> (or <code>-modified_at</code>) and offset-based pagination, Postgres must:</p>
+    <ol>
+      <li>Compute the full join</li>
+      <li>Deduplicate the entire result</li>
+      <li>Sort the entire deduplicated result</li>
+      <li>Discard N-1 pages of rows to serve page N</li>
+    </ol>
+    <p><strong>Impact scales with table size.</strong> Under 10k rows: unnoticeable. At 100k+ rows: 300-800 ms per query. On a hot audit-log table: 2 seconds or more. And this fires on every keystroke (or every debounce interval).</p>
+    <p><strong>Fix.</strong> Two options depending on how important the FK-name search is:</p>
+    <ul>
+      <li>Move the FK-name search behind a separate "search by user" input that only kicks in when populated, and drop it from the free-text OR chain</li>
+      <li>Rewrite as a subquery: <code>Q(tenant_actor__in=TenantActor.objects.filter(name__icontains=s))</code> so the join happens against a much smaller set</li>
+    </ul>
+    <p>Either way, once the FK joins are out of the OR chain, <code>.distinct()</code> becomes unnecessary.</p>
+  </div>
+
+  <h3>Finding B5 — App Users fires 3 queries per keystroke</h3>
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">Two extra <code>.count()</code> calls just for tile headers</div>
+        <span class="finding-path">backend/src/zango/api/platform/tenancy/v1/views.py · lines 465–466</span>
+      </div>
+      <span class="pill warn">Performance</span>
+    </div>
+    <p>The view fetches the paged users, then does <code>filter(is_active=True).count()</code> and <code>filter(is_active=False).count()</code> to compute the "Active users: N / Inactive users: M" tiles. That's three round trips per keystroke — one for the page + two for the tile counts.</p>
+    <p><strong>Fix.</strong> Collapse into a single grouped query with Django's <code>Count</code> conditional aggregation:</p>
+    <div class="code-card">
+      <div class="code-header">
+        <span class="code-path">proposed</span>
+        <span class="code-badge fix">fix</span>
+      </div>
+<pre><span class="tok-kw">from</span> django.db.models <span class="tok-kw">import</span> Count, Q
+
+counts = app_users_queryset.<span class="tok-fn">aggregate</span>(
+    active=<span class="tok-fn">Count</span>(<span class="tok-str">"id"</span>, filter=Q(is_active=<span class="tok-num">True</span>)),
+    inactive=<span class="tok-fn">Count</span>(<span class="tok-str">"id"</span>, filter=Q(is_active=<span class="tok-num">False</span>)),
+)</pre>
+    </div>
+    <p>One query. Same numbers.</p>
+  </div>
+
+  <h3>Finding B6 — What's actually searchable is inconsistent</h3>
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <div class="finding-title">The three surfaces disagree on what "search" covers</div>
+        <span class="finding-path">All three <code>get_queryset</code> methods</span>
+      </div>
+      <span class="pill info">Consistency</span>
+    </div>
+    <p>What each free-text search actually looks at:</p>
+    <table>
+      <thead>
+        <tr><th>Endpoint</th><th>Fields covered by free-text</th><th>Missing (probably expected)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>App Users</code></td>
+          <td>name, email, mobile, roles, <s>id</s>*</td>
+          <td>Phone country code, last login timestamp</td>
+        </tr>
+        <tr>
+          <td><code>Access Logs</code></td>
+          <td>user name, username, user_agent, ip, attempt_type, role</td>
+          <td>Referer URL, session_id, timestamps (only via advanced filter)</td>
+        </tr>
+        <tr>
+          <td><code>Audit Logs</code></td>
+          <td>tenant_actor, platform_actor, object_repr, changes, object_uuid</td>
+          <td>Actor email, changes.field_name specifically, action type</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">* strikethrough = field is listed but wrongly typed, per B3</p>
+    <p><strong>Fix.</strong> Establish a rule: <em>the search box searches human-readable text; numeric IDs and timestamps go in the column-filter panel</em>. Document it. Update the placeholder text ("Search by name, email, or role") to set expectations.</p>
+  </div>
+</section>
+
+<!-- ============== FIX PLAN — BACKEND ============== -->
+<section>
+  <span class="kicker">09 · Backend fix plan</span>
+  <h2>The queries we should actually be running</h2>
+  <p class="lede">Applied in the same PR as the frontend versioning fix so the two land together. All changes are internal to <code>get_queryset</code> methods; API contract unchanged.</p>
+
+  <div class="grid-2">
+    <div class="card sage">
+      <h4 style="margin-top: 0;">B1 + B2 · Split numeric from text search</h4>
+      <p style="font-size: 13px; margin-top: 6px;">In both AuditLogs and AccessLogs, remove <code>id</code>, <code>object_id</code>, and <code>user_id</code> from the free-text <code>field_name_query_mapping</code>. If the operator wants an exact ID lookup, they use the column-specific search (<code>?search_id=12</code>) which is already supported.</p>
+    </div>
+    <div class="card sage">
+      <h4 style="margin-top: 0;">B3 · Drop id__icontains from App Users</h4>
+      <p style="font-size: 13px; margin-top: 6px;">Replace with numeric-only branch: <code>if search.isdigit(): filters |= Q(id=int(search))</code>. Preserves capability without table-scanning on every keystroke.</p>
+    </div>
+    <div class="card sage">
+      <h4 style="margin-top: 0;">B4 · Move FK-name searches to subqueries</h4>
+      <p style="font-size: 13px; margin-top: 6px;">Replace <code>tenant_actor__name__icontains</code> with <code>tenant_actor__in=…</code> against a small filtered subquery. Kills the need for <code>.distinct()</code> entirely.</p>
+    </div>
+    <div class="card sage">
+      <h4 style="margin-top: 0;">B5 · Single aggregate for App Users tiles</h4>
+      <p style="font-size: 13px; margin-top: 6px;">Collapse the two <code>.count()</code> calls into one <code>.aggregate(active=Count(...), inactive=Count(...))</code>. Cuts DB round trips per keystroke from 3 to 1.</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-title">Indices worth adding (separate migration)</div>
+    <p>All three tables benefit from partial indices on the fields we search most. Audit logs already indexes <code>timestamp</code>; add functional indices on <code>LOWER(object_repr)</code> and <code>LOWER(changes)</code> for icontains prefix support. Access logs benefits from an index on <code>(ip_address, attempt_time)</code>. This is a separate PR — measure the wins from B1-B5 first.</p>
+  </div>
+</section>
+
+<!-- ============== APPENDIX ============== -->
+<section>
+  <span class="kicker">Appendix</span>
+  <h2>Where the shared <code>useApi</code> hook falls short</h2>
+  <p><code>frontend/src/hooks/useApi.jsx</code> currently accepts <code>{url, type, payload, loader, showErrorModal, notify}</code>. It does not accept an <code>AbortSignal</code>, and it doesn't return an object with a <code>.cancel()</code> method. Its internal calls (<code>callGetApi</code>, <code>callPostApi</code>, etc.) similarly don't accept signals.</p>
+  <p>Adding cancellation is a straightforward refactor (~30 lines across useApi + the 4 service functions) but every caller becomes at-risk of a subtle change in error semantics — an aborted request returns <code>{success: false, response: {message: 'aborted'}}</code> today would need special handling. That's why Option A wins for this specific fix.</p>
+</section>
+
+<footer>
+  Plan doc · Search race audit · Fix targets: App Users, Access Logs, Application Audit Logs, Framework Audit Logs · Effort ~40 LOC frontend, 0 LOC backend, 0 DB.
+</footer>
+
+</div>
+</body>
+</html>

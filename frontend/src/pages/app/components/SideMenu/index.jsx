@@ -132,6 +132,25 @@ export default function SideMenu() {
 			</NavLink>
 
 			<NavLink
+				data-cy="downloads"
+				to={`downloads/`}
+				className={({ isActive, isPending }) =>
+					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${
+						isPending ? 'bg-transparent' : isActive ? 'bg-[#d3c9a4]' : ''
+					}`
+				}
+			>
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+					<path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#26210F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<polyline points="7 10 12 15 17 10" stroke="#26210F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+					<line x1="12" y1="15" x2="12" y2="3" stroke="#26210F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+				</svg>
+				<span className="text-center font-lato text-[10px] font-bold leading-[12px] tracking-[0.2px] text-[#26210F]">
+					Downloads
+				</span>
+			</NavLink>
+
+			<NavLink
 				to={`Releases/`}
 				className={({ isActive, isPending }) =>
 					`flex flex-col items-center justify-center gap-[4px] px-[13px] py-[10px] hover:bg-[#d3c9a4] ${

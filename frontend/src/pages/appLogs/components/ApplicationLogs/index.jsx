@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import ExportButton from '../../../../components/ExportButton';
 import useApi from '../../../../hooks/useApi';
 
 export default function ApplicationLogs() {
@@ -386,6 +387,27 @@ export default function ApplicationLogs() {
 								Clear Filters
 							</button>
 						)}
+
+						{/* Export CSV */}
+						<ExportButton
+							kind="audit_logs_app"
+							filters={{
+								search: searchTerm || '',
+								columns: {
+									...(filters.action && { action: filters.action }),
+									...(filters.object_type && {
+										object_type: filters.object_type,
+									}),
+									...(filters.date_range?.start &&
+										filters.date_range?.end && {
+											timestamp: {
+												start: filters.date_range.start,
+												end: filters.date_range.end,
+											},
+										}),
+								},
+							}}
+						/>
 					</div>
 				</div>
 			</div>

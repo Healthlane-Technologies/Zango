@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
@@ -13,6 +13,7 @@ import {
 	selectRerenderPage,
 	setAppUserManagementData,
 } from '../../slice';
+import ExportButton from '../../../../components/ExportButton';
 import ActivateUserModal from '../Modals/ActivateUserModal';
 import AddNewUserModal from '../Modals/AddNewUserModal';
 import DeactivateUserModal from '../Modals/DeactivateUserModal';
@@ -29,6 +30,16 @@ export default function AppUserManagement() {
 	
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
+	// Debounced search value drives the API call. searchTerm updates
+	// on every keystroke for a snappy input; debouncedSearchTerm only
+	// updates 300ms after the last keystroke.
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+	// Request versioning refs — bumped before every fetch, checked
+	// before applying the response. Discards stale responses from
+	// requests that were made before a newer keystroke or filter change,
+	// so a slow first response can't overwrite a fast second one.
+	const requestSeqRef = useRef(0);
+	const lastAppliedSeqRef = useRef(0);
 	const [filters, setFilters] = useState({
 		is_active: ''
 	});
@@ -47,15 +58,17 @@ export default function AppUserManagement() {
 		dispatch(setAppUserManagementData(value));
 	};
 
-	// Fetch users data
+	// Fetch users data. Versioned via requestSeqRef so a slow response
+	// from an older request can't overwrite a fresh one.
 	const fetchUsers = async () => {
+		const seq = ++requestSeqRef.current;
 		setLoading(true);
 		try {
 			const queryParams = new URLSearchParams({
 				page: page.toString(),
 				page_size: pageSize.toString(),
 				include_dropdown_options: 'true',
-				search: searchTerm,
+				search: debouncedSearchTerm,
 			});
 
 			// Add filters
@@ -69,15 +82,27 @@ export default function AppUserManagement() {
 				loader: false,
 			});
 
+			// Discard stale responses. Two guards:
+			// - lastAppliedSeqRef: a later response has already applied
+			// - requestSeqRef: a newer request is still in flight
+			if (seq <= lastAppliedSeqRef.current) return;
+			if (seq !== requestSeqRef.current) return;
+
 			if (success && response) {
 				updateAppUserManagementData(response);
 				setTotalPages(response.users?.total_pages || 1);
 				setTotalRecords(response.users?.total_records || 0);
+				lastAppliedSeqRef.current = seq;
 			}
 		} catch (error) {
 			console.error('Error fetching users:', error);
 		} finally {
-			setLoading(false);
+			// Only clear loading when this fetch is still the latest one
+			// in flight — otherwise a stale error would hide the spinner
+			// for a still-running newer request.
+			if (seq === requestSeqRef.current) {
+				setLoading(false);
+			}
 		}
 	};
 
@@ -85,14 +110,20 @@ export default function AppUserManagement() {
 		setPage(1); // Reset to page 1 when pageSize changes
 	}, [pageSize]);
 
+	// Debounce searchTerm → debouncedSearchTerm (300ms).
+	useEffect(() => {
+		const t = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+		return () => clearTimeout(t);
+	}, [searchTerm]);
+
 	useEffect(() => {
 		fetchUsers();
-	}, [appId, page, pageSize, searchTerm, filters, rerenderPage]);
+	}, [appId, page, pageSize, debouncedSearchTerm, filters, rerenderPage]);
 
 	// Reset page to 1 when search term or filters change
 	useEffect(() => {
 		setPage(1);
-	}, [searchTerm, filters]);
+	}, [debouncedSearchTerm, filters]);
 
 	// Toggle row expansion
 	const toggleRowExpansion = (userId) => {
@@ -257,6 +288,18 @@ export default function AppUserManagement() {
 											</svg>
 										</button>
 									</div>
+
+									{/* Export CSV */}
+									<ExportButton
+										kind="app_users"
+										filters={{
+											search: searchTerm || '',
+											columns: filters.is_active
+												? { is_active: filters.is_active }
+												: {},
+										}}
+										className="h-9"
+									/>
 
 									{/* Add User Button */}
 									<button
