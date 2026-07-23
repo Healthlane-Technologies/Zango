@@ -1180,7 +1180,7 @@ function JsonSchemaCollapsible({ schema }) {
 }
 
 /* ─── Agent Row (list item) ─── */
-function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, testingId, appId, triggerApi }) {
+function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, testingId, appId, triggerApi, onPromptPreview }) {
 	const [expanded, setExpanded] = useState(false);
 	const [showSessions, setShowSessions] = useState(false);
 	const [sessions, setSessions] = useState([]);
@@ -1266,8 +1266,8 @@ function AgentRow({ agent, onEdit, onToggleStatus, onDuplicate, onTestAgent, tes
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Temperature</span><span className="font-lato text-[13px] text-[#111827]">{agent.temperature}</span></div>
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Max Tokens</span><span className="font-lato text-[13px] text-[#111827]">{(agent.max_tokens || 0).toLocaleString()}</span></div>
 								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Timeout</span><span className="font-lato text-[13px] text-[#111827]">{agent.timeout_seconds}s</span></div>
-								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">System Prompt</span><span className="font-lato text-[13px] font-medium text-[#346BD4]">{agent.system_prompt_name || '-'}</span></div>
-								<div className="flex"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">User Prompt</span><span className="font-lato text-[13px] font-medium text-[#346BD4]">{agent.user_prompt_name || '-'}</span></div>
+								<div className="flex items-center"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">System Prompt</span>{agent.system_prompt_name ? <button type="button" onClick={() => onPromptPreview(agent.system_prompt_name)} className="flex items-center gap-[6px] group"><span className="font-lato text-[13px] font-medium text-[#346BD4] group-hover:underline">{agent.system_prompt_name}</span>{agent.system_prompt_version != null && <span className="inline-flex items-center rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-[6px] py-[1px] text-[10px] font-semibold tracking-wide text-[#4F46E5]">v{agent.system_prompt_version}</span>}</button> : <span className="font-lato text-[13px] text-[#111827]">-</span>}</div>
+								<div className="flex items-center"><span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">User Prompt</span>{agent.user_prompt_name ? <button type="button" onClick={() => onPromptPreview(agent.user_prompt_name)} className="flex items-center gap-[6px] group"><span className="font-lato text-[13px] font-medium text-[#346BD4] group-hover:underline">{agent.user_prompt_name}</span>{agent.user_prompt_version != null && <span className="inline-flex items-center rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-[6px] py-[1px] text-[10px] font-semibold tracking-wide text-[#4F46E5]">v{agent.user_prompt_version}</span>}</button> : <span className="font-lato text-[13px] text-[#111827]">-</span>}</div>
 								<div className="flex items-start">
 									<span className="w-[120px] shrink-0 font-lato text-[13px] text-[#6B7280]">Output</span>
 									<div>
@@ -1548,6 +1548,7 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 	const [testSystemVariables, setTestSystemVariables] = useState({});
 	const [testResult, setTestResult] = useState(null);
 	const [disableConfirmAgent, setDisableConfirmAgent] = useState(null);
+	const [promptPreview, setPromptPreview] = useState(null); // { name, version, content, type, loading, error }
 	const readyCalledRef = useRef(false);
 
 	// Pagination
@@ -1707,6 +1708,28 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 		}
 	};
 
+	const handlePromptPreview = async (promptName) => {
+		if (!promptName) return;
+		setPromptPreview({ name: promptName, version: null, content: null, loading: true });
+		const { response, success } = await triggerApi({
+			url: `/api/v1/apps/${appId}/ai/prompts/?search=${encodeURIComponent(promptName)}`,
+			type: 'GET',
+			loader: false,
+		});
+		const results = response?.prompts?.records || response?.prompts?.results || response?.results || [];
+		if (success && results.length) {
+			const prompt = results.find((p) => p.name === promptName) || results[0];
+			setPromptPreview({
+				name: prompt.name,
+				type: prompt.type,
+				version: prompt.active_version?.version_number ?? null,
+				content: prompt.active_version?.content ?? null,
+			});
+		} else {
+			setPromptPreview({ name: promptName, version: null, content: null, error: true });
+		}
+	};
+
 	const handleTestAgent = (agent) => {
 		if (testingId) return;
 		setTestUserMessage('');
@@ -1828,7 +1851,7 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 					</div>
 				)}
 				{agents.map((agent) => (
-					<AgentRow key={agent.id} agent={agent} onEdit={openEdit} onToggleStatus={handleToggleStatus} onDuplicate={handleDuplicate} onTestAgent={handleTestAgent} testingId={testingId} appId={appId} triggerApi={triggerApi} />
+					<AgentRow key={agent.id} agent={agent} onEdit={openEdit} onToggleStatus={handleToggleStatus} onDuplicate={handleDuplicate} onTestAgent={handleTestAgent} testingId={testingId} appId={appId} triggerApi={triggerApi} onPromptPreview={handlePromptPreview} />
 				))}
 				{totalPages > 1 && (
 					<div className="rounded-[8px] border border-[#E5E7EB] bg-white overflow-hidden">
@@ -2129,6 +2152,59 @@ export default function Agents({ onReady, refreshSignal, onFetchComplete, onInva
 					</div>
 				);
 			})()}
+
+		{/* Prompt preview modal */}
+		{promptPreview && (
+			<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPromptPreview(null)}>
+				<div className="w-full max-w-[560px] rounded-[16px] bg-white shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+					{/* Header */}
+					<div className="flex items-center justify-between border-b border-[#E5E7EB] px-[24px] py-[18px]">
+						<div className="flex items-center gap-[10px]">
+							<div className="flex h-[34px] w-[34px] items-center justify-center rounded-[8px] bg-[#EEF2FF]">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+									<rect x="2" y="2" width="12" height="12" rx="2" stroke="#4F46E5" strokeWidth="1.4"/>
+									<path d="M5 5.5h6M5 8h6M5 10.5h3.5" stroke="#4F46E5" strokeWidth="1.3" strokeLinecap="round"/>
+								</svg>
+							</div>
+							<div>
+								<p className="font-source-sans-pro text-[15px] font-semibold text-[#111827]">{promptPreview.name}</p>
+								<div className="flex items-center gap-[6px] mt-[2px]">
+									{promptPreview.type && <span className="text-[11px] font-medium text-[#6B7280] capitalize">{promptPreview.type} prompt</span>}
+									{promptPreview.version != null && (
+										<span className="inline-flex items-center rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-[6px] py-[1px] text-[10px] font-semibold tracking-wide text-[#4F46E5]">v{promptPreview.version}</span>
+									)}
+								</div>
+							</div>
+						</div>
+						<button onClick={() => setPromptPreview(null)} className="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#374151]">
+							<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+						</button>
+					</div>
+					{/* Content */}
+					<div className="px-[24px] py-[20px]">
+						{promptPreview.loading ? (
+							<div className="flex items-center justify-center py-[32px]">
+								<svg className="animate-spin h-5 w-5 text-[#4F46E5]" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+							</div>
+						) : promptPreview.error ? (
+							<p className="font-lato text-[13px] text-[#EF4444]">Could not load prompt content.</p>
+						) : promptPreview.content ? (
+							<div className="rounded-[8px] bg-[#1F2937] p-[16px] max-h-[360px] overflow-y-auto">
+								<pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-[20px] text-[#D1D5DB]">
+									{promptPreview.content.split(/(\{\{\w+\}\})/g).map((part, i) =>
+										/^\{\{\w+\}\}$/.test(part)
+											? <span key={i} className="text-[#F59E0B]">{part}</span>
+											: <span key={i}>{part}</span>
+									)}
+								</pre>
+							</div>
+						) : (
+							<p className="font-lato text-[13px] text-[#9CA3AF]">No active version content.</p>
+						)}
+					</div>
+				</div>
+			</div>
+		)}
 
 		</div>
 	);

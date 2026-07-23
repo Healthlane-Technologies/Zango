@@ -1,7 +1,7 @@
 anthropic==0.100.0
 beautifulsoup4==4.12.3
-boto3==1.28.52
-botocore==1.31.85
+boto3==1.43.23
+botocore==1.43.23
 celery==5.3.1
 click==8.1.7
 cookiecutter==2.3.0
