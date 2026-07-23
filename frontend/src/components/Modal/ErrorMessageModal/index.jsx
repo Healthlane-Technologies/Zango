@@ -12,6 +12,18 @@ export default function ErrorMessageModal({
 		event.preventDefault();
 	};
 
+	// Convert newline characters to JSX elements for proper rendering
+	const renderMessageWithLineBreaks = (message) => {
+		if (!message) return null;
+
+		const lines = message.split('\n');
+		return lines.map((line, index) => (
+			<div key={index} className="mb-1">
+				{line}
+			</div>
+		));
+	};
+
 	return (
 		<Transition.Root show={isVisible} as={Fragment}>
 			<Dialog
@@ -64,7 +76,7 @@ export default function ErrorMessageModal({
 								</Dialog.Title>
 								<div className="mb-[32px] w-full px-6">
 									<div data-cy="error_message" className="w-full text-center text-[#808187]">
-										{errorMessage}
+										{renderMessageWithLineBreaks(errorMessage)}
 									</div>
 								</div>
 								<footer className="flex w-full flex-row items-center justify-end border-t border-[#3F4151] px-4 py-3">

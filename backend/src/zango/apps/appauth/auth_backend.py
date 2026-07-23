@@ -27,7 +27,7 @@ class AppUserModelBackend(ModelBackend):
             try:
                 query = Q()
                 if email:
-                    query = query | Q(email=email)
+                    query = query | Q(email__iexact=email)
                 if phone:
                     query = query | Q(mobile=phone)
                 if username:
