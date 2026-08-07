@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0b8] - 2026-08-07
+
+### Added
+
+* Include SAML NameID in the `user_not_found` ACS token to aid SSO login debugging [(#610)](https://github.com/Healthlane-Technologies/Zango/pull/610)
+
+### Fixed
+
+* Pin ruff version to 0.6.9 for deterministic CI [(#611)](https://github.com/Healthlane-Technologies/Zango/pull/611)
+
 ## [1.2.0b7] - 2026-07-22
 
 ### Added
