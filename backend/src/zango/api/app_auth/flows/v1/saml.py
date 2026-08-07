@@ -109,6 +109,7 @@ def acs(request, *args, **kwargs):
                 "message": "User does not exist",
                 "code": "user_not_found",
                 "param": "email",
+                "nameid": email,
             }
             return HttpResponseRedirect(
                 redirect_to=f"/app/login/?token={signing.dumps(resp, key=in_response_to)}&request_id={in_response_to}"
