@@ -127,6 +127,9 @@ class TenantModel(TenantMixin, FullAuditMixin):
     def __str__(self):
         return self.name
 
+    def get_primary_domain(self):
+        return self.domains.filter(is_primary=True).first()
+
     def suspend(self):
         self.status = "suspended"
         self.suspended_on = timezone.now()
