@@ -125,11 +125,8 @@ export default function useApi() {
 						setErrorMessage(response.message);
 					}
 
-
 					return {
-						response: {
-							message: response.message || 'Server Error',
-						},
+						response,
 						success: false,
 						responseStatus: apiRequest.status,
 					};
@@ -153,9 +150,7 @@ export default function useApi() {
 					}
 
 					return {
-						response: {
-							message: response.message,
-						},
+						response,
 						success: false,
 						responseStatus: apiRequest.status,
 					};

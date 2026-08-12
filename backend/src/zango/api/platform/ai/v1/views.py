@@ -222,9 +222,9 @@ class ProvidersListViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                                     if isinstance(sub_msg, list)
                                     else str(sub_msg)
                                 )
-                                error_messages.append(str(sub_msg_str))
+                                error_messages.append(f"{sub_field}: {sub_msg_str}")
                         else:
-                            error_messages.append(str(error))
+                            error_messages.append(f"{field_name}: {error}")
                 return get_api_response(
                     False, {"message": ", ".join(error_messages)}, 400
                 )
