@@ -21,7 +21,9 @@ const LaunchNewAppForm = ({ closeModal }) => {
 	};
 
 	let validationSchema = Yup.object().shape({
-		name: Yup.string(),
+		name: Yup.string().test('no-spaces', 
+					'App name cannot contain spaces',
+					value => !/\s/.test(value)).nullable(),
 		description: Yup.string(),
 		app_template: Yup.mixed().test('fileType', 'Only ZIP files are allowed', (value) => {
 			if (value) {
@@ -127,6 +129,7 @@ const LaunchNewAppForm = ({ closeModal }) => {
 								label={'Template'}
 								id={'app_template'}
 								fileValue={null}
+								fileType='application/zip'
 							/>
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
