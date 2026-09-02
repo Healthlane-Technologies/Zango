@@ -365,6 +365,7 @@ def setup_settings(settings, BASE_DIR):
             ["http://localhost:1443", "http://localhost:8000"],
         ),
         CORS_ALLOWED_ORIGIN_REGEXES=(list, []),
+        CORS_ALLOW_ALL_ORIGINS=(bool, False),
         CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:1443", "http://localhost:8000"]),
         AXES_BEHIND_REVERSE_PROXY=(bool, False),
         AXES_FAILURE_LIMIT=(int, 6),
@@ -464,11 +465,10 @@ def setup_settings(settings, BASE_DIR):
     # requesting tenant's own registered domains.
     #
     # Local development stays blanket-allow so a dev setup needs no CORS config
-    # at all; every other environment defaults to the tenant-aware check. Either
-    # side can be pinned explicitly with CORS_ALLOW_ALL_ORIGINS in .env.
-    settings.CORS_ALLOW_ALL_ORIGINS = env.bool(
-        "CORS_ALLOW_ALL_ORIGINS",
-        default=settings.ENV == "dev",
+    # at all; every other environment uses the tenant-aware check unless
+    # CORS_ALLOW_ALL_ORIGINS is explicitly turned on.
+    settings.CORS_ALLOW_ALL_ORIGINS = (
+        env("CORS_ALLOW_ALL_ORIGINS") or settings.ENV == "dev"
     )
     settings.CORS_ORIGIN_ALLOW_ALL = settings.CORS_ALLOW_ALL_ORIGINS
     settings.CORS_ALLOW_CREDENTIALS = True

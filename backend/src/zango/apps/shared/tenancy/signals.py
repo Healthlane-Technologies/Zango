@@ -7,8 +7,17 @@ def _build_origins(domains):
     """
     Expand tenant hostnames into the origin strings a browser sends in the
     Origin header.
+
+    Both schemes are emitted: a tenant served over plain http - internal,
+    pre-TLS, or behind a proxy that terminates elsewhere - would otherwise
+    never match its own domain and lock itself out. The origin still has to be
+    one of that tenant's registered domains either way.
     """
-    return {f"https://{domain}" for domain in domains}
+    return {
+        f"{scheme}://{domain}"
+        for domain in domains
+        for scheme in ("https", "http")
+    }
 
 
 def _tenant_origins(request):
