@@ -91,6 +91,10 @@ TENANT_DOMAIN_MODEL = "tenancy.Domain"
 
 MIDDLEWARE = [
     "zango.middleware.tenant.ZangoTenantMainMiddleware",
+    # Must stay directly below ZangoTenantMainMiddleware: the
+    # check_request_enabled receiver resolves request.tenant, and it must
+    # still run before any middleware that can short-circuit a response.
+    "corsheaders.middleware.CorsMiddleware",
     # 'zango.middleware.context_middleware.SimpleContextMiddleware',
     # 'zango.middleware.tenant_url_switch.url_switch_middleware',
     # 'django_tenants.middleware.main.TenantMainMiddleware',
@@ -110,8 +114,6 @@ MIDDLEWARE = [
     # 'zango.middleware.middleware.SetUserRoleMiddleWare',
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "zango.middleware.tenant.TimezoneMiddleware",
     "zango.apps.auditlogs.middleware.AuditlogMiddleware",
@@ -362,6 +364,8 @@ def setup_settings(settings, BASE_DIR):
             list,
             ["http://localhost:1443", "http://localhost:8000"],
         ),
+        CORS_ALLOWED_ORIGIN_REGEXES=(list, []),
+        CORS_ALLOW_ALL_ORIGINS=(bool, False),
         CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:1443", "http://localhost:8000"]),
         AXES_BEHIND_REVERSE_PROXY=(bool, False),
         AXES_FAILURE_LIMIT=(int, 6),
@@ -455,12 +459,27 @@ def setup_settings(settings, BASE_DIR):
         }
     }
 
-    settings.CORS_ORIGIN_ALLOW_ALL = True
-    settings.CORS_ALLOW_ALL_ORIGINS = True
+    # Origins are not blanket-allowed. A request is permitted when EITHER the
+    # Origin is in the static allow-list below, OR the check_request_enabled
+    # receiver in zango.apps.shared.tenancy.signals recognises it as one of the
+    # requesting tenant's own registered domains.
+    #
+    # Local development stays blanket-allow so a dev setup needs no CORS config
+    # at all; every other environment uses the tenant-aware check unless
+    # CORS_ALLOW_ALL_ORIGINS is explicitly turned on.
+    settings.CORS_ALLOW_ALL_ORIGINS = (
+        env("CORS_ALLOW_ALL_ORIGINS") or settings.ENV == "dev"
+    )
+    settings.CORS_ORIGIN_ALLOW_ALL = settings.CORS_ALLOW_ALL_ORIGINS
     settings.CORS_ALLOW_CREDENTIALS = True
-    settings.CORS_ORIGIN_WHITELIST = env(
+    # Static allow-list: platform-level and embed origins that are not tied to a
+    # single tenant. Never add "null" here - sandboxed iframes and file:// pages
+    # send it, and combined with credentials that reopens the hole.
+    settings.CORS_ALLOWED_ORIGINS = env(
         "CORS_ORIGIN_WHITELIST"
     )  # Change according to domain configured
+    settings.CORS_ORIGIN_WHITELIST = settings.CORS_ALLOWED_ORIGINS
+    settings.CORS_ALLOWED_ORIGIN_REGEXES = env("CORS_ALLOWED_ORIGIN_REGEXES")
     settings.CSRF_TRUSTED_ORIGINS = env(
         "CSRF_TRUSTED_ORIGINS"
     )  # Change according to domain configured
