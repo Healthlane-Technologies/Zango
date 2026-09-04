@@ -56,7 +56,6 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
 WORKDIR /zango
 
 # Install Python dependencies
-RUN pip install --upgrade 'sentry-sdk[django]'
 COPY backend/requirements/base.txt /backend/requirements/base.txt
 RUN pip install -r /backend/requirements/base.txt
 
