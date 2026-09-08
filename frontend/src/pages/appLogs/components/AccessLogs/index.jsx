@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import ExportButton from '../../../../components/ExportButton';
 import useApi from '../../../../hooks/useApi';
 
 export default function AccessLogs() {
@@ -262,6 +263,35 @@ export default function AccessLogs() {
 								Clear Filters
 							</button>
 						)}
+
+						{/* Export CSV */}
+						<ExportButton
+							kind="access_logs"
+							filters={{
+								search: searchTerm || '',
+								columns: {
+									...(filters.attempt_type && {
+										attempt_type: filters.attempt_type,
+									}),
+									...(filters.is_login_successful !== '' &&
+										filters.is_login_successful !== undefined && {
+											is_login_successful:
+												filters.is_login_successful === 'true'
+													? 'successful'
+													: 'failed',
+										}),
+									...(filters.role && { role: filters.role }),
+									...(filters.date_range?.start &&
+										filters.date_range?.end && {
+											attempt_time: {
+												start: filters.date_range.start,
+												end: filters.date_range.end,
+											},
+										}),
+								},
+							}}
+							className="h-9"
+						/>
 					</div>
 				</div>
 			</div>

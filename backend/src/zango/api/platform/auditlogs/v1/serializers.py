@@ -21,22 +21,29 @@ class AuditLogSerializerModel(serializers.ModelSerializer):
         )
 
     def get_actor(self, obj):
-        return (
-            obj.tenant_actor.name
-            if obj.tenant_actor
-            else obj.platform_actor.name
-            if obj.platform_actor
-            else None
-        )
+        # FK targets (PlatformUserModel, AppUserModel) can be hard-deleted
+        # independently of LogEntry rows. Accessing the descriptor raises
+        # DoesNotExist when the target is gone — guard so a single
+        # dangling row can't 500 the whole audit-log endpoint.
+        try:
+            if obj.tenant_actor_id and obj.tenant_actor:
+                return obj.tenant_actor.name
+        except Exception:
+            pass
+        try:
+            if obj.platform_actor_id and obj.platform_actor:
+                return obj.platform_actor.name
+        except Exception:
+            pass
+        return None
 
     def get_actor_type(self, obj):
-        return (
-            "tenant_actor"
-            if obj.tenant_actor
-            else "platform_actor"
-            if obj.platform_actor
-            else None
-        )
+        # Base type on FK id, not descriptor — id survives dangling refs.
+        if obj.tenant_actor_id:
+            return "tenant_actor"
+        if obj.platform_actor_id:
+            return "platform_actor"
+        return None
 
     def get_object_uuid(self, obj):
         if obj.object_ref is not None:

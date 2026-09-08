@@ -26,19 +26,23 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             return None
 
     def get_queryset(self, search, tenant, columns={}, model_type=None):
-        field_name_query_mapping = {
-            "tenant_actor": "tenant_actor__name__icontains",
-            "platform_actor": "platform_actor__name__icontains",
-            "object_id": "object_id",
-            "id": "id",
+        # Text-only free-text search targets. Numeric fields (id, object_id)
+        # are handled separately below with an exact-match branch so we
+        # don't OR `Q(id=None)` into every keystroke and so a search for
+        # "42" doesn't silently include unrelated rows whose text fields
+        # happen to contain "42".
+        text_field_query_mapping = {
             "object_repr": "object_repr__icontains",
             "changes": "changes__icontains",
             "object_uuid": "object_ref__object_uuid__icontains",
         }
-        search_filters = {
-            "id": self.process_id,
-            "object_id": self.process_id,
-            "timestamp": process_timestamp,
+        # FK-name searches use a subquery instead of a joined icontains so
+        # we don't need distinct() to dedupe join rows and the DB can use
+        # the FK index. Each entry maps the FK field to the joined-model
+        # field to icontains-match.
+        fk_name_search_mapping = {
+            "tenant_actor__in": ("tenant_actor", "name__icontains"),
+            "platform_actor__in": ("platform_actor", "name__icontains"),
         }
         if model_type == "dynamic_models":
             records = (
@@ -57,13 +61,19 @@ class AuditLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
         if search == "" and columns == {}:
             return records
         filters = Q()
-        for field_name, query in field_name_query_mapping.items():
-            if search:
-                if search_filters.get(field_name, None):
-                    filters |= Q(**{query: search_filters[field_name](search)})
-                else:
-                    filters |= Q(**{query: search})
-        records = records.filter(filters).distinct()
+        if search:
+            for field_name, query in text_field_query_mapping.items():
+                filters |= Q(**{query: search})
+            for query_key, (field, subq_filter) in fk_name_search_mapping.items():
+                related_model = LogEntry._meta.get_field(field).related_model
+                filters |= Q(
+                    **{query_key: related_model.objects.filter(**{subq_filter: search})}
+                )
+            # Exact-match numeric branch — only fires when the user typed
+            # a plain integer, otherwise skipped entirely.
+            if search.isdigit():
+                filters |= Q(id=int(search)) | Q(object_id=int(search))
+        records = records.filter(filters)
         if columns.get("timestamp"):
             processed = process_timestamp(columns.get("timestamp"), tenant.timezone)
             if processed is not None:

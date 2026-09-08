@@ -427,31 +427,52 @@ class UserViewAPIV1(
         return options
 
     def get_queryset(self, search, columns={}):
-        name_field_query_mappping = {
+        # Free-text search targets that make sense as icontains — user
+        # name, email, mobile. `id__icontains` was here and casts BigInt
+        # → text on every row, so it's replaced with an exact-numeric
+        # branch below.
+        text_field_query_mappping = {
             "user_name": "name__icontains",
             "email": "email__icontains",
-            "user_id": "id__icontains",
             "mobile": "mobile__icontains",
-            "roles_access": "roles__name__icontains",
-            "is_active": "is_active",
         }
-        if columns.get("is_active") == "true":
-            columns["is_active"] = True
-        elif columns.get("is_active") == "false":
-            columns["is_active"] = False
-        elif columns.get("is_active") == "" or columns.get("is_active") is None:
-            name_field_query_mappping.pop("is_active")
+        # FK-name search via subquery — dedupe-free (no distinct needed)
+        # and lets Postgres use the FK index instead of joining first.
+        fk_name_search_mapping = {
+            "roles__in": ("roles", "name__icontains"),
+        }
+        # Explicit column filters that aren't part of the free-text OR.
+        # is_active is a bool tri-state (true / false / unset).
+        is_active_filter = columns.get("is_active")
+        if is_active_filter == "true":
+            is_active_filter = True
+        elif is_active_filter == "false":
+            is_active_filter = False
+        else:
+            is_active_filter = None
+
         records = AppUserModel.objects.all().order_by("-modified_at")
         if search == "" and columns == {}:
             return records
         filters = Q()
-        for field_name, query in name_field_query_mappping.items():
-            if field_name in columns:
-                filters &= Q(**{query: columns[field_name]})
-            else:
-                if search:
-                    filters |= Q(**{query: search})
-        return records.filter(filters).distinct()
+        if search:
+            for query in text_field_query_mappping.values():
+                filters |= Q(**{query: search})
+            for query_key, (field, subq_filter) in fk_name_search_mapping.items():
+                related_model = AppUserModel._meta.get_field(field).related_model
+                filters |= Q(
+                    **{query_key: related_model.objects.filter(**{subq_filter: search})}
+                )
+            if search.isdigit():
+                filters |= Q(id=int(search))
+        # Column filter for user_name applies AND semantics so it narrows
+        # (unlike the free-text OR that widens).
+        if columns.get("user_name"):
+            filters &= Q(name__icontains=columns["user_name"])
+        if is_active_filter is not None:
+            filters &= Q(is_active=is_active_filter)
+        records = records.filter(filters)
+        return records
 
     def get(self, request, *args, **kwargs):
         try:
@@ -461,9 +482,17 @@ class UserViewAPIV1(
             columns = get_search_columns(request)
             app_users_queryset = self.get_queryset(search, columns)
 
-            # Calculate active and inactive counts from the filtered queryset
-            active_count = app_users_queryset.filter(is_active=True).count()
-            inactive_count = app_users_queryset.filter(is_active=False).count()
+            # Calculate active + inactive counts in ONE query via
+            # conditional aggregation rather than two extra .count()
+            # round trips per keystroke.
+            from django.db.models import Count
+
+            counts = app_users_queryset.aggregate(
+                active=Count("id", filter=Q(is_active=True)),
+                inactive=Count("id", filter=Q(is_active=False)),
+            )
+            active_count = counts["active"] or 0
+            inactive_count = counts["inactive"] or 0
 
             app_users = self.paginate_queryset(app_users_queryset, request, view=self)
             serializer = AppUserModelSerializerModel(

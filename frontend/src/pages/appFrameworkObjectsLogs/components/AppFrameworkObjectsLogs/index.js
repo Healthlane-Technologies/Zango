@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import useApi from '../../../../hooks/useApi';
@@ -33,6 +33,10 @@ export default function AppFrameworkObjectsLogs() {
 
 	const triggerApi = useApi();
 
+	// Request versioning refs — see search-race-audit.html.
+	const requestSeqRef = useRef(0);
+	const lastAppliedSeqRef = useRef(0);
+
 	useEffect(() => {
 		let columnFilter = appFrameworkObjectsLogsTableData?.columns
 			? appFrameworkObjectsLogsTableData?.columns
@@ -52,6 +56,7 @@ export default function AppFrameworkObjectsLogs() {
 			: '';
 
 		const makeApiCall = async () => {
+			const seq = ++requestSeqRef.current;
 			const { response, success } = await triggerApi({
 				url: `/api/v1/apps/${appId}/auditlog/?model_type=core_models&page=${
 					appFrameworkObjectsLogsTableData?.pageIndex + 1
@@ -63,8 +68,11 @@ export default function AppFrameworkObjectsLogs() {
 				type: 'GET',
 				loader: true,
 			});
+			if (seq <= lastAppliedSeqRef.current) return;
+			if (seq !== requestSeqRef.current) return;
 			if (success && response) {
 				updateAppFrameworkObjectsLogsData(response);
+				lastAppliedSeqRef.current = seq;
 			}
 		};
 

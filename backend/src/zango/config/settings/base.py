@@ -61,6 +61,7 @@ TENANT_APPS = [
     "zango.apps.code_execution",
     "zango.apps.auditlogs",
     "zango.apps.accesslogs",
+    "zango.apps.exports",
     "zango.apps.release",
     "zango.apps.secrets",
     "zango.apps.ai",

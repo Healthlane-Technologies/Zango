@@ -24,20 +24,21 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             return None
 
     def get_queryset(self, search, tenant, columns={}):
-        field_name_query_mapping = {
-            "id": "id",
-            "user": "user__name__icontains",
+        # Text-only free-text search targets. Numeric fields (id, user_id)
+        # move to an explicit exact-match branch below so we don't OR
+        # int-typed columns into a text search chain.
+        text_field_query_mapping = {
             "username": "username__icontains",
             "user_agent": "user_agent__icontains",
             "ip_address": "ip_address__icontains",
             "attempt_type": "attempt_type__icontains",
-            "role": "role__name__icontains",
-            "user_id": "user_id",
         }
-        search_filters = {
-            "id": self.process_id,
-            "attempt_time": process_timestamp,
-            "session_expired_at": process_timestamp,
+        # FK-name searches use a subquery instead of a joined icontains so
+        # we don't need distinct() to dedupe join rows and the DB can use
+        # the FK index.
+        fk_name_search_mapping = {
+            "user__in": ("user", "name__icontains"),
+            "role__in": ("role", "name__icontains"),
         }
 
         records = AppAccessLog.objects.all().order_by("-id")
@@ -46,19 +47,19 @@ class AccessLogViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
             return records
 
         filters = Q()
-        for field_name, query in field_name_query_mapping.items():
-            if search:
-                if search_filters.get(field_name, None):
-                    filters |= Q(**{query: search_filters[field_name](search)})
-                else:
-                    if field_name == "user_id":
-                        try:
-                            filters |= Q(**{query: int(search)})
-                        except ValueError:
-                            pass
-                    else:
-                        filters |= Q(**{query: search})
-        records = records.filter(filters).distinct()
+        if search:
+            for field_name, query in text_field_query_mapping.items():
+                filters |= Q(**{query: search})
+            for query_key, (field, subq_filter) in fk_name_search_mapping.items():
+                related_model = AppAccessLog._meta.get_field(field).related_model
+                filters |= Q(
+                    **{query_key: related_model.objects.filter(**{subq_filter: search})}
+                )
+            # Exact-match numeric branch — only fires when the user typed
+            # a plain integer.
+            if search.isdigit():
+                filters |= Q(id=int(search)) | Q(user_id=int(search))
+        records = records.filter(filters)
 
         if columns.get("attempt_time"):
             processed = process_timestamp(columns.get("attempt_time"), tenant.timezone)
