@@ -38,6 +38,7 @@ class OTPConfig:
         hook: Optional[str] = None,
         config_key: Optional[str] = None,
         extra_data: Optional[Dict[str, Any]] = None,
+        expiry: Optional[int] = None,
     ):
         self.method = method
         self.otp_type = otp_type
@@ -53,6 +54,7 @@ class OTPConfig:
         self.hook = hook
         self.config_key = config_key
         self.extra_data = extra_data
+        self.expiry = expiry
 
 
 class OTPSendError(Exception):
@@ -204,7 +206,12 @@ class OTPService:
             return
 
         if not self.config.code:
-            otp = generate_otp(self.config.otp_type, self.user)
+            if self.config.expiry:
+                otp = generate_otp(
+                    self.config.otp_type, self.user, expiry=self.config.expiry
+                )
+            else:
+                otp = generate_otp(self.config.otp_type, self.user)
             message = self.config.message.format(code=otp)
         else:
             message = self.config.message.format(code=self.config.code)
@@ -319,6 +326,7 @@ def send_otp(
     config_key: Optional[str] = None,
     hook: Optional[str] = None,
     extra_data: Optional[Dict[Any, Any]] = None,
+    expiry: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Celery task to send OTP via email or SMS.
@@ -353,6 +361,7 @@ def send_otp(
         hook=hook,
         config_key=config_key,
         extra_data=extra_data,
+        expiry=expiry,
     )
 
     service = OTPService(config)

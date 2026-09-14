@@ -6,6 +6,11 @@ from django.http import HttpResponse
 
 from zango.core.api import get_api_response
 
+from .auth_utils import (
+    get_user_by_email_or_phone_with_query,
+    validate_user_for_authentication,
+)
+
 
 class AppLoginViewAPIV1(LoginView):
     def handle(self, request, *args, **kwargs):
@@ -24,6 +29,18 @@ class AppLoginViewAPIV1(LoginView):
                 ],
             }
             return HttpResponse(json.dumps(response), status=400)
+        data = json.loads(request.body) if request.body else {}
+        email = data.get("email")
+        phone = data.get("phone")
+
+        if email or phone:
+            user = get_user_by_email_or_phone_with_query(email=email, phone=phone)
+            if user:
+                validation_error = validate_user_for_authentication(
+                    user, "Password login"
+                )
+                if validation_error:
+                    return validation_error
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):

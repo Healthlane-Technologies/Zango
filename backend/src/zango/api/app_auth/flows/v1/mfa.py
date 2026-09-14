@@ -9,17 +9,12 @@ from zango.apps.appauth.tasks import send_otp
 from zango.core.api import get_api_response
 from zango.core.utils import get_auth_priority, mask_email, mask_phone_number
 
+from .auth_utils import get_user_by_email_or_phone
+
 
 class GetMFACodeViewAPIV1(APIView):
     def get_user(self, username):
-        from django.db.models import Q
-
-        from zango.apps.appauth.models import AppUserModel
-
-        try:
-            return AppUserModel.objects.get(Q(email=username) | Q(mobile=username))
-        except AppUserModel.DoesNotExist:
-            return None
+        return get_user_by_email_or_phone(username)
 
     def get(self, request, *args, **kwargs):
         from allauth.account.internal.stagekit import unstash_login
@@ -33,7 +28,7 @@ class GetMFACodeViewAPIV1(APIView):
                 "status": 400,
                 "errors": [
                     {
-                        "message": "MFA not required",
+                        "message": "MFA is not required",
                     }
                 ],
             }
@@ -51,10 +46,14 @@ class GetMFACodeViewAPIV1(APIView):
                 }
                 return HttpResponse(json.dumps(resp), status=400)
 
-            if len(request.session.get("account_authentication_methods", [])) > 0:
-                latest_auth_method = request.session["account_authentication_methods"][
-                    0
-                ]
+            from allauth.account.authentication import get_authentication_records
+
+            # Get authentication records from the request
+            auth_records = get_authentication_records(request)
+
+            if auth_records and len(auth_records) > 0:
+                # Get the latest authentication record
+                latest_auth_record = auth_records[0]
                 preferred_method = None
 
                 request_data = {
@@ -62,19 +61,22 @@ class GetMFACodeViewAPIV1(APIView):
                     "params": request.GET,
                 }
 
-                user = None
-                if latest_auth_method.get("email"):
-                    user = self.get_user(latest_auth_method.get("email"))
-                    if user is None:
-                        resp = {
-                            "status": 400,
-                            "errors": [
-                                {
-                                    "message": "User not found",
-                                }
-                            ],
-                        }
-                        return HttpResponse(json.dumps(resp), status=400)
+                # Use login.user directly instead of fetching
+                user = login.user
+                if user is None:
+                    resp = {
+                        "status": 400,
+                        "errors": [
+                            {
+                                "message": "User not found",
+                            }
+                        ],
+                    }
+                    return HttpResponse(json.dumps(resp), status=400)
+
+                # Check if user authenticated with email
+                if latest_auth_record.get("email"):
+                    # If user authenticated with email, send OTP via SMS
                     preferred_method = "sms"
                     if preferred_method not in allowed_methods:
                         resp = {
@@ -86,6 +88,12 @@ class GetMFACodeViewAPIV1(APIView):
                             ],
                         }
                         return HttpResponse(json.dumps(resp), status=400)
+                    hook = policy.get("sms_hook")
+                    sms_content = policy.get("sms_content")
+                    extra_data = policy.get("sms_extra_data")
+                    config_key = policy.get("sms_config_key")
+                    expiry = policy.get("expiry")
+
                     send_otp.delay(
                         method=preferred_method,
                         otp_type="two_factor_auth",
@@ -93,20 +101,17 @@ class GetMFACodeViewAPIV1(APIView):
                         tenant_id=request.tenant.id,
                         request_data=request_data,
                         user_role_id=request.session.get("role_id"),
-                        message="Your 2FA code is {code}",
+                        message=sms_content
+                        if sms_content
+                        else "Your 2FA code is {code}",
+                        hook=hook,
+                        extra_data=extra_data,
+                        config_key=config_key,
+                        expiry=expiry,
                     )
-                else:
-                    user = self.get_user(latest_auth_method.get("phone"))
-                    if user is None:
-                        resp = {
-                            "status": 400,
-                            "errors": [
-                                {
-                                    "message": "User not found",
-                                }
-                            ],
-                        }
-                        return HttpResponse(json.dumps(resp), status=400)
+                # Check if user authenticated with phone
+                elif latest_auth_record.get("phone"):
+                    # If user authenticated with phone, send OTP via email
                     preferred_method = "email"
                     if preferred_method not in allowed_methods:
                         resp = {
@@ -118,6 +123,13 @@ class GetMFACodeViewAPIV1(APIView):
                             ],
                         }
                         return HttpResponse(json.dumps(resp), status=400)
+
+                    email_content = policy.get("email_content")
+                    config_key = policy.get("email_config_key")
+                    hook = policy.get("email_hook")
+                    subject = policy.get("email_subject")
+                    expiry = policy.get("expiry")
+
                     send_otp.delay(
                         method=preferred_method,
                         otp_type="two_factor_auth",
@@ -125,9 +137,15 @@ class GetMFACodeViewAPIV1(APIView):
                         tenant_id=request.tenant.id,
                         request_data=request_data,
                         user_role_id=request.session.get("role_id"),
-                        message="Your 2FA code is",
-                        subject="2FA Verification Code",
+                        message=email_content
+                        if email_content
+                        else "Your 2FA code is {code}",
+                        subject=subject if subject else "2FA Verification Code",
+                        hook=hook,
+                        expiry=expiry,
+                        config_key=config_key,
                     )
+
                 return get_api_response(
                     success=True,
                     response_content={
@@ -139,6 +157,7 @@ class GetMFACodeViewAPIV1(APIView):
                     status=200,
                 )
             elif request.session.get("saml", False):
+                # Handle SAML authentication
                 preferred_method = "sms"
                 if preferred_method not in allowed_methods:
                     resp = {
@@ -155,6 +174,13 @@ class GetMFACodeViewAPIV1(APIView):
                     "path": request.path,
                     "params": request.GET,
                 }
+
+                hook = policy.get("sms_hook")
+                sms_content = policy.get("sms_content")
+                extra_data = policy.get("sms_extra_data")
+                config_key = policy.get("sms_config_key")
+                expiry = policy.get("expiry")
+
                 send_otp.delay(
                     method=preferred_method,
                     otp_type="two_factor_auth",
@@ -162,8 +188,11 @@ class GetMFACodeViewAPIV1(APIView):
                     tenant_id=request.tenant.id,
                     request_data=request_data,
                     user_role_id=request.session.get("role_id"),
-                    message="Your 2FA code is {code}",
-                    subject="2FA Verification Code",
+                    message=sms_content if sms_content else "Your 2FA code is {code}",
+                    hook=hook,
+                    extra_data=extra_data,
+                    config_key=config_key,
+                    expiry=expiry,
                 )
                 return get_api_response(
                     success=True,

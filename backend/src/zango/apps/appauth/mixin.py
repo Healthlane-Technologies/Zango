@@ -40,8 +40,9 @@ class UserAuthConfigValidationMixin:
     ):
         if not roles:
             roles = user.roles.filter(is_active=True)
-        auth_priority = get_auth_priority(tenant=tenant, user=user)
-        twofa_enabled = auth_priority.get("two_factor_auth", {}).get("required", False)
+        twofa_enabled = tenant.auth_config.get("two_factor_auth", {}).get(
+            "required", False
+        )
         for role in roles:
             role_twofa_config = get_auth_priority(
                 tenant=tenant, user_role=role, policy="two_factor_auth"
@@ -49,12 +50,6 @@ class UserAuthConfigValidationMixin:
             if role_twofa_config.get("required", False):
                 twofa_enabled = True
                 break
-        if auth_priority.get("two_factor_auth"):
-            auth_priority["two_factor_auth"]["required"] = twofa_enabled
-        else:
-            auth_priority["two_factor_auth"] = {
-                "required": twofa_enabled,
-            }
         if twofa_enabled:
             if not user.email or not user.mobile:
                 raise ValidationError(

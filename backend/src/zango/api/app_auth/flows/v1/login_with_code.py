@@ -2,11 +2,16 @@ import json
 
 from allauth.headless.account.views import ConfirmLoginCodeView, RequestLoginCodeView
 
-from django.db.models import Q
 from django.http import HttpResponse
 
-from zango.apps.appauth.models import AppUserModel, OTPCode
+from zango.apps.appauth.models import OTPCode
 from zango.core.api import get_api_response
+
+from .auth_utils import (
+    get_user_by_email_or_phone_with_query,
+    get_user_not_found_error_response,
+    validate_user_for_authentication,
+)
 
 
 class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
@@ -26,44 +31,22 @@ class RequestLoginCodeViewAPIV1(RequestLoginCodeView):
                 ],
             }
             return HttpResponse(json.dumps(response), status=400)
-        query = Q()
         data = json.loads(request.body)
         email = data.get("email")
         phone = data.get("phone")
-        if email:
-            query = query | Q(email__iexact=email)
-        if phone:
-            query = query | Q(mobile=phone)
-        try:
-            user = AppUserModel.objects.get(query)
-        except AppUserModel.DoesNotExist:
-            response = {
-                "status": 400,
-                "errors": [
-                    {
-                        "message": "No account found with this email address.",
-                    }
-                ],
-            }
-            return HttpResponse(json.dumps(response), status=400)
-        if not user.is_active:
-            response = {
-                "status": 400,
-                "errors": [
-                    {
-                        "message": "Your account is currently inactive. Please reach out to support for assistance.",
-                    }
-                ],
-            }
-            return HttpResponse(json.dumps(response), status=400)
-        if any(role.auth_config.get("enforce_sso", False) for role in user.roles.all()):
-            response = {
-                "status": 400,
-                "errors": [
-                    {"message": "OTP/Link login cannot be used when SSO is enforced"}
-                ],
-            }
-            return HttpResponse(json.dumps(response), status=400)
+
+        # Fetch user by email or phone
+        user = get_user_by_email_or_phone_with_query(email=email, phone=phone)
+        if not user:
+            return get_user_not_found_error_response(
+                "No account found with this email address/phone."
+            )
+
+        # Validate user status and permissions
+        validation_error = validate_user_for_authentication(user, "OTP/Link login")
+        if validation_error:
+            return validation_error
+
         return super().handle(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
