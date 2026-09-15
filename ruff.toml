@@ -29,6 +29,10 @@ exclude = [
     "tests",
     "migrations",
     "frontend",
+    # Agent Mode's vendored skill plugin: reference content copied from the
+    # zango-app-developer skill. Its template scaffolds are examples the agent
+    # reproduces verbatim, so they must not be reformatted or linted.
+    "backend/src/zango/apps/agent_mode/skill_plugin",
 ]
 
 target-version = "py311"

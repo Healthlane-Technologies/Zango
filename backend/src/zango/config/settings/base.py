@@ -47,6 +47,7 @@ SHARED_APPS = [
     "zango.apps.shared.tenancy",
     "zango.apps.shared.platformauth",
     "zango.apps.shared.platform_logs",
+    "zango.apps.shared.agent_mode",
 ]
 
 
@@ -64,6 +65,7 @@ TENANT_APPS = [
     "zango.apps.release",
     "zango.apps.secrets",
     "zango.apps.ai",
+    "zango.apps.agent_mode",
     "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
@@ -211,7 +213,7 @@ PASSWORD_RESET_DAYS = 90
 MEDIA_URL = "/media/"
 
 # Celery
-CELERY_IMPORTS = ("zango.ai.tasks",)
+CELERY_IMPORTS = ("zango.ai.tasks", "zango.apps.agent_mode.tasks")
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_RESULT_EXTENDED = True
 CELERY_RESULT_EXPIRES = None
@@ -234,6 +236,26 @@ CELERY_BEAT_SCHEDULE = {
         "task": "zango.ai.update_tool_usage_stats",
         "schedule": crontab(minute="0", hour="2"),
     },
+    # Reaps runs whose worker died, and runs stranded because no worker is
+    # consuming the agent_mode queue at all.
+    "sweep_stuck_agent_runs": {
+        "task": "zango.agent_mode.sweep_stuck_agent_runs",
+        "schedule": crontab(minute="*/5"),
+    },
+    # Snapshots are whole-workspace tarballs; without pruning they grow
+    # without bound.
+    "prune_agent_artifacts": {
+        "task": "zango.agent_mode.prune_agent_artifacts",
+        "schedule": crontab(minute="30", hour="3"),
+    },
+}
+
+# Agent Mode runs for minutes at a time. Routing them to a dedicated queue
+# keeps them from occupying the default worker alongside the per-minute
+# health check and ordinary app tasks.
+CELERY_TASK_ROUTES = {
+    "zango.agent_mode.agent_run_executor": {"queue": "agent_mode"},
+    "zango.agent_mode.agent_requirement_turn": {"queue": "agent_mode"},
 }
 
 X_FRAME_OPTIONS = "ALLOW"
@@ -411,10 +433,56 @@ def setup_settings(settings, BASE_DIR):
         SECURE_PROXY_SSL_HEADER=(list, []),
         SENTRY_DSN=(str, ""),
         AWS_CLOUDFRONT_DOMAIN=(str, ""),
+        # --- Agent Mode -------------------------------------------------
+        ANTHROPIC_API_KEY=(str, ""),
+        AGENT_MODE_ENABLED=(bool, False),
+        AGENT_MODE_ENSURE_PACKAGES=(bool, True),
+        AGENT_MODE_ALLOW_FRONTEND_BUILD=(bool, False),
+        AGENT_MODE_MODEL=(str, ""),
+        AGENT_MODE_EFFORT=(str, ""),
+        AGENT_MODE_MAX_TURNS=(int, 0),
+        AGENT_MODE_MAX_RUN_SECONDS=(int, 1800),
+        AGENT_MODE_MAX_BUDGET_USD=(float, 25.0),
+        AGENT_MODE_ANALYST_BUDGET_USD=(float, 2.0),
+        AGENT_MODE_ANALYST_MAX_TURNS=(int, 40),
+        AGENT_MODE_PERMISSION_MODE=(str, "acceptEdits"),
+        AGENT_MODE_REQUIRE_SUPERADMIN=(bool, True),
+        AGENT_MODE_QUEUE=(str, "agent_mode"),
+        AGENT_MODE_HOME=(str, ""),
+        AGENT_MODE_CLAUDE_BIN=(str, ""),
+        AGENT_MODE_SNAPSHOT_RETENTION=(int, 5),
+        AGENT_MODE_SNAPSHOT_MAX_BYTES=(int, 536870912),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
     settings.ENV = env("ENV")
+
+    # --- Agent Mode ------------------------------------------------------
+    # Platform-level Anthropic credential. Read here so the availability
+    # probe can report it without decrypting the AgentModeSettings row;
+    # AgentModeSettings (public schema, encrypted) takes precedence when set.
+    settings.ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY")
+    settings.AGENT_MODE_ENABLED = env("AGENT_MODE_ENABLED")
+    settings.AGENT_MODE_ENSURE_PACKAGES = env("AGENT_MODE_ENSURE_PACKAGES")
+    settings.AGENT_MODE_ALLOW_FRONTEND_BUILD = env(
+        "AGENT_MODE_ALLOW_FRONTEND_BUILD"
+    )
+    settings.AGENT_MODE_MODEL = env("AGENT_MODE_MODEL")
+    settings.AGENT_MODE_EFFORT = env("AGENT_MODE_EFFORT")
+    settings.AGENT_MODE_MAX_TURNS = env("AGENT_MODE_MAX_TURNS")
+    settings.AGENT_MODE_MAX_RUN_SECONDS = env("AGENT_MODE_MAX_RUN_SECONDS")
+    settings.AGENT_MODE_MAX_BUDGET_USD = env("AGENT_MODE_MAX_BUDGET_USD")
+    settings.AGENT_MODE_ANALYST_BUDGET_USD = env("AGENT_MODE_ANALYST_BUDGET_USD")
+    settings.AGENT_MODE_ANALYST_MAX_TURNS = env("AGENT_MODE_ANALYST_MAX_TURNS")
+    settings.AGENT_MODE_PERMISSION_MODE = env("AGENT_MODE_PERMISSION_MODE")
+    settings.AGENT_MODE_REQUIRE_SUPERADMIN = env("AGENT_MODE_REQUIRE_SUPERADMIN")
+    settings.AGENT_MODE_QUEUE = env("AGENT_MODE_QUEUE")
+    settings.AGENT_MODE_HOME = env("AGENT_MODE_HOME") or str(
+        BASE_DIR / ".agent_mode" / "home"
+    )
+    settings.AGENT_MODE_CLAUDE_BIN = env("AGENT_MODE_CLAUDE_BIN")
+    settings.AGENT_MODE_SNAPSHOT_RETENTION = env("AGENT_MODE_SNAPSHOT_RETENTION")
+    settings.AGENT_MODE_SNAPSHOT_MAX_BYTES = env("AGENT_MODE_SNAPSHOT_MAX_BYTES")
 
     settings.SECRET_KEY = env("SECRET_KEY")
     settings.DEBUG = env("DEBUG")

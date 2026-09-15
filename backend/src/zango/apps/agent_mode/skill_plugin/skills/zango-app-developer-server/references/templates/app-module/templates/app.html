@@ -1,0 +1,18 @@
+{% load zstatic %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{APP_NAME}}</title>
+  </head>
+
+  <body>
+    <!-- React App Root -->
+    <div id="zango-app" data-base-path="/app/"></div>
+
+    <!-- Build file will be dynamically loaded -->
+    <script type="module" src="{% zstatic 'js/{{BUILD_FILE}}' %}"></script>
+  </body>
+</html>

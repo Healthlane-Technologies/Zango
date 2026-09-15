@@ -21,6 +21,7 @@ import { AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
 import appCodeRoutes from '../../appCode/routes';
 import { AppLogsRoutes } from '../../appLogs/routes';
 import { AppAiRoutes } from '../../appAi/routes';
+import { AgentModeRoutes } from '../../appAgentMode/routes';
 
 const PlatformAppRoutes = () => {
 	let { appId } = useParams();
@@ -75,6 +76,10 @@ const PlatformAppRoutes = () => {
 				<Route
 					path="/app-settings/app-configuration/*"
 					element={<AppConfigurationRoutes />}
+				/>
+				<Route
+					path="/app-settings/agent-mode/*"
+					element={<AgentModeRoutes />}
 				/>
 				<Route
 					path="/app-settings/app-theme-configuration//*"

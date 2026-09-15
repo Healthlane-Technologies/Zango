@@ -162,8 +162,8 @@ export default function UnifiedAppSettings() {
 		<div className="flex flex-col h-full bg-[#F8FAFC] overflow-hidden">
 			{/* Header */}
 			<div className="bg-white border-b border-[#E5E7EB] px-[40px] py-[20px] flex-shrink-0">
-				<div className="flex items-center justify-between">
-					<div>
+				<div className="flex items-end justify-between gap-[16px]">
+					<div className="min-w-0">
 						<BreadCrumbs />
 						<div className="flex items-center gap-[12px] mt-[8px]">
 							<div className="flex h-[40px] w-[40px] items-center justify-center rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] shadow-lg">
@@ -208,6 +208,24 @@ export default function UnifiedAppSettings() {
 							</div>
 						</div>
 					</div>
+					<button
+						onClick={() =>
+							navigate(`/platform/apps/${appId}/app-settings/agent-mode`)
+						}
+						data-cy="agent_mode_cta"
+						className="mb-[2px] flex shrink-0 items-center gap-[8px] whitespace-nowrap rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[16px] py-[9px] font-lato text-[14px] font-medium text-white shadow-lg transition-opacity hover:opacity-90"
+					>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+							<path
+								d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z"
+								stroke="currentColor"
+								strokeWidth="1.5"
+								strokeLinejoin="round"
+								fill="none"
+							/>
+						</svg>
+						Build with AI
+					</button>
 				</div>
 			</div>
 

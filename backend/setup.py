@@ -81,6 +81,12 @@ setup(
             "assets/**/*",
             "**/templates/**/*",
             "**/workspace_folder_template/**/*",
+            # Agent Mode's vendored skill plugin. The second pattern is not
+            # redundant: setuptools' globbing skips dot-directories, so
+            # ".claude-plugin/plugin.json" is not matched by "**/*" and the
+            # wheel would ship the skill with no plugin manifest.
+            "apps/agent_mode/skill_plugin/**/*",
+            "apps/agent_mode/skill_plugin/.claude-plugin/*",
         ],
     },
     include_package_data=True,

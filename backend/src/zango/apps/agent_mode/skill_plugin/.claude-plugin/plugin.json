@@ -1,0 +1,7 @@
+{
+  "name": "zango-agent-mode",
+  "description": "Server-mode Zango app development skill used by Agent Mode. Builds backend modules, models, CRUD views, workflows, policies and AppBuilder routes inside a single app's workspace.",
+  "author": {
+    "name": "Zango"
+  }
+}
