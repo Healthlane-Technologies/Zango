@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Mode — Polished Frontend &amp; Branded Login by Default</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px;
+       background: #f6f8fa; color: #24292f; line-height: 1.6; }
+.doc { max-width: 900px; margin: 40px auto; padding: 0 24px 80px; }
+header { border-bottom: 2px solid #d0d7de; padding-bottom: 20px; margin-bottom: 32px; }
+.doc-type { font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+            color: #0969da; margin-bottom: 8px; }
+h1 { font-size: 22px; color: #1f2328; font-weight: 700; }
+.meta { font-size: 11px; color: #656d76; margin-top: 6px; }
+h2 { font-size: 12px; font-weight: 700; color: #1f2328; margin: 28px 0 10px;
+     text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #d0d7de;
+     padding-bottom: 6px; }
+h3 { font-size: 13px; font-weight: 600; color: #24292f; margin: 18px 0 6px; }
+p { color: #57606a; margin-bottom: 8px; }
+ul, ol { padding-left: 20px; }
+li { color: #57606a; margin-bottom: 4px; }
+code { background: #eaeef2; color: #0550ae; padding: 2px 5px;
+       border-radius: 3px; font-size: 12px; }
+pre { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
+      padding: 14px; overflow-x: auto; margin: 10px 0; }
+pre code { background: none; padding: 0; color: #24292f; }
+.section { margin-bottom: 32px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px;
+       font-size: 11px; font-weight: 600; margin-right: 4px; }
+.tag-blue { background: #ddf4ff; color: #0969da; border: 1px solid #b6e3ff; }
+.tag-green { background: #dcffe4; color: #116329; border: 1px solid #a7f0b5; }
+.tag-yellow { background: #fff8c5; color: #7d4e00; border: 1px solid #e3b341; }
+.tag-red { background: #ffebe9; color: #cf222e; border: 1px solid #ff818266; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; color: #656d76;
+     border-bottom: 2px solid #d0d7de; padding: 6px 10px; background: #f6f8fa; }
+td { padding: 8px 10px; border-bottom: 1px solid #eaeef2; color: #57606a; vertical-align: top; }
+td:first-child { color: #24292f; }
+hr { border: none; border-top: 1px solid #eaeef2; margin: 24px 0; }
+.risk { border-left: 3px solid #e3b341; padding: 8px 12px; background: #fff8c5;
+        margin: 8px 0; color: #57606a; border-radius: 0 4px 4px 0; }
+.note { border-left: 3px solid #0969da; padding: 8px 12px; background: #ddf4ff;
+        margin: 8px 0; color: #57606a; border-radius: 0 4px 4px 0; }
+ol.steps > li { margin-bottom: 14px; }
+ol.steps > li > strong { color: #1f2328; }
+.mockup { border:1px solid #d0d7de; border-radius:6px; overflow:hidden; margin:14px 0; font-size:11px; }
+.mockup-chrome { background:#eaeef2; padding:8px 12px; color:#656d76; letter-spacing:.05em;
+                 border-bottom:1px solid #d0d7de; }
+.mockup-body { display:flex; min-height:150px; background:#fff; }
+.mockup-left { flex:1.05; background:linear-gradient(150deg,#1B1846,#2C2777 52%,#5048ED);
+               color:#fff; padding:14px; }
+.mockup-right { flex:.95; padding:14px; color:#57606a; display:flex; align-items:center;
+                justify-content:center; }
+.mockup-card { border:1px solid #d0d7de; border-radius:6px; padding:12px; width:100%; background:#fff; }
+.mockup-field { border:1px solid #d0d7de; border-radius:4px; height:20px; margin:6px 0; background:#FBFCFE; }
+.mockup-btn { border-radius:4px; height:22px; margin-top:8px;
+              background:linear-gradient(135deg,#5048ED,#4038D6); color:#fff; font-size:10px;
+              display:flex; align-items:center; justify-content:center; }
+.dim { color:#8b949e; }
+.filetree { font-size:12px; }
+</style>
+</head>
+<body>
+<div class="doc">
+<header>
+  <div class="doc-type">Implementation Plan</div>
+  <h1>Agent Mode — Polished Frontend &amp; Branded Login by Default</h1>
+  <div class="meta">Harsh Shah · 2026-09-16 · Plan only, no code changes · branch <code>agent_mode</code></div>
+</header>
+
+<div class="section">
+<h2>Overview</h2>
+<p>Today Agent Mode's "Build with AI" produces a <em>functionally</em> correct Zango app whose UI is
+whatever <code>appbuilder</code>'s prebuilt shell renders: default CRUD lists, a default detail drawer,
+and the framework's stock login page. The result works but does not look like a product, and the
+first impression of the generated app is the login screen.</p>
+<p>This plan changes the <strong>instructions</strong> in the Agent Mode skill plugin so that the first
+version the agent ships is already polished: custom React for the page types that warrant it
+(detail views, dashboards), and a branded split-screen login page modelled on the
+<code>au-psp</code> reference implementation.</p>
+<p><strong>Scope is documentation/prompt-engineering only</strong> — files under
+<code>backend/src/zango/apps/agent_mode/skill_plugin/</code>. No framework, package or runtime code changes.</p>
+</div>
+
+<div class="section">
+<h2>Current State — what the skill says today</h2>
+<table>
+<tr><th>File</th><th>Relevant content</th><th>Problem</th></tr>
+<tr>
+  <td><code>zango-app-developer-server/SKILL.md</code><br><span class="dim">STEP 3 → "UX decisions"</span></td>
+  <td>A 3-question checklist + a page-type table. Ends with: <em>"CrudHandler covers almost every case. Reach for a fully custom component only when there is genuinely no list/detail structure."</em></td>
+  <td>Reads as <strong>discouragement</strong>. The agent's cheapest compliant path is <code>page_type: "crud"</code> everywhere, so that's what it picks.</td>
+</tr>
+<tr>
+  <td><code>SKILL.md</code><br><span class="dim">STEP 5d</span></td>
+  <td><em>"Do not scaffold a frontend just because you can."</em></td>
+  <td>Actively suppresses the frontend build. Correct when frontend was impossible; now Node is available and the line is stale.</td>
+</tr>
+<tr>
+  <td><code>SKILL.md</code> — everywhere</td>
+  <td>No mention of <strong>login</strong>, <strong>auth</strong>, <strong>branding</strong>, or <strong>visual quality</strong>.</td>
+  <td>The login page is never considered part of the deliverable.</td>
+</tr>
+<tr>
+  <td><code>SKILL.md</code><br><span class="dim">STEP 5a — <code>app.html</code></span></td>
+  <td>Hardcodes the <strong>appbuilder</strong> bundle:<br><code>src="{% zstatic 'packages/appbuilder/js/build.&lt;v&gt;.js' %}"</code></td>
+  <td><span class="tag tag-red">BLOCKER</span> A branded login lives in the app's <em>own</em> build. If <code>app.html</code> keeps loading appbuilder's prebuilt shell, the custom <code>LoginPage</code> is never in the served JS and the branding silently does nothing. <code>au-psp</code> loads <code>js/zango-app.&lt;ts&gt;.min.js</code> instead.</td>
+</tr>
+<tr>
+  <td><code>references/frontend/appbuilder.md</code></td>
+  <td><code>authConfig</code> appears once as a prop-table row and once in a code sample as <code>{ customComponents: { LoginPage: CustomLogin } }</code>.</td>
+  <td>No guidance on <em>what</em> <code>CustomLogin</code> must contain. An agent that tried would hand-roll a POST to the login endpoint and break role selection / password reset.</td>
+</tr>
+<tr>
+  <td><span class="dim">upstream</span> <code>zelthy-claude-skills/<br>zango-app-developer/SKILL.md</code></td>
+  <td>Already has most of this: "UX Design Decisions (MANDATORY)", the child-entity question, and working <code>CrudHandler</code> snippets for <code>customDrawerDetail</code>, <code>customMainDetail</code> + <code>enableDetailViewRoute</code> + <code>customTableBody</code>.</td>
+  <td><span class="tag tag-yellow">LOST IN VENDORING</span> Our server copy compressed these into prose and <strong>dropped every code snippet</strong>. The agent is told to build a profile view but not shown the props that do it.</td>
+</tr>
+<tr>
+  <td><code>zango-requirements-analyst/SKILL.md</code></td>
+  <td>Sample line to the user: <em>"A fully custom-designed screen would take much longer than the rest of the app put together — I'd start with a standard layout. Fine?"</em></td>
+  <td><span class="tag tag-red">CONTRADICTION</span> Phase 1 talks the user <em>out</em> of the thing Phase 2 is now meant to do by default.</td>
+</tr>
+</table>
+<div class="note">The reference app <code>Healthlane-Technologies/app-demo-aupsp</code> already solves the login
+problem correctly at <code>frontend/src/custom/auth/PspLoginCard.tsx</code> (+ wiring in <code>src/App.tsx</code>).
+That file is the source of truth for the new reference doc — it is a full <code>LoginPage</code> override that
+still drives the <em>framework's</em> auth primitives rather than re-implementing auth.</div>
+</div>
+
+<div class="section">
+<h2>Already in the skill — what we build on, not rebuild</h2>
+<p>Frontend setup and the app module <strong>are</strong> already covered. The gap is not plumbing, it is
+what the agent is told to <em>put</em> in that plumbing.</p>
+<table>
+<tr><th>Concern</th><th>Where</th><th>Status</th></tr>
+<tr><td>App module (<code>backend/app/</code>: <code>urls.py</code>, <code>views.py</code>, <code>policies.json</code>, <code>templates/app.html</code>)</td>
+    <td>STEP 5a + <code>references/templates/app-module/</code> (real files, copyable)</td>
+    <td><span class="tag tag-green">COVERED</span> keep as-is</td></tr>
+<tr><td><code>/</code> and <code>/login</code> → <code>/app</code> redirect</td>
+    <td><code>RedirectAppView</code> in the template</td>
+    <td><span class="tag tag-green">COVERED</span> — React owns <code>/app/login</code></td></tr>
+<tr><td>Frontend scaffold (<code>npx @zango-core/create-zango-app</code>), <code>.env</code> / <code>VITE_PROXY_ROUTES</code>, <code>build:zango</code>, copy to <code>static/js/</code>, <code>sync_static</code> + <code>collectstatic</code></td>
+    <td>STEP 5d</td>
+    <td><span class="tag tag-yellow">COVERED BUT SUPPRESSED</span> — opens with <em>"Do not scaffold a frontend just because you can"</em></td></tr>
+<tr><td>Route + menu registration (<code>page_type</code>, <code>component</code>, numeric role id)</td>
+    <td>STEP 5b / 5c</td>
+    <td><span class="tag tag-green">COVERED</span> and well-documented</td></tr>
+<tr><td>Which bundle <code>app.html</code> loads</td>
+    <td>STEP 5a</td>
+    <td><span class="tag tag-red">WRONG FOR OUR GOAL</span> — hardcoded to appbuilder's prebuilt shell</td></tr>
+<tr><td>What a good detail page / login page looks like</td>
+    <td>—</td>
+    <td><span class="tag tag-red">MISSING</span> — the actual subject of this plan</td></tr>
+</table>
+<p><strong>So the net change is small in surface area:</strong> flip two defaults (STEP 3, STEP 5d), fix
+one line in STEP 5a, add one step (5e), and add three reference documents. No new plumbing.</p>
+</div>
+
+<div class="section">
+<h2>Goals / Non-Goals</h2>
+<h3>Goals</h3>
+<ul>
+  <li>Detail views of focus entities are <strong>full-page custom React routes</strong> — never the default side drawer — and any dashboard/report page is custom too.</li>
+  <li>Every generated app ships a <strong>branded split-screen login page — always, no exceptions and no toggle</strong>.</li>
+  <li>The agent has a <strong>correct, copyable auth pattern</strong> so custom login never breaks role selection, first-login password reset, or SAML.</li>
+  <li>The agent has an explicit, checkable <strong>visual quality bar</strong> instead of "make it nice".</li>
+  <li>Phase 1 (analyst) stops steering users away from custom UI, and starts collecting the brand inputs the login page needs.</li>
+</ul>
+<h3>Non-Goals</h3>
+<ul>
+  <li>No changes to <code>@zango-core/crm-framework</code>, <code>appbuilder</code>, <code>crud</code> or any package.</li>
+  <li>No new npm dependencies — the allowlist in STEP 5d stays as-is; the login page must be buildable with what the template ships (inline <code>&lt;style&gt;</code> + inline SVG, exactly as <code>PspLoginCard</code> does).</li>
+  <li>Not a theme editor / App Panel branding UI. This is prompt content only.</li>
+  <li><strong>Not a reuse of the <code>pharma-enterprise-ui</code> skill.</strong> That is a separate standalone skill for a different purpose; <code>design-system.md</code> here is domain-neutral and self-contained, and must not import its tokens or its pharma framing.</li>
+  <li>Not attempting pixel-parity with <code>au-psp</code> — it is a pattern reference, not a template to clone.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Target shape — the detail view the agent should produce</h2>
+<p>This is the heart of "polished": for a <strong>focus object</strong> — the entity the app is really
+about, and the one other records point at — a detail page is not a field dump. It is an
+<strong>entity-360</strong>: identity header, key facts, then the related records
+<strong>as tables/cards inside tabs</strong>, on the same page.</p>
+
+<p><strong>Worked example — Patient.</strong> <code>Order</code>, <code>Program</code>, <code>Document</code> and
+<code>Note</code> all carry a <code>ZForeignKey</code> to <code>Patient</code>. So the Patient detail view
+shows each of them as its own tab, scoped to that patient — not four separate menu items the user
+has to visit and filter by hand.</p>
+
+<div class="mockup">
+  <div class="mockup-chrome">● ● ●  &lt;app&gt;.zelthy.app / app / patients / &lt;uuid&gt;</div>
+  <div class="mockup-body" style="flex-direction:column;padding:12px;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid #d0d7de;padding-bottom:8px">
+      <div style="width:32px;height:32px;border-radius:50%;background:#ddf4ff;border:1px solid #b6e3ff"></div>
+      <div><strong style="color:#1f2328">Jane Doe</strong> <span class="dim">· PT-10482</span><br>
+        <span class="tag tag-green" style="margin-top:2px">Active</span></div>
+      <div style="margin-left:auto" class="dim">[ Edit ]&nbsp;[ ⋯ ]</div>
+    </div>
+    <div style="display:flex;gap:8px" class="dim">
+      <span>Enrolled 12 Mar</span><span>·</span><span>Dr. Smith</span><span>·</span><span>Sydney</span><span>·</span><span>Program: PSP-A</span>
+    </div>
+    <div style="display:flex;gap:14px;border-bottom:1px solid #d0d7de;padding-bottom:6px;font-size:11px">
+      <span style="color:#0969da;font-weight:700;border-bottom:2px solid #0969da;padding-bottom:6px">Overview</span>
+      <span class="dim">Orders <span class="tag tag-blue">7</span></span>
+      <span class="dim">Programs <span class="tag tag-blue">2</span></span>
+      <span class="dim">Documents <span class="tag tag-blue">5</span></span>
+      <span class="dim">Timeline</span>
+    </div>
+    <div style="border:1px solid #d0d7de;border-radius:4px;padding:8px" class="dim">
+      ▤ &nbsp;child CrudHandler — <code>/orders/?patient_uuid=&lt;uuid&gt;</code><br>
+      <span style="font-size:10px">full table: search · filter · row actions · pagination · add</span>
+    </div>
+  </div>
+</div>
+
+<h3>The mechanic (this is what the skill must spell out)</h3>
+<p>There is <strong>no <code>childTables</code> prop</strong>. A child table is just another
+<code>CrudHandler</code> mounted inside a tab, pointed at the <em>child module's own</em> CRUD endpoint
+with a parent filter appended. The parent module holds no reference to the child beyond that
+endpoint string:</p>
+<pre><code>&lt;CrudHandler
+  api_endpoint={`/orders/?patient_uuid=${objectUuid}`}
+  headerProps={{ title: 'Orders' }}
+/&gt;</code></pre>
+<p>Backend side: the child's <code>BaseCrudView</code> narrows its own queryset from that query param —
+the filter is enforced on the server, never trusted from the client.</p>
+
+<div class="risk"><strong>Footgun to document verbatim.</strong> <code>customTableBody</code> /
+<code>customMainDetail</code> must be a <strong>stable module-scope component reference</strong>. An arrow
+function defined inline in the render creates a new identity each pass, so React unmounts and
+remounts the whole CRUD subtree → refetch → parent re-render → refetch. The <code>au-psp</code> code
+carries a 12-line comment about exactly this loop. Any <code>onTotal</code>-style callback must write to a
+store, never to parent React state.</div>
+
+<h3>Which entities get this treatment</h3>
+<table>
+<tr><th>Test</th><th>Then</th></tr>
+<tr><td>Other models hold a <code>ZForeignKey</code> to it (≥1 child), <em>and</em> it is a subject the user works <em>on</em> — Patient, Customer, Order, Case, Employee, Program</td>
+    <td><span class="tag tag-green">ENTITY-360</span> custom detail + child tabs</td></tr>
+<tr><td>Primary subject but no children yet</td>
+    <td><span class="tag tag-green">CUSTOM</span> profile-style detail, no tabs</td></tr>
+<tr><td>Referenced by others but never worked on directly — Category, Status, City, Document Type</td>
+    <td><span class="tag tag-blue">DEFAULT CRUD</span> — a lookup table, not a focus object</td></tr>
+</table>
+<p>Rule of thumb for the agent: <em>read the FK graph. The models with inbound
+<code>ZForeignKey</code>s that a role actually navigates to are the focus objects.</em>
+<strong>No fixed cap — the agent decides how many qualify from the app's own shape</strong>, and
+justifies the selection in its summary. The test above is the filter; a lookup table never passes it.</p>
+<div class="note"><strong>Full-page, not a drawer.</strong> An entity-360 is a routed page of its own
+(<code>/app/patients/&lt;uuid&gt;</code>) via <code>enableDetailViewRoute={true}</code> +
+<code>customMainDetail</code> + <code>customTableBody={NavigateTableBody}</code>. The default side
+drawer cannot hold child tables, tabs and a timeline — it is the wrong container. Rows navigate;
+they do not open a drawer.</div>
+
+<h3>Required anatomy of an entity-360 page</h3>
+<ol>
+  <li><strong>Header / identity</strong> — title, unique ref, avatar or icon, workflow status chip (<code>WorkflowStatus</code>), primary actions, back link.</li>
+  <li><strong>Key facts strip</strong> — 4–8 of the most-consulted fields, from <code>generalDetails.fields</code>. Not all fields.</li>
+  <li><strong>Overview tab</strong> — remaining fields grouped into titled sections, plus summary cards.</li>
+  <li><strong>One tab per child relation</strong> — a scoped <code>CrudHandler</code>, labelled with a count badge.</li>
+  <li><strong>Timeline / activity</strong> where a lifecycle exists.</li>
+  <li><strong>States</strong> — skeleton while loading, empty state per tab, error state. Not optional.</li>
+</ol>
+</div>
+
+<div class="section">
+<h2>Target shape — the login page the agent should produce</h2>
+<div class="mockup">
+  <div class="mockup-chrome">● ● ●  &lt;app&gt;.zelthy.app / app / login</div>
+  <div class="mockup-body">
+    <div class="mockup-left">
+      <div>▣ &nbsp;<strong>Brand name</strong><br><span style="opacity:.6">domain sub-line</span></div>
+      <div style="margin-top:18px;font-size:13px;line-height:1.3">
+        Headline about the<br>domain outcome
+      </div>
+      <div style="margin-top:12px;opacity:.7">◉—◉—◉—◉ &nbsp;journey / value strip</div>
+      <div style="margin-top:14px;opacity:.55">Powered by Zelthy</div>
+    </div>
+    <div class="mockup-right">
+      <div class="mockup-card">
+        <div style="font-size:10px;color:#767A88;letter-spacing:.1em">WELCOME BACK</div>
+        <div style="font-size:13px;color:#14171F;font-weight:700;margin:4px 0 8px">Sign in</div>
+        <div class="mockup-field"></div>
+        <div class="mockup-field"></div>
+        <div class="mockup-btn">Sign in</div>
+      </div>
+    </div>
+  </div>
+</div>
+<p>Left panel = brand + domain story (collapses away under 880px). Right panel = the
+<strong>framework's real</strong> <code>&lt;PasswordLoginForm /&gt;</code>, restyled by CSS, wrapped in a card,
+with <code>RoleSelection</code> and <code>PasswordResetRequired</code> swapped into the same card when the
+backend asks for them.</p>
+</div>
+
+<div class="section">
+<h2>Steps</h2>
+<ol class="steps">
+
+<li><strong>Add a new reference: <code>references/frontend/entity-360.md</code></strong><br>
+<span>The detail-view pattern, with the code the server copy currently lacks. Recover the working
+snippets from the upstream interactive skill rather than re-deriving them:</span>
+<ul>
+  <li>How to decide a focus object from the FK graph (inbound <code>ZForeignKey</code> count + "is it worked on directly").</li>
+  <li>Full-page detail wiring: <code>enableDetailViewRoute</code> + <code>customMainDetail</code> + <code>customTableBody={NavigateTableBody}</code>, and the drawer variant <code>customDrawerDetail</code>.</li>
+  <li><span class="tag tag-red">CRITICAL</span> prop-casing trap from upstream: the detail component receives <strong>camelCase</strong> (<code>generalDetails</code>, <code>objectUuid</code>, <code>workflowDetails</code>) while the raw API is snake_case (<code>general_details</code>). Getting this wrong renders a blank page.</li>
+  <li><strong>Child tables:</strong> mount a second <code>CrudHandler</code> per tab at <code>`${childCrudUrl}?${parentParam}=${objectUuid}`</code>. There is no built-in child-table prop — say so explicitly so the agent stops looking for one.</li>
+  <li><span class="tag tag-red">CRITICAL</span> stability rule: <code>customTableBody</code> / <code>customMainDetail</code> declared at <strong>module scope</strong>, never inline — inline identities cause the remount→refetch→re-render loop documented in <code>au-psp</code>.</li>
+  <li>Backend half: the child <code>BaseCrudView</code> filters its own queryset from the parent query param (server-enforced, never client-trusted).</li>
+  <li>The required page anatomy (header → key facts → overview → child tabs → timeline) and the skeleton/empty/error states.</li>
+  <li>A complete copyable <code>&lt;Entity&gt;Detail.tsx</code> skeleton with two child tabs.</li>
+</ul>
+</li>
+
+<li><strong>Add a new reference: <code>references/frontend/auth-login.md</code></strong><br>
+<span>The single biggest gap. Contents, derived from <code>PspLoginCard.tsx</code>:</span>
+<ul>
+  <li>Wiring: <code>authConfig={{ customComponents: { LoginPage: MyLogin } }}</code> on <code>ZangoApp</code> — pass the <em>component</em>, not an element.</li>
+  <li>Imports available from <code>@zango-core/crm-framework</code>: <code>PasswordLoginForm</code>, <code>RoleSelection</code>, <code>PasswordResetRequired</code>, <code>authService</code>, <code>getNextParam</code>, <code>getValidRedirectUrl</code>.</li>
+  <li><span class="tag tag-red">CRITICAL</span> Drive the flow from <code>PasswordLoginForm</code>'s <code>onSuccess</code>, <strong>not</strong> <code>LoginContext.onLogin</code> (mis-handles the single-role case).</li>
+  <li>The <code>next_step</code> contract and its four response shapes → the <code>extractNextStep</code> helper, verbatim.</li>
+  <li>Handling <code>set_password</code> / <code>password_expiry</code> / <code>first_login</code> → <code>PasswordResetRequired</code>; <code>role_selection</code> → <code>RoleSelection</code>; else redirect via <code>getValidRedirectUrl(next, serverRedirect, '/app')</code>.</li>
+  <li>Styling rules for framework-rendered internals (inputs, <code>button[type=submit]</code>, stripping the nested card chrome from <code>RoleSelection</code> / <code>PasswordResetRequired</code>).</li>
+  <li>Responsive note: media queries <strong>must come last</strong> in the CSS string — equal specificity means source order decides.</li>
+  <li>A complete, trimmed skeleton the agent can copy and re-theme.</li>
+</ul>
+</li>
+
+<li><strong>Add a new reference: <code>references/frontend/design-system.md</code></strong><br>
+<span>The objective quality bar, so "polished" is checkable rather than aspirational:</span>
+<ul>
+  <li>Token set to declare once per app (brand / brand-600 / text / sub / muted / border / page) and use everywhere — no ad-hoc hex.</li>
+  <li>Pull the palette from the app's theme (<code>useAppContext().theme</code> / initializer <code>--color-brand-500</code>) so the app and login agree.</li>
+  <li>Typography scale, spacing scale, border-radius and elevation conventions.</li>
+  <li>Detail-view anatomy: header/identity block → status → key-fact grid → tabbed or sectioned child entities → activity.</li>
+  <li>Dashboard anatomy: KPI row → primary chart → breakdown table → queue/worklist.</li>
+  <li>Empty, loading (skeleton, not spinner) and error states are required, not optional.</li>
+  <li>Responsive floor: usable at 880px and 480px.</li>
+  <li>Assets constraint: inline SVG + inline <code>&lt;style&gt;</code> only — no new npm packages, no external fonts/CDN.</li>
+</ul>
+</li>
+
+<li><strong>Rewrite <code>SKILL.md</code> STEP 3 → "UX decisions"</strong><br>
+<span>Invert the default. Replace the closing "reach for custom only when..." line with an explicit
+<em>always-custom</em> list, and keep default CRUD for the genuinely boring cases:</span>
+<table>
+<tr><th>Case</th><th>New default</th></tr>
+<tr><td><strong>Focus object</strong> — has inbound <code>ZForeignKey</code>s and is worked on directly (Patient, Order, Case, Employee, Program)</td><td><span class="tag tag-green">ENTITY-360</span> custom detail + a scoped child table per relation, in tabs</td></tr>
+<tr><td>Primary entity with no child relations yet</td><td><span class="tag tag-green">CUSTOM</span> profile-style page, sectioned</td></tr>
+<tr><td>Dashboard, home page, report, analytics, worklist</td><td><span class="tag tag-green">CUSTOM</span> hand-written React</td></tr>
+<tr><td>List with a natural non-table shape (kanban by status, calendar by date, cards)</td><td><span class="tag tag-green">CUSTOM</span> via <code>CrudHandler customTableBody</code></td></tr>
+<tr><td>Landing page after login for each role</td><td><span class="tag tag-green">CUSTOM</span> — never dump the user on a raw list</td></tr>
+<tr><td>Lookup / master data (Department, City, Category, Document Type)</td><td><span class="tag tag-blue">DEFAULT CRUD</span> — custom here is waste</td></tr>
+</table>
+<span>Add the rule: <em>an app whose every page is <code>page_type:"crud"</code> is an incomplete first version — say so in the summary if that is what you shipped, and why.</em></span>
+</li>
+
+<li><strong>Fix <code>SKILL.md</code> STEP 5a — serve the app's own bundle, not appbuilder's</strong><br>
+<span>Prerequisite for the branded login; without it steps 5d/5e are invisible at runtime.</span>
+<ul>
+  <li><code>app.html</code> must point at the app's built bundle once a frontend exists:<br>
+      <code>{% zstatic 'js/zango-app.&lt;timestamp&gt;.min.js' %}</code> — read the real filename off disk after the build, never guess the timestamp.</li>
+  <li>Keep the appbuilder bundle only as the fallback for an app with no custom frontend at all — which, under the new defaults, should not happen.</li>
+  <li>Confirm <code>RedirectAppView</code> still maps <code>^login/</code> → <code>/app</code>: the React router owns <code>/app/login</code>, which is where the custom <code>LoginPage</code> renders.</li>
+  <li><code>policies.json</code> must grant <code>AnonymousUsers</code> on both <code>AppView</code> and <code>RedirectAppView</code>, or the login page 403s before it can be shown.</li>
+</ul>
+</li>
+
+<li><strong>Rewrite <code>SKILL.md</code> STEP 5d</strong><br>
+<span>Delete <em>"Do not scaffold a frontend just because you can."</em> Replace with: scaffold the frontend
+whenever the plan contains at least one custom page <em>or</em> a branded login — which, per Step 3, is
+essentially every app. Add the login page to the build checklist:</span>
+<pre><code>frontend/src/
+├── custom/
+│   ├── auth/
+│   │   └── AppLoginCard.tsx     ← branded login (STEP 5e)
+│   └── pages/
+│       ├── &lt;Entity&gt;Detail.tsx
+│       ├── Dashboard.tsx
+│       └── index.js             ← export names MUST match route.component
+└── App.tsx                      ← authConfig + navbarConfig wiring</code></pre>
+<span>Keep the npm allowlist and the build/deploy sequence unchanged.</span>
+</li>
+
+<li><strong>Add <code>SKILL.md</code> STEP 5e — "Brand the login page"</strong><br>
+<span>A short mandatory step pointing at <code>auth-login.md</code>, stating:</span>
+<ul>
+  <li><strong>Every app gets a branded login. Always.</strong> There is no opt-out and no run-context condition — if the app has a password login, it is branded.</li>
+  <li><strong>Layout archetype is fixed: the <code>au-psp</code> split-screen.</strong> Left = brand + domain story (hidden under 880px), right = the framework auth form in a card. The agent re-themes and rewrites the copy; it does not invent a different layout.</li>
+  <li>Derive brand name, tagline and palette from the requirement spec / theme — never invent a third-party company's branding.</li>
+  <li>The copy on the left panel must describe <em>this</em> app's domain outcome, not generic "Welcome to our portal" filler.</li>
+  <li>Keep "Powered by Zelthy" attribution.</li>
+  <li>Verification: <code>/app/login</code> renders the custom card; login still completes for a multi-role user and for a first-login user.</li>
+</ul>
+</li>
+
+<li><strong>Extend the STEP 3 "References to read" table</strong><br>
+<span>Two new rows so the new docs are actually discovered:</span>
+<pre><code>| Detail view w/ child tables | frontend/entity-360.md    |
+| Custom login / auth screens | frontend/auth-login.md    |
+| Visual quality bar, tokens  | frontend/design-system.md |</code></pre>
+</li>
+
+<li><strong>Extend STEP 7 hand-off summary checklist</strong><br>
+<span>Add three reporting lines: <em>which entities got an entity-360 page and why the others did not</em>, <em>that every child table is filtered server-side, not just by query string</em>, and <em>whether the branded login is live and verified for a multi-role and a first-login user</em>. What the agent must report on, it plans for.</span>
+</li>
+
+<li><strong>Fix the Phase-1 contradiction in <code>zango-requirements-analyst/SKILL.md</code></strong><br>
+<span>Remove the "a fully custom-designed screen would take much longer… I'd start with a standard layout"
+example. Replace the page-shape question row so the analyst assumes polish and asks for brand inputs
+in business language:</span>
+<pre><code>| Page shape | "When you open one patient, what do you expect to see
+|            |  on that screen alongside their details - their orders,
+|            |  their programs, their documents?"
+| Focus      | "Which one or two things do your team spend most of
+|            |  their day inside?"
+| Branding   | "What should the sign-in screen call your product?"
+|            | "Do you have brand colours we should use?"</code></pre>
+<span>The page-shape question is the one that matters most: its answer <em>is</em> the child-tab list
+for the entity-360 page, gathered in business language without ever saying "foreign key".</span>
+<span>Keep the vocabulary ban intact — never say "React", "custom page" or "component" to the user.</span>
+</li>
+
+<li><strong>Update <code>VENDORED.md</code></strong><br>
+<span>Record the delta from the interactive skill: STEP 5d inverted (Node now available), STEP 5e added,
+two new references authored server-side-first. Keeps future upstream syncs reviewable.</span>
+</li>
+
+</ol>
+</div>
+
+<div class="section">
+<h2>File Manifest</h2>
+<p class="dim">All paths relative to <code>backend/src/zango/apps/agent_mode/skill_plugin/skills/</code></p>
+<table>
+<tr><th>File</th><th>Action</th><th>Purpose</th></tr>
+<tr><td><code>zango-app-developer-server/references/frontend/entity-360.md</code></td>
+    <td><span class="tag tag-green">CREATE</span></td>
+    <td>Focus-object detection, full-page detail wiring, child tables via scoped CrudHandler, stability + camelCase traps. ~220 lines.</td></tr>
+<tr><td><code>zango-app-developer-server/references/frontend/auth-login.md</code></td>
+    <td><span class="tag tag-green">CREATE</span></td>
+    <td>Custom LoginPage contract + full skeleton, from <code>PspLoginCard.tsx</code>. ~250 lines.</td></tr>
+<tr><td><code>zango-app-developer-server/references/frontend/design-system.md</code></td>
+    <td><span class="tag tag-green">CREATE</span></td>
+    <td>Tokens, page anatomies, required states, responsive floor. ~180 lines.</td></tr>
+<tr><td><code>zango-app-developer-server/SKILL.md</code></td>
+    <td><span class="tag tag-blue">MODIFY</span></td>
+    <td>STEP 3 UX defaults inverted; reference table +2 rows; STEP 5d rewritten; STEP 5e added; STEP 7 summary +2 lines.</td></tr>
+<tr><td><code>zango-requirements-analyst/SKILL.md</code></td>
+    <td><span class="tag tag-blue">MODIFY</span></td>
+    <td>Remove anti-custom-UI example; add page-shape + branding question rows.</td></tr>
+<tr><td><code>zango-app-developer-server/VENDORED.md</code></td>
+    <td><span class="tag tag-blue">MODIFY</span></td>
+    <td>Record the new delta from the interactive skill.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Dependencies &amp; Assumptions</h2>
+<ul>
+  <li><strong>Node is guaranteed</strong> <span class="tag tag-green">CONFIRMED</span> — the platform ensures it, installing it if absent. So STEP 5d's "if Node is unavailable, skip the frontend" branch and the stale <em>"Node is unavailable"</em> banners in the vendored references should be <strong>deleted</strong>, not made conditional. No fallback path is needed.</li>
+  <li><code>@zango-core/crm-framework</code> must export <code>PasswordLoginForm</code>, <code>RoleSelection</code>, <code>PasswordResetRequired</code>, <code>authService</code>, <code>getNextParam</code>, <code>getValidRedirectUrl</code> at the version the create-zango-app template pins. <span class="tag tag-yellow">VERIFY</span> — <code>au-psp</code> needed <code>@ts-ignore</code> because these are absent from <code>zango.d.ts</code>.</li>
+  <li>The <code>app</code> module's login route must render the appbuilder bundle so the React <code>LoginPage</code> override is reached — STEP 5a already wires <code>RedirectAppView</code> for <code>/login</code>.</li>
+  <li>Reference repo <code>Healthlane-Technologies/app-demo-aupsp</code> is private; the reference doc must contain the pattern <em>inline</em>, not a link the agent cannot fetch.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Risk Notes</h2>
+<div class="risk"><strong>Scope creep across entities</strong> <span class="dim">(turn budget is being raised, so
+this is about focus, not cost)</span>. With no numeric cap, an agent that reads "custom detail view" as
+"every model" builds twelve mediocre pages instead of three good ones. Mitigation: the focus-object
+test must read as a <em>filter</em> — a model with no inbound FKs, or one nobody navigates to, fails it
+— and the summary must name which entities got an entity-360 page <em>and why each remaining model
+did not</em>. Justification is the brake, in place of a number.</div>
+
+<div class="risk"><strong>The remount → refetch → re-render loop.</strong> The single most likely way a
+generated detail page ships visibly broken: an inline <code>customTableBody</code> or a child
+<code>onTotal</code> writing to parent state. It is not obvious from the props and the agent will not
+infer it. Mitigation: it is called out as CRITICAL in <code>entity-360.md</code> with the module-scope
+rule stated as code, not prose.</div>
+
+<div class="risk"><strong>Child scoping enforced only on the client.</strong> Appending
+<code>?patient_uuid=…</code> is a display filter; if the child <code>BaseCrudView</code> does not narrow its
+own queryset, any user can edit the URL and read another patient's orders — a tenant-data leak in a
+healthcare app. Mitigation: <code>entity-360.md</code> pairs every frontend child-table snippet with the
+backend queryset filter, and STEP 7 requires reporting that the filter is server-side.</div>
+
+<div class="risk"><strong>Broken auth is worse than an ugly login.</strong> A custom LoginPage that mishandles
+<code>next_step</code> locks every user out. Mitigation: the reference doc leads with the
+<code>onSuccess</code>/<code>extractNextStep</code> contract and marks it CRITICAL <em>before</em> any styling;
+STEP 5e requires verifying a multi-role and a first-login user.</div>
+
+<div class="risk"><strong>Generic AI-looking output.</strong> Without a concrete bar, "polished" degrades into
+purple gradients on every app regardless of domain. Mitigation: <code>design-system.md</code> mandates
+tokens sourced from the app's own theme, and STEP 5e forbids filler copy — the left panel must
+state this app's actual domain outcome.</div>
+
+<div class="risk"><strong>Brand impersonation.</strong> Given a real company name the agent may reproduce a
+real brand's identity. Mitigation: STEP 5e explicitly limits branding to what the requirement spec
+and theme supply.</div>
+
+<div class="risk"><strong>Drift from the interactive skill.</strong> These edits widen the server/interactive
+fork. Mitigation: Step 9 (VENDORED.md) — and the two new references are written to be portable back
+to the interactive skill unchanged.</div>
+</div>
+
+<div class="section">
+<h2>Decisions (resolved)</h2>
+<table>
+<tr><th>Question</th><th>Decision</th></tr>
+<tr><td>Node availability</td><td><span class="tag tag-green">GUARANTEED</span> Platform ensures Node, installing it if absent. Delete the "Node unavailable" branch and banners rather than keeping a fallback.</td></tr>
+<tr><td>Branded login — conditional?</td><td><span class="tag tag-green">ALWAYS</span> No toggle, no run-context gate. Every app.</td></tr>
+<tr><td>Login layout archetype</td><td><span class="tag tag-green">FIXED</span> The <code>au-psp</code> split-screen is the house style. Re-theme and rewrite copy; do not invent other layouts.</td></tr>
+<tr><td>Entity-360 cap</td><td><span class="tag tag-green">AGENT DECIDES</span> No number. The focus-object test filters; the summary must justify inclusions and exclusions. Always a <strong>full-page route</strong>, never a drawer.</td></tr>
+<tr><td>Reuse <code>pharma-enterprise-ui</code> tokens?</td><td><span class="tag tag-red">NO</span> Separate standalone skill, different purpose. <code>design-system.md</code> is domain-neutral and self-contained.</td></tr>
+<tr><td>Turn budget</td><td><span class="tag tag-green">RAISED</span> Not a constraint. Focus, not cost, is the remaining concern.</td></tr>
+</table>
+
+<h3>The one still open — upstream vs local, restated plainly</h3>
+<p>We have <strong>two copies</strong> of this skill:</p>
+<table>
+<tr><th>Copy</th><th>Where</th><th>Who uses it</th></tr>
+<tr><td><strong>Interactive</strong></td><td>GitHub <code>zelthy-claude-skills/zango-app-developer</code></td><td>Developers on their laptop, in Claude Code</td></tr>
+<tr><td><strong>Server</strong></td><td>this repo, <code>skill_plugin/skills/zango-app-developer-server</code></td><td>Agent Mode "Build with AI", headless</td></tr>
+</table>
+<p>The server copy was <em>vendored</em> (copied + edited) from the interactive one — that is what
+<code>VENDORED.md</code> records. The two new references (<code>entity-360.md</code>,
+<code>auth-login.md</code>) are useful to <strong>both</strong>. So:</p>
+<ul>
+  <li><strong>Option A — write them here first.</strong> Faster; Agent Mode gets them immediately. Risk: the interactive skill never gets them, and the two copies drift further apart.</li>
+  <li><strong>Option B — write them in the GitHub skill first, then vendor down.</strong> Both audiences benefit and the copies stay in sync. Slower: a PR to the other repo before Agent Mode sees any change.</li>
+</ul>
+<p><strong>Recommendation: Option A now, port to upstream after it has proven out in a real run</strong>
+— the content is written to be portable either way, and the vendoring note in Step 10 keeps the debt
+visible rather than silent.</p>
+</div>
+
+</div>
+</body>
+</html>
