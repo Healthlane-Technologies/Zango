@@ -1,8 +1,9 @@
 > **Server-mode note (Agent Mode).** Commands in this file that use
-> `docker compose`, `npm`/`npx`, `manage.py` or the `zango` CLI **cannot be
-> run** in server mode: Bash is read-only, Node is unavailable, and the
-> platform runs migrations and sync for you. Treat them as background
-> reference for how the pieces fit together, not as steps to execute.
+> `docker compose` or the `zango` CLI **cannot be run** in server mode, and
+> Bash is otherwise read-only. Treat those as background reference.
+> Two exceptions: the **npm commands allowed by STEP 5d** (scaffold, install,
+> build) do run — Node is available — and you run the **`manage.py` commands
+> listed in STEP 7** (migrations, sync, static) yourself.
 
 # Zango App Panel API Reference
 

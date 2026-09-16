@@ -11,13 +11,13 @@ Scope: skill/prompt content only, under
 |---|------|------|--------|
 | 1 | entity-360 reference | `references/frontend/entity-360.md` | ☑ |
 | 2 | auth/login reference | `references/frontend/auth-login.md` | ☑ |
-| 3 | design-system reference | `references/frontend/design-system.md` | ☐ |
-| 4 | STEP 3 UX defaults inverted | `SKILL.md` | ☐ |
-| 5 | STEP 5a bundle + login route fix | `SKILL.md` | ☐ |
-| 6 | STEP 5d rewritten (Node guaranteed) | `SKILL.md` | ☐ |
-| 7 | STEP 5e branded login added | `SKILL.md` | ☐ |
-| 8 | Reference table + STEP 7 summary | `SKILL.md` | ☐ |
-| 9 | Stale "Node unavailable" banners removed | `references/*` | ☐ |
+| 3 | design-system reference | `references/frontend/design-system.md` | ☑ |
+| 4 | STEP 3 UX defaults inverted | `SKILL.md` | ☑ |
+| 5 | STEP 5a bundle + login route fix | `SKILL.md` | ☑ |
+| 6 | STEP 5d rewritten (Node guaranteed) | `SKILL.md` | ☑ |
+| 7 | STEP 5e branded login added | `SKILL.md` | ☑ |
+| 8 | Reference table + STEP 7 summary | `SKILL.md` | ☑ |
+| 9 | Stale "Node unavailable" banners removed | `references/*` | ☑ |
 | 10 | Analyst skill de-conflicted | `zango-requirements-analyst/SKILL.md` | ☐ |
 | 11 | VENDORED.md delta recorded | `VENDORED.md` | ☐ |
 
@@ -36,5 +36,9 @@ Legend: ☐ todo · ◐ in progress · ☑ done
   `self.crud_view_instance.request`), NOT `get_queryset()` on the view —
   `BaseCrudView` has no such method, so that override would silently no-op and
   leave child tables unfiltered. Verified in `packages/crud/tables.md`.
+- Skill header + description updated; version 1.0.0 -> 1.1.0.
+- Server-mode banners in 5 reference files corrected rather than deleted: the
+  read-only-Bash part is still true, but the "npm/npx cannot run, Node is
+  unavailable" claim is not.
 - `customMainDetail` receives **camelCase** props; the large snake_case example in
   `frontend/crud.md` is for `customDrawerDetail` only. Both documented.
