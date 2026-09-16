@@ -28,10 +28,26 @@ class AgentModeSettings(FullAuditMixin):
     provider = models.CharField(max_length=16, default="anthropic")
     config_encrypted = models.BinaryField(null=True, blank=True)
 
+    # --- build agent (phase 2: implements the approved spec) --------------
     default_model = models.CharField(max_length=64, blank=True, default="")
     default_effort = models.CharField(max_length=16, blank=True, default="")
     max_run_seconds = models.PositiveIntegerField(default=1800)
     max_turns = models.PositiveIntegerField(null=True, blank=True)
+
+    # --- analyst agent (phase 1: gathers the requirement) -----------------
+    # Configured separately because the two do very different work: the
+    # analyst reads and asks questions in short turns, so it rarely needs the
+    # same model or budget as a build that writes dozens of files.
+    analyst_model = models.CharField(max_length=64, blank=True, default="")
+    analyst_effort = models.CharField(max_length=16, blank=True, default="")
+    analyst_budget_usd = models.DecimalField(
+        max_digits=10, decimal_places=4, null=True, blank=True
+    )
+    analyst_max_turns = models.PositiveIntegerField(null=True, blank=True)
+
+    # --- behaviour --------------------------------------------------------
+    allow_frontend_build = models.BooleanField(default=False)
+    ensure_packages = models.BooleanField(default=True)
     max_budget_usd = models.DecimalField(
         max_digits=10, decimal_places=4, null=True, blank=True
     )

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import Toast from '../../../components/Notifications/Toast';
 import useApi from '../../../hooks/useApi';
+import Markdown from './Markdown';
 
 const POLL_MS = 1500;
 
@@ -43,11 +44,14 @@ function Bubble({ message }) {
 	return (
 		<div className={`flex ${isUser ? 'justify-end' : 'justify-start'} px-[16px] py-[6px]`}>
 			<div
-				className={`max-w-[85%] whitespace-pre-wrap rounded-[10px] px-[12px] py-[8px] font-lato text-[13px] leading-[19px] ${
-					isUser ? 'bg-[#5048ED] text-white' : 'bg-[#F3F4F6] text-[#111827]'
+				className={`max-w-[85%] rounded-[10px] px-[12px] py-[8px] font-lato text-[13px] leading-[19px] ${
+					isUser
+						? 'whitespace-pre-wrap bg-[#5048ED] text-white'
+						: 'bg-[#F3F4F6] text-[#111827]'
 				}`}
 			>
-				{message.content}
+				{/* The user typed plain text; the agent replies in markdown. */}
+				{isUser ? message.content : <Markdown text={message.content} />}
 			</div>
 		</div>
 	);
@@ -62,6 +66,7 @@ export default function RequirementChat() {
 	const [reply, setReply] = useState('');
 	const [spec, setSpec] = useState('');
 	const [specDirty, setSpecDirty] = useState(false);
+	const [editingSpec, setEditingSpec] = useState(false);
 	const [busy, setBusy] = useState(false);
 	// Set the moment we send, cleared only when the server reports a reply.
 	// Without it an in-flight poll can clear is_thinking and re-enable Send.
@@ -274,19 +279,35 @@ export default function RequirementChat() {
 					<span className="font-lato text-[13px] font-semibold text-[#212429]">
 						Requirement{req.spec_version ? ` · v${req.spec_version}` : ''}
 					</span>
-					{specDirty ? (
-						<span className="font-lato text-[11px] text-[#B45309]">unsaved edits</span>
-					) : null}
+					<span className="flex items-center gap-[10px]">
+						{specDirty ? (
+							<span className="font-lato text-[11px] text-[#B45309]">unsaved edits</span>
+						) : null}
+						{req.spec_markdown || spec ? (
+							<button
+								onClick={() => setEditingSpec((v) => !v)}
+								className="font-lato text-[11px] font-medium text-[#6B7280] hover:text-[#111827]"
+							>
+								{editingSpec ? 'Preview' : 'Edit'}
+							</button>
+						) : null}
+					</span>
 				</div>
 
 				{req.spec_markdown || spec ? (
 					<>
-						<textarea
-							value={spec}
-							onChange={(e) => { setSpec(e.target.value); setSpecDirty(true); }}
-							readOnly={locked}
-							className="min-h-0 grow resize-none p-[16px] font-mono text-[12px] leading-[18px] text-[#111827] focus:outline-none"
-						/>
+						{editingSpec && !locked ? (
+							<textarea
+								value={spec}
+								onChange={(e) => { setSpec(e.target.value); setSpecDirty(true); }}
+								autoFocus
+								className="min-h-0 grow resize-none p-[16px] font-mono text-[12px] leading-[18px] text-[#111827] focus:outline-none"
+							/>
+						) : (
+							<div className="min-h-0 grow overflow-y-auto p-[16px] font-lato text-[13px] leading-[19px] text-[#111827]">
+								<Markdown text={spec} />
+							</div>
+						)}
 						<div className="flex items-center justify-end gap-[8px] border-t border-[#F1F3F5] p-[10px]">
 							{!locked ? (
 								<>

@@ -79,8 +79,20 @@ def initialize_workspace(tenant_uuid, app_template_path=None, run_migrations=Fal
             subprocess.run(["python", "manage.py", "ws_makemigration", tenant.name])
             with open(f"workspaces/{tenant.name}/manifest.json", "w") as f:
                 f.write(json.dumps(manifest, indent=4))
+        # The platform default theme, when one is configured; otherwise the
+        # framework's built-in palette.
+        theme_config = DEFAULT_THEME_CONFIG
+        try:
+            from ..platform_settings.models import PlatformSettings
+
+            configured = PlatformSettings.load().default_theme_config
+            if isinstance(configured, dict) and configured:
+                theme_config = configured
+        except Exception:  # noqa: BLE001 - never block a launch over a theme
+            pass
+
         theme = ThemesModel.objects.create(
-            name="Default", tenant=tenant, config=DEFAULT_THEME_CONFIG
+            name="Default", tenant=tenant, config=theme_config
         )
 
         if not app_template_path:

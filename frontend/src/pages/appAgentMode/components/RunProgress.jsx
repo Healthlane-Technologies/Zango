@@ -11,6 +11,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Toast from '../../../components/Notifications/Toast';
 import useApi from '../../../hooks/useApi';
 import RunEventRow from './RunEventRow';
+import RunUsage from './RunUsage';
 
 const POLL_RUNNING_MS = 1200;
 const POLL_QUEUED_MS = 3000;
@@ -255,6 +256,35 @@ export default function RunProgress() {
 					</div>
 				) : null}
 
+				{run?.app_access?.url || run?.test_users?.length ? (
+					<div className="border-t border-[#F1F3F5] px-[20px] py-[12px]">
+						<div className="mb-[6px] font-lato text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280]">
+							Open the app
+						</div>
+						{run?.app_access?.url ? (
+							<div className="flex flex-wrap items-center gap-[10px]">
+								<a
+									href={run.app_access.url}
+									target="_blank"
+									rel="noreferrer"
+									className="rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[14px] py-[7px] font-lato text-[13px] font-medium text-white hover:opacity-90"
+								>
+									Open {run.app_access.domain} ↗
+								</a>
+								<span className="select-all font-mono text-[11px] text-[#6B7280]">
+									{run.app_access.url}
+								</span>
+							</div>
+						) : (
+							<div className="font-lato text-[12px] text-[#B45309]">
+								This app has no domain set up yet, so it cannot be opened in a
+								browser. Add one under App Settings, then sign in with the
+								credentials below.
+							</div>
+						)}
+					</div>
+				) : null}
+
 				{run?.test_users?.length ? (
 					<div className="border-t border-[#F1F3F5] px-[20px] py-[12px]">
 						<div className="mb-[6px] font-lato text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280]">
@@ -273,6 +303,8 @@ export default function RunProgress() {
 						</table>
 					</div>
 				) : null}
+
+				<RunUsage run={run} />
 
 				{showDetail ? (
 					<div ref={detailRef} className="max-h-[380px] overflow-y-auto border-t border-[#E5E7EB]">

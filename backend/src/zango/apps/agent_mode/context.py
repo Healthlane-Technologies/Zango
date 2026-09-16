@@ -51,6 +51,83 @@ def workspace_path_for(tenant_name: str) -> str:
     return os.path.join(workspaces_root(), tenant_name)
 
 
+
+def app_front_door(app_settings: dict) -> str:
+    """The path the app's UI is actually served from.
+
+    Zango serves the appbuilder React shell at ``/app/`` — the generated
+    ``app.html`` hardcodes ``data-base-path="/app/"`` and an initializer at
+    ``/app/initializer/``. That path is split across two files, which is easy
+    to get wrong: ``settings.json`` mounts the ``app`` module, and the module's
+    own ``urls.py`` puts the view under it. Both real layouts land on ``/app/``:
+
+        settings.json ``^``      + urls.py ``^app/``  ->  /app/
+        settings.json ``^app/``  + urls.py ``/``      ->  /app/
+
+    So the front door is the module's mount point with ``app/`` underneath it,
+    unless the mount already ends there.
+    """
+    routes = (app_settings or {}).get("app_routes") or []
+    routes = [r for r in routes if isinstance(r, dict)]
+    chosen = next((r for r in routes if r.get("module") == "app"), None)
+    if chosen is None:
+        chosen = routes[0] if routes else None
+
+    mount = ""
+    if chosen is not None:
+        mount = str(chosen.get("re_path") or "").strip().lstrip("^").rstrip("$")
+    mount = mount.strip("/")
+
+    if not mount:
+        return "/app/"
+    if mount.split("/")[-1] == "app":
+        return f"/{mount}/"
+    return f"/{mount}/app/"
+
+
+def app_access(tenant, *, request=None, app_settings=None) -> dict:
+    """Where a person can actually open this app.
+
+    Tenants are resolved strictly by hostname, so without a domain row there
+    is no reachable URL — say so rather than inventing one. Scheme and port
+    are carried from the caller's own request, which is what makes the link
+    work on a dev server running off the default port.
+    """
+    domain = ""
+    try:
+        domains = list(tenant.domains.all())
+        primary = next((d for d in domains if getattr(d, "is_primary", False)), None)
+        chosen = primary or (domains[0] if domains else None)
+        if chosen is not None:
+            domain = chosen.domain or ""
+    except Exception:  # noqa: BLE001
+        domain = ""
+
+    if not domain:
+        return {"domain": "", "url": "", "path": "/"}
+
+    if app_settings is None:
+        app_settings = _read_json(
+            os.path.join(workspace_path_for(tenant.name), "settings.json")
+        )
+    path = app_front_door(app_settings)
+
+    scheme, port = "https", ""
+    if request is not None:
+        try:
+            scheme = "https" if request.is_secure() else "http"
+            host = request.get_host()
+            if ":" in host:
+                port = ":" + host.rsplit(":", 1)[1]
+        except Exception:  # noqa: BLE001
+            scheme, port = "https", ""
+
+    return {
+        "domain": domain,
+        "url": f"{scheme}://{domain}{port}{path}",
+        "path": path,
+    }
+
 def build_app_context(tenant) -> AppContext:
     """Collect the run context. Never raises."""
     path = workspace_path_for(tenant.name)

@@ -6,9 +6,9 @@ const PlatformSettingsRoutes = () => {
 	return (
 		<Layout>
 			<Routes>
-				<Route path="" element={<Navigate to="log-connectors" replace />} />
+				<Route path="" element={<Navigate to="general" replace />} />
 				<Route path=":tab" element={<PlatformSettings />} />
-				<Route path="*" element={<Navigate to="log-connectors" replace />} />
+				<Route path="*" element={<Navigate to="general" replace />} />
 			</Routes>
 		</Layout>
 	);

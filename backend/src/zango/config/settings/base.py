@@ -48,6 +48,7 @@ SHARED_APPS = [
     "zango.apps.shared.platformauth",
     "zango.apps.shared.platform_logs",
     "zango.apps.shared.agent_mode",
+    "zango.apps.shared.platform_settings",
 ]
 
 

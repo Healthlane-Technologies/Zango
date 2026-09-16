@@ -1,6 +1,6 @@
 ---
 name: zango-app-developer-server
-description: Server-mode Zango app development, used by Agent Mode inside the Zango platform. Implements backend features on an existing, already-deployed Zango app - modules, DynamicModelBase models, BaseCrudView CRUD views, forms, tables, workflows, policies, async tasks and AppBuilder routes - working only inside that app's workspace directory. Assumes no interactive user, no Docker, and no Node toolchain.
+description: Server-mode Zango app development, used by Agent Mode inside the Zango platform. Implements backend features on an existing, already-deployed Zango app - modules, DynamicModelBase models, BaseCrudView CRUD views, forms, tables, workflows, policies, async tasks and AppBuilder routes - working only inside that app's workspace directory. Assumes no interactive user feedback.
 version: 1.0.0
 ---
 
@@ -15,15 +15,13 @@ platform, headless, against one existing app. It differs from the interactive
 variant in ways that matter:
 
 - There is **no human to answer questions**. Decide, and record the assumption.
-- The app already exists and is deployed. There is nothing to bootstrap.
+- You don't have to bootstrap Zango. The environment is already up and running and you have to either work on a new app or on its enhancement.
 - Your working directory **is** the app's workspace. You cannot write outside it.
 - You run your own migrations and sync (STEP 7) with a fixed set of
-  `manage.py` commands, and fix what they report. The platform re-runs them
-  afterwards as a backstop.
+  `manage.py` commands, and fix what they report. 
 - The Bash tool is **read-only**. Use Read, Write, Edit, Glob and Grep.
 - `appbuilder` ships a prebuilt React shell that renders CRUD pages at
-  `/app/` with no build step. A *custom* React build is possible only when the
-  run context says Node is available (STEP 5d).
+  `/app/` with no build step. Should you require to build custom react pages, you will have to initialize the frontend app within the workspace and follow zango's frontend patterns (Step 5d)
 
 ---
 
@@ -66,6 +64,7 @@ Concretely:
 | An entity with a lifecycle | The `workflow` package | A `status` `CharField` on the model |
 | Pages, routes and menus | AppBuilder route/menu configuration | Hand-written `urls.py` for UI pages |
 | Response envelopes / pagination | What `crud` already provides | A bespoke `common/api.py` |
+| Custom frontend page | zango's react frontend pattern | server rendered django's templateview/ html based pages |
 
 A raw Django class-based view is legitimate **only** for an operation that
 genuinely does not map to CRUD — a multi-model transaction, a multi-step flow,
@@ -116,11 +115,11 @@ Cover:
 
 ### UX decisions (work through this for every entity)
 
-Do not default to the simplest page type without reasoning.
+Do not default to the simplest page type without reasoning. For building more nuanced interfaces that are not provided off the shelf from packages, build custom react pages, following pattern stated in Step 5d. A few examples where custom page would be desireable:
 
 1. **Is this a primary entity?** (Patient, Employee, Customer, Order, Case…) A
    plain list plus the default detail drawer is almost never right for these —
-   prefer a profile-style detail view with structured sections.
+   prefer a profile-style detail view with structured sections. 
 2. **Does it have child entities?** One-to-many relationships (Patient →
    Appointments, Prescriptions) are better as a unified view with tabs or
    sections than as separate list pages.
@@ -346,7 +345,7 @@ Only these npm commands are permitted: the scaffold above, `npm install`,
 packages is denied, so if a component needs a dependency the template does
 not provide, say so in your summary instead of trying to add it.
 
-## STEP 6: Declare test users
+## STEP 6: Declare test users and login url
 
 An app nobody can log into is not a working app. Write `users.json` at the
 workspace root with one user per role you defined:

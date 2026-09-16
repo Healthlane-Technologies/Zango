@@ -149,6 +149,10 @@ def record_message(message, recorder, state: dict) -> None:
         return
 
     if kind == "AssistantMessage":
+        model_name = getattr(message, "model", "") or ""
+        if model_name:
+            seen = state.setdefault("models_seen", {})
+            seen[model_name] = seen.get(model_name, 0) + 1
         for block in getattr(message, "content", None) or []:
             btype = _cls(block)
             if btype == "TextBlock":
@@ -203,8 +207,11 @@ def record_message(message, recorder, state: dict) -> None:
         return
 
     if kind == "ResultMessage":
-        totals = sum_model_usage(getattr(message, "model_usage", None))
+        raw_usage = getattr(message, "model_usage", None)
+        totals = sum_model_usage(raw_usage)
         state.update(totals)
+        if isinstance(raw_usage, dict) and raw_usage:
+            state["model_usage"] = raw_usage
         state["result_subtype"] = getattr(message, "subtype", "") or ""
         state["terminal_reason"] = getattr(message, "terminal_reason", "") or ""
         state["result_text"] = getattr(message, "result", "") or ""

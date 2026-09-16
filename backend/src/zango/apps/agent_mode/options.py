@@ -101,19 +101,17 @@ def build_agent_options(
 
     from django.conf import settings as dj
 
+    from .config import load_config, node_available
     from .guards import make_pre_tool_use_guard
 
+    cfg = load_config()
     home = agent_home()
     # Reads may also reach the vendored skill's own reference docs;
     # writes stay confined to the workspace.
     # Both conditions must hold: the operator opted in, and Node is actually
     # installed. Allowing npm where node is absent just produces confusing
     # failures deep in a run.
-    import shutil as _shutil
-
-    allow_frontend = bool(
-        getattr(dj, "AGENT_MODE_ALLOW_FRONTEND_BUILD", False)
-    ) and bool(_shutil.which("node"))
+    allow_frontend = cfg.allow_frontend_build and node_available()
 
     guard = make_pre_tool_use_guard(
         ctx.workspace_path,
@@ -155,15 +153,16 @@ def build_agent_options(
         env=build_env(creds, home),
     )
 
-    if run.model:
-        kwargs["model"] = run.model
-    if run.effort:
-        kwargs["effort"] = run.effort
-    if run.max_turns:
-        kwargs["max_turns"] = run.max_turns
-    if run.max_budget_usd:
+    # Per-run override wins; otherwise the platform setting.
+    if run.model or cfg.model:
+        kwargs["model"] = run.model or cfg.model
+    if run.effort or cfg.effort:
+        kwargs["effort"] = run.effort or cfg.effort
+    if run.max_turns or cfg.max_turns:
+        kwargs["max_turns"] = run.max_turns or cfg.max_turns
+    if run.max_budget_usd or cfg.max_budget_usd:
         # Native hard per-run cost ceiling.
-        kwargs["max_budget_usd"] = float(run.max_budget_usd)
+        kwargs["max_budget_usd"] = float(run.max_budget_usd or cfg.max_budget_usd)
     if getattr(dj, "AGENT_MODE_CLAUDE_BIN", ""):
         kwargs["cli_path"] = dj.AGENT_MODE_CLAUDE_BIN
     if stderr_sink is not None:

@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import tempfile
@@ -224,9 +225,33 @@ class TenantModel(TenantMixin, FullAuditMixin):
         **other_params,
     ):
         _check_tenant_name(name)
+
+        # Platform defaults are stamped on at creation and owned by the app
+        # from then on — changing a default later must not move an existing
+        # app's dates or timezone under its users. An explicit value passed in
+        # always wins.
+        platform_settings = None
+        try:
+            from ..platform_settings.models import PlatformSettings
+
+            platform_settings = PlatformSettings.load()
+            for field, value in platform_settings.tenant_defaults().items():
+                other_params.setdefault(field, value)
+        except Exception:  # noqa: BLE001 - defaults must never block a launch
+            logging.getLogger(__name__).exception(
+                "platform_settings: could not apply tenant defaults"
+            )
+
         obj = cls.objects.create(
             name=name, schema_name=schema_name, description=description, **other_params
         )
+
+        # Tenants resolve strictly by hostname, so without a Domain row the
+        # app cannot be opened at all.
+        if other_params.get("tenant_type", "app") == "app":
+            from ..platform_settings.domains import allocate_domain
+
+            allocate_domain(obj, platform_settings)
         app_template_path = None
         if obj.app_template:
             if obj.app_template.url.startswith("https://"):

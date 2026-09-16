@@ -77,9 +77,11 @@ def probe(tenant=None) -> dict:
     """Report whether a run could start, with machine-readable reasons."""
     from django.conf import settings as dj
 
+    from .config import load_config
     from .context import workspace_path_for
     from .credentials import resolve_credentials
 
+    cfg = load_config()
     creds = resolve_credentials()
     cli = _cli_path()
     queue = getattr(dj, "AGENT_MODE_QUEUE", "agent_mode") or "celery"
@@ -88,7 +90,7 @@ def probe(tenant=None) -> dict:
 
     workspace = workspace_path_for(tenant.name) if tenant is not None else ""
     checks = {
-        "feature_enabled": bool(getattr(dj, "AGENT_MODE_ENABLED", False)),
+        "feature_enabled": cfg.enabled,
         "sdk_installed": _sdk_installed(),
         "cli_available": bool(cli),
         "credentials": creds.is_usable,
@@ -129,13 +131,16 @@ def probe(tenant=None) -> dict:
         "reasons": reasons,
         "checks": checks,
         "config": {
-            "model": getattr(dj, "AGENT_MODE_MODEL", "") or None,
-            "effort": getattr(dj, "AGENT_MODE_EFFORT", "") or None,
-            "max_run_seconds": getattr(dj, "AGENT_MODE_MAX_RUN_SECONDS", 1800),
-            "max_turns": getattr(dj, "AGENT_MODE_MAX_TURNS", 0) or None,
-            "max_budget_usd": getattr(dj, "AGENT_MODE_MAX_BUDGET_USD", None),
+            "model": cfg.model or None,
+            "effort": cfg.effort or None,
+            "max_run_seconds": cfg.max_run_seconds,
+            "max_turns": cfg.max_turns,
+            "max_budget_usd": cfg.max_budget_usd,
+            "analyst_model": cfg.analyst_model or None,
+            "analyst_budget_usd": cfg.analyst_budget_usd,
             "permission_mode": getattr(dj, "AGENT_MODE_PERMISSION_MODE", ""),
             "queue": queue,
+            "source": cfg.source,
         },
     }
 

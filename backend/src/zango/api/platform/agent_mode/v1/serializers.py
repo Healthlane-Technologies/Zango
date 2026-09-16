@@ -81,6 +81,7 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
             "output_tokens",
             "cache_read_tokens",
             "cache_creation_tokens",
+            "model_usage",
             "error_type",
             "error_message",
             "api_error_status",

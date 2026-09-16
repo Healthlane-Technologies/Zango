@@ -78,7 +78,7 @@ export default function useApi() {
 				setLoading(false);
 			}
 
-			if (apiRequest.status === 200 || apiRequest.status === 201) {
+			if (apiRequest.status >= 200 && apiRequest.status < 300) {
 				try {
 					if (!isMockApi()) {
 						if (apiRequest.redirected) {
@@ -86,6 +86,13 @@ export default function useApi() {
 								window.location = apiRequest.url;
 							}
 						}
+					}
+					if (apiRequest.status === 204 || apiRequest.status === 205) {
+						return {
+							response: {},
+							success: true,
+							responseStatus: apiRequest.status,
+						};
 					}
 					const { response, success } = await apiRequest.json();
 

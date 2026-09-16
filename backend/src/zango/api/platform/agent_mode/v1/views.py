@@ -288,7 +288,7 @@ class AgentRunDetailView(ZangoGenericPlatformAPIView, TenantMixin):
 
     def get(self, request, app_uuid, run_uuid, *args, **kwargs):
         try:
-            _bind_tenant(self, app_uuid)
+            tenant = _bind_tenant(self, app_uuid)
             try:
                 run = AgentRun.objects.get(object_uuid=run_uuid)
             except AgentRun.DoesNotExist:
@@ -299,6 +299,15 @@ class AgentRunDetailView(ZangoGenericPlatformAPIView, TenantMixin):
                     "Model, task or settings files changed. Restart the app "
                     "server and any Celery workers to load the new code."
                 )
+            # Where to actually open the app. Paired with the test users, this
+            # is the whole hand-off: credentials are useless without a link.
+            try:
+                from zango.apps.agent_mode.context import app_access
+
+                data["app_access"] = app_access(tenant, request=request)
+            except Exception:  # noqa: BLE001 - never fail the detail response
+                log.exception("agent_mode: could not resolve the app URL")
+                data["app_access"] = {"domain": "", "url": "", "path": "/"}
             return get_api_response(True, data, 200)
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: run detail failed")
@@ -780,7 +789,10 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
                 )
 
             _dispatch_turn(requirement, tenant)
-            return get_api_response(True, {"status": requirement.status}, 202)
+            # 200, not 202: the panel's useApi hook treats only 200/201 as
+            # success, so a 202 surfaced to the user as "Server Error" even
+            # though the turn had been queued.
+            return get_api_response(True, {"status": requirement.status}, 200)
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: requirement message failed")
             return get_api_response(False, {"message": str(exc)}, 500)

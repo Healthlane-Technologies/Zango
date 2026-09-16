@@ -163,6 +163,16 @@ def _apply_state(run, state: dict) -> None:
         if state.get(field) is not None:
             setattr(run, field, state[field])
     run.tool_use_counts = state.get("tool_use_counts") or {}
+    # Which models actually ran, and what each cost. Falls back to the models
+    # seen on assistant messages when the run died before a ResultMessage.
+    usage = state.get("model_usage")
+    if not usage and state.get("models_seen"):
+        usage = {
+            name: {"messages": count}
+            for name, count in state["models_seen"].items()
+        }
+    if usage:
+        run.model_usage = usage
 
     run.save(
         update_fields=[
@@ -179,6 +189,7 @@ def _apply_state(run, state: dict) -> None:
             "cache_read_tokens",
             "cache_creation_tokens",
             "tool_use_counts",
+            "model_usage",
             "modified_at",
         ]
     )
@@ -311,7 +322,10 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
         # there is no BaseCrudView, FormRenderer, workflow engine or route
         # config, and the agent falls back to hand-rolled Django views — which
         # is what the first real run produced.
-        if getattr(dj, "AGENT_MODE_ENSURE_PACKAGES", True):
+        from .config import load_config
+
+        agent_cfg = load_config()
+        if agent_cfg.ensure_packages:
             recorder.emit(
                 EventKind.SYS,
                 "Ensuring Zango packages are installed…",

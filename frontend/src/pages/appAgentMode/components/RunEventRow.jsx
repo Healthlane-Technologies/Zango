@@ -6,6 +6,7 @@
  * useful signal is the one-line summary the backend already computed.
  */
 import { useState } from 'react';
+import Markdown from './Markdown';
 
 const KIND_META = {
 	sys: { label: 'System', bg: '#F3F4F6', accent: '#6B7280' },
@@ -51,12 +52,13 @@ export default function RunEventRow({ event }) {
 
 			<div className="min-w-0 grow">
 				<div
-					className={`whitespace-pre-wrap break-words font-lato text-[13px] leading-[19px] ${
-						isPlainText ? 'text-[#111827]' : 'text-[#374151]'
+					className={`break-words font-lato text-[13px] leading-[19px] ${
+						isPlainText ? 'text-[#111827]' : 'whitespace-pre-wrap text-[#374151]'
 					}`}
 					style={event.kind === 'thinking' ? { color: '#9CA3AF', fontStyle: 'italic' } : undefined}
 				>
-					{event.message}
+					{/* The agent's own prose is markdown; tool output is not. */}
+					{isPlainText ? <Markdown text={event.message} /> : event.message}
 				</div>
 
 				{collapsible ? (

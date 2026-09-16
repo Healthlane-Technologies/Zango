@@ -108,7 +108,10 @@ def build_analyst_options(*, ctx, creds, requirement):
 
     from django.conf import settings as dj
 
+    from .config import load_config
     from .options import SKILL_PLUGIN_DIR, agent_home, build_env
+
+    cfg = load_config()
 
     kwargs = dict(
         cwd=ctx.workspace_path,
@@ -126,16 +129,27 @@ def build_analyst_options(*, ctx, creds, requirement):
             "preset": "claude_code",
             "append": (
                 "You are gathering requirements, not implementing. Never "
-                "create or modify files. Keep the scope to an MVP and say "
-                "what you are deliberately leaving out."
+                "create or modify files. Keep the scope small and say what "
+                "you are deliberately leaving out.\n\n"
+                "You are talking to a NON-TECHNICAL BUSINESS USER. Ask short, "
+                "direct questions in everyday language — three or four per "
+                "turn, one or two lines each, each with a sensible default "
+                "they can simply agree to. Never use technical vocabulary "
+                "(entity, model, field, schema, CRUD, workflow package, "
+                "policy, React, frontend, component, API, async task, MVP, "
+                "migration, module) and never ask them to make a technical "
+                "decision. Work out the technical shape silently; ask only "
+                "about how their business works."
             ),
         },
         env=build_env(creds, agent_home()),
-        max_turns=int(getattr(dj, "AGENT_MODE_ANALYST_MAX_TURNS", 40) or 40),
-        max_budget_usd=float(getattr(dj, "AGENT_MODE_ANALYST_BUDGET_USD", 2.0)),
+        max_turns=int(cfg.analyst_max_turns or 40),
+        max_budget_usd=float(cfg.analyst_budget_usd or 2.0),
     )
-    if getattr(dj, "AGENT_MODE_MODEL", ""):
-        kwargs["model"] = dj.AGENT_MODE_MODEL
+    if cfg.analyst_model:
+        kwargs["model"] = cfg.analyst_model
+    if cfg.analyst_effort:
+        kwargs["effort"] = cfg.analyst_effort
     if getattr(dj, "AGENT_MODE_CLAUDE_BIN", ""):
         kwargs["cli_path"] = dj.AGENT_MODE_CLAUDE_BIN
     if requirement.session_id:
