@@ -1,5 +1,8 @@
 # Agent Mode — Polished Frontend & Branded Login
 
+**Status: all 11 steps complete.** Verified: every reference link resolves, no
+stale "Node unavailable" / "do not scaffold" guidance remains.
+
 Branch: `feat/agent-mode-polished-frontend`
 Plan: `agent-mode-polished-frontend-plan.html`
 Scope: skill/prompt content only, under
@@ -18,8 +21,8 @@ Scope: skill/prompt content only, under
 | 7 | STEP 5e branded login added | `SKILL.md` | ☑ |
 | 8 | Reference table + STEP 7 summary | `SKILL.md` | ☑ |
 | 9 | Stale "Node unavailable" banners removed | `references/*` | ☑ |
-| 10 | Analyst skill de-conflicted | `zango-requirements-analyst/SKILL.md` | ☐ |
-| 11 | VENDORED.md delta recorded | `VENDORED.md` | ☐ |
+| 10 | Analyst skill de-conflicted | `zango-requirements-analyst/SKILL.md` | ☑ |
+| 11 | VENDORED.md delta recorded | `VENDORED.md` | ☑ |
 
 Legend: ☐ todo · ◐ in progress · ☑ done
 
@@ -42,3 +45,10 @@ Legend: ☐ todo · ◐ in progress · ☑ done
   unavailable" claim is not.
 - `customMainDetail` receives **camelCase** props; the large snake_case example in
   `frontend/crud.md` is for `customDrawerDetail` only. Both documented.
+
+## Not done (deliberate)
+- **No upstream port** to `zelthy-claude-skills`. The three new references are
+  written to be portable; contribute them once proven in a real run.
+- **No runtime test.** These are prompt/doc changes; the real check is an
+  Agent Mode run that produces an app with an entity-360 page and a branded
+  login. Worth doing before this reaches users.

@@ -39,7 +39,9 @@ Say this instead:
 | Entities and relationships | "What do you need to keep track of?" · "Does each bid belong to one tender?" |
 | Lifecycle / workflow | "Does a tender move through stages? What are they called?" · "Who decides when it moves on?" |
 | Roles and access | "Who will use this?" · "Should a salesperson see everyone's deals, or only their own?" |
-| Page shape | "Is a simple list you can search and open enough to start?" |
+| Page shape | "When you open one patient, what do you expect to see there — their orders, their visits, their documents?" |
+| Focus of the work | "Which one or two things does your team spend most of the day inside?" |
+| Branding | "What should the sign-in screen call your product?" · "Any brand colours we should use?" |
 | Background work | "Should anything happen automatically — a nightly summary, a reminder?" |
 | Scope / MVP | "Shall we leave that out of the first version and add it once you're using it?" |
 
@@ -72,9 +74,15 @@ Bad — technical, long, and asks four things at once:
 >    inline, a summary card layout?
 
 If a technical constraint genuinely limits what they can have, give them the
-business consequence in one sentence and move on: *"A fully custom-designed
-screen would take much longer than the rest of the app put together — I'd
-start with a standard layout. Fine?"*
+business consequence in one sentence and move on: *"Reporting that pulls in
+last year's data would take longer than the rest of the app — shall we start
+with this year and add history later?"*
+
+**Do not talk the user out of a well-designed screen.** The builder produces
+custom, polished pages as a matter of course — a full profile page for the
+things a team works on every day, a landing page per role, and a branded
+sign-in screen. None of that is an expensive extra to be negotiated away, so
+never offer a plainer layout as the safe option.
 
 ## What you are working out underneath
 
@@ -90,8 +98,13 @@ it is what the specification must pin down:
 - **Roles** drive `policies.json`. "Who does what" is not optional detail; it
   determines whether the app is usable at all.
 - **Page shape** decides default CRUD vs. `CrudHandler` vs. a custom React
-  component — and custom React cannot be built server-side, so steer away from
-  it unless it is genuinely required.
+  component. Custom React *is* buildable server-side and is the default for the
+  things a team works on daily, so the job is to find out **which entities
+  those are and what belongs on their page** — not to steer away from custom.
+  The answer to "what else do you expect to see on that screen?" becomes the
+  tabs of child records on that entity's detail page.
+- **Branding** — the product name the sign-in screen should carry, and any
+  brand colours. Ask once, near the end; it is quick and it is always used.
 - **Background work** (scheduled jobs, long operations) becomes async tasks.
 
 ## Aim small, and say so plainly
@@ -173,9 +186,15 @@ One short paragraph: what the app is for and who uses it.
   The receptionist confirms it; the clinician marks it completed or no-show.
 
 ### Screens
-- Appointments — a searchable list, and a page for each one showing that
-  patient's previous visits
+- Patients — a searchable list, and a full page for each patient showing their
+  details alongside their appointments, prescriptions and documents
+- Appointments — a searchable list
 - Clinicians — a simple list
+- Home — what is booked today and what needs attention, per role
+
+### Branding
+- Product name on the sign-in screen: "Northside Clinic"
+- Brand colour: deep green (from their logo)
 
 ### Automatic actions
 - None in this version.

@@ -52,6 +52,55 @@ deleting content that remains useful as background.
   while `examples/tutorial_app/` in this repo still references the legacy
   `frame`/`login` packages. The modern set is correct.
 
+## 2026-09-16 — polished frontend & branded login (v1.1.0)
+
+Node is now guaranteed in the Agent Mode runtime (the platform installs it if
+absent), which invalidates the assumption behind most of the original frontend
+delta. The server copy now asks for *more* frontend than the interactive skill,
+not less.
+
+| Change | Detail |
+|---|---|
+| `SKILL.md` header + description | Node stated as available; appbuilder's shell described as the floor, not the target. v1.0.0 → v1.1.0. |
+| STEP 3 UX decisions | Rewritten. Focus objects (inbound `ZForeignKey` **and** worked on directly) get full-page entity-360 views with child tables. No cap — the agent justifies its selection. Adds a per-role landing page and the branded login as standing requirements. |
+| STEP 5 intro | 5a–5e all mandatory; the "only when genuinely needed / if Node is available" hedge is gone. |
+| **STEP 5a** | **Bug fix.** It instructed `app.html` to load appbuilder's prebuilt bundle and said "you are not building your own". With a custom frontend that silently discards every custom page and the login, with no error. Now serves the app's own `js/zango-app.<ts>.min.js`, and requires `AnonymousUsers` on `AppView`/`RedirectAppView`. |
+| STEP 5d | "Do not scaffold a frontend just because you can" deleted, along with the Node-unavailable branch. Adds the expected `frontend/src` layout. |
+| STEP 5e | **New.** Branded login, always. |
+| STEP 7 + Critical rules | Report which bundle is served, entity-360 selection and its justification, server-side child filtering, and which of the three login paths were verified. |
+| Server-mode banners (5 files) | Corrected, not deleted: Bash is still read-only, but the "npm/npx cannot run, Node is unavailable" claim was false. |
+
+### New references (written here first)
+
+- `references/frontend/entity-360.md`
+- `references/frontend/auth-login.md`
+- `references/frontend/design-system.md`
+
+These have **no upstream counterpart**. They are deliberately written to be
+portable — nothing in them is server-mode-specific — so they should be
+contributed back to the interactive skill once proven in a real run. Until
+then this is the only copy.
+
+Two corrections captured in them that the rest of the docs get wrong:
+
+1. Child-table scoping is `get_table_data_queryset()` on the **table class**
+   (reading `self.crud_view_instance.request`). `BaseCrudView` has no
+   `get_queryset()`; overriding that name silently no-ops and leaves child
+   tables unfiltered — a cross-record data leak.
+2. `customMainDetail` receives **camelCase** props (`generalDetails`,
+   `workflowDetails`). The long snake_case example in `frontend/crud.md` is for
+   `customDrawerDetail` only; copying it into `customMainDetail` renders a
+   blank page with no error.
+
+### `zango-requirements-analyst`
+
+Phase 1 previously talked users *out* of custom UI ("a fully custom-designed
+screen would take much longer than the rest of the app put together"), directly
+contradicting Phase 2's new defaults. That example and the "steer away from
+custom React" note are removed; the question table now asks what else belongs
+on an entity's page (which becomes its child tabs) and collects product name
+and brand colours for the login screen.
+
 ## Keeping it in sync
 
 This copy is the source of truth for Agent Mode. When the interactive skill
