@@ -52,6 +52,41 @@ deleting content that remains useful as background.
   while `examples/tutorial_app/` in this repo still references the legacy
   `frame`/`login` packages. The modern set is correct.
 
+## 2026-09-17 — frontend setup made a hard, ordered gate (v1.2.0)
+
+v1.1.0 asked for a polished frontend but did not get one. Observed in a real
+run (`wapp2`, Vendor Onboarding): **no `frontend/` directory was ever created**,
+`static/` was empty, all three registered routes were `page_type: "crud"`, and
+`backend/app/templates/app.html` was a verbatim copy of
+`packages/appbuilder/templates/appbuilder/app.html` — `app_initializer_endpoint`
+script block and `packages/appbuilder/js/build.<version>.js` bundle included.
+No error was raised at any point.
+
+Root cause was **ordering plus an escape hatch**, not missing instructions:
+
+- The frontend was sub-step **5d of 5**, after the `app` module (5a) and route
+  registration (5b/5c), described in the same register as those. It read as an
+  enhancement to an already-working app.
+- 5a was reached while no `frontend/` existed, so its own text — *"Load the
+  appbuilder bundle only as an interim"*, and
+  *"`packages/appbuilder/templates/appbuilder/app.html` is a working
+  reference"* — made copying the platform shell the sanctioned move. Nothing
+  ever brought the agent back to replace it.
+
+| Change | Detail |
+|---|---|
+| STEP 5 title + intro | "Make the app reachable" → "**Build the frontend** and make the app reachable". Adds an ordered sub-step table and states that the order is load-bearing. |
+| **Sub-steps reordered** | Was 5a app module → 5b routes → 5c menus → 5d frontend → 5e login. Now **5a scaffold → 5b custom pages → 5c branded login → 5d build → 5e app module → 5f routes and menus**. `app.html` is now written once, after a real bundle exists. This matches the upstream interactive skill, whose STEP 5 also puts "Frontend Setup (one-time)" before the app module. |
+| 5a | **New framing.** Named as the step that gets skipped, with the consequence stated. Scaffold, `.env`/`VITE_PROXY_ROUTES`, target `src/` layout and the npm allowlist all moved here from the old 5d. |
+| 5e | Escape hatches removed: no "interim" bundle, and the instruction to use appbuilder's `app.html` as a reference is replaced by an explicit prohibition naming both tells (`app_initializer_endpoint`, `packages/appbuilder/js/`). Full `app.html` body now inlined rather than a 3-line fragment. |
+| 5f | Adds: an app whose routes are *all* `page_type: "crud"` has no custom frontend. The `appbuilder_config_url` UNAVAILABLE branch now skips only 5f — it previously read as licence to skip frontend work too. |
+| Verify gate | **New.** Six booleans at the end of STEP 5, including the two `app.html` string tells. |
+| `templates/app-module/README.md` | "When to create this" section added (after 5a–5d, never before) with the same prohibition. `{{BUILD_FILE}}` instruction now says to read the name off disk and shows the finished tag. |
+| STEP 7 + Critical rules | Report the bundle filename and quote `app.html`'s `src` line. New critical rule: `frontend/` missing at end of run means the frontend was not built. |
+
+Not changed: `entity-360.md`, `auth-login.md`, `design-system.md` — their
+content was never the problem; they were simply never reached.
+
 ## 2026-09-16 — polished frontend & branded login (v1.1.0)
 
 Node is now guaranteed in the Agent Mode runtime (the platform installs it if

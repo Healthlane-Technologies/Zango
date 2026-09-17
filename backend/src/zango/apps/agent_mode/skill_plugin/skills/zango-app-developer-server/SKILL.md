@@ -1,7 +1,7 @@
 ---
 name: zango-app-developer-server
 description: Server-mode Zango app development, used by Agent Mode inside the Zango platform. Implements backend and frontend features on an existing, already-deployed Zango app - modules, DynamicModelBase models, BaseCrudView CRUD views, forms, tables, workflows, policies, async tasks, AppBuilder routes, custom React pages, entity-360 detail views with child tables, and a branded login page - working only inside that app's workspace directory. Assumes no interactive user feedback.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Zango App Developer (server mode)
@@ -20,13 +20,13 @@ variant in ways that matter:
 - You run your own migrations and sync (STEP 7) with a fixed set of
   `manage.py` commands, and fix what they report. 
 - The Bash tool is **read-only**, except the `manage.py` commands in STEP 7 and
-  the npm commands in STEP 5d. Otherwise use Read, Write, Edit, Glob and Grep.
+  the npm commands in STEP 5a and 5d. Otherwise use Read, Write, Edit, Glob and Grep.
 - **Node is available** — the platform guarantees it. You build a real frontend
-  (STEP 5d) and serve your own bundle (STEP 5a).
+  (STEP 5a-5d) and serve your own bundle (STEP 5e).
 - `appbuilder` ships a prebuilt React shell that renders `page_type: "crud"`
   pages with no build step. It is the floor, not the target: focus objects get
   full-page entity-360 views with child tables, each role gets a landing page,
-  and **every app gets a branded login**. See STEP 3 and STEP 5d/5e.
+  and **every app gets a branded login**. See STEP 3 and STEP 5.
 
 ---
 
@@ -162,7 +162,7 @@ Also plan, for every app:
 - **A landing page per role.** Never drop a user on a raw list as their home.
   A small dashboard — what is mine, what is overdue, what needs action — is
   usually the right first screen.
-- **A branded login page.** Always. See STEP 5e.
+- **A branded login page.** Always. See STEP 5c.
 
 Detail-view mechanics, child tables and the failure modes that make them break
 are in [frontend/entity-360.md](references/frontend/entity-360.md). The visual
@@ -231,13 +231,129 @@ to reach `packages/`:
 
 See [core/modules.md](references/core/modules.md) for more examples.
 
-## STEP 5: Make the app reachable
+## STEP 5: Build the frontend and make the app reachable
 
-Backend code alone is not a working app. **Every sub-step 5a–5e is mandatory**
+Backend code alone is not a working app. **Every sub-step 5a–5f is mandatory**
 and each is separately verifiable. Node is available — the platform guarantees
-it — so the frontend steps are not optional or conditional.
+it — so none of the frontend sub-steps is optional or conditional.
 
-### 5a. Create the `app` module so `/app/` serves the UI
+**Do them in this order.** The order is load-bearing: the frontend is
+scaffolded and built *before* `app.html` is written, so `app.html` is written
+once, already pointing at a bundle that exists. Writing the app module first
+is what leads to it being left on appbuilder's prebuilt shell forever.
+
+| | Sub-step | Produces |
+|---|---|---|
+| 5a | Scaffold `frontend/` | `frontend/` with `src/custom/` |
+| 5b | Write the custom pages | entity-360, landing pages |
+| 5c | Brand the login page | `AppLoginCard.tsx` |
+| 5d | Build the bundle | `frontend/zango-build/zango-app.<ts>.min.js` |
+| 5e | Create the `app` module | `backend/app/` + `app.html` → your bundle |
+| 5f | Register routes and menus | navigation for every role |
+
+### 5a. Scaffold the frontend — FIRST, before any of the rest
+
+**This is the step that gets skipped, and skipping it makes every later
+frontend instruction unreachable.** If `frontend/` does not exist at the end of
+your run, the app has no custom frontend, no entity-360 page and no branded
+login, regardless of what else you did.
+
+Skip **only** if `frontend/` already exists in the workspace — check, do not
+assume:
+
+```bash
+npx @zango-core/create-zango-app frontend    # run inside the workspace root
+```
+
+Then configure `frontend/.env` with `VITE_PROXY_ROUTES` listing every backend
+route your app serves (`/api`, `/appbuilder`, plus each CRUD module route).
+**Never include `/app`** — that is a frontend route, not a backend proxy. See
+[frontend/appbuilder.md](references/frontend/appbuilder.md).
+
+Target layout:
+
+```
+frontend/src/
+├── custom/
+│   ├── auth/
+│   │   └── AppLoginCard.tsx     branded login (5c)
+│   └── pages/
+│       ├── <Entity>Detail.tsx   entity-360 pages (5b)
+│       ├── Dashboard.tsx        per-role landing page (5b)
+│       └── index.js             export names MUST match route.component
+└── App.tsx                      authConfig + customPages wiring
+```
+
+Only these npm commands are permitted: the scaffold above, `npm install`,
+`npm ci`, `npm run build:zango`, `npm run build`. Installing arbitrary
+packages is denied, so if a component needs a dependency the template does
+not provide, say so in your summary instead of trying to add it.
+
+### 5b. Write the custom pages
+
+Under STEP 3's defaults essentially every app needs these: focus objects get
+full-page entity-360 views with child tables, and each role gets a landing
+page. Appbuilder's prebuilt shell renders only `page_type: "crud"` pages, so
+anything beyond a plain lookup table requires your own build.
+
+Export every page from `src/custom/pages/index.js`. **The export name must
+match the route's `component` value exactly**, or the page renders blank.
+
+Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
+[frontend/crud.md](references/frontend/crud.md),
+[frontend/form.md](references/frontend/form.md).
+
+### 5c. Brand the login page
+
+**Every app gets a branded login page. Always** — there is no toggle and no
+condition. It is the first screen anyone sees, and the framework default says
+nothing about the product.
+
+Full contract and a copyable skeleton:
+[frontend/auth-login.md](references/frontend/auth-login.md). In short:
+
+- Register a full override —
+  `authConfig={{ customComponents: { LoginPage: AppLoginCard } }}` on
+  `ZangoApp`. Pass the **component**, not an element.
+- **Never hand-roll auth.** Render the framework's own `PasswordLoginForm`,
+  `RoleSelection` and `PasswordResetRequired` inside your layout. Rolling your
+  own POST loses SAML, password policy, rate limiting and role selection.
+- Drive the flow from `PasswordLoginForm`'s `onSuccess`, **not**
+  `LoginContext.onLogin` (which mis-handles the single-role case), and
+  normalise `next_step` across its four response shapes.
+- **Layout is the split-screen archetype**: left = brand mark, product name and
+  a headline naming the domain outcome (hidden below 880px); right = the auth
+  form in a card. Re-theme it and rewrite the copy — do not invent a different
+  layout. Keep the "Powered by Zelthy" attribution.
+- **Copy must name this app's real domain outcome**, taken from the
+  requirement spec — never generic filler like "Welcome, please sign in".
+- Use only the brand name, tagline and palette the spec or app theme supplies.
+  **Never reproduce a real third-party company's branding, logo or trade
+  dress**; if the spec names a real organisation, use its name as plain text
+  and nothing more.
+- Inline `<style>` and inline SVG only — no new packages, no external fonts,
+  no CDN.
+
+### 5d. Build the bundle — once, at the end of frontend work
+
+Not after every change:
+
+```bash
+cd frontend && npm install && npm run build:zango
+```
+
+This writes `frontend/zango-build/zango-app.<timestamp>.min.js`. Copy
+`frontend/zango-build/*` into the workspace's `static/js/`, then run
+`sync_static` and `collectstatic` in STEP 7.
+
+**Read the built filename off disk** — it carries a build timestamp, so never
+guess it:
+
+```bash
+ls frontend/zango-build/
+```
+
+### 5e. Create the `app` module so `/app/` serves the UI
 
 Without it `/app/` returns 404 and the app has no front door. Copy the
 template from
@@ -258,40 +374,48 @@ Register it **first** in `settings.json` so it catches root paths:
 {"app_routes": [{"re_path": "^app/", "module": "app", "url": "urls"}]}
 ```
 
-`app.html` mounts the React root and loads **one** bundle. Which one decides
-whether your frontend work is visible at all.
-
-**You are building your own frontend (STEP 5d), so serve your own bundle.**
-After the build, `app.html` must point at it:
+`app.html` mounts the React root and loads **your** bundle — the one you built
+in 5d, whose real filename you just read off disk:
 
 ```html
 {% load zstatic %}
-<div id="zango-app" data-base-path="/app/"></div>
-<script>window.app_initializer_endpoint = "/app/initializer/"</script>
-<script type="module" src="{% zstatic 'js/zango-app.<timestamp>.min.js' %}"></script>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{ APP_NAME }}</title>
+  </head>
+  <body>
+    <div id="zango-app" data-base-path="/app/"></div>
+    <script type="module" src="{% zstatic 'js/zango-app.<timestamp>.min.js' %}"></script>
+  </body>
+</html>
 ```
 
-The filename carries a build timestamp — **read the actual name off disk after
-building, never guess it**.
-
-> **This is the step that silently discards your frontend.** If `app.html` keeps
-> loading `packages/appbuilder/js/build.<version>.js`, the served JavaScript is
-> appbuilder's prebuilt shell: your custom pages and your branded login are not
-> in it. Nothing errors. The app just renders the stock UI, and the work looks
-> like it was never done.
-
-Load the appbuilder bundle only as an interim, before your first build exists —
-using the version from the run context.
-`packages/appbuilder/templates/appbuilder/app.html` is a working reference.
+> **Do not copy `packages/appbuilder/templates/appbuilder/app.html`.** It is
+> the platform's own shell, not a template for your app. Copying it gives you
+> an `app_initializer_endpoint` script block and
+> `{% zstatic 'packages/appbuilder/js/build.'|add:build_version|add:'.js' %}` —
+> appbuilder's prebuilt bundle. Your custom pages and your branded login are
+> not in that bundle. **Nothing errors.** The app renders the stock CRUD UI and
+> the entire frontend looks like it was never built.
+>
+> The two tells that this has gone wrong: `app.html` contains the string
+> `app_initializer_endpoint`, or it contains `packages/appbuilder/js/`. If
+> either is true at the end of your run, the frontend is not being served —
+> fix it before you finish.
 
 **`policies.json` must grant `AnonymousUsers`** on both `AppView` and
 `RedirectAppView`. Without it the login page 403s before it can be shown —
 nobody, including you, can reach the app.
 
 `RedirectAppView` maps `/` and `/login` to `/app`; the React router owns
-`/app/login`, which is where your branded login renders (STEP 5e).
+`/app/login`, which is where your branded login renders (5c).
 
-### 5b. Register routes
+### 5f. Register routes and menu configs
+
+#### Routes
 
 ```bash
 curl "$APPBUILDER_CONFIG_URL/routes/api/?token=$APPBUILDER_TOKEN&action=get_routes"
@@ -302,7 +426,11 @@ CRUD page: `page_type: "crud"` with `extra_params.api_endpoint`. Custom page:
 `page_type: "custom"` with `component` matching the export name exactly.
 **Route PUTs replace the whole array** — fetch, merge, then send.
 
-### 5c. Register a menu config for every role
+**An app whose routes are all `page_type: "crud"` has no custom frontend.**
+Every entity-360 page and every landing page you wrote in 5b must appear here
+as `page_type: "custom"`. If none do, you skipped 5a–5b.
+
+#### Menu configs — one per role
 
 **This is the step most likely to be skipped, and skipping it means no
 navigation for anyone.** Writing a `menu_items.json` file is *not* enough —
@@ -347,99 +475,20 @@ Full request shapes:
 `curl` is permitted for this, but only against this app's own domain and
 localhost. The token lasts 30 minutes.
 
-If `appbuilder_config_url` is UNAVAILABLE, skip 5b/5c and list the routes and
-menu entries an operator must add.
+If `appbuilder_config_url` is UNAVAILABLE, skip 5f and list the routes and
+menu entries an operator must add. Do NOT skip 5a-5e because of it - the
+frontend build does not depend on the config API.
 
-### 5d. Custom React frontend
+### Verify STEP 5 before moving on
 
-**Node is available.** The platform guarantees it, installing it if absent, so
-there is no "skip the frontend" branch — scaffold and build.
+All six must be true. Any that is false is a bug in your run, not a nice-to-have:
 
-Under STEP 3's defaults essentially every app needs this: focus objects get
-entity-360 pages, each role gets a landing page, and every app gets a branded
-login. Appbuilder's prebuilt shell renders only `page_type: "crud"` pages, so
-anything beyond a plain lookup table requires your own build.
-
-Target layout:
-
-```
-frontend/src/
-├── custom/
-│   ├── auth/
-│   │   └── AppLoginCard.tsx     branded login (5e)
-│   └── pages/
-│       ├── <Entity>Detail.tsx   entity-360 pages
-│       ├── Dashboard.tsx        per-role landing page
-│       └── index.js             export names MUST match route.component
-└── App.tsx                      authConfig + customPages wiring
-```
-
-**1. Scaffold** (skip if `frontend/` already exists — the context line says):
-
-```bash
-npx @zango-core/create-zango-app frontend    # run inside the workspace
-```
-
-**2. Configure `.env`** with `VITE_PROXY_ROUTES` covering every backend route
-your app serves — **never include `/app`**, which is a frontend route, not a
-backend proxy. See
-[frontend/appbuilder.md](references/frontend/appbuilder.md).
-
-**3. Write the components**, exporting each from `src/custom/pages/index.js`.
-The export name must match the route's `component` value exactly, or the page
-renders blank. Patterns: [frontend/crud.md](references/frontend/crud.md),
-[frontend/form.md](references/frontend/form.md).
-
-**4. Build once, at the end** — not after every change:
-
-```bash
-cd frontend && npm install && npm run build:zango
-```
-
-**5. Deploy the bundle**: copy `frontend/zango-build/*` into the workspace's
-`static/js/`, then run `sync_static` and `collectstatic` (STEP 7). Finally
-point `backend/app/templates/app.html` at the built filename — it contains a
-timestamp, so read the actual name rather than guessing.
-
-Only these npm commands are permitted: the scaffold above, `npm install`,
-`npm ci`, `npm run build:zango`, `npm run build`. Installing arbitrary
-packages is denied, so if a component needs a dependency the template does
-not provide, say so in your summary instead of trying to add it.
-
-### 5e. Brand the login page
-
-**Every app gets a branded login page. Always** — there is no toggle and no
-condition. It is the first screen anyone sees, and the framework default says
-nothing about the product.
-
-Full contract and a copyable skeleton:
-[frontend/auth-login.md](references/frontend/auth-login.md). In short:
-
-- Register a full override —
-  `authConfig={{ customComponents: { LoginPage: AppLoginCard } }}` on
-  `ZangoApp`. Pass the **component**, not an element.
-- **Never hand-roll auth.** Render the framework's own `PasswordLoginForm`,
-  `RoleSelection` and `PasswordResetRequired` inside your layout. Rolling your
-  own POST loses SAML, password policy, rate limiting and role selection.
-- Drive the flow from `PasswordLoginForm`'s `onSuccess`, **not**
-  `LoginContext.onLogin` (which mis-handles the single-role case), and
-  normalise `next_step` across its four response shapes.
-- **Layout is the split-screen archetype**: left = brand mark, product name and
-  a headline naming the domain outcome (hidden below 880px); right = the auth
-  form in a card. Re-theme it and rewrite the copy — do not invent a different
-  layout. Keep the "Powered by Zelthy" attribution.
-- **Copy must name this app's real domain outcome**, taken from the
-  requirement spec — never generic filler like "Welcome, please sign in".
-- Use only the brand name, tagline and palette the spec or app theme supplies.
-  **Never reproduce a real third-party company's branding, logo or trade
-  dress**; if the spec names a real organisation, use its name as plain text
-  and nothing more.
-- Inline `<style>` and inline SVG only — no new packages, no external fonts,
-  no CDN.
-
-**Verify**: `/app/login` renders your card, and login completes for a
-single-role user, a multi-role user (role picker) and a first-login user
-(password reset). If you cannot exercise all three, say so in your summary.
+1. `frontend/` exists in the workspace.
+2. `frontend/zango-build/zango-app.<ts>.min.js` exists and was copied to `static/js/`.
+3. `backend/app/templates/app.html` references `js/zango-app.` and contains **neither** `app_initializer_endpoint` **nor** `packages/appbuilder/js/`.
+4. At least one registered route has `page_type: "custom"`.
+5. `/app/login` renders your branded card.
+6. Every role has a menu config accepted by the API.
 
 ## STEP 6: Declare test users and login url
 
@@ -498,8 +547,9 @@ Finish with a summary containing:
 - policies added, and any roles that must be created by an operator
 - packages required but not installed
 - roles you defined and the test users you declared
-- whether `/app/` serves **your own bundle** (not appbuilder's), and whether
-  routes AND menu configs were accepted
+- whether `frontend/` was scaffolded and built, and the exact bundle filename
+- whether `/app/` serves **your own bundle** (not appbuilder's) — quote the
+  `src` line from `app.html` — and whether routes AND menu configs were accepted
 - which entities got an entity-360 page, and why each remaining model did not
 - that every child table is filtered **server-side**, not just by query string
 - whether the branded login is live, and which of the three login paths
@@ -529,9 +579,16 @@ Finish with a summary containing:
 - **Scope**: never write outside your working directory.
 - **Reachability**: a module with no `app` module, no route and no menu config
   is invisible to users. STEP 5 is not optional.
-- **Bundle**: once you have built a frontend, `app.html` must load **your**
-  bundle. Leaving it on appbuilder's prebuilt shell silently discards every
-  custom page and the branded login, with no error.
+- **Frontend setup**: scaffolding `frontend/` is STEP 5a and runs **before**
+  the `app` module and before route registration. If `frontend/` does not
+  exist at the end of the run, the frontend was not built — no amount of
+  backend work substitutes for it.
+- **Bundle**: `app.html` must load **your** bundle (`js/zango-app.<ts>.min.js`)
+  and must never contain `app_initializer_endpoint` or
+  `packages/appbuilder/js/`. Never copy
+  `packages/appbuilder/templates/appbuilder/app.html`. Leaving `app.html` on
+  appbuilder's prebuilt shell silently discards every custom page and the
+  branded login, with no error.
 - **Frontend defaults**: focus objects get full-page entity-360 views with child
   tables; every role gets a landing page; every app gets a branded login. An app
   that is default CRUD throughout is an incomplete first version.

@@ -1,7 +1,7 @@
 > **Server-mode note (Agent Mode).** Commands in this file that use
 > `docker compose` or the `zango` CLI **cannot be run** in server mode, and
 > Bash is otherwise read-only. Treat those as background reference.
-> Two exceptions: the **npm commands allowed by STEP 5d** (scaffold, install,
+> Two exceptions: the **npm commands allowed by STEP 5a and 5d** (scaffold, install,
 > build) do run — Node is available — and you run the **`manage.py` commands
 > listed in STEP 7** (migrations, sync, static) yourself.
 

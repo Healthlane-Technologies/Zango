@@ -1,7 +1,7 @@
 > **Server-mode note (Agent Mode).** Commands in this file that use
 > `docker compose` or the `zango` CLI **cannot be run** in server mode, and
 > Bash is otherwise read-only. Treat those as background reference.
-> Two exceptions: the **npm commands allowed by STEP 5d** (scaffold, install,
+> Two exceptions: the **npm commands allowed by STEP 5a and 5d** (scaffold, install,
 > build) do run — Node is available — and you run the **`manage.py` commands
 > listed in STEP 7** (migrations, sync, static) yourself.
 
@@ -19,6 +19,20 @@ backend/app/
 └── templates/
     └── app.html     # HTML template that loads the React app
 ```
+
+## When to create this
+
+**After the frontend is scaffolded and built** (SKILL.md STEP 5a-5d), not
+before. The whole point of `app.html` is to load the bundle you built, so
+creating this module first means writing `app.html` with no bundle to point
+at — and the usual result is that it is left pointing at appbuilder's
+prebuilt shell forever, silently discarding the entire custom frontend.
+
+> **Never copy `packages/appbuilder/templates/appbuilder/app.html`.** That is
+> the platform's own shell. It loads
+> `packages/appbuilder/js/build.<version>.js` and sets
+> `window.app_initializer_endpoint`. Neither belongs in your app's `app.html`,
+> and either one means your custom pages and branded login are not served.
 
 ## Purpose
 
@@ -51,11 +65,9 @@ Add the app module route to `settings.json`:
 
 **Important**: This should be the FIRST route in `app_routes` to catch all root-level paths.
 
-### 3. Build and Deploy Frontend
+### 3. Point app.html at the built bundle
 
-After frontend setup is complete:
-
-#### Build the React app:
+#### Build the React app (STEP 5d):
 ```bash
 cd frontend
 npm run build:zango
@@ -75,7 +87,16 @@ docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> 
 ```
 
 #### Update app.html with build filename:
-Replace `{{BUILD_FILE}}` in `backend/app/templates/app.html` with the actual build filename (e.g., `zango-app.1768223010381.min.js`).
+Replace `{{BUILD_FILE}}` in `backend/app/templates/app.html` with the actual
+build filename. **Read it off disk** (`ls frontend/zango-build/`) — it carries
+a build timestamp, so it cannot be guessed:
+
+```html
+<script type="module" src="{% zstatic 'js/zango-app.1768223010381.min.js' %}"></script>
+```
+
+The finished `app.html` must contain `js/zango-app.` and must contain neither
+`app_initializer_endpoint` nor `packages/appbuilder/js/`.
 
 ### 4. Sync policies
 

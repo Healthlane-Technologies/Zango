@@ -38,7 +38,7 @@ Pass the **component**, not an element — the framework renders it as
 > The app must serve **its own build** for this to have any effect. If
 > `backend/app/templates/app.html` still loads the prebuilt `appbuilder` bundle,
 > your login component is not in the served JavaScript and the page renders the
-> stock login with no error. See SKILL.md STEP 5a.
+> stock login with no error. See SKILL.md STEP 5e.
 
 ## 2. Use the framework's auth primitives — never hand-roll auth
 
