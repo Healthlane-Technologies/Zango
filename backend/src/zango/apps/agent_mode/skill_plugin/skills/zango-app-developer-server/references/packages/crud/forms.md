@@ -334,6 +334,40 @@ field_name = CustomSchemaField(
 - Dynamic form fields
 - Multi-select with custom rendering
 
+> **A `CustomSchemaField` is NOT in `self.declared_fields`.** `BaseForm.__init__`
+> sorts each field by class: `ModelField` goes into `self.declared_fields`,
+> while `CustomSchemaField` goes into **`self.custom_schema_fields`**. So this,
+> in `__init__` after `super()`, raises `KeyError` and 500s the whole form —
+> `initialize_form` fails, and the Add/Edit drawer shows only "Server Error":
+>
+> ```python
+> # WRONG -- KeyError: 'lines'
+> self.declared_fields["lines"].schema = {...}
+> ```
+>
+> Build the schema where the field lives instead:
+>
+> ```python
+> # Right -- same dict BaseForm put it in
+> self.custom_schema_fields["lines"].schema = {...}
+> self.custom_schema_fields["lines"].ui_schema = {...}
+> ```
+>
+> `self.declared_fields[...]` remains correct for `ModelField` attributes such
+> as `extra_ui_schema` — that is what the examples further down this file show.
+> The rule is per field class, not per attribute.
+>
+> This is a build-time-clean, runtime-fatal mistake: the module imports fine and
+> the list page renders, so it is only caught by **opening the Add form**. Do
+> that for every form you write that uses a `CustomSchemaField`.
+
+> **Every non-null model field the user must supply needs a form field.** A
+> required `ZForeignKey` (e.g. `retailer` on a sales order) that you omit from
+> the form cannot be filled in, so the save fails validation with no usable
+> message. Cross-check the form's fields against the model's required fields
+> before moving on — parent FKs are the ones most often forgotten, especially
+> when the form is reached from a parent's detail page.
+
 ### CustomSchemaField Examples
 
 **Array of Objects** (e.g., multiple signers):
@@ -675,9 +709,35 @@ def save(self, commit=True):
 
 Cross-field validation.
 
+> **`BaseForm.clean()` returns `None` — never assign from it.** Unlike Django's
+> `Form.clean()`, which returns `self.cleaned_data`, `BaseForm.clean()` runs its
+> `unique_together` checks and then falls off the end with no `return`. So the
+> familiar Django idiom silently produces `None`:
+>
+> ```python
+> # WRONG -- cleaned_data is None, every .get() below returns None,
+> # cross-field validation never fires, and the form saves blank values.
+> cleaned_data = super().clean()
+> start = cleaned_data.get("start_date")     # AttributeError, or None
+> ```
+>
+> Call it for its side effects, then read **`self.cleaned_data`**, which is
+> always the authoritative dict:
+>
+> ```python
+> # Right
+> super().clean()
+> cleaned_data = self.cleaned_data
+> ```
+>
+> The same applies anywhere else you would normally use a `super()` return
+> value from the form: `self.cleaned_data` is the source of truth. Note there
+> is nothing to catch this — no exception is raised and validation simply does
+> not happen, so the bug surfaces later as missing or unvalidated data.
+
 ```python
 def clean(self):
-    super().clean()
+    super().clean()              # side effects only -- returns None
     cleaned_data = self.cleaned_data
 
     start_date = cleaned_data.get('start_date')
@@ -908,6 +968,8 @@ class RejectionForm(BaseSimpleForm):
 6. **Use meaningful placeholders**: Help users understand what to enter
 7. **Specify `required_msg`**: Provide clear error messages
 8. **Use `CustomSchemaField` for complex inputs**: Arrays, nested objects, multi-select
+9. **Never write `cleaned_data = super().clean()`**: `BaseForm.clean()` returns `None`.
+   Call `super().clean()`, then read `self.cleaned_data`.
 9. **Return instance from save**: Always return the saved instance
 10. **Validate in `clean_*` methods**: Not in `save` method
 
@@ -952,6 +1014,34 @@ def __init__(self, *args, **kwargs):
 **Problem**: Invalid JSON schema or UI schema
 
 **Solution**: Validate schema structure, ensure proper rjsf format
+
+### Cross-field validation never runs / values save as blank
+
+**Problem**: `cleaned_data = super().clean()` in a `clean()` override.
+`BaseForm.clean()` has no `return`, so it hands back `None`. Every subsequent
+`cleaned_data.get(...)` is `None` (or raises `AttributeError`), the validation
+silently does nothing, and the record saves without the values you expected.
+
+**Solution**: call `super().clean()` for its side effects and read
+`self.cleaned_data`:
+
+```python
+def clean(self):
+    super().clean()
+    cleaned_data = self.cleaned_data
+    ...
+    return cleaned_data
+```
+
+### `KeyError` on a CustomSchemaField name (form 500s, drawer shows "Server Error")
+
+**Problem**: `self.declared_fields["<name>"]` in `__init__`. A
+`CustomSchemaField` is stored in `self.custom_schema_fields`, not
+`declared_fields`, so the lookup raises `KeyError` and `initialize_form`
+returns 500.
+
+**Solution**: use `self.custom_schema_fields["<name>"].schema = {...}`. See the
+note in the CustomSchemaField section above.
 
 ### Form Title Not Updating
 

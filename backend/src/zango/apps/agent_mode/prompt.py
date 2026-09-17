@@ -12,6 +12,7 @@ Node toolchain, none of which exist in server mode.
 
 from __future__ import annotations
 
+
 PLUGIN_NAME = "zango-agent-mode"
 SKILL_NAME = "zango-app-developer-server"
 QUALIFIED_SKILL = f"{PLUGIN_NAME}:{SKILL_NAME}"
@@ -47,14 +48,22 @@ _CONSTRAINTS = """\
 5. Every file you create or modify must be inside the workspace directory
    above, which is your working directory. Writes elsewhere are blocked and
    will be reported as a policy violation.
-6. The Bash tool is read-only in this environment. Use Read, Write, Edit,
-   Glob and Grep for all file work; shell commands that write are blocked.
+6. The Bash tool is read-only **for the filesystem**. Use Read, Write, Edit,
+   Glob and Grep for all file work; shell commands that write files are
+   blocked. This does NOT restrict network calls: `curl` POST/PUT to this
+   app's own domain is permitted and required by constraint 8.
 7. {frontend_rule}
 8. Registering AppBuilder routes and menus is MANDATORY for every page you
    create — a CRUD view with no route never appears in the app's navigation.
    Use the appbuilder_config_url and appbuilder_token above with `curl`; see
-   references/packages/appbuilder/api-configuration.md. curl is permitted, but
-   only against this app's own domain and localhost.
+   references/packages/appbuilder/api-configuration.md. curl is permitted
+   against this app's own domain and localhost, and **POST with a request body
+   is allowed** — `-X POST`, `-d`, `--data-raw`, `--data-binary`, `-F` and
+   `-H` all work against those hosts. Writing the payload to a file for an
+   operator to send later does NOT complete this step: it is only done once
+   the API has accepted it and `action=get_routes` reads it back. If a call
+   fails, report the exact command and the server's response in your summary —
+   never assume the method is blocked without attempting it.
 9. Declare test users in `users.json` at the workspace root — one per role
    you define ({"users":[{"name":..,"email":..,"role":..}]}). The platform
    creates them and generates temporary passwords; never invent a password or
@@ -68,6 +77,31 @@ _CONSTRAINTS = """\
 
 def _format_list(items: list, empty: str = "(none)") -> str:
     return ", ".join(str(i) for i in items) if items else empty
+
+
+def _format_theme(theme: dict) -> str:
+    """The app's palette, flattened onto one line for the run context.
+
+    The login page needs these values literally: it renders before
+    authentication, so `useAppContext()` is unavailable and the CSS variables
+    the initializer sets are not in scope either. Given no source, an agent
+    hard-codes a hex it guessed -- which then stops matching the moment the
+    app is re-themed. Everywhere else in the app, the tokens remain correct.
+    """
+    if not isinstance(theme, dict) or not theme:
+        return "(not configured — use var(--color-*) tokens everywhere)"
+    colour = theme.get("color") or {}
+    button = theme.get("button") or {}
+    typography = theme.get("typography") or {}
+    parts = [
+        f"primary {colour['primary']}" if colour.get("primary") else "",
+        f"secondary {colour['secondary']}" if colour.get("secondary") else "",
+        f"background {colour['background']}" if colour.get("background") else "",
+        f"button {button['background']}" if button.get("background") else "",
+        f"radius {button['border_radius']}px" if button.get("border_radius") else "",
+        f"font {typography['font_family']}" if typography.get("font_family") else "",
+    ]
+    return ", ".join(p for p in parts if p) or "(not configured)"
 
 
 RESUME_PREAMBLE = """\
@@ -129,17 +163,27 @@ def compose_prompt(requirement: str, ctx) -> str:
     )
     modules = _format_list([f"{m['name']} ({m['path']})" for m in ctx.modules])
     roles = _format_list(ctx.roles)
+    theme = _format_theme(getattr(ctx, "theme", None))
     domain = ctx.primary_domain or "(no domain configured)"
     manage_py = _manage_py_path()
     if getattr(ctx, "frontend_build_allowed", False):
         frontend_rule = (
-            "Node IS available for this app, so you may scaffold and build a "
-            "custom React frontend when the requirement genuinely needs one "
-            "(see STEP 5d). You may run only: "
-            "`npx @zango-core/create-zango-app frontend`, `npm install`, "
-            "`npm run build:zango`. Anything else npm-related is denied. For "
-            "ordinary CRUD pages prefer appbuilder's prebuilt shell — it "
-            "needs no build at all."
+            "Node IS available for this app and custom React builds are "
+            "enabled, so scaffolding and building the frontend is REQUIRED, "
+            "not optional — follow STEP 5 in order (5a scaffold, 5b shared "
+            "primitives, 5c custom pages, 5d branded login, 5e build, "
+            "5f app module, 5g routes and menus). Do not stop at "
+            "appbuilder's prebuilt shell: it renders "
+            'only page_type "crud" pages, so it cannot show an entity-360 '
+            "detail page, a role landing page or a branded login. You may run "
+            "only: `npx @zango-core/create-zango-app frontend`, `npm "
+            "install`, `npm run build:zango`, and `npm install` of the "
+            "approved design packages (echarts, echarts-for-react, recharts, "
+            "date-fns, clsx, tailwind-merge). Anything else npm-related is "
+            "denied. lucide-react is already installed and Google Fonts are "
+            "reachable -- use both. Deploy the build with exactly "
+            "`cp -r frontend/zango-build/. static/js/` — that one copy is "
+            "permitted; every other cp/mv/mkdir is blocked."
         )
     else:
         frontend_rule = (
@@ -182,6 +226,7 @@ primary_domain: {domain}
 installed_packages: {packages}
 existing_modules: {modules}
 roles: {roles}
+theme: {theme}
 {appbuilder}
 
 {constraints}

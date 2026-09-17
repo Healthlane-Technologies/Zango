@@ -1,7 +1,7 @@
 ---
 name: zango-app-developer-server
 description: Server-mode Zango app development, used by Agent Mode inside the Zango platform. Implements backend and frontend features on an existing, already-deployed Zango app - modules, DynamicModelBase models, BaseCrudView CRUD views, forms, tables, workflows, policies, async tasks, AppBuilder routes, custom React pages, entity-360 detail views with child tables, and a branded login page - working only inside that app's workspace directory. Assumes no interactive user feedback.
-version: 1.2.0
+version: 1.5.0
 ---
 
 # Zango App Developer (server mode)
@@ -20,9 +20,9 @@ variant in ways that matter:
 - You run your own migrations and sync (STEP 7) with a fixed set of
   `manage.py` commands, and fix what they report. 
 - The Bash tool is **read-only**, except the `manage.py` commands in STEP 7 and
-  the npm commands in STEP 5a and 5d. Otherwise use Read, Write, Edit, Glob and Grep.
+  the npm commands in STEP 5a and 5f. Otherwise use Read, Write, Edit, Glob and Grep.
 - **Node is available** — the platform guarantees it. You build a real frontend
-  (STEP 5a-5d) and serve your own bundle (STEP 5e).
+  (STEP 5a-5f) and serve your own bundle (STEP 5g).
 - `appbuilder` ships a prebuilt React shell that renders `page_type: "crud"`
   pages with no build step. It is the floor, not the target: focus objects get
   full-page entity-360 views with child tables, each role gets a landing page,
@@ -162,7 +162,7 @@ Also plan, for every app:
 - **A landing page per role.** Never drop a user on a raw list as their home.
   A small dashboard — what is mine, what is overdue, what needs action — is
   usually the right first screen.
-- **A branded login page.** Always. See STEP 5c.
+- **A branded login page.** Always. See STEP 5e.
 
 Detail-view mechanics, child tables and the failure modes that make them break
 are in [frontend/entity-360.md](references/frontend/entity-360.md). The visual
@@ -185,6 +185,7 @@ before writing components.
 | Detail view with child tables | [frontend/entity-360.md](references/frontend/entity-360.md) |
 | Branded login / custom auth screens | [frontend/auth-login.md](references/frontend/auth-login.md) |
 | Visual quality bar, tokens, states | [frontend/design-system.md](references/frontend/design-system.md) |
+| Shared UI primitives (write these first) | [frontend/shared-primitives.md](references/frontend/shared-primitives.md) |
 | Frontend patterns | [frontend/crud.md](references/frontend/crud.md), [frontend/form.md](references/frontend/form.md), [frontend/appbuilder.md](references/frontend/appbuilder.md) |
 
 ## STEP 4: Implement
@@ -233,7 +234,7 @@ See [core/modules.md](references/core/modules.md) for more examples.
 
 ## STEP 5: Build the frontend and make the app reachable
 
-Backend code alone is not a working app. **Every sub-step 5a–5f is mandatory**
+Backend code alone is not a working app. **Every sub-step 5a–5h is mandatory**
 and each is separately verifiable. Node is available — the platform guarantees
 it — so none of the frontend sub-steps is optional or conditional.
 
@@ -245,11 +246,13 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 | | Sub-step | Produces |
 |---|---|---|
 | 5a | Scaffold `frontend/` | `frontend/` with `src/custom/` |
-| 5b | Write the custom pages | entity-360, landing pages |
-| 5c | Brand the login page | `AppLoginCard.tsx` |
-| 5d | Build the bundle | `frontend/zango-build/zango-app.<ts>.min.js` |
-| 5e | Create the `app` module | `backend/app/` + `app.html` → your bundle |
-| 5f | Register routes and menus | navigation for every role |
+| 5b | **Plan the pages** | `design-plan.md` at the workspace root |
+| 5c | Write the shared primitives | `src/custom/pages/shared.tsx` |
+| 5d | Write the custom pages | entity-360, landing pages |
+| 5e | Brand the login page | `AppLoginCard.tsx` |
+| 5f | Build the bundle | `frontend/zango-build/zango-app.<ts>.min.js` |
+| 5g | Create the `app` module | `backend/app/` + `app.html` |
+| 5h | Register routes and menus | navigation for every role |
 
 ### 5a. Scaffold the frontend — FIRST, before any of the rest
 
@@ -276,34 +279,148 @@ Target layout:
 frontend/src/
 ├── custom/
 │   ├── auth/
-│   │   └── AppLoginCard.tsx     branded login (5c)
+│   │   └── AppLoginCard.tsx     branded login (5e)
 │   └── pages/
-│       ├── <Entity>Detail.tsx   entity-360 pages (5b)
-│       ├── Dashboard.tsx        per-role landing page (5b)
+│       ├── <Entity>Detail.tsx   entity-360 pages (5d)
+│       ├── Dashboard.tsx        per-role landing page (5d)
 │       └── index.js             export names MUST match route.component
 └── App.tsx                      authConfig + customPages wiring
 ```
 
-Only these npm commands are permitted: the scaffold above, `npm install`,
-`npm ci`, `npm run build:zango`, `npm run build`. Installing arbitrary
-packages is denied, so if a component needs a dependency the template does
-not provide, say so in your summary instead of trying to add it.
+Permitted npm commands: the scaffold above, `npm install`, `npm ci`,
+`npm run build:zango`, `npm run build`, and installing **only** these design
+packages — `echarts`, `echarts-for-react`, `recharts`, `date-fns`, `clsx`,
+`tailwind-merge`. Any other package is denied; say so in your summary rather
+than trying.
 
-### 5b. Write the custom pages
+You do **not** need to install icons: `lucide-react` already ships with
+`@zango-core`. Inter and JetBrains Mono load from Google Fonts. See
+[frontend/design-system.md](references/frontend/design-system.md) §10 — the
+earlier claim that fonts and icons were unavailable was wrong, and it is why
+generated apps looked plain.
+
+### 5b. Plan the pages — write `design-plan.md` before any component
+
+**This step exists because the previous version of this skill produced pages
+that satisfied every structural rule and still looked like wireframes.** The
+rules below (§6 anatomy, §1a aesthetic direction) are all satisfiable
+*nominally*: a page can have "two or more titled Sections" where the second
+section adds nothing, tabs that carry counts of zero, and an Overview that
+re-lists the same five fields already shown in the header. That page passes a
+grep and fails a glance.
+
+So before writing a single component, write `design-plan.md` at the workspace
+root. It is a real file, committed to the workspace, because the verify gate
+reads it back and checks the finished pages against it. A plan you only thought
+about cannot be checked.
+
+For **each focus entity**, the plan must answer all six:
+
+1. **The question this page answers.** One sentence, in the user's words, not
+   the schema's. *"Can we still bid on this, and are we ready to?"* — not
+   *"shows tender fields"*. Every later decision serves this sentence. If you
+   cannot write it without listing fields, you do not yet understand the
+   entity well enough to design its page.
+
+2. **The lead card.** The first thing inside Overview is **a synthesis, not a
+   field dump** — a computed answer to (1), assembled from several fields plus
+   derived state. A progress bar against an allowance, a countdown with a
+   readiness checklist, an outstanding balance with its ageing. *Re-listing the
+   key facts that are already in the header is the single most common failure
+   and is never acceptable.* Name what it computes and from which fields.
+
+3. **The layout.** Detail pages default to **main column + right rail** (§6).
+   State what goes in the rail: status with who changed it and when, an
+   at-a-glance block of the flat attributes, open tasks, and any
+   consent/compliance state. The rail is what carries the flat fields, which is
+   precisely why Overview is then free to be a synthesis.
+
+4. **The aesthetic direction** from design-system.md §1a — one of Operational,
+   Editorial, Clinical, Approval — and the **signature treatment** that makes
+   it legible. "Default" is not a direction.
+
+5. **Every tab**, with: its count source, whether it is a child table or a
+   composed view, and its **empty-state copy written out in full**. Copy
+   invented later at implementation time reverts to "No data".
+
+6. **The one deliberate moment** — the single element you will execute with
+   more care than the brief requires, and which you can point at afterwards.
+
+Then one plan-level entry for the app as a whole: the **identity strip**. The
+header is not a title plus a chip; it is the title plus the four to six facts
+that identify this record at a glance — reference number, dates, the one
+relationship that matters, contact. List them per entity.
+
+Keep it short. Six answers per entity, a few lines each — this is a design
+decision record, not a document. Write it, then build exactly it.
+
+### 5c. Write the shared primitives — before any page
+
+Write `src/custom/pages/shared.tsx` **first**, and compose every later page
+from it. Full contract and a copyable floor:
+[frontend/shared-primitives.md](references/frontend/shared-primitives.md).
+
+It exports the layout, state and formatting primitives every page needs:
+`PageShell`, `PageHeader`, `Avatar`, `IdentityStrip`, `KeyFacts`,
+`FieldGrid`, `Section`, `Tabs`, `Card`, `Button`, `StatusChip`, `Skeleton`,
+`EmptyState`, `ErrorState`, `Money`, `DateText`, `Num`, `NavigateTableBody`
+— plus the detail-page shape from §6: `DetailLayout` (main + right rail),
+`RailCard`, `AtAGlance`, `Meter`, `ProcessStepper` and `ActivityFeed`.
+
+`DetailLayout`, `RailCard` and `AtAGlance` are not optional extras: they are
+how the rail gets built, and the rail is what lets Overview be a synthesis
+instead of a second copy of the header.
+
+This is not an optimisation, it is the polish mechanism. Pages that each
+hand-roll their own tab strip, key-facts grid and (missing) loading state
+diverge immediately, and no fix can be applied in one place. **Set `LOCALE`
+and `CURRENCY` from the requirement spec while you are here** — a hard-coded
+`$` on a non-US app is a defect.
+
+If at the end of your run `shared.tsx` is a near-empty file and the detail
+pages are ~100 lines of inline-styled JSX each, this step was skipped.
+
+### 5d. Write the custom pages
+
+**Build the plan from 5b, page by page.** Open `design-plan.md` and implement
+each entity's six answers literally: the lead card it names, the rail it names,
+the tabs and empty-state copy it names. If while building you conclude the plan
+was wrong, change `design-plan.md` and say why in your summary — but do not
+silently drift, because the gate compares the finished page to that file.
+
 
 Under STEP 3's defaults essentially every app needs these: focus objects get
 full-page entity-360 views with child tables, and each role gets a landing
 page. Appbuilder's prebuilt shell renders only `page_type: "crud"` pages, so
 anything beyond a plain lookup table requires your own build.
 
+**Compose from 5c's primitives, and pick a treatment per block.**
+`shared-primitives.md` has a card-treatment library: `Section` (plain field
+group), `Card`+`Inset`+`MetricTile` (the lead block), `Card tone=` (status),
+`RailCard` (rail). **Every detail page needs exactly one lead `Card`** — a page
+composed entirely of `Section`s is structurally correct and renders as
+identical grey-capped white boxes, which is the observed wireframe failure.
+Numbers go in `MetricTile` with a `qualifier`, never bare.
+
+Import the primitives; do not re-implement layout per
+page, and do not paste a reference skeleton and swap its classes for inline
+`style` objects — the scaffold ships Tailwind v4, and inline styles cannot
+express hover, focus or responsive behaviour, so a page written that way
+cannot meet the visual bar.
+
+Every entity the team works in daily gets a detail page — including the ones
+whose list is otherwise plain. An entity left on the default drawer shows the
+user almost nothing.
+
 Export every page from `src/custom/pages/index.js`. **The export name must
 match the route's `component` value exactly**, or the page renders blank.
 
 Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
+[frontend/design-system.md](references/frontend/design-system.md),
 [frontend/crud.md](references/frontend/crud.md),
 [frontend/form.md](references/frontend/form.md).
 
-### 5c. Brand the login page
+### 5e. Brand the login page
 
 **Every app gets a branded login page. Always** — there is no toggle and no
 condition. It is the first screen anyone sees, and the framework default says
@@ -311,6 +428,13 @@ nothing about the product.
 
 Full contract and a copyable skeleton:
 [frontend/auth-login.md](references/frontend/auth-login.md). In short:
+
+- **The left panel must be full, and fullness is measured, not judged.** A
+  headline floating in a gradient is the observed failure mode — it satisfies
+  every structural rule and still ships a page that reads as unfinished. It
+  needs a **middle band** (journey stepper or proof tiles) plus 3 feature rows
+  with icon tiles, a `700`-weight headline capped at 640px, an eyebrow in both
+  panes, and a layered background. Gates and copy-paste CSS: auth-login.md §5b.
 
 - Register a full override —
   `authConfig={{ customComponents: { LoginPage: AppLoginCard } }}` on
@@ -331,10 +455,11 @@ Full contract and a copyable skeleton:
   **Never reproduce a real third-party company's branding, logo or trade
   dress**; if the spec names a real organisation, use its name as plain text
   and nothing more.
-- Inline `<style>` and inline SVG only — no new packages, no external fonts,
-  no CDN.
+- Inline `<style>` in the component (it mounts over the whole viewport).
+  `lucide-react` is available for icons, and Inter/JetBrains Mono may be loaded
+  from Google Fonts — see design-system.md §10 for what is and is not allowed.
 
-### 5d. Build the bundle — once, at the end of frontend work
+### 5f. Build the bundle — once, at the end of frontend work
 
 Not after every change:
 
@@ -342,9 +467,7 @@ Not after every change:
 cd frontend && npm install && npm run build:zango
 ```
 
-This writes `frontend/zango-build/zango-app.<timestamp>.min.js`. Copy
-`frontend/zango-build/*` into the workspace's `static/js/`, then run
-`sync_static` and `collectstatic` in STEP 7.
+This writes `frontend/zango-build/zango-app.<timestamp>.min.js`.
 
 **Read the built filename off disk** — it carries a build timestamp, so never
 guess it:
@@ -353,7 +476,23 @@ guess it:
 ls frontend/zango-build/
 ```
 
-### 5e. Create the `app` module so `/app/` serves the UI
+Then deploy it into the workspace's `static/js/`. This one copy is the sole
+exception to the read-only Bash rule — the bundle is multi-megabyte minified
+JS, so it cannot go through the Write tool:
+
+```bash
+cp -r frontend/zango-build/. static/js/
+```
+
+Only this exact form is permitted: source `frontend/zango-build/`, destination
+`static/js/`, both workspace-relative. Anything else — another source, another
+destination, `mv`, `rm` — is denied.
+
+`sync_static` and `collectstatic` then publish it, and you run both in STEP 7.
+`sync_static` copies from `<workspace>/static` only, so a bundle left in
+`frontend/zango-build/` is never served no matter what `app.html` points at.
+
+### 5g. Create the `app` module so `/app/` serves the UI
 
 Without it `/app/` returns 404 and the app has no front door. Copy the
 template from
@@ -362,20 +501,44 @@ into `backend/app/`:
 
 ```
 backend/app/
-├── urls.py          AppView at ^, RedirectAppView for / and /login
+├── urls.py          AppView at ^app/, RedirectAppView for / and /login
 ├── views.py
 ├── policies.json    grant AnonymousUsers access to the view
 └── templates/app.html
 ```
 
+`urls.py` is **exactly this** — do not improvise the patterns:
+
+```python
+from django.urls import re_path
+from .views import AppView, RedirectAppView
+
+urlpatterns = [
+    re_path(r"^app/", AppView.as_view()),
+    re_path(r"^login/?$", RedirectAppView.as_view()),
+    re_path(r"^/", RedirectAppView.as_view()),
+]
+```
+
+The root entry must be `re_path(r"^/", ...)`. Writing `r"^$"` instead does
+**not** work in this deployment — an agent improvised it on one run and the
+root redirect broke. Keep the three patterns, in this order.
+
 Register it **first** in `settings.json` so it catches root paths:
 
 ```json
-{"app_routes": [{"re_path": "^app/", "module": "app", "url": "urls"}]}
+{"app_routes": [{"re_path": "^", "module": "app", "url": "urls"}]}
 ```
 
+The mount is `"^"`, **not** `"^app/"`. The module is mounted at the site root
+and its own `urls.py` owns the rest of the path — that is why `urls.py` above
+carries `^app/` itself, and why the root redirect is reachable at all. Mount it
+at `"^app/"` and the module never sees `/` or `/login`, so both redirects are
+dead. It must also be the **first** entry, or another module's `^` catches
+root paths first.
+
 `app.html` mounts the React root and loads **your** bundle — the one you built
-in 5d, whose real filename you just read off disk:
+in 5f, whose real filename you just read off disk:
 
 ```html
 {% load zstatic %}
@@ -411,85 +574,95 @@ in 5d, whose real filename you just read off disk:
 nobody, including you, can reach the app.
 
 `RedirectAppView` maps `/` and `/login` to `/app`; the React router owns
-`/app/login`, which is where your branded login renders (5c).
+`/app/login`, which is where your branded login renders (5e).
 
-### 5f. Register routes and menu configs
+### 5h. Register routes and menu configs
 
-#### Routes
+Every page you built needs a route; every role needs a menu. Both are API
+calls, and **neither has a file-based substitute** — a payload written to disk
+is not a saved config.
 
-```bash
-curl "$APPBUILDER_CONFIG_URL/routes/api/?token=$APPBUILDER_TOKEN&action=get_routes"
-curl "$APPBUILDER_CONFIG_URL/routes/api/?token=$APPBUILDER_TOKEN&action=save_routes" ...
-```
+Full sequence, payload shapes and failure modes:
+[appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md).
+The essentials:
 
-CRUD page: `page_type: "crud"` with `extra_params.api_endpoint`. Custom page:
-`page_type: "custom"` with `component` matching the export name exactly.
-**Route PUTs replace the whole array** — fetch, merge, then send.
+- **Order matters.** Save routes first, read back the server-generated
+  `route_id`s, then create one menu config per role using those ids. Ids you
+  invent yourself save fine and produce a sidebar of dead links.
+- `save_routes` **replaces the whole array** — fetch, merge, send.
+- Custom pages are `page_type: "custom"` with `component` matching the export
+  name exactly. **An app whose routes are all `"crud"` has no custom
+  frontend** — if none are custom, you skipped 5a–5d.
+- **`create_config` takes the role's NUMERIC ID, not its name.** The field is
+  called `user_role` for frontend compatibility but resolves as a primary key,
+  so a name returns `Field 'id' expected a number but got 'Approver'.` Resolve
+  it via `action=get_available_roles`, which shrinks as configs are created —
+  re-fetch rather than caching, or the last role silently gets no menu.
+- **Give every menu item its own icon, and every icon is inline SVG. Never
+  emoji.** `clean_icon()` replaces any icon
+  containing a replacement character with `"📄"`, and emoji only have to
+  survive one mis-encoded hop to become one. The POST still returns
+  `success: true`. Use 32×32 viewBox paths with `stroke="currentColor"`.
+- `curl` is permitted against this app's own domain and localhost, and **POST
+  with a body is allowed** — `-X POST`, `-d`, `--data-raw`, `--data-binary`,
+  `-F`, `-H` all work. The token lasts 30 minutes.
 
-**An app whose routes are all `page_type: "crud"` has no custom frontend.**
-Every entity-360 page and every landing page you wrote in 5b must appear here
-as `page_type: "custom"`. If none do, you skipped 5a–5b.
+**Verify by reading back, not by status code.** `get_routes` must not return
+`[]`; `get_configs` must return one config per role; every menu `route_id` must
+exist in `get_routes`; every `icon` must contain `<svg`. All four failure modes
+return `success: true`, so the read-back is the only evidence.
 
-#### Menu configs — one per role
+If `appbuilder_config_url` is UNAVAILABLE, skip 5h and list what an operator
+must add. Do **not** skip 5a-5g for it — the build does not depend on this API.
 
-**This is the step most likely to be skipped, and skipping it means no
-navigation for anyone.** Writing a `menu_items.json` file is *not* enough —
-the config only exists once the API has accepted it.
-
-Your roles already exist — the platform creates every role named in the
-requirement before you start, precisely so they have IDs you can use here.
-
-**`create_config` takes the role's NUMERIC ID, not its name.** This is the
-single most common way this step fails. The request field is called
-`user_role` for frontend-compatibility reasons, but the server resolves it as
-a primary key, so passing a name returns:
-
-    {"success": false, "response": "Field 'id' expected a number but got 'Approver'."}
-
-So always resolve the ID first:
-
-```bash
-# 1. Roles WITHOUT a menu config yet -> [{"id": 3, "name": "Approver"}, ...]
-curl "$APPBUILDER_CONFIG_URL/api/?token=$APPBUILDER_TOKEN&action=get_available_roles"
-
-# 2. Registered routes, for their route_ids
-curl "$APPBUILDER_CONFIG_URL/api/?token=$APPBUILDER_TOKEN&action=get_routes_list"
-
-# 3. One config per role, using the numeric id from step 1
-curl -X POST -H 'Content-Type: application/json' \
-  --data-raw '{"user_role": 3, "menu": [{"route_id": "<uuid>", "name": "Tenders", "uri": "/app/tenders", "icon": "📄", "children": []}], "config": {}}' \
-  "$APPBUILDER_CONFIG_URL/api/?token=$APPBUILDER_TOKEN&action=create_config"
-```
-
-Note `get_available_roles` only returns roles that do **not** yet have a
-config, so it shrinks as you go. Re-fetch it rather than caching, and expect
-`Configuration already exists for this role` if you retry one.
-
-**Verify before moving on**: `action=get_configs` must return one config per
-role. If a role is missing, the menu did not save and that role has no
-navigation — fix it rather than reporting success. If you genuinely cannot,
-say so explicitly in your summary as an outstanding manual step.
-
-Full request shapes:
-[packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md).
-`curl` is permitted for this, but only against this app's own domain and
-localhost. The token lasts 30 minutes.
-
-If `appbuilder_config_url` is UNAVAILABLE, skip 5f and list the routes and
-menu entries an operator must add. Do NOT skip 5a-5e because of it - the
-frontend build does not depend on the config API.
-
+> **That is the only reason to skip 5h.**
+> **A failure here is not an outstanding item — it is a blocker.**
+> The observed pattern is: the POST fails, the agent files
+> it as a remaining task, finishes everything else and reports success — leaving
+> an app whose sidebar is empty or entirely dead links, indistinguishable to the
+> user from no frontend at all.
+>
+> So **attempt the call before concluding anything is blocked** — a guess about
+> the sandbox is not evidence. Read the response body (it names the fix), fix,
+> and retry. Only if it still fails, stop and report the run **incomplete** with
+> the exact command and verbatim response. Never write "routes and menus still need registering" in a
+> summary that otherwise reads as success — the correct first line is that **the
+> app has no working navigation**.
 ### Verify STEP 5 before moving on
 
-All six must be true. Any that is false is a bug in your run, not a nice-to-have:
+Work through the full gate in
+[frontend/verify-gate.md](references/frontend/verify-gate.md) — 24 items, each
+binding. Several of these failures return HTTP 200 and look correct, so the
+gate is what catches them, not the absence of errors.
 
-1. `frontend/` exists in the workspace.
-2. `frontend/zango-build/zango-app.<ts>.min.js` exists and was copied to `static/js/`.
-3. `backend/app/templates/app.html` references `js/zango-app.` and contains **neither** `app_initializer_endpoint` **nor** `packages/appbuilder/js/`.
-4. At least one registered route has `page_type: "custom"`.
-5. `/app/login` renders your branded card.
-6. Every role has a menu config accepted by the API.
+**Wired up** — `frontend/` exists; the bundle is built and copied to
+`static/js/`; `app.html` loads *your* bundle (never `app_initializer_endpoint`
+or `packages/appbuilder/js/`); at least one route is `page_type: "custom"`; the
+branded login renders and its left panel passes the §5b fill gate; routes and
+menus read back correctly, with every menu `route_id` present in `get_routes`
+and every `icon` an inline SVG.
 
+**Polished** — `shared.tsx` exports the primitives and the pages compose them.
+**No literal hex colour in `src/custom/pages/`.**
+`src/custom/auth/` is the one exception — the login renders pre-auth with no
+theme tokens in scope, so it takes its palette from the run context. No
+inline `style={{...}}` for static styling. Four states on every data surface,
+**including each child tab** opened and confirmed to render. `Money`/`DateText`
+everywhere; one visual anchor per page; detail pages match design-system.md §6;
+`design-plan.md` exists and the pages match it.
+
+**Correct, full and not flat** — the three most recently observed to fail:
+
+- **Open one record and check the page against the stored data.** A page whose
+  numbers are all `0` is internally consistent and uniformly wrong. The usual
+  cause is a `BaseDetail` with no `Meta.fields` (entity-360.md §3b).
+- **The page fills the screen.** Content width within ~300px of
+  `viewport - 260`, and the rail at least 0.6x the main column's height. A
+  1080px column on a 1920px screen leaves ~640px of empty grey.
+- **The page is not flat.** Run the snippet in design-system.md §1: at least 2
+  distinct card fills, every card carrying the hairline shadow, page ground
+  differing from card fill. All-white boxes with grey title bars passes every
+  structural rule and still reads as a wireframe.
 ## STEP 6: Declare test users and login url
 
 An app nobody can log into is not a working app. Write `users.json` at the
@@ -583,6 +756,15 @@ Finish with a summary containing:
   the `app` module and before route registration. If `frontend/` does not
   exist at the end of the run, the frontend was not built — no amount of
   backend work substitutes for it.
+- **Shared primitives before pages**: `src/custom/pages/shared.tsx` is STEP 5c
+  and is written **before** the first page. Pages compose from it. Four detail
+  pages that each hand-roll a tab strip, carry literal hexes and have no
+  loading or empty state are a failed run even though every file exists and
+  nothing errors.
+- **Reference skeletons are a floor, not a template**: adapt them to the app in
+  front of you. Transcribing a skeleton and converting its Tailwind classes to
+  inline `style` objects is a downgrade — inline styles cannot express hover,
+  focus or responsive behaviour, so the result cannot meet the visual bar.
 - **Bundle**: `app.html` must load **your** bundle (`js/zango-app.<ts>.min.js`)
   and must never contain `app_initializer_endpoint` or
   `packages/appbuilder/js/`. Never copy

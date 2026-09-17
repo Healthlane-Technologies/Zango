@@ -1,7 +1,7 @@
 > **Server-mode note (Agent Mode).** Commands in this file that use
 > `docker compose` or the `zango` CLI **cannot be run** in server mode, and
 > Bash is otherwise read-only. Treat those as background reference.
-> Two exceptions: the **npm commands allowed by STEP 5a and 5d** (scaffold, install,
+> Two exceptions: the **npm commands allowed by STEP 5a and 5f** (scaffold, install,
 > build) do run — Node is available — and you run the **`manage.py` commands
 > listed in STEP 7** (migrations, sync, static) yourself.
 
@@ -22,7 +22,7 @@ backend/app/
 
 ## When to create this
 
-**After the frontend is scaffolded and built** (SKILL.md STEP 5a-5d), not
+**After the frontend is scaffolded and built** (SKILL.md STEP 5a-5f), not
 before. The whole point of `app.html` is to load the bundle you built, so
 creating this module first means writing `app.html` with no bundle to point
 at — and the usual result is that it is left pointing at appbuilder's
@@ -47,6 +47,19 @@ The app module serves as the entry point for your React frontend application. It
 
 Create the `backend/app/` directory with all template files from this reference.
 
+**Copy `urls.py` verbatim.** The URL patterns are not a matter of taste:
+
+```python
+urlpatterns = [
+    re_path(r"^app/", AppView.as_view()),
+    re_path(r"^login/?$", RedirectAppView.as_view()),
+    re_path(r"^/", RedirectAppView.as_view()),
+]
+```
+
+The root entry must be `r"^/"`. An agent that "tidied" it to `r"^$"` broke the
+root redirect on a real run. Keep all three patterns, in this order.
+
 ### 2. Add to settings.json
 
 Add the app module route to `settings.json`:
@@ -67,7 +80,7 @@ Add the app module route to `settings.json`:
 
 ### 3. Point app.html at the built bundle
 
-#### Build the React app (STEP 5d):
+#### Build the React app (STEP 5f):
 ```bash
 cd frontend
 npm run build:zango

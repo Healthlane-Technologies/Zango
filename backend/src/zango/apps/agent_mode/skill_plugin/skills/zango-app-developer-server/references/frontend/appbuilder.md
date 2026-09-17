@@ -1,7 +1,7 @@
 > **Server-mode note (Agent Mode).** Commands in this file that use
 > `docker compose` or the `zango` CLI **cannot be run** in server mode, and
 > Bash is otherwise read-only. Treat those as background reference.
-> Two exceptions: the **npm commands allowed by STEP 5a and 5d** (scaffold, install,
+> Two exceptions: the **npm commands allowed by STEP 5a and 5f** (scaffold, install,
 > build) do run — Node is available — and you run the **`manage.py` commands
 > listed in STEP 7** (migrations, sync, static) yourself.
 
@@ -329,8 +329,8 @@ GET /appbuilder/initializer/
       { "path": "/app/patients", "page_type": "crud", "entity": "Patient", "extra_params": { "api_endpoint": "/api/patients/" } }
     ],
     "menu": [
-      { "name": "Dashboard", "uri": "/app/dashboard", "icon": "home-icon-svg" },
-      { "name": "Management", "uri": "/app/patients", "icon": "users-icon", "children": [
+      { "name": "Dashboard", "uri": "/app/dashboard", "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M3 10.5 12 3l9 7.5\"/><path d=\"M5 9.5V20a1 1 0 0 0 1 1h14V9.5\"/></svg>" },
+      { "name": "Management", "uri": "/app/patients", "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4 4-7 8-7s8 3 8 7\"/></svg>", "children": [
         { "name": "Patients", "uri": "/app/patients" },
         { "name": "Doctors", "uri": "/app/doctors" }
       ]}
@@ -567,7 +567,7 @@ After creating custom pages, you need to configure routes and menus to make them
       "path": "/app/dashboard",
       "page_type": "custom",
       "component": "Dashboard",
-      "icon": "📊"
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/></svg>"
     }
   ]
 }
@@ -582,7 +582,7 @@ After creating custom pages, you need to configure routes and menus to make them
       "route_id": "custom-page-route-id",
       "name": "Dashboard",
       "uri": "/app/dashboard",
-      "icon": "📊",
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/></svg>",
       "children": []
     }
   ]

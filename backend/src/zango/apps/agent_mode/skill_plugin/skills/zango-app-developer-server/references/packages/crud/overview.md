@@ -95,7 +95,7 @@ Add your CRUD page to AppBuilder routes. **All AppBuilder routes must start with
   "name": "Patients",
   "path": "/app/patients",
   "page_type": "crud",
-  "icon": "🏥",
+  "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M4 21V7a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14\"/><path d=\"M12 9v6M9 12h6\"/></svg>",
   "extra_params": {
     "api_endpoint": "/patients/patients"
   }
@@ -114,7 +114,7 @@ Add the menu item to specific user roles so they can access it from the menu.
   "route_id": "<generated-route-id>",
   "name": "Patients",
   "uri": "/app/patients",
-  "icon": "🏥",
+  "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M4 21V7a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14\"/><path d=\"M12 9v6M9 12h6\"/></svg>",
   "children": []
 }
 ```

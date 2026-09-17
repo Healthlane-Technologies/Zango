@@ -195,6 +195,7 @@ One short paragraph: what the app is for and who uses it.
 ### Branding
 - Product name on the sign-in screen: "Northside Clinic"
 - Brand colour: deep green (from their logo)
+- Currency: Australian dollars (A$) — inferred, not asked
 
 ### Automatic actions
 - None in this version.

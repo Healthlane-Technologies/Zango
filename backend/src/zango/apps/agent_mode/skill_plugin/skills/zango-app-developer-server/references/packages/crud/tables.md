@@ -638,6 +638,14 @@ def can_perform_row_action_activate(self, request, obj):
 
 ## Custom Table Queryset
 
+> **Fetching these rows from a custom page?** The response shape has three
+> traps that all fail silently with a 200 — the rows sit behind
+> `action=get_table_data`, they are at `j.data` (a plain array), and any
+> column with a `_getval` is serialized to an **HTML string**, so a boolean
+> column is truthy whatever its value. See
+> [../../frontend/entity-360.md](../../frontend/entity-360.md) §4b.
+
+
 Override `get_table_data_queryset()` to customize the data shown in the table.
 
 **Method Signature**:

@@ -31,6 +31,7 @@ class AppContext:
     appbuilder_reason: str = ""
     frontend_build_allowed: bool = False
     frontend_exists: bool = False
+    theme: dict = field(default_factory=dict)
 
 
 def _read_json(path: str) -> dict:
@@ -49,7 +50,6 @@ def workspaces_root() -> str:
 
 def workspace_path_for(tenant_name: str) -> str:
     return os.path.join(workspaces_root(), tenant_name)
-
 
 
 def app_front_door(app_settings: dict) -> str:
@@ -128,6 +128,7 @@ def app_access(tenant, *, request=None, app_settings=None) -> dict:
         "path": path,
     }
 
+
 def build_app_context(tenant) -> AppContext:
     """Collect the run context. Never raises."""
     path = workspace_path_for(tenant.name)
@@ -139,13 +140,15 @@ def build_app_context(tenant) -> AppContext:
     )
 
     try:
-        import shutil
+        # Must match what the Bash guard actually permits, which resolves from
+        # the platform settings row (env is only its fallback). Reading the
+        # Django setting directly here skipped that row, so an operator who
+        # enabled "Allow custom React builds" in the UI still got a run context
+        # saying Node was unavailable: the guard allowed npm while the prompt
+        # told the agent not to build, and the agent obeyed the prompt.
+        from .config import frontend_build_enabled
 
-        from django.conf import settings as dj
-
-        ctx.frontend_build_allowed = bool(
-            getattr(dj, "AGENT_MODE_ALLOW_FRONTEND_BUILD", False)
-        ) and bool(shutil.which("node"))
+        ctx.frontend_build_allowed = frontend_build_enabled()
         ctx.frontend_exists = os.path.isdir(os.path.join(path, "frontend"))
     except Exception:  # noqa: BLE001
         pass
@@ -190,6 +193,25 @@ def build_app_context(tenant) -> AppContext:
         ctx.roles = list(
             UserRoleModel.objects.filter(is_active=True).values_list("name", flat=True)
         )
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        # The app's own active theme. The agent needs these values literally
+        # for the login page: it renders before authentication, so
+        # `useAppContext()` is not available there and there is no runtime
+        # source for the palette. Without this the agent hard-codes a hex it
+        # guessed or copied, which then stops matching the moment the app is
+        # re-themed.
+        from zango.apps.shared.tenancy.models import ThemesModel
+        from zango.apps.shared.tenancy.utils import DEFAULT_THEME_CONFIG
+
+        theme = (
+            ThemesModel.objects.filter(tenant=tenant, is_active=True)
+            .values_list("config", flat=True)
+            .first()
+        )
+        ctx.theme = theme or DEFAULT_THEME_CONFIG
     except Exception:  # noqa: BLE001
         pass
 

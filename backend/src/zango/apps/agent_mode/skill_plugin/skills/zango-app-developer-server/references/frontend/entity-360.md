@@ -86,6 +86,98 @@ const PatientDetail = ({
 Each entry in `generalDetails.fields` is
 `{ name, display_name, type, value, searchable, sortable }`.
 
+## 3b. `generalDetails.fields` carries the TABLE's columns — not your model's
+
+**The trap that renders a confident, wrong number.** `fields` is keyed by field
+name, so `fields.amount_billed?.value` *looks* right. But which keys exist is
+decided server-side, and the default is not what you expect:
+
+```python
+# packages/crud/detail/base.py — get_general_details()
+if hasattr(self, "Meta") and hasattr(self.Meta, "fields"):
+    table_metadata = self.get_table_metadata()      # your detail's fields
+else:
+    table_metadata = self.table_obj.get_table_metadata()   # the TABLE's columns
+```
+
+**A `BaseDetail` subclass with no `Meta.fields` falls back to the table's
+columns.** A table normally lists what belongs in a *grid* — a few identifying
+columns plus computed display columns — not the model's monetary or date
+fields. So the keys your page wants are simply absent.
+
+This shipped on a real run. `ClaimTable` declared `id, patient, tpa_name,
+policy_number, status, outstanding_amount, documents_count, transitions`, and
+`ClaimDetail` declared no `Meta`. The page read:
+
+```ts
+const billed = toNum(fields.amount_billed?.value);     // undefined
+const approved = toNum(fields.amount_approved?.value); // undefined
+```
+
+The record held ₹1000.00 billed and ₹100.00 approved. The page rendered
+**₹0.00 for both, and ₹0.00 outstanding** — the one number the design plan
+called "the single number billing staff open the page to check". No error, no
+warning, HTTP 200. The "Amounts" section rendered empty and the meters showed
+as flat grey lines, which read as a styling problem and hid the data bug.
+
+### Two rules
+
+**1. Every `BaseDetail` subclass declares `Meta.fields`.** List every field the
+page reads, including ones absent from the table:
+
+```python
+class ClaimDetail(BaseDetail):
+    class Meta:
+        fields = ["id", "patient", "tpa_name", "policy_number", "doctor",
+                  "admission_date", "discharge_date",
+                  "amount_billed", "amount_approved"]
+```
+
+**2. `get_sections(self, obj)` is not a hook — defining it does nothing.** The
+framework calls `self.get_sections(self.Meta.sections)`, passing a
+`SectionSchema` list, and only `if hasattr(self.Meta, "sections")`. A
+zero-`Meta` class that defines `get_sections(self, obj)` has an incompatible
+signature and is **never called**; the sections silently do not exist. Declare
+`Meta.sections` or lay sections out in the React page, not both.
+
+### Never let a missing field read as zero
+
+A `toNum` helper that maps `undefined → 0` converts "the server never sent
+this" into "the value is zero" — indistinguishable on screen, and the reason
+this survived to production:
+
+```ts
+// WRONG: undefined and a real 0 are now the same thing
+const toNum = (v: any) => {
+  const n = Number(String(v ?? '').replace(/[^0-9.\-]/g, ''));
+  return Number.isNaN(n) ? 0 : n;
+};
+
+// RIGHT: absent stays absent, and renders as "—"
+const toNum = (v: any): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(String(v).replace(/[^0-9.\-]/g, ''));
+  return Number.isNaN(n) ? null : n;
+};
+```
+
+Then a missing field shows `—`, which is visibly wrong and gets fixed, rather
+than `₹0.00`, which looks deliberate.
+
+### Verify it — one record, against the source
+
+Before calling a detail page done, take **one real record** and compare what it
+renders against the stored values:
+
+```sql
+select amount_billed, amount_approved, admission_date
+from <schema>."dynamic_models_claim" limit 1;
+```
+
+Then confirm those exact values appear on the page. Checking the page against
+itself cannot catch this class of bug: when every derived number is 0, the page
+is internally consistent and uniformly wrong.
+
 ## 4. Child tables — the mechanic
 
 **There is no `childTables` prop. Stop looking for one.**
@@ -102,8 +194,27 @@ row state, no takeover.
 />
 ```
 
-That gives the tab a full table for free: search, filters, row actions,
+That should give the tab a full table: search, filters, row actions,
 pagination and the add button, governed by the child module's own policies.
+
+> **Verify the child tab actually renders — do not assume it.** This is the
+> single most common way an entity-360 page ships broken. In an observed run
+> both child API calls returned `200` with correctly filtered data and the tab
+> still painted **nothing at all** — no table, no header, no empty state — so
+> the network tab looks healthy while the page is blank.
+>
+> After wiring a child tab, open it and confirm rows (or a designed empty
+> state) are visible. If it is blank:
+>
+> - compare your props against a working `page_type: "crud"` list page for the
+>   same module — the list page is the reference implementation, and whatever
+>   it passes that you do not is the likely cause;
+> - check `crud.md` for the `CrudHandler` props that list page relies on;
+> - confirm the endpoint you passed is the child module's own CRUD endpoint,
+>   spelled exactly as in `settings.json` `app_routes`.
+>
+> A tab that renders blank is not "an empty state" — it is a broken tab. Ship
+> an `EmptyState` for genuinely-empty data, and fix the blank.
 
 ### The backend half is not optional
 
@@ -139,6 +250,56 @@ class OrderTable(ModelTable):
 Without this, any user can edit the URL and read another parent's children.
 In a healthcare or finance app that is a data breach, not a UI bug. **Never
 rely on the frontend to scope a child table.**
+
+## 4b. Reading child rows yourself — the three traps
+
+`CrudHandler` renders a child table for you. But a **lead card that
+synthesises** (design-system.md §6.2) usually needs the rows themselves — the
+lowest quote, the unpaid total, how many are approved — not just a table. When
+you fetch them yourself, all three of these will bite, and each fails
+*silently* with a 200:
+
+**1. The rows are behind `action=get_table_data`.** The bare endpoint returns
+200 with table *metadata*, not records, so a naive fetch yields an empty list
+and the card renders "0" next to a table visibly showing rows.
+
+```ts
+// WRONG -- 200, but no records
+fetch(`/vendor-quotes/vendor-quotes/?tender_uuid=${objectUuid}`)
+
+// RIGHT
+fetch(
+  `/vendor-quotes/vendor-quotes/?tender_uuid=${objectUuid}` +
+    `&action=get_table_data&view=table&start=0&length=100`,
+)
+```
+
+**2. The rows are at `j.data` — a plain array.** `ModelTable.get_table_data()`
+returns `{draw, recordsTotal, recordsFiltered, data}` where `data` **is** the
+row array (packages/crud/table/base.py). A chain like
+`j?.data?.records ?? j?.records ?? []` silently falls through to `[]`.
+
+```ts
+const rows = Array.isArray(j?.data) ? j.data : [];
+```
+
+**3. Serialized columns are HTML strings, not values.** Any column with a
+`<field>_getval` on the table class is rendered server-side. A boolean column
+arrives as `'<span class="badge badge-success">Picked</span>'` — which is
+**truthy either way**, so `rows.filter((r) => r.is_selected)` counts every row.
+Decimals may arrive formatted too.
+
+```ts
+const stripTags = (v: any) => String(v ?? '').replace(/<[^>]*>/g, '').trim();
+const toNum = (v: any) => Number(String(v ?? '').replace(/[^0-9.\-]/g, ''));
+const isPicked = (r: any) =>
+  r?.is_selected === true || /(^|>)\s*Picked\s*(<|$)/i.test(String(r?.is_selected ?? ''));
+```
+
+**Verify with the numbers, not the network tab.** All three return 200. The
+only reliable check is that the count in your card matches the row count in
+the table rendered beside it — if the card says 0 and the table shows rows,
+you have hit one of these.
 
 ## 5. The stability rule — read this before writing the page
 
@@ -198,7 +359,33 @@ Two corollaries:
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 7. Skeleton to copy
+## 7. Reference skeleton — a floor, not a template
+
+**Read this for the mechanics, then write your page from
+[shared-primitives.md](shared-primitives.md) instead.**
+
+This skeleton exists to show *how the props and the child-table wiring work*,
+so it is deliberately bare. It is **not** the quality bar, and transcribing it
+is the known failure mode: an observed run shipped four detail pages that were
+this skeleton with the Tailwind classes mechanically converted to inline
+`style` objects — no shared primitives, no loading state, no empty state,
+literal hexes throughout, and a hard-coded `$` on a non-US app. Every file
+existed; nothing errored; the app looked unfinished.
+
+So when you write the real page:
+
+- compose `PageShell` / `PageHeader` / `KeyFacts` / `Tabs` from
+  [shared-primitives.md](shared-primitives.md) rather than repeating this
+  markup per page;
+- keep the classes as **classes** — the scaffold ships Tailwind v4;
+- add the states this skeleton omits: a shape-matched skeleton while loading,
+  an empty state *per child tab*, an error state;
+- take colours from `var(--color-*)` tokens, never a literal hex;
+- adapt the anatomy to the entity — a sales order wants its line-items table
+  and total; a retailer wants a balance and payment history.
+
+The mechanics below (camelCase props, module-scope constants, the scoped
+`CrudHandler`) are what to carry across verbatim. The styling is not.
 
 ```jsx
 // src/custom/pages/PatientDetail.tsx
@@ -242,7 +429,7 @@ const PatientDetail = ({ data, generalDetails, workflowDetails, objectUuid, onRe
       </div>
 
       {/* 2. key facts */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
+      <div className="grid max-md:grid-cols-2 md:grid-cols-4 gap-4 py-4">
         {KEY_FACTS.map((k) => fields[k] && (
           <div key={k}>
             <span className="block text-xs text-gray-500">{fields[k].display_name}</span>
@@ -306,9 +493,19 @@ export { default as PatientDetail } from './PatientDetail';
 - [ ] Focus objects chosen from the FK graph; selection justified in the summary
 - [ ] `enableDetailViewRoute` + `customMainDetail` + `customTableBody` all three set
 - [ ] Detail component reads **camelCase** props (`generalDetails`, `workflowDetails`)
+- [ ] **Every `BaseDetail` subclass declares `Meta.fields`** listing every field
+      the page reads — without it the payload falls back to the *table's*
+      columns and the missing ones read as `undefined` (§3b)
+- [ ] **No `undefined → 0` coercion.** A missing field renders `—`, never a
+      number that looks deliberate
+- [ ] **One real record checked against its stored values** — the page's numbers
+      match the database, not just each other
 - [ ] Every child table is a scoped `CrudHandler` on the child's own endpoint
 - [ ] **Every child endpoint filters its queryset server-side**
 - [ ] No component passed to `CrudHandler` is defined inline
 - [ ] No child callback writes to parent React state
 - [ ] Loading skeleton, per-tab empty state, error state all present
+- [ ] **Each child tab opened and confirmed to render** — not assumed from a 200
+- [ ] Page composed from `shared.tsx` primitives, not hand-rolled per page
+- [ ] Tailwind classes, no inline `style` for static styling, no literal hex
 - [ ] Export name matches the AppBuilder route's `component`

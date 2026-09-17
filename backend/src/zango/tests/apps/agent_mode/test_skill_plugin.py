@@ -233,8 +233,13 @@ class MenuConfigGuidanceTests(unittest.TestCase):
 
 
 class FrontendSetupGuidanceTests(unittest.TestCase):
-    """The frontend setup step was cut when the plan assumed no Node was
-    available server-side. It is restored, conditional on the run context."""
+    """Node is now guaranteed server-side, so the frontend is mandatory rather
+    than conditional. A run that produces no frontend/ is a failed run.
+
+    These assertions were inverted in v1.2.0. They previously required the step
+    to be conditional and to carry "Do not scaffold a frontend just because you
+    can" -- guidance written when the plan assumed no Node, and the reason a
+    real run (wapp2) shipped no frontend at all."""
 
     def setUp(self):
         self.skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
@@ -245,13 +250,108 @@ class FrontendSetupGuidanceTests(unittest.TestCase):
     def test_build_and_proxy_config_documented(self):
         self.assertIn("npm run build:zango", self.skill)
         self.assertIn("VITE_PROXY_ROUTES", self.skill)
-        self.assertIn("never include `/app`", self.skill)
+        self.assertIn("Never include `/app`", self.skill)
 
-    def test_step_is_conditional_not_mandatory(self):
-        self.assertIn("5a, 5b and 5c are mandatory", self.skill)
-        self.assertNotIn("MANDATORY — all three parts", self.skill)
-        # 5d is gated on Node being present, however that is phrased.
-        self.assertIn("Node", self.skill.split("### 5d")[1][:400])
+    def test_step_is_mandatory_not_conditional(self):
+        self.assertIn("Every sub-step 5a–5h is mandatory", self.skill)
+        self.assertNotIn("5a, 5b and 5c are mandatory", self.skill)
 
-    def test_steers_away_from_needless_scaffolding(self):
-        self.assertIn("Do not scaffold a frontend just because you can", self.skill)
+    def test_scaffolding_is_not_discouraged(self):
+        self.assertNotIn(
+            "Do not scaffold a frontend just because you can", self.skill
+        )
+
+    def test_scaffold_runs_before_the_app_module(self):
+        """The ordering is the fix: app.html is written once, after a bundle
+        exists. Reversed, the agent writes it against appbuilder's prebuilt
+        shell and never comes back."""
+        self.assertLess(
+            self.skill.index("### 5a. Scaffold the frontend"),
+            self.skill.index("### 5g. Create the `app` module"),
+        )
+
+    def test_appbuilder_shell_is_not_offered_as_an_out(self):
+        """Both tells of the wapp2 failure must be named as errors."""
+        self.assertIn("app_initializer_endpoint", self.skill)
+        self.assertIn("packages/appbuilder/js/", self.skill)
+        self.assertNotIn("is a working reference", self.skill)
+
+    def test_build_deploy_copy_is_documented(self):
+        self.assertIn("cp -r frontend/zango-build/. static/js/", self.skill)
+
+    def test_app_module_root_redirect_pattern_is_pinned(self):
+        """An agent improvised r"^$" for the root redirect on one run and broke
+        it. The skill must show the working pattern and name the wrong one."""
+        self.assertIn('re_path(r"^/", RedirectAppView.as_view())', self.skill)
+        self.assertIn('Writing `r"^$"` instead does', self.skill)
+
+    def test_app_module_mounts_at_site_root(self):
+        """The app module is mounted at "^" so its own urls.py owns the whole
+        path -- that is what makes r"^/" and r"^login/?$" reachable. SKILL.md
+        said "^app/", which would leave both redirects dead."""
+        self.assertIn(
+            '{"app_routes": [{"re_path": "^", "module": "app", "url": "urls"}]}',
+            self.skill,
+        )
+        self.assertNotIn('"re_path": "^app/", "module": "app"', self.skill)
+
+    def test_routes_and_menus_have_no_file_substitute(self):
+        """wapp4 wrote routes_payload.json + menu_payloads.md, never attempted a
+        POST, and reported the build complete -- leaving 0 routes and 0 menus in
+        the schema. The skill must close that substitution and require read-back."""
+        # Match on collapsed whitespace: the wording is pinned, the line
+        # wrapping is not -- rewrapping a paragraph must not fail this test.
+        flat = " ".join(self.skill.split())
+        self.assertIn("is not a saved config", flat)
+        self.assertIn("attempt the call before concluding anything is blocked", flat)
+        # A failed registration must block the run, not be filed as a TODO.
+        self.assertIn("A failure here is not an outstanding item", flat)
+
+    def test_prompt_does_not_imply_post_is_blocked(self):
+        """Constraint 6 said Bash is read-only in absolute terms, directly above
+        constraint 8 asking for a POST; the agent resolved that by never trying."""
+        from zango.apps.agent_mode.prompt import _CONSTRAINTS
+        self.assertIn("read-only **for the filesystem**", _CONSTRAINTS)
+        self.assertIn("POST with a request body\n   is allowed", _CONSTRAINTS)
+
+    def test_base_form_clean_returns_none_is_documented(self):
+        """BaseForm.clean() has no return, so `cleaned_data = super().clean()`
+        yields None. Observed live in two generated apps: wapp3 payments reads
+        from it (AttributeError on save) and wapp4 appointments returns it
+        (validated data discarded). Django's own docs teach the opposite idiom,
+        so this must be stated explicitly."""
+        forms_md = (
+            SKILL_DIR / "references" / "packages" / "crud" / "forms.md"
+        ).read_text()
+        self.assertIn("`BaseForm.clean()` returns `None`", forms_md)
+        self.assertIn("Never write `cleaned_data = super().clean()`", forms_md)
+        self.assertIn("read **`self.cleaned_data`**", forms_md)
+
+    def test_menu_icons_are_required(self):
+        """Observed in wapp3: every sidebar item rendered as the same grey page
+        because the agent sent no icon and clean_icon() substituted U+1F4C4.
+        The skill must name the fallback so a skip is recognisable."""
+        self.assertIn("clean_icon()", self.skill)
+        self.assertIn("Give every menu item its own icon", self.skill)
+        # and it must not teach the fallback glyph as an example
+        self.assertNotIn('"icon": "\U0001F4C4", "children"', self.skill)
+
+    def test_shared_primitives_precede_the_pages(self):
+        """shared.tsx is the polish mechanism: pages that each hand-roll their
+        own tab strip and skeleton diverge immediately. It must be its own
+        ordered sub-step, before the pages that compose from it."""
+        self.assertIn("### 5c. Write the shared primitives", self.skill)
+        self.assertLess(
+            self.skill.index("### 5c. Write the shared primitives"),
+            self.skill.index("### 5d. Write the custom pages"),
+        )
+
+    def test_polish_gate_is_checkable(self):
+        """The wapp3 failure was literal hexes and inline styles everywhere,
+        with no loading or empty state. Each gate item must be greppable."""
+        self.assertIn("No literal hex colour in `src/custom/pages/`", self.skill)
+        # auth/ is the one exception: it renders pre-auth with no tokens in
+        # scope and takes its palette from the run context's theme: line.
+        self.assertIn("`src/custom/auth/` is the one exception", self.skill)
+        self.assertIn("style={{...}}", self.skill)
+        self.assertIn("including each child tab", self.skill)

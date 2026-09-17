@@ -240,10 +240,32 @@ _MANAGE_COMMANDS = frozenset(
 # lifecycle scripts — arbitrary code from the registry. A closed set of
 # invocations, same approach as the manage.py allowance.
 _NPM_RE = re.compile(r"^(?:npm|npx)\s+(.*)$", re.I)
+# Design-system packages the agent may add. Deliberately a closed, exact-name
+# set rather than a general `npm install <anything>`: installing a package runs
+# its lifecycle scripts, so the name is the security boundary. Each entry is
+# here because a polished UI genuinely needs it and nothing in the scaffold
+# provides it.
+#
+# Not listed, because they are already installed transitively via @zango-core
+# and need no install at all: lucide-react.
+_NPM_DESIGN_PACKAGES = (
+    "echarts",
+    "echarts-for-react",
+    "recharts",
+    "date-fns",
+    "clsx",
+    "tailwind-merge",
+)
+# Matches `install <pkg>` / `i <pkg>` / `add <pkg>` for one or more allowlisted
+# names, each optionally @-pinned. Anything else falls through to the denial.
+_NPM_PKG = (
+    r"(?:" + "|".join(re.escape(n) for n in _NPM_DESIGN_PACKAGES) + r")(?:@[\w.\-^~]+)?"
+)
 _NPM_ALLOWED = (
     re.compile(r"^@zango-core/create-zango-app\s+\S+\s*$", re.I),  # npx scaffold
     re.compile(r"^install\s*$", re.I),
     re.compile(r"^ci\s*$", re.I),
+    re.compile(rf"^(?:install|i|add)\s+(?:{_NPM_PKG}\s*)+$", re.I),
     re.compile(r"^run\s+build:zango\s*$", re.I),
     re.compile(r"^run\s+build\s*$", re.I),
     re.compile(r"^-v$|^--version$", re.I),
@@ -268,6 +290,34 @@ def _is_allowed_npm(segment: str, allow_frontend: bool) -> tuple[bool, str]:
         f"`npm/npx {rest[:40]}` is not permitted; only the documented "
         "scaffold, install and build commands are"
     )
+
+
+# The one write the agent must make through Bash: moving its own frontend build
+# into the workspace's static dir so `sync_static` can publish it. It cannot go
+# through the Write tool -- the bundle is multi-megabyte minified JS -- and
+# `sync_static` only ever reads from <workspace>/static, so without this the
+# built frontend is never served no matter what app.html points at.
+#
+# Deliberately a single closed form rather than a general `cp`: both operands
+# are fixed, workspace-relative literals, so even though Bash arguments are not
+# path-guarded there is nothing here to point outside the workspace. No flags
+# beyond -r, no globs, no second source. Anything else still falls through to
+# the hard-deny scan below.
+_DEPLOY_BUILD_RE = re.compile(
+    r"^cp\s+(?:-r\s+|-R\s+)?frontend/zango-build/\.?\s+static/js/?$"
+)
+
+
+def _is_allowed_deploy(segment: str, allow_frontend: bool) -> tuple[bool, str]:
+    """Recognise the single permitted frontend-build deploy copy."""
+    if not _DEPLOY_BUILD_RE.match(segment.strip()):
+        return False, ""
+    if not allow_frontend:
+        return False, (
+            "Node tooling is disabled for this app, so there is no frontend "
+            "build to deploy."
+        )
+    return True, ""
 
 
 _MANAGE_RE = re.compile(
@@ -375,6 +425,12 @@ def check_bash(
         if npm_reason:
             return False, npm_reason
         if allowed_npm:
+            continue
+
+        allowed_deploy, deploy_reason = _is_allowed_deploy(segment, allow_frontend)
+        if deploy_reason:
+            return False, deploy_reason
+        if allowed_deploy:
             continue
 
         for pattern, message in _BASH_HARD_DENY_RE:

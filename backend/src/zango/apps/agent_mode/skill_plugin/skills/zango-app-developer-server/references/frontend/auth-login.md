@@ -142,8 +142,11 @@ different layout.
      hidden below 880px           always visible
 ```
 
-- **Left** — brand mark, product name, a headline naming the *domain outcome*,
-  and 3–5 value lines or journey steps. Hidden under 880px.
+- **Left** — brand mark, product name, an eyebrow, a headline naming the
+  *domain outcome*, a **middle band** (journey stepper or proof tiles) and
+  3 feature rows. Hidden under 880px. **§5b makes the fill level measurable —
+  a left panel with only a headline fails the gate even though it satisfies
+  every rule in this section.**
 - **Right** — `<PasswordLoginForm />` inside a card, with a kicker + heading.
 - Keep the **"Powered by Zelthy"** attribution.
 
@@ -163,10 +166,45 @@ and nothing more.
 ### Styling constraints
 
 - One `<style>{CSS}</style>` block inside the component and inline SVG for icons.
-  **No new npm packages, no external fonts, no CDN** — the build allowlist
-  forbids installing anything.
-- Source the palette from the app theme (`useAppContext().theme`, or the
-  `--color-brand-500` CSS variables the initializer sets) so login and app agree.
+  Only the approved design packages may be installed (design-system.md §10);
+  anything else is denied. `lucide-react` is already available, and Inter /
+  JetBrains Mono may be loaded from Google Fonts — always with a real fallback
+  stack so a blocked request degrades rather than breaks the sign-in screen.
+- **Source the palette from the `theme:` line in the run context.** The login
+  page is the one screen where you write colour values literally, and this is
+  the only correct source for them.
+
+  It renders **before authentication**, so `useAppContext()` has no theme yet
+  and the `--color-brand-*` variables the initializer sets are not in scope —
+  advice elsewhere in these references to read the theme at runtime does not
+  apply here. Given no source, the usual outcome is a guessed or copy-pasted
+  hex that stops matching the moment the app is re-themed.
+
+  The run context carries the app's real palette, e.g.
+
+  ```
+  theme: primary #5048ED, secondary #E1D6AE, background #ffffff,
+         button #5048ED, radius 10px, font Open Sans
+  ```
+
+  Use those values. Declare them once as custom properties on your root class
+  and derive everything else from them, so the whole card follows one source:
+
+  ```css
+  .app-login{--brand:#5048ED;--brand-600:color-mix(in srgb,var(--brand) 86%,black)}
+  .app-login .creative{background:linear-gradient(150deg,
+      color-mix(in srgb,var(--brand) 30%,#0B0D14),
+      color-mix(in srgb,var(--brand) 55%,#0B0D14) 52%,var(--brand))}
+  ```
+
+  Deriving the gradient stops from `--brand` rather than hand-picking them
+  means a re-theme only changes one line. **Never hard-code a hex that is not
+  in the run context's `theme:` line**, and if that line says
+  `(not configured)`, use `var(--color-*)` tokens and no literals at all.
+
+  The font is a **name only** — apply it as
+  `font-family: 'Open Sans', system-ui, sans-serif` and do not fetch it. There
+  is no network at build or runtime.
 - Scope every rule under one root class (`.app-login`) — this component mounts
   over the whole viewport.
 - You are styling **framework-rendered** internals: target
@@ -181,6 +219,132 @@ and nothing more.
 > the same specificity as the base rule they fight, so **source order alone**
 > decides the winner. A media query placed above the base rule silently loses and
 > the left panel never hides on mobile.
+
+### 5b. The left panel must be FULL — measured, not judged
+
+**This is the step that fails.** A real run produced a left panel with exactly
+three children — brandmark, headline, `Powered by Zelthy` — leaving a 265px
+dead gap above the headline and a 266px dead gap below it. The layout rules
+above were all satisfied. The page still looked unfinished, because **61% of
+the panel was empty gradient.** The ASCII sketch in §5 shows a stepper and
+value rows; that run rendered neither, and nothing caught it.
+
+So the bar is numeric. Open the login page and run this:
+
+```js
+const pane = [...document.querySelectorAll('*')].find(
+  e => /gradient/.test(getComputedStyle(e).backgroundImage) &&
+       e.getBoundingClientRect().height > 300);
+const kids = [...pane.children].map(c => {
+  const r = c.getBoundingClientRect();
+  return { cls: c.className, y: Math.round(r.y), h: Math.round(r.height) };
+});
+const used = kids.reduce((s, k) => s + k.h, 0);
+({ kids, count: kids.length,
+   fill: (used / pane.getBoundingClientRect().height * 100).toFixed(0) + '%' })
+```
+
+Three hard gates:
+
+1. **`count` must be ≥ 4.** Brandmark, headline block, a **middle band**, and
+   the footer. Three means the middle band is missing — that is the failure
+   above, exactly.
+2. **`fill` must be ≥ 50%.** The observed failure was 31%. The reference is 57%.
+3. **No gap between consecutive children may exceed 120px.** Compute it:
+   `kids[i+1].y - (kids[i].y + kids[i].h)`. Two ~265px gaps is what "lots of
+   white space" looks like as a number.
+
+#### The middle band — pick one, and it is not optional
+
+This is the content that fills the panel. Choose whichever suits the domain:
+
+- **A journey stepper** — 4–6 nodes on a connecting rail, each an icon tile
+  with a caption, showing the lifecycle the app manages (consent → enrolled →
+  tests funded → education → certified). Best when the domain has an ordered
+  progression.
+- **Proof tiles** — 3 stat tiles (a number and a qualifier each). Only with
+  real, defensible figures; never invented metrics.
+
+Plus, below it, **3 feature rows** — each an icon tile, a **bold lead-in**, and
+a detail clause. Not bare `✓` text at 12.5px, which is what the failing run
+shipped:
+
+```html
+<!-- WRONG: what shipped -->
+<div>✓ Live stage tracking, collection to delivery</div>
+
+<!-- RIGHT -->
+<div class="frow">
+  <span class="ficon"><svg …/></span>
+  <span><b>Live stage tracking</b> : collection through to delivery</span>
+</div>
+```
+
+#### Typography and depth — the measured deltas
+
+| Property | Observed failure | Required |
+|---|---|---|
+| Headline `font-weight` | `400` | **`700`** |
+| Headline `font-size` | 40px | **42px**, `line-height: 1.1` |
+| Headline wrap width | 388px → 3 ragged lines | **`max-width: 640px`** → 2 lines |
+| Eyebrow above headline | absent | **required** (see below) |
+| Background layers | 1 linear gradient | **4** (see below) |
+
+**The eyebrow** appears in *both* panes — a short rule then a letterspaced
+label. It is what makes the two halves read as one designed page:
+
+```css
+.eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:14px;
+  font:600 11px/1 ui-monospace,monospace;letter-spacing:.14em;
+  text-transform:uppercase}
+.eyebrow::before{content:'';width:26px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,var(--brand-300),var(--brand-200))}
+```
+
+**A flat gradient is the other half of the problem.** One `linear-gradient` is
+what the failing run used. Layer two radial glows and a dot mesh over it —
+still derived from `--brand`, so a re-theme changes one line:
+
+```css
+.creative{position:relative;overflow:hidden;
+  background:
+    radial-gradient(820px 520px at 88% 96%,
+      color-mix(in srgb,var(--brand) 50%,transparent),transparent 55%),
+    radial-gradient(760px 520px at 6% 4%,
+      color-mix(in srgb,var(--brand) 44%,transparent),transparent 58%),
+    linear-gradient(150deg,
+      color-mix(in srgb,var(--brand) 30%,#0B0D14),
+      color-mix(in srgb,var(--brand) 55%,#0B0D14) 52%, var(--brand));}
+.creative .mesh{position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle at 1px 1px,
+    rgba(255,255,255,.10) 1px,transparent 0);background-size:22px 22px}
+```
+
+The `.mesh` is a sibling `<div>` inside `.creative`, before the content.
+
+#### Panel geometry
+
+The shell is a **grid, not a flex pair** — the creative side takes slightly
+more than half, which is what keeps the card off-centre and deliberate:
+
+```css
+.app-login .shell{display:grid;grid-template-columns:1.05fr 0.95fr;
+  min-height:100vh}
+@media (max-width:880px){.app-login .shell{grid-template-columns:1fr}}
+```
+
+Content sits in a column with generous side padding and the footer pinned:
+
+```css
+.creative>.inner{position:relative;display:flex;flex-direction:column;
+  justify-content:center;gap:40px;padding:56px 64px;min-height:100vh}
+.brandmark{position:absolute;top:56px;left:64px}
+.powered{position:absolute;bottom:56px;left:64px}
+```
+
+`justify-content:center` with the brandmark and footer *absolutely positioned*
+is what closes the two dead gaps: the middle content centres itself in the
+panel instead of stranding at the top.
 
 ## 6. Skeleton to copy
 
@@ -359,4 +523,10 @@ export default AppLoginCard;
 - [ ] Copy names the app's real domain outcome; no generic filler
 - [ ] Palette sourced from the app theme; no new packages, fonts or CDN
 - [ ] Media queries last; left panel hides below 880px
+- [ ] **§5b measured on the rendered page: ≥4 panel children, ≥50% fill,
+      no gap >120px** — run the snippet, do not eyeball it
+- [ ] Middle band present (stepper or proof tiles); feature rows have icon
+      tiles and bold lead-ins, not bare `✓` text
+- [ ] Headline is `700` weight, `max-width:640px`; eyebrow in both panes
+- [ ] Background is layered (2 radial glows + mesh), not one flat gradient
 - [ ] Verified: single-role, multi-role, and first-login users

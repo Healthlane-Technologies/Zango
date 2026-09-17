@@ -147,14 +147,14 @@ Menus are role-based and stored in `AppMenuModel`. Each role can have a differen
   {
     "uri": "/app/dashboard",
     "name": "Dashboard",
-    "icon": "📊",
+    "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/></svg>",
     "page_type": "custom",
     "component": "Dashboard"
   },
   {
     "uri": "/app/doctors",
     "name": "Doctors",
-    "icon": "👨‍⚕️",
+    "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M9 3v4a3 3 0 0 0 6 0V3\"/><path d=\"M12 14v3m0 0a4 4 0 0 0 4-4v-1a5 5 0 0 0-10 0v1a4 4 0 0 0 4 4Z\"/></svg>",
     "page_type": "crud",
     "entity": "doctors"
   }
