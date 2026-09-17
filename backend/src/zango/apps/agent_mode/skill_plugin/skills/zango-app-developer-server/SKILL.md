@@ -631,7 +631,7 @@ must add. Do **not** skip 5a-5g for it — the build does not depend on this API
 ### Verify STEP 5 before moving on
 
 Work through the full gate in
-[frontend/verify-gate.md](references/frontend/verify-gate.md) — 24 items, each
+[frontend/verify-gate.md](references/frontend/verify-gate.md) — 25 items, each
 binding. Several of these failures return HTTP 200 and look correct, so the
 gate is what catches them, not the absence of errors.
 

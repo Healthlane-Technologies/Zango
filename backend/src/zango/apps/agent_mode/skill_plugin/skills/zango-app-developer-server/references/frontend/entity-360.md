@@ -60,6 +60,59 @@ const NavigateTableBody = () => <TableBody defaultDetailView="navigate" />;
 All three props are required **together**. Omit `enableDetailViewRoute` and the
 route never exists; omit `customTableBody` and rows still open the drawer.
 
+### Every table of that entity gets the same three props — not just its list page
+
+Once an entity has a custom detail page, **every `CrudHandler` anywhere in the
+app that lists that entity must pass the same three props.** The wiring travels
+with the entity, not with the page it happens to be on.
+
+This is easy to miss because the list page is the one you build while writing
+the detail page, so it always gets wired. The other tables — the dashboard
+worklist, the role landing page, a child tab on a *different* entity's detail
+page, a "recent items" panel — get added at another time and silently fall back
+to the framework's default drawer.
+
+The result is the same record opening two different ways depending on where the
+user clicked it. Nothing errors, both routes return 200, and the default drawer
+looks plausible on its own — so this survives every check that only ever opens
+the list page.
+
+```jsx
+// WRONG — same entity, same app, two different detail experiences.
+// Home:
+<CrudHandler api_endpoint="/bookings/bookings/?created_today=1" showHeader={false} />
+// Bookings list:
+<CrudHandler api_endpoint="/bookings/bookings/" enableDetailViewRoute={true}
+             customMainDetail={BookingDetail} customTableBody={NavigateTableBody} />
+```
+
+Give the entity **one wrapper** and use it everywhere, so the wiring cannot
+drift apart:
+
+```jsx
+// bookings/BookingsTable.tsx — the only place these props are written.
+export const BookingsTable = (props) => (
+  <CrudHandler
+    enableDetailViewRoute={true}
+    customMainDetail={BookingDetail}
+    customTableBody={NavigateTableBody}
+    api_endpoint="/bookings/bookings/"
+    {...props}                      // callers override endpoint/filters/header
+  />
+);
+```
+
+Then the dashboard is `<BookingsTable api_endpoint="/bookings/bookings/?created_today=1"
+showHeader={false} />` and cannot lose the detail view.
+
+To check, grep for every table of the entity and confirm the count matches the
+number wired:
+
+```bash
+grep -rn "bookings/bookings/" src/custom/ | wc -l   # tables of this entity
+grep -rn "customMainDetail" src/custom/ | wc -l     # tables wired to the page
+```
+
 ## 3. Props your detail component receives — camelCase
 
 > **This is the single most common way an entity-360 page ships blank.**
@@ -492,6 +545,9 @@ export { default as PatientDetail } from './PatientDetail';
 
 - [ ] Focus objects chosen from the FK graph; selection justified in the summary
 - [ ] `enableDetailViewRoute` + `customMainDetail` + `customTableBody` all three set
+- [ ] **Set on EVERY table of that entity**, not just its list page — dashboard
+      worklists, role landing pages and child tabs included (§2). One shared
+      wrapper component per entity is the reliable way
 - [ ] Detail component reads **camelCase** props (`generalDetails`, `workflowDetails`)
 - [ ] **Every `BaseDetail` subclass declares `Meta.fields`** listing every field
       the page reads — without it the payload falls back to the *table's*

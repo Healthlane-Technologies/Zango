@@ -108,7 +108,17 @@ and each is checkable with a single grep over `src/custom/`:
     right rail drops below the main content. Use `max-md:grid-cols-1
     md:grid-cols-3` (and `max-md:col-span-2 md:col-span-1`). See
     design-system.md §1.
-24. **Labels are human.** No label renders as a raw column name:
+24. **Every table of an entity opens that entity's custom detail page.** For
+    each entity with a `customMainDetail`, the number of `CrudHandler`s hitting
+    its endpoint must equal the number passing the three detail props:
+    `grep -rn "<endpoint>" src/custom/ | wc -l` vs
+    `grep -rn "customMainDetail" src/custom/ | wc -l`. A dashboard worklist or
+    role landing page listing the same records without them opens the
+    framework's default drawer instead — the same record opening two different
+    ways depending on where it was clicked. Both return 200 and the drawer
+    looks plausible, so opening only the list page never reveals it. See
+    entity-360.md §2.
+25. **Labels are human.** No label renders as a raw column name:
     `ESTIMATED_VALUE`, `emd_amount`, `submission_deadline` are defects. The
     detail API's `name` is a column name, not a display label — title-case it
     and strip underscores, or pass an explicit label.
