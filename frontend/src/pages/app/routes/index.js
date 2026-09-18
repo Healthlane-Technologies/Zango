@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import useApi from '../../../hooks/useApi';
 import { AppConfigurationRoutes } from '../../appConfiguration/routes';
@@ -21,7 +21,19 @@ import { AppReleasesRoutes } from '../../appReleasesRoutes/routes/Index';
 import appCodeRoutes from '../../appCode/routes';
 import { AppLogsRoutes } from '../../appLogs/routes';
 import { AppAiRoutes } from '../../appAi/routes';
-import { AgentModeRoutes } from '../../appAgentMode/routes';
+
+/**
+ * Build with AI moved out of the app shell to get the full screen. Bookmarks
+ * and older links still point at the in-shell path, so redirect rather than
+ * 404 — and keep whatever came after it, so a link to one requirement still
+ * opens that requirement.
+ */
+function LegacyAgentModeRedirect() {
+	const { appId } = useParams();
+	const { pathname } = useLocation();
+	const rest = pathname.split('/app-settings/agent-mode')[1] || '';
+	return <Navigate to={`/platform/apps/${appId}/agent-mode${rest}`} replace />;
+}
 
 const PlatformAppRoutes = () => {
 	let { appId } = useParams();
@@ -79,7 +91,7 @@ const PlatformAppRoutes = () => {
 				/>
 				<Route
 					path="/app-settings/agent-mode/*"
-					element={<AgentModeRoutes />}
+					element={<LegacyAgentModeRedirect />}
 				/>
 				<Route
 					path="/app-settings/app-theme-configuration//*"

@@ -73,6 +73,10 @@ def _worker_online(queue: str) -> tuple[bool | None, list]:
     return False, nodes
 
 
+def _as_float(value):
+    return None if value is None else float(value)
+
+
 def probe(tenant=None) -> dict:
     """Report whether a run could start, with machine-readable reasons."""
     from django.conf import settings as dj
@@ -117,7 +121,9 @@ def probe(tenant=None) -> dict:
         reasons.append("no_credentials")
     if not checks["skill_plugin_present"]:
         reasons.append("skill_plugin_missing")
-    if not checks["workspace_exists"]:
+    # With no tenant this is a platform-level probe — "is Build with AI usable
+    # at all" — asked before any app exists, so there is no workspace to miss.
+    if tenant is not None and not checks["workspace_exists"]:
         reasons.append("workspace_missing")
     if checks["tenant_status"] == "suspended":
         reasons.append("app_suspended")
@@ -135,9 +141,11 @@ def probe(tenant=None) -> dict:
             "effort": cfg.effort or None,
             "max_run_seconds": cfg.max_run_seconds,
             "max_turns": cfg.max_turns,
-            "max_budget_usd": cfg.max_budget_usd,
+            # Decimal when it came from the platform row, and the API layer
+            # serializes with a bare json.dumps() that would raise on one.
+            "max_budget_usd": _as_float(cfg.max_budget_usd),
             "analyst_model": cfg.analyst_model or None,
-            "analyst_budget_usd": cfg.analyst_budget_usd,
+            "analyst_budget_usd": _as_float(cfg.analyst_budget_usd),
             "permission_mode": getattr(dj, "AGENT_MODE_PERMISSION_MODE", ""),
             "queue": queue,
             "source": cfg.source,
