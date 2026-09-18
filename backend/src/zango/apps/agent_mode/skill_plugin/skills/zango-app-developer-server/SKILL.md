@@ -562,44 +562,26 @@ Without it `/app/` returns 404 and the app has no front door.
 
 **Copy the module from
 [templates/app-module/](references/templates/app-module/README.md) into
-`backend/app/`** — `urls.py`, `views.py`, `policies.json` and
-`templates/app.html` are all there, ready to use. Take them as they are; the
-details below are the ones that have actually broken runs, and the README has
-the rest.
+`backend/app/` and follow it** — `urls.py`, `views.py`, `policies.json` and
+`templates/app.html` are all there, with the exact route patterns, the
+`settings.json` entry and the mount rules. Copy them exactly; do not
+improvise the patterns — in particular the root entry is `re_path(r"^/", ...)`
+and **never** `r"^$"`, and the `app_routes` mount is `"^"`, **not** `"^app/"`.
 
-- **`urls.py` is exactly the template's three patterns, in that order.** The
-  root entry must be `re_path(r"^/", ...)`. Writing `r"^$"` does **not** work
-  in this deployment — an agent improvised it once and the root redirect broke.
+Also confirm `RedirectAppView` maps `/` and `/login` to `/app`; the React router
+owns `/app/login`, where your branded login renders (5e).
 
-- **Register it FIRST in `settings.json`, mounted at `"^"`, not `"^app/"`:**
-  `{"app_routes": [{"re_path": "^", "module": "app", "url": "urls"}]}`.
-  The module is mounted at the site root and its own `urls.py` owns the rest of
-  the path — which is why that file carries `^app/` itself, and why the root
-  redirect is reachable at all. Mount it at `"^app/"` and the module never sees
-  `/` or `/login`, so both redirects are dead. Put it anywhere but first and
-  another module's `^` catches root paths first.
+Three things that silently produce a broken app, so check them before you
+finish:
 
-- **`app.html` must point at *your* bundle** — the one you built in 5f, whose
-  real filename you read off disk in that step. Substitute it into the
-  template's `{% zstatic 'js/zango-app.<timestamp>.min.js' %}`.
-
-- **`policies.json` must grant `AnonymousUsers`** on both `AppView` and
-  `RedirectAppView`. Without it the login page 403s before it can be shown —
-  nobody, including you, can reach the app.
-
-> **Never copy `packages/appbuilder/templates/appbuilder/app.html`.** It is the
-> platform's own shell, not a template for your app. Copying it gives you an
-> `app_initializer_endpoint` script block and appbuilder's prebuilt bundle —
-> which contains neither your custom pages nor your branded login. **Nothing
-> errors.** The app renders the stock CRUD UI and the entire frontend looks
-> like it was never built.
->
-> Two greppable tells that this has gone wrong: `app.html` contains
-> `app_initializer_endpoint`, or it contains `packages/appbuilder/js/`. If
-> either is true at the end of your run, fix it before you finish.
-
-`RedirectAppView` maps `/` and `/login` to `/app`; the React router owns
-`/app/login`, which is where your branded login renders (5e).
+- **`app.html` points at *your* bundle** — the 5f filename you read off disk,
+  not the placeholder.
+- **`policies.json` grants `AnonymousUsers`** on `AppView` and
+  `RedirectAppView`, or the login page 403s and nobody can reach the app.
+- **`app.html` contains neither `app_initializer_endpoint` nor
+  `packages/appbuilder/js/`.** Either means you copied appbuilder's own shell:
+  **nothing errors**, the stock CRUD UI renders, and your custom pages and
+  branded login are simply absent.
 
 ### 5h. Register routes and menu configs
 

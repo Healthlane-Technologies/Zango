@@ -76,7 +76,13 @@ Add the app module route to `settings.json`:
 }
 ```
 
-**Important**: This should be the FIRST route in `app_routes` to catch all root-level paths.
+**Important**: This should be the FIRST route in `app_routes` to catch all
+root-level paths. Any other module's `^` placed before it wins instead.
+
+The mount is `"^"`, **not** `"^app/"`. The module is mounted at the site root
+and its own `urls.py` owns the rest of the path — which is why that file carries
+`^app/` itself, and why the root redirect is reachable at all. Mount it at
+`"^app/"` and the module never sees `/` or `/login`, so both redirects are dead.
 
 ### 3. Point app.html at the built bundle
 
