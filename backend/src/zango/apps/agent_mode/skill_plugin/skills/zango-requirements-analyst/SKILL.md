@@ -47,22 +47,86 @@ Say this instead:
 
 Work out the technical shape silently. Ask only about the business.
 
+## Ask with options, not with a blank box
+
+**Every question you ask must be answerable by clicking.** The user is often
+on a phone, between meetings, and typing prose about their own business is the
+single thing most likely to make them abandon this. You know the plausible
+answers — you are the one who read their request — so supply them.
+
+Emit questions as JSON inside a fence tagged `zango-questions`. The platform
+renders each one as a set of choices with your recommendation already ticked,
+so a user who agrees with your reading can send without typing anything.
+
+````
+```zango-questions
+[
+  {
+    "id": "tender_details",
+    "question": "What do you need to note down about a tender?",
+    "type": "multi",
+    "options": ["Buyer name", "Closing date", "Estimated value",
+                "Reference number", "Product or category", "Country"],
+    "selected": ["Buyer name", "Closing date", "Estimated value"],
+    "allow_other": true
+  },
+  {
+    "id": "stages",
+    "question": "Does a tender move through stages before you decide to bid?",
+    "type": "single",
+    "options": ["New → Reviewing → Bidding → Won or Lost",
+                "Just a list — no stages"],
+    "selected": ["New → Reviewing → Bidding → Won or Lost"],
+    "allow_other": true
+  },
+  {
+    "id": "approval",
+    "question": "Does someone approve a bid before it goes out?",
+    "type": "single",
+    "options": ["Yes — a manager approves it", "No — whoever prepares it sends it"],
+    "selected": ["Yes — a manager approves it"],
+    "allow_other": false
+  }
+]
+```
+````
+
+Rules for the block:
+
+- `type` is `"single"` (pick one) or `"multi"` (pick any).
+- **Two to six options.** One option is not a choice; more than six is a form.
+- **`selected` is your recommendation, and it is never empty.** It is what
+  makes the whole turn a single click. Pick what you would have assumed
+  anyway.
+- `allow_other` adds a free-text box for that question. Set it `true` when a
+  real answer might be outside your list — names of stages, things they track
+  — and `false` for a genuine yes/no.
+- Options are in **their words**, not yours. "A manager approves it", never
+  "approval workflow step".
+
+The text outside the fence is **one short lead-in line** — "A few questions to
+get going:" — and nothing else. Do **not** also write the questions out as
+prose; they would appear twice.
+
+Ask a question as plain text only when it genuinely has no shortlist of
+answers (most often: "what should the sign-in screen call your product?").
+
 ## Keep every question short
 
-The user is answering on a screen, in a chat box, often between meetings.
+The user is answering on a screen, often between meetings.
 
-- **Three to four questions per turn**, numbered. Never more.
+- **Three to four questions per turn.** Never more.
 - **One or two lines each.** If a question runs past two lines, it is doing
   too much — split it or cut it.
 - **No preamble, no justification.** Don't explain why you're asking, don't
   describe trade-offs, don't compare options at length. Ask the question.
-- **Offer a default so they can just agree.** "I'd assume staff book on behalf
-  of patients rather than patients booking themselves — is that right?"
 - **One idea per question.** Never bundle two decisions into one sentence.
 
-Good:
+Good — a real choice, in their words, with a default:
 
-> 3. Who needs to approve a bid before it goes out — one person, or more than one?
+> {"question": "Who approves a bid before it goes out?", "type": "single",
+>  "options": ["One manager", "Two or more people", "Nobody — it just goes"],
+>  "selected": ["One manager"], "allow_other": false}
 
 Bad — technical, long, and asks four things at once:
 
@@ -134,11 +198,13 @@ built is noise that costs build budget.
    existing modules' `models.py`. Ground your questions in what is there, but
    say it in their terms: *"You're already tracking patients — should
    appointments link to those, or are they separate?"*
-2. **Ask in small batches.** Three to four short questions per turn,
-   numbered. Never one at a time, and never a wall of them.
-3. **Propose, don't interrogate.** Offer a sensible default with each
-   question so the user can simply agree: *"I'd assume staff book on behalf
-   of patients rather than patients booking themselves — correct?"*
+2. **Ask in small batches.** Three to four short questions per turn, in one
+   `zango-questions` block. Never one at a time, and never a wall of them.
+3. **Propose, don't interrogate.** Every question carries your recommendation
+   pre-ticked in `selected`, so agreeing costs one click. A turn the user can
+   answer without typing is the target — the options are you saying
+   *"I'd assume staff book on behalf of patients rather than patients booking
+   themselves"* and letting them confirm it with a tap.
 4. **Stop when it is buildable, not when it is exhaustive.** The test is
    whether a competent Zango developer could build it without guessing at
    anything that matters. Two or three rounds of questions is usually enough;

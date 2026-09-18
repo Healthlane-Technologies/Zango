@@ -14,7 +14,7 @@ from zango.apps.agent_mode.requirements import (
     derive_title,
     extract_spec,
     looks_like_question,
-    strip_spec_fence,
+    strip_fences,
 )
 
 
@@ -51,7 +51,7 @@ class SpecExtractionTests(unittest.TestCase):
 
     def test_chat_text_excludes_the_spec_block(self):
         reply = f"Ready for review.\n\n```zango-spec\n{SPEC}```\n"
-        chat = strip_spec_fence(reply)
+        chat = strip_fences(reply)
         self.assertIn("Ready for review.", chat)
         self.assertNotIn("Appointment", chat)
 
@@ -130,3 +130,36 @@ class ResumeTests(unittest.TestCase):
         # Nothing to continue from a clean finish.
         self.assertNotIn("success", AgentRunResumeView.RESUMABLE)
         self.assertNotIn("running", AgentRunResumeView.RESUMABLE)
+
+
+class TitleFromSpecTests(unittest.TestCase):
+    """The title is shown as the app's name — on the requirement list, in the
+    Share and Deploy dialogs, and in "<name> is live".
+
+    It starts as the opening ask truncated to 80 characters, which is a
+    sentence. Once the spec names the app, that name has to take over, or the
+    panel reads "I want to build an app for managing tenders… is live".
+    """
+
+    def test_spec_heading_replaces_the_placeholder(self):
+        placeholder = "I want to build an app for managing tenders for a pharma co"
+        self.assertEqual(
+            derive_title(SPEC, placeholder), "Appointment Scheduling"
+        )
+
+    def test_a_spec_without_a_heading_keeps_what_we_had(self):
+        # derive_title falling through is what makes the overwrite safe.
+        placeholder = "Build a task tracker"
+        self.assertEqual(derive_title("- just a list\n", placeholder), placeholder)
+        self.assertEqual(derive_title("", placeholder), placeholder)
+
+    def test_the_overwrite_is_unconditional_in_the_recorder(self):
+        # Guarding on `if not req.title` was the bug: the title is always set
+        # at creation, so the guard never let the spec's name through.
+        import inspect
+
+        from zango.apps.agent_mode import tasks
+
+        source = inspect.getsource(tasks._record_analyst_reply)
+        self.assertIn("req.title = derive_title(spec,", source)
+        self.assertNotIn("if not req.title:", source)

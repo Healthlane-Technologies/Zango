@@ -844,16 +844,20 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
     from .models import AgentRequirementMessage, MessageRole, RequirementStatus
     from .requirements import (
         derive_title,
+        extract_questions,
         extract_spec,
         looks_like_question,
-        strip_spec_fence,
+        strip_fences,
     )
 
     reply = "\n\n".join(part for part in text_parts if part.strip()).strip()
     spec = extract_spec(reply)
-    conversational = strip_spec_fence(reply) or (
+    questions = extract_questions(reply)
+    conversational = strip_fences(reply) or (
         "I've drafted the requirement — review it on the right."
         if spec
+        else "A few questions before I write this up."
+        if questions
         else "(no reply)"
     )
 
@@ -865,7 +869,9 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
         seq=next_seq,
         role=MessageRole.ASSISTANT,
         content=conversational,
-        is_question=looks_like_question(conversational) and not spec,
+        questions=questions,
+        is_question=bool(questions)
+        or (looks_like_question(conversational) and not spec),
     )
 
     req.turns += 1
@@ -878,8 +884,12 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
         req.total_cost_usd = (req.total_cost_usd or Decimal("0")) + Decimal(str(cost))
     if spec:
         req.record_spec(spec)
-        if not req.title:
-            req.title = derive_title(spec, req.initial_prompt)
+        # The title starts life as the opening ask truncated to 80 characters
+        # — a sentence, not a name, and the panel shows it as the app's name.
+        # The spec's own heading is that name, so it always wins once there is
+        # one. (`derive_title` falls back to what we had if the spec has no
+        # heading, so this can never blank it.)
+        req.title = derive_title(spec, req.title or req.initial_prompt)
         # Only advance out of gathering; never regress an approved spec.
         if req.status == RequirementStatus.GATHERING:
             req.status = RequirementStatus.READY
@@ -887,4 +897,37 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
     req.is_thinking = False
     req.error_message = ""
     req.save()
-    return {"status": req.status, "spec": bool(spec), "turns": req.turns}
+    return {
+        "status": req.status,
+        "spec": bool(spec),
+        "questions": len(questions),
+        "turns": req.turns,
+    }
+
+
+@shared_task(bind=True, name="zango.agent_mode.agent_app_scaffold")
+def agent_app_scaffold(self, scaffold_uuid: str) -> dict:
+    """Name and launch the app behind a "Build with Agent" ask.
+
+    Stays on the public schema throughout: it reads platform settings, writes
+    a public-schema scaffold row and creates a tenant. The workspace itself is
+    built by ``initialize_workspace``, which this task only kicks off — the
+    panel polls for that separately, so no worker is held open for it.
+    """
+    from zango.apps.shared.agent_mode.models import AgentAppScaffold
+
+    from .scaffold import launch_app
+
+    try:
+        scaffold = AgentAppScaffold.objects.get(object_uuid=scaffold_uuid)
+    except AgentAppScaffold.DoesNotExist:
+        return {"status": "missing"}
+
+    try:
+        launch_app(scaffold)
+    except Exception as exc:  # noqa: BLE001 - the user is watching a spinner
+        logger.exception("agent_mode: could not launch the app for a scaffold")
+        scaffold.fail(f"{type(exc).__name__}: {exc}")
+        return {"status": "failed"}
+
+    return {"status": scaffold.status, "app_name": scaffold.app_name}

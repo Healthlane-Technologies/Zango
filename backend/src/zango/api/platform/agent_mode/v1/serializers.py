@@ -126,7 +126,7 @@ class AgentRunCreateSerializer(serializers.Serializer):
 class AgentRequirementMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AgentRequirementMessage
-        fields = ("seq", "role", "content", "ts", "is_question")
+        fields = ("seq", "role", "content", "ts", "is_question", "questions")
 
 
 class AgentRequirementListSerializer(serializers.ModelSerializer):
