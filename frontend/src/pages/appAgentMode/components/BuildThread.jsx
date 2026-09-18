@@ -33,6 +33,8 @@ import RunLive, { TERMINAL } from './RunLive';
 import SpecHighlights from './SpecHighlights';
 
 const POLL_MS = 1500;
+// A build takes minutes; there is nothing to see at conversation speed.
+const RUN_POLL_MS = 3000;
 
 const TABS = [
 	{ id: 'highlights', label: 'My Build' },
@@ -147,6 +149,9 @@ export default function BuildThread() {
 	const replyRef = useRef(null);
 	const scrollRef = useRef(null);
 	const pollRef = useRef(null);
+	// Run details already requested, so a failed fetch is not retried on
+	// every render.
+	const askedRef = useRef(new Set());
 	const base = `/api/v1/apps/${appId}/agent-mode`;
 
 	const active = versions?.length ? versions[versions.length - 1] : null;
@@ -205,6 +210,7 @@ export default function BuildThread() {
 	useEffect(() => {
 		setVersions(null);
 		setRuns({});
+		askedRef.current = new Set();
 		setContinuing(false);
 		loadAll();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,16 +243,54 @@ export default function BuildThread() {
 		setRuns((prev) => ({ ...prev, [run.uuid]: run }));
 	}, []);
 
-	// A finished build changes the version's run history and its status.
-	const finishedRef = useRef('');
 	const activeRunUuid = active?.runs?.[0]?.uuid || null;
 	const activeRun = activeRunUuid ? runs[activeRunUuid] : null;
+
+	// A build in flight changes the requirement without any message arriving,
+	// so the is_thinking poll above never covers it. Watch the server rather
+	// than trusting the build card to report back: the card can be folded,
+	// remounted or simply miss the transition, and the whole footer — is it
+	// still building, is there an app yet — hangs off this.
 	useEffect(() => {
-		if (!activeRun?.status || !TERMINAL.includes(activeRun.status)) return;
-		if (finishedRef.current === activeRunUuid) return;
-		finishedRef.current = activeRunUuid;
-		reloadActive();
-	}, [activeRun?.status, activeRunUuid, reloadActive]);
+		const row = active?.runs?.[0];
+		if (!row || TERMINAL.includes(row.status)) return undefined;
+		const id = setInterval(reloadActive, RUN_POLL_MS);
+		return () => clearInterval(id);
+	}, [active?.runs, reloadActive]);
+
+	// Only the run detail carries the app's address and sign-ins, so fetch it
+	// for every finished run rather than waiting for a card to hand it over.
+	useEffect(() => {
+		const wanted = [];
+		(versions || []).forEach((v) =>
+			(v.runs || []).forEach((r) => {
+				if (!TERMINAL.includes(r.status)) return;
+				if (runs[r.uuid]?.app_access || askedRef.current.has(r.uuid)) return;
+				askedRef.current.add(r.uuid);
+				wanted.push(r.uuid);
+			})
+		);
+		if (!wanted.length) return;
+		Promise.all(
+			wanted.map((uuid) =>
+				triggerApi({
+					url: `${base}/runs/${uuid}/`,
+					type: 'GET', loader: false, showErrorModal: false,
+				}).then((r) => (r.success ? r.response : null))
+			)
+		).then((details) => {
+			const found = details.filter((d) => d?.uuid);
+			if (!found.length) return;
+			setRuns((prev) => {
+				const next = { ...prev };
+				found.forEach((d) => {
+					next[d.uuid] = d;
+				});
+				return next;
+			});
+		});
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [versions, runs, base]);
 
 	// The app is live regardless of which version built it, so the card must
 	// survive starting a new version that has not been built yet.
@@ -416,7 +460,15 @@ export default function BuildThread() {
 	const viewedSpec = viewingActive ? spec : viewed?.spec_markdown || '';
 	const hasSpec = Boolean(viewedSpec);
 	const canEditSpec = viewingActive && !locked;
-	const buildInFlight = Boolean(activeRun && !TERMINAL.includes(activeRun.status));
+	// The requirement's own run row is the fresher truth — it is refetched
+	// while a build is going — so it decides, and the detail only fills in
+	// before the first refetch lands.
+	const activeRunRow = active?.runs?.[0] || null;
+	const buildInFlight = Boolean(
+		activeRunRow
+			? !TERMINAL.includes(activeRunRow.status)
+			: activeRun && !TERMINAL.includes(activeRun.status)
+	);
 	const appReady = Boolean(appRun);
 
 	// One box, three jobs: the first ask, a reply to the agent, or the next
