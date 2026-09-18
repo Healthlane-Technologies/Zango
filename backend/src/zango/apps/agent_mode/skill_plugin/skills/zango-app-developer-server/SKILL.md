@@ -272,12 +272,18 @@ Three rules make this safe:
    signatures of `shared.tsx` — is an input to every 5d and 5e subagent. They
    compose from those primitives, so they must know them verbatim. Never run
    5c in parallel with the pages.
-2. **Every subagent prompt carries, verbatim:** the workspace path, the
-   relevant entity's six answers copied out of `design-plan.md`, the export
-   list from 5c, and the sub-step's own text and reference links. A subagent
-   starts with no memory of this run — anything you leave out, it invents.
-   Tell it explicitly: *compose only from the listed primitives; do not
-   invent new layout primitives or restyle existing ones.*
+2. **Every subagent prompt carries, verbatim:** the workspace path; the
+   relevant entity's six answers from `design-plan.md`; the export list from
+   5c; **the backend facts the page binds to** — model and module name, field
+   names and types as you actually wrote them in STEP 4, the CRUD view URL,
+   and per child tab the related model plus its FK; the theme line and
+   `LOCALE`/`CURRENCY`; and the sub-step's own text and reference links.
+   A subagent starts with no memory of this run and did not write the STEP 4
+   models — anything you leave out, it invents, and invented field names
+   render as blank tabs. Tell it explicitly: *compose only from the listed
+   primitives, do not invent or restyle layout primitives, and do not invent
+   field names — report a missing field rather than guessing.*
+   Each sub-step's own dispatch block below lists exactly what it needs.
 3. **Each subagent returns a short report, not code:** files written, export
    names added to `index.js`, and any deviation from `design-plan.md` with its
    reason. Never ask a subagent to return file contents — that puts the tokens
