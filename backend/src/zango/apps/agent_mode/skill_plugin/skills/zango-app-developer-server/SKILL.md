@@ -680,46 +680,20 @@ evaluated, and its users can load nothing.
 
 ## STEP 7: Hand off
 
-**Apply your own work and fix what it reports.** You may run exactly these,
-using the `manage_py` path from the run context:
-
-```bash
-python <manage_py> ws_makemigration <app>     # after model changes
-python <manage_py> ws_migrate <app>           # apply them
-python <manage_py> ws_sync <app>              # policies, roles, tasks, tools
-python <manage_py> sync_static <app>          # after static changes
-python <manage_py> collectstatic --noinput
-```
-
-Run them in that order and **read the output**. A migration error is yours to
-fix — that is the point of running them yourself. Iterate until they pass.
-
-Anything else remains denied: `zango update-apps`, other manage.py
-subcommands, `python -c`, docker, pip, npm, and restarts. The platform re-runs
-the same sequence after you finish as a backstop, so a step you already
-completed is a harmless no-op.
+**Apply your own work and fix what it reports.** Run the management commands
+the run prompt permits — `ws_makemigration`, `ws_migrate`, `ws_sync`,
+`sync_static`, `collectstatic` — **in that order, and read the output.** A
+migration error is yours to fix; that is the point of running them yourself.
+Iterate until they pass.
 
 You cannot restart the app server or Celery. If you changed `models.py`,
-`tasks.py` or `settings.json`, say so — a restart is needed before the change
-takes effect.
+`tasks.py` or `settings.json`, **say so** — a restart is needed before the
+change takes effect.
 
-Finish with a summary containing:
-
-- files created and modified
-- models added or changed, and whether migrations will be needed
-- policies added, and any roles that must be created by an operator
-- packages required but not installed
-- roles you defined and the test users you declared
-- whether `frontend/` was scaffolded and built, and the exact bundle filename
-- whether `/app/` serves **your own bundle** (not appbuilder's) — quote the
-  `src` line from `app.html` — and whether routes AND menu configs were accepted
-- which entities got an entity-360 page, and why each remaining model did not
-- that every child table is filtered **server-side**, not just by query string
-- whether the branded login is live, and which of the three login paths
-  (single-role, multi-role, first-login) you verified
-- the result of the migration/sync commands you ran
-- assumptions you made in place of asking
-- remaining manual steps, including any React work you could not do
+Then write the summary. It **must** cover every item in the required
+checklist, including the claims that have been reported as done when they were
+not: [handoff-summary.md](references/handoff-summary.md). Quote the `src` line
+from `app.html` and the routes/menus read-back rather than asserting them.
 
 ---
 

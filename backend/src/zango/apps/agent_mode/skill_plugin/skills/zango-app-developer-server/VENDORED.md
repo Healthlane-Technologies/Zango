@@ -281,6 +281,8 @@ relative paths to the workspace root rather than the process cwd, so a
 subagent cwd cannot widen the sandbox. The denial sink is `queue.Queue.put`
 and is safe under the parallel 5d subagents.
 
+| **New `references/handoff-summary.md`** | STEP 7's 17-item summary checklist extracted. It is terminal — nothing earlier in the run refers to it — and is needed only once, at the end, so it does not belong in a file re-sent on every turn. STEP 7 45 -> 18 lines. The manage.py command list and denial list were dropped rather than moved: both are in `prompt.py` constraint 4 (injected every run) and `guards.py` enforces manage.py as a closed allowlist. |
+
 ## Keeping it in sync
 
 This copy is the source of truth for Agent Mode. When the interactive skill
