@@ -307,7 +307,7 @@ class OrderTable(ModelTable):
 
 > There is **no** `get_queryset()` on `BaseCrudView` — overriding that name does
 > nothing at all and leaves the child table unfiltered. See
-> [../packages/crud/tables.md](../packages/crud/tables.md) → *Custom Table Queryset*.
+> [../packages/crud/tables/advanced.md](../packages/crud/tables/advanced.md) → *Custom Table Queryset*.
 
 Without this, any user can edit the URL and read another parent's children.
 In a healthcare or finance app that is a data breach, not a UI bug. **Never

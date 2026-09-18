@@ -46,9 +46,9 @@ The CRUD pattern consists of **three main components**:
 
 For detailed documentation on each component, see:
 
-- [Forms Reference](forms.md) - BaseForm, field types, validation, and layouts
-- [Tables Reference](tables.md) - ModelTable, columns, row actions, and search
-- [Views Reference](views.md) - BaseCrudView, integration, and URL configuration
+- [Forms Reference](forms/core.md) - BaseForm, field types, validation, and layouts (worked examples: [forms/examples.md](forms/examples.md))
+- [Tables Reference](tables/core.md) - ModelTable, columns, row actions, and search (advanced patterns: [tables/advanced.md](tables/advanced.md))
+- [Views Reference](views/core.md) - BaseCrudView, integration, and URL configuration (method reference: [views/reference.md](views/reference.md); troubleshooting: [views/troubleshooting.md](views/troubleshooting.md))
 
 ---
 

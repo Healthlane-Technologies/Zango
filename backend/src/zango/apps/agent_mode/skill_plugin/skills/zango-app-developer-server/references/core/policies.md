@@ -131,7 +131,7 @@ Control which roles can access specific CRUD views.
 The `features` array contains package-specific permissions. Each package defines its own features.
 
 **Note**: Features are defined by the package, not by the policy system. Refer to package-specific documentation:
-- CRUD package features → See `packages/crud/views.md`
+- CRUD package features → See `packages/crud/views/core.md`
 - Other package features → See respective package documentation
 
 ### View-Only Policy

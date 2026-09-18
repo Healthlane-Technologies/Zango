@@ -283,6 +283,8 @@ and is safe under the parallel 5d subagents.
 
 | **New `references/handoff-summary.md`** | STEP 7's 17-item summary checklist extracted. It is terminal — nothing earlier in the run refers to it — and is needed only once, at the end, so it does not belong in a file re-sent on every turn. STEP 7 45 -> 18 lines. The manage.py command list and denial list were dropped rather than moved: both are in `prompt.py` constraint 4 (injected every run) and `guards.py` enforces manage.py as a closed allowlist. |
 
+| **`packages/crud/{views,tables,forms}.md` split** | A CRUD view pulled all three whole (104KB / ~26k tokens) at STEP 4, before the frontend even starts, so they rode the prefix for most of the run. Split on existing `##` boundaries into `views/{core,reference,troubleshooting}.md`, `tables/{core,advanced}.md`, `forms/{core,examples}.md`. Default path is now the three `core.md` files (57KB). **Lossless**: every section and every non-blank line of all three originals is accounted for. `views.md`'s 11-entry Table of Contents had 4 anchors pointing at sections that moved; those are now cross-file links and all 11 resolve. 12 inbound references updated across policies.md, entity-360.md, workflow/{utils,tags}.md, crud/detail.md, crud/overview.md and the new views/troubleshooting.md. |
+
 ## Keeping it in sync
 
 This copy is the source of truth for Agent Mode. When the interactive skill

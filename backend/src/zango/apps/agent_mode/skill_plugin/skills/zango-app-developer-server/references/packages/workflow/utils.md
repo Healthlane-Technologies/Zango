@@ -607,4 +607,4 @@ else:
 - **Statuses**: `statuses.md` - Status definitions
 - **Tags**: `tags.md` - Tag definitions and usage
 - **Transitions**: `transitions.md` - Status and tag transitions
-- **Tables**: `../crud/tables.md` - StatusCol and TagsCol for search
+- **Tables**: `../crud/tables/core.md` - StatusCol and TagsCol for search

@@ -826,4 +826,4 @@ def save(self):
 - **Transitions**: `transitions.md` - Status transitions
 - **Advanced**: `advanced.md` - Condition and done methods
 - **Utils**: `utils.md` - Utility functions for filtering by tags
-- **Tables**: `../crud/tables.md` - TagsCol column type
+- **Tables**: `../crud/tables/core.md` - TagsCol column type
