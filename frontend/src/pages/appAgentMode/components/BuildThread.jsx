@@ -107,6 +107,9 @@ export default function BuildThread() {
 	const [busy, setBusy] = useState(false);
 	const [answers, setAnswers] = useState({});
 	const [rightTab, setRightTab] = useState('highlights');
+	// Which version's requirement is on screen. null follows the newest,
+	// so starting a round never leaves you reading a stale spec.
+	const [specIdx, setSpecIdx] = useState(null);
 	// The newest version is approved and built, and the user wants another
 	// round. Reopens the composer to take the next ask.
 	const [continuing, setContinuing] = useState(false);
@@ -248,6 +251,9 @@ export default function BuildThread() {
 		if (success && response?.uuid) {
 			setReply('');
 			setContinuing(false);
+			// Follow the newest again: having explicitly opened an old version
+			// should not leave you reading it once a new round starts.
+			setSpecIdx(null);
 			pendingRef.current = true;
 			await loadAll();
 			return;
@@ -374,7 +380,15 @@ export default function BuildThread() {
 			: null;
 	const answersReady = openQuestions ? isAnswered(openQuestions, answers) : false;
 
-	const hasSpec = Boolean(active?.spec_markdown || spec);
+	const viewedIdx =
+		specIdx !== null && specIdx < versions.length ? specIdx : versions.length - 1;
+	const viewed = versions[viewedIdx] || null;
+	const viewingActive = Boolean(viewed && viewed.uuid === active?.uuid);
+	// The active version's spec is the editable local copy; every earlier
+	// one is fixed, so it comes straight off the record.
+	const viewedSpec = viewingActive ? spec : viewed?.spec_markdown || '';
+	const hasSpec = Boolean(viewedSpec);
+	const canEditSpec = viewingActive && !locked;
 	const buildInFlight = Boolean(activeRun && !TERMINAL.includes(activeRun.status));
 	const appReady = Boolean(appRun);
 
@@ -555,9 +569,6 @@ export default function BuildThread() {
 								}`}
 							>
 								{tab.label}
-								{tab.id === 'requirement' && active?.spec_version
-									? ` · v${active.spec_version}`
-									: ''}
 							</button>
 						))}
 					</div>
@@ -565,7 +576,7 @@ export default function BuildThread() {
 						{specDirty ? (
 							<span className="font-lato text-[11px] text-[#B45309]">unsaved edits</span>
 						) : null}
-						{rightTab === 'requirement' && hasSpec && !locked ? (
+						{rightTab === 'requirement' && hasSpec && canEditSpec ? (
 							<button
 								onClick={() => setEditingSpec((v) => !v)}
 								className="font-lato text-[11px] font-medium text-[#6B7280] hover:text-[#111827]"
@@ -575,6 +586,33 @@ export default function BuildThread() {
 						) : null}
 					</span>
 				</div>
+
+				{rightTab === 'requirement' && versions.length > 1 ? (
+					<div className="flex items-center gap-[6px] overflow-x-auto border-b border-[#F1F3F5] px-[10px] py-[6px]">
+						{versions.map((v, i) => {
+							const m = STATUS_META[v.status] || STATUS_META.gathering;
+							const on = i === viewedIdx;
+							return (
+								<button
+									key={v.uuid}
+									onClick={() => setSpecIdx(i)}
+									title={v.title || `Version ${i + 1}`}
+									className={`flex shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[4px] font-lato text-[12px] ${
+										on
+											? 'border-[#5048ED] bg-[#EEF2FF] font-semibold text-[#3730A3]'
+											: 'border-[#DDE2E5] bg-white text-[#6B7280] hover:border-[#9CA3AF]'
+									}`}
+								>
+									<span>Version {i + 1}</span>
+									<span
+										className="h-[6px] w-[6px] rounded-full"
+										style={{ backgroundColor: m.accent }}
+									/>
+								</button>
+							);
+						})}
+					</div>
+				) : null}
 
 				<div className="flex min-h-0 grow flex-col overflow-hidden">
 					{rightTab === 'highlights' ? (
@@ -599,7 +637,7 @@ export default function BuildThread() {
 								/>
 							) : (
 								<div className="p-[16px] font-lato text-[13px] leading-[19px] text-[#111827]">
-									<Markdown text={spec} />
+									<Markdown text={viewedSpec} />
 								</div>
 							)}
 						</div>
@@ -614,7 +652,7 @@ export default function BuildThread() {
 					)}
 				</div>
 
-				{hasSpec ? (
+				{hasSpec && viewingActive ? (
 					<div className="flex items-center justify-end gap-[8px] border-t border-[#F1F3F5] p-[10px]">
 						{!locked ? (
 							<>
