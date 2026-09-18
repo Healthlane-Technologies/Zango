@@ -125,7 +125,7 @@ colour, `--color-brand-700` your hover.
 In React, read the theme directly when you need a value in JS:
 
 ```jsx
-import { useAppContext } from '@zango-core/crm-framework';
+import { useAppContext } from '@zango-core/appbuilder';
 const { theme, appName, appLogo } = useAppContext();
 ```
 
@@ -726,7 +726,7 @@ real fallback stack so a blocked request degrades rather than breaks.
 `echarts` + `echarts-for-react` (or `recharts`) may be installed:
 
 ```bash
-npm install echarts echarts-for-react
+npm install echarts echarts-for-react --legacy-peer-deps
 ```
 
 Only these are permitted, plus `date-fns`, `clsx`, `tailwind-merge`. Any other

@@ -17,7 +17,7 @@ Register a full override of the framework's `LoginPage` on `ZangoApp`:
 
 ```jsx
 // src/App.tsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 import AppLoginCard from './custom/auth/AppLoginCard';
 
@@ -50,7 +50,7 @@ import {
   authService,           // .setPassword(), .selectRole()
   getNextParam,          // reads ?next= from the URL
   getValidRedirectUrl,   // safely resolves where to land
-} from '@zango-core/crm-framework';
+} from '@zango-core/appbuilder';
 ```
 
 Your component owns the **layout**; these own the **auth**. Never POST to a login
@@ -372,7 +372,7 @@ import { useState } from 'react';
 import {
   PasswordLoginForm, RoleSelection, PasswordResetRequired,
   authService, getNextParam, getValidRedirectUrl,
-} from '@zango-core/crm-framework';
+} from '@zango-core/appbuilder';
 
 const CSS = `
 .app-login{position:fixed;inset:0;z-index:9000;overflow:auto;

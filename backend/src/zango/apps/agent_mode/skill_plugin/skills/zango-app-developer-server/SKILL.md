@@ -269,8 +269,13 @@ Skip **only** if `frontend/` already exists in the workspace — check, do not
 assume:
 
 ```bash
-npx @zango-core/create-zango-app frontend    # run inside the workspace root
+npx @zango-core/create-zango-app frontend --skip-install   # run inside the workspace root
 ```
+
+**`--skip-install` is required.** The scaffold's own `npm install` uses strict
+peer-dependency resolution and fails on this stack; install separately with
+`--legacy-peer-deps` (see below) instead of letting the scaffold install for
+you.
 
 Then configure `frontend/.env` with `VITE_PROXY_ROUTES` listing every backend
 route your app serves (`/api`, `/appbuilder`, plus each CRUD module route).
@@ -296,6 +301,10 @@ Permitted npm commands: the scaffold above, `npm install`, `npm ci`,
 packages — `echarts`, `echarts-for-react`, `recharts`, `date-fns`, `clsx`,
 `tailwind-merge`. Any other package is denied; say so in your summary rather
 than trying.
+
+**Always pass `--legacy-peer-deps` to `npm install`/`npm ci`** — this stack's
+peer dependencies do not resolve cleanly under npm's default strict algorithm,
+and a plain `npm install` fails or produces a broken `node_modules`.
 
 You do **not** need to install icons: `lucide-react` already ships with
 `@zango-core`. Inter and JetBrains Mono load from Google Fonts. See
@@ -468,7 +477,7 @@ Full contract and a copyable skeleton:
 Not after every change:
 
 ```bash
-cd frontend && npm install && npm run build:zango
+cd frontend && npm install --legacy-peer-deps && npm run build:zango
 ```
 
 This writes `frontend/zango-build/zango-app.<timestamp>.min.js`.

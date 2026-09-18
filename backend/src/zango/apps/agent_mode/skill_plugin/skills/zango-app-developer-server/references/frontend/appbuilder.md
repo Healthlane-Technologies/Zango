@@ -19,7 +19,7 @@ npm run dev
 
 ## Key Imports
 ```js
-import { ZangoApp, useAppContext } from '@zango-core/crm-framework';
+import { ZangoApp, useAppContext } from '@zango-core/appbuilder';
 import { CrudHandler } from '@zango-core/crud/table';
 import { FormRenderer } from '@zango-core/crud/form';
 ```
@@ -151,7 +151,7 @@ my-app/
 ```
 
 ```tsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 
 const App = () => {
@@ -190,11 +190,11 @@ export default App;
 ### Code Examples
 
 ```jsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 ```
 
 ```jsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 
 const App = () => (
@@ -206,7 +206,7 @@ const App = () => (
 ```
 
 ```jsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 import CustomLogin from './custom/pages/CustomLogin';
 import DocsNavbar from './custom/components/DocsNavbar';
@@ -240,7 +240,7 @@ const App = () => (
 ```
 
 ```jsx
-import { useAppContext } from '@zango-core/crm-framework';
+import { useAppContext } from '@zango-core/appbuilder';
 
 const MyComponent = () => {
   const {
