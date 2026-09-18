@@ -491,7 +491,7 @@ export default function BuildThread() {
 	return (
 		<div className="flex min-h-0 grow gap-[12px]">
 			{/* The thread */}
-			<div className="flex w-1/2 min-w-[380px] flex-col rounded-[12px] border border-[#DDE2E5] bg-white">
+			<div className="flex min-w-0 shrink-0 grow-0 basis-[calc(50%_-_6px)] flex-col rounded-[12px] border border-[#DDE2E5] bg-white">
 				<div ref={scrollRef} className="min-h-0 grow overflow-y-auto py-[8px]">
 					{versions.length === 0 ? (
 						<Bubble
@@ -634,7 +634,7 @@ export default function BuildThread() {
 			</div>
 
 			{/* What you're getting */}
-			<div className="flex min-w-0 grow flex-col rounded-[12px] border border-[#DDE2E5] bg-white">
+			<div className="flex min-w-0 grow basis-0 flex-col rounded-[12px] border border-[#DDE2E5] bg-white">
 				<div className="flex items-center justify-between gap-[10px] border-b border-[#F1F3F5] px-[10px] py-[7px]">
 					<div className="flex gap-[2px]">
 						{TABS.map((tab) => (
@@ -718,7 +718,7 @@ export default function BuildThread() {
 									className="min-h-[360px] grow resize-none p-[16px] font-mono text-[12px] leading-[18px] text-[#111827] focus:outline-none"
 								/>
 							) : (
-								<div className="p-[16px] font-lato text-[13px] leading-[19px] text-[#111827]">
+								<div className="overflow-x-auto break-words p-[16px] font-lato text-[13px] leading-[19px] text-[#111827]">
 									<Markdown text={viewedSpec} />
 								</div>
 							)}
