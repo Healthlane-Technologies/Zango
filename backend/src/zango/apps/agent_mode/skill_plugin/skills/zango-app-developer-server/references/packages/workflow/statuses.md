@@ -64,6 +64,8 @@ class Meta:
 | `purple` | Special status |
 | `yellow` | Caution, On Hold |
 
+> **Note:** Status badges render with white font color, so avoid light colors like `yellow` where white text is hard to read. Prefer `orange` for caution/pending/on-hold states instead of `yellow`.
+
 ---
 
 ## Common Status Patterns
@@ -83,7 +85,7 @@ statuses = {
 ```python
 statuses = {
     "draft": {"color": "gray", "label": "Draft"},
-    "pending": {"color": "yellow", "label": "Pending Approval"},
+    "pending": {"color": "orange", "label": "Pending Approval"},
     "approved": {"color": "green", "label": "Approved"},
     "rejected": {"color": "red", "label": "Rejected"}
 }
@@ -95,7 +97,7 @@ statuses = {
 statuses = {
     "planning": {"color": "gray", "label": "Planning"},
     "active": {"color": "blue", "label": "Active"},
-    "on_hold": {"color": "yellow", "label": "On Hold"},
+    "on_hold": {"color": "orange", "label": "On Hold"},
     "completed": {"color": "green", "label": "Completed"},
     "cancelled": {"color": "red", "label": "Cancelled"}
 }
