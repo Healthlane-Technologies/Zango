@@ -120,38 +120,30 @@ Cover:
 
 ### UX decisions (work through this for every entity)
 
-**The first version must already look like a product.** Node is available, so a
-custom frontend is always within reach: an app whose every page is the default
-CRUD shell is an incomplete first version, not a safe one.
+**The first version must already look like a product.** Node is available, so an
+app whose every page is the default CRUD shell is an incomplete first version,
+not a safe one.
 
-Decide per entity, in this order.
+Classify each entity, in this order:
 
-**1. Is it a focus object?** Read the FK graph. An entity qualifies when *other
-models declare a `ZForeignKey` to it* **and** *a user works on it directly* —
-Patient, Order, Case, Employee, Customer, Program. These get an **entity-360**
-page: a full-page route showing identity, key facts, and each related record set
-as a **child table inside a tab**. A Patient page shows that patient's Orders,
-Programs and Documents; it does not make the user visit three menu items and
-filter by hand.
-
-There is **no fixed cap** — decide from the app's own shape how many entities
-qualify, and justify the selection in your summary. A lookup table never
-qualifies, however many FKs point at it.
-
-**2. Is it a primary entity with no children yet?** A profile-style custom
-detail page, without tabs — but held to the **same design bar as entity-360**:
-identity block, synthesis lead card, rail, one anchor. See
-[frontend/design-system.md](references/frontend/design-system.md) §6, "Custom
-detail page, no child tables." No tabs does not mean no design effort — a plain
-field dump here is the same failure entity-360 forbids.
-
-**3. Does the list need a non-standard layout?** Kanban (statuses), calendar
-(dates), cards (visual), timeline (sequence). `CrudHandler` supports these via
-`customTableBody` — a fully custom component is not required.
-
-**4. Is it a lookup entity?** Department, City, Category, Document Type, Status
-master — something referenced from dropdowns but never opened and worked on.
-Default CRUD. Custom work here is waste.
+1. **Focus object?** Read the FK graph: other models declare a `ZForeignKey` to
+   it **and** a user works on it directly (Patient, Order, Case, Employee,
+   Customer, Program). Gets an **entity-360** — full-page route showing
+   identity, key facts, and each related record set as a **child table in a
+   tab**. A Patient page shows that patient's Orders, Programs and Documents
+   rather than sending the user to three menu items to filter by hand. **No
+   fixed cap** — decide from the app's shape and justify the selection in your
+   summary. A lookup table never qualifies, however many FKs point at it.
+2. **Primary entity, no children yet?** Profile-style custom detail page, no
+   tabs — held to the **same bar as entity-360**: identity block, synthesis lead
+   card, rail, one anchor (§6, "Custom detail page, no child tables"). No tabs
+   does not mean no design effort.
+3. **List needs a non-standard layout?** Kanban (statuses), calendar (dates),
+   cards (visual), timeline (sequence) — via `CrudHandler`'s `customTableBody`,
+   not a fully custom component.
+4. **Lookup entity?** (Department, City, Category, Document Type, Status master
+   — referenced from dropdowns, never opened.) Default CRUD; custom work here is
+   waste.
 
 | Scenario | Page type | Implementation |
 |----------|-----------|----------------|
@@ -302,27 +294,23 @@ The output must be identical; only the context cost differs.
 
 ### 5a. Scaffold the frontend — FIRST, before any of the rest
 
-**This is the step that gets skipped, and skipping it makes every later
-frontend instruction unreachable.** If `frontend/` does not exist at the end of
-your run, the app has no custom frontend, no entity-360 page and no branded
-login, regardless of what else you did.
+**This is the step that gets skipped**, and skipping it makes every later
+frontend instruction unreachable: no `frontend/` at the end of your run means no
+custom pages, no entity-360 and no branded login, whatever else you did.
 
-Skip **only** if `frontend/` already exists in the workspace — check, do not
-assume:
+Skip **only** if `frontend/` already exists — check, do not assume.
 
 ```bash
-npx @zango-core/create-zango-app frontend --skip-install   # run inside the workspace root
+npx @zango-core/create-zango-app frontend --skip-install   # in the workspace root
 ```
 
-**`--skip-install` is required.** The scaffold's own `npm install` uses strict
-peer-dependency resolution and fails on this stack; install separately with
-`--legacy-peer-deps` (see below) instead of letting the scaffold install for
-you.
-
-Then configure `frontend/.env` with `VITE_PROXY_ROUTES` listing every backend
-route your app serves (`/api`, `/appbuilder`, plus each CRUD module route).
-**Never include `/app`** — that is a frontend route, not a backend proxy. See
-[frontend/appbuilder.md](references/frontend/appbuilder.md).
+- **`--skip-install` is required** — the scaffold's own `npm install` uses strict
+  peer resolution and fails on this stack. Install separately with
+  `--legacy-peer-deps`.
+- **Configure `frontend/.env`** with `VITE_PROXY_ROUTES` listing every backend
+  route the app serves (`/api`, `/appbuilder`, each CRUD module route).
+  **Never include `/app`** — a frontend route, not a backend proxy. See
+  [frontend/appbuilder.md](references/frontend/appbuilder.md).
 
 Target layout:
 
@@ -353,58 +341,38 @@ apps looked plain.
 
 ### 5b. Plan the pages — write `design-plan.md` before any component
 
-**This step exists because the previous version of this skill produced pages
-that satisfied every structural rule and still looked like wireframes.** The
-rules below (§6 anatomy, §1a aesthetic direction) are all satisfiable
-*nominally*: a page can have "two or more titled Sections" where the second
-section adds nothing, tabs that carry counts of zero, and an Overview that
-re-lists the same five fields already shown in the header. That page passes a
-grep and fails a glance.
+Every rule in §6/§1a is satisfiable *nominally* — a second Section that adds
+nothing, tabs with zero counts, an Overview re-listing the header. That passes a
+grep and fails a glance. So write `design-plan.md` at the workspace root first:
+a real file, because the verify gate reads it back against the finished pages.
 
-So before writing a single component, write `design-plan.md` at the workspace
-root. It is a real file, committed to the workspace, because the verify gate
-reads it back and checks the finished pages against it. A plan you only thought
-about cannot be checked.
+For **each focus entity**, answer all six — a few lines each, not a document:
 
-For **each focus entity**, the plan must answer all six:
+1. **The question this page answers.** One sentence in the user's words, not the
+   schema's: *"Can we still bid on this, and are we ready to?"*, not *"shows
+   tender fields"*. Can't write it without listing fields? You don't understand
+   the entity yet.
+2. **The lead card** — a **synthesis, not a field dump**: a computed answer to
+   (1) from several fields plus derived state (progress against an allowance, a
+   countdown with readiness checklist, a balance with ageing). Name what it
+   computes and from which fields. *Re-listing header facts is the single most
+   common failure and is never acceptable.*
+3. **The layout** — default **main column + right rail** (§6). State the rail's
+   contents: status with who changed it and when, the flat attributes
+   at-a-glance, open tasks, consent/compliance state. The rail carries the flat
+   fields, which is what frees Overview to be a synthesis.
+4. **The aesthetic direction** (§1a: Operational, Editorial, Clinical, Approval)
+   and the **signature treatment** that makes it legible. "Default" is not a
+   direction.
+5. **Every tab** — count source, child table or composed view, and its
+   **empty-state copy written out in full**. Copy invented at implementation
+   time reverts to "No data".
+6. **The one deliberate moment** — the single element executed with more care
+   than the brief requires, which you can point at afterwards.
 
-1. **The question this page answers.** One sentence, in the user's words, not
-   the schema's. *"Can we still bid on this, and are we ready to?"* — not
-   *"shows tender fields"*. Every later decision serves this sentence. If you
-   cannot write it without listing fields, you do not yet understand the
-   entity well enough to design its page.
-
-2. **The lead card.** The first thing inside Overview is **a synthesis, not a
-   field dump** — a computed answer to (1), assembled from several fields plus
-   derived state. A progress bar against an allowance, a countdown with a
-   readiness checklist, an outstanding balance with its ageing. *Re-listing the
-   key facts that are already in the header is the single most common failure
-   and is never acceptable.* Name what it computes and from which fields.
-
-3. **The layout.** Detail pages default to **main column + right rail** (§6).
-   State what goes in the rail: status with who changed it and when, an
-   at-a-glance block of the flat attributes, open tasks, and any
-   consent/compliance state. The rail is what carries the flat fields, which is
-   precisely why Overview is then free to be a synthesis.
-
-4. **The aesthetic direction** from design-system.md §1a — one of Operational,
-   Editorial, Clinical, Approval — and the **signature treatment** that makes
-   it legible. "Default" is not a direction.
-
-5. **Every tab**, with: its count source, whether it is a child table or a
-   composed view, and its **empty-state copy written out in full**. Copy
-   invented later at implementation time reverts to "No data".
-
-6. **The one deliberate moment** — the single element you will execute with
-   more care than the brief requires, and which you can point at afterwards.
-
-Then one plan-level entry for the app as a whole: the **identity strip**. The
-header is not a title plus a chip; it is the title plus the four to six facts
-that identify this record at a glance — reference number, dates, the one
-relationship that matters, contact. List them per entity.
-
-Keep it short. Six answers per entity, a few lines each — this is a design
-decision record, not a document. Write it, then build exactly it.
+Then one app-level entry: the **identity strip** — per entity, the four to six
+facts that identify a record at a glance (reference number, dates, the one
+relationship that matters, contact). The header is not a title plus a chip.
 
 ### 5c. Write the shared primitives — before any page
 
@@ -478,38 +446,28 @@ pages are ~100 lines of inline-styled JSX each, this step was skipped.
 > same concept differently, or one flags a missing field, fix it now — the
 > gate will otherwise catch it later at higher cost.
 
-**Build the plan from 5b, page by page.** Open `design-plan.md` and implement
-each entity's six answers literally: the lead card it names, the rail it names,
-the tabs and empty-state copy it names. If while building you conclude the plan
-was wrong, change `design-plan.md` and say why in your summary — but do not
-silently drift, because the gate compares the finished page to that file.
+**Implement `design-plan.md` literally** — the lead card, rail, tabs and
+empty-state copy it names, per entity. Concluded the plan is wrong? Edit
+`design-plan.md` and say why in your summary; never drift silently, because the
+gate compares finished pages to that file.
 
+Rules:
 
-Under STEP 3's defaults essentially every app needs these: focus objects get
-full-page entity-360 views with child tables, and each role gets a landing
-page. Appbuilder's prebuilt shell renders only `page_type: "crud"` pages, so
-anything beyond a plain lookup table requires your own build.
-
-**Compose from 5c's primitives, and pick a treatment per block.**
-`shared-primitives.md` has a card-treatment library: `Section` (plain field
-group), `Card`+`Inset`+`MetricTile` (the lead block), `Card tone=` (status),
-`RailCard` (rail). **Every detail page needs exactly one lead `Card`** — a page
-composed entirely of `Section`s is structurally correct and renders as
-identical grey-capped white boxes, which is the observed wireframe failure.
-Numbers go in `MetricTile` with a `qualifier`, never bare.
-
-Import the primitives; do not re-implement layout per
-page, and do not paste a reference skeleton and swap its classes for inline
-`style` objects — the scaffold ships Tailwind v4, and inline styles cannot
-express hover, focus or responsive behaviour, so a page written that way
-cannot meet the visual bar.
-
-Every entity the team works in daily gets a detail page — including the ones
-whose list is otherwise plain. An entity left on the default drawer shows the
-user almost nothing.
-
-Export every page from `src/custom/pages/index.js`. **The export name must
-match the route's `component` value exactly**, or the page renders blank.
+- **Every focus object gets a full-page entity-360 with child tabs; every role
+  gets a landing page.** Appbuilder's shell renders only `page_type: "crud"`,
+  so anything beyond a plain lookup table is your build. Every entity the team
+  works in daily gets a detail page, including ones whose list looks plain.
+- **Exactly one lead `Card` per detail page.** A page of only `Section`s renders
+  as identical grey-capped boxes — the wireframe failure. Treatments:
+  `Section` (field group), `Card`+`Inset`+`MetricTile` (lead), `Card tone=`
+  (status), `RailCard` (rail).
+- **Numbers go in `MetricTile` with a `qualifier`**, never bare.
+- **Import 5c's primitives; never re-implement layout per page.** Do not paste a
+  reference skeleton and swap classes for inline `style` — the scaffold ships
+  Tailwind v4, and inline styles cannot express hover, focus or responsive
+  behaviour.
+- **Export every page from `src/custom/pages/index.js`, with the export name
+  matching the route's `component` exactly** — a mismatch renders blank.
 
 Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
 [frontend/design-system.md](references/frontend/design-system.md),
