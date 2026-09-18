@@ -338,21 +338,18 @@ frontend/src/
 └── App.tsx                      authConfig + customPages wiring
 ```
 
-Permitted npm commands: the scaffold above, `npm install`, `npm ci`,
-`npm run build:zango`, `npm run build`, and installing **only** these design
-packages — `echarts`, `echarts-for-react`, `recharts`, `date-fns`, `clsx`,
-`tailwind-merge`. Any other package is denied; say so in your summary rather
-than trying.
+The run prompt lists the npm commands and design packages you may install;
+anything else is denied, so say so in your summary rather than trying.
 
 **Always pass `--legacy-peer-deps` to `npm install`/`npm ci`** — this stack's
 peer dependencies do not resolve cleanly under npm's default strict algorithm,
 and a plain `npm install` fails or produces a broken `node_modules`.
 
-You do **not** need to install icons: `lucide-react` already ships with
-`@zango-core`. Inter and JetBrains Mono load from Google Fonts. See
+Icons and fonts are already available: `lucide-react` ships with `@zango-core`,
+and Inter and JetBrains Mono load from Google Fonts. See
 [frontend/design-system.md](references/frontend/design-system.md) §10 — the
-earlier claim that fonts and icons were unavailable was wrong, and it is why
-generated apps looked plain.
+earlier claim that they were unavailable was wrong, and it is why generated
+apps looked plain.
 
 ### 5b. Plan the pages — write `design-plan.md` before any component
 
@@ -577,84 +574,45 @@ destination, `mv`, `rm` — is denied.
 
 ### 5g. Create the `app` module so `/app/` serves the UI
 
-Without it `/app/` returns 404 and the app has no front door. Copy the
-template from
-[templates/app-module/README.md](references/templates/app-module/README.md)
-into `backend/app/`:
+Without it `/app/` returns 404 and the app has no front door.
 
-```
-backend/app/
-├── urls.py          AppView at ^app/, RedirectAppView for / and /login
-├── views.py
-├── policies.json    grant AnonymousUsers access to the view
-└── templates/app.html
-```
+**Copy the module from
+[templates/app-module/](references/templates/app-module/README.md) into
+`backend/app/`** — `urls.py`, `views.py`, `policies.json` and
+`templates/app.html` are all there, ready to use. Take them as they are; the
+details below are the ones that have actually broken runs, and the README has
+the rest.
 
-`urls.py` is **exactly this** — do not improvise the patterns:
+- **`urls.py` is exactly the template's three patterns, in that order.** The
+  root entry must be `re_path(r"^/", ...)`. Writing `r"^$"` does **not** work
+  in this deployment — an agent improvised it once and the root redirect broke.
 
-```python
-from django.urls import re_path
-from .views import AppView, RedirectAppView
+- **Register it FIRST in `settings.json`, mounted at `"^"`, not `"^app/"`:**
+  `{"app_routes": [{"re_path": "^", "module": "app", "url": "urls"}]}`.
+  The module is mounted at the site root and its own `urls.py` owns the rest of
+  the path — which is why that file carries `^app/` itself, and why the root
+  redirect is reachable at all. Mount it at `"^app/"` and the module never sees
+  `/` or `/login`, so both redirects are dead. Put it anywhere but first and
+  another module's `^` catches root paths first.
 
-urlpatterns = [
-    re_path(r"^app/", AppView.as_view()),
-    re_path(r"^login/?$", RedirectAppView.as_view()),
-    re_path(r"^/", RedirectAppView.as_view()),
-]
-```
+- **`app.html` must point at *your* bundle** — the one you built in 5f, whose
+  real filename you read off disk in that step. Substitute it into the
+  template's `{% zstatic 'js/zango-app.<timestamp>.min.js' %}`.
 
-The root entry must be `re_path(r"^/", ...)`. Writing `r"^$"` instead does
-**not** work in this deployment — an agent improvised it on one run and the
-root redirect broke. Keep the three patterns, in this order.
+- **`policies.json` must grant `AnonymousUsers`** on both `AppView` and
+  `RedirectAppView`. Without it the login page 403s before it can be shown —
+  nobody, including you, can reach the app.
 
-Register it **first** in `settings.json` so it catches root paths:
-
-```json
-{"app_routes": [{"re_path": "^", "module": "app", "url": "urls"}]}
-```
-
-The mount is `"^"`, **not** `"^app/"`. The module is mounted at the site root
-and its own `urls.py` owns the rest of the path — that is why `urls.py` above
-carries `^app/` itself, and why the root redirect is reachable at all. Mount it
-at `"^app/"` and the module never sees `/` or `/login`, so both redirects are
-dead. It must also be the **first** entry, or another module's `^` catches
-root paths first.
-
-`app.html` mounts the React root and loads **your** bundle — the one you built
-in 5f, whose real filename you just read off disk:
-
-```html
-{% load zstatic %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>{{ APP_NAME }}</title>
-  </head>
-  <body>
-    <div id="zango-app" data-base-path="/app/"></div>
-    <script type="module" src="{% zstatic 'js/zango-app.<timestamp>.min.js' %}"></script>
-  </body>
-</html>
-```
-
-> **Do not copy `packages/appbuilder/templates/appbuilder/app.html`.** It is
-> the platform's own shell, not a template for your app. Copying it gives you
-> an `app_initializer_endpoint` script block and
-> `{% zstatic 'packages/appbuilder/js/build.'|add:build_version|add:'.js' %}` —
-> appbuilder's prebuilt bundle. Your custom pages and your branded login are
-> not in that bundle. **Nothing errors.** The app renders the stock CRUD UI and
-> the entire frontend looks like it was never built.
+> **Never copy `packages/appbuilder/templates/appbuilder/app.html`.** It is the
+> platform's own shell, not a template for your app. Copying it gives you an
+> `app_initializer_endpoint` script block and appbuilder's prebuilt bundle —
+> which contains neither your custom pages nor your branded login. **Nothing
+> errors.** The app renders the stock CRUD UI and the entire frontend looks
+> like it was never built.
 >
-> The two tells that this has gone wrong: `app.html` contains the string
+> Two greppable tells that this has gone wrong: `app.html` contains
 > `app_initializer_endpoint`, or it contains `packages/appbuilder/js/`. If
-> either is true at the end of your run, the frontend is not being served —
-> fix it before you finish.
-
-**`policies.json` must grant `AnonymousUsers`** on both `AppView` and
-`RedirectAppView`. Without it the login page 403s before it can be shown —
-nobody, including you, can reach the app.
+> either is true at the end of your run, fix it before you finish.
 
 `RedirectAppView` maps `/` and `/login` to `/app`; the React router owns
 `/app/login`, which is where your branded login renders (5e).
