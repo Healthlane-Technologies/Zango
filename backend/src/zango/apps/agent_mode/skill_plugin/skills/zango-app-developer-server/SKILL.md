@@ -318,19 +318,10 @@ npx @zango-core/create-zango-app frontend --skip-install   # in the workspace ro
   **Never include `/app`** — a frontend route, not a backend proxy. See
   [frontend/appbuilder.md](references/frontend/appbuilder.md).
 
-Target layout:
-
-```
-frontend/src/
-├── custom/
-│   ├── auth/
-│   │   └── AppLoginCard.tsx     branded login (5e)
-│   └── pages/
-│       ├── <Entity>Detail.tsx   entity-360 pages (5d)
-│       ├── Dashboard.tsx        per-role landing page (5d)
-│       └── index.js             export names MUST match route.component
-└── App.tsx                      authConfig + customPages wiring
-```
+Target layout — `src/custom/auth/AppLoginCard.tsx` (5e),
+`src/custom/pages/<Entity>Detail.tsx` and `Dashboard.tsx` (5d), and
+`src/custom/pages/index.js`, whose **export names MUST match
+`route.component`**. `App.tsx` carries the `authConfig` + `customPages` wiring.
 
 The run prompt lists the npm commands and design packages you may install;
 anything else is denied, so say so in your summary rather than trying.
@@ -492,42 +483,35 @@ Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
 > the file written plus the exact `authConfig` wiring line for `App.tsx`;
 > **you** apply that line to `App.tsx` in this thread.
 
-**Every app gets a branded login page. Always** — there is no toggle and no
-condition. It is the first screen anyone sees, and the framework default says
-nothing about the product.
+**Every app gets a branded login page. Always** — no toggle, no condition. It
+is the first screen anyone sees, and the framework default says nothing about
+the product.
 
-Full contract and a copyable skeleton:
-[frontend/auth-login.md](references/frontend/auth-login.md). In short:
+Full contract, copy rules and a copyable skeleton:
+[frontend/auth-login.md](references/frontend/auth-login.md). Follow it. The
+four things agents get wrong even with it open:
 
-- **The left panel must be full, and fullness is measured, not judged.** A
-  headline floating in a gradient is the observed failure mode — it satisfies
-  every structural rule and still ships a page that reads as unfinished. It
-  needs a **middle band** (journey stepper or proof tiles) plus 3 feature rows
-  with icon tiles, a `700`-weight headline capped at 640px, an eyebrow in both
-  panes, and a layered background. Gates and copy-paste CSS: auth-login.md §5b.
+1. **Never hand-roll auth.** Render the framework's own `PasswordLoginForm`,
+   `RoleSelection` and `PasswordResetRequired` inside your layout. Your own
+   POST loses SAML, password policy, rate limiting and role selection.
+2. **Drive the flow from `PasswordLoginForm`'s `onSuccess`**, *not*
+   `LoginContext.onLogin` (which mis-handles the single-role case), and
+   normalise `next_step` across its four response shapes.
+3. **Register a full override** on `ZangoApp`, passing the **component**, not
+   an element:
+   `authConfig={{ customComponents: { LoginPage: AppLoginCard } }}`
+4. **The left panel must be full, and fullness is measured, not judged.** A
+   headline floating in a gradient satisfies every structural rule and still
+   ships a page that reads as unfinished. It needs a **middle band** (journey
+   stepper or proof tiles), 3 feature rows with icon tiles, a `700`-weight
+   headline capped at 640px, an eyebrow in both panes, and a layered
+   background. Gates and copy-paste CSS: auth-login.md §5b.
 
-- Register a full override —
-  `authConfig={{ customComponents: { LoginPage: AppLoginCard } }}` on
-  `ZangoApp`. Pass the **component**, not an element.
-- **Never hand-roll auth.** Render the framework's own `PasswordLoginForm`,
-  `RoleSelection` and `PasswordResetRequired` inside your layout. Rolling your
-  own POST loses SAML, password policy, rate limiting and role selection.
-- Drive the flow from `PasswordLoginForm`'s `onSuccess`, **not**
-  `LoginContext.onLogin` (which mis-handles the single-role case), and
-  normalise `next_step` across its four response shapes.
-- **Layout is the split-screen archetype**: left = brand mark, product name and
-  a headline naming the domain outcome (hidden below 880px); right = the auth
-  form in a card. Re-theme it and rewrite the copy — do not invent a different
-  layout. Keep the "Powered by Zelthy" attribution.
-- **Copy must name this app's real domain outcome**, taken from the
-  requirement spec — never generic filler like "Welcome, please sign in".
-- Use only the brand name, tagline and palette the spec or app theme supplies.
-  **Never reproduce a real third-party company's branding, logo or trade
-  dress**; if the spec names a real organisation, use its name as plain text
-  and nothing more.
-- Inline `<style>` in the component (it mounts over the whole viewport).
-  `lucide-react` is available for icons, and Inter/JetBrains Mono may be loaded
-  from Google Fonts — see design-system.md §10 for what is and is not allowed.
+The component's CSS goes in an inline `<style>` in the component itself — it
+mounts over the whole viewport.
+
+Keep the split-screen archetype and the "Powered by Zelthy" attribution —
+re-theme and rewrite the copy, do not invent a different layout.
 
 ### 5f. Build the bundle — once, at the end of frontend work
 

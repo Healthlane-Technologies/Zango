@@ -551,3 +551,20 @@ export default AppLoginCard;
 - [ ] **`.form-item` has real `margin-bottom`** — `PasswordLoginForm`'s fields
       are flush by default; verify with `getBoundingClientRect()`, not by eye
 - [ ] Verified: single-role, multi-role, and first-login users
+
+---
+
+## Copy, branding and styling rules
+
+- **Copy must name this app's real domain outcome**, taken from the requirement
+  spec — never generic filler like "Welcome, please sign in".
+- Use only the brand name, tagline and palette the spec or app theme supplies.
+  **Never reproduce a real third-party company's branding, logo or trade
+  dress.** If the spec names a real organisation, use its name as plain text
+  and nothing more.
+- **A layered background**, not a flat fill or a single gradient — see §5b for
+  what counts and the copy-paste CSS.
+- Put the component's CSS in an inline `<style>` in the component itself: it
+  mounts over the whole viewport. `lucide-react` is available for icons, and
+  Inter / JetBrains Mono may be loaded from Google Fonts — design-system.md §10
+  has what is and is not allowed.
