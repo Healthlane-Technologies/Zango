@@ -173,7 +173,7 @@ before writing components.
 | Module | [core/modules.md](references/core/modules.md) |
 | Model | [core/models.md](references/core/models.md) |
 | CRUD view | [core/modules.md](references/core/modules.md), [core/models.md](references/core/models.md), [packages/crud/views.md](references/packages/crud/views.md), [packages/crud/forms.md](references/packages/crud/forms.md), [packages/crud/tables.md](references/packages/crud/tables.md) |
-| Workflow | [packages/workflow/overview.md](references/packages/workflow/overview.md) and siblings |
+| Workflow | [overview.md](references/packages/workflow/overview.md), [statuses.md](references/packages/workflow/statuses.md), [transitions.md](references/packages/workflow/transitions.md) — then only if the app needs them: [tags.md](references/packages/workflow/tags.md) (secondary classification), [utils.md](references/packages/workflow/utils.md) (filtering by status/tag), [advanced.md](references/packages/workflow/advanced.md) (conditions, done methods, system transitions). `overview.md` indexes all of them. |
 | Policies | [core/policies.md](references/core/policies.md) |
 | Async task | [core/async-tasks.md](references/core/async-tasks.md) |
 | Routes and menus (see STEP 5) | [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) |
