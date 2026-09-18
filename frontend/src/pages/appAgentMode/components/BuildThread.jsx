@@ -30,6 +30,7 @@ import AppReadyCard from './AppReadyCard';
 import Markdown from './Markdown';
 import QuestionAnswers, { composeAnswer, isAnswered } from './QuestionAnswers';
 import RunLive, { TERMINAL } from './RunLive';
+import RunUsage from './RunUsage';
 import SpecHighlights from './SpecHighlights';
 
 const POLL_MS = 1500;
@@ -40,6 +41,14 @@ const TABS = [
 	{ id: 'highlights', label: 'My Build' },
 	{ id: 'requirement', label: 'Requirement' },
 ];
+
+const RUN_META = {
+	success: { label: 'Built', bg: '#ECFDF5', accent: '#047857' },
+	partial: { label: 'Built with sync errors', bg: '#FEF3C7', accent: '#B45309' },
+	failed: { label: 'Failed', bg: '#FEF2F2', accent: '#DC2626' },
+	timeout: { label: 'Timed out', bg: '#FEF2F2', accent: '#DC2626' },
+	aborted: { label: 'Stopped', bg: '#F3F4F6', accent: '#6B7280' },
+};
 
 const STATUS_META = {
 	gathering: { label: 'Gathering', bg: '#EEF2FF', accent: '#5048ED' },
@@ -460,6 +469,14 @@ export default function BuildThread() {
 	const viewedSpec = viewingActive ? spec : viewed?.spec_markdown || '';
 	const hasSpec = Boolean(viewedSpec);
 	const canEditSpec = viewingActive && !locked;
+	// What the round on screen actually cost to build. Only once it has
+	// finished: mid-build the numbers are still moving, and the card in the
+	// thread is already reporting that.
+	const viewedRunRow = viewed?.runs?.[0] || null;
+	const viewedRun =
+		viewedRunRow && TERMINAL.includes(viewedRunRow.status)
+			? runs[viewedRunRow.uuid] || null
+			: null;
 	// The requirement's own run row is the fresher truth — it is refetched
 	// while a build is going — so it decides, and the detail only fills in
 	// before the first refetch lands.
@@ -722,6 +739,28 @@ export default function BuildThread() {
 									<Markdown text={viewedSpec} />
 								</div>
 							)}
+							{viewedRun ? (
+								<>
+									<div className="flex items-center gap-[8px] border-t border-[#F1F3F5] px-[20px] pt-[12px]">
+										<span className="font-lato text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280]">
+											This build
+										</span>
+										<span
+											className="rounded-full px-[8px] py-[2px] font-lato text-[10px] font-bold uppercase tracking-[0.05em]"
+											style={{
+												backgroundColor: RUN_META[viewedRun.status]?.bg || '#F3F4F6',
+												color: RUN_META[viewedRun.status]?.accent || '#6B7280',
+											}}
+										>
+											{RUN_META[viewedRun.status]?.label || viewedRun.status}
+										</span>
+										<span className="font-lato text-[11px] text-[#9CA3AF]">
+											{stamp(viewedRun.ended_at || viewedRun.queued_at)}
+										</span>
+									</div>
+									<RunUsage run={viewedRun} flush />
+								</>
+							) : null}
 						</div>
 					) : (
 						<div className="flex grow items-center justify-center px-[24px] text-center">
