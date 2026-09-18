@@ -190,7 +190,7 @@ before writing components.
 | Branded login / custom auth screens | [frontend/auth-login.md](references/frontend/auth-login.md) |
 | Visual quality bar, tokens, states | [frontend/design-system.md](references/frontend/design-system.md) |
 | Shared UI primitives (write these first) | [frontend/shared-primitives.md](references/frontend/shared-primitives.md) |
-| Frontend patterns | [frontend/crud.md](references/frontend/crud.md), [frontend/form.md](references/frontend/form.md), [frontend/appbuilder.md](references/frontend/appbuilder.md) |
+| Frontend patterns | [frontend/crud/core.md](references/frontend/crud/core.md) (always — imports, API shapes, CrudHandler), then only what you need: [crud/tables.md](references/frontend/crud/tables.md), [crud/detail.md](references/frontend/crud/detail.md), [crud/hooks.md](references/frontend/crud/hooks.md) · [frontend/form.md](references/frontend/form.md), [frontend/appbuilder.md](references/frontend/appbuilder.md) |
 
 ## STEP 4: Implement
 
@@ -430,7 +430,8 @@ match the route's `component` value exactly**, or the page renders blank.
 
 Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
 [frontend/design-system.md](references/frontend/design-system.md),
-[frontend/crud.md](references/frontend/crud.md),
+[frontend/crud/core.md](references/frontend/crud/core.md) +
+[crud/detail.md](references/frontend/crud/detail.md),
 [frontend/form.md](references/frontend/form.md).
 
 ### 5e. Brand the login page

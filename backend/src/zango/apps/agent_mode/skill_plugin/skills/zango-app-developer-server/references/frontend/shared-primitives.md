@@ -14,7 +14,7 @@ four states from §3.
 Two things to check against the real scaffold before you rely on them: the
 `@zango-core/crud/table` exports you import, and the exact theme variable names
 the initializer set. Both are documented in
-[appbuilder.md](appbuilder.md) and [crud.md](crud.md).
+[appbuilder.md](appbuilder.md) and [crud/core.md](crud/core.md).
 
 ---
 

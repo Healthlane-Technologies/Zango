@@ -9,7 +9,8 @@ full-page route showing identity, key facts, and the entity's **related records
 as tables inside tabs** — orders, programs, documents, notes — all scoped to that
 one record.
 
-> Read this together with [crud.md](crud.md) (CrudHandler props, detail-view
+> Read this together with [crud/core.md](crud/core.md) and
+> [crud/detail.md](crud/detail.md) (CrudHandler props, detail-view
 > payload shapes) and [design-system.md](design-system.md) (tokens, states).
 
 ---
@@ -126,7 +127,7 @@ grep -rn "customMainDetail" src/custom/ | wc -l     # tables wired to the page
 > **This is the single most common way an entity-360 page ships blank.**
 
 `customMainDetail` receives **camelCase** props, while the raw API payload uses
-snake_case. Some older examples in `crud.md` show the snake_case spelling — those
+snake_case. Some older examples in `crud/detail.md` show the snake_case spelling — those
 are for `customDrawerDetail`, and copying them into `customMainDetail` renders an
 empty page with no error.
 
@@ -270,7 +271,7 @@ pagination and the add button, governed by the child module's own policies.
 > - compare your props against a working `page_type: "crud"` list page for the
 >   same module — the list page is the reference implementation, and whatever
 >   it passes that you do not is the likely cause;
-> - check `crud.md` for the `CrudHandler` props that list page relies on;
+> - check `crud/core.md` for the `CrudHandler` props that list page relies on;
 > - confirm the endpoint you passed is the child module's own CRUD endpoint,
 >   spelled exactly as in `settings.json` `app_routes`.
 >
