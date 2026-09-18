@@ -585,56 +585,48 @@ finish:
 
 ### 5h. Register routes and menu configs
 
-Every page you built needs a route; every role needs a menu. Both are API
-calls, and **neither has a file-based substitute** — a payload written to disk
-is not a saved config.
+Every page needs a route; every role needs a menu. Both are API calls and
+**neither has a file-based substitute** — a payload written to disk is not a
+saved config.
 
-Full sequence, payload shapes and failure modes:
+Sequence, payload shapes, the permitted `curl` flags and the read-back checks:
 [appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md).
-The essentials:
+Follow it. The five things agents get wrong even with it open:
 
-- **Order matters.** Save routes first, read back the server-generated
-  `route_id`s, then create one menu config per role using those ids. Ids you
-  invent yourself save fine and produce a sidebar of dead links.
-- `save_routes` **replaces the whole array** — fetch, merge, send.
-- Custom pages are `page_type: "custom"` with `component` matching the export
-  name exactly. **An app whose routes are all `"crud"` has no custom
-  frontend** — if none are custom, you skipped 5a–5d.
-- **`create_config` takes the role's NUMERIC ID, not its name.** The field is
-  called `user_role` for frontend compatibility but resolves as a primary key,
-  so a name returns `Field 'id' expected a number but got 'Approver'.` Resolve
-  it via `action=get_available_roles`, which shrinks as configs are created —
-  re-fetch rather than caching, or the last role silently gets no menu.
-- **Give every menu item its own icon, and every icon is inline SVG. Never
-  emoji.** `clean_icon()` replaces any icon
-  containing a replacement character with `"📄"`, and emoji only have to
-  survive one mis-encoded hop to become one. The POST still returns
-  `success: true`. Use 32×32 viewBox paths with `stroke="currentColor"`.
-- `curl` is permitted against this app's own domain and localhost, and **POST
-  with a body is allowed** — `-X POST`, `-d`, `--data-raw`, `--data-binary`,
-  `-F`, `-H` all work. The token lasts 30 minutes.
+1. **Order.** Save routes first, read back the server-generated `route_id`s,
+   *then* create one menu config per role from those ids. Ids you invent save
+   fine and produce a sidebar of dead links.
+2. **`save_routes` replaces the whole array** — fetch, merge, send. And every
+   route `path` must start with `/app`.
+3. **`create_config` takes the role's NUMERIC id, not its name.** The field is
+   `user_role` for frontend compatibility but resolves as a primary key, so a
+   name returns `Field 'id' expected a number but got 'Approver'.` Resolve via
+   `action=get_available_roles`, which **shrinks as configs are created** —
+   re-fetch rather than caching, or the last role silently gets no menu.
+4. **Every menu item gets its own inline-SVG icon. Never emoji.**
+   `clean_icon()` rewrites any icon containing a replacement character to
+   `"📄"`, and emoji need only one mis-encoded hop to become one. The POST
+   still returns `success: true`. Use 32×32 viewBox paths with
+   `stroke="currentColor"`.
+5. **Custom pages are `page_type: "custom"` with `component` matching the
+   export name exactly.** An app whose routes are all `"crud"` has no custom
+   frontend — if none are custom, you skipped 5a–5d.
 
-**Verify by reading back, not by status code.** `get_routes` must not return
-`[]`; `get_configs` must return one config per role; every menu `route_id` must
-exist in `get_routes`; every `icon` must contain `<svg`. All four failure modes
+**Verify by reading back, not by status code.** `get_routes` must not be `[]`;
+`get_configs` must return one config per role; every menu `route_id` must exist
+in `get_routes`; every `icon` must contain `<svg`. All four failure modes
 return `success: true`, so the read-back is the only evidence.
 
-If `appbuilder_config_url` is UNAVAILABLE, skip 5h and list what an operator
-must add. Do **not** skip 5a-5g for it — the build does not depend on this API.
+> **A failure here is not an outstanding item — it is a blocker.** The observed
+> pattern: the POST fails, the agent files it as a remaining task, finishes
+> everything else and reports success — leaving an app whose sidebar is empty
+> or entirely dead links, indistinguishable to the user from no frontend at
+> all.
 
-> **That is the only reason to skip 5h.**
-> **A failure here is not an outstanding item — it is a blocker.**
-> The observed pattern is: the POST fails, the agent files
-> it as a remaining task, finishes everything else and reports success — leaving
-> an app whose sidebar is empty or entirely dead links, indistinguishable to the
-> user from no frontend at all.
->
-> So **attempt the call before concluding anything is blocked** — a guess about
-> the sandbox is not evidence. Read the response body (it names the fix), fix,
-> and retry. Only if it still fails, stop and report the run **incomplete** with
-> the exact command and verbatim response. Never write "routes and menus still need registering" in a
-> summary that otherwise reads as success — the correct first line is that **the
-> app has no working navigation**.
+The only reason to skip 5h is `appbuilder_config_url` being UNAVAILABLE — then list
+what an operator must add. Never skip 5a–5g for it; the build does not depend
+on this API.
+
 ### Verify STEP 5 before moving on
 
 Work through the full gate in
@@ -670,6 +662,7 @@ everywhere; one visual anchor per page; detail pages match design-system.md §6;
   distinct card fills, every card carrying the hairline shadow, page ground
   differing from card fill. All-white boxes with grey title bars passes every
   structural rule and still reads as a wireframe.
+
 ## STEP 6: Declare test users and login url
 
 An app nobody can log into is not a working app. Write `users.json` at the

@@ -42,6 +42,11 @@ CONFIG_BASE_URL="http://yourdomain.com/app/configure"
 TOKEN="abc123xyz"
 ```
 
+**The token is valid for 30 minutes from the start of the run.** Do routes and
+menus in one pass rather than leaving them to the end of a long build; if calls
+start returning auth errors, the token has expired â€” say so in your summary
+rather than silently skipping the step.
+
 The configuration endpoints (always pass `token` as a query param):
 - Routes API: `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=<action>`
 - Menu API: `$CONFIG_BASE_URL/api/?token=$TOKEN&action=<action>`
@@ -843,11 +848,27 @@ not exist, leaves the app with a sidebar that is empty or entirely dead links â€
 which is indistinguishable, to the person opening the app, from the frontend
 never having been built.
 
-Full request shapes:
-[packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md).
 `curl` is permitted for this, but only against this app's own domain and
-localhost. The token lasts 30 minutes.
+localhost, and POST with a body is allowed: `-X POST`, `-d`, `--data-raw`,
+`--data-binary`, `-F` and `-H` all work against those hosts. The token lasts
+30 minutes.
 
 If `appbuilder_config_url` is UNAVAILABLE, skip 5h and list the routes and
 menu entries an operator must add. Do NOT skip 5a-5g because of it - the
 frontend build does not depend on the config API.
+
+---
+
+## Verify by reading back, not by status code
+
+All four of these failure modes return `success: true`. The POST succeeding is
+not evidence that the configuration took.
+
+| Check | Passes when |
+|---|---|
+| `action=get_routes` | does not return `[]` |
+| `action=get_configs` | returns one config per role |
+| every menu `route_id` | exists in `get_routes` |
+| every `icon` | contains `<svg` |
+
+Run all four before you call this step done.
