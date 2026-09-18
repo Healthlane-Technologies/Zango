@@ -250,53 +250,52 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 | 5g | Create the `app` module | `backend/app/` + `app.html` |
 | 5h | Register routes and menus | navigation for every role |
 
-### Delegate 5c, 5d and 5e to subagents
+### Delegating 5c, 5d and 5e (optional — read the constraints first)
 
-**5c, 5d and 5e are each done by a `Task` subagent, not in this thread.**
+You MAY hand 5c, 5d and 5e to `Task`/`Agent` subagents to keep their ~70k of
+reference docs out of this context. **It is optional. Doing it wrong loses the
+entire frontend, so if anything below is not satisfied, do 5c–5e inline** —
+inline is always correct and only costs context.
 
-The reference docs those steps need — `shared-primitives.md`,
-`design-system.md`, `entity-360.md`, `crud/*`, `form.md`, `auth-login.md` —
-come to about 70k tokens. Read here, they stay in context for every later
-turn: the build, the app module, routes, the gate. Read inside a subagent they
-are released when it returns. This is the difference between finishing a build
-and running out of context at 5f.
+**1. The Agent tool launches in the BACKGROUND and returns immediately.**
+Its result says "Async agent launched successfully" and gives an `agentId`. That
+is *not* the work finished. There is no way to block on it by intention: saying
+"I will wait" and continuing to other work means the run ends while the agents
+are still going, and **everything they were writing is lost**. If you dispatch,
+you MUST, before doing anything else:
 
-**It changes nothing about what gets written.** Every rule in 5c–5e is binding
-on the subagent exactly as written; the subagent reads this skill's sub-step
-and its references and follows them. You are moving where the work happens,
-not what the work is.
+  - poll the workspace for the files each agent was told to write
+    (`ls frontend/src/custom/pages/`), and
+  - not proceed to 5f until every expected file exists on disk.
 
-Three rules make this safe:
+If a file has not appeared and you have no way left to wait, **write it
+yourself inline**. A missing page is a failed build; a slower build is not.
 
-1. **5c first, alone, and wait for it.** Its return value — the exact export
-   signatures of `shared.tsx` — is an input to every 5d and 5e subagent. They
-   compose from those primitives, so they must know them verbatim. Never run
-   5c in parallel with the pages.
-2. **Every subagent prompt carries, verbatim:** the workspace path; the
-   relevant entity's six answers from `design-plan.md`; the export list from
-   5c; **the backend facts the page binds to** — model and module name, field
-   names and types as you actually wrote them in STEP 4, the CRUD view URL,
-   and per child tab the related model plus its FK; the theme line and
-   `LOCALE`/`CURRENCY`; and the sub-step's own text and reference links.
-   A subagent starts with no memory of this run and did not write the STEP 4
-   models — anything you leave out, it invents, and invented field names
-   render as blank tabs. Tell it explicitly: *compose only from the listed
-   primitives, do not invent or restyle layout primitives, and do not invent
-   field names — report a missing field rather than guessing.*
-   Each sub-step's own dispatch block below lists exactly what it needs.
-3. **Each subagent returns a short report, not code:** files written, export
-   names added to `index.js`, and any deviation from `design-plan.md` with its
-   reason. Never ask a subagent to return file contents — that puts the tokens
-   straight back into this context and defeats the point.
+**2. Subagents cannot read outside the workspace unless given exact paths.**
+The reference docs live outside the workspace and the path guard denies
+anything that does not resolve. A mistyped path is silently fatal: the subagent
+gets "resolves outside the app workspace" for every doc, writes nothing useful
+and reports back as if it tried. **Never retype these paths from memory.**
+Obtain each one by running `ls` or `find` on the skill's references directory
+first, then paste the verified absolute path into the prompt.
 
-You keep in this thread: `design-plan.md` (5b), the `index.js` and `App.tsx`
-wiring, the build (5f), the app module (5g), routes and menus (5h), and the
-verify gate. **The gate is yours and is not delegated** — it is what catches a
-subagent that drifted from the plan, so it must run in the thread that holds
-the plan.
+**3. Verify each subagent's work before trusting its report.** A report saying
+"written" is not evidence. `Read` the file it claims to have written. If it is
+absent or empty, redo that page inline.
 
-If the `Task` tool is unavailable for any reason, do 5c–5e inline in order.
-The output must be identical; only the context cost differs.
+If you do dispatch: 5c first and alone (its export list feeds 5d and 5e); one
+agent per page for 5d; 5e may run alongside. Each prompt carries the workspace
+path, the entity's six answers from `design-plan.md`, the 5c export list, the
+backend facts the page binds to (model and module name, field names and types
+as written in STEP 4, the CRUD view URL, per child tab the related model and
+its FK), the theme line and `LOCALE`/`CURRENCY`, and verified absolute paths to
+the docs it must read. Tell it: compose only from the listed primitives, invent
+no field names, report a missing field rather than guessing. Each returns a
+short report — files written and the export name — never file contents.
+
+**You keep in this thread regardless:** `design-plan.md` (5b), `index.js` and
+`App.tsx` wiring, the build (5f), the app module (5g), routes and menus (5h),
+and the verify gate. The gate is never delegated.
 
 ### 5a. Scaffold the frontend — FIRST, before any of the rest
 
@@ -375,16 +374,10 @@ Write it, then build exactly it.
 
 ### 5c. Write the shared primitives — before any page
 
-> **Dispatch this to one subagent and wait for it.** Give it: the workspace
-> path, the app's `LOCALE`/`CURRENCY` from the requirement, **the theme line
-> from the run context** (so the primitives use the app's real tokens), the
-> entity and status names the app actually uses — `StatusChip` renders those —
-> this sub-step's text, and
-> [shared-primitives.md](references/frontend/shared-primitives.md)
-> + [design-system.md](references/frontend/design-system.md) §4 to read.
-> Require it to return **the exact export signature list of the file it
-> wrote** — names and props, no bodies. That list is a required input to
-> every 5d and 5e subagent, which is why this one runs alone and first.
+> **May be delegated** (see the delegation constraints above) — if so, alone
+> and first, because its export list feeds 5d and 5e, and you must confirm
+> `shared.tsx` exists on disk before dispatching any page. Otherwise write it
+> here. Either way the rules below are what must end up in the file.
 
 Write `src/custom/pages/shared.tsx` **first**, and compose every later page
 from it. Full contract and a copyable floor:
@@ -412,38 +405,11 @@ pages are ~100 lines of inline-styled JSX each, this step was skipped.
 
 ### 5d. Write the custom pages
 
-> **Dispatch one subagent per page, in parallel.** A subagent starts with no
-> memory of this run — it has not seen the run context, and it did not write
-> the models in STEP 4. Anything you leave out, it invents, and invented field
-> names render as blank tabs. Each prompt must therefore carry, verbatim:
->
-> - the workspace path;
-> - that entity's six answers copied out of `design-plan.md`;
-> - the export list returned by 5c;
-> - **the backend facts the page binds to** — the entity's module and model
->   name, its field names and types as you actually wrote them in STEP 4, the
->   CRUD view's URL, and for each child tab the related model plus the FK
->   field that links it. Copy these from the files you wrote, not from memory;
-> - **the app's theme line** from the run context, and `LOCALE`/`CURRENCY`;
-> - this sub-step's text and its reference links.
->
-> State plainly: *compose only from the primitives in the list; do not invent
-> or restyle layout primitives, and do not invent field names — if a field you
-> need is absent from the list above, say so in your report rather than
-> guessing.*
->
-> Each returns the file it wrote, the export name for `index.js`, any
-> deviation from `design-plan.md` with its reason, and any field it needed but
-> was not given — never the file contents.
->
-> You then write `index.js` yourself from the returned export names. Do not
-> let subagents edit `index.js` concurrently; parallel edits to one file
-> collide and silently lose exports.
->
-> **Read every report before moving on.** A subagent cannot see its siblings,
-> so cross-page consistency is yours to enforce: if two reports describe the
-> same concept differently, or one flags a missing field, fix it now — the
-> gate will otherwise catch it later at higher cost.
+> **May be delegated**, one agent per page (see the delegation constraints
+> above). If you do: dispatch, then poll `frontend/src/custom/pages/` until
+> every expected file exists, and `Read` each one before believing it. Any page
+> that has not appeared, write inline. **You** write `index.js` from the export
+> names — never let parallel agents edit it.
 
 **Implement `design-plan.md` literally** — the lead card, rail, tabs and
 empty-state copy it names, per entity. Concluded the plan is wrong? Edit
@@ -476,12 +442,9 @@ Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
 
 ### 5e. Brand the login page
 
-> **Dispatch this to one subagent.** It may run in parallel with 5d — the
-> login page shares no file with them. Give it: the workspace path, the
-> app's theme/brand colours, the export list from 5c, this sub-step's text,
-> and [auth-login.md](references/frontend/auth-login.md) to read. It returns
-> the file written plus the exact `authConfig` wiring line for `App.tsx`;
-> **you** apply that line to `App.tsx` in this thread.
+> **May be delegated** (see the delegation constraints above); it shares no
+> file with 5d. Confirm `AppLoginCard.tsx` exists on disk before 5f, and apply
+> the `authConfig` line to `App.tsx` yourself in this thread.
 
 **Every app gets a branded login page. Always** — no toggle, no condition. It
 is the first screen anyone sees, and the framework default says nothing about
@@ -514,6 +477,18 @@ Keep the split-screen archetype and the "Powered by Zelthy" attribution —
 re-theme and rewrite the copy, do not invent a different layout.
 
 ### 5f. Build the bundle — once, at the end of frontend work
+
+**Gate — run this before building, every time:**
+
+```bash
+ls frontend/src/custom/pages/ frontend/src/custom/auth/
+```
+
+Every page named in `design-plan.md` plus `shared.tsx` and `AppLoginCard.tsx`
+must be there. **If a file is missing, write it now, inline, before you
+build** — most often it was delegated to a background agent that had not
+finished. Building without it silently ships an app missing that page, and
+neither the build nor the platform will tell you.
 
 Not after every change:
 
