@@ -4,13 +4,19 @@
  * There used to be a list of requirements you picked from before you could
  * talk to anything. But a requirement is not a document you file, it is a
  * round of the same conversation: you ask for something, agree it, build it,
- * then ask for the next thing. So every round is a **version**, and they all
- * live in one thread, in order, with the builds that came out of them.
+ * then ask for the next thing. So every round lives in one thread, in order,
+ * with the build that came out of it.
  *
- * Only the newest version is live. Earlier ones are approved and built —
- * their spec is fixed, because what was agreed and what was built have to
- * keep matching — so they read as history and the composer belongs to the
- * last one.
+ * A round is an `AgentRequirement` on the wire and `versions[i]` here, but it
+ * is never called a version to the user — the first one is the Initial Build
+ * and the rest are Enhancements, which is what they actually are. (`version`
+ * already means something else nearby: `spec_version` counts revisions
+ * *inside* one round.)
+ *
+ * Only the newest round is live. Earlier ones are approved and built — their
+ * spec is fixed, because what was agreed and what was built have to keep
+ * matching — so they read as history and the composer belongs to the last
+ * one.
  *
  * Right is what you are getting: the requirement while it is being agreed,
  * and the live app's address, sign-ins, Share and Deploy once one exists.
@@ -68,15 +74,36 @@ function Bubble({ message }) {
 	);
 }
 
-/** Where one version ends and the next begins. */
-function VersionRule({ index, requirement }) {
+function roundLabel(index) {
+	return index === 0 ? 'Initial Build' : `Enhancement ${index}`;
+}
+
+/** Compact and unambiguous: the year only appears when it is not this one. */
+function stamp(iso) {
+	if (!iso) return '';
+	const when = new Date(iso);
+	if (Number.isNaN(when.getTime())) return '';
+	const opts = { day: 'numeric', month: 'short' };
+	if (when.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+	return `${when.toLocaleDateString(undefined, opts)} · ${when.toLocaleTimeString(
+		undefined,
+		{ hour: '2-digit', minute: '2-digit' }
+	)}`;
+}
+
+/** Where one round ends and the next begins. */
+function RoundRule({ index, requirement }) {
 	const meta = STATUS_META[requirement.status] || STATUS_META.gathering;
+	const when = stamp(requirement.created_at);
 	return (
 		<div className="flex items-center gap-[10px] px-[16px] pb-[4px] pt-[14px]">
 			<span className="h-px w-[16px] shrink-0 bg-[#EDEFF1]" />
 			<span className="shrink-0 font-lato text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280]">
-				Version {index + 1}
+				{roundLabel(index)}
 			</span>
+			{when ? (
+				<span className="shrink-0 font-lato text-[11px] text-[#9CA3AF]">{when}</span>
+			) : null}
 			{requirement.title ? (
 				<span className="min-w-0 truncate font-lato text-[12px] text-[#9CA3AF]">
 					{requirement.title}
@@ -240,7 +267,7 @@ export default function BuildThread() {
 		);
 	}, [versions, runs]);
 
-	const startVersion = async (content) => {
+	const startRound = async (content) => {
 		setBusy(true);
 		const { success, response } = await triggerApi({
 			url: `${base}/requirements/`,
@@ -317,7 +344,7 @@ export default function BuildThread() {
 		setBusy(false);
 		if (success) {
 			setSpecDirty(false);
-			notify('success', 'Requirement saved', `Version ${response?.spec_version}`);
+			notify('success', 'Requirement saved', `Revision ${response?.spec_version}`);
 			reloadActive();
 		} else {
 			notify('error', 'Could not save', response?.message);
@@ -397,7 +424,7 @@ export default function BuildThread() {
 	const submit = () => {
 		const content = reply.trim();
 		if (!content || busy) return;
-		if (!active || locked) startVersion(content);
+		if (!active || locked) startRound(content);
 		else send();
 	};
 
@@ -430,7 +457,7 @@ export default function BuildThread() {
 						return (
 							<div key={version.uuid}>
 								{versions.length > 1 || !isActive ? (
-									<VersionRule index={index} requirement={version} />
+									<RoundRule index={index} requirement={version} />
 								) : null}
 								{(version.messages || []).map((m) => (
 									<Bubble key={`${version.uuid}-${m.seq}`} message={m} />
@@ -469,7 +496,7 @@ export default function BuildThread() {
 								role: 'assistant',
 								content:
 									'Happy to keep going. What would you like to add or change? ' +
-									"I'll ask what I need to know, then write up the next version " +
+									"I'll ask what I need to know, then write it up " +
 									'for you to approve.',
 							}}
 						/>
@@ -529,7 +556,7 @@ export default function BuildThread() {
 								{!active
 									? '⌘/Ctrl + Enter'
 									: locked
-										? 'This starts the next version — nothing changes until you approve it.'
+										? 'This starts the next enhancement — nothing changes until you approve it.'
 										: active.is_thinking
 											? 'Waiting for the agent…'
 											: '⌘/Ctrl + Enter'}
@@ -596,18 +623,21 @@ export default function BuildThread() {
 								<button
 									key={v.uuid}
 									onClick={() => setSpecIdx(i)}
-									title={v.title || `Version ${i + 1}`}
-									className={`flex shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[4px] font-lato text-[12px] ${
+									title={v.title || roundLabel(i)}
+									className={`flex shrink-0 flex-col items-start gap-[1px] rounded-[9px] border px-[10px] py-[5px] text-left font-lato ${
 										on
-											? 'border-[#5048ED] bg-[#EEF2FF] font-semibold text-[#3730A3]'
+											? 'border-[#5048ED] bg-[#EEF2FF] text-[#3730A3]'
 											: 'border-[#DDE2E5] bg-white text-[#6B7280] hover:border-[#9CA3AF]'
 									}`}
 								>
-									<span>Version {i + 1}</span>
-									<span
-										className="h-[6px] w-[6px] rounded-full"
-										style={{ backgroundColor: m.accent }}
-									/>
+									<span className="flex items-center gap-[6px] text-[12px] font-semibold">
+										{roundLabel(i)}
+										<span
+											className="h-[6px] w-[6px] rounded-full"
+											style={{ backgroundColor: m.accent }}
+										/>
+									</span>
+									<span className="text-[10.5px] text-[#9CA3AF]">{stamp(v.created_at)}</span>
 								</button>
 							);
 						})}
