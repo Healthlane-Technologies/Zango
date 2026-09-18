@@ -10,10 +10,9 @@
  * you are working on.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import useApi from '../../../hooks/useApi';
-import RequirementChat from './RequirementChat';
-import RequirementList from './RequirementList';
+import BuildThread from './BuildThread';
 import RunProgress from './RunProgress';
 
 const REASON_TEXT = {
@@ -102,8 +101,10 @@ export default function AgentMode() {
 
 			<div className="flex min-h-0 grow flex-col px-[16px] py-[12px]">
 				<Routes>
-					<Route path="/" element={<RequirementList availability={availability} />} />
-					<Route path="requirements/:requirementId" element={<RequirementChat />} />
+					<Route path="/" element={<BuildThread />} />
+					{/* Every version lives in the one thread now; a link to a
+					    single requirement lands there. */}
+					<Route path="requirements/:requirementId" element={<Navigate to=".." replace />} />
 					<Route path="runs/:runId" element={<RunProgress />} />
 				</Routes>
 			</div>

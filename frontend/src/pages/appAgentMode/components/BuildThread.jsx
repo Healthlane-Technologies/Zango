@@ -1,19 +1,23 @@
 /**
- * The whole of Agent Mode for one requirement: agree it, build it, open it.
+ * Build with AI — one screen, the whole history of the app.
  *
- * Left is the conversation, and the build runs *inside* it — the user asked
- * for something and this is it happening, so sending them to a separate
- * progress screen would break the one thread they are following.
+ * There used to be a list of requirements you picked from before you could
+ * talk to anything. But a requirement is not a document you file, it is a
+ * round of the same conversation: you ask for something, agree it, build it,
+ * then ask for the next thing. So every round is a **version**, and they all
+ * live in one thread, in order, with the builds that came out of them.
  *
- * Right is what they are getting: highlights of the requirement while it is
- * being agreed and built, replaced at the top by the live app's address the
- * moment there is one, with Share and Deploy next to it. The full spec stays
- * a tab away — it is what gets approved, and a one-word correction should not
- * cost a full agent turn, so it is directly editable and versioned.
+ * Only the newest version is live. Earlier ones are approved and built —
+ * their spec is fixed, because what was agreed and what was built have to
+ * keep matching — so they read as history and the composer belongs to the
+ * last one.
+ *
+ * Right is what you are getting: the requirement while it is being agreed,
+ * and the live app's address, sign-ins, Share and Deploy once one exists.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Toast from '../../../components/Notifications/Toast';
 import useApi from '../../../hooks/useApi';
 import AppReadyCard from './AppReadyCard';
@@ -24,10 +28,20 @@ import SpecHighlights from './SpecHighlights';
 
 const POLL_MS = 1500;
 
-const BASE_TABS = [
+const TABS = [
 	{ id: 'highlights', label: 'My Build' },
 	{ id: 'requirement', label: 'Requirement' },
 ];
+
+const STATUS_META = {
+	gathering: { label: 'Gathering', bg: '#EEF2FF', accent: '#5048ED' },
+	ready: { label: 'Ready for review', bg: '#FEF3C7', accent: '#B45309' },
+	approved: { label: 'Built', bg: '#ECFDF5', accent: '#047857' },
+	abandoned: { label: 'Abandoned', bg: '#F3F4F6', accent: '#6B7280' },
+};
+
+const PLACEHOLDER =
+	'e.g. a way for staff to book patient appointments and track whether they were attended';
 
 function notify(type, title, description) {
 	toast.custom(
@@ -35,24 +49,6 @@ function notify(type, title, description) {
 		{ duration: 5000, position: 'bottom-left' }
 	);
 }
-
-const RUN_META = {
-	queued: { label: 'Queued', bg: '#F3F4F6', accent: '#6B7280' },
-	running: { label: 'Running', bg: '#EEF2FF', accent: '#5048ED' },
-	syncing: { label: 'Syncing', bg: '#FEF3C7', accent: '#B45309' },
-	success: { label: 'Success', bg: '#ECFDF5', accent: '#047857' },
-	partial: { label: 'Sync errors', bg: '#FEF3C7', accent: '#B45309' },
-	failed: { label: 'Failed', bg: '#FEF2F2', accent: '#DC2626' },
-	timeout: { label: 'Timed out', bg: '#FEF2F2', accent: '#DC2626' },
-	aborted: { label: 'Aborted', bg: '#F3F4F6', accent: '#6B7280' },
-};
-
-const STATUS_META = {
-	gathering: { label: 'Gathering', bg: '#EEF2FF', accent: '#5048ED' },
-	ready: { label: 'Ready for review', bg: '#FEF3C7', accent: '#B45309' },
-	approved: { label: 'Approved', bg: '#ECFDF5', accent: '#047857' },
-	abandoned: { label: 'Abandoned', bg: '#F3F4F6', accent: '#6B7280' },
-};
 
 function Bubble({ message }) {
 	const isUser = message.role === 'user';
@@ -72,25 +68,47 @@ function Bubble({ message }) {
 	);
 }
 
-export default function RequirementChat() {
-	const { appId, requirementId } = useParams();
-	const navigate = useNavigate();
+/** Where one version ends and the next begins. */
+function VersionRule({ index, requirement }) {
+	const meta = STATUS_META[requirement.status] || STATUS_META.gathering;
+	return (
+		<div className="flex items-center gap-[10px] px-[16px] pb-[4px] pt-[14px]">
+			<span className="h-px w-[16px] shrink-0 bg-[#EDEFF1]" />
+			<span className="shrink-0 font-lato text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280]">
+				Version {index + 1}
+			</span>
+			{requirement.title ? (
+				<span className="min-w-0 truncate font-lato text-[12px] text-[#9CA3AF]">
+					{requirement.title}
+				</span>
+			) : null}
+			<span className="h-px grow bg-[#EDEFF1]" />
+			<span
+				className="shrink-0 rounded-full px-[8px] py-[2px] font-lato text-[10px] font-bold uppercase tracking-[0.05em]"
+				style={{ backgroundColor: meta.bg, color: meta.accent }}
+			>
+				{meta.label}
+			</span>
+		</div>
+	);
+}
+
+export default function BuildThread() {
+	const { appId } = useParams();
 	const triggerApi = useApi();
 
-	const [req, setReq] = useState(null);
+	// Oldest first: the thread reads top to bottom like any conversation.
+	const [versions, setVersions] = useState(null);
+	const [runs, setRuns] = useState({});
 	const [reply, setReply] = useState('');
 	const [spec, setSpec] = useState('');
 	const [specDirty, setSpecDirty] = useState(false);
 	const [editingSpec, setEditingSpec] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [answers, setAnswers] = useState({});
-	// The build the chat is currently showing, and its detail once RunLive
-	// has it — the app's address and test users ride on that object.
-	const [activeRunId, setActiveRunId] = useState(null);
-	const [activeRun, setActiveRun] = useState(null);
 	const [rightTab, setRightTab] = useState('highlights');
-	// An approved requirement is locked, so its composer is hidden. This
-	// reopens it to take the ask for the next version.
+	// The newest version is approved and built, and the user wants another
+	// round. Reopens the composer to take the next ask.
 	const [continuing, setContinuing] = useState(false);
 	// Set the moment we send, cleared only when the server reports a reply.
 	// Without it an in-flight poll can clear is_thinking and re-enable Send.
@@ -101,16 +119,39 @@ export default function RequirementChat() {
 	const pollRef = useRef(null);
 	const base = `/api/v1/apps/${appId}/agent-mode`;
 
-	const openRun = useCallback((uuid) => {
-		setActiveRunId(uuid);
-		// A run belonging to a different build must not leave the previous
-		// one's URL and credentials on screen.
-		setActiveRun(null);
-	}, []);
+	const active = versions?.length ? versions[versions.length - 1] : null;
 
-	const load = useCallback(async () => {
+	const loadAll = useCallback(async () => {
 		const { response, success } = await triggerApi({
-			url: `${base}/requirements/${requirementId}/`,
+			url: `${base}/requirements/?page_size=50`,
+			type: 'GET', loader: false, showErrorModal: false,
+		});
+		if (!success || !response) {
+			setVersions([]);
+			return;
+		}
+		// The list comes back newest first; the thread wants the opposite.
+		const rows = [...(response.requirements?.records || [])].reverse();
+		const details = await Promise.all(
+			rows.map((row) =>
+				triggerApi({
+					url: `${base}/requirements/${row.uuid}/`,
+					type: 'GET', loader: false, showErrorModal: false,
+				}).then((r) => (r.success ? r.response : null))
+			)
+		);
+		const loaded = details.filter(Boolean);
+		setVersions(loaded);
+		const newest = loaded[loaded.length - 1];
+		setSpec((cur) => (specDirty ? cur : newest?.spec_markdown || ''));
+	}, [base, specDirty]);
+
+	// Only the newest version can change: everything before it is approved and
+	// built, so re-fetching the whole thread on every tick would be waste.
+	const reloadActive = useCallback(async () => {
+		if (!active?.uuid) return null;
+		const { response, success } = await triggerApi({
+			url: `${base}/requirements/${active.uuid}/`,
 			type: 'GET', loader: false, showErrorModal: false,
 		});
 		if (!success || !response) return null;
@@ -119,62 +160,84 @@ export default function RequirementChat() {
 			const last = response.messages[response.messages.length - 1];
 			if (last.role === 'assistant') pendingRef.current = false;
 		}
-		setReq({ ...response, is_thinking: response.is_thinking || pendingRef.current });
+		const merged = {
+			...response,
+			is_thinking: response.is_thinking || pendingRef.current,
+		};
+		setVersions((vs) =>
+			(vs || []).map((v) => (v.uuid === merged.uuid ? merged : v))
+		);
 		// Never clobber unsaved edits with the server copy.
 		setSpec((cur) => (specDirty ? cur : response.spec_markdown || ''));
-		// Reopening the page picks the conversation back up mid-build: runs
-		// come back newest first.
-		if (response.runs?.length) {
-			setActiveRunId((cur) => cur || response.runs[0].uuid);
-		}
-		return response;
-	}, [base, requirementId, specDirty]);
+		return merged;
+	}, [base, active?.uuid, specDirty]);
 
 	useEffect(() => {
-		setActiveRunId(null);
-		setActiveRun(null);
+		setVersions(null);
+		setRuns({});
 		setContinuing(false);
-		load();
+		loadAll();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [requirementId]);
+	}, [appId]);
 
 	// Poll only while the agent is composing a reply.
 	useEffect(() => {
-		if (!req?.is_thinking) {
+		if (!active?.is_thinking) {
 			if (pollRef.current) clearInterval(pollRef.current);
 			pollRef.current = null;
 			return undefined;
 		}
-		pollRef.current = setInterval(load, POLL_MS);
+		pollRef.current = setInterval(reloadActive, POLL_MS);
 		return () => {
 			if (pollRef.current) clearInterval(pollRef.current);
 			pollRef.current = null;
 		};
-	}, [req?.is_thinking, load]);
+	}, [active?.is_thinking, reloadActive]);
 
 	useEffect(() => {
 		if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-	}, [req?.messages?.length, req?.is_thinking, activeRunId, continuing]);
+	}, [versions?.length, active?.messages?.length, active?.is_thinking, continuing]);
 
 	useEffect(() => {
 		if (continuing && replyRef.current) replyRef.current.focus();
 	}, [continuing]);
 
-	// A finished build changes the requirement's run history, which is only
-	// otherwise refetched while the analyst is replying.
+	const recordRun = useCallback((run) => {
+		if (!run?.uuid) return;
+		setRuns((prev) => ({ ...prev, [run.uuid]: run }));
+	}, []);
+
+	// A finished build changes the version's run history and its status.
 	const finishedRef = useRef('');
+	const activeRunUuid = active?.runs?.[0]?.uuid || null;
+	const activeRun = activeRunUuid ? runs[activeRunUuid] : null;
 	useEffect(() => {
 		if (!activeRun?.status || !TERMINAL.includes(activeRun.status)) return;
-		if (finishedRef.current === activeRunId) return;
-		finishedRef.current = activeRunId;
-		load();
-	}, [activeRun?.status, activeRunId, load]);
+		if (finishedRef.current === activeRunUuid) return;
+		finishedRef.current = activeRunUuid;
+		reloadActive();
+	}, [activeRun?.status, activeRunUuid, reloadActive]);
 
-// The next version is a new requirement: the approved one has already
-	// been built, and what was agreed and what was built must keep matching.
-	const startFollowUp = async () => {
-		const content = reply.trim();
-		if (!content || busy) return;
+	// The app is live regardless of which version built it, so the card must
+	// survive starting a new version that has not been built yet.
+	const appRun = useMemo(() => {
+		const ordered = [];
+		[...(versions || [])].reverse().forEach((v) =>
+			(v.runs || []).forEach((r) => ordered.push(r.uuid))
+		);
+		return (
+			ordered
+				.map((uuid) => runs[uuid])
+				.find(
+					(r) =>
+						r &&
+						['success', 'partial'].includes(r.status) &&
+						(r.app_access?.url || r.test_users?.length)
+				) || null
+		);
+	}, [versions, runs]);
+
+	const startVersion = async (content) => {
 		setBusy(true);
 		const { success, response } = await triggerApi({
 			url: `${base}/requirements/`,
@@ -185,7 +248,8 @@ export default function RequirementChat() {
 		if (success && response?.uuid) {
 			setReply('');
 			setContinuing(false);
-			navigate(`../requirements/${response.uuid}`);
+			pendingRef.current = true;
+			await loadAll();
 			return;
 		}
 		notify('error', 'Could not start', response?.message);
@@ -193,10 +257,10 @@ export default function RequirementChat() {
 
 	const send = async (override) => {
 		const content = (override ?? reply).trim();
-		if (!content || req?.is_thinking) return;
+		if (!content || active?.is_thinking) return;
 		setBusy(true);
 		const { success, response, responseStatus } = await triggerApi({
-			url: `${base}/requirements/${requirementId}/messages/`,
+			url: `${base}/requirements/${active.uuid}/messages/`,
 			type: 'POST', loader: false, payload: { content },
 			showErrorModal: false,
 		});
@@ -204,19 +268,29 @@ export default function RequirementChat() {
 		if (success) {
 			pendingRef.current = true;
 			setReply('');
-			setReq((r) => ({
-				...r,
-				is_thinking: true,
-				messages: [
-					...(r?.messages || []),
-					{ seq: (r?.messages?.length || 0) + 1, role: 'user', content },
-				],
-			}));
+			setVersions((vs) =>
+				(vs || []).map((v) =>
+					v.uuid === active.uuid
+						? {
+								...v,
+								is_thinking: true,
+								messages: [
+									...(v.messages || []),
+									{ seq: (v.messages?.length || 0) + 1, role: 'user', content },
+								],
+							}
+						: v
+				)
+			);
 		} else if (responseStatus === 409) {
 			// The agent was still replying. Keep the text so nothing is lost
 			// and reflect the real state instead of reporting a failure.
 			pendingRef.current = true;
-			setReq((r) => ({ ...r, is_thinking: true }));
+			setVersions((vs) =>
+				(vs || []).map((v) =>
+					v.uuid === active.uuid ? { ...v, is_thinking: true } : v
+				)
+			);
 			notify(
 				'info',
 				'Still replying',
@@ -230,7 +304,7 @@ export default function RequirementChat() {
 	const saveSpec = async () => {
 		setBusy(true);
 		const { success, response } = await triggerApi({
-			url: `${base}/requirements/${requirementId}/spec/`,
+			url: `${base}/requirements/${active.uuid}/spec/`,
 			type: 'POST', loader: false, payload: { spec_markdown: spec },
 			showErrorModal: false,
 		});
@@ -238,7 +312,7 @@ export default function RequirementChat() {
 		if (success) {
 			setSpecDirty(false);
 			notify('success', 'Requirement saved', `Version ${response?.spec_version}`);
-			load();
+			reloadActive();
 		} else {
 			notify('error', 'Could not save', response?.message);
 		}
@@ -247,15 +321,12 @@ export default function RequirementChat() {
 	const startRun = async () => {
 		const { success, response } = await triggerApi({
 			url: `${base}/runs/`, type: 'POST', loader: false,
-			payload: { requirement_uuid: requirementId }, showErrorModal: false,
+			payload: { requirement_uuid: active.uuid }, showErrorModal: false,
 		});
-		if (success && response?.uuid) {
-			openRun(response.uuid);
-			return true;
-		}
-		// 409 means a run is already going — show it rather than erroring.
-		if (response?.run_uuid) {
-			openRun(response.run_uuid);
+		// Either way the version's run list is what the thread renders from,
+		// so refetch rather than splicing a run in by hand.
+		if (success || response?.run_uuid) {
+			await reloadActive();
 			return true;
 		}
 		notify('error', 'Could not start the build', response?.message);
@@ -272,7 +343,7 @@ export default function RequirementChat() {
 		setBusy(true);
 		if (specDirty) await saveSpec();
 		const { success, response } = await triggerApi({
-			url: `${base}/requirements/${requirementId}/approve/`,
+			url: `${base}/requirements/${active.uuid}/approve/`,
 			type: 'POST', loader: false, payload: {}, showErrorModal: false,
 		});
 		if (!success) {
@@ -282,37 +353,39 @@ export default function RequirementChat() {
 		}
 		const ok = await startRun();
 		setBusy(false);
-		if (!ok) load();
+		if (!ok) reloadActive();
 	};
 
-	if (!req) return null;
-	const meta = STATUS_META[req.status] || STATUS_META.gathering;
-	const locked = req.status === 'approved';
+	if (versions === null) return null;
+
+	const locked = active?.status === 'approved';
+	// Open unless the newest version is already built and the user has not
+	// asked for another round.
+	const composing = !active || !locked || continuing;
 
 	// Only the newest assistant turn can still be answered. Earlier ones need
 	// no chips: the user's own reply repeats each question above its answer.
-	const messages = req.messages || [];
-	const lastAssistant = [...messages]
+	const lastAssistant = [...(active?.messages || [])]
 		.reverse()
 		.find((m) => m.role === 'assistant');
 	const openQuestions =
-		!locked && !req.is_thinking && lastAssistant?.questions?.length
+		active && !locked && !active.is_thinking && lastAssistant?.questions?.length
 			? lastAssistant.questions
 			: null;
 	const answersReady = openQuestions ? isAnswered(openQuestions, answers) : false;
 
-	const hasSpec = Boolean(req.spec_markdown || spec);
+	const hasSpec = Boolean(active?.spec_markdown || spec);
 	const buildInFlight = Boolean(activeRun && !TERMINAL.includes(activeRun.status));
-	// "partial" still produced a running app, so it counts as ready — what it
-	// lost is some finishing steps, which the build card in the chat reports.
-	const appReady =
-		activeRun && ['success', 'partial'].includes(activeRun.status)
-			? Boolean(activeRun.app_access?.url || activeRun.test_users?.length)
-			: false;
+	const appReady = Boolean(appRun);
 
-
-	// Same box, two jobs: reply to the agent, or open the next version.
-	const submit = () => (locked ? startFollowUp() : send());
+	// One box, three jobs: the first ask, a reply to the agent, or the next
+	// version. Which one it is follows from where the thread has got to.
+	const submit = () => {
+		const content = reply.trim();
+		if (!content || busy) return;
+		if (!active || locked) startVersion(content);
+		else send();
+	};
 
 	const sendAnswers = () => {
 		if (!openQuestions || !answersReady) return;
@@ -324,52 +397,64 @@ export default function RequirementChat() {
 
 	return (
 		<div className="flex min-h-0 grow gap-[12px]">
-			{/* Conversation */}
+			{/* The thread */}
 			<div className="flex w-1/2 min-w-[380px] flex-col rounded-[12px] border border-[#DDE2E5] bg-white">
-				<div className="flex items-center justify-between border-b border-[#F1F3F5] px-[16px] py-[10px]">
-					<span className="font-lato text-[13px] font-semibold text-[#212429]">
-						{req.title || 'New requirement'}
-					</span>
-					<span
-						className="rounded-full px-[8px] py-[2px] font-lato text-[10px] font-bold uppercase tracking-[0.05em]"
-						style={{ backgroundColor: meta.bg, color: meta.accent }}
-					>
-						{meta.label}
-					</span>
-				</div>
-
 				<div ref={scrollRef} className="min-h-0 grow overflow-y-auto py-[8px]">
-					{(req.messages || []).map((m) => <Bubble key={m.seq} message={m} />)}
-					{req.is_thinking ? (
-						<div className="px-[16px] py-[6px] font-lato text-[12px] italic text-[#9CA3AF]">
-							Thinking…
-						</div>
+					{versions.length === 0 ? (
+						<Bubble
+							message={{
+								role: 'assistant',
+								content:
+									"What do you want to build? Describe it in a sentence or two, the way you'd explain it to a colleague — no technical detail needed. I'll ask what I need to know, then write it up for you to approve before anything is built.",
+							}}
+						/>
 					) : null}
-					{req.error_message ? (
-						<div className="mx-[16px] my-[8px] rounded-[6px] bg-[#FEF2F2] px-[10px] py-[8px] font-lato text-[12px] text-[#B91C1C]">
-							{req.error_message}
-						</div>
-					) : null}
-					{/* The build belongs in the thread it came from, as the last
-					    thing that happened in the conversation. */}
-					{activeRunId ? (
-						<div className="px-[16px] py-[8px]">
-							<RunLive
-								key={activeRunId}
-								appId={appId}
-								runId={activeRunId}
-								embedded
-								onRun={setActiveRun}
-								onSwitchRun={openRun}
-							/>
-						</div>
-					) : null}
+
+					{versions.map((version, index) => {
+						const isActive = version.uuid === active?.uuid;
+						const runUuid = version.runs?.[0]?.uuid;
+						return (
+							<div key={version.uuid}>
+								{versions.length > 1 || !isActive ? (
+									<VersionRule index={index} requirement={version} />
+								) : null}
+								{(version.messages || []).map((m) => (
+									<Bubble key={`${version.uuid}-${m.seq}`} message={m} />
+								))}
+								{isActive && version.is_thinking ? (
+									<div className="px-[16px] py-[6px] font-lato text-[12px] italic text-[#9CA3AF]">
+										Thinking…
+									</div>
+								) : null}
+								{isActive && version.error_message ? (
+									<div className="mx-[16px] my-[8px] rounded-[6px] bg-[#FEF2F2] px-[10px] py-[8px] font-lato text-[12px] text-[#B91C1C]">
+										{version.error_message}
+									</div>
+								) : null}
+								{/* The build belongs in the version it came from, as the
+								    last thing that happened in that round. */}
+								{runUuid ? (
+									<div className="px-[16px] py-[8px]">
+										<RunLive
+											key={runUuid}
+											appId={appId}
+											runId={runUuid}
+											embedded
+											onRun={recordRun}
+											onSwitchRun={() => reloadActive()}
+										/>
+									</div>
+								) : null}
+							</div>
+						);
+					})}
+
 					{continuing ? (
 						<Bubble
 							message={{
 								role: 'assistant',
 								content:
-									"Happy to keep going. What would you like to add or change? " +
+									'Happy to keep going. What would you like to add or change? ' +
 									"I'll ask what I need to know, then write up the next version " +
 									'for you to approve.',
 							}}
@@ -377,9 +462,9 @@ export default function RequirementChat() {
 					) : null}
 				</div>
 
-				{!locked || continuing ? (
+				{composing ? (
 					<div className="border-t border-[#F1F3F5] p-[10px]">
-						{openQuestions && !locked ? (
+						{openQuestions ? (
 							<div className="mb-[10px] rounded-[8px] border border-[#E5E7EB] bg-[#FAFAFF] p-[12px]">
 								<QuestionAnswers
 									questions={openQuestions}
@@ -410,32 +495,45 @@ export default function RequirementChat() {
 								if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit();
 							}}
 							rows={3}
-							disabled={busy || (!locked && req.is_thinking)}
+							autoFocus={!active}
+							disabled={busy || Boolean(active && !locked && active.is_thinking)}
 							placeholder={
-								locked
-									? 'What would you like to add or change?'
-									: req.is_thinking
-										? 'The agent is replying…'
-										: openQuestions
-											? 'Anything to add? (optional)'
-											: 'Answer the questions, or ask for changes…'
+								!active
+									? PLACEHOLDER
+									: locked
+										? 'What would you like to add or change?'
+										: active.is_thinking
+											? 'The agent is replying…'
+											: openQuestions
+												? 'Anything to add? (optional)'
+												: 'Answer the questions, or ask for changes…'
 							}
 							className="w-full resize-none rounded-[8px] border border-[#DDE2E5] p-[8px] font-lato text-[13px] focus:border-primary focus:outline-none disabled:bg-[#F8FAFC]"
 						/>
 						<div className="mt-[6px] flex items-center justify-between gap-[10px]">
 							<span className="font-lato text-[11px] text-[#9CA3AF]">
-								{locked
-									? 'This starts the next version — nothing changes until you approve it.'
-									: req.is_thinking
-										? 'Waiting for the agent…'
-										: '⌘/Ctrl + Enter'}
+								{!active
+									? '⌘/Ctrl + Enter'
+									: locked
+										? 'This starts the next version — nothing changes until you approve it.'
+										: active.is_thinking
+											? 'Waiting for the agent…'
+											: '⌘/Ctrl + Enter'}
 							</span>
 							<button
 								onClick={submit}
-								disabled={busy || !reply.trim() || (!locked && req.is_thinking)}
+								disabled={
+									busy ||
+									!reply.trim() ||
+									Boolean(active && !locked && active.is_thinking)
+								}
 								className="rounded-[6px] bg-[#346BD4] px-[14px] py-[6px] font-lato text-[13px] font-medium text-white hover:bg-[#2556B0] disabled:opacity-40"
 							>
-								{busy ? 'Starting…' : req.is_thinking && !locked ? 'Replying…' : 'Send'}
+								{busy
+									? 'Starting…'
+									: active && !locked && active.is_thinking
+										? 'Replying…'
+										: 'Send'}
 							</button>
 						</div>
 					</div>
@@ -446,7 +544,7 @@ export default function RequirementChat() {
 			<div className="flex min-w-0 grow flex-col rounded-[12px] border border-[#DDE2E5] bg-white">
 				<div className="flex items-center justify-between gap-[10px] border-b border-[#F1F3F5] px-[10px] py-[7px]">
 					<div className="flex gap-[2px]">
-						{BASE_TABS.map((tab) => (
+						{TABS.map((tab) => (
 							<button
 								key={tab.id}
 								onClick={() => setRightTab(tab.id)}
@@ -457,7 +555,9 @@ export default function RequirementChat() {
 								}`}
 							>
 								{tab.label}
-								{tab.id === 'requirement' && req.spec_version ? ` · v${req.spec_version}` : ''}
+								{tab.id === 'requirement' && active?.spec_version
+									? ` · v${active.spec_version}`
+									: ''}
 							</button>
 						))}
 					</div>
@@ -484,7 +584,7 @@ export default function RequirementChat() {
 							}`}
 						>
 							{appReady ? (
-								<AppReadyCard appName={req.title} run={activeRun} />
+								<AppReadyCard appName={active?.title} run={appRun} />
 							) : null}
 							{appReady ? null : <SpecHighlights spec={spec} />}
 						</div>
@@ -527,68 +627,30 @@ export default function RequirementChat() {
 								</button>
 								<button
 									onClick={approveAndBuild}
-									disabled={busy || req.is_thinking}
+									disabled={busy || active?.is_thinking}
 									className="rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[16px] py-[8px] font-lato text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
 								>
 									Approve &amp; build →
 								</button>
 							</>
 						) : (
-							<>
-								<button
-									onClick={appReady ? () => setContinuing(true) : build}
-									disabled={busy || buildInFlight || (appReady && continuing)}
-									className="rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[16px] py-[8px] font-lato text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
-								>
-									{buildInFlight
-										? 'Building…'
-										: appReady
-											? 'Continue building →'
-											: req.runs?.length
-												? 'Build again'
-												: 'Start build'}
-								</button>
-							</>
+							<button
+								onClick={appReady ? () => setContinuing(true) : build}
+								disabled={busy || buildInFlight || (appReady && continuing)}
+								className="rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[16px] py-[8px] font-lato text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+							>
+								{buildInFlight
+									? 'Building…'
+									: appReady
+										? 'Continue building →'
+										: active?.runs?.length
+											? 'Build again'
+											: 'Start build'}
+							</button>
 						)}
 					</div>
 				) : null}
-
-				{req.runs?.length > 1 ? (
-					<div className="border-t border-[#F1F3F5]">
-						<div className="px-[16px] pb-[4px] pt-[10px] font-lato text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280]">
-							Earlier builds
-						</div>
-						<div className="max-h-[140px] overflow-y-auto pb-[6px]">
-							{req.runs.map((run) => {
-								const rm = RUN_META[run.status] || RUN_META.queued;
-								return (
-									<button
-										key={run.uuid}
-										onClick={() => openRun(run.uuid)}
-										className={`flex w-full items-center gap-[10px] px-[16px] py-[7px] text-left hover:bg-[#F8FAFC] ${
-											run.uuid === activeRunId ? 'bg-[#F8FAFC]' : ''
-										}`}
-									>
-										<span className="font-mono text-[11px] text-[#6B7280]">
-											{run.uuid.slice(0, 8)}
-										</span>
-										<span className="grow font-lato text-[12px] text-[#9CA3AF]">
-											{run.queued_at ? new Date(run.queued_at).toLocaleString() : ''}
-										</span>
-										<span
-											className="rounded-full px-[8px] py-[2px] font-lato text-[10px] font-bold uppercase tracking-[0.05em]"
-											style={{ backgroundColor: rm.bg, color: rm.accent }}
-										>
-											{rm.label}
-										</span>
-									</button>
-								);
-							})}
-						</div>
-					</div>
-				) : null}
 			</div>
-
 		</div>
 	);
 }
