@@ -354,6 +354,74 @@ only reliable check is that the count in your card matches the row count in
 the table rendered beside it — if the card says 0 and the table shows rows,
 you have hit one of these.
 
+## 4c. Change Logs — the default drawer has this; your page must too
+
+**The default drawer's kebab menu has a "Change Logs" action next to Edit.**
+Switching an entity to a custom `customMainDetail` page removes that menu
+entirely, and nothing else on the page replaces it — the page silently loses
+a capability every other entity in the app still has, the same failure shape
+as §2 (rows opening two different ways), but for one page instead of one
+table.
+
+The action calls the module's own CRUD endpoint with `action=fetch_audit_logs`
+— the same audit-log data the drawer's "Change Logs" view reads, so building
+this is not new backend work, just wiring it into your page:
+
+```ts
+const url = `${apiUrl.split('?')[0]}?object_uuid=${objectUuid}` +
+  `&action=fetch_audit_logs&view=detail`;
+const res = await fetch(url, { credentials: 'include' });
+const { success, response } = await res.json();
+// response: { audit_logs: [...], workflow_transactions: { statuses, tags } }
+```
+
+`audit_logs` entries are `{ id, actor, actor_type, action, object_id,
+object_uuid, object_type, timestamp, changes }` — `action` is `"Create"`,
+`"Update"` or `"Delete"`; `changes` is a serialized diff string, present for
+`Update`. Render newest first (the endpoint already sorts `-id`); skip
+rendering `changes` for `Create` rows (there is nothing to diff yet).
+
+**This page has no drawer — it is a full routed page (§2).** The drawer's own
+"Change Logs" works by swapping the drawer's body in place; there is no
+drawer here to swap. Do not add a new route for it and do not use a centered
+modal — either fights with the tabs and content already on the page. The
+equivalent is a **slide-over panel anchored to the right edge of the
+viewport**, layered on top of the full page (`fixed inset-y-0 right-0`, a
+width like `w-[420px]`, an overlay behind it), opened by a header action next
+to `WorkflowStatus`/Edit and closed by its own back/X control — the same
+gesture users already know from every entity that still uses the drawer:
+
+```jsx
+// module scope — see the stability rule in §5
+const ChangeLogPanel = ({ apiUrl, objectUuid, onClose }) => (
+  <>
+    <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
+    <div className="fixed inset-y-0 right-0 w-[420px] bg-white shadow-xl z-50 overflow-y-auto p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold">Change Logs</h2>
+        <button onClick={onClose} aria-label="Close">&times;</button>
+      </div>
+      {/* fetch + render the timeline, as above */}
+    </div>
+  </>
+);
+
+const PatientDetail = ({ data, generalDetails, workflowDetails, objectUuid, apiUrl, onRefresh }) => {
+  const [showChangeLogs, setShowChangeLogs] = useState(false);
+  // ...header actions...
+  <button onClick={() => setShowChangeLogs(true)}>Change Logs</button>
+  {showChangeLogs && (
+    <ChangeLogPanel apiUrl={apiUrl} objectUuid={objectUuid} onClose={() => setShowChangeLogs(false)} />
+  )}
+};
+```
+
+Do not reach for `useDetailViewContext`/`DetailViewProvider` here — those
+exist for the framework's own drawer internals and assume that provider is
+mounted above you, which a standalone routed page is not guaranteed to have.
+`customMainDetail` already receives `apiUrl` and `objectUuid` as props (§3);
+build the fetch from those directly.
+
 ## 5. The stability rule — read this before writing the page
 
 `customTableBody`, `customMainDetail` and any component passed to `CrudHandler`
@@ -388,7 +456,8 @@ Two corollaries:
 ## 6. Required page anatomy
 
 1. **Header / identity** — title, unique reference, avatar or icon, workflow
-   status chip, primary actions, back link.
+   status chip, primary actions, back link, and a **Change Logs** action
+   (§4c) — the default drawer has one and a custom page must not lose it.
 2. **Key-facts strip** — the 4–8 most-consulted fields from
    `generalDetails.fields`. Not all of them; the rest belong in Overview.
 3. **Overview tab** — remaining fields grouped into titled sections (use
@@ -456,9 +525,10 @@ const CHILD_TABS = [
 
 const KEY_FACTS = ['patient_id', 'enrolled_on', 'primary_physician', 'city'];
 
-const PatientDetail = ({ data, generalDetails, workflowDetails, objectUuid, onRefresh }) => {
+const PatientDetail = ({ data, generalDetails, workflowDetails, objectUuid, apiUrl, onRefresh }) => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
+  const [showChangeLogs, setShowChangeLogs] = useState(false); // see §4c
 
   // Loading: a skeleton, never a bare spinner or an empty div.
   if (!data) return <div className="h-40 rounded-xl bg-gray-100 animate-pulse" />;
@@ -479,7 +549,18 @@ const PatientDetail = ({ data, generalDetails, workflowDetails, objectUuid, onRe
             onStatusChange={onRefresh}
           />
         )}
+        {/* §4c — the default drawer has this action; a custom page must keep it */}
+        <button onClick={() => setShowChangeLogs(true)} className="ml-auto text-sm text-gray-500">
+          Change Logs
+        </button>
       </div>
+      {showChangeLogs && (
+        <ChangeLogPanel
+          apiUrl={apiUrl || `/patients/?object_uuid=${objectUuid}`}
+          objectUuid={objectUuid}
+          onClose={() => setShowChangeLogs(false)}
+        />
+      )}
 
       {/* 2. key facts */}
       <div className="grid max-md:grid-cols-2 md:grid-cols-4 gap-4 py-4">
@@ -558,6 +639,8 @@ export { default as PatientDetail } from './PatientDetail';
       match the database, not just each other
 - [ ] Every child table is a scoped `CrudHandler` on the child's own endpoint
 - [ ] **Every child endpoint filters its queryset server-side**
+- [ ] **Change Logs action present** (§4c) — wired to `action=fetch_audit_logs`
+      on the entity's own endpoint, not lost along with the default drawer
 - [ ] No component passed to `CrudHandler` is defined inline
 - [ ] No child callback writes to parent React state
 - [ ] Loading skeleton, per-tab empty state, error state all present

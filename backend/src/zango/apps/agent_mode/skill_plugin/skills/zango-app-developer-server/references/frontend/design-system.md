@@ -315,7 +315,7 @@ display size from §2, and keep the cards under it plain.
   title) · 28–32 (hero metric). One weight step for emphasis (500 → 600/700),
   not three.
 - **Radius**: 4 (chips, inputs inside dense tables) · 10 (inputs, buttons) ·
-  14 (cards). One radius per element class, consistently.
+  12 (cards, `rounded-xl`). One radius per element class, consistently.
 - **Elevation**: at most two levels. A card is a 1px border plus a soft shadow;
   a drawer or modal gets the heavier one. Shadows are not decoration.
 - **Numerals**: every metric, money column and quantity gets
@@ -569,6 +569,20 @@ marketing site. The bar:
 
 Do not add entrance animations to tables or list rows — content that moves on
 every data refresh is an irritation in an app someone uses for six hours.
+
+**If you ever do add a custom transition/animation class, do not name it
+`animate-in`, `fade-in`, `slide-in-from-*`, `zoom-in`, or `spin-in`.** Tailwind
+v4 ships these as built-in utility class names. A custom rule under one of
+these names is not additive — Tailwind's own rule for the same class name is
+emitted later in the cascade and silently wins, so the element keeps
+Tailwind's `animation` (typically with no `fill-mode: forwards`) instead of
+yours. The observed failure: a custom `.animate-in { opacity:0; animation:
+fadeInUp .28s forwards }` got overridden by Tailwind's own `.animate-in`
+rule, which has no fill-mode — every element carrying the class stayed at
+`opacity: 0` permanently, with **zero console errors**, because nothing threw;
+it was a pure cascade collision. If you need a custom name, prefix it
+(`fx-in`, `app-fade-in`) so it cannot collide with a current or future
+Tailwind utility.
 
 Always include, once, in `index.css`:
 

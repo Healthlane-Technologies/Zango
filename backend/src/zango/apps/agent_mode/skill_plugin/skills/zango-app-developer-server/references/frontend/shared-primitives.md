@@ -111,12 +111,17 @@ export const Card = ({
 }) => {
   /* `tone` carries meaning -- a monitoring block that is healthy, a
      warning that needs action. Never use it for decoration: an
-     app where every card is tinted has no emphasis left to spend. */
+     app where every card is tinted has no emphasis left to spend.
+
+     Uses the SAME semantic tokens as StatusChip below
+     (--color-success/warning/error-*), not a second green/amber/red
+     palette -- a real run had Card and StatusChip disagreeing about what
+     "good" looked like because they drew from two different token sets. */
   const toned = tone
     ? {
-        good: 'border-[color:var(--color-green-200,#bbf7d0)] bg-[color:var(--color-green-50,#f0fdf4)]',
-        warn: 'border-[color:var(--color-amber-200,#fde68a)] bg-[color:var(--color-amber-50,#fffbeb)]',
-        bad: 'border-[color:var(--color-red-200,#fecaca)] bg-[color:var(--color-red-50,#fef2f2)]',
+        good: 'border-[color:var(--color-success-200,#bbf7d0)] bg-[color:var(--color-success-50)]',
+        warn: 'border-[color:var(--color-warning-200,#fde68a)] bg-[color:var(--color-warning-50)]',
+        bad: 'border-[color:var(--color-error-200,#fecaca)] bg-[color:var(--color-error-50)]',
         info: 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]',
       }[tone]
     : tinted
@@ -155,9 +160,9 @@ export const Inset = ({
 }) => {
   const toned = tone
     ? {
-        good: 'border-[color:var(--color-green-200,#bbf7d0)] bg-[color:var(--color-green-50,#f0fdf4)]',
-        warn: 'border-[color:var(--color-amber-200,#fde68a)] bg-[color:var(--color-amber-50,#fffbeb)]',
-        bad: 'border-[color:var(--color-red-200,#fecaca)] bg-[color:var(--color-red-50,#fef2f2)]',
+        good: 'border-[color:var(--color-success-200,#bbf7d0)] bg-[color:var(--color-success-50)]',
+        warn: 'border-[color:var(--color-warning-200,#fde68a)] bg-[color:var(--color-warning-50)]',
+        bad: 'border-[color:var(--color-error-200,#fecaca)] bg-[color:var(--color-error-50)]',
         info: 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]',
       }[tone]
     : 'border-[color:var(--color-gray-200)] bg-[color:var(--color-gray-50)]';
@@ -188,15 +193,15 @@ export const MetricTile = ({
 }) => {
   const dot = {
     neutral: 'bg-[color:var(--color-gray-400)]',
-    good: 'bg-[color:var(--color-green-500,#22c55e)]',
-    warn: 'bg-[color:var(--color-amber-500,#f59e0b)]',
-    bad: 'bg-[color:var(--color-red-500,#ef4444)]',
+    good: 'bg-[color:var(--color-success-500,#22c55e)]',
+    warn: 'bg-[color:var(--color-warning-500,#f59e0b)]',
+    bad: 'bg-[color:var(--color-error-500,#ef4444)]',
   }[tone];
   const txt = {
     neutral: 'text-[color:var(--color-gray-600)]',
-    good: 'text-[color:var(--color-green-700,#15803d)]',
-    warn: 'text-[color:var(--color-amber-700,#b45309)]',
-    bad: 'text-[color:var(--color-red-700,#b91c1c)]',
+    good: 'text-[color:var(--color-success-700,#15803d)]',
+    warn: 'text-[color:var(--color-warning-700,#b45309)]',
+    bad: 'text-[color:var(--color-error-700,#b91c1c)]',
   }[tone];
   return (
     <div className="rounded-lg border border-[color:var(--color-gray-200)] bg-white p-3.5">
@@ -698,32 +703,54 @@ export const RailCard = ({
   title,
   icon,
   count,
+  accent,
   children,
 }: {
   title: string;
   icon?: ReactNode;
   count?: number;
+  /** Optional 3px top border so multiple RailCards in the same rail read as
+   *  distinct blocks rather than N identical white boxes stacked vertically
+   *  (design-system.md §6, "give every page one visual anchor" applies
+   *  inside the rail too). Use sparingly -- carries meaning like `tone`
+   *  elsewhere, not decoration on every card. */
+  accent?: 'brand' | 'success' | 'warning' | 'error';
   children: ReactNode;
-}) => (
-  <section className="rounded-xl border border-[color:var(--color-gray-200)] bg-white">
-    <header className="flex items-center gap-2 px-4 pb-2 pt-3.5">
-      {icon ? (
-        <span className="text-[color:var(--color-gray-400)]">{icon}</span>
-      ) : null}
-      <h3 className="text-[13.5px] font-semibold tracking-[-0.01em] text-[color:var(--color-gray-900)]">
-        {title}
-      </h3>
-      {typeof count === 'number' && (
-        <span className="rounded-md bg-[color:var(--color-gray-100)] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[color:var(--color-gray-600)]">
-          {count}
-        </span>
-      )}
-    </header>
-    <div className="px-4 pb-4 text-[13px] text-[color:var(--color-gray-700)]">
-      {children}
-    </div>
-  </section>
-);
+}) => {
+  const topBorder = accent
+    ? {
+        brand: 'border-t-[3px] border-t-[color:var(--color-brand-500)]',
+        success: 'border-t-[3px] border-t-[color:var(--color-success-500)]',
+        warning: 'border-t-[3px] border-t-[color:var(--color-warning-500)]',
+        error: 'border-t-[3px] border-t-[color:var(--color-error-500)]',
+      }[accent]
+    : '';
+  return (
+    <section
+      className={
+        'overflow-hidden rounded-xl border border-[color:var(--color-gray-200)] bg-white ' +
+        topBorder
+      }
+    >
+      <header className="flex items-center gap-2 px-4 pb-2 pt-3.5">
+        {icon ? (
+          <span className="text-[color:var(--color-gray-400)]">{icon}</span>
+        ) : null}
+        <h3 className="text-[13.5px] font-semibold tracking-[-0.01em] text-[color:var(--color-gray-900)]">
+          {title}
+        </h3>
+        {typeof count === 'number' && (
+          <span className="rounded-md bg-[color:var(--color-gray-100)] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[color:var(--color-gray-600)]">
+            {count}
+          </span>
+        )}
+      </header>
+      <div className="px-4 pb-4 text-[13px] text-[color:var(--color-gray-700)]">
+        {children}
+      </div>
+    </section>
+  );
+};
 
 /* ------------------------------------------------------------------ *
  * AtAGlance -- the rail's flat-attribute list. Icon + line, nothing
@@ -774,9 +801,9 @@ export const Meter = ({
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   const bar = {
     brand: 'var(--color-brand-500)',
-    good: 'var(--color-green-600, #16a34a)',
-    warn: 'var(--color-amber-500, #f59e0b)',
-    bad: 'var(--color-red-600, #dc2626)',
+    good: 'var(--color-success-600, #16a34a)',
+    warn: 'var(--color-warning-500, #f59e0b)',
+    bad: 'var(--color-error-600, #dc2626)',
   }[tone];
   return (
     <div>
