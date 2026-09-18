@@ -139,7 +139,11 @@ qualify, and justify the selection in your summary. A lookup table never
 qualifies, however many FKs point at it.
 
 **2. Is it a primary entity with no children yet?** A profile-style custom
-detail page, without tabs.
+detail page, without tabs — but held to the **same design bar as entity-360**:
+identity block, synthesis lead card, rail, one anchor. See
+[frontend/design-system.md](references/frontend/design-system.md) §6, "Custom
+detail page, no child tables." No tabs does not mean no design effort — a plain
+field dump here is the same failure entity-360 forbids.
 
 **3. Does the list need a non-standard layout?** Kanban (statuses), calendar
 (dates), cards (visual), timeline (sequence). `CrudHandler` supports these via

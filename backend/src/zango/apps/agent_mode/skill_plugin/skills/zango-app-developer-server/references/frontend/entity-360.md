@@ -35,6 +35,14 @@ entity-360 page, and why each remaining model did not. The two tests above are a
 *filter*, not an invitation — a lookup table never passes them, however many
 FKs point at it.
 
+**"Custom detail, no tabs" is not a lesser bar.** An entity that fails test 1
+(nothing points at it) but passes test 2 (a user works on it directly) still
+gets identity block, synthesis lead card, rail and one anchor — everything in
+this file except the tab strip and child tables, because it has none. See
+[design-system.md](design-system.md) §6, "Custom detail page, no child tables."
+The failure mode for this tier is a plain field dump, on the theory that "no
+tabs" means "no design effort" — it does not.
+
 ## 2. Full page, never a drawer
 
 An entity-360 is a **routed page of its own** (`/app/patients/<uuid>`).
@@ -377,9 +385,77 @@ const { success, response } = await res.json();
 
 `audit_logs` entries are `{ id, actor, actor_type, action, object_id,
 object_uuid, object_type, timestamp, changes }` — `action` is `"Create"`,
-`"Update"` or `"Delete"`; `changes` is a serialized diff string, present for
-`Update`. Render newest first (the endpoint already sorts `-id`); skip
-rendering `changes` for `Create` rows (there is nothing to diff yet).
+`"Update"` or `"Delete"`. Render newest first (the endpoint already sorts
+`-id`); skip rendering `changes` for `Create` rows (there is nothing to diff
+yet, and `Create` rows don't reliably omit `changes` either — check `action`,
+not just presence of the field).
+
+**`changes` is an object keyed by field name, each value a `[old, new]`
+pair — never a string.** An earlier version of this doc called it "a
+serialized diff string"; that was wrong and shipped a crash on a real run:
+
+```json
+"changes": {
+  "id": ["N/A", "2"],
+  "booking": ["N/A", "a5068f76-..."],
+  "result_notes": ["N/A", "N/A"]
+}
+```
+
+Rendering `{log.changes}` directly (as the string-shaped example above would
+suggest) throws **React error #31 — "Objects are not valid as a React
+child"** — the whole panel crashes to an error boundary, not just that one
+row. Iterate the entries instead:
+
+```jsx
+{log.changes && log.action !== 'Create' && typeof log.changes === 'object' && (
+  <ul>
+    {Object.entries(log.changes).map(([field, diff]) => {
+      const [oldVal, newVal] = Array.isArray(diff) ? diff : ['—', '—'];
+      return <li key={field}>{field}: {String(oldVal)} → {String(newVal)}</li>;
+    })}
+  </ul>
+)}
+```
+
+Verify against one real `Update` log entry (edit a field, then read
+`fetch_audit_logs` back) — a `Create`-only test booking never exercises the
+`changes` rendering path at all, so it looks fine right up until the first
+edit.
+
+### Change Logs trigger — a styled button, not a bare text link
+
+The header action that opens the panel is a small but real UI element other
+header actions (`WorkflowStatus`, Edit) already look like buttons — a plain
+`<button>` with only text-color classes reads as a stray link, not a control
+at the same level as the rest of the header:
+
+```jsx
+// WRONG — no border, no padding, reads as a link
+<button onClick={openChangeLogs} className="text-[13px] text-gray-500">
+  Change Logs
+</button>
+
+// RIGHT — matches the app's secondary Button treatment, plus an icon
+<button
+  onClick={openChangeLogs}
+  className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--color-gray-300)]
+             bg-white px-3 py-1.5 text-[12.5px] font-medium text-[color:var(--color-gray-700)]
+             shadow-[var(--shadow-xs)] hover:bg-[color:var(--surface-sunken)]"
+>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+       strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-[color:var(--color-gray-500)]">
+    <path d="M3 12a9 9 0 1 0 2.64-6.36" /><path d="M3 4v5h5" /><path d="M12 7v5l3.5 2" />
+  </svg>
+  Change Logs
+</button>
+```
+
+A history/clock glyph (arc + backtick tail) reads clearly as "past activity"
+next to a workflow status chip. Give the panel's close control the same
+treatment — a bordered icon button (`h-7 w-7`, an X glyph), not a bare `×`
+character — so the panel matches the rest of the app's chrome instead of
+looking like an unfinished placeholder.
 
 **This page has no drawer — it is a full routed page (§2).** The drawer's own
 "Change Logs" works by swapping the drawer's body in place; there is no
@@ -392,16 +468,23 @@ to `WorkflowStatus`/Edit and closed by its own back/X control — the same
 gesture users already know from every entity that still uses the drawer:
 
 ```jsx
-// module scope — see the stability rule in §5
+// module scope — see the stability rule in §5. Panel body renders `changes`
+// as field entries (see above) — never `{log.changes}` directly, and the
+// trigger/close controls use the styled-button treatment above, not bare
+// text or a `&times;` character.
 const ChangeLogPanel = ({ apiUrl, objectUuid, onClose }) => (
   <>
     <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-white shadow-xl z-50 overflow-y-auto p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-y-0 right-0 w-[420px] bg-white shadow-xl z-50 flex flex-col">
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3.5">
         <h2 className="text-sm font-semibold">Change Logs</h2>
-        <button onClick={onClose} aria-label="Close">&times;</button>
+        <button onClick={onClose} aria-label="Close" className="grid h-7 w-7 place-items-center rounded-md text-gray-500 hover:bg-gray-100">
+          <CloseIcon className="h-4 w-4" />
+        </button>
       </div>
-      {/* fetch + render the timeline, as above */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* fetch + render the timeline, as above */}
+      </div>
     </div>
   </>
 );
@@ -409,7 +492,9 @@ const ChangeLogPanel = ({ apiUrl, objectUuid, onClose }) => (
 const PatientDetail = ({ data, generalDetails, workflowDetails, objectUuid, apiUrl, onRefresh }) => {
   const [showChangeLogs, setShowChangeLogs] = useState(false);
   // ...header actions...
-  <button onClick={() => setShowChangeLogs(true)}>Change Logs</button>
+  <button onClick={() => setShowChangeLogs(true)} className={CHANGE_LOGS_BUTTON_CLASS}>
+    <HistoryIcon className="h-4 w-4" /> Change Logs
+  </button>
   {showChangeLogs && (
     <ChangeLogPanel apiUrl={apiUrl} objectUuid={objectUuid} onClose={() => setShowChangeLogs(false)} />
   )}
@@ -421,6 +506,52 @@ exist for the framework's own drawer internals and assume that provider is
 mounted above you, which a standalone routed page is not guaranteed to have.
 `customMainDetail` already receives `apiUrl` and `objectUuid` as props (§3);
 build the fetch from those directly.
+
+## 4d. Record info — created/modified fields are already in the payload, just render them
+
+**`BaseDetail.get_general_details()` merges `created_at`, `created_by`,
+`modified_at` and `modified_by` into `generalDetails.fields` automatically,
+for every entity, with no backend work required** — see
+`packages/crud/detail/base.py` → `get_auditlog_details()`. This is easy to
+miss because they are not in the table's own columns and nothing has to be
+added to `Meta.fields` to get them; they show up in the API response whether
+or not the page reads them, so a page that only maps a hand-picked list of
+"business" fields into its sections silently drops them, and nothing errors.
+
+**The default drawer shows these** (as part of its own generic field list),
+so — same failure shape as Change Logs in §4c — switching an entity to a
+custom `customMainDetail` page loses this information unless the page adds
+it back deliberately. A record with no visible "who created this, when, who
+last touched it" reads as unfinished the moment anyone opens the page to
+audit a change.
+
+Add one more `Section`/`FieldGrid` pair near the end of the Overview
+content — same pattern as every other field group on the page:
+
+```jsx
+<Section title="Record info">
+  <FieldGrid
+    fields={fields}
+    keys={['created_by', 'created_at', 'modified_by', 'modified_at']}
+  />
+</Section>
+```
+
+No `render` overrides are needed: `created_at`/`modified_at` arrive
+pre-formatted as display strings (`get_datetime_str_in_current_timezone`),
+`created_by`/`modified_by` arrive as the actor's name (or `"System"`/`"NA"`
+when absent) — unlike most date/FK fields elsewhere on the page, these are
+already presentation-ready.
+
+This applies to **every** `BaseDetail`-backed page — a full routed page
+(§2) and a custom drawer detail alike — provided the page reads from
+`generalDetails.fields` (or the drawer's equivalent `data.general_details`).
+It does **not** apply to a drawer built by hand from a raw table row (no
+`BaseDetail`, no `fetch_item_details`) — a table row only carries the
+columns the table itself declared, and `created_by`/`created_at` are not
+among them unless added as explicit table columns, which changes the list
+view too. For that shape, treat the audit fields as out of scope rather than
+forcing them onto the table.
 
 ## 5. The stability rule — read this before writing the page
 
@@ -461,7 +592,10 @@ Two corollaries:
 2. **Key-facts strip** — the 4–8 most-consulted fields from
    `generalDetails.fields`. Not all of them; the rest belong in Overview.
 3. **Overview tab** — remaining fields grouped into titled sections (use
-   `sections` when the backend supplies it).
+   `sections` when the backend supplies it), ending with a **Record info**
+   section for `created_by`/`created_at`/`modified_by`/`modified_at` (§4d) —
+   already in the payload, the default drawer shows them, a custom page must
+   not lose them.
 4. **One tab per child relation** — a scoped `CrudHandler`, labelled with a
    count badge.
 5. **Timeline / activity** — where the entity has a lifecycle.
@@ -641,6 +775,17 @@ export { default as PatientDetail } from './PatientDetail';
 - [ ] **Every child endpoint filters its queryset server-side**
 - [ ] **Change Logs action present** (§4c) — wired to `action=fetch_audit_logs`
       on the entity's own endpoint, not lost along with the default drawer
+- [ ] **`changes` rendered as `Object.entries`, never `{log.changes}` directly**
+      (§4c) — it is an object of `[old, new]` pairs, not a string; rendering
+      it as a plain child throws React error #31 and crashes the whole panel.
+      Verified against a real `Update` log entry, not just a `Create`-only one
+- [ ] **Change Logs trigger and close control are styled buttons** (§4c) — a
+      bordered pill with an icon for the trigger, a bordered icon button for
+      close; not bare text or a literal `&times;`
+- [ ] **Record info section present** (§4d) — `created_by`, `created_at`,
+      `modified_by`, `modified_at`, already in `generalDetails.fields` with
+      no backend change needed; the default drawer shows them and a custom
+      page must not lose them
 - [ ] No component passed to `CrudHandler` is defined inline
 - [ ] No child callback writes to parent React state
 - [ ] Loading skeleton, per-tab empty state, error state all present

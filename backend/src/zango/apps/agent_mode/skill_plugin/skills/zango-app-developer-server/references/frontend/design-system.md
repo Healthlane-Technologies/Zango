@@ -529,6 +529,54 @@ A page with a title, three bare values, a tab strip and one card containing a
 single field is **not finished**, even though every rule about tokens and
 Tailwind was followed. Check it against the sketch above before moving on.
 
+### Custom detail page, no child tables (SKILL.md decision tier 2)
+
+An entity that fails the entity-360 test — no other model points at it — but is
+still one a user opens and works on directly (`Employee`, `Warehouse`,
+`Contract`) is **not exempt from this bar**. It does not get tabs or child
+tables, because it has none to show. Everything else in the anatomy above still
+applies, in full:
+
+1. **Identity block + identity strip** — same as entity-360. Avatar/monogram,
+   title, status chip, at least one action, then the four-to-six-fact strip.
+   A no-tabs page is not an excuse for a title and a chip.
+2. **The lead card is still a synthesis, not a field dump.** There is no tab
+   strip to hide the field dump under — this makes the rule *more* important
+   here, not less. An `Employee` page's lead card might synthesise tenure,
+   current utilisation and open reviews into one read; it does not restate the
+   header's facts as a bulleted list.
+3. **Main column + right rail still applies.** With no child tables to fill the
+   main column, put the synthesis card(s) and any owned-but-not-foreign-keyed
+   detail there (skills, assignments, documents that belong to this record
+   without being their own model) and use the rail for flat state: status
+   history, at-a-glance attributes, open tasks. A single narrow column of
+   label/value rows is the field-dump failure with tabs removed instead of
+   fixed.
+4. **One anchor still required.** If the entity has a number the page exists
+   for (utilisation %, contract value, days to renewal), it gets `KeyFacts`
+   with `anchor` or a lead-card synthesis at display size — never both saying
+   the same thing.
+5. **Activity is still content**, if the entity has any history worth showing
+   (status changes, assignment changes) — same recent-activity list pattern,
+   even with no child tables to make the record feel connected to anything
+   else.
+6. **All four states still apply** (§3) to whatever the page fetches.
+7. **Change Logs still applies — this rule is unconditional, not entity-360
+   specific.** [entity-360.md](entity-360.md) §4c exists because moving *any*
+   entity off the default drawer onto a custom page removes the drawer's
+   kebab-menu "Change Logs" action, and nothing replaces it unless you build
+   it. That is true whether the page has tabs or not — a tier-2 page is a
+   `customMainDetail` exactly like an entity-360 page, calling the same
+   `action=fetch_audit_logs` endpoint. Wire the same slide-over panel §4c
+   describes. Skipping it here because "there's no timeline tab to put it in"
+   is the exact failure §4c is written against.
+
+The only things entity-360 has that this page does not: a tab strip, counts on
+tabs, and child-table empty states. Everything about identity, synthesis,
+layout, anchor and Change Logs is identical — this is a shorter entity-360
+page, not a different design language. Do not let "no tabs" become "no
+design," and do not let it become "no Change Logs" either.
+
 ### Dashboard
 1. **KPI row** — 3–5 numbers that matter, each with a label and, where it is
    meaningful, a delta. Not twelve.
@@ -715,6 +763,10 @@ better than pulling in a chart library — fewer bytes, full token control.
 - [ ] Detail pages match the §6 anatomy: identity block with avatar + status +
       action, `KeyFacts` **with an `anchor`**, Overview as 2+ titled `Section`s,
       tabs with counts
+- [ ] No-child-table custom detail pages (SKILL.md tier 2) match §6's
+      "Custom detail page, no child tables" anatomy — identity block, synthesis
+      lead card, rail, one anchor. "No tabs" is not "no design"; a field dump
+      here fails the same rule entity-360 does.
 
 **States:**
 - [ ] Loading skeleton, empty state, error state on **every** data surface

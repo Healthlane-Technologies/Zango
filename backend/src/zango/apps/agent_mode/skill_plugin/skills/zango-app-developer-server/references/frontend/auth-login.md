@@ -211,6 +211,23 @@ and nothing more.
   `input:not([type=checkbox])`, `button[type=submit]`, `label`. The password
   reveal control is a `type=button`, so a `button[type=submit]` rule will not
   catch it.
+- **`PasswordLoginForm` stacks its fields with zero gap between them** — each
+  field's row (`form.form-vertical > .form-item`, itself wrapping
+  `.form-control > .w-full > .relative > input`) sits flush against the next.
+  Combined with each input's own fully-rounded border, two flush fields read
+  as an accidental gap/overlap rather than deliberate spacing — confirmed on
+  a real run: email and password looked like they belonged to two different
+  groups. Add real spacing on `.form-item`, not on the input itself (the
+  input has no margin to adjust):
+
+  ```css
+  .app-login .authcard form.form-vertical > .form-item{margin-bottom:14px}
+  ```
+
+  Verify by checking the rendered gap is non-zero, not by eyeballing the
+  screenshot — `getBoundingClientRect()` on the email and password inputs
+  should show a visible difference between `email.bottom` and
+  `password.top`, not `email.bottom === password.top`.
 - `RoleSelection` and `PasswordResetRequired` each ship their **own centred card
   and heading**. Inside your card that reads as a card-in-a-card with the title
   said twice — strip their chrome (`.max-w-lg` wrapper) and hide their heading.
@@ -377,6 +394,8 @@ const CSS = `
   font-size:14px;background:#FBFCFE;outline:none}
 .app-login .authcard input:not([type=checkbox]):not([type=radio]):focus{
   border-color:var(--brand);background:#fff;box-shadow:0 0 0 3.5px rgba(80,72,237,.13)}
+/* PasswordLoginForm's fields are flush with zero gap by default - see §5 */
+.app-login .authcard form.form-vertical > .form-item{margin-bottom:14px}
 .app-login .authcard button[type=submit]{width:100%;height:44px;border:none;border-radius:10px;
   cursor:pointer;font-size:14px;font-weight:600;color:#fff;
   background:linear-gradient(135deg,var(--brand),var(--brand-600))}
@@ -529,4 +548,6 @@ export default AppLoginCard;
       tiles and bold lead-ins, not bare `✓` text
 - [ ] Headline is `700` weight, `max-width:640px`; eyebrow in both panes
 - [ ] Background is layered (2 radial glows + mesh), not one flat gradient
+- [ ] **`.form-item` has real `margin-bottom`** — `PasswordLoginForm`'s fields
+      are flush by default; verify with `getBoundingClientRect()`, not by eye
 - [ ] Verified: single-role, multi-role, and first-login users

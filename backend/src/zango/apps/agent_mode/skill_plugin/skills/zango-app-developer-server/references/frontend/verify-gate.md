@@ -122,3 +122,19 @@ and each is checkable with a single grep over `src/custom/`:
     `ESTIMATED_VALUE`, `emd_amount`, `submission_deadline` are defects. The
     detail API's `name` is a column name, not a display label — title-case it
     and strip underscores, or pass an explicit label.
+
+26. **Tier-2 custom detail pages (no child tables) match the same bar as
+    entity-360.** For every entity given a "custom detail, no tabs" page under
+    SKILL.md decision test 2: identity block with avatar + status + action,
+    a synthesis lead card (not a field dump), a right rail carrying flat state,
+    and one anchor. See design-system.md §6, "Custom detail page, no child
+    tables." A page here that is a single narrow column of label/value rows is
+    the entity-360 field-dump failure with the tabs removed instead of fixed.
+
+27. **Every `customMainDetail` page — entity-360 or tier-2 — replaces the
+    Change Logs action the default drawer had.** Grep for
+    `fetch_audit_logs` under every directory containing a `*Detail.tsx`
+    component used as `customMainDetail`; a page with none is missing the
+    capability every other entity in the app still has via the drawer. See
+    entity-360.md §4c. This applies regardless of whether the page has tabs —
+    "no timeline tab" is not a reason to skip it.
