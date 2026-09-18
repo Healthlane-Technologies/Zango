@@ -374,6 +374,8 @@ Then one app-level entry: the **identity strip** — per entity, the four to six
 facts that identify a record at a glance (reference number, dates, the one
 relationship that matters, contact). The header is not a title plus a chip.
 
+Write it, then build exactly it.
+
 ### 5c. Write the shared primitives — before any page
 
 > **Dispatch this to one subagent and wait for it.** Give it: the workspace
@@ -466,8 +468,8 @@ Rules:
   reference skeleton and swap classes for inline `style` — the scaffold ships
   Tailwind v4, and inline styles cannot express hover, focus or responsive
   behaviour.
-- **Export every page from `src/custom/pages/index.js`, with the export name
-  matching the route's `component` exactly** — a mismatch renders blank.
+- **Export every page from `src/custom/pages/index.js`. The export name must
+  match the route's `component` value exactly**, or the page renders blank.
 
 Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
 [frontend/design-system.md](references/frontend/design-system.md),
