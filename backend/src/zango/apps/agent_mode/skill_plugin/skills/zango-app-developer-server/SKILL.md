@@ -409,8 +409,11 @@ decision record, not a document. Write it, then build exactly it.
 ### 5c. Write the shared primitives — before any page
 
 > **Dispatch this to one subagent and wait for it.** Give it: the workspace
-> path, the app's `LOCALE`/`CURRENCY` from the requirement, this sub-step's
-> text, and [shared-primitives.md](references/frontend/shared-primitives.md)
+> path, the app's `LOCALE`/`CURRENCY` from the requirement, **the theme line
+> from the run context** (so the primitives use the app's real tokens), the
+> entity and status names the app actually uses — `StatusChip` renders those —
+> this sub-step's text, and
+> [shared-primitives.md](references/frontend/shared-primitives.md)
 > + [design-system.md](references/frontend/design-system.md) §4 to read.
 > Require it to return **the exact export signature list of the file it
 > wrote** — names and props, no bodies. That list is a required input to
@@ -442,17 +445,38 @@ pages are ~100 lines of inline-styled JSX each, this step was skipped.
 
 ### 5d. Write the custom pages
 
-> **Dispatch one subagent per page, in parallel.** Each gets: the workspace
-> path, that entity's six answers copied verbatim out of `design-plan.md`,
-> the export list returned by 5c, this sub-step's text, and its references
-> to read. State plainly: *compose only from the primitives in the list;
-> do not invent or restyle layout primitives.* Each returns the file it
-> wrote, the export name for `index.js`, and any deviation from the plan
-> with its reason — never the file contents.
+> **Dispatch one subagent per page, in parallel.** A subagent starts with no
+> memory of this run — it has not seen the run context, and it did not write
+> the models in STEP 4. Anything you leave out, it invents, and invented field
+> names render as blank tabs. Each prompt must therefore carry, verbatim:
+>
+> - the workspace path;
+> - that entity's six answers copied out of `design-plan.md`;
+> - the export list returned by 5c;
+> - **the backend facts the page binds to** — the entity's module and model
+>   name, its field names and types as you actually wrote them in STEP 4, the
+>   CRUD view's URL, and for each child tab the related model plus the FK
+>   field that links it. Copy these from the files you wrote, not from memory;
+> - **the app's theme line** from the run context, and `LOCALE`/`CURRENCY`;
+> - this sub-step's text and its reference links.
+>
+> State plainly: *compose only from the primitives in the list; do not invent
+> or restyle layout primitives, and do not invent field names — if a field you
+> need is absent from the list above, say so in your report rather than
+> guessing.*
+>
+> Each returns the file it wrote, the export name for `index.js`, any
+> deviation from `design-plan.md` with its reason, and any field it needed but
+> was not given — never the file contents.
 >
 > You then write `index.js` yourself from the returned export names. Do not
 > let subagents edit `index.js` concurrently; parallel edits to one file
 > collide and silently lose exports.
+>
+> **Read every report before moving on.** A subagent cannot see its siblings,
+> so cross-page consistency is yours to enforce: if two reports describe the
+> same concept differently, or one flags a missing field, fix it now — the
+> gate will otherwise catch it later at higher cost.
 
 **Build the plan from 5b, page by page.** Open `design-plan.md` and implement
 each entity's six answers literally: the lead card it names, the rail it names,
