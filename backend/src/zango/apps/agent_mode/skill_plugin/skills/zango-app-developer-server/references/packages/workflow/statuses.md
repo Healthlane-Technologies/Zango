@@ -47,7 +47,7 @@ class Meta:
 ```
 
 **Status Properties**:
-- **color**: Badge color (gray, green, blue, orange, red, purple, yellow)
+- **color**: Badge color (gray, green, blue, orange, red, purple, yellow, or a custom hex code e.g. `#ff9900`)
 - **label**: Display name shown to users
 
 ---
@@ -64,7 +64,7 @@ class Meta:
 | `purple` | Special status |
 | `yellow` | Caution, On Hold |
 
-> **Note:** Status badges render with white font color, so avoid light colors like `yellow` where white text is hard to read. Prefer `orange` for caution/pending/on-hold states instead of `yellow`.
+> **Note:** Status badges render with white font color, so avoid light colors like `yellow` where white text is hard to read. Prefer `orange` for caution/pending/on-hold states instead of `yellow`. A custom hex code (e.g. `#ff9900`) is also accepted for `color` — the same readability caveat applies, so pick a hex value dark/saturated enough for white text.
 
 ---
 
