@@ -251,12 +251,54 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 |---|---|---|
 | 5a | Scaffold `frontend/` | `frontend/` with `src/custom/` |
 | 5b | **Plan the pages** | `design-plan.md` at the workspace root |
-| 5c | Write the shared primitives | `src/custom/pages/shared.tsx` |
-| 5d | Write the custom pages | entity-360, landing pages |
-| 5e | Brand the login page | `AppLoginCard.tsx` |
+| 5c | Write the shared primitives *(subagent)* | `src/custom/pages/shared.tsx` |
+| 5d | Write the custom pages *(subagent per page)* | entity-360, landing pages |
+| 5e | Brand the login page *(subagent)* | `AppLoginCard.tsx` |
 | 5f | Build the bundle | `frontend/zango-build/zango-app.<ts>.min.js` |
 | 5g | Create the `app` module | `backend/app/` + `app.html` |
 | 5h | Register routes and menus | navigation for every role |
+
+### Delegate 5c, 5d and 5e to subagents
+
+**5c, 5d and 5e are each done by a `Task` subagent, not in this thread.**
+
+The reference docs those steps need — `shared-primitives.md`,
+`design-system.md`, `entity-360.md`, `crud/*`, `form.md`, `auth-login.md` —
+come to about 70k tokens. Read here, they stay in context for every later
+turn: the build, the app module, routes, the gate. Read inside a subagent they
+are released when it returns. This is the difference between finishing a build
+and running out of context at 5f.
+
+**It changes nothing about what gets written.** Every rule in 5c–5e is binding
+on the subagent exactly as written; the subagent reads this skill's sub-step
+and its references and follows them. You are moving where the work happens,
+not what the work is.
+
+Three rules make this safe:
+
+1. **5c first, alone, and wait for it.** Its return value — the exact export
+   signatures of `shared.tsx` — is an input to every 5d and 5e subagent. They
+   compose from those primitives, so they must know them verbatim. Never run
+   5c in parallel with the pages.
+2. **Every subagent prompt carries, verbatim:** the workspace path, the
+   relevant entity's six answers copied out of `design-plan.md`, the export
+   list from 5c, and the sub-step's own text and reference links. A subagent
+   starts with no memory of this run — anything you leave out, it invents.
+   Tell it explicitly: *compose only from the listed primitives; do not
+   invent new layout primitives or restyle existing ones.*
+3. **Each subagent returns a short report, not code:** files written, export
+   names added to `index.js`, and any deviation from `design-plan.md` with its
+   reason. Never ask a subagent to return file contents — that puts the tokens
+   straight back into this context and defeats the point.
+
+You keep in this thread: `design-plan.md` (5b), the `index.js` and `App.tsx`
+wiring, the build (5f), the app module (5g), routes and menus (5h), and the
+verify gate. **The gate is yours and is not delegated** — it is what catches a
+subagent that drifted from the plan, so it must run in the thread that holds
+the plan.
+
+If the `Task` tool is unavailable for any reason, do 5c–5e inline in order.
+The output must be identical; only the context cost differs.
 
 ### 5a. Scaffold the frontend — FIRST, before any of the rest
 
@@ -369,6 +411,14 @@ decision record, not a document. Write it, then build exactly it.
 
 ### 5c. Write the shared primitives — before any page
 
+> **Dispatch this to one subagent and wait for it.** Give it: the workspace
+> path, the app's `LOCALE`/`CURRENCY` from the requirement, this sub-step's
+> text, and [shared-primitives.md](references/frontend/shared-primitives.md)
+> + [design-system.md](references/frontend/design-system.md) §4 to read.
+> Require it to return **the exact export signature list of the file it
+> wrote** — names and props, no bodies. That list is a required input to
+> every 5d and 5e subagent, which is why this one runs alone and first.
+
 Write `src/custom/pages/shared.tsx` **first**, and compose every later page
 from it. Full contract and a copyable floor:
 [frontend/shared-primitives.md](references/frontend/shared-primitives.md).
@@ -394,6 +444,18 @@ If at the end of your run `shared.tsx` is a near-empty file and the detail
 pages are ~100 lines of inline-styled JSX each, this step was skipped.
 
 ### 5d. Write the custom pages
+
+> **Dispatch one subagent per page, in parallel.** Each gets: the workspace
+> path, that entity's six answers copied verbatim out of `design-plan.md`,
+> the export list returned by 5c, this sub-step's text, and its references
+> to read. State plainly: *compose only from the primitives in the list;
+> do not invent or restyle layout primitives.* Each returns the file it
+> wrote, the export name for `index.js`, and any deviation from the plan
+> with its reason — never the file contents.
+>
+> You then write `index.js` yourself from the returned export names. Do not
+> let subagents edit `index.js` concurrently; parallel edits to one file
+> collide and silently lose exports.
 
 **Build the plan from 5b, page by page.** Open `design-plan.md` and implement
 each entity's six answers literally: the lead card it names, the rail it names,
@@ -435,6 +497,13 @@ Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
 [frontend/form.md](references/frontend/form.md).
 
 ### 5e. Brand the login page
+
+> **Dispatch this to one subagent.** It may run in parallel with 5d — the
+> login page shares no file with them. Give it: the workspace path, the
+> app's theme/brand colours, the export list from 5c, this sub-step's text,
+> and [auth-login.md](references/frontend/auth-login.md) to read. It returns
+> the file written plus the exact `authConfig` wiring line for `App.tsx`;
+> **you** apply that line to `App.tsx` in this thread.
 
 **Every app gets a branded login page. Always** — there is no toggle and no
 condition. It is the first screen anyone sees, and the framework default says

@@ -255,6 +255,32 @@ custom React" note are removed; the question table now asks what else belongs
 on an entity's page (which becomes its child tabs) and collects product name
 and brand colours for the login screen.
 
+## Context-cost changes (2026-09-18)
+
+Agent Mode runs were reaching the context ceiling during STEP 5, which is what
+`RESUME_PREAMBLE` exists to recover from. Measured baseline: ~23M cache-read
+tokens per frontend build, main-loop resident context ~130k.
+
+| Change | Detail |
+|---|---|
+| **`frontend/crud.md` split into `frontend/crud/`** | 68KB read whole to obtain two or three patterns, then carried for the rest of the run. Split on existing `##` boundaries into `core.md` (3.1KB — imports, API response formats, column types, CrudHandler), `tables.md` (34KB), `detail.md` (11KB), `hooks.md` (14KB). **Lossless**: reconstruction is byte-identical to the 68438 B original. STEP 5d now cites core+detail (14KB) instead of 68KB. |
+| **STEP 5c/5d/5e dispatched to subagents** | The ~70k tokens of frontend references now load in child contexts that are released on return, instead of riding the main loop's cached prefix through 5f–5h and the gate. Sub-step text and every rule are unchanged and binding on the subagent. 5c runs alone and first because its export list feeds 5d/5e; `index.js` and `App.tsx` are written by the main thread to avoid concurrent edits to one file; the verify gate is explicitly **not** delegated. Falls back to inline execution if `Task` is unavailable. |
+
+`shared-primitives.md` was **not** split, though it is 44KB: it is a single
+contiguous `tsx` block the agent writes out as one file, and splitting it would
+break the copyable floor and change generated output.
+
+Safety, verified against `claude_agent_sdk` 0.2.152 rather than assumed:
+`PreToolUseHookInput` inherits `_SubagentContextMixin`, whose `agent_id` is
+documented as "present only when the hook fires from inside a Task-spawned
+sub-agent" — so `guards.py` contains subagent tool calls too. This matters
+because the settings-file deny rules only hard-block specific high-value
+targets; general workspace containment exists solely in that hook, since glob
+syntax cannot express "deny all except this subtree". `resolve_within` joins
+relative paths to the workspace root rather than the process cwd, so a
+subagent cwd cannot widen the sandbox. The denial sink is `queue.Queue.put`
+and is safe under the parallel 5d subagents.
+
 ## Keeping it in sync
 
 This copy is the source of truth for Agent Mode. When the interactive skill
