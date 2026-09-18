@@ -4,6 +4,8 @@ import { useDispatch } from 'react-redux';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import useApi from '../hooks/useApi';
 import PlatformAppRoutes from '../pages/app/routes';
+import { AgentModeRoutes } from '../pages/appAgentMode/routes';
+import BuildWithAgentRoutes from '../pages/platformBuildWithAgent/routes';
 import PlatformLogsRoutes from '../pages/platformLogs/routes';
 import PlatformRoutes from '../pages/platform/routes';
 import PlatformSettingsRoutes from '../pages/platformSettings/routes';
@@ -50,9 +52,19 @@ export const AppRoutes = () => {
 					element={<PlatformLogsRoutes />}
 				></Route>
 				<Route
+					path="/platform/build-with-agent/*"
+					element={<BuildWithAgentRoutes />}
+				></Route>
+				<Route
 					path="/platform/log-connectors/*"
 					element={<Navigate to="/platform/settings/log-connectors" replace />}
 				></Route>
+				{/* Ranked above the app shell by specificity: this screen deliberately
+				    has no left menu. */}
+				<Route
+					path="/platform/apps/:appId/agent-mode/*"
+					element={<AgentModeRoutes />}
+				/>
 				<Route path="/platform/apps/:appId/*" element={<PlatformAppRoutes />} />
 				<Route path="*" element={<Navigate to="./platform/apps" />} />
 			</Routes>

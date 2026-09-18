@@ -9,6 +9,15 @@ import FileUpload from '../../../../../components/Form/FileUpload';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormDataOrder } from '../../../../../utils/form';
 import { setPollingTastIds, toggleRerenderPage } from '../../../slice';
+import BuildWithAgentOption from './BuildWithAgentOption';
+
+const Separator = () => (
+	<div className="flex w-full items-center">
+		<div className="h-px grow bg-[#A3ABB1]" />
+		<p className="mx-4 font-lato text-sm font-medium text-[#A3ABB1]">OR</p>
+		<div className="h-px grow bg-[#A3ABB1]" />
+	</div>
+);
 
 const LaunchNewAppForm = ({ closeModal }) => {
 	const dispatch = useDispatch();
@@ -95,6 +104,11 @@ const LaunchNewAppForm = ({ closeModal }) => {
 						onSubmit={formik.handleSubmit}
 					>
 						<div className="flex grow flex-col gap-[16px]">
+							{/* First, because it is the option that asks least of the
+							    user: the name and description below are exactly what
+							    the agent works out for itself. */}
+							<BuildWithAgentOption closeModal={closeModal} />
+							<Separator />
 							<InputField
 								key="name"
 								label="App Name"
@@ -115,12 +129,8 @@ const LaunchNewAppForm = ({ closeModal }) => {
 								onChange={formik.handleChange}
 								formik={formik}
 							/>
-							<div className='w-full flex my-4'>
-								<div className="w-full flex items-center">
-      							<div className="flex-grow h-px bg-[#A3ABB1]"></div>
-      							<p className="mx-4 text-sm text-[#A3ABB1] font-medium">OR</p>
-      							<div className="flex-grow h-px bg-[#A3ABB1]"></div>
-    							</div>						
+							<div className="my-4 w-full">
+								<Separator />
 							</div>
 							<FileUpload
 								formik={formik}

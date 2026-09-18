@@ -257,6 +257,7 @@ CELERY_BEAT_SCHEDULE = {
 CELERY_TASK_ROUTES = {
     "zango.agent_mode.agent_run_executor": {"queue": "agent_mode"},
     "zango.agent_mode.agent_requirement_turn": {"queue": "agent_mode"},
+    "zango.agent_mode.agent_app_scaffold": {"queue": "agent_mode"},
 }
 
 X_FRAME_OPTIONS = "ALLOW"

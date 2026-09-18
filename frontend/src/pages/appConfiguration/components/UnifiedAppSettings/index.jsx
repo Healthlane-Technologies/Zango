@@ -210,7 +210,7 @@ export default function UnifiedAppSettings() {
 					</div>
 					<button
 						onClick={() =>
-							navigate(`/platform/apps/${appId}/app-settings/agent-mode`)
+							navigate(`/platform/apps/${appId}/agent-mode`)
 						}
 						data-cy="agent_mode_cta"
 						className="mb-[2px] flex shrink-0 items-center gap-[8px] whitespace-nowrap rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[16px] py-[9px] font-lato text-[14px] font-medium text-white shadow-lg transition-opacity hover:opacity-90"

@@ -233,6 +233,10 @@ class AgentRequirementMessage(models.Model):
     # True when the assistant is asking rather than concluding — lets the UI
     # signal that a reply is expected.
     is_question = models.BooleanField(default=False)
+    # Structured choices for this question, so the user answers by clicking
+    # instead of writing prose. Empty for a reply that offered none; the chat
+    # box is always still there, so this is an affordance, not a gate.
+    questions = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "agent_mode_requirement_message"

@@ -11,6 +11,7 @@ ground its questions in the real workspace without any risk of changing it.
 
 from __future__ import annotations
 
+import json
 import re
 
 from .prompt import PLUGIN_NAME
@@ -20,6 +21,23 @@ ANALYST_SKILL = f"{PLUGIN_NAME}:zango-requirements-analyst"
 
 # The analyst signals "ready for review" by emitting the spec in this fence.
 _SPEC_FENCE = re.compile(r"```zango-spec[ \t]*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+
+# Questions come back as structured choices so the user answers by clicking.
+# Typing prose is the thing that stalls a non-technical user, and it is the
+# analyst — not the panel — that knows which answers are plausible, so the
+# options have to come from the model rather than from a fixed form.
+_QUESTIONS_FENCE = re.compile(
+    r"```zango-questions[ \t]*\n(.*?)```", re.DOTALL | re.IGNORECASE
+)
+
+# Caps, because this payload is rendered straight into the panel. A model that
+# emits forty options has misunderstood the format, and truncating is better
+# than a page the user has to scroll to answer.
+MAX_QUESTIONS = 6
+MAX_OPTIONS = 8
+MAX_QUESTION_CHARS = 240
+MAX_OPTION_CHARS = 120
+QUESTION_TYPES = ("single", "multi")
 
 MAX_MESSAGE_CHARS = 10_000
 
@@ -43,15 +61,89 @@ def extract_spec(text: str) -> str:
     return matches[-1].strip() if matches else ""
 
 
-def strip_spec_fence(text: str) -> str:
-    """The conversational part of a reply, with the spec block removed.
+def extract_questions(text: str) -> list:
+    """Structured questions from a ```zango-questions fence.
 
-    The spec renders in its own editable pane, so repeating it in the chat
-    transcript is noise.
+    Everything is normalised and capped here rather than trusted: the payload
+    is model output that the panel renders directly, and a malformed block
+    must degrade to "no options offered" — the user can still type — rather
+    than break the turn.
+    """
+    if not text:
+        return []
+    matches = _QUESTIONS_FENCE.findall(text)
+    if not matches:
+        return []
+    try:
+        raw = json.loads(matches[-1].strip())
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(raw, list):
+        return []
+
+    questions = []
+    for index, item in enumerate(raw[:MAX_QUESTIONS]):
+        question = _normalise_question(item, index)
+        if question is not None:
+            questions.append(question)
+    return questions
+
+
+def _normalise_question(item, index: int):
+    """One validated question, or None if it cannot be rendered."""
+    if not isinstance(item, dict):
+        return None
+
+    prompt = str(item.get("question") or "").strip()[:MAX_QUESTION_CHARS]
+    if not prompt:
+        return None
+
+    options, seen = [], set()
+    for option in item.get("options") or []:
+        label = str(option).strip()[:MAX_OPTION_CHARS]
+        # Duplicates make a radio group ambiguous about what was chosen.
+        if label and label not in seen:
+            seen.add(label)
+            options.append(label)
+        if len(options) >= MAX_OPTIONS:
+            break
+    # One option is not a choice; the user would have nothing to decide.
+    if len(options) < 2:
+        return None
+
+    kind = str(item.get("type") or "single").strip().lower()
+    if kind not in QUESTION_TYPES:
+        kind = "single"
+
+    # Pre-ticked defaults are the whole point: a user who agrees with the
+    # analyst's reading can send without touching anything.
+    selected = [
+        label
+        for label in (str(value).strip()[:MAX_OPTION_CHARS] for value in item.get("selected") or [])
+        if label in seen
+    ]
+    if kind == "single":
+        selected = selected[:1]
+
+    return {
+        "id": str(item.get("id") or f"q{index + 1}")[:64],
+        "question": prompt,
+        "type": kind,
+        "options": options,
+        "selected": selected,
+        "allow_other": bool(item.get("allow_other", True)),
+    }
+
+
+def strip_fences(text: str) -> str:
+    """The conversational part of a reply, with the agent's blocks removed.
+
+    The spec renders in its own editable pane and the questions render as
+    clickable options, so repeating either as chat text is noise.
     """
     if not text:
         return ""
-    cleaned = _SPEC_FENCE.sub("", text).strip()
+    cleaned = _QUESTIONS_FENCE.sub("", _SPEC_FENCE.sub("", text)).strip()
     return re.sub(r"\n{3,}", "\n\n", cleaned)
 
 
@@ -133,8 +225,12 @@ def build_analyst_options(*, ctx, creds, requirement):
                 "you are deliberately leaving out.\n\n"
                 "You are talking to a NON-TECHNICAL BUSINESS USER. Ask short, "
                 "direct questions in everyday language — three or four per "
-                "turn, one or two lines each, each with a sensible default "
-                "they can simply agree to. Never use technical vocabulary "
+                "turn, one or two lines each. Put them in a ```zango-questions "
+                "JSON block with 2-6 options each and your recommendation "
+                "pre-filled in `selected`, so the user answers by clicking "
+                "rather than typing; outside the block write only a one-line "
+                "lead-in, never the questions again. "
+                "Never use technical vocabulary "
                 "(entity, model, field, schema, CRUD, workflow package, "
                 "policy, React, frontend, component, API, async task, MVP, "
                 "migration, module) and never ask them to make a technical "

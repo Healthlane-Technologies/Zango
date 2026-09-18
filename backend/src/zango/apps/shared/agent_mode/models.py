@@ -11,6 +11,8 @@ and is never returned by any API path — see ``masked_config()``.
 
 from __future__ import annotations
 
+import uuid
+
 from django.db import models
 
 from zango.core.model_mixins import FullAuditMixin
@@ -89,3 +91,75 @@ class AgentModeSettings(FullAuditMixin):
     def __str__(self) -> str:
         state = "enabled" if self.is_enabled else "disabled"
         return f"Agent Mode settings ({self.provider}, {state})"
+
+
+class ScaffoldStatus(models.TextChoices):
+    """Lifecycle of a "Build with Agent" hand-off.
+
+    Short-lived: it exists only to carry a one-line ask from the platform
+    landing page to a requirement conversation inside a brand-new app.
+    """
+
+    NAMING = "naming", "Choosing a name"
+    CREATING = "creating", "Creating the app"
+    READY = "ready", "Ready"
+    FAILED = "failed", "Failed"
+
+
+SCAFFOLD_TERMINAL_STATUSES = frozenset({ScaffoldStatus.READY, ScaffoldStatus.FAILED})
+
+
+class AgentAppScaffold(FullAuditMixin):
+    """One "describe it and the agent builds it" hand-off.
+
+    Lives in the public schema because it is created *before* the app exists —
+    there is no tenant schema to write to yet. Once the app is deployed the
+    conversation moves into that app's own ``AgentRequirement``, and this row
+    is only a breadcrumb linking the two (so a page reload mid-creation can
+    pick the thread back up).
+    """
+
+    object_uuid = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, editable=False
+    )
+    prompt = models.TextField()
+    status = models.CharField(
+        max_length=16,
+        choices=ScaffoldStatus.choices,
+        default=ScaffoldStatus.NAMING,
+        db_index=True,
+    )
+
+    # Chosen by the agent, validated against the tenant-name rules.
+    app_name = models.CharField(max_length=30, blank=True, default="")
+    app_label = models.CharField(max_length=120, blank=True, default="")
+    app_description = models.TextField(blank=True, default="")
+    name_source = models.CharField(max_length=16, blank=True, default="")
+
+    # The app this became, and the workspace-init task to watch.
+    app_uuid = models.UUIDField(null=True, blank=True, db_index=True)
+    init_task_id = models.CharField(max_length=64, blank=True, default="")
+
+    # The requirement conversation the user is handed off to.
+    requirement_uuid = models.UUIDField(null=True, blank=True)
+
+    celery_task_id = models.CharField(max_length=64, blank=True, default="")
+    error_message = models.TextField(blank=True, default="")
+    created_by_label = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        db_table = "agent_mode_app_scaffold"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"Scaffold {self.object_uuid} ({self.status})"
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in SCAFFOLD_TERMINAL_STATUSES
+
+    def fail(self, message: str) -> None:
+        self.status = ScaffoldStatus.FAILED
+        self.error_message = (message or "")[:2000]
+        self.save(update_fields=["status", "error_message", "modified_at"])

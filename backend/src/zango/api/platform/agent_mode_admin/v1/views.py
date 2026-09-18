@@ -251,3 +251,175 @@ class AgentModeSettingsValidateView(ZangoGenericPlatformAPIView):
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: validate failed")
             return get_api_response(False, {"message": str(exc)}, 500)
+
+
+# ---------------------------------------------------------------------------
+# Build with Agent — app scaffolding
+# ---------------------------------------------------------------------------
+
+
+class AgentModeAvailabilityPlatformView(ZangoGenericPlatformAPIView):
+    """GET /api/v1/platform/agent-mode/availability/
+
+    The app-scoped probe with the workspace checks dropped, because this is
+    asked before any app exists. Drives whether the landing page offers
+    "Build with Agent" at all.
+    """
+
+    def get(self, request, *args, **kwargs):
+        from zango.apps.agent_mode.availability import probe
+
+        try:
+            return get_api_response(True, probe(None), 200)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: platform availability probe failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
+    """POST /api/v1/platform/agent-mode/scaffolds/
+
+    Takes the one-line ask and returns immediately — naming and app creation
+    both happen on a worker, because the user is looking at a chat window and
+    a synchronous launch would block it for a minute or more.
+    """
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    MAX_PROMPT_CHARS = 10_000
+
+    def post(self, request, *args, **kwargs):
+        from django.conf import settings as dj
+        from django.db import transaction
+
+        from zango.apps.agent_mode.availability import probe
+        from zango.apps.agent_mode.scaffold import state_payload
+        from zango.apps.agent_mode.tasks import agent_app_scaffold
+        from zango.apps.shared.agent_mode.models import AgentAppScaffold
+
+        try:
+            status_probe = probe(None)
+            if not status_probe["available"]:
+                return get_api_response(
+                    False,
+                    {
+                        "message": "Build with AI is not available on this platform.",
+                        "reasons": status_probe["reasons"],
+                    },
+                    409,
+                )
+
+            prompt = (request.data.get("prompt") or "").strip()
+            if not prompt:
+                return get_api_response(
+                    False, {"message": "Describe what you want to build."}, 400
+                )
+            if len(prompt) > self.MAX_PROMPT_CHARS:
+                return get_api_response(
+                    False, {"message": "That description is too long."}, 400
+                )
+
+            user = getattr(request, "user", None)
+            scaffold = AgentAppScaffold.objects.create(
+                prompt=prompt,
+                created_by_label=(getattr(user, "email", "") or str(user or ""))[:255],
+            )
+
+            def _dispatch():
+                result = agent_app_scaffold.apply_async(
+                    args=[str(scaffold.object_uuid)],
+                    queue=getattr(dj, "AGENT_MODE_QUEUE", "") or None,
+                    soft_time_limit=600,
+                    time_limit=660,
+                )
+                AgentAppScaffold.objects.filter(pk=scaffold.pk).update(
+                    celery_task_id=(result.id or "")[:64]
+                )
+
+            # ATOMIC_REQUESTS wraps this view: dispatching inline would race
+            # the worker against the row's visibility.
+            transaction.on_commit(_dispatch)
+            return get_api_response(True, state_payload(scaffold), 201)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: scaffold create failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+class AgentAppScaffoldDetailView(ZangoGenericPlatformAPIView):
+    """GET /api/v1/platform/agent-mode/scaffolds/<uuid>/ — one poll."""
+
+    def get(self, request, scaffold_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.scaffold import state_payload
+        from zango.apps.shared.agent_mode.models import AgentAppScaffold
+
+        try:
+            scaffold = AgentAppScaffold.objects.filter(
+                object_uuid=scaffold_uuid
+            ).first()
+            if scaffold is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            return get_api_response(True, state_payload(scaffold), 200)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: scaffold detail failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+class AgentAppScaffoldRequirementView(ZangoGenericPlatformAPIView):
+    """POST /api/v1/platform/agent-mode/scaffolds/<uuid>/requirement/
+
+    The hand-off. Called once the app reports deployed: it opens the
+    requirement conversation inside the new app, seeded with the ask the user
+    already typed, and returns where to continue it. From here the flow is the
+    ordinary app-scoped Agent Mode chat.
+    """
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def post(self, request, scaffold_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.scaffold import (
+            APP_FAILED,
+            APP_READY,
+            app_creation_state,
+            handoff_requirement,
+            state_payload,
+        )
+        from zango.apps.shared.agent_mode.models import AgentAppScaffold
+
+        try:
+            # Locked for the request: two tabs polling the same scaffold would
+            # otherwise both see requirement_uuid unset and open two
+            # conversations about the same ask.
+            scaffold = (
+                AgentAppScaffold.objects.select_for_update()
+                .filter(object_uuid=scaffold_uuid)
+                .first()
+            )
+            if scaffold is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+
+            if not scaffold.requirement_uuid:
+                state, error = app_creation_state(scaffold)
+                if state == APP_FAILED:
+                    return get_api_response(
+                        False,
+                        {
+                            "message": "The app could not be created.",
+                            "detail": error,
+                        },
+                        409,
+                    )
+                if state != APP_READY:
+                    return get_api_response(
+                        False,
+                        {
+                            "message": "The app is still being created.",
+                            "app_state": state,
+                        },
+                        409,
+                    )
+
+            handoff_requirement(scaffold)
+            return get_api_response(True, state_payload(scaffold), 201)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: scaffold hand-off failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
