@@ -258,18 +258,22 @@ entire frontend, so if anything below is not satisfied, do 5c–5e inline** —
 inline is always correct and only costs context.
 
 **1. The Agent tool launches in the BACKGROUND and returns immediately.**
-Its result says "Async agent launched successfully" and gives an `agentId`. That
-is *not* the work finished. There is no way to block on it by intention: saying
-"I will wait" and continuing to other work means the run ends while the agents
-are still going, and **everything they were writing is lost**. If you dispatch,
-you MUST, before doing anything else:
+Its result says "Async agent launched successfully" and gives an `agentId`.
+**That is not the work finished.** Saying "I will wait" and moving on to other
+work does not wait: the run ends while the agents are still writing and
+**everything they produced is lost** — this has actually happened, and the run
+still reported success.
 
-  - poll the workspace for the files each agent was told to write
-    (`ls frontend/src/custom/pages/`), and
-  - not proceed to 5f until every expected file exists on disk.
+**`TaskOutput` is how you wait.** Call it with the `agentId` the launch
+returned; it blocks until that agent finishes and gives you its report. After
+dispatching, your very next action is `TaskOutput` for each `agentId` — one per
+agent, until all have returned. Do not read a file, run a command, or think
+about the next sub-step in between.
 
-If a file has not appeared and you have no way left to wait, **write it
-yourself inline**. A missing page is a failed build; a slower build is not.
+Then confirm on disk (`ls frontend/src/custom/pages/`) and `Read` each file the
+agent claimed to write. **A report is not evidence; the file is.** Anything
+missing or empty, write it yourself inline. A missing page is a failed build;
+a slower build is not.
 
 **2. Subagents cannot read outside the workspace unless given exact paths.**
 The reference docs live outside the workspace and the path guard denies
@@ -375,8 +379,9 @@ Write it, then build exactly it.
 ### 5c. Write the shared primitives — before any page
 
 > **May be delegated** (see the delegation constraints above) — if so, alone
-> and first, because its export list feeds 5d and 5e, and you must confirm
-> `shared.tsx` exists on disk before dispatching any page. Otherwise write it
+> and first, because its export list feeds 5d and 5e: dispatch it, call
+> `TaskOutput` on its `agentId`, and confirm `shared.tsx` exists on disk
+> before dispatching any page. Otherwise write it
 > here. Either way the rules below are what must end up in the file.
 
 Write `src/custom/pages/shared.tsx` **first**, and compose every later page
@@ -406,8 +411,9 @@ pages are ~100 lines of inline-styled JSX each, this step was skipped.
 ### 5d. Write the custom pages
 
 > **May be delegated**, one agent per page (see the delegation constraints
-> above). If you do: dispatch, then poll `frontend/src/custom/pages/` until
-> every expected file exists, and `Read` each one before believing it. Any page
+> above). If you do: dispatch all of them, then immediately call `TaskOutput`
+> on each returned `agentId` until every one has come back, and `Read` each
+> file before believing it. Any page
 > that has not appeared, write inline. **You** write `index.js` from the export
 > names — never let parallel agents edit it.
 

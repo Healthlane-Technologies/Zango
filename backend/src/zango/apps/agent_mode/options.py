@@ -38,7 +38,17 @@ ALLOWED_TOOLS = [
     "Glob",
     "Grep",
     "TodoWrite",
+    # The spawn tool reports as "Agent" in transcripts; "Task" is its alias.
+    # Both are listed so the allowlist matches whichever name the CLI uses.
     "Task",
+    "Agent",
+    # Agent launches in the BACKGROUND and returns immediately. TaskOutput is
+    # how the parent collects a finished agent's result, and TaskStop cancels
+    # one. Without them a dispatching run cannot ever retrieve its subagents'
+    # work -- which is exactly how one run discarded an entire frontend while
+    # reporting success.
+    "TaskOutput",
+    "TaskStop",
     "Bash",
     "Skill",
 ]
