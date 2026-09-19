@@ -77,7 +77,7 @@ export default function AgentMode() {
 				{/* The only way back: without the left menu this screen would
 				    otherwise be a dead end. */}
 				<button
-					onClick={() => navigate(`/platform/apps/${appId}/dashboard`)}
+					onClick={() => navigate(`/platform/apps/${appId}/app-settings/app-configuration/`)}
 					className="shrink-0 rounded-[6px] border border-[#DDE2E5] px-[12px] py-[5px] font-lato text-[12.5px] font-medium text-[#6B7280] hover:bg-[#F0F3F4] hover:text-[#111827]"
 				>
 					App panel
