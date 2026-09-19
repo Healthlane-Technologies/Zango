@@ -11,6 +11,7 @@ that needs it (STEP 5), not while planning.
 | Scaffolding, routes, `App.tsx` wiring | `appbuilder.md` | 5a |
 | The shared primitive set, before any page | `shared-primitives.md` | 5c |
 | Any custom page — the visual bar | `design-system.md` | 5b/5d |
+| Any custom page — the values and recipes | `design/` | 5b/5c/5d |
 | A detail page with child tables | `entity-360.md` | 5d |
 | A page that lists or edits CRUD data | `crud/` | 5d |
 | A form | `form.md` | 5d |
@@ -23,3 +24,8 @@ then `tables.md`, `detail.md` or `hooks.md` only as needed.
 
 `design-system.md` is required for every custom page — it is the bar those
 pages are held to, not optional background.
+
+`design/` is a directory: the tokens, the direction table and the card
+treatments. It is the **material** that meets that bar — a page built without
+it comes out flat even when every rule in `design-system.md` is satisfied.
+~13 KB total; read it inside the page subagent, not in the main thread.

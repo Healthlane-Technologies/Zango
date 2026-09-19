@@ -39,11 +39,17 @@ nice-to-have.
 **The frontend is actually polished** — these are as binding as the eight above,
 and each is checkable with a single grep over `src/custom/`:
 
-9. `src/custom/pages/shared.tsx` exists and exports the primitives from 5c. No
-   page re-implements its tab strip or key-facts grid.
-10. **No literal hex colour in `src/custom/pages/`.**
-   `grep -rn '#[0-9a-fA-F]\{3,8\}\b' src/custom/pages/` returns nothing —
-   colours come from `var(--color-*)` tokens.
+9. `src/custom/pages/tokens.css` exists, and `shared.tsx` imports it and
+   exports the primitives from 5c. No page re-implements its tab strip or
+   key-facts grid. Without `tokens.css` every primitive loses its colours,
+   shadows and font — the app builds and ships unstyled.
+10. **No literal hex colour in any `.tsx` under `src/custom/pages/`.**
+   `grep -rn '#[0-9a-fA-F]\{3,8\}\b' src/custom/pages/ --include='*.tsx'`
+   returns nothing — colours come from `var(--*)` tokens.
+   `tokens.css` is where literals are allowed and expected: it is the one
+   file that *defines* the tokens, and its accent and semantic ramps have no
+   theme variable to derive from. Brand and gray still must not be
+   hard-coded there — they come from `--color-brand-*` via `color-mix`.
    `src/custom/auth/` is the one exception: it renders before authentication,
    so it has no tokens in scope and takes its values from the run context's
    `theme:` line instead. Those values must be declared once as custom

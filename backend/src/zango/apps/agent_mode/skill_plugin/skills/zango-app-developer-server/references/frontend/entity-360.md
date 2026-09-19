@@ -222,10 +222,10 @@ const PatientDetail = ({
   generalDetails,   // NOT general_details — { fields: { <field_name>: {...} } }
   workflowDetails,  // NOT workflow_details — current_status_meta, next_transitions, tag_details
   sections,         // array of { key, name, title, data, extra_html, form }
-  rowActions,
+  rowActions,       // the table's row_actions, e.g. Edit — render these yourself (§4e)
   objectUuid,       // the record's UUID — what you scope child tables by
   pk,
-  onRefresh,        // re-fetch after a mutation
+  onRefresh,        // re-fetch after a mutation — refreshes THIS record only, not child tabs (§4b)
   apiUrl,
 }) => { ... };
 ```
@@ -443,7 +443,39 @@ Without this, any user can edit the URL and read another parent's children.
 In a healthcare or finance app that is a data breach, not a UI bug. **Never
 rely on the frontend to scope a child table.**
 
-## 4b. Reading child rows yourself — the three traps
+### The tab's Add button — don't make the user pick the parent
+
+That add button (§4) opens the child module's **own** form — the same form its
+standalone list page opens. Left alone, it asks the user to select the parent
+they are already looking at: on the Vehicle page, "Add Service Job" shows a
+Vehicle dropdown. That is a wrong question, and picking the wrong row files the
+record against another parent.
+
+The fix reuses the filter you just wired. The parent uuid is already on the
+endpoint, so it reaches the form too — in the child form's `__init__`, preset
+the FK from that param and hide it; when the param is absent (the module's own
+list page, no parent in context) leave the field as a normal select. One form,
+both contexts — no second form class, no view override.
+
+```python
+# backend/jobs/forms.py -- child module's form
+request = getattr(self.crud_view_instance, "request", None)
+parent_uuid = request.GET.get("vehicle_uuid") if request else None
+```
+
+Full pattern, and the shared-state trap that makes the naive version leak the
+hidden field into the standalone form:
+[../packages/crud/forms/core.md](../packages/crud/forms/core.md) → *The parent
+FK on a child-tab form*.
+
+The param is one string spelled in three places — this `api_endpoint`, the
+table's `get_table_data_queryset`, and the child form. Keep them identical.
+
+> Applies only to the FK **pointing at this page's entity**. Any other FK on
+> the child form (a part, a technician) is a real question and stays a normal
+> select — with no `autocomplete=` on it.
+
+## 4b. Reading child rows yourself — the four traps
 
 `CrudHandler` renders a child table for you. But a **lead card that
 synthesises** (design-system.md §4) usually needs the rows themselves — the
@@ -488,10 +520,98 @@ const isPicked = (r: any) =>
   r?.is_selected === true || /(^|>)\s*Picked\s*(<|$)/i.test(String(r?.is_selected ?? ''));
 ```
 
-**Verify with the numbers, not the network tab.** All three return 200. The
+**4. Nothing refetches them after a write.** A `useEffect` keyed on
+`[objectUuid]` runs **once** — and `objectUuid` never changes while the user is
+on the page. `CrudHandler` refreshes its *own* table after a save, so the tab
+updates while every number you fetched yourself stays frozen at its page-load
+value. The user adds a row, watches the table grow, and the tab badge and stat
+cards beside it still show the old count. **Observed, not theoretical**: after
+adding a rent payment the same page read "Rent Payments (4)" in the table, "3"
+in the tab badge and "3" in the stat card, and only a full reload agreed.
+
+**The page and the table do NOT share one `QueryClient` — do not reach for
+`invalidateQueries` to fix this.** Every `CrudHandler` mounts its own private
+`QueryClient` inside its own `TableProvider` (`@zango-core/crud`'s
+`table.es.js` — `TableProvider` does `useMemo(() => createQueryClient(), [])`
+unconditionally, with no check for an ancestor provider). Its `TableAddButton`
+calls `useQueryClient()`, which React resolves to that **private** client, and
+invalidates `['tableData']` **inside it only**. If your page also owns a
+`QueryClient` (App-root, so `useQuery` even works on a custom page — see the
+note below) and keys its own reads under `['tableData', ...]`, that is a
+**third, separate cache**. Nothing you do with `invalidateQueries` from your
+page ever reaches the table's private one, and nothing the table invalidates
+ever reaches yours. Two different objects, same key prefix, no relationship —
+a version of this doc claimed otherwise ("the page and the table share one
+QueryClient"); that was wrong and never worked.
+
+There is also no prop for this: `CrudHandler` does **not** forward an
+`onSuccess`/`onFormSuccess` prop, and do not reach for one either —
+`formProps` only reaches its own **Add-button** form (spread last over the
+framework's own `onResponse`, so passing your own **replaces** the table's
+save handler and silently drops its toast and its own cache invalidation).
+
+**The only lever that actually crosses this boundary is a remount.** Own a
+`reloadKey` counter on the page and bump it wherever a write could have
+happened that this page needs to reflect elsewhere: the page's own row-actions
+kebab (§4e) succeeding, and — cheapest and sufficient — every tab switch, since
+a child tab's `CrudHandler` only needs to be fresh when it is actually shown:
+
+```tsx
+const [reloadKey, setReloadKey] = useState(0);
+const bumpReload = () => setReloadKey((k) => k + 1);
+
+// Rows you fetch yourself — reloadKey in the query key forces a refetch.
+const payments = useQuery({
+  queryKey: ['tableData', 'rent_payments', objectUuid, reloadKey],
+  queryFn: () => fetchRows(endpoint, param, objectUuid),
+  enabled: !!objectUuid,
+});
+
+<Tabs value={tab} onChange={(next) => { setTab(next); bumpReload(); }} items={...} />
+
+{tab === 'payments' && (
+  <CrudHandler key={reloadKey} api_endpoint={...} headerProps={{ title: 'Payments' }} />
+)}
+```
+
+A child tab's own internal Add/edit/row-action still refreshes **itself**
+correctly (that is what its private `QueryClient` is for) — the remount only
+needs to catch what that private cache cannot reach: this page's own derived
+numbers, and the *other* tab.
+
+**A `useQuery` on a custom page needs an app-root `QueryClientProvider` to
+exist at all**, or it crashes with `No QueryClient set, use QueryClientProvider
+to set one` the first time a custom page (not a `CrudHandler`) calls it — none
+of the skill's `App.tsx` templates create one by default. Wrap `ZangoApp` once:
+
+```tsx
+// App.tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ZApp ... />
+  </QueryClientProvider>
+);
+```
+
+Add `@tanstack/react-query` as an explicit `dependencies` entry in
+`package.json` too — without it the import only resolves because
+`@zango-core/appbuilder`/`@zango-core/crud` happen to bundle it as a
+transitive dependency, which is not a contract to build on.
+
+**This is not only about counts.** Anything the page derived from those rows
+goes stale the same way: a "paid in full" percentage, an outstanding balance,
+an open-complaints tile, a synthesised lead card. One row written by a child
+tab can leave every number on the page stale until the counter bumps.
+
+**Verify with the numbers, not the network tab.** All four return 200. The
 only reliable check is that the count in your card matches the row count in
 the table rendered beside it — if the card says 0 and the table shows rows,
-you have hit one of these.
+you have hit one of the first three. **Then add a row from the child tab,
+switch away and back**: if the table moved but your number did not update by
+the time you return, that is trap 4.
 
 ## 4c. Change Logs — the default drawer has this; your page must too
 
@@ -683,6 +803,63 @@ columns the table itself declared, and `created_by`/`created_at` are not
 among them unless added as explicit table columns, which changes the list
 view too. For that shape, treat the audit fields as out of scope rather than
 forcing them onto the table.
+
+## 4e. Row actions — the default drawer's kebab menu, again
+
+**The default drawer's kebab menu also lists every entry in the table's
+`row_actions`** (`packages/crud/tables/core.md`) — Edit, and anything else the
+table declares. Same failure shape as Change Logs (§4c) and Record info (§4d):
+switching an entity to a custom `customMainDetail` page drops this menu
+entirely, and `customMainDetail` receives a `rowActions` prop (§3) for exactly
+this reason — it is documented as existing but this doc had no example of
+using it, so the natural next move is to hand-roll an Edit button against the
+**wrong server contract**.
+
+**There are two contracts, and they are not interchangeable.** `form.md`'s
+plain `FormRenderer` example (`getParams: { action: "initialize_form",
+form_type: "edit_form", object_uuid }`) is for a form with no row-action
+declaration behind it. An entity whose edit behaviour is declared via
+`row_actions` — the framework's default table pattern, and what
+`tables/core.md` teaches — is dispatched server-side through a **different**
+branch (`BaseCrudView` checks `action_type == "row"` before routing to
+`get_row_action_form`, see `packages/crud/views/reference.md`). Calling the
+plain edit-form params against a `row_actions`-only entity hits a code path
+that was never wired for that model and fails. Match the framework's own
+drawer kebab (`@zango-core/crud`'s `table.es.js`) instead:
+
+```tsx
+// GET  (open the form)
+getParams: {
+  action: 'initialize_form',
+  action_type: 'row',
+  action_key: action.key,   // 'edit', or whatever the table declared
+  object_uuid: objectUuid,
+}
+// POST (submit it)
+postParams: {
+  form_type: 'row_action_form',
+  action_type: 'row',
+  action_key: action.key,
+  object_uuid: objectUuid,
+}
+```
+
+A `type: "simple"` action (no form, confirm-then-run) is a bare POST to the
+same base endpoint, no `FormRenderer` involved:
+
+```tsx
+POST `${baseUrl}?action_type=row&action_key=${action.key}&object_uuid=${objectUuid}`
+```
+
+**Build one small reusable menu in `shared.tsx`, not a bespoke Edit button per
+page.** A table can declare any number of `row_actions` (`tables/core.md`
+covers role-restricted, multi-action tables), so the menu should read
+`rowActions` and render all of them — a three-dot button in the page header
+next to Change Logs, opening a dropdown, each entry driving whichever contract
+above matches its `type`. On success, refetch — see §4b for why
+`invalidateQueries` alone does not reach a sibling `CrudHandler`'s table, and
+why a `reloadKey` bump (calling the page's `onRefresh` too, so the main detail
+record itself is current) is the mechanism that actually works.
 
 ## 5. The stability rule — read this before writing the page
 
@@ -928,10 +1105,26 @@ export { default as PatientDetail } from './PatientDetail';
       `modified_by`, `modified_at`, already in `generalDetails.fields` with
       no backend change needed; the default drawer shows them and a custom
       page must not lose them
+- [ ] **Row actions menu present** (§4e) — every entry in the `rowActions`
+      prop, driven through `action_type=row`/`action_key`/`form_type=
+      row_action_form` (form actions) or a bare POST with the same
+      `action_type`/`action_key` (simple actions) — **not** `form.md`'s plain
+      `form_type=edit_form` contract, which is for entities with no
+      `row_actions` declaration behind them
+- [ ] **App root has a `QueryClientProvider`** (§4b) if any custom page uses
+      `useQuery` — `@tanstack/react-query` is also an explicit `package.json`
+      dependency, not just a transitive one
 - [ ] No component passed to `CrudHandler` is defined inline
 - [ ] No child callback writes to parent React state
 - [ ] Loading skeleton, per-tab empty state, error state all present
 - [ ] **Each child tab opened and confirmed to render** — not assumed from a 200
+- [ ] **A row added from a child tab updates the page's own numbers, and the
+      other tab, once you switch back to them** (§4b trap 4) — tab badges,
+      stat cards and any synthesised figure. `CrudHandler`'s own `QueryClient`
+      is private to itself (confirmed in `@zango-core/crud` source) and does
+      **not** reach your page's own queries or a sibling tab's table — a
+      `reloadKey` bumped on tab switch and on the page's own row-actions
+      success is what actually crosses that boundary, not `invalidateQueries`
 - [ ] Page composed from `shared.tsx` primitives, not hand-rolled per page
 - [ ] Tailwind classes, no inline `style` for static styling, no literal hex
 - [ ] Export name matches the AppBuilder route's `component`
