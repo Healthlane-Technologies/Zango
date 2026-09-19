@@ -565,8 +565,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
                     recorder.emit(
                         EventKind.SYS,
                         f"Created {len(made)} test user(s): {', '.join(made)}. "
-                        "Temporary passwords are on the run detail; each must be "
-                        "changed at first login.",
+                        "Passwords are on the run detail.",
                         level=EventLevel.SYS,
                     )
 

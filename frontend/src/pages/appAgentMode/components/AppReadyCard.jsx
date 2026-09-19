@@ -140,7 +140,7 @@ export default function AppReadyCard({ appName, run }) {
 							</a>
 							{signIns.length ? (
 								<span className="font-lato text-[11.5px] leading-[16px] text-[#6B7280]">
-									Temporary passwords — change them at first sign-in
+									Sign in with this and the app opens straight away
 								</span>
 							) : null}
 						</div>
