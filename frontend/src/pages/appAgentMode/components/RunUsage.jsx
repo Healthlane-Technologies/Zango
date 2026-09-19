@@ -62,7 +62,8 @@ function SectionLabel({ children }) {
 	);
 }
 
-export default function RunUsage({ run }) {
+/** `flush` drops the top rule, for callers that draw their own heading. */
+export default function RunUsage({ run, flush = false }) {
 	if (!run) return null;
 
 	const usage = run.model_usage && typeof run.model_usage === 'object' ? run.model_usage : null;
@@ -98,8 +99,12 @@ export default function RunUsage({ run }) {
 	if (!hasAnything) return null;
 
 	return (
-		<div className="border-t border-[#F1F3F5] px-[20px] py-[14px]">
-			<SectionLabel>Usage</SectionLabel>
+		<div
+			className={`px-[20px] py-[14px] ${
+				flush ? '' : 'border-t border-[#F1F3F5]'
+			}`}
+		>
+			{flush ? null : <SectionLabel>Usage</SectionLabel>}
 
 			<div className="mb-[14px] grid grid-cols-2 gap-x-[16px] gap-y-[10px] sm:grid-cols-4">
 				<Metric label="Cost" value={fmtCost(cost)} />

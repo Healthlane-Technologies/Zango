@@ -21,7 +21,7 @@ export function shareText(appName, url, testUsers) {
 	const creds = credentialLines(testUsers);
 	if (creds.length) {
 		lines.push('Sign in with one of these temporary accounts:', ...creds, '');
-		lines.push('Please change the password after the first sign-in.');
+		lines.push('These are demo accounts — please do not reuse the password.');
 	}
 	return lines.join('\n');
 }
@@ -106,8 +106,8 @@ export default function ShareAppModal({ show, closeModal, appName, run }) {
 							</p>
 						)}
 						<p className="mt-[8px] font-lato text-[12px] text-[#B45309]">
-							These are temporary passwords. Whoever you send them to should
-							change theirs at first sign-in.
+							Demo accounts on a demo build — they sign in as-is, so treat the
+							link and these passwords as one thing you are sharing.
 						</p>
 					</div>
 

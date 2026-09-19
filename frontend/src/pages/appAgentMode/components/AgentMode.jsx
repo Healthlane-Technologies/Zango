@@ -10,10 +10,9 @@
  * you are working on.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import useApi from '../../../hooks/useApi';
-import RequirementChat from './RequirementChat';
-import RequirementList from './RequirementList';
+import BuildThread from './BuildThread';
 import RunProgress from './RunProgress';
 
 const REASON_TEXT = {
@@ -78,7 +77,7 @@ export default function AgentMode() {
 				{/* The only way back: without the left menu this screen would
 				    otherwise be a dead end. */}
 				<button
-					onClick={() => navigate(`/platform/apps/${appId}/dashboard`)}
+					onClick={() => navigate(`/platform/apps/${appId}/app-settings/app-configuration/`)}
 					className="shrink-0 rounded-[6px] border border-[#DDE2E5] px-[12px] py-[5px] font-lato text-[12.5px] font-medium text-[#6B7280] hover:bg-[#F0F3F4] hover:text-[#111827]"
 				>
 					App panel
@@ -102,8 +101,10 @@ export default function AgentMode() {
 
 			<div className="flex min-h-0 grow flex-col px-[16px] py-[12px]">
 				<Routes>
-					<Route path="/" element={<RequirementList availability={availability} />} />
-					<Route path="requirements/:requirementId" element={<RequirementChat />} />
+					<Route path="/" element={<BuildThread />} />
+					{/* Every version lives in the one thread now; a link to a
+					    single requirement lands there. */}
+					<Route path="requirements/:requirementId" element={<Navigate to=".." replace />} />
 					<Route path="runs/:runId" element={<RunProgress />} />
 				</Routes>
 			</div>

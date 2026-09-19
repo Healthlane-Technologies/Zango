@@ -92,10 +92,15 @@ export default function RunLive({ appId, runId, onRun, onSwitchRun, embedded = f
 	const [events, setEvents] = useState([]);
 	const [phase, setPhase] = useState('preparing');
 	const [showDetail, setShowDetail] = useState(false);
+	// A finished build's timeline is seven ticks — it says nothing. One
+	// that finished before you arrived starts folded; one that finishes
+	// while you watch does not suddenly collapse under you.
+	const [showSteps, setShowSteps] = useState(true);
 
 	const seqRef = useRef(0);
 	const pollRef = useRef(null);
 	const detailRef = useRef(null);
+	const arrivedRef = useRef(true);
 	const onRunRef = useRef(onRun);
 	onRunRef.current = onRun;
 
@@ -116,6 +121,10 @@ export default function RunLive({ appId, runId, onRun, onSwitchRun, embedded = f
 			showErrorModal: false,
 		});
 		if (!success || !response) return;
+		if (arrivedRef.current) {
+			arrivedRef.current = false;
+			if (embedded && response.is_terminal) setShowSteps(false);
+		}
 		if (response.events?.length) {
 			seqRef.current = response.next_seq ?? seqRef.current;
 			setEvents((prev) => [...prev, ...response.events]);
@@ -146,6 +155,7 @@ export default function RunLive({ appId, runId, onRun, onSwitchRun, embedded = f
 
 	useEffect(() => {
 		seqRef.current = 0;
+		arrivedRef.current = true;
 		setEvents([]);
 		setPhase('preparing');
 		pollOnce();
@@ -247,6 +257,14 @@ export default function RunLive({ appId, runId, onRun, onSwitchRun, embedded = f
 							Stop
 						</button>
 					) : null}
+					{!showSteps ? (
+						<button
+							onClick={() => setShowSteps(true)}
+							className="rounded-[6px] border border-[#DDE2E5] px-[10px] py-[4px] font-lato text-[12px] text-[#6B7280] hover:bg-[#F0F3F4]"
+						>
+							Steps
+						</button>
+					) : null}
 					<button
 						onClick={() => setShowDetail((v) => !v)}
 						className="rounded-[6px] border border-[#DDE2E5] px-[10px] py-[4px] font-lato text-[12px] text-[#6B7280] hover:bg-[#F0F3F4]"
@@ -257,6 +275,8 @@ export default function RunLive({ appId, runId, onRun, onSwitchRun, embedded = f
 			</div>
 
 			<div className={embedded ? '' : 'min-h-0 grow overflow-y-auto'}>
+				{showSteps ? (
+					<>
 				<div className="px-[16px] py-[12px]">
 					{PHASES.map((p, i) => {
 						const state = i < phaseIndex ? 'done' : i === phaseIndex ? 'active' : 'todo';
@@ -301,7 +321,10 @@ export default function RunLive({ appId, runId, onRun, onSwitchRun, embedded = f
 					</div>
 				) : null}
 
-				{run?.requires_restart ? (
+						</>
+				) : null}
+
+			{run?.requires_restart ? (
 					<div className="border-t border-[#FDE68A] bg-[#FFFBEB] px-[16px] py-[9px] font-lato text-[12px] text-[#92400E]">
 						Models, tasks or settings changed — restart the app server and Celery
 						workers to load the new code.

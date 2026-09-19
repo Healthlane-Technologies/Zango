@@ -63,13 +63,31 @@ class ZangoAppBaseTestCase(FastTenantTestCase):
 
     @classmethod
     def clean_workspaces(cls):
-        workspaces_dir = os.path.join(settings.BASE_DIR, "workspaces")
+        """Remove the workspace this test created — and only that one.
 
-        if os.path.exists(workspaces_dir) and os.path.isdir(workspaces_dir):
-            shutil.rmtree(workspaces_dir)
-            print("test workspaces have been deleted.")
+        This used to delete ``BASE_DIR/workspaces`` outright. Django isolates
+        the test *database*; it does not isolate the filesystem, so running
+        the suite anywhere BASE_DIR is a real project — a developer's working
+        checkout rather than the throwaway test project — destroyed every
+        app's source on that machine. The database looked fine afterwards,
+        which is what made it hard to see.
+
+        A test only ever creates ``workspaces/<tenant.name>``, so that is the
+        only thing it may remove.
+        """
+        root = Path(settings.BASE_DIR).resolve() / "workspaces"
+        target = (root / cls.tenant.name).resolve()
+
+        # Never the tree itself, and never outside it: a tenant name
+        # containing ".." must not be able to walk out.
+        if target == root or root not in target.parents:
+            raise RuntimeError(f"refusing to delete {target}: not a test workspace")
+
+        if target.is_dir():
+            shutil.rmtree(target)
+            print(f"test workspace {target} deleted.")
         else:
-            print("test workspaces does not exist.")
+            print(f"test workspace {target} does not exist.")
 
     @classmethod
     def get_test_module_path(self):

@@ -185,7 +185,7 @@ export default function BuildWithAgent() {
 			if (success && response?.requirement_uuid) {
 				setScaffold(response);
 				navigate(
-					`/platform/apps/${response.app_uuid}/agent-mode/requirements/${response.requirement_uuid}`,
+					`/platform/apps/${response.app_uuid}/agent-mode`,
 					{ replace: true }
 				);
 				return;
