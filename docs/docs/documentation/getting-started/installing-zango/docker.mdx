@@ -20,7 +20,50 @@ To begin using Zango through Docker installation, ensure that Docker and Docker 
    ```
 
 #### 2. Run the following command from the root folder of the project:
+## Minimum System Requirements
 
+Before running Zango locally with Docker, ensure your system meets these minimum requirements.
+
+| Resource | Minimum | Recommended |
+|----------|----------|-------------|
+| CPU | 2 Cores | 4+ Cores |
+| RAM | 4 GB | 8 GB+ |
+| Disk Space | 10 GB Free | 20 GB+ |
+| Docker Version | 24+ | Latest Stable |
+| Docker Compose | v2 | Latest Stable |
+
+## Docker Resource Configuration
+
+Some services such as Celery, Flower, PostgreSQL, and Redis may crash if Docker memory allocation is too low.
+
+Common symptoms include:
+
+- Random container shutdowns
+- `SIGKILL` process termination
+- Docker services stopping unexpectedly
+- Failed startup during `docker compose up`
+
+### Recommended Docker Desktop Settings
+
+- Memory Allocation: Minimum 6 GB
+- Swap: 1–2 GB
+- CPU Allocation: 2+ CPUs
+
+## Troubleshooting
+
+If services crash during startup:
+
+```bash
+docker compose down
+docker compose up --build
+Also ensure:
+
+Docker Desktop has enough memory allocated
+Enough disk space is available
+No heavy background applications are consuming RAM
+Docker Desktop is updated to the latest stable version
+
+ Run the following command from the root folder of the project:
    ```bash
    python setup_project.py --project_dir <directory>
    ```
