@@ -85,13 +85,39 @@ def app_front_door(app_settings: dict) -> str:
     return f"/{mount}/app/"
 
 
+def _base_scheme_and_port(fallback_scheme: str = "https") -> tuple:
+    """Scheme and port for URLs built with no request to borrow them from.
+
+    Read from ``AGENT_MODE_APP_BASE_URL`` (default ``http://localhost:8000``).
+    Its host is ignored: the tenant's own domain is what routes to the app.
+    Returns ``(scheme, port)`` where port is ":8000" or "".
+    """
+    try:
+        from urllib.parse import urlparse
+
+        from django.conf import settings as dj_settings
+
+        base = getattr(dj_settings, "AGENT_MODE_APP_BASE_URL", "") or ""
+        if not base:
+            return fallback_scheme, ""
+        parsed = urlparse(base)
+        return (parsed.scheme or fallback_scheme), (
+            f":{parsed.port}" if parsed.port else ""
+        )
+    except Exception:  # noqa: BLE001
+        return fallback_scheme, ""
+
+
 def app_access(tenant, *, request=None, app_settings=None) -> dict:
     """Where a person can actually open this app.
 
     Tenants are resolved strictly by hostname, so without a domain row there
     is no reachable URL — say so rather than inventing one. Scheme and port
     are carried from the caller's own request, which is what makes the link
-    work on a dev server running off the default port.
+    work on a dev server running off the default port. With no request (a
+    Celery task, so every Agent Mode run) they fall back to https and no
+    port, which staging and production already match; local development
+    overrides them with ``AGENT_MODE_APP_BASE_URL``.
     """
     domain = ""
     try:
@@ -121,6 +147,19 @@ def app_access(tenant, *, request=None, app_settings=None) -> dict:
                 port = ":" + host.rsplit(":", 1)[1]
         except Exception:  # noqa: BLE001
             scheme, port = "https", ""
+    else:
+        # No request: Agent Mode runs under Celery, so there is no caller
+        # whose scheme and port we can borrow. Without them the URL omits the
+        # dev server's port and does not answer -- a headless run then spends
+        # turns rediscovering the reachable address, and route registration
+        # (prompt.py constraint 8, mandatory) can fail outright.
+        #
+        # AGENT_MODE_APP_BASE_URL supplies both; it defaults to
+        # http://localhost:8000 so a local install works untouched. Deploys
+        # serving https on 443 set it to "https://localhost". Only the scheme
+        # and port are read -- never the host, since the tenant's own domain
+        # is what resolves to the right app.
+        scheme, port = _base_scheme_and_port(scheme)
 
     return {
         "domain": domain,

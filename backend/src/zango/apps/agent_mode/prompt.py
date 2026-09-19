@@ -170,9 +170,9 @@ def compose_prompt(requirement: str, ctx) -> str:
         frontend_rule = (
             "Node IS available for this app and custom React builds are "
             "enabled, so scaffolding and building the frontend is REQUIRED, "
-            "not optional — follow STEP 5 in order (5a scaffold, 5b shared "
-            "primitives, 5c custom pages, 5d branded login, 5e build, "
-            "5f app module, 5g routes and menus). Do not stop at "
+            "not optional — follow STEP 5 in order (5a scaffold, 5b plan the "
+            "pages, 5c shared primitives, 5d custom pages, 5e branded login, "
+            "5f build, 5g app module, 5h routes and menus). Do not stop at "
             "appbuilder's prebuilt shell: it renders "
             'only page_type "crud" pages, so it cannot show an entity-360 '
             "detail page, a role landing page or a branded login. You may run "
@@ -198,7 +198,7 @@ def compose_prompt(requirement: str, ctx) -> str:
             f"appbuilder_config_url: {ctx.appbuilder_config_url}\n"
             f"appbuilder_token: {ctx.appbuilder_token}\n"
             "  (pass as ?token=<appbuilder_token> on every AppBuilder API call;\n"
-            "   valid 30 minutes from the start of this run)"
+            "   valid 2 hours from the start of this run)"
         )
     else:
         appbuilder = (

@@ -59,12 +59,16 @@ why every generated app otherwise looks identical.
 3. **What is the anchor on each page?** The one number or status the page
    exists for — a balance, a stage, a next appointment. Name it per page. If
    you cannot name it, you do not yet understand the page.
-4. **Aesthetic direction** — pick ONE and hold it across every page (see §1a).
+4. **Aesthetic direction** — pick ONE and hold it across every page (see §1).
    This is what stops every Zango app looking the same.
 5. **Density** — an operations tool used all day (compact rows, more per
    screen) or a review/approval tool used occasionally (more breathing room)?
 6. **Currency, date format, locale** — inferred from the spec's business
    context, not asked. Set once in `shared.tsx` and record the assumption.
+
+Record the answers in `design-plan.md` at the frontend root — the direction you
+picked and each page's anchor. A brief you did not write down is a brief you
+will contradict on page three.
 
 ### The one deliberate moment
 
@@ -76,36 +80,39 @@ and not on every page. Pick one and execute it well:
 - An identity header that genuinely identifies: monogram, reference code,
   status, and the two facts that matter, laid out with intent.
 - A status timeline on the entity with a lifecycle, showing where a record is
-  and what happens next.
+  and what happens next. An entity whose status is a **sequence** gets a
+  `ProcessStepper` across the top rather than a bare status pill.
 - A worklist that answers "what should I do now?" rather than listing rows.
 
 One well-executed moment beats five half-executed flourishes. If you cannot
 point at yours when you finish, the app does not have one.
 
-## 1a. Aesthetic direction — pick one per app
+---
 
-Without this every app is the same grey-and-indigo CRUD shell. The theme's
-brand colour is fixed (§1), but **everything around it is yours to decide**:
-surface temperature, density, type treatment, how much colour appears outside
-status pills. Choose one direction in the brief and hold it everywhere.
+## 1. Aesthetic direction — commit to one
 
-| Direction | For | Surface | Type | Density | Signature |
-|---|---|---|---|---|---|
-| **Operational** | Dispatch, inventory, order desks — used all day | cool grey (`gray-50` page) | compact 13px, tabular figures everywhere | dense: 12-16px cell padding | numbers carry the page; status colour does real work |
-| **Editorial** | Dashboards, reports, exec views | warm off-white | large display numbers, tight tracking (-0.03em) | airy: generous whitespace, 24-32px gaps | one oversized hero metric per screen |
-| **Clinical** | Patient, case, compliance records | near-white, restrained | precise 13px, mono for IDs/codes | medium | structure and labelling over ornament; nothing decorative |
-| **Approval** | Queues, reviews, sign-off flows | light neutral | clear 14px body | medium-airy | the action is unmissable; state is always visible |
+The theme's brand colour is fixed (§2), but surface temperature, density, type
+treatment and how much colour appears beyond status pills are yours. Decide in
+the brief, then hold it across every page.
 
-Then decide **where colour appears beyond status pills** — the anchor card's
-tint, an accent border on the active row, a tinted section header. An app whose
-only colour is a row of coloured chips reads as unfinished.
+Commit to a clear direction and execute it precisely rather than hedging —
+a page that splits the difference between two directions reads as neither.
+Operational tools want compact rows, tabular figures and status colour doing
+real work; review and approval tools want more air and an unmissable action;
+record-keeping wants structure and labelling over ornament. Those are starting
+points, not a menu — the requirement's own vocabulary and rhythm should suggest
+the direction, and an app that genuinely warrants something else should have it.
 
-**Never** let this collapse into "default": if you did not consciously pick a
-direction, you picked Operational by accident and it will look it.
+Then decide where colour appears beyond status pills — an anchor card's tint,
+an accent border on the active row, a tinted section header. An app whose only
+colour is a row of coloured chips reads as unfinished.
+
+**Never let this collapse into "default".** If you did not consciously pick a
+direction, you picked the generic one and it will look it.
 
 ---
 
-## 1. Colour comes from the app theme, never from your imagination
+## 2. Colour comes from the app theme, never from your imagination
 
 The initializer already sets CSS variables from the app's configured theme, as
 **full ramps** — `25` through `950` for brand and gray, plus semantic colours.
@@ -308,24 +315,6 @@ display size from §2, and keep the cards under it plain.
 
 ---
 
-## 2. Scales — pick from these, do not improvise
-
-- **Spacing**: 4 · 8 · 12 · 16 · 24 · 32 · 48 px. Nothing in between.
-- **Type**: 11 (meta) · 12.5 (label) · 14 (body) · 16 (section) · 20–24 (page
-  title) · 28–32 (hero metric). One weight step for emphasis (500 → 600/700),
-  not three.
-- **Radius**: 4 (chips, inputs inside dense tables) · 10 (inputs, buttons) ·
-  12 (cards, `rounded-xl`). One radius per element class, consistently.
-- **Elevation**: at most two levels. A card is a 1px border plus a soft shadow;
-  a drawer or modal gets the heavier one. Shadows are not decoration.
-- **Numerals**: every metric, money column and quantity gets
-  `font-variant-numeric: tabular-nums`, so figures line up between rows.
-
-Density matters more than ornament: an enterprise table that shows 6 rows on a
-laptop has failed regardless of how it looks.
-
----
-
 ## 3. Every data surface needs four states
 
 A page that only handles the happy path is not finished. Implement all four:
@@ -372,7 +361,7 @@ At minimum `shared.tsx` exports:
 
 | Primitive | Responsibility |
 |---|---|
-| `PageShell` | max-width, page padding, page surface |
+| `PageShell` | max-width, page padding, page surface — detail and custom pages only, never around a `CrudHandler` list |
 | `PageHeader` | back link, title, reference, status chip, actions |
 | `KeyFacts` | the 4–8 field label/value strip |
 | `Tabs` | the tab strip, including counts |
@@ -391,6 +380,26 @@ Rules for these primitives:
 - They take their colours from theme tokens only.
 - `Money`, `DateText` and `Num` are the **only** places formatting is decided,
   so currency and date format are correct everywhere by construction.
+- Consistency means *the same primitive for the same job*, not *every primitive
+  on every page*. In particular `PageShell` is a page **surface**, and a
+  `CrudHandler` list already is one — see below.
+
+### `PageShell` does not go around a list page
+
+A `CrudHandler` ships its own white card, title bar, filter row and padding.
+Wrapping it in `PageShell` pads an already-padded component: you get a grey
+band between the sidebar and the table, a table card floating inset instead of
+meeting the chrome, and ~48px of horizontal room lost — enough to clip the last
+column on a laptop.
+
+```jsx
+const PatientsList = () => <PatientsTable />;              // right
+const PatientsList = () => <PageShell><PatientsTable /></PageShell>;  // wrong
+```
+
+`PageShell` is for detail pages and hand-built custom pages, whose content is
+bare `Card`s that need a surface under them. Full table in
+[shared-primitives.md](shared-primitives.md) § "Which pages get a `PageShell`".
 
 A detail page should then read as composition, roughly:
 
@@ -414,7 +423,7 @@ and `@import "tailwindcss"` in `src/index.css`). Use it.
 
 Inline `style={{...}}` objects cannot express hover, focus, responsive
 breakpoints or `prefers-reduced-motion` — so a page written that way is
-structurally incapable of meeting §3, §7 and §8 of this file. Converting the
+structurally incapable of meeting §3 and §6 of this file. Converting the
 example snippets in this repo from classes to inline styles is a downgrade, not
 a translation.
 
@@ -431,162 +440,6 @@ width, a colour chosen from data at runtime.
 
 ---
 
-## 6. Page anatomies
-
-### List page
-Title + count · search/filter row · table · pagination. The add button belongs
-with the title, not adrift at the bottom.
-
-### Detail page
-
-See [entity-360.md](entity-360.md) for the data mechanics. The **visual** bar,
-which is what gets missed:
-
-```
-< Patients                                                    [...]
-(AR)  Asha Rao   [Active v]  [Interpreter required]  [+ Add tag]
-      PT-0042 · 08 May 1975 · 51 yrs · Female · +91 98… · Dr Mehta   <- identity strip
- Overview │ Programs 1 │ Bills 2 │ Timeline │ Notes 1              <- counts
-┌───────────────────────────────────────────┬──────────────────────┐
-│ [icon] Diagnostics & Lab Testing [Completed]│ Patient status      │  <- RIGHT RAIL
-│ Corvanel 25mg · Regimen complete           │  • Active           │
-│                                            │  since 17 Aug 2026  │
-│ TESTING SCHEDULE          ┌──────────────┐ │  Moved by Vedant    │
-│ Tumour Marker Panel  1/1  │ REGIMEN      │ ├──────────────────────┤
-│ ████████████████████████  │ Corvanel …   │ │ At a glance         │
-│ Fully used                └──────────────┘ │  ▫ Prefers SMS      │
-│                           ┌──────────────┐ │  ▫ Interpreter req. │
-│ 1 of 1 funded tests used  │ ✓ MONITORING │ │  ▫ Victoria 8788    │
-│ ████████████████ 100%     │ Regimen done │ │  ▫ Reg. 17 Aug 2026 │
-│                           └──────────────┘ ├──────────────────────┤
-│ ┌─────────┬─────────┬─────────┐            │ Open tasks  1       │
-│ │TESTS    │NEXT DUE │PATHOLOGY│            │  Enrol in a program │
-│ │1 of 1  ✓│ -  Done │ -       │            │  Overdue by 30 days │
-│ └─────────┴─────────┴─────────┘            ├──────────────────────┤
-├───────────────────────────────────────────┤ Consent             │
-│ ⟳ Recent activity  10      Full timeline → │  ✓ Signed           │
-│  17 AUG 2026  Monday            6 events   │  Method  Physical   │
-│  ● Active  17:40 · Vedant                  │                     │
-│    [New] → [Active]                        │                     │
-└───────────────────────────────────────────┴──────────────────────┘
-```
-
-Non-negotiable, and each is visible in a screenshot:
-
-1. **Identity block + identity strip.** Avatar/monogram, title, status chip,
-   and at least one action. Below the title, a **strip of four to six inline
-   facts** that identify the record — reference, key dates, the relationship
-   that matters, contact. A title and one chip is a wireframe.
-
-2. **The lead card is a synthesis, not a field dump.** The first block inside
-   Overview answers the question the page exists for, computed from several
-   fields plus derived state: progress against an allowance, a countdown with
-   a readiness list, a balance with its ageing. **Re-listing the header's key
-   facts in Overview is the most common failure and is never acceptable** — if
-   a field is in the header, it does not reappear below.
-
-3. **Main column + right rail** is the default layout (roughly 2:1). The rail
-   carries the flat state: current status *with who changed it and when*, an
-   at-a-glance list of flat attributes, open tasks, and any consent or
-   compliance block. Putting the flat fields here is what frees Overview to be
-   a synthesis. Drop to one column only when there is genuinely no state to
-   park — and say so in `design-plan.md`.
-
-4. **Key facts, with one anchor**, when the entity has a number the page exists
-   for. `KeyFacts` takes an `anchor` prop; use it. On an entity whose story is
-   progress rather than a single number, the lead card replaces it — do not
-   ship both a KeyFacts row and a lead card saying the same thing.
-
-5. **Tabs carry counts.** `Programs 1` tells the user something; `Programs`
-   does not.
-
-6. **Every tab has all four states** (§3), including an `EmptyState` whose copy
-   names the thing. Write that copy in `design-plan.md`, not at the keyboard.
-
-7. **Activity is content.** Anything with a history gets a recent-activity
-   list — timestamp, actor, and the transition (`New → Active`), with a link
-   to the full timeline. This is what makes a record feel alive rather than
-   stored. Each entry gets a one-line human explanation, not just the event
-   name: *"Document DOC-004 validated. Subsidy slab determined: 75%."*
-
-8. **An entity whose status is a SEQUENCE gets a `ProcessStepper`** across the
-   top of Overview — the named stages left to right, the current one marked,
-   later ones muted. A status field like `Created → Submitted → Verified →
-   Approved` carries the whole lifecycle, and a lone chip throws all of it
-   away: the user cannot see how far the record got or what happens next.
-
-   Apply the test before reaching for it. **Ordered** (`Identified →
-   Submitted → Awarded`) gets a stepper. A **flat set of independent flags**
-   (`Active`, `Interpreter required`, `VIP`) does not — those are chips, and
-   forcing them into a stepper invents an order that does not exist.
-
-9. **Empty states are invitations, not apologies.** The empty state of a tab
-   the user is expected to act on carries the action itself — an upload zone,
-   a create button — plus the rule that governs it (*"SLA: invoice within 48
-   hours of order creation. Auto-reminder sent."*). "No data" is a defect.
-
-A page with a title, three bare values, a tab strip and one card containing a
-single field is **not finished**, even though every rule about tokens and
-Tailwind was followed. Check it against the sketch above before moving on.
-
-### Custom detail page, no child tables (SKILL.md decision tier 2)
-
-An entity that fails the entity-360 test — no other model points at it — but is
-still one a user opens and works on directly (`Employee`, `Warehouse`,
-`Contract`) is **not exempt from this bar**. It does not get tabs or child
-tables, because it has none to show. Everything else in the anatomy above still
-applies, in full:
-
-1. **Identity block + identity strip** — same as entity-360. Avatar/monogram,
-   title, status chip, at least one action, then the four-to-six-fact strip.
-   A no-tabs page is not an excuse for a title and a chip.
-2. **The lead card is still a synthesis, not a field dump.** There is no tab
-   strip to hide the field dump under — this makes the rule *more* important
-   here, not less. An `Employee` page's lead card might synthesise tenure,
-   current utilisation and open reviews into one read; it does not restate the
-   header's facts as a bulleted list.
-3. **Main column + right rail still applies.** With no child tables to fill the
-   main column, put the synthesis card(s) and any owned-but-not-foreign-keyed
-   detail there (skills, assignments, documents that belong to this record
-   without being their own model) and use the rail for flat state: status
-   history, at-a-glance attributes, open tasks. A single narrow column of
-   label/value rows is the field-dump failure with tabs removed instead of
-   fixed.
-4. **One anchor still required.** If the entity has a number the page exists
-   for (utilisation %, contract value, days to renewal), it gets `KeyFacts`
-   with `anchor` or a lead-card synthesis at display size — never both saying
-   the same thing.
-5. **Activity is still content**, if the entity has any history worth showing
-   (status changes, assignment changes) — same recent-activity list pattern,
-   even with no child tables to make the record feel connected to anything
-   else.
-6. **All four states still apply** (§3) to whatever the page fetches.
-7. **Change Logs still applies — this rule is unconditional, not entity-360
-   specific.** [entity-360.md](entity-360.md) §4c exists because moving *any*
-   entity off the default drawer onto a custom page removes the drawer's
-   kebab-menu "Change Logs" action, and nothing replaces it unless you build
-   it. That is true whether the page has tabs or not — a tier-2 page is a
-   `customMainDetail` exactly like an entity-360 page, calling the same
-   `action=fetch_audit_logs` endpoint. Wire the same slide-over panel §4c
-   describes. Skipping it here because "there's no timeline tab to put it in"
-   is the exact failure §4c is written against.
-
-The only things entity-360 has that this page does not: a tab strip, counts on
-tabs, and child-table empty states. Everything about identity, synthesis,
-layout, anchor and Change Logs is identical — this is a shorter entity-360
-page, not a different design language. Do not let "no tabs" become "no
-design," and do not let it become "no Change Logs" either.
-
-### Dashboard
-1. **KPI row** — 3–5 numbers that matter, each with a label and, where it is
-   meaningful, a delta. Not twelve.
-2. **Primary visual** — the one chart that answers the main question.
-3. **Breakdown** — a table or grouped list supporting that chart.
-4. **Worklist** — what this user should act on next, with links through.
-
-Every number on a dashboard must be traceable: clicking it goes to the filtered
-list it came from. A KPI that cannot be drilled into is decoration.
-
 ### Give every page one visual anchor
 
 The most common tell of generated UI is **N equal cards in a row**: same size,
@@ -602,51 +455,26 @@ One dominant element per page. Not zero, and not five competing.
 
 ---
 
-## 7. Motion — restrained, and never the only signal
+## 5b. A custom detail page with no child tables is still a detail page
 
-Modern enterprise UI is not static, but this is an operations tool, not a
-marketing site. The bar:
+Tier-2 pages (SKILL.md's decision table) have no tab strip, no tab counts and
+no child-table empty states. **Everything else is identical to an entity-360
+page** — identity block, synthesis, layout, anchor. Do not let "no tabs" become
+"no design".
 
-- **Transitions on state change**: hover, active tab, drawer open/close.
-  150–220ms, `cubic-bezier(0.22, 1, 0.36, 1)`. Never `linear`.
-- **Skeleton shimmer** while loading, as in §3.
-- **Every interactive element responds to hover** — background, border or
-  elevation shift. A row, tab or button with no hover state reads as disabled.
-- **Focus rings are never removed.** `focus-visible` must be clearly visible;
-  keyboard users navigate these apps all day.
-
-Do not add entrance animations to tables or list rows — content that moves on
-every data refresh is an irritation in an app someone uses for six hours.
-
-**If you ever do add a custom transition/animation class, do not name it
-`animate-in`, `fade-in`, `slide-in-from-*`, `zoom-in`, or `spin-in`.** Tailwind
-v4 ships these as built-in utility class names. A custom rule under one of
-these names is not additive — Tailwind's own rule for the same class name is
-emitted later in the cascade and silently wins, so the element keeps
-Tailwind's `animation` (typically with no `fill-mode: forwards`) instead of
-yours. The observed failure: a custom `.animate-in { opacity:0; animation:
-fadeInUp .28s forwards }` got overridden by Tailwind's own `.animate-in`
-rule, which has no fill-mode — every element carrying the class stayed at
-`opacity: 0` permanently, with **zero console errors**, because nothing threw;
-it was a pure cascade collision. If you need a custom name, prefix it
-(`fx-in`, `app-fade-in`) so it cannot collide with a current or future
-Tailwind utility.
-
-Always include, once, in `index.css`:
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
+**Change Logs still applies — this rule is unconditional, not entity-360
+specific.** [entity-360.md](entity-360.md) §4c exists because moving *any*
+entity off the default drawer onto a custom page removes the drawer's
+kebab-menu "Change Logs" action, and nothing replaces it unless you build it.
+That is true whether the page has tabs or not — a tier-2 page is a
+`customMainDetail` exactly like an entity-360 page, calling the same
+`action=fetch_audit_logs` endpoint. Wire the same slide-over panel §4c
+describes. Skipping it because "there's no timeline tab to put it in" is the
+exact failure §4c is written against.
 
 ---
 
-## 8. Responsive floor
+## 6. Responsive floor
 
 Every custom page must be usable at **880px** and **480px**.
 
@@ -662,7 +490,7 @@ specificity as its base rule is decided by source order alone.
 
 ---
 
-## 9. Copy
+## 7. Copy
 
 - Label things the way the user's business does, taking names from the
   requirement spec — not from the model field names.
@@ -674,11 +502,12 @@ specificity as its base rule is decided by source order alone.
   `null`, `undefined` or blank.
 - Numbers get thousands separators; currency gets **the app's** symbol, taken
   from the requirement spec — never a hard-coded `$`.
-- Money is right-aligned and tabular in tables, so columns compare by eye.
+- Money is right-aligned in tables and every metric, money column and quantity
+  gets `font-variant-numeric: tabular-nums`, so figures line up between rows.
 
 ---
 
-## 10. What you may use — and the real constraints
+## 8. What you may use — and the real constraints
 
 Earlier versions of this file forbade icons and web fonts. **That was wrong**,
 and it is a large part of why generated apps looked plain. The accurate picture:
@@ -747,10 +576,10 @@ better than pulling in a chart library — fewer bytes, full token control.
   page is custom *layout*, not custom widgets.
 - **Dark mode is not required.** Do not spend budget on it unless asked.
 
-## 11. Checklist
+## 9. Checklist
 
 **Design (judgement — check these by looking at the page, not by grepping):**
-- [ ] Design brief answered; aesthetic direction consciously chosen (§0, §1a)
+- [ ] Design brief answered; aesthetic direction consciously chosen (§0, §1)
 - [ ] Each page's anchor is identifiable at a glance
 - [ ] The app's one deliberate moment exists and you can point at it
 - [ ] No page is a row of N identical cards
@@ -760,13 +589,11 @@ better than pulling in a chart library — fewer bytes, full token control.
 - [ ] `shared.tsx` exists and exports the primitives in §4
 - [ ] No detail page hand-rolls its own tab strip or key-facts grid
 - [ ] Three surface tones present (page ≠ card ≠ sunken/tinted)
-- [ ] Detail pages match the §6 anatomy: identity block with avatar + status +
-      action, `KeyFacts` **with an `anchor`**, Overview as 2+ titled `Section`s,
-      tabs with counts
-- [ ] No-child-table custom detail pages (SKILL.md tier 2) match §6's
-      "Custom detail page, no child tables" anatomy — identity block, synthesis
-      lead card, rail, one anchor. "No tabs" is not "no design"; a field dump
-      here fails the same rule entity-360 does.
+- [ ] Detail pages carry an identity block, key facts with an anchor, and
+      titled sections — see [entity-360.md](entity-360.md) for the layout
+- [ ] A custom detail page with no child tables (SKILL.md tier 2) is still
+      designed: identity block, a lead card that synthesises, one anchor.
+      "No tabs" is not "no design"; a field dump fails here too.
 
 **States:**
 - [ ] Loading skeleton, empty state, error state on **every** data surface
@@ -778,7 +605,8 @@ better than pulling in a chart library — fewer bytes, full token control.
 - [ ] Tailwind classes, not inline `style` objects, for static styling
 - [ ] Inter loaded; JetBrains Mono on IDs and reference codes
 - [ ] `lucide-react` icons at one size and stroke width per context
-- [ ] Spacing, type, radius from the §2 scales; metrics use `tabular-nums`
+- [ ] Spacing, type and radius consistent within an element class;
+      metrics and money use `tabular-nums`
 - [ ] Hover and `focus-visible` on every interactive element
 - [ ] `prefers-reduced-motion` block present in `index.css`
 

@@ -8,7 +8,7 @@ mandatory for every new page.
 The credential is a signed platform-user id, consumed by
 ``zango.apps.dynamic_models.permissions.get_platform_user``:
 
-    user_id = signing.loads(token, max_age=1800)
+    user_id = signing.loads(token, max_age=TOKEN_MAX_AGE_SECONDS)
 
 Three properties make it safe to hand to an agent, and they are why this is
 back in scope after the rest of Capability 3 was cut:
@@ -19,10 +19,14 @@ back in scope after the rest of Capability 3 was cut:
   app's own views via ``is_platform_user``. It does **not** authenticate the
   ``/api/v1/apps/...`` platform admin API, so it cannot create or delete
   apps, users or secrets.
-* **It expires in 30 minutes**, enforced framework-side.
+* **It expires**, enforced framework-side by
+  ``dynamic_models.permissions.TOKEN_MAX_AGE_SECONDS`` — the only place the
+  TTL is defined.
 
-That TTL is shorter than the run ceiling, so a long run can outlive its
-token — see ``TOKEN_MAX_AGE_SECONDS``.
+That TTL must exceed a full build: the token is minted at run start but first
+used at STEP 5h, the last step. At 1800s a 34-minute run missed it by 34
+seconds, so every config call redirected to /login/ and the app shipped with
+no navigation while the run still reported success.
 """
 
 from __future__ import annotations
@@ -33,9 +37,6 @@ from dataclasses import dataclass
 
 
 logger = logging.getLogger("zango.agent_mode")
-
-# Fixed framework-side in dynamic_models/permissions.py.
-TOKEN_MAX_AGE_SECONDS = 1800
 
 
 @dataclass
@@ -105,8 +106,15 @@ def build_access(
         logger.exception("agent_mode: could not mint appbuilder token")
         return AppBuilderAccess(reason=f"{type(exc).__name__}: {exc}")
 
+    # This runs under Celery with no request, so scheme and port come from
+    # AGENT_MODE_APP_BASE_URL. Without the port the URL does not answer and
+    # route registration -- mandatory per prompt.py constraint 8 -- fails.
+    from .context import _base_scheme_and_port
+
+    scheme, port = _base_scheme_and_port(scheme)
+
     return AppBuilderAccess(
-        config_base_url=f"{scheme}://{domain}/{route}configure",
+        config_base_url=f"{scheme}://{domain}{port}/{route}configure",
         token=token,
         available=True,
     )

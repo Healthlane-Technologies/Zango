@@ -452,6 +452,13 @@ def setup_settings(settings, BASE_DIR):
         AGENT_MODE_QUEUE=(str, "agent_mode"),
         AGENT_MODE_HOME=(str, ""),
         AGENT_MODE_CLAUDE_BIN=(str, ""),
+        # Scheme and port for app URLs built outside a request. Agent Mode
+        # runs under Celery, so there is no caller to borrow them from, and a
+        # URL without the dev server's port does not answer -- which breaks
+        # the mandatory AppBuilder route registration. Only the scheme and
+        # port are read; the host is always the tenant's own domain. Deploys
+        # that serve on https:443 set this to "https://localhost".
+        AGENT_MODE_APP_BASE_URL=(str, "http://localhost:8000"),
         AGENT_MODE_SNAPSHOT_RETENTION=(int, 5),
         AGENT_MODE_SNAPSHOT_MAX_BYTES=(int, 536870912),
     )
@@ -466,9 +473,7 @@ def setup_settings(settings, BASE_DIR):
     settings.ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY")
     settings.AGENT_MODE_ENABLED = env("AGENT_MODE_ENABLED")
     settings.AGENT_MODE_ENSURE_PACKAGES = env("AGENT_MODE_ENSURE_PACKAGES")
-    settings.AGENT_MODE_ALLOW_FRONTEND_BUILD = env(
-        "AGENT_MODE_ALLOW_FRONTEND_BUILD"
-    )
+    settings.AGENT_MODE_ALLOW_FRONTEND_BUILD = env("AGENT_MODE_ALLOW_FRONTEND_BUILD")
     settings.AGENT_MODE_MODEL = env("AGENT_MODE_MODEL")
     settings.AGENT_MODE_EFFORT = env("AGENT_MODE_EFFORT")
     settings.AGENT_MODE_MAX_TURNS = env("AGENT_MODE_MAX_TURNS")
@@ -483,6 +488,7 @@ def setup_settings(settings, BASE_DIR):
         BASE_DIR / ".agent_mode" / "home"
     )
     settings.AGENT_MODE_CLAUDE_BIN = env("AGENT_MODE_CLAUDE_BIN")
+    settings.AGENT_MODE_APP_BASE_URL = env("AGENT_MODE_APP_BASE_URL")
     settings.AGENT_MODE_SNAPSHOT_RETENTION = env("AGENT_MODE_SNAPSHOT_RETENTION")
     settings.AGENT_MODE_SNAPSHOT_MAX_BYTES = env("AGENT_MODE_SNAPSHOT_MAX_BYTES")
 

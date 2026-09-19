@@ -56,7 +56,7 @@ and each is checkable with a single grep over `src/custom/`:
 13. `Money` / `DateText` are used for all currency and dates, and their
     `LOCALE`/`CURRENCY` came from the requirement spec, not a hard-coded `$`.
 14. Each page has one visual anchor; no page is a row of N identical cards.
-15. **Every detail page passes the anatomy in design-system.md §6**: identity
+15. **Every detail page passes the anatomy in design-system.md §4**: identity
     block with avatar + status + at least one action button; `KeyFacts` called
     **with an `anchor`**; Overview built from two or more titled `Section`s
     (never one anonymous card); tabs carrying counts. Open the page and look at
@@ -92,9 +92,9 @@ and each is checkable with a single grep over `src/custom/`:
 21. **The page fills the screen.** No large empty band: content width within
     ~300px of `viewport - 260`, and the rail at least 0.6x the main column's
     height. A 1080px column on a 1920px screen leaves ~640px of grey and is the
-    observed failure. Snippet in design-system.md §1.
+    observed failure. Snippet in design-system.md §2.
 
-22. **The page is not flat.** Run the snippet in design-system.md §1
+22. **The page is not flat.** Run the snippet in design-system.md §2
     ("Measure it"): at least 2 distinct card fills, every card carrying the
     hairline shadow, and a page ground that differs from the card fill. All-white
     boxes with grey title bars is the observed failure — it passes every
@@ -107,7 +107,7 @@ and each is checkable with a single grep over `src/custom/`:
     width, so `grid-cols-1 md:grid-cols-3` silently renders one column and a
     right rail drops below the main content. Use `max-md:grid-cols-1
     md:grid-cols-3` (and `max-md:col-span-2 md:col-span-1`). See
-    design-system.md §1.
+    design-system.md §2.
 24. **Every table of an entity opens that entity's custom detail page.** For
     each entity with a `customMainDetail`, the number of `CrudHandler`s hitting
     its endpoint must equal the number passing the three detail props:
@@ -127,7 +127,7 @@ and each is checkable with a single grep over `src/custom/`:
     entity-360.** For every entity given a "custom detail, no tabs" page under
     SKILL.md decision test 2: identity block with avatar + status + action,
     a synthesis lead card (not a field dump), a right rail carrying flat state,
-    and one anchor. See design-system.md §6, "Custom detail page, no child
+    and one anchor. See design-system.md §5b, "no child
     tables." A page here that is a single narrow column of label/value rows is
     the entity-360 field-dump failure with the tabs removed instead of fixed.
 

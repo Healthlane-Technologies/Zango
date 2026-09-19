@@ -166,7 +166,7 @@ and nothing more.
 ### Styling constraints
 
 - One `<style>{CSS}</style>` block inside the component and inline SVG for icons.
-  Only the approved design packages may be installed (design-system.md §10);
+  Only the approved design packages may be installed (design-system.md §8);
   anything else is denied. `lucide-react` is already available, and Inter /
   JetBrains Mono may be loaded from Google Fonts — always with a real fallback
   stack so a blocked request degrades rather than breaks the sign-in screen.
@@ -566,5 +566,5 @@ export default AppLoginCard;
   what counts and the copy-paste CSS.
 - Put the component's CSS in an inline `<style>` in the component itself: it
   mounts over the whole viewport. `lucide-react` is available for icons, and
-  Inter / JetBrains Mono may be loaded from Google Fonts — design-system.md §10
+  Inter / JetBrains Mono may be loaded from Google Fonts — design-system.md §8
   has what is and is not allowed.

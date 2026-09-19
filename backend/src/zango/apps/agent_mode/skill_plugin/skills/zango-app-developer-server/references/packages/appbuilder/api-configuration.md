@@ -42,10 +42,14 @@ CONFIG_BASE_URL="http://yourdomain.com/app/configure"
 TOKEN="abc123xyz"
 ```
 
-**The token is valid for 30 minutes from the start of the run.** Do routes and
-menus in one pass rather than leaving them to the end of a long build; if calls
-start returning auth errors, the token has expired — say so in your summary
-rather than silently skipping the step.
+**The token is valid for 2 hours from the start of the run**, which covers a
+full build reaching this step last. Do routes and menus in one pass.
+
+If a call redirects to `/login/` (HTTP 302) or returns an auth error, the
+token has expired — the run has outlived it. **Say so in your summary with the
+exact command and response. Never treat it as done:** writing the payload to a
+file is not registration, and a run that skips this silently ships an app
+whose pages have no navigation.
 
 The configuration endpoints (always pass `token` as a query param):
 - Routes API: `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=<action>`
@@ -851,7 +855,7 @@ never having been built.
 `curl` is permitted for this, but only against this app's own domain and
 localhost, and POST with a body is allowed: `-X POST`, `-d`, `--data-raw`,
 `--data-binary`, `-F` and `-H` all work against those hosts. The token lasts
-30 minutes.
+2 hours.
 
 If `appbuilder_config_url` is UNAVAILABLE, skip 5h and list the routes and
 menu entries an operator must add. Do NOT skip 5a-5g because of it - the

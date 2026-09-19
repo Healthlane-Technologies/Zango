@@ -1,7 +1,7 @@
 ---
 name: zango-app-developer-server
 description: Server-mode Zango app development, used by Agent Mode inside the Zango platform. Implements backend and frontend features on an existing, already-deployed Zango app - modules, DynamicModelBase models, BaseCrudView CRUD views, forms, tables, workflows, policies, async tasks, AppBuilder routes, custom React pages, entity-360 detail views with child tables, and a branded login page - working only inside that app's workspace directory. Assumes no interactive user feedback.
-version: 1.5.0
+version: 1.6.0
 ---
 
 # Zango App Developer (server mode)
@@ -136,7 +136,7 @@ Classify each entity, in this order:
    summary. A lookup table never qualifies, however many FKs point at it.
 2. **Primary entity, no children yet?** Profile-style custom detail page, no
    tabs — held to the **same bar as entity-360**: identity block, synthesis lead
-   card, rail, one anchor (§6, "Custom detail page, no child tables"). No tabs
+   card, rail, one anchor (design-system.md §5b). No tabs
    does not mean no design effort.
 3. **List needs a non-standard layout?** Kanban (statuses), calendar (dates),
    cards (visual), timeline (sequence) — via `CrudHandler`'s `customTableBody`,
@@ -163,31 +163,42 @@ Also plan, for every app:
 Detail-view mechanics, child tables and the failure modes that make them break
 are in [frontend/entity-360.md](references/frontend/entity-360.md). The visual
 bar every custom page must meet — tokens, states, responsive floor — is in
-[frontend/design-system.md](references/frontend/design-system.md). Read both
-before writing components.
+[frontend/design-system.md](references/frontend/design-system.md). Both are
+required reading before you write components.
 
-### References to read before coding
+### Reference index
+
+Look up the rows for what this app actually needs. Skip the rest. Each row
+names the file to read — open it directly rather than listing its directory.
+A directory's `README.md` indexes the rest of that directory, for the cases a
+row below does not cover.
 
 | What you need to build | Read |
 |------------------------|------|
 | Module | [core/modules.md](references/core/modules.md) |
 | Model | [core/models.md](references/core/models.md) |
-| CRUD view | [core/modules.md](references/core/modules.md), [core/models.md](references/core/models.md), then the three core files — [crud/views/core.md](references/packages/crud/views/core.md), [crud/forms/core.md](references/packages/crud/forms/core.md), [crud/tables/core.md](references/packages/crud/tables/core.md). Reach for [views/reference.md](references/packages/crud/views/reference.md) (method reference, worked examples), [views/troubleshooting.md](references/packages/crud/views/troubleshooting.md), [tables/advanced.md](references/packages/crud/tables/advanced.md) or [forms/examples.md](references/packages/crud/forms/examples.md) only when a core file does not answer it. |
-| Workflow | [overview.md](references/packages/workflow/overview.md), [statuses.md](references/packages/workflow/statuses.md), [transitions.md](references/packages/workflow/transitions.md) — then only if the app needs them: [tags.md](references/packages/workflow/tags.md) (secondary classification), [utils.md](references/packages/workflow/utils.md) (filtering by status/tag), [advanced.md](references/packages/workflow/advanced.md) (conditions, done methods, system transitions). `overview.md` indexes all of them. |
+| CRUD view | [core/modules.md](references/core/modules.md) + [core/models.md](references/core/models.md), then [crud/views/core.md](references/packages/crud/views/core.md), [crud/forms/core.md](references/packages/crud/forms/core.md), [crud/tables/core.md](references/packages/crud/tables/core.md) — those three and nothing else |
+| Workflow | [`overview.md`](references/packages/workflow/overview.md) always — it indexes the rest — then [statuses.md](references/packages/workflow/statuses.md) and [transitions.md](references/packages/workflow/transitions.md) |
 | Policies | [core/policies.md](references/core/policies.md) |
 | Async task | [core/async-tasks.md](references/core/async-tasks.md) |
-| Routes and menus (see STEP 5) | [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) |
+| Routes and menus (see STEP 5) | [appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) |
 | Secrets / encrypted fields | [core/secrets.md](references/core/secrets.md) |
 | Detail view with child tables | [frontend/entity-360.md](references/frontend/entity-360.md) |
 | Branded login / custom auth screens | [frontend/auth-login.md](references/frontend/auth-login.md) |
 | Visual quality bar, tokens, states | [frontend/design-system.md](references/frontend/design-system.md) |
 | Shared UI primitives (write these first) | [frontend/shared-primitives.md](references/frontend/shared-primitives.md) |
-| Frontend patterns | [frontend/crud/core.md](references/frontend/crud/core.md) (always — imports, API shapes, CrudHandler), then only what you need: [crud/tables.md](references/frontend/crud/tables.md), [crud/detail.md](references/frontend/crud/detail.md), [crud/hooks.md](references/frontend/crud/hooks.md) · [frontend/form.md](references/frontend/form.md), [frontend/appbuilder.md](references/frontend/appbuilder.md) |
+| Frontend patterns | [frontend/crud/core.md](references/frontend/crud/core.md) always (imports, API shapes, CrudHandler), then only what the page needs |
 
 ## STEP 4: Implement
 
-Read the reference docs identified above **before writing code**. Use their
-exact patterns and attributes — do not improvise Zango APIs.
+Read the reference for each thing you build **before writing its code**. Use
+their exact patterns and attributes — do not improvise Zango APIs. A pattern
+you half-remember is an improvised Zango API, which is the failure STEP 2
+exists to prevent.
+
+Read only the rows you actually need. Rows naming a **directory** are
+deliberate: list it and read the file you need from its `README.md` index —
+never every file in it.
 
 ### Dependency chain
 
@@ -252,10 +263,14 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 
 ### Delegating 5c, 5d and 5e (optional — read the constraints first)
 
-You MAY hand 5c, 5d and 5e to `Task`/`Agent` subagents to keep their ~70k of
-reference docs out of this context. **It is optional. Doing it wrong loses the
-entire frontend, so if anything below is not satisfied, do 5c–5e inline** —
-inline is always correct and only costs context.
+You MAY hand 5c, 5d and 5e to `Task`/`Agent` subagents so those steps run on a
+small context instead of carrying the whole backend phase. **It is optional.
+Doing it wrong loses the entire frontend, so if anything below is not
+satisfied, do 5c–5e inline** — inline is always correct, but it is the
+expensive path: every turn resends the whole conversation, so the backend
+references still in context are charged again on every frontend turn. "I
+already have the context" is what makes delegating worth it, not a reason to
+skip it.
 
 **1. The Agent tool launches in the BACKGROUND and returns immediately.**
 Its result says "Async agent launched successfully" and gives an `agentId`.
@@ -618,7 +633,7 @@ and every `icon` an inline SVG.
 theme tokens in scope, so it takes its palette from the run context. No
 inline `style={{...}}` for static styling. Four states on every data surface,
 **including each child tab** opened and confirmed to render. `Money`/`DateText`
-everywhere; one visual anchor per page; detail pages match design-system.md §6;
+everywhere; one visual anchor per page; detail pages match design-system.md §4;
 `design-plan.md` exists and the pages match it.
 
 **Correct, full and not flat** — the three most recently observed to fail:
@@ -629,7 +644,7 @@ everywhere; one visual anchor per page; detail pages match design-system.md §6;
 - **The page fills the screen.** Content width within ~300px of
   `viewport - 260`, and the rail at least 0.6x the main column's height. A
   1080px column on a 1920px screen leaves ~640px of empty grey.
-- **The page is not flat.** Run the snippet in design-system.md §1: at least 2
+- **The page is not flat.** Run the snippet in design-system.md §2: at least 2
   distinct card fills, every card carrying the hairline shadow, page ground
   differing from card fill. All-white boxes with grey title bars passes every
   structural rule and still reads as a wireframe.

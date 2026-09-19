@@ -40,7 +40,7 @@ FKs point at it.
 (nothing points at it) but passes test 2 (a user works on it directly) still
 gets identity block, synthesis lead card, rail and one anchor — everything in
 this file except the tab strip and child tables, because it has none. See
-[design-system.md](design-system.md) §6, "Custom detail page, no child tables."
+[design-system.md](design-system.md) §5b, "a custom detail page with no child tables."
 The failure mode for this tier is a plain field dump, on the theory that "no
 tabs" means "no design effort" — it does not.
 
@@ -114,6 +114,20 @@ export const BookingsTable = (props) => (
 Then the dashboard is `<BookingsTable api_endpoint="/bookings/bookings/?created_today=1"
 showHeader={false} />` and cannot lose the detail view.
 
+The entity's own list page is then just that wrapper, mounted bare — **no
+`PageShell`, no padding div, no surface of your own around it**:
+
+```jsx
+// bookings/BookingList.tsx — the whole page.
+const BookingList = () => <BookingsTable headerProps={{ title: 'Bookings' }} />;
+```
+
+A `CrudHandler` already renders its own card, title bar, filter row and
+padding. Wrapping it adds a grey gutter between the sidebar and the table and
+costs ~48px of width, which clips the last column on a laptop. `PageShell` is
+for detail and custom pages — see
+[design-system.md](design-system.md) § "`PageShell` does not go around a list page".
+
 To check, grep for every table of the entity and confirm the count matches the
 number wired:
 
@@ -121,6 +135,77 @@ number wired:
 grep -rn "bookings/bookings/" src/custom/ | wc -l   # tables of this entity
 grep -rn "customMainDetail" src/custom/ | wc -l     # tables wired to the page
 ```
+
+### But only ONE of them may be mounted on any single page
+
+The rule above is about *entities*, not about *instances*. `enableDetailViewRoute`
+registers the `/detail-view/:object_uuid` route, and **that route is a singleton
+per rendered page.** Mount the wrapper twice on one page and both instances claim
+it: on navigation, each renders your detail component *in its own container*,
+side by side.
+
+This bites exactly the layout this skill encourages — a dashboard with one table
+per workflow stage:
+
+```jsx
+// WRONG — four wrappers on one page, four detail views at once.
+{STAGES.map((s) => (
+  <RailCard key={s.key} title={s.label}>
+    <BookingsTable api_endpoint={`/bookings/bookings/?stage=${s.key}`} />
+  </RailCard>
+))}
+<BookingsTable api_endpoint="/bookings/bookings/?assigned_to_me=1" />
+```
+
+Clicking a row renders the detail page inside a ~340px dashboard column —
+every label wrapping one letter per line — while the other three columns render
+it again behind it. Nothing throws. The list page looks perfect, so this
+survives every check that only opens the list.
+
+On a multi-table page, let the tables **navigate to the canonical route** and
+mount the detail-owning wrapper only on the entity's own list page:
+
+```jsx
+// RIGHT — dashboard tables navigate; they do not own the route.
+<BookingsTable
+  api_endpoint={`/bookings/bookings/?stage=${s.key}`}
+  enableDetailViewRoute={false}
+  customMainDetail={undefined}
+  onRowClick={(row) => navigate(`/app/bookings/detail-view/${row.object_uuid}`)}
+/>
+```
+
+Or give the wrapper a `detailRoute` prop that defaults on and is passed `false`
+by every dashboard caller — whichever you choose, the invariant to hold is:
+
+> **Exactly one mounted `CrudHandler` per page may set `enableDetailViewRoute`.**
+
+Check it per page, not just per entity:
+
+```bash
+# For each page component, count wrappers that own the route. Must be 0 or 1.
+grep -c "BookingsTable" src/custom/pages/Home.tsx
+```
+
+### A filtered `api_endpoint` breaks the detail fetch
+
+`CrudHandler` carries the endpoint's **query string into the detail request**.
+So a table scoped with a filter issues:
+
+```
+/bookings/bookings/?stage=done&object_uuid=<uuid>&action=fetch_item_details&view=detail
+```
+
+The server applies `stage=done` to the lookup as well. If the record you clicked
+is not in that stage, `get_queryset()` cannot find it and `BaseDetail` raises an
+unhandled `DoesNotExist` — **HTTP 500**, not a 404. On a stage-per-column
+dashboard, every column except the matching one 500s on every row click.
+
+The filter belongs on the *list* request only. Either drop it from the detail
+route by having dashboard tables navigate (previous section), or scope the table
+server-side — a dedicated view or a `get_queryset()` that reads the filter only
+when `action=get_table_data` — rather than in the endpoint the detail fetch
+inherits.
 
 ## 3. Props your detail component receives — camelCase
 
@@ -147,6 +232,51 @@ const PatientDetail = ({
 
 Each entry in `generalDetails.fields` is
 `{ name, display_name, type, value, searchable, sortable }`.
+
+### `workflowDetails.current_status_meta` has no `label` key
+
+The status label is `status_label`. `current_status_meta` is the **transition**
+metadata for the transition that produced the current state, with the status
+fields merged in — see `packages/workflow/base/engine.py::get_current_status()`:
+
+```json
+"workflow_details": {
+  "current_status": "in_progress",
+  "current_status_meta": {
+    "name": "to_do_to_in_progress",   // the TRANSITION's name, not the status
+    "display_name": "Start",          // the TRANSITION's label — not the status label
+    "from": "to_do",
+    "to": "in_progress",
+    "status_label": "In Progress",    // <- the status label lives HERE
+    "status_color": "blue"
+  },
+  "next_transitions": [...],
+  "tag_details": []
+}
+```
+
+There is no `.label`, and no `.name` that means the status. Both spellings are
+the ones you reach for, both are `undefined`, and both fail **silently into your
+fallback** — so a stepper or badge written like this pins to the first stage for
+every record, forever:
+
+```jsx
+// WRONG — .label is always undefined; every task reads "To Do".
+const current = workflowDetails?.current_status_meta?.label || 'To Do';
+
+// RIGHT — status_label, falling back to the raw status key.
+const current = workflowDetails?.current_status_meta?.status_label
+  || workflowDetails?.current_status;
+```
+
+Reading `display_name` is the same bug wearing a better disguise: it resolves,
+so there is no fallback to notice, but it renders the *transition* name
+("Start") where you wanted the *status* ("In Progress").
+
+If you drive a `ProcessStepper` from this, assert the lookup actually hits —
+`stages.indexOf(current)` returning `-1` means you read the wrong key, and
+clamping it to `0` with `Math.max(0, ...)` is what converts the bug into a
+confident wrong answer.
 
 ## 3b. `generalDetails.fields` carries the TABLE's columns — not your model's
 
@@ -316,7 +446,7 @@ rely on the frontend to scope a child table.**
 ## 4b. Reading child rows yourself — the three traps
 
 `CrudHandler` renders a child table for you. But a **lead card that
-synthesises** (design-system.md §6.2) usually needs the rows themselves — the
+synthesises** (design-system.md §4) usually needs the rows themselves — the
 lowest quote, the unpaid total, how many are approved — not just a table. When
 you fetch them yourself, all three of these will bite, and each fails
 *silently* with a 200:
@@ -764,7 +894,18 @@ export { default as PatientDetail } from './PatientDetail';
 - [ ] **Set on EVERY table of that entity**, not just its list page — dashboard
       worklists, role landing pages and child tabs included (§2). One shared
       wrapper component per entity is the reliable way
+- [ ] **…but only ONE mounted table per page owns the route.** On a page with
+      several tables of one entity (stage columns, worklists), the others
+      navigate to the canonical detail route instead (§2). Two owners = the
+      detail page renders inside a dashboard column
+- [ ] **No filter in the `api_endpoint` of a detail-owning table** — the query
+      string rides along into `fetch_item_details` and 500s on any record the
+      filter excludes (§2)
 - [ ] Detail component reads **camelCase** props (`generalDetails`, `workflowDetails`)
+- [ ] **Status read as `current_status_meta.status_label`**, never `.label`
+      (always `undefined`, fails silently into your fallback) or `.display_name`
+      (the transition's name, not the status) (§3). If a stepper indexes stages
+      by it, `indexOf` must not return `-1`
 - [ ] **Every `BaseDetail` subclass declares `Meta.fields`** listing every field
       the page reads — without it the payload falls back to the *table's*
       columns and the missing ones read as `undefined` (§3b)

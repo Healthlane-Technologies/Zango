@@ -45,7 +45,35 @@ for w in ["never","must","mandatory","always","required","exactly","not optional
 
 # 4. reference links
 def links(s): return set(re.findall(r'\(references/[^)]+\)', s))
-lost_links = links(b) - links(n) - {'(references/frontend/crud.md)'}
+# The STEP 3 reference index points at DIRECTORIES, not files, so the agent
+# must list one and choose from its README before it can read anything. A
+# resolved file path in that table is an immediately actionable Read, and the
+# agent front-loads the whole table during planning -- measured: 13 reference
+# docs read back-to-back before a single line of code, ~71% of one run's
+# cache-read bill. Directory rows broke that batch (13 reads / 0 writes ->
+# 5 reads / write / 4 reads). Every file below is still reachable, one hop
+# later, via its directory's README.md index -- and any file still named at
+# its point of use inside a STEP keeps its link.
+DIR_INDEXED = {
+    '(references/core/models.md)', '(references/core/policies.md)',
+    '(references/core/async-tasks.md)', '(references/core/secrets.md)',
+    '(references/packages/crud/views/core.md)',
+    '(references/packages/crud/views/reference.md)',
+    '(references/packages/crud/views/troubleshooting.md)',
+    '(references/packages/crud/forms/core.md)',
+    '(references/packages/crud/forms/examples.md)',
+    '(references/packages/crud/tables/core.md)',
+    '(references/packages/crud/tables/advanced.md)',
+    '(references/packages/workflow/overview.md)',
+    '(references/packages/workflow/statuses.md)',
+    '(references/packages/workflow/transitions.md)',
+    '(references/packages/workflow/tags.md)',
+    '(references/packages/workflow/utils.md)',
+    '(references/packages/workflow/advanced.md)',
+    '(references/frontend/crud/tables.md)',
+    '(references/frontend/crud/hooks.md)',
+}
+lost_links = links(b) - links(n) - {'(references/frontend/crud.md)'} - DIR_INDEXED
 if lost_links: fail.append(f"LOST links: {sorted(lost_links)}")
 
 print(f"lines {b.count(chr(10))} -> {n.count(chr(10))}")
