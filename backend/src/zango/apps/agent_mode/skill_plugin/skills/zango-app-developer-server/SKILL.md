@@ -661,10 +661,9 @@ workspace root with one user per role you defined:
 ]}
 ```
 
-The platform creates them after your run, generates a temporary password for
-each, and shows the credentials on the run detail. Do **not** invent
-passwords yourself and do not put any password in a file — they are generated
-and must be changed at first login.
+The platform creates them after your run, generates a password for each, and
+shows the credentials on the run detail. Do **not** invent passwords yourself
+and do not put any password in a file — they are generated.
 
 Use addresses that are obviously non-production (`@demo.test`,
 `@example.com`). One user per role is enough.

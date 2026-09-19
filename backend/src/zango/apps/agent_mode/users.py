@@ -11,8 +11,14 @@ schema), so it writes `users.json` and the runner reconciles it after the
 stream ends.
 
 Passwords are generated here, never chosen by the agent, and returned to the
-caller so the panel can show them once. They are deliberately temporary:
-``force_password_reset=True`` means the first login must change them.
+caller so the panel can show them.
+
+``force_password_reset`` is deliberately **off**. These accounts exist so the
+person who just described an app can open it, and so they can hand the link
+to a colleague to look at — a forced reset puts a wall in front of exactly
+that, and the recipient cannot even use the credentials that were shared with
+them. The accounts are demo accounts on a demo build; the reset belongs at
+the point the app goes to production, not here.
 """
 
 from __future__ import annotations
@@ -134,7 +140,7 @@ def ensure_users(workspace_path: str, emit=None) -> list:
                 spec["mobile"],
                 password,
                 [role.id],
-                force_password_reset=True,
+                force_password_reset=False,
                 require_verification=False,
             )
             ok = not isinstance(response, dict) or response.get("success", True)
