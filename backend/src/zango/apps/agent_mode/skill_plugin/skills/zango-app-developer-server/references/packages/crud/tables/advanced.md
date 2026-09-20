@@ -76,11 +76,11 @@ def can_perform_row_action_activate(self, request, obj):
 
 ## Custom Table Queryset
 
-> **Fetching these rows from a custom page?** The response shape has three
-> traps that all fail silently with a 200 — the rows sit behind
-> `action=get_table_data`, they are at `j.data` (a plain array), and any
-> column with a `_getval` is serialized to an **HTML string**, so a boolean
-> column is truthy whatever its value. See
+> **Reading these rows from a custom page?** Use `useTable`, which handles the
+> request and response shapes for you — a hand-rolled `fetch` fails silently
+> with a 200. One thing it cannot handle: any column with a `_getval` is
+> serialized to an **HTML string**, so a boolean column is truthy whatever its
+> value; strip the markup before reading it. See
 > [../../../frontend/entity-360.md](../../../frontend/entity-360.md) §4b.
 
 

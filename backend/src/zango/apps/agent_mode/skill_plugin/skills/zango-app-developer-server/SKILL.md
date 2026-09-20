@@ -136,7 +136,7 @@ Classify each entity, in this order:
    summary. A lookup table never qualifies, however many FKs point at it.
 2. **Primary entity, no children yet?** Profile-style custom detail page, no
    tabs — held to the **same bar as entity-360**: identity block, synthesis lead
-   card, rail, one anchor (design-system.md §5b). No tabs
+   card, rail, one anchor (verify-gate.md item 26). No tabs
    does not mean no design effort.
 3. **List needs a non-standard layout?** Kanban (statuses), calendar (dates),
    cards (visual), timeline (sequence) — via `CrudHandler`'s `customTableBody`,
@@ -160,10 +160,17 @@ Also plan, for every app:
   usually the right first screen.
 - **A branded login page.** Always. See STEP 5e.
 
+Dashboard stat cards need aggregates, not rows. `useTableRows` works for
+small tables, but doesn't have to be the default — a custom view that
+aggregates in the database and returns just the numbers is equally valid,
+and scales better once a table outgrows one page.
+
 Detail-view mechanics, child tables and the failure modes that make them break
-are in [frontend/entity-360.md](references/frontend/entity-360.md). The visual
-bar every custom page must meet — tokens, states, responsive floor — is in
-[frontend/design-system.md](references/frontend/design-system.md). Both are
+are in [frontend/entity-360.md](references/frontend/entity-360.md). The
+primitives every page composes from are in
+[frontend/shared-primitives.md](references/frontend/shared-primitives.md), and
+the values they use are in
+[frontend/design/](references/frontend/design/). All are
 required reading before you write components — **at STEP 5, not here.** You
 are planning now; naming them is enough. See "When to read a reference" below.
 
@@ -207,7 +214,6 @@ over half of all reference bytes, and none is needed before STEP 5:
 | [frontend/entity-360.md](references/frontend/entity-360.md) | 5d, writing that detail page |
 | [frontend/appbuilder.md](references/frontend/appbuilder.md) | 5a scaffold, then 5h wiring |
 | [appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) | 5h, registering routes and menus |
-| [frontend/design-system.md](references/frontend/design-system.md) | 5b for the brief, 5d per page |
 | [packages/crud/detail.md](references/packages/crud/detail.md) | when writing a `BaseDetail` view |
 
 | What you need to build | Read |
@@ -222,7 +228,6 @@ over half of all reference bytes, and none is needed before STEP 5:
 | Secrets / encrypted fields | [core/secrets.md](references/core/secrets.md) |
 | Detail view with child tables | [frontend/entity-360.md](references/frontend/entity-360.md) |
 | Branded login / custom auth screens | [frontend/auth-login.md](references/frontend/auth-login.md) |
-| Visual quality bar, tokens, states | [frontend/design-system.md](references/frontend/design-system.md) |
 | The values that meet that bar — tokens, direction, card treatments | [frontend/design/](references/frontend/design/) — read at 5c/5d |
 | Shared UI primitives (write these first) | [frontend/shared-primitives.md](references/frontend/shared-primitives.md) |
 | Frontend patterns | [frontend/crud/core.md](references/frontend/crud/core.md) always (imports, API shapes, CrudHandler), then only what the page needs |
@@ -295,7 +300,7 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 | | Sub-step | Produces |
 |---|---|---|
 | 5a | Scaffold `frontend/` | `frontend/` with `src/custom/` |
-| 5b | **Plan the pages** | `design-plan.md` at the workspace root |
+| 5b | **Read treatments.md + directions.md, then plan the pages** | `design-plan.md` at the workspace root, with an anchor treatment named per page |
 | 5c | Write the tokens + shared primitives | `src/custom/pages/tokens.css` + `shared.tsx` |
 | 5d | Write the custom pages | entity-360, landing pages |
 | 5e | Brand the login page | `AppLoginCard.tsx` |
@@ -308,7 +313,7 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 **Do not dispatch `Task`/`Agent` subagents for the frontend.** This was tried
 — one subagent per page, in parallel — and measured worse on every real run:
 each parallel dispatch independently re-read the same shared reference
-material (`entity-360.md`, `design-system.md`, `shared-primitives.md`, the
+material (`entity-360.md`, `shared-primitives.md`, the
 full `design-plan.md`), so cache-creation, output and thinking tokens all went
 up by multiples (3–9x on a same-size comparison) for a total cost higher than
 writing the whole frontend phase yourself, even though per-dispatch cache-read
@@ -330,8 +335,8 @@ because compaction discards exactly the design detail you are implementing.
 Manage that directly instead of forking contexts to dodge it:
 
 - Keep `design-plan.md` (5b) as the one artifact you actually re-read per
-  page — it already distills what `entity-360.md`/`design-system.md` say for
-  this app, so once those two are read once during planning you should not
+  page — it already distills what `entity-360.md` and the design kit say for
+  this app, so once those are read once during planning you should not
   need to reopen them per page.
 - Do not re-read backend files (`models.py`, `views.py`) while writing
   frontend pages — the facts you need (model/module names, field names and
@@ -387,10 +392,10 @@ peaked at 359k context and compacted mid-build. Let the install finish, then
 write 5c → 5d → 5e in order.
 
 Icons and fonts are already available: `lucide-react` ships with `@zango-core`,
-and Inter and JetBrains Mono load from Google Fonts. See
-[frontend/design-system.md](references/frontend/design-system.md) §10 — the
-earlier claim that they were unavailable was wrong, and it is why generated
-apps looked plain.
+and Inter and JetBrains Mono load from Google Fonts — see
+[frontend/design/tokens.md](references/frontend/design/tokens.md). The earlier
+claim that they were unavailable was wrong, and it is why generated apps
+looked plain.
 
 ### 5b. Plan the pages — write `design-plan.md` before any component
 
@@ -398,6 +403,17 @@ Every rule in §6/§1a is satisfiable *nominally* — a second Section that adds
 nothing, tabs with zero counts, an Overview re-listing the header. That passes a
 grep and fails a glance. So write `design-plan.md` at the workspace root first:
 a real file, because the verify gate reads it back against the finished pages.
+
+**Read [frontend/design/treatments.md](references/frontend/design/treatments.md)
+and [frontend/design/directions.md](references/frontend/design/directions.md)
+before writing a single line of `design-plan.md`, not after.** A plan drafted
+without treatments.md in context comes out as "N sections with MetricTile
+counts" — a flat, anchor-less list — and 5d then "implements it literally,"
+shipping the flat page verbatim even though treatments.md gets read later in
+the run. Reading the doc late does not help once the plan already shipped
+without an anchor. This applies to **every** page you plan, including the
+role landing page (Home) below — it is not exempt just because it isn't a
+focus entity.
 
 For **each focus entity**, answer all six — a few lines each, not a document:
 
@@ -423,12 +439,26 @@ For **each focus entity**, answer all six — a few lines each, not a document:
 5. **Every tab** — count source, child table or composed view, and its
    **empty-state copy written out in full**. Copy invented at implementation
    time reverts to "No data".
-6. **The one deliberate moment** — the single element executed with more care
-   than the brief requires, which you can point at afterwards.
+6. **The anchor and its treatment** — name the single element on this page
+   that is visually heavier than everything else (the lead card, a hero
+   figure, the primary chart), then pick its treatment from
+   [design/treatments.md](references/frontend/design/treatments.md): gradient
+   hero for an identity/summary page, sunken band for grouped metrics,
+   top-accent for rail blocks. Record which treatment goes where **in this
+   plan**, not as a decision left for 5d. If you cannot name an anchor, you do
+   not yet know what the page is for, and it will come out as a flat list of
+   equal-weight boxes — the exact failure this step exists to prevent.
 
 Then one app-level entry: the **identity strip** — per entity, the four to six
 facts that identify a record at a glance (reference number, dates, the one
 relationship that matters, contact). The header is not a title plus a chip.
+
+**The role landing page (Home) gets the same six answers**, not a shorter
+version — it is the first page every user sees and is not exempt just
+because it is not a focus entity. In particular: name its anchor (typically a
+gradient-hero summary of what needs attention today) and do not default it to
+"N sections with MetricTile counts at the top" — three identical stat tiles
+with no hero is the flat-list failure by another name.
 
 Write it, then build exactly it.
 
@@ -503,7 +533,6 @@ Rules:
   match the route's `component` value exactly**, or the page renders blank.
 
 Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
-[frontend/design-system.md](references/frontend/design-system.md),
 [frontend/design/treatments.md](references/frontend/design/treatments.md),
 [frontend/crud/core.md](references/frontend/crud/core.md) +
 [crud/detail.md](references/frontend/crud/detail.md),
@@ -681,7 +710,7 @@ and every `icon` an inline SVG.
 theme tokens in scope, so it takes its palette from the run context. No
 inline `style={{...}}` for static styling. Four states on every data surface,
 **including each child tab** opened and confirmed to render. `Money`/`DateText`
-everywhere; one visual anchor per page; detail pages match design-system.md §4;
+everywhere; one visual anchor per page; detail pages match entity-360.md §6;
 `design-plan.md` exists and the pages match it.
 
 **Correct, full and not flat** — the four most recently observed to fail:
@@ -691,11 +720,11 @@ everywhere; one visual anchor per page; detail pages match design-system.md §4;
   cause is a `BaseDetail` with no `Meta.fields` (entity-360.md §3b).
 - **Add a row from a child tab, then check the page's own numbers without
   reloading.** The table refreshes itself; tab badges and stat cards fetched by
-  the page do not (entity-360.md §4b trap 4).
+  the page do not (entity-360.md §4b).
 - **The page fills the screen.** Content width within ~300px of
   `viewport - 260`, and the rail at least 0.6x the main column's height. A
   1080px column on a 1920px screen leaves ~640px of empty grey.
-- **The page is not flat.** Run the snippet in design-system.md §2: at least 2
+- **The page is not flat.** Run the snippet in verify-gate.md item 22: at least 2
   distinct card fills, every card carrying the hairline shadow, page ground
   differing from card fill. All-white boxes with grey title bars passes every
   structural rule and still reads as a wireframe.

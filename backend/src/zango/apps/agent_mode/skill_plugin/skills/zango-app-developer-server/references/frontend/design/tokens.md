@@ -3,30 +3,34 @@
 Copy this file into `src/custom/pages/tokens.css` and import it once from
 `shared.tsx`. Everything in the design kit references these names.
 
-It exists because the theme gives you **one hue plus gray**. A page built from
-only `--color-brand-500` and `--color-gray-*` has no tonal range to design
-with, and comes out flat no matter how the components are written. This block
-derives a full ramp from the tenant's single brand colour with `color-mix`, so
-you get range **and** per-tenant re-skinning — the brand hex stays the only
-input.
+**The theme already ships five full ramps** — `brand`, `gray`, `success`,
+`error` and `warning`, roughly `25`/`50` through `900`/`950`, verified in a
+built app bundle. That is your palette: use the ramp steps as steps. A page
+that only ever touches `--color-brand-500` and three grays comes out flat
+because it ignored what was already there, not because the palette was thin.
 
-**Never hard-code a hex for brand or gray.** The literals below are only for
-the accent and semantic hues, which the theme does not supply.
+So this file does **not** redefine colour. It adds the layer the ramps do not
+carry: a finer text hierarchy, compound shadows, the type scale, and motion.
+
+**Never hard-code a hex for brand, gray, success, error or warning** — they
+come from the theme and must re-skin with it. The only literals below are the
+`--accent` steps, a second hue the theme does not supply, chosen from the
+direction row in [directions.md](directions.md).
 
 ```css
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* -- Brand, hydrated from the Zango theme ---------------------- */
+  /* -- Brand and state: alias the theme's ramps. Never redefine them. --- */
   --brand:        var(--color-brand-500);
-  --brand-hover:  color-mix(in oklch, var(--brand) 88%, white);
-  --brand-active: color-mix(in oklch, var(--brand) 90%, black);
-  --brand-50:     color-mix(in oklch, var(--brand)  7%, white);
-  --brand-100:    color-mix(in oklch, var(--brand) 14%, white);
-  --brand-200:    color-mix(in oklch, var(--brand) 28%, white);
-  --brand-600:    color-mix(in oklch, var(--brand) 84%, black);
-  --brand-700:    color-mix(in oklch, var(--brand) 70%, black);
-  --brand-ring:   color-mix(in oklch, var(--brand) 18%, transparent);
+  --brand-hover:  var(--color-brand-400);
+  --brand-active: var(--color-brand-600);
+  --brand-50:     var(--color-brand-50);
+  --brand-100:    var(--color-brand-100);
+  --brand-200:    var(--color-brand-200);
+  --brand-600:    var(--color-brand-600);
+  --brand-700:    var(--color-brand-700);
+  --brand-ring:   color-mix(in oklch, var(--color-brand-500) 18%, transparent);
 
   /* -- Accent: the SECOND hue. Without it the page reads as one
         colour plus gray, which is the "unfinished" tell. Pick from
@@ -39,32 +43,36 @@ the accent and semantic hues, which the theme does not supply.
 
   /* -- Surfaces: three tones. A page where everything is white on
         white is the clearest tell of an unfinished UI. ------------ */
-  --surface-page:    #FAFAFB;
-  --surface-card:    #FFFFFF;
-  --surface-sunken:  #F4F5F8;
-  --surface-tinted:  color-mix(in oklch, var(--brand) 6%, white);
+  --surface-page:    var(--color-gray-50);
+  --surface-card:    var(--color-base-white);
+  --surface-sunken:  var(--color-gray-100);
+  --surface-tinted:  var(--color-brand-25);
   --surface-overlay: rgba(15, 18, 28, 0.6);
 
-  /* -- Text: SEVEN levels, slightly cool. Three levels of gray is
-        what makes generated pages read flat. --------------------- */
-  --text-strong:  #0B0D14;
-  --text:         #14171F;
-  --text-sub:     #4A4F5C;
-  --text-muted:   #767A88;
-  --text-faint:   #A4A8B5;
-  --text-ghost:   #C9CCD4;
-  --text-inverse: #FFFFFF;
+  /* -- Text: SEVEN levels. The theme's gray ramp carries five of
+        them; these two extras are the display and hairline ends.
+        Three levels of gray is what makes generated pages read flat. */
+  --text-strong:  var(--color-gray-950);
+  --text:         var(--color-gray-900);
+  --text-sub:     var(--color-gray-700);
+  --text-muted:   var(--color-gray-500);
+  --text-faint:   var(--color-gray-400);
+  --text-ghost:   var(--color-gray-300);
+  --text-inverse: var(--color-base-white);
 
-  /* -- Borders: cooler and softer than tailwind's gray-200 ------- */
-  --border-faint:  #EEEFF2;
-  --border:        #E2E4E9;
-  --border-strong: #C7CAD3;
+  /* -- Borders ---------------------------------------------------- */
+  --border-faint:  var(--color-gray-100);
+  --border:        var(--color-gray-200);
+  --border-strong: var(--color-gray-300);
 
-  /* -- Semantic. Warm success, amber warning; red is reserved for
-        genuine failure, not for every negative number. ----------- */
-  --ok:   #2E9E6B;  --ok-50:   #E9F6EF;  --ok-700:   #1C6A46;
-  --warn: #DA800B;  --warn-50: #FEF6E7;  --warn-700: #91490D;
-  --bad:  #C92535;  --bad-50:  #FDEEEF;  --bad-700:  #871625;
+  /* -- Semantic: alias the theme's ramps, so a re-theme moves these
+        too. Red is for genuine failure, not every negative number. -- */
+  --ok:   var(--color-success-500);  --ok-50:   var(--color-success-50);
+  --ok-700:   var(--color-success-700);
+  --warn: var(--color-warning-500);  --warn-50: var(--color-warning-50);
+  --warn-700: var(--color-warning-700);
+  --bad:  var(--color-error-500);    --bad-50:  var(--color-error-50);
+  --bad-700:  var(--color-error-700);
 
   /* -- Shadows: compound, never single-layer. The inset top
         highlight is invisible until you look for it and is most of
@@ -76,7 +84,7 @@ the accent and semantic hues, which the theme does not supply.
                inset 0 1px 0 rgba(255,255,255,.6);
   --shadow-lg: 0 4px 8px rgba(15,18,28,.06), 0 16px 32px -8px rgba(15,18,28,.12),
                inset 0 1px 0 rgba(255,255,255,.6);
-  --shadow-brand: 0 4px 12px -2px color-mix(in oklch, var(--brand) 22%, transparent),
+  --shadow-brand: 0 4px 12px -2px color-mix(in oklch, var(--color-brand-500) 22%, transparent),
                   0 2px 4px rgba(15,18,28,.04);
 
   /* -- Radii / motion ------------------------------------------- */

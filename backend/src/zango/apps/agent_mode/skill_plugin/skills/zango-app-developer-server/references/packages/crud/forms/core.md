@@ -401,7 +401,7 @@ context.
 
 One form covers both. The child tab already appends the parent uuid to its
 endpoint to scope the table
-([../../frontend/entity-360.md](../../frontend/entity-360.md) §4); that query
+([../../../frontend/entity-360.md](../../../frontend/entity-360.md) §4); that query
 param also reaches the form. `BaseCrudView.get_form` passes
 `crud_view_instance=self` into every form, and `BaseForm.__init__` stores it, so
 read the request from it — **preset and hide the FK when the param is there,

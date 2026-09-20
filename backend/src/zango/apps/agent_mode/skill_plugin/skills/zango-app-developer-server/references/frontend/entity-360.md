@@ -11,7 +11,7 @@ one record.
 
 > Read this together with [crud/core.md](crud/core.md) and
 > [crud/detail.md](crud/detail.md) (CrudHandler props, detail-view
-> payload shapes) and [design-system.md](design-system.md) (tokens, states).
+> payload shapes) and [shared-primitives.md](shared-primitives.md) (primitives, states).
 
 ---
 
@@ -40,7 +40,8 @@ FKs point at it.
 (nothing points at it) but passes test 2 (a user works on it directly) still
 gets identity block, synthesis lead card, rail and one anchor — everything in
 this file except the tab strip and child tables, because it has none. See
-[design-system.md](design-system.md) §5b, "a custom detail page with no child tables."
+verify-gate.md item 26 — a custom detail page with no child tables is still a
+detail page, and meets the same bar.
 The failure mode for this tier is a plain field dump, on the theory that "no
 tabs" means "no design effort" — it does not.
 
@@ -126,7 +127,7 @@ A `CrudHandler` already renders its own card, title bar, filter row and
 padding. Wrapping it adds a grey gutter between the sidebar and the table and
 costs ~48px of width, which clips the last column on a laptop. `PageShell` is
 for detail and custom pages — see
-[design-system.md](design-system.md) § "`PageShell` does not go around a list page".
+[shared-primitives.md](shared-primitives.md) § "Which pages get a `PageShell`".
 
 To check, grep for every table of the entity and confirm the count matches the
 number wired:
@@ -187,6 +188,11 @@ Check it per page, not just per entity:
 grep -c "BookingsTable" src/custom/pages/Home.tsx
 ```
 
+The same invariant, one entity's detail page embedding *another* entity's
+route-owning wrapper as a child tab instead of siding it: §4 → [Never use
+another entity's `enableDetailViewRoute` wrapper as a child
+tab](#never-use-another-entitys-enabledetailviewroute-wrapper-as-a-child-tab).
+
 ### A filtered `api_endpoint` breaks the detail fetch
 
 `CrudHandler` carries the endpoint's **query string into the detail request**.
@@ -225,7 +231,7 @@ const PatientDetail = ({
   rowActions,       // the table's row_actions, e.g. Edit — render these yourself (§4e)
   objectUuid,       // the record's UUID — what you scope child tables by
   pk,
-  onRefresh,        // re-fetch after a mutation — refreshes THIS record only, not child tabs (§4b)
+  onRefresh,        // re-fetch after a mutation — THIS record only, not child tabs (§4b)
   apiUrl,
 }) => { ... };
 ```
@@ -408,6 +414,75 @@ pagination and the add button, governed by the child module's own policies.
 > A tab that renders blank is not "an empty state" — it is a broken tab. Ship
 > an `EmptyState` for genuinely-empty data, and fix the blank.
 
+### Never use another entity's `enableDetailViewRoute` wrapper as a child tab
+
+§2 tells you to give each entity **one wrapper** carrying
+`enableDetailViewRoute` + `customMainDetail` + `customTableBody`, and to use it
+everywhere that entity is listed — including, it sounds like, here. **Don't.**
+A child tab is the one place that reuses the *filtered endpoint*, not the
+wrapper.
+
+`enableDetailViewRoute` registers `detail-view/:object_uuid` **relative to
+wherever the `CrudHandler` is mounted** — it reads `window.location.pathname`
+at click time and appends to it (`CrudHandler.tsx`, the row/title click
+handler). Mounted at the entity's own list page, `/app/bids`, that produces
+`/app/bids/detail-view/<uuid>` — correct. Mounted inside a *different*
+entity's detail page — a `<BidsTable>` on the `TenderDetail` page's Bids tab —
+it produces `/app/tenders/detail-view/<tender>/detail-view/<bid>`: nested
+under a route React Router registered as `detail-view/:object_uuid` with no
+trailing `/*`, so it can never match. The click doesn't open the wrong page —
+**it silently falls back to the tender list**, and nothing in the network tab
+or the console (past a router warning easy to miss) says so.
+
+```jsx
+// WRONG — TenderDetail.tsx's Bids tab. BidsTable carries enableDetailViewRoute
+// from §2; nested here, its link can never resolve.
+<BidsTable api_endpoint={`/bids/bids/?tender_uuid=${objectUuid}`} />
+
+// ALSO WRONG — CrudHandler has no onRowClick prop, and defaultDetailView's
+// 'navigate' action (string template) is still resolved relative to
+// whichever CrudHandler currently owns enableDetailViewRoute, or renders the
+// framework's generic default detail view when nothing does — either way,
+// not the child's own customMainDetail.
+<CrudHandler
+  api_endpoint={`/bids/bids/?tender_uuid=${objectUuid}`}
+  headerProps={{ title: 'Bids' }}
+  defaultDetailView={{ action: 'navigate', navigateUrlTemplate: 'app/bids/detail-view/{object_uuid}' }}
+/>
+
+// RIGHT — same filtered endpoint, but a bare CrudHandler with no route of its
+// own. A custom customTableBody wraps TableBody with defaultDetailView's
+// 'custom' action, which pushes an absolute SPA-router navigation to the
+// entity's real, top-level detail route (where its customMainDetail is
+// actually registered). customHandler receives the raw react-table Row, so
+// read object_uuid off `row.original`, not `row` itself.
+import { useNavigate } from 'react-router-dom';
+import { CrudHandler, TableBody } from '@zango-core/crud/table';
+
+<CrudHandler
+  api_endpoint={`/bids/bids/?tender_uuid=${objectUuid}`}
+  headerProps={{ title: 'Bids' }}
+  customTableBody={() => {
+    const navigate = useNavigate();
+    return (
+      <TableBody
+        defaultDetailView={{
+          action: 'custom',
+          customHandler: (row: any) => navigate(`/app/bids/detail-view/${(row.original || row).object_uuid}`),
+        }}
+      />
+    );
+  }}
+/>
+```
+
+Verify it by clicking through, not by reading the table: open the parent
+entity's detail page, open a child tab, click a row, and confirm the URL and
+the rendered page are the *child's own* detail page — not the parent's list,
+and not the framework's generic default detail view. This is the same "only
+one mounted route-owner per page" invariant §2's dashboard section states,
+just triggered by nesting instead of siding.
+
 ### The backend half is not optional
 
 The query string is a **display** filter. The child's `BaseCrudView` must narrow
@@ -475,43 +550,114 @@ table's `get_table_data_queryset`, and the child form. Keep them identical.
 > the child form (a part, a technician) is a real question and stays a normal
 > select — with no `autocomplete=` on it.
 
-## 4b. Reading child rows yourself — the four traps
+## 4b. Reading child rows yourself — hand-fetch the table endpoint, not `useTable`
 
 `CrudHandler` renders a child table for you. But a **lead card that
-synthesises** (design-system.md §4) usually needs the rows themselves — the
-lowest quote, the unpaid total, how many are approved — not just a table. When
-you fetch them yourself, all three of these will bite, and each fails
-*silently* with a 200:
+synthesises** (shared-primitives.md, treatment B) usually needs the rows
+themselves — the lowest quote, the unpaid total, how many are approved — not
+just a table.
 
-**1. The rows are behind `action=get_table_data`.** The bare endpoint returns
-200 with table *metadata*, not records, so a naive fetch yields an empty list
-and the card renders "0" next to a table visibly showing rows.
+**Do not use `useTable`/`useTableData` from `@zango-core/crud/table` for this
+— it crashes the page.** Both call `useQueryClient()` unconditionally, no
+try/catch, no fallback, against `@zango-core/crud`'s own bundled copy of
+`@tanstack/react-query` — a separate copy from the one `@zango-core/appbuilder`
+bundles for `ZangoApp`'s own `QueryClientProvider`, with its own private
+`React.createContext()`. `ZangoApp`'s provider never satisfies crud's
+`useQueryClient()` call, so any page calling `useTable` standalone (no
+`CrudHandler` in the same tree) throws `"No QueryClient set, use
+QueryClientProvider to set one"` on **every** load — not a race, not
+intermittent. Observed live: a Home dashboard's stat tiles and worklists,
+each using standalone `useTable`, crashed with "Something went wrong" on
+every first navigation to that route.
 
-```ts
-// WRONG -- 200, but no records
-fetch(`/vendor-quotes/vendor-quotes/?tender_uuid=${objectUuid}`)
+**Do not hand-roll `fetch` against a guessed shape either.** Add a small
+local hook to `shared.tsx` that replicates `useTableData`'s own request/response
+contract with plain `fetch`, no `QueryClient` involved:
 
-// RIGHT
-fetch(
-  `/vendor-quotes/vendor-quotes/?tender_uuid=${objectUuid}` +
-    `&action=get_table_data&view=table&start=0&length=100`,
-)
+```tsx
+// shared.tsx
+export const useTableRows = (apiEndpoint: string, length = 100) => {
+  const [data, setData] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refetchToken, setRefetchToken] = useState(0);
+
+  useEffect(() => {
+    if (!apiEndpoint) { setData([]); setTotalCount(0); setIsLoading(false); return; }
+    setIsLoading(true);
+    const sep = apiEndpoint.includes('?') ? '&' : '?';
+    fetch(`${apiEndpoint}${sep}action=get_table_data&view=table&start=0&length=${length}`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((json) => {
+        setData(json?.response?.table_data ?? []);
+        setTotalCount(json?.response?.recordsTotal ?? 0);
+      })
+      .catch(() => { setData([]); setTotalCount(0); })
+      .finally(() => setIsLoading(false));
+  }, [apiEndpoint, length, refetchToken]);
+
+  return { data, totalCount, isLoading, refetch: () => setRefetchToken((t) => t + 1) };
+};
 ```
 
-**2. The rows are at `j.data` — a plain array.** `ModelTable.get_table_data()`
-returns `{draw, recordsTotal, recordsFiltered, data}` where `data` **is** the
-row array (packages/crud/table/base.py). A chain like
-`j?.data?.records ?? j?.records ?? []` silently falls through to `[]`.
+Same call shape callers already expect from `useTable`:
 
-```ts
-const rows = Array.isArray(j?.data) ? j.data : [];
+```tsx
+const { data, isLoading, totalCount, refetch } = useTableRows(
+  `/vendor-quotes/vendor-quotes/?tender_uuid=${objectUuid}`
+);
 ```
 
-**3. Serialized columns are HTML strings, not values.** Any column with a
-`<field>_getval` on the table class is rendered server-side. A boolean column
-arrives as `'<span class="badge badge-success">Picked</span>'` — which is
-**truthy either way**, so `rows.filter((r) => r.is_selected)` counts every row.
-Decimals may arrive formatted too.
+What this gets right, each of which fails *silently* with a 200 when guessed:
+the `action=get_table_data&view=table&start=&length=` parameters (the bare
+endpoint returns table *metadata*, not records); the response shape
+(`{success, response: {table_data, recordsTotal}}` from this backend —
+a chain like `j?.data?.records ?? []` reads empty against it); and reading
+`recordsTotal`, not `table_data.length`, for the true server-side count.
+
+### Refreshing after a write — `refetch`, not a remount
+
+Every `CrudHandler` mounts its **own private `QueryClient`** inside its own
+`TableProvider` (`TableProvider` does `useMemo(() => createQueryClient(), [])`
+unconditionally, with no check for an ancestor provider). So a child tab's
+Add/edit refreshes **itself** correctly, but `invalidateQueries` called from
+your page never reaches that private cache, and vice versa — two different
+client objects, same `['tableData']` key prefix, no relationship.
+
+The lever that does cross the boundary is the `refetch` your own `useTableRows`
+returned. Call it wherever a write could have happened that your derived
+numbers need to reflect — your page's own row-actions kebab (§4e) succeeding,
+and on tab switch:
+
+```tsx
+const { data: payments, refetch } = useTableRows(
+  `/rent-payments/rent-payments/?tenant_uuid=${objectUuid}`
+);
+
+<Tabs value={tab} onChange={(next) => { setTab(next); refetch(); }} items={...} />
+```
+
+Without this, the user adds a row, watches the child table grow, and every
+number you derived stays frozen at its page-load value. **Observed:** after
+adding a rent payment the same page read "Rent Payments (4)" in the table,
+"3" in the tab badge and "3" in the stat card, and only a full reload agreed.
+A `useEffect` keyed on `[objectUuid]` does not fix it — `objectUuid` never
+changes while the user is on the page.
+
+There is no prop for this either: `CrudHandler` does **not** forward an
+`onSuccess`/`onFormSuccess`. `formProps` reaches only its own Add-button form
+and is spread last over the framework's own `onResponse`, so passing your own
+**replaces** the table's save handler and silently drops its toast and its
+cache invalidation.
+
+### The one trap `useTableRows` does not solve: serialized columns
+
+**Row values are the table's rendered cells, not model values.** Any column
+with a `<field>_getval` on the table class is rendered server-side, and
+`useTableRows` passes it through untouched. A boolean column arrives as
+`'<span class="badge badge-success">Picked</span>'` — **truthy either way**,
+so `rows.filter((r) => r.is_selected)` counts every row. Decimals may arrive
+formatted too.
 
 ```ts
 const stripTags = (v: any) => String(v ?? '').replace(/<[^>]*>/g, '').trim();
@@ -520,98 +666,16 @@ const isPicked = (r: any) =>
   r?.is_selected === true || /(^|>)\s*Picked\s*(<|$)/i.test(String(r?.is_selected ?? ''));
 ```
 
-**4. Nothing refetches them after a write.** A `useEffect` keyed on
-`[objectUuid]` runs **once** — and `objectUuid` never changes while the user is
-on the page. `CrudHandler` refreshes its *own* table after a save, so the tab
-updates while every number you fetched yourself stays frozen at its page-load
-value. The user adds a row, watches the table grow, and the tab badge and stat
-cards beside it still show the old count. **Observed, not theoretical**: after
-adding a rent payment the same page read "Rent Payments (4)" in the table, "3"
-in the tab badge and "3" in the stat card, and only a full reload agreed.
+**This is not only about counts.** Anything derived from those rows goes
+stale or wrong the same way: a "paid in full" percentage, an outstanding
+balance, an open-complaints tile, a synthesised lead card.
 
-**The page and the table do NOT share one `QueryClient` — do not reach for
-`invalidateQueries` to fix this.** Every `CrudHandler` mounts its own private
-`QueryClient` inside its own `TableProvider` (`@zango-core/crud`'s
-`table.es.js` — `TableProvider` does `useMemo(() => createQueryClient(), [])`
-unconditionally, with no check for an ancestor provider). Its `TableAddButton`
-calls `useQueryClient()`, which React resolves to that **private** client, and
-invalidates `['tableData']` **inside it only**. If your page also owns a
-`QueryClient` (App-root, so `useQuery` even works on a custom page — see the
-note below) and keys its own reads under `['tableData', ...]`, that is a
-**third, separate cache**. Nothing you do with `invalidateQueries` from your
-page ever reaches the table's private one, and nothing the table invalidates
-ever reaches yours. Two different objects, same key prefix, no relationship —
-a version of this doc claimed otherwise ("the page and the table share one
-QueryClient"); that was wrong and never worked.
+**Verify with the numbers, not the network tab.** Everything here returns
+200. The only reliable check is that the count in your card matches the row
+count in the table rendered beside it. **Then add a row from the child tab,
+switch away and back**: if the table moved but your number did not, the
+refresh above is missing.
 
-There is also no prop for this: `CrudHandler` does **not** forward an
-`onSuccess`/`onFormSuccess` prop, and do not reach for one either —
-`formProps` only reaches its own **Add-button** form (spread last over the
-framework's own `onResponse`, so passing your own **replaces** the table's
-save handler and silently drops its toast and its own cache invalidation).
-
-**The only lever that actually crosses this boundary is a remount.** Own a
-`reloadKey` counter on the page and bump it wherever a write could have
-happened that this page needs to reflect elsewhere: the page's own row-actions
-kebab (§4e) succeeding, and — cheapest and sufficient — every tab switch, since
-a child tab's `CrudHandler` only needs to be fresh when it is actually shown:
-
-```tsx
-const [reloadKey, setReloadKey] = useState(0);
-const bumpReload = () => setReloadKey((k) => k + 1);
-
-// Rows you fetch yourself — reloadKey in the query key forces a refetch.
-const payments = useQuery({
-  queryKey: ['tableData', 'rent_payments', objectUuid, reloadKey],
-  queryFn: () => fetchRows(endpoint, param, objectUuid),
-  enabled: !!objectUuid,
-});
-
-<Tabs value={tab} onChange={(next) => { setTab(next); bumpReload(); }} items={...} />
-
-{tab === 'payments' && (
-  <CrudHandler key={reloadKey} api_endpoint={...} headerProps={{ title: 'Payments' }} />
-)}
-```
-
-A child tab's own internal Add/edit/row-action still refreshes **itself**
-correctly (that is what its private `QueryClient` is for) — the remount only
-needs to catch what that private cache cannot reach: this page's own derived
-numbers, and the *other* tab.
-
-**A `useQuery` on a custom page needs an app-root `QueryClientProvider` to
-exist at all**, or it crashes with `No QueryClient set, use QueryClientProvider
-to set one` the first time a custom page (not a `CrudHandler`) calls it — none
-of the skill's `App.tsx` templates create one by default. Wrap `ZangoApp` once:
-
-```tsx
-// App.tsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ZApp ... />
-  </QueryClientProvider>
-);
-```
-
-Add `@tanstack/react-query` as an explicit `dependencies` entry in
-`package.json` too — without it the import only resolves because
-`@zango-core/appbuilder`/`@zango-core/crud` happen to bundle it as a
-transitive dependency, which is not a contract to build on.
-
-**This is not only about counts.** Anything the page derived from those rows
-goes stale the same way: a "paid in full" percentage, an outstanding balance,
-an open-complaints tile, a synthesised lead card. One row written by a child
-tab can leave every number on the page stale until the counter bumps.
-
-**Verify with the numbers, not the network tab.** All four return 200. The
-only reliable check is that the count in your card matches the row count in
-the table rendered beside it — if the card says 0 and the table shows rows,
-you have hit one of the first three. **Then add a row from the child tab,
-switch away and back**: if the table moved but your number did not update by
-the time you return, that is trap 4.
 
 ## 4c. Change Logs — the default drawer has this; your page must too
 
@@ -804,6 +868,35 @@ among them unless added as explicit table columns, which changes the list
 view too. For that shape, treat the audit fields as out of scope rather than
 forcing them onto the table.
 
+## 4d-2. Data that isn't a field — override `get_general_details()`
+
+`Meta.fields` and a column's `_getval` only ever produce values *derived from
+the row itself*, landing under `details["fields"][...]`. When the page needs
+something that isn't naturally a column — an aggregate over related rows
+("lowest quote so far", "papers uploaded count"), a cross-model lookup, or a
+nested structure a single flat value can't express — override
+`get_general_details()` on the `BaseDetail` subclass. It returns a plain
+dict, so the override can add **any new top-level key**, not only more
+entries under `fields`:
+
+```python
+class TenderDetail(BaseDetail):
+    class Meta:
+        fields = [...]
+
+    def get_general_details(self, obj):
+        details = super().get_general_details(obj)
+        details["fields"]["lowest_quote"] = {"value": self._compute_lowest_quote(obj)}
+        details["papers_checklist"] = self._build_papers_checklist(obj)  # new key, any shape
+        return details
+```
+
+No new endpoint or extra frontend fetch is needed: the detail page already
+calls this endpoint on load (§2/§3 — `customMainDetail` receives
+`generalDetails` from that one call), so the override just adds keys to a
+payload already being fetched. Read them as `generalDetails.<key>`, not only
+`generalDetails.fields.*`.
+
 ## 4e. Row actions — the default drawer's kebab menu, again
 
 **The default drawer's kebab menu also lists every entry in the table's
@@ -851,15 +944,48 @@ same base endpoint, no `FormRenderer` involved:
 POST `${baseUrl}?action_type=row&action_key=${action.key}&object_uuid=${objectUuid}`
 ```
 
-**Build one small reusable menu in `shared.tsx`, not a bespoke Edit button per
-page.** A table can declare any number of `row_actions` (`tables/core.md`
-covers role-restricted, multi-action tables), so the menu should read
-`rowActions` and render all of them — a three-dot button in the page header
-next to Change Logs, opening a dropdown, each entry driving whichever contract
-above matches its `type`. On success, refetch — see §4b for why
-`invalidateQueries` alone does not reach a sibling `CrudHandler`'s table, and
-why a `reloadKey` bump (calling the page's `onRefresh` too, so the main detail
-record itself is current) is the mechanism that actually works.
+**Build one small reusable `RowActionsMenu` in `shared.tsx`, not a bespoke Edit
+button per page.** The natural first draft renders `rowActions` as a row of
+buttons straight in the header — `{(rowActions || []).map((a) => <Button
+onClick={() => open(a)}>{a.name}</Button>)}` — and this is the wrong shape
+even though it drives the correct API contract; it has shipped before.
+Instead: one `RowActionsMenu` component in `shared.tsx`, a three-dot kebab
+button that toggles a dropdown, reading `rowActions` and rendering every entry
+inside it (a table can declare more than one — `tables/core.md` covers
+role-restricted, multi-action tables) — placed in the page header next to
+Change Logs, each entry driving whichever contract above matches its `type`.
+On success, call the `refetch` from your own `useTableRows` **and** the
+page's `onRefresh` (so the main detail record itself is current) — see §4b
+for why `invalidateQueries` alone does not reach a sibling `CrudHandler`'s
+table.
+
+**The form itself renders in the framework's `Drawer`, not a hand-rolled
+centered dialog.** `import { Drawer } from '@zango-core/components'` — the
+same component the default drawer's own kebab uses
+(`packages/crud/table/components/cells/ActionsCell.tsx`), with `open`,
+`onClose`, `title` and `size="md"` props. A `fixed left-1/2 top-1/2
+-translate-x-1/2 -translate-y-1/2` centered box is the natural next move once
+the form is working, and it is the wrong one: a `FormRenderer` with several
+fields and a select overflows a fixed-width centered box on smaller screens
+and reads as broken chrome, not a deliberate design choice. Wire it exactly
+like the drawer components elsewhere in this same file — `ChangeLogPanel`
+(§4c) is not this component, but the shape is: `open` follows the same
+`formAction` (or equivalent) state used to pick which action's contract to
+call, `onClose` clears it.
+
+```tsx
+<Drawer open={!!formAction} onClose={() => setFormAction(null)} title={formAction?.name} size="md">
+  {formAction && (
+    <FormRenderer
+      api_endpoint={base}
+      getParams={{ action: 'initialize_form', action_type: 'row', action_key: formAction.key, object_uuid: objectUuid }}
+      postParams={{ form_type: 'row_action_form', action_type: 'row', action_key: formAction.key, object_uuid: objectUuid }}
+      onResponse={() => { setFormAction(null); onDone(); }}
+      onError={() => {}}
+    />
+  )}
+</Drawer>
+```
 
 ## 5. The stability rule — read this before writing the page
 
@@ -908,7 +1034,7 @@ Two corollaries:
    count badge.
 5. **Timeline / activity** — where the entity has a lifecycle.
 6. **States** — a skeleton while loading, an empty state per tab, an error
-   state. Not optional; see [design-system.md](design-system.md).
+   state. Not optional; see [shared-primitives.md](shared-primitives.md).
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -1105,26 +1231,34 @@ export { default as PatientDetail } from './PatientDetail';
       `modified_by`, `modified_at`, already in `generalDetails.fields` with
       no backend change needed; the default drawer shows them and a custom
       page must not lose them
-- [ ] **Row actions menu present** (§4e) — every entry in the `rowActions`
-      prop, driven through `action_type=row`/`action_key`/`form_type=
-      row_action_form` (form actions) or a bare POST with the same
-      `action_type`/`action_key` (simple actions) — **not** `form.md`'s plain
-      `form_type=edit_form` contract, which is for entities with no
-      `row_actions` declaration behind them
-- [ ] **App root has a `QueryClientProvider`** (§4b) if any custom page uses
-      `useQuery` — `@tanstack/react-query` is also an explicit `package.json`
-      dependency, not just a transitive one
+- [ ] **Row actions menu present, as one shared `RowActionsMenu` in
+      `shared.tsx`** (§4e) — every entry in the `rowActions` prop, driven
+      through `action_type=row`/`action_key`/`form_type=row_action_form`
+      (form actions) or a bare POST with the same `action_type`/`action_key`
+      (simple actions) — **not** `form.md`'s plain `form_type=edit_form`
+      contract, which is for entities with no `row_actions` declaration
+      behind them. **Rendered as a three-dot kebab + dropdown, not a row of
+      bare buttons in the header** — a page can drive the API contract
+      correctly and still fail this by rendering `rowActions.map(a =>
+      <Button>)` straight in the header instead of one shared menu component.
+- [ ] **Row action forms render in `Drawer` from `@zango-core/components`**
+      (§4e), not a hand-rolled centered modal — open it and confirm it slides
+      in from the side and doesn't clip or overflow on a normal viewport
+- [ ] Child rows read with `useTableRows`, not a hand-rolled `fetch` and not
+      `useTable`/`useTableData` (§4b — the latter two throw "No QueryClient
+      set" on every load outside a `CrudHandler`)
 - [ ] No component passed to `CrudHandler` is defined inline
 - [ ] No child callback writes to parent React state
 - [ ] Loading skeleton, per-tab empty state, error state all present
 - [ ] **Each child tab opened and confirmed to render** — not assumed from a 200
 - [ ] **A row added from a child tab updates the page's own numbers, and the
-      other tab, once you switch back to them** (§4b trap 4) — tab badges,
-      stat cards and any synthesised figure. `CrudHandler`'s own `QueryClient`
-      is private to itself (confirmed in `@zango-core/crud` source) and does
-      **not** reach your page's own queries or a sibling tab's table — a
-      `reloadKey` bumped on tab switch and on the page's own row-actions
-      success is what actually crosses that boundary, not `invalidateQueries`
+      other tab, once you switch back to them** (§4b) — tab badges, stat cards
+      and any synthesised figure. `CrudHandler`'s own `QueryClient` is private
+      to itself, so `invalidateQueries` does not cross it — calling your
+      `useTableRows`'s `refetch` on tab switch and on row-action success is
+      what does
+- [ ] **Values read off a row are stripped of serialized HTML** (§4b) — a
+      `_getval` column arrives as markup and is truthy either way
 - [ ] Page composed from `shared.tsx` primitives, not hand-rolled per page
 - [ ] Tailwind classes, no inline `style` for static styling, no literal hex
 - [ ] Export name matches the AppBuilder route's `component`

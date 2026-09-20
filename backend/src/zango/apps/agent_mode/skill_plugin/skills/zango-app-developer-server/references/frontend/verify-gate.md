@@ -46,10 +46,11 @@ and each is checkable with a single grep over `src/custom/`:
 10. **No literal hex colour in any `.tsx` under `src/custom/pages/`.**
    `grep -rn '#[0-9a-fA-F]\{3,8\}\b' src/custom/pages/ --include='*.tsx'`
    returns nothing — colours come from `var(--*)` tokens.
-   `tokens.css` is where literals are allowed and expected: it is the one
-   file that *defines* the tokens, and its accent and semantic ramps have no
-   theme variable to derive from. Brand and gray still must not be
-   hard-coded there — they come from `--color-brand-*` via `color-mix`.
+   `tokens.css` is the one file where a literal is allowed, and **only** for
+   the `--accent` steps — a second hue the theme does not supply. Brand, gray,
+   success, error and warning all have theme ramps and must be aliased from
+   them (`var(--color-brand-500)`), never hard-coded, or the app stops
+   re-skinning with its tenant.
    `src/custom/auth/` is the one exception: it renders before authentication,
    so it has no tokens in scope and takes its values from the run context's
    `theme:` line instead. Those values must be declared once as custom
@@ -62,7 +63,7 @@ and each is checkable with a single grep over `src/custom/`:
 13. `Money` / `DateText` are used for all currency and dates, and their
     `LOCALE`/`CURRENCY` came from the requirement spec, not a hard-coded `$`.
 14. Each page has one visual anchor; no page is a row of N identical cards.
-15. **Every detail page passes the anatomy in design-system.md §4**: identity
+15. **Every detail page passes the anatomy in entity-360.md §6**: identity
     block with avatar + status + at least one action button; `KeyFacts` called
     **with an `anchor`**; Overview built from two or more titled `Section`s
     (never one anonymous card); tabs carrying counts. Open the page and look at
@@ -91,29 +92,72 @@ and each is checkable with a single grep over `src/custom/`:
 
 20. **Any number your page computed matches what is rendered beside it.** If
     a card says "0 quotes" while the table under it shows rows, the fetch hit
-    one of the three silent-200 traps in entity-360.md §4b (missing
-    `action=get_table_data`, rows at `j.data` not `j.data.records`, or an
-    HTML-serialized column read as a boolean). Check the numbers on the
-    rendered page — the network tab shows 200 for all three failures.
-21. **The page fills the screen.** No large empty band: content width within
-    ~300px of `viewport - 260`, and the rail at least 0.6x the main column's
-    height. A 1080px column on a 1920px screen leaves ~640px of grey and is the
-    observed failure. Snippet in design-system.md §2.
+    a hand-rolled `fetch` instead of `useTable` (entity-360.md §4b), or an
+    HTML-serialized `_getval` column read as a boolean — which `useTable`
+    passes through untouched. Check the numbers on the rendered page; the
+    network tab shows 200 for every one of these failures.
+21. **The page fills the screen.** No large empty band. Your pages render
+    inside the platform's sidebar chrome, so the usable area is roughly
+    `viewport - 260px`. A 1080px column on a 1920px screen leaves ~640px of
+    flat grey and is the observed failure. Run this on the finished page:
 
-22. **The page is not flat.** Run the snippet in design-system.md §2
-    ("Measure it"): at least 2 distinct card fills, every card carrying the
-    hairline shadow, and a page ground that differs from the card fill. All-white
-    boxes with grey title bars is the observed failure — it passes every
-    structural rule and still reads as a wireframe. Confirm by eye that the lead
-    card outweighs the section cards below it.
+    ```js
+    const aside = document.querySelector('aside');
+    const main  = aside.parentElement.firstElementChild;
+    ({ mainH: Math.round(main.getBoundingClientRect().height),
+       railH: Math.round(aside.getBoundingClientRect().height),
+       ratio: (aside.getBoundingClientRect().height /
+               main.getBoundingClientRect().height).toFixed(2),
+       contentWidth: Math.round(main.parentElement.getBoundingClientRect().width),
+       viewport: window.innerWidth })
+    ```
+
+    - **`ratio` must be >= 0.6.** Below that the rail is stranded — move
+      content into it (identity/at-a-glance, status with who changed it and
+      when, open items, recent activity — activity grows with the record and
+      is what fills a rail naturally), or fold its items into the main column
+      and drop the rail entirely. Do not leave it half empty.
+    - **`contentWidth` must be within ~300px of `viewport - 260`.** A much
+      smaller number means a `max-w-*` cap is fighting the layout. `PageShell`
+      uses `max-w-[1600px]` — do not narrow it, and do not add a second
+      `max-w-*` inside it.
+
+    If the whole page ends at the fold with nothing below it, that is not a
+    layout bug — the page does not have enough on it. Revisit `design-plan.md`.
+
+22. **The page is not flat.** Run this on the finished page:
+
+    ```js
+    const cards = [...document.querySelectorAll('*')].filter(e => {
+      const s = getComputedStyle(e);
+      return s.borderWidth !== '0px' && s.borderRadius !== '0px'
+          && e.getBoundingClientRect().width > 240;
+    });
+    const bg = new Set(cards.map(c => getComputedStyle(c).backgroundColor));
+    ({ cards: cards.length, distinctFills: bg.size,
+       withShadow: cards.filter(c => getComputedStyle(c).boxShadow !== 'none').length,
+       pageGround: getComputedStyle(document.body).backgroundColor })
+    ```
+
+    - **`distinctFills` must be >= 2.** All-white means no `Inset`, no `tone`,
+      no sunken surface — see [design/treatments.md](design/treatments.md).
+    - **`withShadow` must equal `cards`.** The hairline is on the `Card`
+      primitive; zero shadows means pages are hand-rolling
+      `<div className="border">` instead of composing `Card`.
+    - **`pageGround` must differ from the card fill.** White cards on a white
+      page is the unfinished look.
+
+    And one check no snippet catches, so do it by eye: **the lead card must not
+    be the same size and weight as the section cards below it.** If the one
+    deliberate moment from your design plan renders as the second of four
+    identical boxes, it is not an anchor — it is a list item.
 
 23. **No responsive grid pairs a base `grid-cols-N` with a `md:` variant.**
     `grep -rnE 'grid-cols-[0-9]+ [^"]*(sm|md|lg):grid-cols-' src/custom/`
     must return nothing. In this build the unprefixed utility wins at every
     width, so `grid-cols-1 md:grid-cols-3` silently renders one column and a
     right rail drops below the main content. Use `max-md:grid-cols-1
-    md:grid-cols-3` (and `max-md:col-span-2 md:col-span-1`). See
-    design-system.md §2.
+    md:grid-cols-3` (and `max-md:col-span-2 md:col-span-1`).
 24. **Every table of an entity opens that entity's custom detail page.** For
     each entity with a `customMainDetail`, the number of `CrudHandler`s hitting
     its endpoint must equal the number passing the three detail props:
@@ -124,6 +168,29 @@ and each is checkable with a single grep over `src/custom/`:
     ways depending on where it was clicked. Both return 200 and the drawer
     looks plausible, so opening only the list page never reveals it. See
     entity-360.md §2.
+24b. **No entity's `enableDetailViewRoute` wrapper is mounted as a child tab
+    on another entity's detail page.** This is the opposite defect from 24 —
+    the wrapper *is* wired correctly, and that's exactly what breaks it.
+    Nested under `/app/<parent>/detail-view/<uuid>`, its route resolves
+    relative to that mount point, can never match, and the click silently
+    falls back to the **parent's list page** — not a 404, not a console error
+    a passing grep would catch. Check every child-tab `CrudHandler`:
+    `grep -rn "enableDetailViewRoute" src/custom/pages/*Detail.tsx` must return
+    nothing. A `defaultDetailView={{ action: 'navigate', navigateUrlTemplate:
+    ... }}` on that same child-tab `CrudHandler` is not the fix either — it
+    renders the framework's generic default detail view instead of the
+    child's `customMainDetail`, which is its own distinct failure that also
+    returns 200 and looks plausible. The only correct fix is a custom
+    `customTableBody` wrapping `TableBody` with `defaultDetailView={{ action:
+    'custom', customHandler }}`, calling `useNavigate()` to push an absolute
+    path to the child's real top-level route — see entity-360.md §4's code
+    example. `customHandler` receives the raw react-table `Row`, not the row
+    data: read the id off `row.original`, not `row` directly, or the pushed
+    URL ends in `.../detail-view/undefined`. Then click-test it: open a
+    parent's detail page, open a child tab, click a row, and confirm the URL
+    and the page are the *child's own* detail page, rendering its actual
+    `customMainDetail` component. See entity-360.md §4 → "Never use another
+    entity's `enableDetailViewRoute` wrapper as a child tab".
 25. **Labels are human.** No label renders as a raw column name:
     `ESTIMATED_VALUE`, `emd_amount`, `submission_deadline` are defects. The
     detail API's `name` is a column name, not a display label — title-case it
@@ -133,8 +200,7 @@ and each is checkable with a single grep over `src/custom/`:
     entity-360.** For every entity given a "custom detail, no tabs" page under
     SKILL.md decision test 2: identity block with avatar + status + action,
     a synthesis lead card (not a field dump), a right rail carrying flat state,
-    and one anchor. See design-system.md §5b, "no child
-    tables." A page here that is a single narrow column of label/value rows is
+    and one anchor. A page here that is a single narrow column of label/value rows is
     the entity-360 field-dump failure with the tabs removed instead of fixed.
 
 27. **Every `customMainDetail` page — entity-360 or tier-2 — replaces the

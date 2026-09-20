@@ -707,7 +707,7 @@ export const Tabs = ({
 );
 
 /* ------------------------------------------------------------------ *
- * The four states (design-system.md §3)
+ * The four states (shared-primitives.md)
  * ------------------------------------------------------------------ */
 
 export const Skeleton = ({ className = '' }: { className?: string }) => (
@@ -979,7 +979,7 @@ export const RailCard = ({
   count?: number;
   /** Optional 3px top border so multiple RailCards in the same rail read as
    *  distinct blocks rather than N identical white boxes stacked vertically
-   *  (design-system.md §4, "give every page one visual anchor" applies
+   *  (design/treatments.md, "the anchor rule" applies
    *  inside the rail too). Use sparingly -- carries meaning like `tone`
    *  elsewhere, not decoration on every card. */
   accent?: 'brand' | 'success' | 'warning' | 'error';

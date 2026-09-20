@@ -8,23 +8,21 @@ What makes a page look designed rather than generated. Three files:
 | [directions.md](directions.md) | 5b, to pick the row — then record it | ~3 KB |
 | [treatments.md](treatments.md) | 5d/5e, before writing any page | ~5 KB |
 
-**Read all three inside the page subagent, not in the main thread.** Together
-they are ~13 KB; carried in the main thread they are re-sent on every
-remaining turn of the build, and the pages are written in subagents anyway.
+**Read each file at the sub-step that needs it**, not up front — together they
+are ~13 KB, and anything read early is re-sent on every remaining turn.
 
-`design-system.md` is the *bar* — what must be true of a finished page, and the
-four states every page needs. This kit is the *material* — the values and
-recipes that get you there. Read the bar once at 5b; read the kit at the point
-of writing.
+This kit is the *material*: the values and recipes a page is built from.
+What a finished page must satisfy is checked by
+[verify-gate.md](../verify-gate.md); the page's shape is
+[entity-360.md](../entity-360.md) §6.
 
 ## Why this exists
 
-A page assembled from theme variables and Tailwind defaults comes out flat:
-one hue plus gray, three levels of text, single-layer shadows, every block
-rendered identically. Every rule in `design-system.md` can be satisfied by
-such a page — that is the documented failure it warns about.
+A page assembled from Tailwind defaults comes out flat: three levels of text,
+single-layer shadows, every block rendered identically. Structural rules alone
+do not prevent that — such a page can satisfy all of them.
 
-What closes the gap is not more instruction. It is specific values: a seven-
-level text hierarchy, a derived brand ramp, compound shadows with the inset
-highlight, a second hue, and two or three card treatments per page instead of
-one. That is what these files carry.
+What closes the gap is specific values: a seven-level text hierarchy, the
+theme's full ramps used as ramps, compound shadows with the inset highlight,
+and two or three card treatments per page instead of one. That is what these
+files carry.

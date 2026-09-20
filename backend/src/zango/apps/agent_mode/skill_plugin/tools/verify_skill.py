@@ -36,6 +36,17 @@ EXPECTED_GONE = {
     # on or verify against a background write.
     'TaskOutput', 'agentId', 'find', 'ls', 'ls frontend/src/custom/pages/',
     'Read',
+    # design-system.md was deleted after a rule-by-rule audit: 17 of its 19
+    # rules were already stated in 3-7 other files each (max-md grid rule,
+    # four states, primitive list, PageShell placement, module scope, anchor,
+    # tier-2 pages, Tailwind-not-inline, responsive floor, tabular-nums,
+    # money/locale, lucide, Inter, the six brief questions, direction). The
+    # two genuinely unique items were MOVED before the delete: the two
+    # measurement snippets -> verify-gate.md items 21/22, and the copy rules
+    # -> shared-primitives.md. Its npm allowlist was already in prompt.py
+    # (told to the agent every run) and enforced in guards.py. What is gone
+    # is ~19 narrated failure anecdotes, which bound no rule.
+    'design-system.md',
 }
 lb, ln = lit(b), lit(n)
 lost = lb - ln - EXPECTED_GONE
@@ -108,7 +119,12 @@ DIR_INDEXED = {
     '(references/frontend/crud/tables.md)',
     '(references/frontend/crud/hooks.md)',
 }
-lost_links = links(b) - links(n) - {'(references/frontend/crud.md)'} - DIR_INDEXED
+# design-system.md: deleted, see EXPECTED_GONE. Its two unique items moved to
+# verify-gate.md (the measurement snippets) and shared-primitives.md (the copy
+# rules); every other rule it held was already stated in 3-7 other files.
+DELETED_DOCS = {'(references/frontend/design-system.md)'}
+lost_links = (links(b) - links(n) - {'(references/frontend/crud.md)'}
+              - DIR_INDEXED - DELETED_DOCS)
 if lost_links: fail.append(f"LOST links: {sorted(lost_links)}")
 
 print(f"lines {b.count(chr(10))} -> {n.count(chr(10))}")
