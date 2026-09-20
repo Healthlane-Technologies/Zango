@@ -10,7 +10,7 @@ that needs it (STEP 5), not while planning.
 |---|---|---|
 | Scaffolding, routes, `App.tsx` wiring | `appbuilder.md` | 5a |
 | The shared primitive set, before any page | `shared-primitives.md` | 5c |
-| Any custom page — the visual bar | `design-system.md` | 5b/5d |
+| Any custom page — the values and recipes | `design/` | 5b/5c/5d |
 | A detail page with child tables | `entity-360.md` | 5d |
 | A page that lists or edits CRUD data | `crud/` | 5d |
 | A form | `form.md` | 5d |
@@ -21,5 +21,7 @@ that needs it (STEP 5), not while planning.
 `crud/` is a directory: `core.md` always (imports, API shapes, `CrudHandler`),
 then `tables.md`, `detail.md` or `hooks.md` only as needed.
 
-`design-system.md` is required for every custom page — it is the bar those
-pages are held to, not optional background.
+`design/` is a directory: the tokens, the direction table and the card
+treatments — the **material** a page is built from. A page written without it
+comes out flat even when every structural rule is satisfied. ~13 KB total;
+read each file at the sub-step that needs it.

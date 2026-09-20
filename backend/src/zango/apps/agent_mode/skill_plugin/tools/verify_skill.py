@@ -26,6 +26,27 @@ EXPECTED_GONE = {
     # the appbuilder shell line, quoted only as an example of what NOT to
     # copy; both greppable tells for it are still present.
     "{% zstatic 'packages/appbuilder/js/build.'|add:build_version|add:'.js' %}",
+    # Frontend delegation (5c/5d/5e dispatching Task/Agent subagents) was
+    # removed outright: measured worse than writing inline on every real run
+    # (parallel dispatch re-read the same shared reference material once per
+    # page, 3-9x'ing cache-creation/output/thinking for a net cost increase
+    # over a zero-delegation baseline). These literals only existed to name
+    # the dispatch-and-wait protocol (TaskOutput/agentId) and the on-disk
+    # check for subagent output; with no subagent, there is nothing to wait
+    # on or verify against a background write.
+    'TaskOutput', 'agentId', 'find', 'ls', 'ls frontend/src/custom/pages/',
+    'Read',
+    # design-system.md was deleted after a rule-by-rule audit: 17 of its 19
+    # rules were already stated in 3-7 other files each (max-md grid rule,
+    # four states, primitive list, PageShell placement, module scope, anchor,
+    # tier-2 pages, Tailwind-not-inline, responsive floor, tabular-nums,
+    # money/locale, lucide, Inter, the six brief questions, direction). The
+    # two genuinely unique items were MOVED before the delete: the two
+    # measurement snippets -> verify-gate.md items 21/22, and the copy rules
+    # -> shared-primitives.md. Its npm allowlist was already in prompt.py
+    # (told to the agent every run) and enforced in guards.py. What is gone
+    # is ~19 narrated failure anecdotes, which bound no rule.
+    'design-system.md',
 }
 lb, ln = lit(b), lit(n)
 lost = lb - ln - EXPECTED_GONE
@@ -39,9 +60,34 @@ cb, cn = consequences(b), consequences(n)
 if cb - cn: fail.append(f"LOST consequences ({len(cb-cn)}): {sorted(cb-cn)[:6]}")
 
 # 3. imperative force
+#
+# A marker may be deliberately retired when the rule it was binding was
+# itself wrong. Each entry below is one such removal, with the reason --
+# the count is allowed to drop by exactly the number of entries for that
+# word, and no further.
+RETIRED_EMPHASIS = {
+    # "inline is always correct" made delegation of 5c-5e unreachable in
+    # practice: two consecutive runs dispatched 0 and 1 subagents, wrote the
+    # frontend inline from a context already carrying the whole backend
+    # phase, and one peaked at 359k -> compacted mid-build. Delegation is
+    # now the default with two named fallbacks; the 5f on-disk gate, not
+    # inline-by-default, is what makes it safe.
+    "always": 1,
+    # Frontend delegation was removed outright (see EXPECTED_GONE above) --
+    # measured worse than writing inline on every real run. The 2 "never"
+    # drops are rules that only made sense with subagents in the picture
+    # ("never let parallel agents edit index.js", "the gate is never
+    # delegated" -- meaningless with nothing to delegate to). The 1 "must"
+    # drop is the dispatch protocol's own "the rules below are what must end
+    # up in the file" framing device, not a rule about the file's content.
+    "never": 2,
+    "must": 1,
+}
 for w in ["never","must","mandatory","always","required","exactly","not optional","MUST"]:
     x, y = len(re.findall(re.escape(w), b)), len(re.findall(re.escape(w), n))
-    if y < x: fail.append(f"WEAKER '{w}': {x} -> {y}")
+    allowed = RETIRED_EMPHASIS.get(w, 0)
+    if y < x - allowed:
+        fail.append(f"WEAKER '{w}': {x} -> {y} (allowed drop: {allowed})")
 
 # 4. reference links
 def links(s): return set(re.findall(r'\(references/[^)]+\)', s))
@@ -73,7 +119,12 @@ DIR_INDEXED = {
     '(references/frontend/crud/tables.md)',
     '(references/frontend/crud/hooks.md)',
 }
-lost_links = links(b) - links(n) - {'(references/frontend/crud.md)'} - DIR_INDEXED
+# design-system.md: deleted, see EXPECTED_GONE. Its two unique items moved to
+# verify-gate.md (the measurement snippets) and shared-primitives.md (the copy
+# rules); every other rule it held was already stated in 3-7 other files.
+DELETED_DOCS = {'(references/frontend/design-system.md)'}
+lost_links = (links(b) - links(n) - {'(references/frontend/crud.md)'}
+              - DIR_INDEXED - DELETED_DOCS)
 if lost_links: fail.append(f"LOST links: {sorted(lost_links)}")
 
 print(f"lines {b.count(chr(10))} -> {n.count(chr(10))}")

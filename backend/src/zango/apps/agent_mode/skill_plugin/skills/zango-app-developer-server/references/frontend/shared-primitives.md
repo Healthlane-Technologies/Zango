@@ -1,8 +1,8 @@
 # `shared.tsx` — the primitives every custom page composes from
 
 Write this file **first**, before any detail page or dashboard. Every other
-custom page imports from it. See [design-system.md](design-system.md) §4 for
-why this is mandatory rather than an optimisation.
+custom page imports from it. This is the polish mechanism, not an optimisation: pages that each hand-roll
+their own tab strip and key-facts grid diverge immediately.
 
 ## Write it for this app
 
@@ -16,8 +16,7 @@ where entities have photos) and leave out what it does not.
 What every version needs, whatever you name it: formatters that are the single
 place currency and date format are decided, a page surface, a card, an identity
 header, a status chip, a key-facts strip, tabs if the page has them, and all
-four states from [design-system.md](design-system.md) §3 — skeleton, empty,
-error, populated. Define them at module scope, take colours from theme tokens,
+four states — skeleton, empty, error, populated. Define them at module scope, take colours from theme tokens,
 style with Tailwind classes.
 
 **Leaving something out is a design decision, so make it deliberately.** The
@@ -29,7 +28,7 @@ it has history. An observed run designed its primitives well, dropped every one
 of those as "not needed", and shipped a page where every element carried the
 same weight. It passed every rule in these files and still looked unfinished.
 Before you cut a primitive, ask whether the page has anything left that leads
-the eye — see design-system.md §4, "give every page one visual anchor".
+the eye — see [design/treatments.md](design/treatments.md), "the anchor rule".
 
 ### Four things you cannot infer — take these exactly
 
@@ -45,7 +44,7 @@ and guessing them produces code that renders wrong with no error:
 2. **Responsive grids must use `max-md:`, never a bare base class.** In this
    build `grid-cols-1 md:grid-cols-3` renders ONE column at every width — the
    unprefixed utility wins over the responsive variant. Write
-   `max-md:grid-cols-1 md:grid-cols-3`. See design-system.md §2.
+   `max-md:grid-cols-1 md:grid-cols-3`. Verified by verify-gate.md item 23.
 
 3. **A page surface is `bg-[color:var(--color-gray-50)]` with an inner
    `max-w-[1600px] px-4 py-6 md:px-6`** — and it goes around detail and custom
@@ -53,8 +52,9 @@ and guessing them produces code that renders wrong with no error:
    what breaks when you get it wrong, is below.
 
 4. **Colours come from the theme's ramps** (`--color-brand-*`, `--color-gray-*`,
-   `--color-success/warning/error-*`), never a literal hex. design-system.md §2
-   has the full contract and the one login-page exception.
+   `--color-success/warning/error-*`), never a literal hex. See
+   [design/tokens.md](design/tokens.md); auth-login.md carries the one
+   login-page exception.
 
 Also not guessable, and not in the worked example below: **Change Logs.** Any
 entity on a custom detail page needs it — moving off the default drawer removes
@@ -260,6 +260,28 @@ The props your detail component receives, and how child tables are wired to
 `CrudHandler`, are in [entity-360.md](entity-360.md) §3 and §4 — that file owns
 the mechanics, including the traps. `assets/shared.tsx` shows one set of
 primitives composed together if you want to see the shape.
+
+## Copy — the primitives decide it, so decide it once
+
+These are formatting rules, which makes them primitive rules: `Money`,
+`DateText`, `Num` and your label helper are the only places each is settled,
+so getting them right here makes them right on every page at once.
+
+- **Label things the way the user's business does**, taking names from the
+  requirement spec — not from the model field names. See the humanise rule
+  above; a label reading `lease_start_date` is a defect.
+- **Sentence case** for labels and buttons. No ALL-CAPS except small
+  letter-spaced eyebrow text.
+- **Buttons say what happens**: *Add patient*, not *Submit*. *Confirm order*,
+  not *OK*.
+- **Dates formatted, never raw ISO strings.** Nulls render as `—`, never as
+  `null`, `undefined` or blank — and never as the literal `"NA"` the API
+  sends.
+- **Numbers get thousands separators**; currency gets **the app's** symbol
+  from the requirement spec, never a hard-coded `$`.
+- **Money is right-aligned in tables**, and every metric, money column and
+  quantity gets `font-variant-numeric: tabular-nums` so figures line up
+  between rows.
 
 ## Checklist
 

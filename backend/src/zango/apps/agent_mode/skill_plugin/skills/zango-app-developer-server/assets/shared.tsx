@@ -8,6 +8,200 @@ import { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TableBody } from '@zango-core/crud/table';
 
+/* The token layer. Written at 5c from references/frontend/design/tokens.md,
+   with --accent set from the direction row picked at 5b. It defines every
+   --surface-*, --text-*, --border, --shadow-* and --brand-* name used below,
+   so this import is required, not optional: without it the primitives fall
+   back to unstyled and the pages come out flat. */
+import './tokens.css';
+
+/* ================================================================== *
+ * DESIGN TOKENS -- the TS half
+ * ==================================================================
+ *
+ * Colour, type and shadow live in tokens.css. What lives here is what
+ * Tailwind classes must be chosen for at build time -- radius, padding
+ * and figure sizes, which vary by direction and cannot be a CSS
+ * variable in a utility class.
+ *
+ * Set DIRECTION from the row picked at 5b
+ * (references/frontend/design/directions.md) and every page changes
+ * together. This is what stops two Zango apps built from the same
+ * primitives looking like the same app.
+ *
+ * Colour still comes from the theme -- never hard-code a brand or gray
+ * hex. tokens.css derives the whole brand ramp from the tenant's one
+ * configured colour.
+ *
+ *   precision   dense rows, tight radius. An all-day worklist.
+ *   editorial   generous air, large display type, soft radius.
+ *   ledger      dense and figure-led: money and records.
+ *   care        airy with larger text; a person is the subject.
+ *   console     very dense, mono-heavy: systems and health.
+ */
+
+const DIRECTION: 'precision' | 'editorial' | 'ledger' | 'care' | 'console' = 'precision';
+
+/* Derived treatment. Read these; do not re-derive them per component. */
+const T = {
+  precision: {
+    radius: 'rounded-lg',
+    radiusSm: 'rounded-md',
+    pad: 'p-3.5',
+    padTight: 'p-3',
+    gap: 'gap-3',
+    sectionGap: 'space-y-4',
+    body: 'text-[12.5px]',
+    row: 'py-2',
+    display: 'text-[26px]',
+    anchor: 'text-[44px]',
+  },
+  editorial: {
+    radius: 'rounded-2xl',
+    radiusSm: 'rounded-xl',
+    pad: 'p-5',
+    padTight: 'p-4',
+    gap: 'gap-5',
+    sectionGap: 'space-y-6',
+    body: 'text-[14px]',
+    row: 'py-3.5',
+    display: 'text-[36px]',
+    anchor: 'text-[56px]',
+  },
+  ledger: {
+    radius: 'rounded-xl',
+    radiusSm: 'rounded-lg',
+    pad: 'p-4',
+    padTight: 'p-3.5',
+    gap: 'gap-3',
+    sectionGap: 'space-y-4',
+    body: 'text-[12.5px]',
+    row: 'py-2',
+    display: 'text-[30px]',
+    anchor: 'text-[48px]',
+  },
+  care: {
+    radius: 'rounded-2xl',
+    radiusSm: 'rounded-xl',
+    pad: 'p-5',
+    padTight: 'p-4',
+    gap: 'gap-4',
+    sectionGap: 'space-y-5',
+    body: 'text-[14px]',
+    row: 'py-3',
+    display: 'text-[30px]',
+    anchor: 'text-[48px]',
+  },
+  console: {
+    radius: 'rounded-md',
+    radiusSm: 'rounded',
+    pad: 'p-3',
+    padTight: 'p-2.5',
+    gap: 'gap-2.5',
+    sectionGap: 'space-y-3',
+    body: 'text-[12px]',
+    row: 'py-1.5',
+    display: 'text-[24px]',
+    anchor: 'text-[40px]',
+  },
+}[DIRECTION];
+
+/* ------------------------------------------------------------------ *
+ * Surfaces -- three tones, not one.
+ *
+ * A page where everything is white on white is the single clearest tell
+ * of an unfinished UI. The 1-2% tonal step between the page ground and
+ * a raised card is what produces depth; the sunken tone is what lets a
+ * block sit *inside* a card without another border.
+ *
+ *   PAGE    the ground. Slightly off-white, never pure #fff.
+ *   CARD    raised. Pure white, so it reads as lifted off the ground.
+ *   SUNKEN  recessed. For insets, table headers, quiet sub-blocks.
+ * ------------------------------------------------------------------ */
+
+const SURFACE = {
+  page: 'bg-[color:var(--surface-page)]',
+  card: 'bg-[color:var(--surface-card)]',
+  sunken: 'bg-[color:var(--surface-sunken)]',
+  tinted: 'bg-[color:var(--surface-tinted)]',
+};
+
+/* Borders and text come from tokens.css too, written inline as
+   `text-[color:var(--text-muted)]` / `border-[color:var(--border)]`.
+   The seven text levels are the point -- three levels of gray is what
+   makes a page read flat, so reach past --text and --text-muted for
+   --text-sub, --text-faint and --text-ghost where the hierarchy needs
+   them. */
+
+/* ------------------------------------------------------------------ *
+ * Shadows -- compound, never single-layer.
+ *
+ * Each level stacks an ambient spread, a tighter key shadow, and (at
+ * rest, on a raised surface) a 1px inset white highlight along the top
+ * edge. That inset is invisible until you look for it and is most of
+ * what separates a modern card from a bordered rectangle -- it fakes
+ * the light catching the card's top lip.
+ *
+ * RAISE is the hover partner for CARD: the same shape, lifted. Always
+ * pair it with a transform so the lift is felt, not just seen.
+ * ------------------------------------------------------------------ */
+
+const SHADOW = {
+  card: 'shadow-[var(--shadow-sm)]',
+  raiseOnHover: 'hover:shadow-[var(--shadow-md)]',
+  rail: 'shadow-[var(--shadow-xs)]',
+};
+
+/* ------------------------------------------------------------------ *
+ * Motion -- every interactive surface responds, every page enters.
+ *
+ * Two rules, both cheap and both load-bearing:
+ *   1. Nothing appears instantly. Entrance is staggered, 40ms apart,
+ *      total under 400ms. See <Enter> below.
+ *   2. Everything clickable changes on hover. A card that does not
+ *      respond reads as a picture of a card.
+ *
+ * Durations are fast (200-260ms). Slow entrances feel sluggish, not
+ * elegant. Easing is a decelerating cubic-bezier, never `linear`.
+ *
+ * REDUCED honours prefers-reduced-motion -- required, not optional.
+ * ------------------------------------------------------------------ */
+
+const MOTION = {
+  base: 'transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]',
+  /** Hover lift for a card that navigates or opens something. */
+  lift: 'hover:-translate-y-[2px] motion-reduce:hover:translate-y-0',
+};
+
+/* Staggered entrance wrapper. Wrap the major blocks of a page:
+ *
+ *   <Enter i={0}><KeyFacts .../></Enter>
+ *   <Enter i={1}><Section  .../></Enter>
+ *
+ * `i` is the sibling index -- 40ms apart, capped so a long list does
+ * not trail in for two seconds. Under prefers-reduced-motion the
+ * animation is dropped and the content is simply present. */
+export const Enter = ({
+  i = 0,
+  children,
+  className = '',
+}: {
+  i?: number;
+  children: ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={'pe-enter ' + className}
+    style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+  >
+    {children}
+  </div>
+);
+
+/* `pe-enter`, its keyframes and the prefers-reduced-motion override all
+ * live in tokens.css -- defined once there rather than injected from a
+ * component, so they are not re-emitted per page. */
+
 /* ------------------------------------------------------------------ *
  * Formatting -- the ONLY place currency / date / number format is
  * decided, so the whole app is consistent by construction.
@@ -78,8 +272,12 @@ export const DateText = ({ value }: { value: any }) => {
  * empty grey band: a 1080px cap on a 1920px screen left ~640px of unused page
  * beside a detail view. `max-w-[1600px]` fills a laptop and still stops lines
  * from running to absurd lengths on an ultrawide. */
+/* `pe-root` carries the Inter variable font, its optical sizing and the
+   cv11/ss01/ss03 feature settings from tokens.css. Without it the page
+   renders in the browser default and loses most of its typographic
+   character, so every page surface starts here. */
 export const PageShell = ({ children }: { children: ReactNode }) => (
-  <div className="min-h-full bg-[color:var(--color-gray-50)]">
+  <div className={'pe-root min-h-full ' + SURFACE.page}>
     <div className="mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6">{children}</div>
   </div>
 );
@@ -88,11 +286,15 @@ export const Card = ({
   children,
   tinted = false,
   tone,
+  interactive = false,
   className = '',
 }: {
   children: ReactNode;
   tinted?: boolean;
   tone?: 'good' | 'warn' | 'bad' | 'info';
+  /** Set when the card navigates or opens something -- adds the hover
+   *  lift. A card that responds to hover but does nothing is a lie. */
+  interactive?: boolean;
   className?: string;
 }) => {
   /* `tone` carries meaning -- a monitoring block that is healthy, a
@@ -112,12 +314,15 @@ export const Card = ({
       }[tone]
     : tinted
       ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
-      : 'border-[color:var(--color-gray-200)] bg-white';
+      : 'border-[color:var(--border)] ' + SURFACE.card;
 
   return (
     <div
       className={
-        'rounded-xl border p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] ' +
+        T.radius + ' border ' + T.pad + ' ' + SHADOW.card + ' ' + MOTION.base + ' ' +
+        (interactive
+          ? 'cursor-pointer ' + SHADOW.raiseOnHover + ' ' + MOTION.lift + ' '
+          : '') +
         toned +
         ' ' +
         className
@@ -151,9 +356,13 @@ export const Inset = ({
         bad: 'border-[color:var(--color-error-200,#fecaca)] bg-[color:var(--color-error-50)]',
         info: 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]',
       }[tone]
-    : 'border-[color:var(--color-gray-200)] bg-[color:var(--color-gray-50)]';
+    : 'border-[color:var(--border)] ' + SURFACE.sunken;
   return (
-    <div className={'rounded-lg border p-3.5 ' + toned + ' ' + className}>
+    <div
+      className={
+        T.radiusSm + ' border ' + T.padTight + ' ' + toned + ' ' + className
+      }
+    >
       {children}
     </div>
   );
@@ -178,24 +387,37 @@ export const MetricTile = ({
   hint?: ReactNode;
 }) => {
   const dot = {
-    neutral: 'bg-[color:var(--color-gray-400)]',
+    neutral: 'bg-[color:var(--text-faint)]',
     good: 'bg-[color:var(--color-success-500,#22c55e)]',
     warn: 'bg-[color:var(--color-warning-500,#f59e0b)]',
     bad: 'bg-[color:var(--color-error-500,#ef4444)]',
   }[tone];
   const txt = {
-    neutral: 'text-[color:var(--color-gray-600)]',
+    neutral: 'text-[color:var(--text-sub)]',
     good: 'text-[color:var(--color-success-700,#15803d)]',
     warn: 'text-[color:var(--color-warning-700,#b45309)]',
     bad: 'text-[color:var(--color-error-700,#b91c1c)]',
   }[tone];
   return (
-    <div className="rounded-lg border border-[color:var(--color-gray-200)] bg-white p-3.5">
-      <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--color-gray-500)]">
+    <div
+      className={
+        T.radiusSm +
+        ' border border-[color:var(--border)] ' +
+        SURFACE.card +
+        ' ' +
+        T.padTight +
+        ' ' +
+        SHADOW.card +
+        ' ' +
+        MOTION.base +
+        ' hover:border-[color:var(--border)]'
+      }
+    >
+      <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--text-muted)]">
         {label}
       </span>
       <div className="mt-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-[19px] font-semibold tabular-nums tracking-[-0.02em] text-[color:var(--color-gray-900)]">
+        <span className="text-[19px] font-semibold tabular-nums tracking-[-0.02em] text-[color:var(--text-strong)]">
           {value}
         </span>
         {qualifier ? (
@@ -206,7 +428,7 @@ export const MetricTile = ({
         ) : null}
       </div>
       {hint ? (
-        <span className="mt-1 block text-[11.5px] text-[color:var(--color-gray-500)]">
+        <span className="mt-1 block text-[11.5px] text-[color:var(--text-muted)]">
           {hint}
         </span>
       ) : null}
@@ -215,14 +437,14 @@ export const MetricTile = ({
 };
 
 export const SectionTitle = ({ children }: { children: ReactNode }) => (
-  <h2 className="mb-3 text-[16px] font-semibold text-[color:var(--color-gray-900)]">
+  <h2 className="mb-3 text-[16px] font-semibold text-[color:var(--text-strong)]">
     {children}
   </h2>
 );
 
 /* Small uppercase eyebrow label. The one place ALL-CAPS is allowed. */
 export const Eyebrow = ({ children }: { children: ReactNode }) => (
-  <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[color:var(--color-gray-500)]">
+  <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[color:var(--text-muted)]">
     {children}
   </span>
 );
@@ -250,23 +472,23 @@ export const PageHeader = ({
 }) => {
   const navigate = useNavigate();
   return (
-    <div className="mb-4 border-b border-[color:var(--color-gray-200)] pb-4">
+    <div className="mb-4 border-b border-[color:var(--border)] pb-4">
       {backLabel && (
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mb-2 rounded text-[13px] text-[color:var(--color-gray-500)] transition-colors hover:text-[color:var(--color-gray-900)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-brand-500)]"
+          className="mb-2 rounded text-[13px] text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-brand-500)]"
         >
           &larr; {backLabel}
         </button>
       )}
       <div className="flex flex-wrap items-center gap-3">
         {avatar}
-        <h1 className="text-[20px] font-bold tracking-[-0.02em] text-[color:var(--color-gray-900)] md:text-[24px]">
+        <h1 className="text-[20px] font-bold tracking-[-0.02em] text-[color:var(--text-strong)] md:text-[24px]">
           {title}
         </h1>
         {reference && (
-          <span className="font-mono text-[12px] text-[color:var(--color-gray-500)]">
+          <span className="font-mono text-[12px] text-[color:var(--text-muted)]">
             {reference}
           </span>
         )}
@@ -285,7 +507,7 @@ export const StatusChip = ({
   tone?: 'neutral' | 'info' | 'success' | 'warning' | 'error';
 }) => {
   const tones: Record<string, string> = {
-    neutral: 'bg-[color:var(--color-gray-100)] text-[color:var(--color-gray-700)]',
+    neutral: 'bg-[color:var(--surface-sunken)] text-[color:var(--text-sub)]',
     info: 'bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]',
     success: 'bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)]',
     warning: 'bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)]',
@@ -337,17 +559,35 @@ export const KeyFacts = ({
   return (
     <div className="grid max-md:grid-cols-2 gap-3 py-4 md:grid-cols-4">
       {anchorField && (
-        <div className="col-span-2 rounded-xl border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-4">
-          <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--color-gray-500)]">
+        <div
+          className={
+            'col-span-2 row-span-1 border border-[color:var(--color-brand-200)] ' +
+            T.radius +
+            ' ' +
+            T.pad +
+            ' ' +
+            SHADOW.card +
+            /* Tinted, and carrying a soft brand wash rather than a flat
+               fill -- this is the one card on the page allowed to be
+               visually louder than its neighbours. */
+            ' bg-gradient-to-br from-[color:var(--color-brand-50)] to-[color:var(--color-brand-100)]'
+          }
+        >
+          <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--color-brand-700)] opacity-80">
             {labelOf(anchorField, anchor!.key)}
           </span>
-          <span className="mt-1 block text-[25px] font-bold leading-none tracking-[-0.025em] tabular-nums text-[color:var(--color-brand-700)]">
+          <span
+            className={
+              'mt-1 block font-bold leading-none tracking-[-0.03em] tabular-nums text-[color:var(--color-brand-700)] ' +
+              T.anchor
+            }
+          >
             {render?.[anchor!.key]
               ? render[anchor!.key](anchorField.value)
               : (anchorField.value ?? <>&mdash;</>)}
           </span>
           {anchor!.sub && (
-            <span className="mt-1.5 block text-[11px] text-[color:var(--color-gray-500)]">
+            <span className="mt-1.5 block text-[11px] text-[color:var(--text-muted)]">
               {anchor!.sub}
             </span>
           )}
@@ -359,12 +599,23 @@ export const KeyFacts = ({
         return (
           <div
             key={k}
-            className="rounded-xl border border-[color:var(--color-gray-200)] bg-white p-3.5"
+            className={
+              T.radius +
+              ' border border-[color:var(--border)] ' +
+              SURFACE.card +
+              ' ' +
+              T.padTight +
+              ' ' +
+              SHADOW.card +
+              ' ' +
+              MOTION.base +
+              ' hover:border-[color:var(--border)]'
+            }
           >
-            <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--color-gray-500)]">
+            <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--text-muted)]">
               {labelOf(f, k)}
             </span>
-            <span className="mt-1 block text-[15px] font-semibold tabular-nums text-[color:var(--color-gray-900)]">
+            <span className="mt-1 block text-[15px] font-semibold tabular-nums text-[color:var(--text-strong)]">
               {render?.[k] ? render[k](f.value) : (f.value ?? <>&mdash;</>)}
             </span>
           </div>
@@ -398,10 +649,10 @@ export const FieldGrid = ({
         if (!f) return null;
         return (
           <div key={k} className="min-w-0">
-            <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--color-gray-500)]">
+            <span className="block text-[10.5px] font-semibold uppercase tracking-[0.07em] text-[color:var(--text-muted)]">
               {labelOf(f, k)}
             </span>
-            <span className="mt-0.5 block break-words text-[13.5px] text-[color:var(--color-gray-900)]">
+            <span className="mt-0.5 block break-words text-[13.5px] text-[color:var(--text-strong)]">
               {render?.[k] ? render[k](f.value) : (f.value ?? <>&mdash;</>)}
             </span>
           </div>
@@ -426,7 +677,7 @@ export const Tabs = ({
 }) => (
   <div
     role="tablist"
-    className="flex gap-5 overflow-x-auto border-b border-[color:var(--color-gray-200)] text-[13px]"
+    className="flex gap-5 overflow-x-auto border-b border-[color:var(--border)] text-[13px]"
   >
     {items.map((it) => {
       const active = value === it.key;
@@ -439,13 +690,13 @@ export const Tabs = ({
           className={
             'whitespace-nowrap border-b-2 py-2.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-brand-500)] ' +
             (active
-              ? 'border-[color:var(--color-brand-500)] font-semibold text-[color:var(--color-gray-900)]'
-              : 'border-transparent text-[color:var(--color-gray-500)] hover:text-[color:var(--color-gray-900)]')
+              ? 'border-[color:var(--color-brand-500)] font-semibold text-[color:var(--text-strong)]'
+              : 'border-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-strong)]')
           }
         >
           {it.label}
           {typeof it.count === 'number' && (
-            <span className="ml-1.5 rounded bg-[color:var(--color-gray-100)] px-1.5 py-0.5 text-[11px] tabular-nums text-[color:var(--color-gray-600)]">
+            <span className="ml-1.5 rounded bg-[color:var(--surface-sunken)] px-1.5 py-0.5 text-[11px] tabular-nums text-[color:var(--text-sub)]">
               {it.count}
             </span>
           )}
@@ -456,13 +707,13 @@ export const Tabs = ({
 );
 
 /* ------------------------------------------------------------------ *
- * The four states (design-system.md §3)
+ * The four states (shared-primitives.md)
  * ------------------------------------------------------------------ */
 
 export const Skeleton = ({ className = '' }: { className?: string }) => (
   <div
     className={
-      'animate-pulse rounded bg-[color:var(--color-gray-100)] ' + className
+      'animate-pulse rounded bg-[color:var(--surface-sunken)] ' + className
     }
   />
 );
@@ -514,14 +765,14 @@ export const EmptyState = ({
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="mb-3 h-12 w-12 text-[color:var(--color-gray-300)]"
+      className="mb-3 h-12 w-12 text-[color:var(--text-ghost)]"
       aria-hidden="true"
     >
       <path d="M3 7h18M3 12h18M3 17h10" />
     </svg>
-    <h3 className="text-[15px] font-semibold text-[color:var(--color-gray-900)]">{title}</h3>
+    <h3 className="text-[15px] font-semibold text-[color:var(--text-strong)]">{title}</h3>
     {description && (
-      <p className="mt-1 max-w-[320px] text-[13px] text-[color:var(--color-gray-500)]">
+      <p className="mt-1 max-w-[320px] text-[13px] text-[color:var(--text-muted)]">
         {description}
       </p>
     )}
@@ -540,14 +791,14 @@ export const ErrorState = ({
     <h3 className="text-[15px] font-semibold text-[color:var(--color-error-600)]">
       Could not load
     </h3>
-    <p className="mt-1 max-w-[320px] text-[13px] text-[color:var(--color-gray-500)]">
+    <p className="mt-1 max-w-[320px] text-[13px] text-[color:var(--text-muted)]">
       {message}
     </p>
     {onRetry && (
       <button
         type="button"
         onClick={onRetry}
-        className="mt-4 rounded-lg border border-[color:var(--color-gray-300)] bg-white px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[color:var(--color-gray-50)]"
+        className="mt-4 rounded-lg border border-[color:var(--border)] bg-white px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[color:var(--surface-sunken)]"
       >
         Try again
       </button>
@@ -576,9 +827,32 @@ export const Section = ({
   actions?: ReactNode;
   children: ReactNode;
 }) => (
-  <section className="mb-4 rounded-xl border border-[color:var(--color-gray-200)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-    <header className="flex items-center gap-3 border-b border-[color:var(--color-gray-100)] px-4 py-3">
-      <h2 className="text-[12.5px] font-semibold text-[color:var(--color-gray-700)]">{title}</h2>
+  <section
+    className={
+      /* overflow-hidden clips the sunken header bar to the card's
+         radius, so the header needs no rounding of its own and cannot
+         disagree with T.radius. */
+      'mb-4 overflow-hidden border border-[color:var(--border)] ' +
+      T.radius +
+      ' ' +
+      SURFACE.card +
+      ' ' +
+      SHADOW.card
+    }
+  >
+    {/* The header sits on the sunken tone -- the third surface. This is
+        what makes a Section read as a panel with a title bar rather
+        than a white rectangle with bold text at the top. */}
+    <header
+      className={
+        /* The parent Section is overflow-hidden, so the header's own
+           corners are clipped to the card's radius -- no rounding
+           needed here, and none that could disagree with T.radius. */
+        'flex items-center gap-3 border-b border-[color:var(--border)] px-4 py-3 ' +
+        SURFACE.sunken
+      }
+    >
+      <h2 className="text-[12.5px] font-semibold text-[color:var(--text-sub)]">{title}</h2>
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
     </header>
     <div className="p-4">{children}</div>
@@ -605,10 +879,18 @@ export const Button = ({
     type={type}
     onClick={onClick}
     className={
-      'rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--color-brand-500)] ' +
+      T.radiusSm +
+      ' px-3 py-1.5 text-[12.5px] font-medium ' +
+      MOTION.base +
+      /* Actions lift on hover and settle on press. The active state is
+         what makes a button feel physical rather than painted. */
+      ' hover:-translate-y-[1px] active:translate-y-0 motion-reduce:hover:translate-y-0' +
+      ' focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--color-brand-500)] ' +
       (variant === 'primary'
-        ? 'bg-[color:var(--color-brand-500)] text-white hover:bg-[color:var(--color-brand-700)]'
-        : 'border border-[color:var(--color-gray-300)] bg-white text-[color:var(--color-gray-700)] hover:bg-[color:var(--color-gray-50)]')
+        ? 'bg-[color:var(--color-brand-500)] text-white shadow-[0_1px_2px_rgba(16,24,40,0.10),inset_0_1px_0_rgba(255,255,255,0.18)] hover:bg-[color:var(--color-brand-700)] hover:shadow-[0_4px_10px_-2px_color-mix(in_srgb,var(--color-brand-500)_40%,transparent)]'
+        : 'border border-[color:var(--border)] ' +
+          SURFACE.card +
+          ' text-[color:var(--text-sub)] shadow-[0_1px_2px_rgba(16,24,40,0.04),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-[color:var(--surface-sunken)] hover:border-[color:var(--border-strong)]')
     }
   >
     {children}
@@ -650,10 +932,10 @@ export const IdentityStrip = ({
     {items.filter(Boolean).map((it, i) => (
       <span
         key={i}
-        className="inline-flex items-center gap-1.5 text-[12.5px] text-[color:var(--color-gray-600)]"
+        className="inline-flex items-center gap-1.5 text-[12.5px] text-[color:var(--text-sub)]"
       >
         {it.icon ? (
-          <span className="text-[color:var(--color-gray-400)]">{it.icon}</span>
+          <span className="text-[color:var(--text-faint)]">{it.icon}</span>
         ) : null}
         {it.text}
       </span>
@@ -697,7 +979,7 @@ export const RailCard = ({
   count?: number;
   /** Optional 3px top border so multiple RailCards in the same rail read as
    *  distinct blocks rather than N identical white boxes stacked vertically
-   *  (design-system.md §4, "give every page one visual anchor" applies
+   *  (design/treatments.md, "the anchor rule" applies
    *  inside the rail too). Use sparingly -- carries meaning like `tone`
    *  elsewhere, not decoration on every card. */
   accent?: 'brand' | 'success' | 'warning' | 'error';
@@ -714,24 +996,30 @@ export const RailCard = ({
   return (
     <section
       className={
-        'overflow-hidden rounded-xl border border-[color:var(--color-gray-200)] bg-white ' +
+        'overflow-hidden border border-[color:var(--border)] ' +
+        T.radius +
+        ' ' +
+        SURFACE.card +
+        ' ' +
+        SHADOW.rail +
+        ' ' +
         topBorder
       }
     >
       <header className="flex items-center gap-2 px-4 pb-2 pt-3.5">
         {icon ? (
-          <span className="text-[color:var(--color-gray-400)]">{icon}</span>
+          <span className="text-[color:var(--text-faint)]">{icon}</span>
         ) : null}
-        <h3 className="text-[13.5px] font-semibold tracking-[-0.01em] text-[color:var(--color-gray-900)]">
+        <h3 className="text-[13.5px] font-semibold tracking-[-0.01em] text-[color:var(--text-strong)]">
           {title}
         </h3>
         {typeof count === 'number' && (
-          <span className="rounded-md bg-[color:var(--color-gray-100)] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[color:var(--color-gray-600)]">
+          <span className="rounded-md bg-[color:var(--surface-sunken)] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[color:var(--text-sub)]">
             {count}
           </span>
         )}
       </header>
-      <div className="px-4 pb-4 text-[13px] text-[color:var(--color-gray-700)]">
+      <div className="px-4 pb-4 text-[13px] text-[color:var(--text-sub)]">
         {children}
       </div>
     </section>
@@ -752,10 +1040,10 @@ export const AtAGlance = ({
   <ul className="space-y-2.5">
     {items.filter(Boolean).map((it, i) => (
       <li key={i} className="flex items-start gap-2.5">
-        <span className="mt-[1px] text-[color:var(--color-gray-400)]">
+        <span className="mt-[1px] text-[color:var(--text-faint)]">
           {it.icon}
         </span>
-        <span className="min-w-0 text-[13px] text-[color:var(--color-gray-700)]">
+        <span className="min-w-0 text-[13px] text-[color:var(--text-sub)]">
           {it.text}
         </span>
       </li>
@@ -794,23 +1082,23 @@ export const Meter = ({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[13px] text-[color:var(--color-gray-800)]">
+        <span className="text-[13px] text-[color:var(--text)]">
           {label}
         </span>
         {right ? (
-          <span className="text-[12.5px] tabular-nums text-[color:var(--color-gray-600)]">
+          <span className="text-[12.5px] tabular-nums text-[color:var(--text-sub)]">
             {right}
           </span>
         ) : null}
       </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-gray-200)]">
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--border)]">
         <div
           className="h-full rounded-full transition-[width] duration-500"
           style={{ width: `${pct}%`, background: bar }}
         />
       </div>
       {hint ? (
-        <p className="mt-1 text-[11.5px] text-[color:var(--color-gray-500)]">
+        <p className="mt-1 text-[11.5px] text-[color:var(--text-muted)]">
           {hint}
         </p>
       ) : null}
@@ -855,7 +1143,7 @@ export const ProcessStepper = ({
                     ? 'bg-[color:var(--color-brand-500)] text-white'
                     : now
                       ? 'bg-[color:var(--color-brand-500)] text-white ring-4 ring-[color:var(--color-brand-100)]'
-                      : 'bg-[color:var(--color-gray-200)] text-[color:var(--color-gray-500)]')
+                      : 'bg-[color:var(--border)] text-[color:var(--text-muted)]')
                 }
               >
                 {done ? '\u2713' : i + 1}
@@ -866,8 +1154,8 @@ export const ProcessStepper = ({
                   (now
                     ? 'font-semibold text-[color:var(--color-brand-700)]'
                     : done
-                      ? 'text-[color:var(--color-gray-700)]'
-                      : 'text-[color:var(--color-gray-400)]')
+                      ? 'text-[color:var(--text-sub)]'
+                      : 'text-[color:var(--text-faint)]')
                 }
               >
                 {stage}
@@ -880,7 +1168,7 @@ export const ProcessStepper = ({
                   'h-px w-6 shrink-0 ' +
                   (done
                     ? 'bg-[color:var(--color-brand-300)]'
-                    : 'bg-[color:var(--color-gray-200)]')
+                    : 'bg-[color:var(--border)]')
                 }
               />
             )}
@@ -913,19 +1201,19 @@ export const ActivityFeed = ({
         <span className="relative flex flex-col items-center">
           <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[color:var(--color-brand-500)]" />
           {i < events.length - 1 && (
-            <span className="mt-1 w-px flex-1 bg-[color:var(--color-gray-200)]" />
+            <span className="mt-1 w-px flex-1 bg-[color:var(--border)]" />
           )}
         </span>
         <div className="min-w-0 pb-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-[13px] font-medium text-[color:var(--color-gray-900)]">
+            <span className="text-[13px] font-medium text-[color:var(--text-strong)]">
               {e.label}
             </span>
-            <span className="text-[11.5px] tabular-nums text-[color:var(--color-gray-500)]">
+            <span className="text-[11.5px] tabular-nums text-[color:var(--text-muted)]">
               <DateText value={e.at} />
             </span>
             {e.actor ? (
-              <span className="text-[11.5px] text-[color:var(--color-gray-500)]">
+              <span className="text-[11.5px] text-[color:var(--text-muted)]">
                 · {e.actor}
               </span>
             ) : null}
@@ -933,7 +1221,7 @@ export const ActivityFeed = ({
           {e.from && e.to ? (
             <div className="mt-1 flex items-center gap-1.5">
               <StatusChip label={e.from} />
-              <span className="text-[color:var(--color-gray-400)]">&rarr;</span>
+              <span className="text-[color:var(--text-faint)]">&rarr;</span>
               <StatusChip label={e.to} />
             </div>
           ) : null}

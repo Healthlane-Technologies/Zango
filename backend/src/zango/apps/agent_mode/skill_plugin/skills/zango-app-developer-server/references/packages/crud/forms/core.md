@@ -368,6 +368,89 @@ field_name = CustomSchemaField(
 > before moving on — parent FKs are the ones most often forgotten, especially
 > when the form is reached from a parent's detail page.
 
+> **`ZForeignKey` fields need no autocomplete wiring at all.** An FK field
+> already renders as a searchable select populated from the related model. Do
+> not pass `autocomplete=` on it, and do not write a
+> `get_{field_name}_autocomplete_options` method for it — neither is required,
+> and adding them replaces the working select with a widget you then have to
+> feed by hand. Declare the field and stop:
+>
+> ```python
+> # WRONG -- nothing here is needed for an FK
+> vehicle = ModelField(label="Vehicle", autocomplete={"enabled": True, "keys": 3})
+>
+> def get_vehicle_autocomplete_options(self, request, search_query, form_data):
+>     ...
+>
+> # Right -- the FK renders its own select
+> vehicle = ModelField(label="Vehicle", placeholder="Select vehicle")
+> ```
+>
+> `autocomplete=` and its options method are for non-FK fields whose choices
+> you supply yourself — a currency code, a country code, a value from an
+> external service.
+
+#### The parent FK on a child-tab form — preset and hide it
+
+An entity-360 child tab reuses the child module's **own** form (the same one its
+standalone list page opens). On the tab, the parent is the page the user is
+already on, so making them select it again is wrong — and lets them file the
+record against a *different* parent. But the same form still needs that field
+when it is opened from the module's own list page, where there is no parent in
+context.
+
+One form covers both. The child tab already appends the parent uuid to its
+endpoint to scope the table
+([../../../frontend/entity-360.md](../../../frontend/entity-360.md) §4); that query
+param also reaches the form. `BaseCrudView.get_form` passes
+`crud_view_instance=self` into every form, and `BaseForm.__init__` stores it, so
+read the request from it — **preset and hide the FK when the param is there,
+leave the field alone when it is not**:
+
+```python
+import copy
+
+class ServiceJobForm(BaseForm):
+    vehicle = ModelField(label="Vehicle", placeholder="Select vehicle")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = getattr(self.crud_view_instance, "request", None)
+        parent_uuid = request.GET.get("vehicle_uuid") if request else None
+        if not parent_uuid:
+            return  # standalone list page — normal select, user picks
+
+        # the value can arrive with a trailing slash from the router
+        vehicle = Vehicle.objects.filter(uuid=parent_uuid.replace("/", "")).first()
+        if not vehicle:
+            return
+
+        self.fields["vehicle"].initial = vehicle.pk
+
+        # copy before mutating -- see the warning below
+        field = copy.copy(self.declared_fields["vehicle"])
+        field.properties = {**field.properties, "hidden": True}
+        self.declared_fields["vehicle"] = field
+```
+
+`hidden` renders the field as `"ui:widget": "hidden"` — it stays in the payload
+and still submits, so the FK saves; the user simply never sees it.
+
+> **Copy the `ModelField` before setting `hidden` — do not mutate it in place.**
+> `BaseForm.__init__` fills `self.declared_fields` with the **class-level**
+> `ModelField` objects, not per-instance copies. So
+> `self.declared_fields["vehicle"].properties["hidden"] = True` writes to state
+> shared by every request this worker serves: the child tab hides the FK once,
+> and from then on the **standalone** form renders it hidden too, with nothing
+> to fill it — saves fail with no visible cause, and only on a warm worker.
+> Rebind a copy, as above.
+
+**Spell the param identically in all three places.** It is one string shared by
+the child tab's `api_endpoint`, the child table's `get_table_data_queryset`, and
+this form. A mismatch is silent in each: the table falls back to unfiltered, and
+the form falls back to showing the select.
+
 ### CustomSchemaField Examples
 
 **Array of Objects** (e.g., multiple signers):

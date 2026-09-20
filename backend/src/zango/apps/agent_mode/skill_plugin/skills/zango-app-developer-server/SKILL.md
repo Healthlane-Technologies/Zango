@@ -136,7 +136,7 @@ Classify each entity, in this order:
    summary. A lookup table never qualifies, however many FKs point at it.
 2. **Primary entity, no children yet?** Profile-style custom detail page, no
    tabs — held to the **same bar as entity-360**: identity block, synthesis lead
-   card, rail, one anchor (design-system.md §5b). No tabs
+   card, rail, one anchor (verify-gate.md item 26). No tabs
    does not mean no design effort.
 3. **List needs a non-standard layout?** Kanban (statuses), calendar (dates),
    cards (visual), timeline (sequence) — via `CrudHandler`'s `customTableBody`,
@@ -160,11 +160,19 @@ Also plan, for every app:
   usually the right first screen.
 - **A branded login page.** Always. See STEP 5e.
 
+Dashboard stat cards need aggregates, not rows. `useTableRows` works for
+small tables, but doesn't have to be the default — a custom view that
+aggregates in the database and returns just the numbers is equally valid,
+and scales better once a table outgrows one page.
+
 Detail-view mechanics, child tables and the failure modes that make them break
-are in [frontend/entity-360.md](references/frontend/entity-360.md). The visual
-bar every custom page must meet — tokens, states, responsive floor — is in
-[frontend/design-system.md](references/frontend/design-system.md). Both are
-required reading before you write components.
+are in [frontend/entity-360.md](references/frontend/entity-360.md). The
+primitives every page composes from are in
+[frontend/shared-primitives.md](references/frontend/shared-primitives.md), and
+the values they use are in
+[frontend/design/](references/frontend/design/). All are
+required reading before you write components — **at STEP 5, not here.** You
+are planning now; naming them is enough. See "When to read a reference" below.
 
 ### Reference index
 
@@ -172,6 +180,41 @@ Look up the rows for what this app actually needs. Skip the rest. Each row
 names the file to read — open it directly rather than listing its directory.
 A directory's `README.md` indexes the rest of that directory, for the cases a
 row below does not cover.
+
+#### When to read a reference
+
+**Read each reference immediately before writing the code that uses it — not
+here, and not in a batch.** This index tells you *which* file answers a
+question; it is not a reading list to work through before you start.
+
+This matters because everything you read stays in context for the rest of the
+run and is re-sent on every turn. A reference opened while planning is charged
+against all ~180 turns that follow; the same file opened at the sub-step that
+needs it is charged against the few that remain. Front-loading the index has
+put real runs over the context limit mid-build, and what gets discarded when
+that happens is the detail you were going to implement.
+
+So: at this step, **name** the references each part of the build will need and
+write those names into your plan. Open each one at the moment you write its
+code — the model reference when you write models, `entity-360.md` when you
+write the detail page, `appbuilder/api-configuration.md` when you register
+routes at 5h.
+
+**Deferring is not skipping, and this is the trap.** Every reference must
+still be read before the code that depends on it. "I will read it later" that
+turns into writing from memory is an improvised Zango API — the exact failure
+STEP 2 exists to prevent, and worse than front-loading. If you reach the code
+and have not read its reference, stop and read it then.
+
+The five largest files are the ones this matters most for — together they are
+over half of all reference bytes, and none is needed before STEP 5:
+
+| File | Read at |
+|---|---|
+| [frontend/entity-360.md](references/frontend/entity-360.md) | 5d, writing that detail page |
+| [frontend/appbuilder.md](references/frontend/appbuilder.md) | 5a scaffold, then 5h wiring |
+| [appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) | 5h, registering routes and menus |
+| [packages/crud/detail.md](references/packages/crud/detail.md) | when writing a `BaseDetail` view |
 
 | What you need to build | Read |
 |------------------------|------|
@@ -185,7 +228,7 @@ row below does not cover.
 | Secrets / encrypted fields | [core/secrets.md](references/core/secrets.md) |
 | Detail view with child tables | [frontend/entity-360.md](references/frontend/entity-360.md) |
 | Branded login / custom auth screens | [frontend/auth-login.md](references/frontend/auth-login.md) |
-| Visual quality bar, tokens, states | [frontend/design-system.md](references/frontend/design-system.md) |
+| The values that meet that bar — tokens, direction, card treatments | [frontend/design/](references/frontend/design/) — read at 5c/5d |
 | Shared UI primitives (write these first) | [frontend/shared-primitives.md](references/frontend/shared-primitives.md) |
 | Frontend patterns | [frontend/crud/core.md](references/frontend/crud/core.md) always (imports, API shapes, CrudHandler), then only what the page needs |
 
@@ -196,9 +239,13 @@ their exact patterns and attributes — do not improvise Zango APIs. A pattern
 you half-remember is an improvised Zango API, which is the failure STEP 2
 exists to prevent.
 
-Read only the rows you actually need. Rows naming a **directory** are
-deliberate: list it and read the file you need from its `README.md` index —
-never every file in it.
+Read only the rows you actually need, and read each **at the point of use** —
+the model reference when you write models, not all of them before you start.
+Rows naming a **directory** are deliberate: list it and read the file you need
+from its `README.md` index — never every file in it.
+
+Reading at the point of use never means writing the code first and checking
+afterwards. Open the reference, then write.
 
 ### Dependency chain
 
@@ -253,68 +300,57 @@ is what leads to it being left on appbuilder's prebuilt shell forever.
 | | Sub-step | Produces |
 |---|---|---|
 | 5a | Scaffold `frontend/` | `frontend/` with `src/custom/` |
-| 5b | **Plan the pages** | `design-plan.md` at the workspace root |
-| 5c | Write the shared primitives *(subagent)* | `src/custom/pages/shared.tsx` |
-| 5d | Write the custom pages *(subagent per page)* | entity-360, landing pages |
-| 5e | Brand the login page *(subagent)* | `AppLoginCard.tsx` |
+| 5b | **Read treatments.md + directions.md, then plan the pages** | `design-plan.md` at the workspace root, with an anchor treatment named per page |
+| 5c | Write the tokens + shared primitives | `src/custom/pages/tokens.css` + `shared.tsx` |
+| 5d | Write the custom pages | entity-360, landing pages |
+| 5e | Brand the login page | `AppLoginCard.tsx` |
 | 5f | Build the bundle | `frontend/zango-build/zango-app.<ts>.min.js` |
 | 5g | Create the `app` module | `backend/app/` + `app.html` |
 | 5h | Register routes and menus | navigation for every role |
 
-### Delegating 5c, 5d and 5e (optional — read the constraints first)
+### 5c, 5d and 5e — write these yourself
 
-You MAY hand 5c, 5d and 5e to `Task`/`Agent` subagents so those steps run on a
-small context instead of carrying the whole backend phase. **It is optional.
-Doing it wrong loses the entire frontend, so if anything below is not
-satisfied, do 5c–5e inline** — inline is always correct, but it is the
-expensive path: every turn resends the whole conversation, so the backend
-references still in context are charged again on every frontend turn. "I
-already have the context" is what makes delegating worth it, not a reason to
-skip it.
+**Do not dispatch `Task`/`Agent` subagents for the frontend.** This was tried
+— one subagent per page, in parallel — and measured worse on every real run:
+each parallel dispatch independently re-read the same shared reference
+material (`entity-360.md`, `shared-primitives.md`, the
+full `design-plan.md`), so cache-creation, output and thinking tokens all went
+up by multiples (3–9x on a same-size comparison) for a total cost higher than
+writing the whole frontend phase yourself, even though per-dispatch cache-read
+looked fine in isolation. The duplication is structural to per-page parallel
+dispatch, not a prompt-wording bug — it does not go away by trimming what each
+dispatch reads, only by not forking the reads at all.
 
-**1. The Agent tool launches in the BACKGROUND and returns immediately.**
-Its result says "Async agent launched successfully" and gives an `agentId`.
-**That is not the work finished.** Saying "I will wait" and moving on to other
-work does not wait: the run ends while the agents are still writing and
-**everything they produced is lost** — this has actually happened, and the run
-still reported success.
+Write `tokens.css`, `shared.tsx`, every entity-360 page, the dashboard/landing
+pages, and the login page in this thread, in that order. Read each reference
+immediately before the code that needs it (see "When to read a reference"
+above) rather than up front — that is what actually controls peak context,
+not who writes the file.
 
-**`TaskOutput` is how you wait.** Call it with the `agentId` the launch
-returned; it blocks until that agent finishes and gives you its report. After
-dispatching, your very next action is `TaskOutput` for each `agentId` — one per
-agent, until all have returned. Do not read a file, run a command, or think
-about the next sub-step in between.
+The one thing delegation was correctly solving for — the backend phase's
+context still being live when the frontend is written — is real: a run that
+carried the whole backend phase forward peaked at **359k context** and
+compacted mid-build, producing visibly worse pages than the plan called for,
+because compaction discards exactly the design detail you are implementing.
+Manage that directly instead of forking contexts to dodge it:
 
-Then confirm on disk (`ls frontend/src/custom/pages/`) and `Read` each file the
-agent claimed to write. **A report is not evidence; the file is.** Anything
-missing or empty, write it yourself inline. A missing page is a failed build;
-a slower build is not.
+- Keep `design-plan.md` (5b) as the one artifact you actually re-read per
+  page — it already distills what `entity-360.md` and the design kit say for
+  this app, so once those are read once during planning you should not
+  need to reopen them per page.
+- Do not re-read backend files (`models.py`, `views.py`) while writing
+  frontend pages — the facts you need (model/module names, field names and
+  types, the CRUD view URL, per-child-tab FK) were already established in
+  STEP 4; carry them forward as your own working notes instead of rereading
+  source.
+- If you are deep enough into the frontend phase that context is genuinely
+  getting tight, that is a signal to keep pages leaner (compose from
+  `shared.tsx` primitives, avoid re-deriving anything already decided in
+  `design-plan.md`) — not a reason to reach for a subagent.
 
-**2. Subagents cannot read outside the workspace unless given exact paths.**
-The reference docs live outside the workspace and the path guard denies
-anything that does not resolve. A mistyped path is silently fatal: the subagent
-gets "resolves outside the app workspace" for every doc, writes nothing useful
-and reports back as if it tried. **Never retype these paths from memory.**
-Obtain each one by running `ls` or `find` on the skill's references directory
-first, then paste the verified absolute path into the prompt.
-
-**3. Verify each subagent's work before trusting its report.** A report saying
-"written" is not evidence. `Read` the file it claims to have written. If it is
-absent or empty, redo that page inline.
-
-If you do dispatch: 5c first and alone (its export list feeds 5d and 5e); one
-agent per page for 5d; 5e may run alongside. Each prompt carries the workspace
-path, the entity's six answers from `design-plan.md`, the 5c export list, the
-backend facts the page binds to (model and module name, field names and types
-as written in STEP 4, the CRUD view URL, per child tab the related model and
-its FK), the theme line and `LOCALE`/`CURRENCY`, and verified absolute paths to
-the docs it must read. Tell it: compose only from the listed primitives, invent
-no field names, report a missing field rather than guessing. Each returns a
-short report — files written and the export name — never file contents.
-
-**You keep in this thread regardless:** `design-plan.md` (5b), `index.js` and
-`App.tsx` wiring, the build (5f), the app module (5g), routes and menus (5h),
-and the verify gate. The gate is never delegated.
+**Do not treat the install wait as spare time.** `npm install` runs for
+several minutes; do not fill it by writing 5c/5d ahead of the scaffold being
+ready — write them in order, after the install completes.
 
 ### 5a. Scaffold the frontend — FIRST, before any of the rest
 
@@ -348,11 +384,18 @@ anything else is denied, so say so in your summary rather than trying.
 peer dependencies do not resolve cleanly under npm's default strict algorithm,
 and a plain `npm install` fails or produces a broken `node_modules`.
 
+**Do not treat the install wait as spare time.** It runs for several minutes.
+Use it for 5b (planning), which needs no scaffold — but do not start writing
+5c/5d/5e "while npm finishes"; that is how the frontend ends up written from a
+context already carrying the whole backend phase, observed on a real run that
+peaked at 359k context and compacted mid-build. Let the install finish, then
+write 5c → 5d → 5e in order.
+
 Icons and fonts are already available: `lucide-react` ships with `@zango-core`,
-and Inter and JetBrains Mono load from Google Fonts. See
-[frontend/design-system.md](references/frontend/design-system.md) §10 — the
-earlier claim that they were unavailable was wrong, and it is why generated
-apps looked plain.
+and Inter and JetBrains Mono load from Google Fonts — see
+[frontend/design/tokens.md](references/frontend/design/tokens.md). The earlier
+claim that they were unavailable was wrong, and it is why generated apps
+looked plain.
 
 ### 5b. Plan the pages — write `design-plan.md` before any component
 
@@ -360,6 +403,17 @@ Every rule in §6/§1a is satisfiable *nominally* — a second Section that adds
 nothing, tabs with zero counts, an Overview re-listing the header. That passes a
 grep and fails a glance. So write `design-plan.md` at the workspace root first:
 a real file, because the verify gate reads it back against the finished pages.
+
+**Read [frontend/design/treatments.md](references/frontend/design/treatments.md)
+and [frontend/design/directions.md](references/frontend/design/directions.md)
+before writing a single line of `design-plan.md`, not after.** A plan drafted
+without treatments.md in context comes out as "N sections with MetricTile
+counts" — a flat, anchor-less list — and 5d then "implements it literally,"
+shipping the flat page verbatim even though treatments.md gets read later in
+the run. Reading the doc late does not help once the plan already shipped
+without an anchor. This applies to **every** page you plan, including the
+role landing page (Home) below — it is not exempt just because it isn't a
+focus entity.
 
 For **each focus entity**, answer all six — a few lines each, not a document:
 
@@ -376,32 +430,55 @@ For **each focus entity**, answer all six — a few lines each, not a document:
    contents: status with who changed it and when, the flat attributes
    at-a-glance, open tasks, consent/compliance state. The rail carries the flat
    fields, which is what frees Overview to be a synthesis.
-4. **The aesthetic direction** (§1a: Operational, Editorial, Clinical, Approval)
-   and the **signature treatment** that makes it legible. "Default" is not a
-   direction.
+4. **The aesthetic direction** — pick **one row** from the table in
+   [frontend/design/directions.md](references/frontend/design/directions.md)
+   and record the row name, its accent hex and its density. One row per app,
+   not per page. Do not describe a direction in prose instead of picking a
+   row: "commit to a direction" without a row is how every app ends up
+   looking the same.
 5. **Every tab** — count source, child table or composed view, and its
    **empty-state copy written out in full**. Copy invented at implementation
    time reverts to "No data".
-6. **The one deliberate moment** — the single element executed with more care
-   than the brief requires, which you can point at afterwards.
+6. **The anchor and its treatment** — name the single element on this page
+   that is visually heavier than everything else (the lead card, a hero
+   figure, the primary chart), then pick its treatment from
+   [design/treatments.md](references/frontend/design/treatments.md): gradient
+   hero for an identity/summary page, sunken band for grouped metrics,
+   top-accent for rail blocks. Record which treatment goes where **in this
+   plan**, not as a decision left for 5d. If you cannot name an anchor, you do
+   not yet know what the page is for, and it will come out as a flat list of
+   equal-weight boxes — the exact failure this step exists to prevent.
 
 Then one app-level entry: the **identity strip** — per entity, the four to six
 facts that identify a record at a glance (reference number, dates, the one
 relationship that matters, contact). The header is not a title plus a chip.
 
+**The role landing page (Home) gets the same six answers**, not a shorter
+version — it is the first page every user sees and is not exempt just
+because it is not a focus entity. In particular: name its anchor (typically a
+gradient-hero summary of what needs attention today) and do not default it to
+"N sections with MetricTile counts at the top" — three identical stat tiles
+with no hero is the flat-list failure by another name.
+
 Write it, then build exactly it.
 
 ### 5c. Write the shared primitives — before any page
 
-> **May be delegated** (see the delegation constraints above) — if so, alone
-> and first, because its export list feeds 5d and 5e: dispatch it, call
-> `TaskOutput` on its `agentId`, and confirm `shared.tsx` exists on disk
-> before dispatching any page. Otherwise write it
-> here. Either way the rules below are what must end up in the file.
+Write this before any page (5d) or the login page (5e) — both import from it.
+Set the direction row (name, accent hex, density) from what you decided at
+5b; you already have it in context.
 
-Write `src/custom/pages/shared.tsx` **first**, and compose every later page
-from it. Full contract and a copyable floor:
-[frontend/shared-primitives.md](references/frontend/shared-primitives.md).
+Write **two** files here, in this order:
+
+1. `src/custom/pages/tokens.css` — copy the block from
+   [frontend/design/tokens.md](references/frontend/design/tokens.md), setting
+   `--accent` (and its `-50`/`-600`/`-700` steps) from the direction row
+   chosen at 5b. This is the file that gives the pages a tonal range to
+   design with; without it they come out flat however well they are composed.
+2. `src/custom/pages/shared.tsx` — imports `./tokens.css` once, at the top.
+
+Then compose every later page from `shared.tsx`. Full contract and a copyable
+floor: [frontend/shared-primitives.md](references/frontend/shared-primitives.md).
 
 It exports the layout, state and formatting primitives every page needs:
 `PageShell`, `PageHeader`, `Avatar`, `IdentityStrip`, `KeyFacts`,
@@ -425,12 +502,7 @@ pages are ~100 lines of inline-styled JSX each, this step was skipped.
 
 ### 5d. Write the custom pages
 
-> **May be delegated**, one agent per page (see the delegation constraints
-> above). If you do: dispatch all of them, then immediately call `TaskOutput`
-> on each returned `agentId` until every one has come back, and `Read` each
-> file before believing it. Any page
-> that has not appeared, write inline. **You** write `index.js` from the export
-> names — never let parallel agents edit it.
+Write each page, one at a time, then `index.js` from the export names.
 
 **Implement `design-plan.md` literally** — the lead card, rail, tabs and
 empty-state copy it names, per entity. Concluded the plan is wrong? Edit
@@ -443,10 +515,15 @@ Rules:
   gets a landing page.** Appbuilder's shell renders only `page_type: "crud"`,
   so anything beyond a plain lookup table is your build. Every entity the team
   works in daily gets a detail page, including ones whose list looks plain.
-- **Exactly one lead `Card` per detail page.** A page of only `Section`s renders
-  as identical grey-capped boxes — the wireframe failure. Treatments:
-  `Section` (field group), `Card`+`Inset`+`MetricTile` (lead), `Card tone=`
-  (status), `RailCard` (rail).
+- **Two or three card treatments per page, and exactly one anchor.** A page
+  where every block is a white bordered card renders as identical grey-capped
+  boxes — the wireframe failure. Pick treatments by role from
+  [design/treatments.md](references/frontend/design/treatments.md): gradient
+  hero for the anchor (one per page), sunken band for grouped metrics,
+  bordered card for the rest, top-accent for rail blocks. The primitives that
+  carry them: `Section` (field group), `Card`+`Inset`+`MetricTile` (lead
+  card), `Card tone=` (status), `RailCard` (rail). Name your anchor before
+  writing; if you cannot, you do not yet know what the page is for.
 - **Numbers go in `MetricTile` with a `qualifier`**, never bare.
 - **Import 5c's primitives; never re-implement layout per page.** Do not paste a
   reference skeleton and swap classes for inline `style` — the scaffold ships
@@ -456,16 +533,15 @@ Rules:
   match the route's `component` value exactly**, or the page renders blank.
 
 Patterns: [frontend/entity-360.md](references/frontend/entity-360.md),
-[frontend/design-system.md](references/frontend/design-system.md),
+[frontend/design/treatments.md](references/frontend/design/treatments.md),
 [frontend/crud/core.md](references/frontend/crud/core.md) +
 [crud/detail.md](references/frontend/crud/detail.md),
 [frontend/form.md](references/frontend/form.md).
 
 ### 5e. Brand the login page
 
-> **May be delegated** (see the delegation constraints above); it shares no
-> file with 5d. Confirm `AppLoginCard.tsx` exists on disk before 5f, and apply
-> the `authConfig` line to `App.tsx` yourself in this thread.
+Write this after 5d. Apply the `authConfig` line to `App.tsx` in the same
+pass.
 
 **Every app gets a branded login page. Always** — no toggle, no condition. It
 is the first screen anyone sees, and the framework default says nothing about
@@ -505,10 +581,11 @@ re-theme and rewrite the copy, do not invent a different layout.
 ls frontend/src/custom/pages/ frontend/src/custom/auth/
 ```
 
-Every page named in `design-plan.md` plus `shared.tsx` and `AppLoginCard.tsx`
-must be there. **If a file is missing, write it now, inline, before you
-build** — most often it was delegated to a background agent that had not
-finished. Building without it silently ships an app missing that page, and
+Every page named in `design-plan.md` plus `tokens.css`, `shared.tsx` and
+`AppLoginCard.tsx` must be there. **If a file is missing, write it now,
+before you build.** `tokens.css` missing is not cosmetic: every
+primitive resolves its colours, shadows and fonts from it, so the app builds
+and ships unstyled. Building without it silently ships an app missing that page, and
 neither the build nor the platform will tell you.
 
 Not after every change:
@@ -633,18 +710,21 @@ and every `icon` an inline SVG.
 theme tokens in scope, so it takes its palette from the run context. No
 inline `style={{...}}` for static styling. Four states on every data surface,
 **including each child tab** opened and confirmed to render. `Money`/`DateText`
-everywhere; one visual anchor per page; detail pages match design-system.md §4;
+everywhere; one visual anchor per page; detail pages match entity-360.md §6;
 `design-plan.md` exists and the pages match it.
 
-**Correct, full and not flat** — the three most recently observed to fail:
+**Correct, full and not flat** — the four most recently observed to fail:
 
 - **Open one record and check the page against the stored data.** A page whose
   numbers are all `0` is internally consistent and uniformly wrong. The usual
   cause is a `BaseDetail` with no `Meta.fields` (entity-360.md §3b).
+- **Add a row from a child tab, then check the page's own numbers without
+  reloading.** The table refreshes itself; tab badges and stat cards fetched by
+  the page do not (entity-360.md §4b).
 - **The page fills the screen.** Content width within ~300px of
   `viewport - 260`, and the rail at least 0.6x the main column's height. A
   1080px column on a 1920px screen leaves ~640px of empty grey.
-- **The page is not flat.** Run the snippet in design-system.md §2: at least 2
+- **The page is not flat.** Run the snippet in verify-gate.md item 22: at least 2
   distinct card fills, every card carrying the hairline shadow, page ground
   differing from card fill. All-white boxes with grey title bars passes every
   structural rule and still reads as a wireframe.
