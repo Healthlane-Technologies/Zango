@@ -29,6 +29,7 @@ Models define the data structure and database schema for your application. Zango
 6. **NO `ManyToManyField` support** - use intermediary models
 7. **NEVER add `class Meta:`** inside models - DynamicModelBase handles all metadata automatically
 8. **Use `PhoneNumberField`** for any phone or mobile number fields - NEVER use `CharField` for phone/mobile fields (`from phonenumber_field.modelfields import PhoneNumberField`)
+9. **For any user foreign key, ALWAYS use `AppUserModel`** - NEVER use Django's built-in `User` model (`from zango.apps.appauth.models import AppUserModel`, then `models.ForeignKey(AppUserModel, ...)`)
 
 ---
 
@@ -390,22 +391,41 @@ class Program(DynamicModelBase):
 #### When to Use ZForeignKey vs models.ForeignKey
 
 - **Use `ZForeignKey`**: For relationships to Zango models (inheriting from `DynamicModelBase`)
-- **Use `models.ForeignKey`**: ONLY for Django framework models (User, Group, etc.)
+- **Use `models.ForeignKey`**: ONLY for other Django framework models (Group, etc.) — **NEVER** for the user model
+
+#### CRITICAL: User Foreign Keys MUST Use AppUserModel, NEVER Django's User
+
+**NEVER** import or reference `django.contrib.auth.models.User` for a user foreign key. Zango apps use their own `AppUserModel` for all user relationships.
 
 ```python
+# ❌ WRONG - Never use Django's built-in User model
 from django.contrib.auth.models import User
 
 class AuditLog(DynamicModelBase):
     action = models.CharField(max_length=255)
 
-    # Use models.ForeignKey for Django's built-in User model
     user = models.ForeignKey(
-        User,
+        User,  # ❌ WRONG
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+# ✅ CORRECT - Always use AppUserModel with models.ForeignKey
+from zango.apps.appauth.models import AppUserModel
+
+class AuditLog(DynamicModelBase):
+    action = models.CharField(max_length=255)
+
+    user = models.ForeignKey(
+        AppUserModel,  # ✅ CORRECT
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
 ```
+
+**Why?** Zango apps authenticate and manage users through `AppUserModel` (multi-tenant aware), not Django's default `auth.User`. Referencing `User` will not correctly resolve to the app's actual user records.
 
 #### Self-Referential Relationships
 
@@ -973,6 +993,21 @@ class MyModel(DynamicModelBase):
 # Correct
 class MyModel(DynamicModelBase):
     name = models.CharField(max_length=255)  # ✅ No Meta class
+```
+
+### Error: Using Django's User model for a user foreign key
+
+**Problem**: Importing `django.contrib.auth.models.User` for a user relationship
+
+**Solution**: Always use `AppUserModel` instead:
+```python
+# Wrong
+from django.contrib.auth.models import User
+user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)  # ❌
+
+# Correct
+from zango.apps.appauth.models import AppUserModel
+user = models.ForeignKey(AppUserModel, on_delete=models.SET_NULL, null=True)  # ✅
 ```
 
 ### Migration Not Creating Table
