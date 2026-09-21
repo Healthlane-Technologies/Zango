@@ -24,7 +24,7 @@ import { WorkflowStatus, WorkflowTags, DetailViewProvider, useWorkflow, useDetai
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `apiUrl` | string | - | API endpoint for fetching workflow data. Uses DetailView context if not provided. |
+| `apiUrl` | string | - | API endpoint for fetching workflow data. Uses DetailView context if not provided. **Must include `?object_uuid=<uuid>`** — in a detail view built manually (outside `DetailViewProvider`), append the record's `object_uuid` to the endpoint yourself, e.g. `` `${ENDPOINT}?object_uuid=${objectUuid}` ``; without it the component fetches workflow data for the wrong (or no) record. |
 | `workflowDetails` | object | - | Direct workflow data object. When provided, skips the API fetch and uses this data directly. |
 | `formContainerId` | string | - | DOM element ID where the transition form should render. Enables portal rendering into custom containers like dialogs or modals. |
 | `onStatusChange` | () => void | - | Callback invoked after a successful status transition completes. Use for refreshing data or updating UI. |
