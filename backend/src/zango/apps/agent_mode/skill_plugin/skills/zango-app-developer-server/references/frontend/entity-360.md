@@ -884,8 +884,8 @@ class TenderDetail(BaseDetail):
     class Meta:
         fields = [...]
 
-    def get_general_details(self, obj):
-        details = super().get_general_details(obj)
+    def get_general_details(self, obj, object_data):
+        details = super().get_general_details(obj, object_data)
         details["fields"]["lowest_quote"] = {"value": self._compute_lowest_quote(obj)}
         details["papers_checklist"] = self._build_papers_checklist(obj)  # new key, any shape
         return details
