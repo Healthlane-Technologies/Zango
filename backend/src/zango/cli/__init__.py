@@ -6,6 +6,7 @@ from zango.cli import (
     package_info,
     start_project,
     update_apps,
+    create_user,
 )
 
 
@@ -20,6 +21,7 @@ cli.add_command(package_info.list_packages)
 cli.add_command(install_package.install_package)
 cli.add_command(git_setup.git_setup)
 cli.add_command(update_apps.update_apps)
+cli.add_command(create_user.create_user)
 
 if __name__ == "__main__":
     cli()
