@@ -24,6 +24,7 @@ import {
 	KeyValues,
 	Page,
 	Skeleton,
+	TemplateBadge,
 	type Tone,
 } from '@/ui';
 
@@ -190,6 +191,7 @@ export function OverviewPage() {
 					<div className="flex items-center gap-2.5">
 						<h1 className="truncate">{app?.name ?? <Skeleton width={180} height={20} />}</h1>
 						{app && <StatusBadge status={app.status} />}
+						{app?.template && <TemplateBadge template={app.template} />}
 					</div>
 					<p className="truncate">
 						{app ? app.description || 'No description' : <Skeleton width={260} />}

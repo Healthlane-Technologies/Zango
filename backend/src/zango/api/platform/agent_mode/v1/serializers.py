@@ -143,6 +143,8 @@ def _template_payload(obj):
         "name": template.name,
         "one_liner": template.one_liner,
         "spec_format": template.spec_format,
+        "version": template.version,
+        "version_uuid": template.version_uuid,
     }
 
 
@@ -163,6 +165,7 @@ class AgentRequirementListSerializer(serializers.ModelSerializer):
             "template_slug",
             "template",
             "spec_format",
+            "draft_revision",
             "spec_version",
             "turns",
             "total_cost_usd",
@@ -204,6 +207,8 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "spec_markdown",
             "spec_format",
             "spec_is_draft",
+            "draft_revision",
+            "validation_issues",
             "spec_version",
             "turns",
             "total_cost_usd",

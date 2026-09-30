@@ -1,0 +1,504 @@
+/* Template gallery, quick view, detail and picker — ported from design/prototype.html
+   (vTemplates, tplModalHTML, vTemplate, vNew .tpick). Plain CSS, so nothing is purged. */
+
+.page-wide {
+	max-width: 1280px;
+	padding-top: 24px;
+}
+
+.tlib {
+	display: grid;
+	grid-template-columns: 224px minmax(0, 1fr);
+	gap: 28px;
+	align-items: start;
+}
+.trail {
+	position: sticky;
+	top: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	padding-top: 2px;
+}
+.tr-i {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	height: 30px;
+	padding: 0 8px;
+	border-radius: 6px;
+	color: var(--t2);
+	text-align: left;
+	width: 100%;
+}
+.tr-i:hover {
+	background: var(--hover);
+	color: var(--t1);
+}
+.tr-i.on {
+	background: var(--subtle);
+	color: var(--t1);
+	font-weight: 550;
+}
+.tr-i .sw {
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+	flex-shrink: 0;
+	opacity: 0.85;
+}
+.tr-i .tl {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.tr-i .tc {
+	font-size: 11.5px;
+	color: var(--t4);
+	font-weight: 500;
+}
+.tr-f {
+	margin-top: 18px;
+	padding: 14px 8px 0;
+	border-top: 1px solid var(--border-soft);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.tr-f h4,
+.tp-s h4 {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--t3);
+}
+.tchk {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--t2);
+	cursor: pointer;
+}
+.tchk input {
+	accent-color: var(--accent);
+	width: 14px;
+	height: 14px;
+	margin: 0;
+}
+
+.tmain {
+	min-width: 0;
+}
+.tbar .tsearch {
+	flex: 1;
+	width: auto;
+	min-width: 200px;
+	max-width: 420px;
+}
+.tbar .tsearch kbd {
+	margin-left: 0;
+}
+.tgh {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 18px 2px 8px;
+}
+.tbar + .tgh {
+	padding-top: 6px;
+}
+.tgh h2 {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--t1);
+}
+.tgh span {
+	font-size: 12px;
+	color: var(--t4);
+}
+.tlist {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel);
+	overflow: hidden;
+}
+.trow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	padding: 10px 14px;
+	text-align: left;
+	border-top: 1px solid var(--border-soft);
+	position: relative;
+}
+.trow:first-child {
+	border-top: 0;
+}
+.trow:hover {
+	background: #fafafb;
+}
+.trow:focus-visible {
+	outline-offset: -2px;
+	border-radius: 0;
+}
+.trow .tm {
+	flex: 1;
+	min-width: 0;
+}
+.trow .tm b {
+	display: block;
+	font-weight: 550;
+	color: var(--t1);
+	font-size: 13.5px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.trow .tm small {
+	display: block;
+	color: var(--t3);
+	font-size: 12.5px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.trow .tb {
+	height: 17px;
+	font-size: 10.5px;
+	vertical-align: 1px;
+}
+.trow .tx {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+	color: var(--t4);
+	font-size: 12px;
+}
+.tag-ai {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 5px;
+	background: var(--violet-soft);
+	color: var(--violet-t);
+	font-size: 11.5px;
+	font-weight: 550;
+}
+mark {
+	background: #fef3c7;
+	color: inherit;
+	border-radius: 2px;
+	padding: 0 1px;
+}
+
+.vic {
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+}
+
+/* quick view */
+.modal .mb2 {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	display: grid;
+	grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+	gap: 28px;
+	padding: 20px;
+}
+.tp-d {
+	color: var(--t2);
+	line-height: 1.55;
+}
+.tp-s {
+	margin-top: 18px;
+}
+.tp-s:first-child {
+	margin-top: 0;
+}
+.tp-s h4 {
+	margin-bottom: 8px;
+}
+.tflow {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	counter-reset: f;
+}
+.tflow li {
+	counter-increment: f;
+	position: relative;
+	padding: 0 0 12px 30px;
+	color: var(--t1);
+	font-weight: 500;
+	line-height: 20px;
+}
+.tflow li::before {
+	content: counter(f);
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 1px solid var(--border-2);
+	background: var(--panel);
+	color: var(--t3);
+	font-size: 11px;
+	font-weight: 600;
+	display: grid;
+	place-items: center;
+}
+.tflow li::after {
+	content: '';
+	position: absolute;
+	left: 10px;
+	top: 21px;
+	bottom: 1px;
+	width: 1px;
+	background: var(--border);
+}
+.tflow li:last-child {
+	padding-bottom: 0;
+}
+.tflow li:last-child::after {
+	display: none;
+}
+.tflow li small {
+	display: block;
+	color: var(--t3);
+	font-weight: 400;
+	font-size: 12px;
+	line-height: 1.4;
+}
+.tp-ag {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 8px;
+	margin: 0 -8px;
+	width: calc(100% + 16px);
+	border-radius: 7px;
+	text-align: left;
+}
+.tp-ag b {
+	display: block;
+	font-weight: 550;
+	color: var(--t1);
+}
+.tp-ag small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+}
+.tp-c {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.tp-c li {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	color: var(--t2);
+}
+.tp-c li svg {
+	color: var(--green);
+	margin-top: 3px;
+}
+.rchip {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 9px;
+	border-radius: 99px;
+	background: var(--subtle);
+	color: var(--t2);
+	font-size: 12px;
+}
+.pkgs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.pkg {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 8px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	font-family: var(--mono);
+	font-size: 11.5px;
+	color: var(--t2);
+	background: var(--panel);
+}
+
+/* detail page */
+.tdg {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 340px;
+	gap: 16px;
+	align-items: start;
+}
+.tdg2 {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+@media (max-width: 1100px) {
+	.tdg,
+	.tdg2 {
+		grid-template-columns: 1fr;
+	}
+}
+.steps-ol {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+.steps-ol li {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--border-soft);
+}
+.steps-ol li:last-child {
+	border: 0;
+}
+.steps-ol li span.n {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--subtle);
+	color: var(--t3);
+	font-size: 11px;
+	font-weight: 600;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+}
+.steps-ol li b {
+	font-weight: 500;
+	color: var(--t1);
+	display: block;
+}
+.steps-ol li small {
+	color: var(--t3);
+	font-size: 12px;
+}
+.act-list .ai {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--border-soft);
+}
+.act-list .ai:last-child {
+	border: 0;
+}
+.act-list .ai b {
+	font-weight: 500;
+	color: var(--t1);
+}
+.act-list .ai small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+}
+
+/* New app picker */
+.tpick {
+	border: 1px solid var(--border);
+	border-radius: 9px;
+	overflow: hidden;
+	background: var(--panel);
+	box-shadow: var(--sh-card);
+	margin-top: 12px;
+}
+.tpick .tp-h {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 8px;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
+}
+.tpick .tp-h .tsearch {
+	flex: 1;
+	width: auto;
+}
+.tpick .tp-l {
+	max-height: 330px;
+	overflow-y: auto;
+}
+.tprow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--border-soft);
+	text-align: left;
+}
+.tprow:last-child {
+	border: 0;
+}
+.tprow:hover {
+	background: #fafafb;
+}
+.tprow.on {
+	background: var(--accent-soft);
+}
+.tprow .rd {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 1.5px solid var(--border-2);
+	flex-shrink: 0;
+	background: var(--panel);
+}
+.tprow.on .rd {
+	border: 4.5px solid var(--accent);
+}
+.tprow b {
+	display: block;
+	color: var(--t1);
+	font-weight: 550;
+}
+.tprow small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.tprow .mid {
+	min-width: 0;
+	flex: 1;
+}
+.tprow .meta {
+	margin-left: auto;
+	color: var(--t4);
+	font-size: 12px;
+	white-space: nowrap;
+	text-align: right;
+	line-height: 1.4;
+}

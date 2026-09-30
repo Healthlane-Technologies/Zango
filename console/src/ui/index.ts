@@ -24,5 +24,6 @@ export { Page, PageHeader } from './PageHeader';
 export { Pagination, usePaged } from './Pagination';
 export { SaveBar } from './SaveBar';
 export { Table, type Column } from './Table';
+export { TemplateBadge } from './TemplateBadge';
 export { toast, Toaster } from './toast';
 export { Checkbox, Switch, SwitchField, SwitchRow } from './Toggle';

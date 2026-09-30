@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from './client';
+import type { TemplateRef } from './templates';
 
 export interface AppDomain {
 	domain: string;
@@ -17,6 +18,8 @@ export interface App {
 	domain_url: string | null;
 	last_released_version: string | null;
 	modified_at: string;
+	/** The template the app is built on (AppTemplateBinding), or null for a from-scratch app. */
+	template?: TemplateRef | null;
 }
 
 export const appKeys = {

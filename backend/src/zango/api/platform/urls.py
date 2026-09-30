@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from .agent_mode_admin.v1 import urls as agent_mode_admin_urls
+from .app_templates.v1 import urls as app_templates_v1_urls
 from .auth.v1 import urls as auth_v1_urls
 from .code_execution.v1 import urls as code_execution_v1_urls
 from .codebase.v1 import urls as codebase_v1_urls
@@ -22,4 +23,5 @@ urlpatterns = [
     path("v1/platform/logs/", include(platform_logs_admin_urls)),
     path("v1/platform/agent-mode/", include(agent_mode_admin_urls)),
     path("v1/platform/general/", include(platform_settings_admin_urls)),
+    path("v1/platform/app-templates/", include(app_templates_v1_urls)),
 ]

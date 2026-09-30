@@ -12,7 +12,7 @@ import {
 	useSendMessage,
 } from '@/api/agentMode';
 import { useAppId } from '@/api/hooks';
-import { Badge, Button, ErrorState, Icon, Skeleton, Tabs, cx } from '@/ui';
+import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
 import { RequirementsPanel } from './agent/RequirementsPanel';
 import { RunsPanel } from './agent/runs/RunsPanel';
 import { Thread } from './agent/Thread';
@@ -185,6 +185,7 @@ export function AgentPage() {
 						{roundLabel(activeRound.index)}
 					</Badge>
 				)}
+				{active?.template && <TemplateBadge template={active.template} />}
 				<div className="stepline" aria-label="Progress">
 					{STAGES.map(([k, label], i) => (
 						<Fragment key={k}>

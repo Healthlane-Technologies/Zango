@@ -1,9 +1,8 @@
 import type { ComponentType } from 'react';
 import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router-dom';
 import { Shell } from './shell/Shell';
-import { AppCrumb, type CrumbHandle } from './shell/crumbs';
+import { AppCrumb, TemplateCrumb, type CrumbHandle } from './shell/crumbs';
 import { AppsPage } from './pages/AppsPage';
-import { Placeholder } from './pages/Placeholder';
 
 const crumb = (label: string): CrumbHandle => ({ crumb: () => label });
 
@@ -96,13 +95,22 @@ export const router = createBrowserRouter(
 				{
 					path: 'templates',
 					handle: crumb('Templates'),
-					element: (
-						<Placeholder
-							title="Templates"
-							description="Start a new app from a proven program."
-							classicHref="/platform/build-with-agent"
-						/>
-					),
+					children: [
+						{
+							index: true,
+							...page(() => import('./pages/workspace/templates/TemplatesPage'), 'TemplatesPage'),
+						},
+						{
+							path: ':slug',
+							handle: {
+								crumb: (m) => <TemplateCrumb slug={m.params.slug!} />,
+							} satisfies CrumbHandle,
+							...page(
+								() => import('./pages/workspace/templates/TemplateDetailPage'),
+								'TemplateDetailPage',
+							),
+						},
+					],
 				},
 				{
 					path: 'packages',

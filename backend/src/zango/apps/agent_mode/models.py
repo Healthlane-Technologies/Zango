@@ -192,10 +192,20 @@ class AgentRequirement(FullAuditMixin):
     # so the pane is populated long before there is anything to approve.
     spec_is_draft = models.BooleanField(default=False)
 
-    # The app template this requirement is being built on, if the user chose
-    # one. Empty means a from-scratch build. Stored as the slug rather than a
-    # foreign key: templates ship with the code, so there is no row to point at.
+    # The app template this requirement is being built on, if any. Empty means
+    # a from-scratch build. Templates live in the public schema, so this is a
+    # slug plus the pinned version's uuid rather than a foreign key: a newer
+    # published version must never change what an app was agreed and built on.
     template_slug = models.CharField(max_length=64, blank=True, default="")
+    template_version = models.CharField(max_length=32, blank=True, default="")
+    template_version_uuid = models.UUIDField(null=True, blank=True)
+
+    # Bumped on every change to a draft spec, by the agent or by hand. The
+    # panel polls it to know when to re-read, and a manual save must quote the
+    # revision it started from so it cannot silently overwrite the agent.
+    draft_revision = models.PositiveIntegerField(default=0)
+    # The last validation result for a template spec: [{level, path, message}].
+    validation_issues = models.JSONField(default=list, blank=True)
 
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")
@@ -230,23 +240,35 @@ class AgentRequirement(FullAuditMixin):
 
     @property
     def template(self):
-        """The template pack behind this requirement, or None."""
-        from .app_templates import get_template
+        """The template version behind this requirement, or None.
 
-        return get_template(self.template_slug)
-
-    def adopt_template(self, slug: str) -> bool:
-        """Record that the user chose a template. Returns whether it changed.
-
-        The spec format follows from the template, so this is also the moment
-        the requirement stops being a Markdown one.
+        Pinned requirements resolve their own version even after the template
+        moves on; one adopted before pinning existed resolves the current one.
         """
         from .app_templates import get_template
 
-        template = get_template(slug)
-        if template is None or self.template_slug == template.slug:
+        if not self.template_slug:
+            return None
+        return get_template(self.template_slug, version_uuid=self.template_version_uuid)
+
+    def adopt_template(self, slug: str, version_uuid=None) -> bool:
+        """Record that the user chose a template. Returns whether it changed.
+
+        The version is pinned here — the current one unless ``version_uuid``
+        names another — and the spec format follows from the template, so this
+        is also the moment the requirement stops being a Markdown one.
+        """
+        from .app_templates import get_template
+
+        template = get_template(slug, version_uuid=version_uuid)
+        if template is None or (
+            self.template_slug == template.slug
+            and str(self.template_version_uuid or "") == template.version_uuid
+        ):
             return False
         self.template_slug = template.slug
+        self.template_version = template.version
+        self.template_version_uuid = template.version_uuid or None
         self.spec_format = SpecFormat.YAML if template.is_yaml else SpecFormat.MARKDOWN
         return True
 
@@ -263,6 +285,7 @@ class AgentRequirement(FullAuditMixin):
             return False
         self.spec_markdown = text
         self.spec_is_draft = True
+        self.draft_revision += 1
         return True
 
     def record_spec(self, markdown: str, source: str = SpecSource.AGENT) -> None:
@@ -283,6 +306,7 @@ class AgentRequirement(FullAuditMixin):
             version=self.spec_version,
             spec_markdown=markdown,
             spec_format=self.spec_format,
+            template_version=self.template_version,
             source=source,
         )
 
@@ -336,6 +360,12 @@ class AgentRequirementVersion(models.Model):
     source = models.CharField(
         max_length=8, choices=SpecSource.choices, default=SpecSource.AGENT
     )
+    # The template version the spec was written against, when there is one.
+    template_version = models.CharField(max_length=32, blank=True, default="")
+    # A checkpoint of a draft (one per analyst turn), not an agreed revision.
+    is_draft = models.BooleanField(default=False)
+    # JSON Pointers the turn or edit changed, for the panel's highlights.
+    changed_paths = models.JSONField(default=list, blank=True)
     ts = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -987,6 +987,32 @@
 		color: var(--red);
 	}
 
+	/* ---------- template badge (ui/TemplateBadge) ---------- */
+	.tbadge {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 22px;
+		padding: 0 8px;
+		border-radius: 6px;
+		border: 1px solid var(--border);
+		background: var(--panel);
+		color: var(--t1);
+		font-size: 12px;
+		font-weight: 550;
+		white-space: nowrap;
+		max-width: 100%;
+	}
+	.tbadge:hover {
+		border-color: var(--border-2);
+	}
+	.tbadge .v {
+		font-family: var(--mono);
+		font-size: 11px;
+		color: var(--t3);
+		font-weight: 400;
+	}
+
 	.fi {
 		animation: fi 0.22s var(--ease) both;
 	}

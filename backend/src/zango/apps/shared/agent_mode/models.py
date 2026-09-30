@@ -143,6 +143,16 @@ class AgentAppScaffold(FullAuditMixin):
     # The requirement conversation the user is handed off to.
     requirement_uuid = models.UUIDField(null=True, blank=True)
 
+    # The template the user started from, pinned at creation; null for a
+    # from-scratch app.
+    template_version = models.ForeignKey(
+        "app_templates.AppTemplateVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="scaffolds",
+    )
+
     celery_task_id = models.CharField(max_length=64, blank=True, default="")
     error_message = models.TextField(blank=True, default="")
     created_by_label = models.CharField(max_length=255, blank=True, default="")

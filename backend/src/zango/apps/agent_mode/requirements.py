@@ -311,6 +311,56 @@ of your general interview.
 """
 
 
+_TEMPLATE_MODE = """\
+## This app is built on a template
+
+Template: {name} (slug `{slug}`, version {version})
+
+The user chose this template before the conversation started, so do not
+offer templates and do not ask whether to use one. Read `{interview}` first,
+then `{schema}`, and follow that interview instead of your general one. The
+spec is YAML in the template's own vocabulary, rooted at `{root}`.
+
+{draft}
+Re-emit the whole journey in a ```zango-spec-draft fence after every reply,
+as the interview says, and use a plain ```zango-spec fence only when it is
+finished.
+"""
+
+_TEMPLATE_FIRST_DRAFT = """\
+The requirement already holds the template's starter journey as a draft —
+it is at `{starter}` — and the user watches it fill in beside the chat. Every
+answer should change that draft; nothing is built until they approve it."""
+
+_TEMPLATE_CHANGE_DRAFT = """\
+This is a change to an app that already runs on the template. The draft
+below is the journey the app was last approved on; change only what the user
+asks for and keep everything else exactly as it is.
+
+```yaml
+{spec}
+```"""
+
+
+def _template_mode_block(requirement, template) -> str:
+    spec = (requirement.spec_markdown or "").strip()
+    is_change = bool(spec) and spec != (template.starter_yaml or "").strip()
+    draft = (
+        _TEMPLATE_CHANGE_DRAFT.format(spec=spec)
+        if is_change
+        else _TEMPLATE_FIRST_DRAFT.format(starter=template.file_path("starter") or "starter.yaml")
+    )
+    return _TEMPLATE_MODE.format(
+        name=template.name,
+        slug=template.slug,
+        version=template.version or "current",
+        interview=template.file_path("interview"),
+        schema=template.file_path("schema"),
+        root=template.spec_root or "the top level",
+        draft=draft,
+    )
+
+
 def compose_analyst_prompt(requirement, ctx, user_message: str) -> str:
     """First turn dispatches the skill and supplies context; later turns are
     just the user's reply, since the session is resumed."""
@@ -326,10 +376,15 @@ def compose_analyst_prompt(requirement, ctx, user_message: str) -> str:
 
     from .app_templates import catalogue_digest
 
-    catalogue = catalogue_digest()
-    templates = (
-        "\n" + _TEMPLATE_BRIEF.format(catalogue=catalogue) if catalogue else ""
-    )
+    # A requirement bound to a template up front skips the offer entirely.
+    bound = requirement.template if getattr(requirement, "template_slug", "") else None
+    if bound is not None:
+        templates = "\n" + _template_mode_block(requirement, bound)
+    else:
+        catalogue = catalogue_digest()
+        templates = (
+            "\n" + _TEMPLATE_BRIEF.format(catalogue=catalogue) if catalogue else ""
+        )
 
     return f"""/{ANALYST_SKILL}
 

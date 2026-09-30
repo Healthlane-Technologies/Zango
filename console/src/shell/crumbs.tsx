@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { Link, useMatches, type UIMatch } from 'react-router-dom';
 import { useApp } from '@/api/apps';
+import { useTemplate } from '@/api/templates';
 
 /** Set on a route's `handle` to give it a breadcrumb. */
 export interface CrumbHandle {
@@ -13,6 +14,11 @@ function hasCrumb(m: UIMatch): m is UIMatch<unknown, CrumbHandle> {
 
 export function AppCrumb({ uuid }: { uuid: string }) {
 	const { data } = useApp(uuid);
+	return <>{data?.name ?? '…'}</>;
+}
+
+export function TemplateCrumb({ slug }: { slug: string }) {
+	const { data } = useTemplate(slug);
 	return <>{data?.name ?? '…'}</>;
 }
 

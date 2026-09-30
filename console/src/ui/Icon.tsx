@@ -187,6 +187,53 @@ const paths = {
 			<path d="M13 3 4 14h7l-1 7 9-11h-7z" />
 		</>
 	),
+	heart: (
+		<>
+			<path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10z" />
+		</>
+	),
+	dna: (
+		<>
+			<path d="M7 3c0 6 10 6 10 12s-10 6-10 6M17 3c0 6-10 6-10 12M8 7h8M8 17h8" />
+		</>
+	),
+	cart: (
+		<>
+			<circle cx="9" cy="20" r="1.5" />
+			<circle cx="18" cy="20" r="1.5" />
+			<path d="M3 4h2l2.5 11h11L21 7H6.5" />
+		</>
+	),
+	truck: (
+		<>
+			<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7" />
+			<circle cx="7" cy="18" r="2" />
+			<circle cx="17.5" cy="18" r="2" />
+		</>
+	),
+	card: (
+		<>
+			<rect x="3" y="5" width="18" height="14" rx="2" />
+			<path d="M3 10h18" />
+		</>
+	),
+	gift: (
+		<>
+			<rect x="3" y="8" width="18" height="4" rx="1" />
+			<path d="M5 12v8h14v-8M12 8v12" />
+		</>
+	),
+	barcode: (
+		<>
+			<path d="M4 5v14M7 5v14M11 5v14M14 5v14M17 5v14M20 5v14" />
+		</>
+	),
+	mic: (
+		<>
+			<rect x="9" y="3" width="6" height="11" rx="3" />
+			<path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+		</>
+	),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;

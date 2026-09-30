@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
 	AVAILABILITY_REASONS,
 	createScaffold,
@@ -7,6 +8,7 @@ import {
 	type Scaffold,
 } from '@/api/scaffolds';
 import { useApiMutation } from '@/api/hooks';
+import { useTemplates } from '@/api/templates';
 import {
 	Button,
 	ButtonLink,
@@ -21,14 +23,20 @@ import {
 	Textarea,
 } from '@/ui';
 import { Section, SourceOption, SummaryRow } from './parts';
+import { TemplatePicker } from './TemplatePicker';
 
 const PLACEHOLDER =
 	'e.g. a way for our clinic staff to book patient appointments and record whether the patient turned up';
 
-// Starting points the backend can take. Only a plain description today; when the template
-// list API lands, add { kind: 'template' } here and render the picker under the options.
-type StartingPoint = 'brief';
+// Starting points the backend can take: a plain description, or a published template
+// (the scaffold then binds the app to it and the analyst runs that template's interview).
+type StartingPoint = 'brief' | 'template';
 const STARTING_POINTS: Array<{ kind: StartingPoint; title: string; description: string }> = [
+	{
+		kind: 'template',
+		title: 'From a template',
+		description: 'Start from a proven program',
+	},
 	{
 		kind: 'brief',
 		title: 'Describe it',
@@ -64,16 +72,38 @@ function Unavailable({ reasons }: { reasons: string[] }) {
 
 /** Step one: say what to build. Hands the created scaffold to `onStarted`. */
 export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) {
-	const [source, setSource] = useState<StartingPoint>('brief');
+	const [params] = useSearchParams();
+	const preselected = params.get('template');
+	const [source, setSource] = useState<StartingPoint>(preselected ? 'template' : 'brief');
+	const [templateSlug, setTemplateSlug] = useState<string | null>(preselected);
 	const [prompt, setPrompt] = useState('');
 	const { data: availability, isLoading: checking } = useAgentAvailability();
+	const templates = useTemplates();
 	const create = useApiMutation({ fn: createScaffold, onSuccess: (s) => onStarted(s) });
+
+	const template =
+		source === 'template' ? (templates.data?.find((t) => t.slug === templateSlug) ?? null) : null;
+	// A deep link to a template that isn't published (any more) falls back to the first one.
+	useEffect(() => {
+		if (source !== 'template' || !templates.data?.length) return;
+		if (!templateSlug || !templates.data.some((t) => t.slug === templateSlug)) {
+			setTemplateSlug(templates.data[0].slug);
+		}
+	}, [source, templates.data, templateSlug]);
 
 	const blocked = !!availability && !availability.available;
 	const trimmed = prompt.trim();
 	const tooLong = trimmed.length > MAX_PROMPT_CHARS;
-	const canStart = !blocked && !checking && !!trimmed && !tooLong && !create.isPending;
-	const start = () => canStart && create.mutate(trimmed);
+	// With a template the brief is optional: the template's interview does the asking.
+	const hasInput = source === 'template' ? !!template : !!trimmed;
+	const canStart = !blocked && !checking && hasInput && !tooLong && !create.isPending;
+	const start = () =>
+		canStart &&
+		create.mutate(
+			source === 'template' && template
+				? { prompt: trimmed || undefined, template_slug: template.slug }
+				: { prompt: trimmed },
+		);
 
 	return (
 		<div className="flex min-h-full flex-col">
@@ -97,18 +127,34 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 										selected={source === p.kind}
 										title={p.title}
 										description={p.description}
+										disabled={create.isPending}
 										onSelect={() => setSource(p.kind)}
 									/>
 								))}
 							</div>
+							{source === 'template' && (
+								<TemplatePicker
+									templates={templates.data}
+									loading={templates.isLoading}
+									error={templates.error}
+									onRetry={() => templates.refetch()}
+									value={templateSlug}
+									onChange={setTemplateSlug}
+									disabled={create.isPending}
+								/>
+							)}
 						</Section>
 						<Section
 							n={2}
 							title="Requirements"
-							hint="Plain language, the way you'd explain it to a colleague: who uses it, the steps, what gets recorded."
+							hint={
+								source === 'template'
+									? "Optional. The agent walks you through the template's questions in the Agent tab; add anything it should know up front."
+									: "Plain language, the way you'd explain it to a colleague: who uses it, the steps, what gets recorded."
+							}
 						>
 							<Field
-								label="Describe the app"
+								label={source === 'template' ? 'Anything to add? (optional)' : 'Describe the app'}
 								error={
 									tooLong
 										? `Keep it under ${MAX_PROMPT_CHARS.toLocaleString()} characters.`
@@ -120,9 +166,13 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 									<Textarea
 										{...p}
 										rows={7}
-										autoFocus
+										autoFocus={source === 'brief'}
 										value={prompt}
-										placeholder={PLACEHOLDER}
+										placeholder={
+											source === 'template'
+												? template?.catalogue.app_prompt_prefill || PLACEHOLDER
+												: PLACEHOLDER
+										}
 										disabled={blocked || create.isPending}
 										onChange={(e) => setPrompt(e.target.value)}
 										onKeyDown={(e) => {
@@ -140,14 +190,37 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 						<Card>
 							<CardHeader title="Summary" />
 							<CardBody>
-								<SummaryRow label="Starting point">Description</SummaryRow>
+								<SummaryRow label="Starting point">
+									{source === 'template' ? 'Template' : 'Description'}
+								</SummaryRow>
+								{source === 'template' && (
+									<>
+										<SummaryRow label="Template">
+											{template ? (
+												<>
+													{template.name} <span className="mono text-t3">v{template.version}</span>
+												</>
+											) : (
+												<span className="font-normal text-t3">Pick one</span>
+											)}
+										</SummaryRow>
+										<SummaryRow label="Packages">
+											{template ? (template.catalogue.packages?.length ?? 0) : '—'}
+										</SummaryRow>
+										<SummaryRow label="Workflows included">
+											{template ? (template.catalogue.workflows?.length ?? 0) : '—'}
+										</SummaryRow>
+									</>
+								)}
 								<SummaryRow label="App name">
 									<span className="font-normal text-t3">Chosen by the agent</span>
 								</SummaryRow>
 								<SummaryRow label="Analyst model">
 									{checking ? <Skeleton width={90} /> : (availability?.config.analyst_model ?? '—')}
 								</SummaryRow>
-								<SummaryRow label="First step">Requirements chat</SummaryRow>
+								<SummaryRow label="First step">
+									{source === 'template' ? 'Template interview' : 'Requirements chat'}
+								</SummaryRow>
 								<div className="divider my-3" />
 								<p className="text-[12px] text-t3">
 									Creating the app starts an agent conversation. Nothing is built until you approve

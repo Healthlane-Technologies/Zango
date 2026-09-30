@@ -310,6 +310,34 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                 )
 
             prompt = (request.data.get("prompt") or "").strip()
+
+            # Starting from a template pins its current published version now,
+            # so a publish during app creation cannot change what was chosen.
+            template_version = None
+            template_slug = (request.data.get("template_slug") or "").strip().lower()
+            if template_slug:
+                from zango.apps.shared.app_templates.models import (
+                    AppTemplate,
+                    TemplateStatus,
+                )
+
+                template = (
+                    AppTemplate.objects.select_related("current_version")
+                    .filter(slug=template_slug, status=TemplateStatus.PUBLISHED)
+                    .first()
+                )
+                if template is None or template.current_version is None:
+                    return get_api_response(
+                        False, {"message": "That template is not available."}, 400
+                    )
+                template_version = template.current_version
+                if not prompt:
+                    catalogue = template_version.catalogue or {}
+                    prompt = (
+                        catalogue.get("app_prompt_prefill")
+                        or f"A new {template.name} app."
+                    ).strip()
+
             if not prompt:
                 return get_api_response(
                     False, {"message": "Describe what you want to build."}, 400
@@ -322,6 +350,7 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
             user = getattr(request, "user", None)
             scaffold = AgentAppScaffold.objects.create(
                 prompt=prompt,
+                template_version=template_version,
                 created_by_label=(getattr(user, "email", "") or str(user or ""))[:255],
             )
 

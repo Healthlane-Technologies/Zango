@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from './client';
+import type { TemplateRef } from './templates';
 
 // "Build with Agent": POST a one-line ask, a worker names and creates the app, then the
 // hand-off opens a requirement conversation inside it seeded with the same ask.
@@ -42,6 +43,8 @@ export interface Scaffold {
 	requirement_uuid: string | null;
 	error_message: string;
 	created_at: string | null;
+	/** The template the app is being created from, or null for a described app. */
+	template?: TemplateRef | null;
 }
 
 /** The backend rejects longer prompts (AgentAppScaffoldCreateView.MAX_PROMPT_CHARS). */
@@ -76,8 +79,17 @@ export function useScaffold(uuid: string | null, { paused = false } = {}) {
 	});
 }
 
-export const createScaffold = (prompt: string) =>
-	api<Scaffold>(`${BASE}/scaffolds/`, 'POST', { prompt });
+export interface ScaffoldInput {
+	/** Optional with a template: the server falls back to its app_prompt_prefill. */
+	prompt?: string;
+	template_slug?: string;
+}
+
+export const createScaffold = ({ prompt, template_slug }: ScaffoldInput) =>
+	api<Scaffold>(`${BASE}/scaffolds/`, 'POST', {
+		...(prompt ? { prompt } : {}),
+		...(template_slug ? { template_slug } : {}),
+	});
 
 /** Open the requirement conversation in the new app. 409 while the app is still being created. */
 export const handOffScaffold = (uuid: string) =>

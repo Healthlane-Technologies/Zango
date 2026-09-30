@@ -90,6 +90,7 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             if not platform_user.is_superadmin:
                 apps = platform_user.apps
 
+            apps = apps.select_related("template_binding__template", "template_binding__version")
             serializer = TenantSerializerModel(apps, many=True)
             success = True
             response = {

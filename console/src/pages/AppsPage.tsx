@@ -14,6 +14,7 @@ import {
 	SearchInput,
 	Segmented,
 	Table,
+	TemplateBadge,
 	Toolbar,
 	type Column,
 	type Tone,
@@ -76,6 +77,12 @@ export function AppsPage() {
 			key: 'domain',
 			header: 'Domain',
 			cell: (a) => <span className="mono">{a.domain_url ?? '—'}</span>,
+		},
+		{
+			key: 'template',
+			header: 'Template',
+			cell: (a) =>
+				a.template ? <TemplateBadge template={a.template} /> : <span className="text-t4">—</span>,
 		},
 		{
 			key: 'release',

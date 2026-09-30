@@ -166,7 +166,13 @@ class TenantSerializerModel(serializers.ModelSerializer):
     last_released_version = serializers.SerializerMethodField(
         "get_last_released_version"
     )
+    template = serializers.SerializerMethodField("get_template")
     auth_config = serializers.JSONField(required=False)
+
+    def get_template(self, obj):
+        from zango.api.platform.app_templates.v1.serializers import app_template_ref
+
+        return app_template_ref(obj)
 
     def get_last_released_version(self, obj):
         try:

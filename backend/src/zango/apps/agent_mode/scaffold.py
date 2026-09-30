@@ -187,8 +187,11 @@ def handoff_requirement(scaffold):
     from django.db import transaction
 
     from zango.apps.shared.agent_mode.models import ScaffoldStatus
+    from zango.apps.shared.app_templates.models import BindingSource
 
+    from .app_templates import get_template
     from .models import AgentRequirement, AgentRequirementMessage, MessageRole
+    from .template_binding import bind_app, seed_template_requirement
 
     tenant = _tenant_for(scaffold)
     if tenant is None:
@@ -196,13 +199,24 @@ def handoff_requirement(scaffold):
     if scaffold.requirement_uuid:
         return str(scaffold.requirement_uuid), tenant
 
+    # Resolved on the public schema, where the catalogue lives.
+    template = None
+    if scaffold.template_version_id:
+        version = scaffold.template_version
+        template = get_template(version.template.slug, version_uuid=version.object_uuid)
+        if template is None:
+            raise RuntimeError("The template this app was started from no longer loads.")
+
     with schema_context(tenant.schema_name):
-        requirement = AgentRequirement.objects.create(
+        requirement = AgentRequirement(
             initial_prompt=scaffold.prompt,
-            title=scaffold.prompt[:80],
+            title=(template.name if template else scaffold.prompt)[:80],
             created_by_label=scaffold.created_by_label,
             is_thinking=True,
         )
+        if template:
+            seed_template_requirement(requirement, template)
+        requirement.save()
         AgentRequirementMessage.objects.create(
             requirement=requirement,
             seq=1,
@@ -210,7 +224,9 @@ def handoff_requirement(scaffold):
             content=scaffold.prompt,
         )
 
-    # Back on the public schema: the scaffold row lives there.
+    # Back on the public schema: the scaffold row and the binding live there.
+    if template:
+        bind_app(tenant, scaffold.template_version, BindingSource.SCAFFOLD)
     scaffold.requirement_uuid = requirement.object_uuid
     scaffold.status = ScaffoldStatus.READY
     scaffold.error_message = ""
@@ -284,4 +300,15 @@ def state_payload(scaffold) -> dict:
         # workspace build reported, so a failure is never just a dead spinner.
         "error_message": scaffold.error_message or app_error,
         "created_at": scaffold.created_at.isoformat() if scaffold.created_at else None,
+        "template": _template_ref(scaffold.template_version),
+    }
+
+
+def _template_ref(version):
+    if version is None:
+        return None
+    return {
+        "slug": version.template.slug,
+        "name": version.template.name,
+        "version": version.version,
     }

@@ -182,7 +182,7 @@ class ImportAndPublishTests(AppTemplatesTestBase):
 
     def test_a_new_version_becomes_current_and_the_old_one_stays_resolvable(self):
         v1, _ = import_pack(self.pack(), publish_now=True)
-        v2, _ = import_pack(
+        import_pack(
             self.pack(version="1.1.0", starter="journey: v2\n"), publish_now=True
         )
         catalogue.clear_caches()

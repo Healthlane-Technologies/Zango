@@ -80,6 +80,19 @@ export interface Requirement {
 	messages: RequirementMessage[];
 	/** Latest ten runs, newest first. */
 	runs: RunRef[];
+	/** The template this requirement is built on, pinned to a version; null when from scratch. */
+	template?: RequirementTemplate | null;
+	/** Bumped on every draft write (agent tool call or manual save); poll-friendly. */
+	draft_revision?: number;
+}
+
+export interface RequirementTemplate {
+	slug: string;
+	name: string;
+	one_liner: string;
+	spec_format: 'yaml' | 'markdown';
+	version: string;
+	version_uuid: string;
 }
 
 export interface Availability {

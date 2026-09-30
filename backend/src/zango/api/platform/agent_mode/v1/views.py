@@ -715,13 +715,19 @@ class AgentRequirementListCreateView(
                     False, {"message": "That description is too long."}, 400
                 )
 
+            from zango.apps.agent_mode.template_binding import seed_from_binding
+
             with transaction.atomic():
-                requirement = AgentRequirement.objects.create(
+                requirement = AgentRequirement(
                     initial_prompt=prompt,
                     title=prompt[:80],
                     created_by_label=_user_label(request),
                     is_thinking=True,
                 )
+                # An app built on a template stays on it: the change request
+                # starts from the journey it was last approved on.
+                seed_from_binding(requirement, tenant)
+                requirement.save()
                 _append_user_message(requirement, prompt)
 
             _dispatch_turn(requirement, tenant)

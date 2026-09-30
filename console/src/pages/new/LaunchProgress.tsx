@@ -12,6 +12,7 @@ import {
 	Page,
 	PageHeader,
 	Skeleton,
+	TemplateBadge,
 	toast,
 } from '@/ui';
 import { Step, type StepState } from './parts';
@@ -150,6 +151,12 @@ export function LaunchProgress({ uuid, onStartOver }: { uuid: string; onStartOve
 							<Icon name="file" />
 						</span>
 						<div className="min-w-0">
+							{scaffold?.template && (
+								<div className="mb-2">
+									<div className="text-[12px] text-t3">Template</div>
+									<TemplateBadge template={scaffold.template} />
+								</div>
+							)}
 							<div className="text-[12px] text-t3">Your brief</div>
 							{scaffold ? (
 								<p className="whitespace-pre-wrap text-t1">{scaffold.prompt}</p>
