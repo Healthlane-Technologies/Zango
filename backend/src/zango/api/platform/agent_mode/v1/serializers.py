@@ -129,11 +129,29 @@ class AgentRequirementMessageSerializer(serializers.ModelSerializer):
         fields = ("seq", "role", "content", "ts", "is_question", "questions")
 
 
+def _template_payload(obj):
+    """What the panel shows about the template behind a requirement.
+
+    The slug alone would make the UI carry its own copy of every template's
+    display name, which then drifts from the pack.
+    """
+    template = obj.template
+    if template is None:
+        return None
+    return {
+        "slug": template.slug,
+        "name": template.name,
+        "one_liner": template.one_liner,
+        "spec_format": template.spec_format,
+    }
+
+
 class AgentRequirementListSerializer(serializers.ModelSerializer):
     uuid = serializers.UUIDField(source="object_uuid", read_only=True)
     can_build = serializers.BooleanField(read_only=True)
     run_count = serializers.IntegerField(source="runs.count", read_only=True)
     latest_run = serializers.SerializerMethodField()
+    template = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentRequirement
@@ -142,6 +160,9 @@ class AgentRequirementListSerializer(serializers.ModelSerializer):
             "title",
             "status",
             "can_build",
+            "template_slug",
+            "template",
+            "spec_format",
             "spec_version",
             "turns",
             "total_cost_usd",
@@ -150,6 +171,9 @@ class AgentRequirementListSerializer(serializers.ModelSerializer):
             "created_at",
             "approved_at",
         )
+
+    def get_template(self, obj):
+        return _template_payload(obj)
 
     def get_latest_run(self, obj):
         """So the list shows whether the last build worked, not just that one
@@ -165,6 +189,7 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
     can_build = serializers.BooleanField(read_only=True)
     messages = AgentRequirementMessageSerializer(many=True, read_only=True)
     runs = serializers.SerializerMethodField()
+    template = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentRequirement
@@ -173,8 +198,12 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "title",
             "status",
             "can_build",
+            "template_slug",
+            "template",
             "initial_prompt",
             "spec_markdown",
+            "spec_format",
+            "spec_is_draft",
             "spec_version",
             "turns",
             "total_cost_usd",
@@ -186,6 +215,9 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "messages",
             "runs",
         )
+
+    def get_template(self, obj):
+        return _template_payload(obj)
 
     def get_runs(self, obj):
         return [

@@ -30,6 +30,8 @@ from celery.exceptions import SoftTimeLimitExceeded
 from django.db import connection
 from django.utils import timezone
 
+from .requirements import roles_from_yaml_spec
+
 
 logger = logging.getLogger("zango.agent_mode")
 
@@ -78,7 +80,8 @@ def _roles_from_text(spec: str) -> list:
     """Role names from the spec's "Roles and access" section.
 
     Best-effort and deliberately narrow: it only reads bold list items under a
-    roles heading, so ordinary prose cannot conjure a role.
+    roles heading, so ordinary prose cannot conjure a role. A spec with no such
+    section may still be a template journey, which names its roles in YAML.
     """
     if not spec:
         return []
@@ -96,7 +99,7 @@ def _roles_from_text(spec: str) -> list:
             name = match.group("name").strip().strip(":").strip()
             if name and name not in names:
                 names.append(name)
-    return names
+    return names or roles_from_yaml_spec(spec)
 
 
 def _precreate_roles(names: list) -> list:
@@ -843,14 +846,21 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
     from .models import AgentRequirementMessage, MessageRole, RequirementStatus
     from .requirements import (
         derive_title,
+        extract_draft_spec,
         extract_questions,
         extract_spec,
+        extract_template,
         looks_like_question,
         strip_fences,
     )
 
     reply = "\n\n".join(part for part in text_parts if part.strip()).strip()
     spec = extract_spec(reply)
+    # Only meaningful while there is no finished spec: a draft emitted
+    # alongside one is the same content, and the finished fence is the
+    # authority.
+    draft = "" if spec else extract_draft_spec(reply)
+    template_slug = extract_template(reply)
     questions = extract_questions(reply)
     conversational = strip_fences(reply) or (
         "I've drafted the requirement — review it on the right."
@@ -881,6 +891,11 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
         # Decimal. Adding the two raises, so normalise before accumulating —
         # it only shows up from the second turn onwards.
         req.total_cost_usd = (req.total_cost_usd or Decimal("0")) + Decimal(str(cost))
+    # Before the spec is recorded: the template decides the format, and the
+    # version row stores the format it was written in.
+    if template_slug:
+        req.adopt_template(template_slug)
+
     if spec:
         req.record_spec(spec)
         # The title starts life as the opening ask truncated to 80 characters
@@ -892,6 +907,12 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
         # Only advance out of gathering; never regress an approved spec.
         if req.status == RequirementStatus.GATHERING:
             req.status = RequirementStatus.READY
+    elif draft and req.status == RequirementStatus.GATHERING:
+        # The interview is still running. The pane fills in so the user can
+        # watch their app take shape, but the status does not move: there is
+        # nothing to approve until the analyst says it is finished.
+        req.record_draft_spec(draft)
+        req.title = derive_title(draft, req.title or req.initial_prompt)
 
     req.is_thinking = False
     req.error_message = ""
@@ -899,6 +920,8 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
     return {
         "status": req.status,
         "spec": bool(spec),
+        "draft": bool(draft),
+        "template": req.template_slug,
         "questions": len(questions),
         "turns": req.turns,
     }

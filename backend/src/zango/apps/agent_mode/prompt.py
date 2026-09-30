@@ -75,6 +75,36 @@ _CONSTRAINTS = """\
 """
 
 
+_TEMPLATE_PREAMBLE = """\
+## This requirement is a {name} specification
+
+The user did not describe an app in prose; they answered an interview against
+Zelthy's **{name}** template, and what follows is that template's own
+configuration format ({spec_format}), not a document to read loosely. Every key
+in it is a decision the user made and signed off.
+
+Build what it specifies. Where it uses a term you do not recognise, treat it as
+a requirement to implement rather than a convention to ignore, and say in your
+summary what you could not honour and why. Do not "tidy" the specification by
+leaving out sections you consider optional — a user approved the whole of it.
+
+"""
+
+
+def template_preamble(template) -> str:
+    """What the build agent is told when the requirement came from a template.
+
+    Without it the agent is handed a YAML document with no explanation and
+    treats it as loose notes — dropping whole sections as decoration.
+    """
+    if template is None:
+        return ""
+    return _TEMPLATE_PREAMBLE.format(
+        name=template.name,
+        spec_format=template.spec_format,
+    )
+
+
 def _format_list(items: list, empty: str = "(none)") -> str:
     return ", ".join(str(i) for i in items) if items else empty
 

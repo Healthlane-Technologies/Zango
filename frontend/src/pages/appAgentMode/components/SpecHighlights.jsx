@@ -26,8 +26,8 @@ const ACCENTS = {
 // is how the user knows they were heard — but never as loud as the scope.
 const MUTED = ['excluded', 'assumptions'];
 
-export default function SpecHighlights({ spec }) {
-	const { title, summary, groups } = specHighlights(spec);
+export default function SpecHighlights({ spec, format, template }) {
+	const { title, summary, groups } = specHighlights(spec, format);
 
 	if (!groups.length) {
 		return (
@@ -48,6 +48,11 @@ export default function SpecHighlights({ spec }) {
 					<h3 className="font-source-sans-pro text-[16px] font-semibold leading-[22px] text-[#111827]">
 						{title}
 					</h3>
+					{template?.name ? (
+						<span className="mt-[6px] inline-block rounded-full bg-[#EEF2FF] px-[9px] py-[2px] font-lato text-[11px] font-semibold text-[#3730A3]">
+							Built on the {template.name} template
+						</span>
+					) : null}
 					{summary ? (
 						<p className="mt-[4px] font-lato text-[13px] leading-[19px] text-[#6B7280]">
 							{summary}

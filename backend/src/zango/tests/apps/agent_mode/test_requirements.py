@@ -12,8 +12,11 @@ from zango.apps.agent_mode.requirements import (
     ANALYST_SKILL,
     ANALYST_TOOLS,
     derive_title,
+    extract_draft_spec,
     extract_spec,
+    extract_template,
     looks_like_question,
+    roles_from_yaml_spec,
     strip_fences,
 )
 
@@ -163,3 +166,132 @@ class TitleFromSpecTests(unittest.TestCase):
         source = inspect.getsource(tasks._record_analyst_reply)
         self.assertIn("req.title = derive_title(spec,", source)
         self.assertNotIn("if not req.title:", source)
+
+
+JOURNEY = """journey: acme_psp
+name: Acme Patient Support
+roles:
+  Manager: {}
+  Executive: {}
+  Distributor:
+    sees_only: own
+    scope_field: distributor
+masters:
+  - code: city
+"""
+
+DRAFT_TURN = f"""Here's where we've got to.
+
+```zango-spec-draft
+{JOURNEY}```
+
+```zango-questions
+[{{"id": "a", "question": "Who approves?", "type": "single",
+   "options": ["A manager", "Nobody"], "selected": ["A manager"]}}]
+```
+"""
+
+
+class DraftSpecTests(unittest.TestCase):
+    """A template interview fills its spec in as it goes.
+
+    The distinction that matters: a draft populates the pane, a finished spec
+    offers itself for approval. Reading one as the other would let a user
+    build from a journey that is still missing half its sections.
+    """
+
+    def test_a_draft_is_not_a_finished_spec(self):
+        self.assertEqual(extract_spec(DRAFT_TURN), "")
+
+    def test_the_draft_is_extracted(self):
+        self.assertTrue(extract_draft_spec(DRAFT_TURN).startswith("journey: acme_psp"))
+
+    def test_a_finished_spec_is_not_a_draft(self):
+        reply = f"Ready for review.\n\n```zango-spec\n{JOURNEY}```\n"
+        self.assertEqual(extract_draft_spec(reply), "")
+        self.assertTrue(extract_spec(reply).startswith("journey: acme_psp"))
+
+    def test_a_finished_spec_wins_over_an_earlier_draft(self):
+        reply = DRAFT_TURN + f"\n```zango-spec\n{JOURNEY}```\n"
+        self.assertTrue(extract_spec(reply).startswith("journey: acme_psp"))
+
+    def test_draft_and_template_fences_leave_the_chat_clean(self):
+        self.assertEqual(strip_fences(DRAFT_TURN), "Here's where we've got to.")
+
+
+class TemplateFenceTests(unittest.TestCase):
+    """How the platform learns the user accepted a template."""
+
+    def test_json_object(self):
+        self.assertEqual(
+            extract_template('```zango-template\n{"template": "psp"}\n```'), "psp"
+        )
+
+    def test_slug_key_is_accepted_too(self):
+        self.assertEqual(
+            extract_template('```zango-template\n{"slug": "psp"}\n```'), "psp"
+        )
+
+    def test_a_bare_slug_still_counts(self):
+        # Losing a choice the user actually made because the model wrote the
+        # slug without JSON around it would be the worst possible failure.
+        self.assertEqual(extract_template("```zango-template\npsp\n```"), "psp")
+
+    def test_an_unknown_template_is_ignored(self):
+        # Otherwise the requirement claims a pack whose interview and schema
+        # do not exist, and the conversation stalls with nothing to read.
+        self.assertEqual(
+            extract_template('```zango-template\n{"template": "crm"}\n```'), ""
+        )
+
+    def test_malformed_block_is_ignored(self):
+        self.assertEqual(extract_template("```zango-template\n{{{\n```"), "")
+
+    def test_no_fence_is_no_template(self):
+        self.assertEqual(extract_template("Shall we start from the ready-made one?"), "")
+
+
+class YamlTitleTests(unittest.TestCase):
+    """A template spec has no headings; it names itself in a key."""
+
+    def test_name_wins_over_the_code(self):
+        self.assertEqual(derive_title(JOURNEY, "fallback"), "Acme Patient Support")
+
+    def test_falls_back_to_the_journey_code(self):
+        self.assertEqual(derive_title("journey: acme_psp\n", "x"), "acme_psp")
+
+    def test_quotes_are_stripped(self):
+        self.assertEqual(derive_title('name: "Quoted"\n', "x"), "Quoted")
+
+    def test_markdown_headings_still_win(self):
+        self.assertEqual(derive_title("## Heading\nname: other\n", "x"), "Heading")
+
+    def test_nothing_to_read_keeps_the_opening_ask(self):
+        self.assertEqual(derive_title("", "the opening ask"), "the opening ask")
+
+
+class YamlRoleTests(unittest.TestCase):
+    """Roles are pre-created from the spec before the build starts.
+
+    A template journey names them in YAML, and missing them means every policy
+    the build writes attaches to nobody — with no error anywhere.
+    """
+
+    def test_reads_the_top_level_roles_block(self):
+        self.assertEqual(
+            roles_from_yaml_spec(JOURNEY), ["Manager", "Executive", "Distributor"]
+        )
+
+    def test_nested_settings_are_not_roles(self):
+        self.assertNotIn("sees_only", roles_from_yaml_spec(JOURNEY))
+        self.assertNotIn("scope_field", roles_from_yaml_spec(JOURNEY))
+
+    def test_the_block_ends_at_the_next_top_level_key(self):
+        self.assertNotIn("city", roles_from_yaml_spec(JOURNEY))
+
+    def test_a_markdown_spec_yields_nothing(self):
+        self.assertEqual(roles_from_yaml_spec(SPEC), [])
+
+    def test_empty_input_is_safe(self):
+        self.assertEqual(roles_from_yaml_spec(""), [])
+        self.assertEqual(roles_from_yaml_spec(None), [])

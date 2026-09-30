@@ -1,0 +1,153 @@
+# The journey every PSP interview starts from.
+#
+# Nothing here is client-specific: these are the roles, records, statuses and
+# consents that essentially every patient support program has. Treat each line
+# as a pre-ticked default to confirm, rename or remove — not as a decision that
+# has already been made.
+
+journey: my_psp
+name: New Patient Support Program
+
+roles:
+  Manager: {}
+  Executive: {}
+
+masters:
+  - code: city
+    name: City
+    plural: Cities
+    reserved: true
+    fields:
+      - state: { type: text }
+  - code: indication
+    name: Indication
+    plural: Indications
+    reserved: true
+    fields:
+      - therapy_area: { type: choice, options: [oncology, haematology, nephrology, other] }
+  - code: doctor
+    name: Doctor
+    plural: Doctors
+    reserved: true
+    fields:
+      - registration_no: { type: text }
+      - specialty: { type: choice, options: [oncology, haematology, nephrology] }
+      - phone: { type: phone }
+      - email: { type: email }
+      - hospital: { type: link, to: hospital, multiple: true }
+      - verified: { type: boolean }
+  - code: hospital
+    name: Hospital
+    plural: Hospitals
+    reserved: true
+    fields:
+      - address: { type: text }
+      - city: { type: link, to: city }
+      - phone: { type: phone }
+      - email: { type: email }
+  - code: distributor
+    name: Distributor
+    plural: Distributors
+    reserved: true
+    fields:
+      - territory: { type: text }
+      - phone: { type: phone }
+      - email: { type: email }
+  - code: pharmacy
+    name: Pharmacy
+    plural: Pharmacies
+    reserved: true
+    fields:
+      - address: { type: text }
+      - city: { type: link, to: city }
+      - phone: { type: phone }
+      - email: { type: email }
+
+patient:
+  attributes:
+    - name: { type: text, required: true }
+    - mobile: { type: phone, required: true }
+    - email: { type: email }
+    - date_of_birth: { type: date }
+    - gender: { type: choice, options: [female, male, other] }
+    - city: { type: link, to: city }
+  states:
+    - new: { start: true }
+    - active
+    - inactive
+  steps:
+    - { do: Activate, from: new, to: active, by: Executive, then: [add_timeline_entry: "Patient activated"] }
+    - { do: Deactivate, from: active, to: inactive, by: Manager, then: [add_timeline_entry: "Patient deactivated"] }
+  create:
+    by: [Executive]
+    form:
+      - name: { required: true }
+      - mobile: { required: true }
+      - email
+      - date_of_birth
+      - gender
+      - city
+    duplicate_check:
+      scope:
+        status_in: [new, active]
+      rules:
+        - match: [mobile]
+          compare: normalised
+          on_match: block
+          message: "A patient with this mobile number already exists."
+    on_create: [add_timeline_entry: "Patient registered"]
+  consent:
+    show_on_patient_360: true
+    data_processing:
+      version: "1.0"
+      record_by: [Executive]
+      withdraw_by: [Executive, Manager]
+      on_withdraw: { patient_status: inactive, stop_all_communication: true, open_archival_task: true }
+    program:
+      version: "1.0"
+      notice: "I agree to join this program and to my treatment details being used by the program team to provide its support."
+      record_by: [Executive]
+      withdraw_by: [Executive, Manager]
+    register_open_to: [Manager]
+
+documents:
+  attaches_to: program_enrolment
+  select: latest_active
+  states:
+    - active: { start: true }
+    - suspended
+  steps:
+    - { do: Suspend, from: active, to: suspended, by: Manager }
+    - { do: Reactivate, from: suspended, to: active, by: Manager }
+  types:
+    - prescription:
+        reserved: true
+        kind: prescription
+        fields:
+          - indication: { type: link, to: indication, required: true }
+          - doctor: { type: link, to: doctor, required: true }
+          - prescription_date: { type: date, required: true }
+          - dosage: { type: text }
+          - frequency: { type: text }
+
+programs:
+  - code: program_1
+    name: Program 1
+    enrolment:
+      states:
+        - pending: { start: true }
+        - active
+        - suspended
+        - closed: { final: true }
+      steps:
+        - { do: Activate, from: pending, to: active, by: Executive, then: [add_timeline_entry: "Enrolment activated"] }
+        - { do: Suspend, from: active, to: suspended, by: Manager, then: [cascade_suspend_dependents] }
+        - { do: Reactivate, from: suspended, to: active, by: Manager }
+        - { do: Close, from: active, to: closed, by: Manager }
+    consent:
+      use: blanket
+      required_before: active
+      on_withdraw: { enrolment_status: suspended, cascade_suspend_dependents: true, open_archival_task: true }
+
+detail:
+  features: [enrolments, documents, orders, wallet, timeline, tasks, notes]

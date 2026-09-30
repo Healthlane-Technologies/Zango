@@ -467,8 +467,13 @@ export default function BuildThread() {
 	// The active version's spec is the editable local copy; every earlier
 	// one is fixed, so it comes straight off the record.
 	const viewedSpec = viewingActive ? spec : viewed?.spec_markdown || '';
+	const viewedFormat = viewed?.spec_format || 'markdown';
 	const hasSpec = Boolean(viewedSpec);
 	const canEditSpec = viewingActive && !locked;
+	// A template interview re-emits its spec after every answer, so the pane
+	// fills in long before there is anything to approve. Showing it is the
+	// point; letting it be approved half-answered is not.
+	const specIsDraft = Boolean(active?.spec_is_draft) && viewingActive;
 	// What the round on screen actually cost to build. Only once it has
 	// finished: mid-build the numbers are still moving, and the card in the
 	// thread is already reporting that.
@@ -672,6 +677,11 @@ export default function BuildThread() {
 						{specDirty ? (
 							<span className="font-lato text-[11px] text-[#B45309]">unsaved edits</span>
 						) : null}
+						{specIsDraft && !specDirty ? (
+							<span className="font-lato text-[11px] text-[#6B7280]">
+								filling in as you answer
+							</span>
+						) : null}
 						{rightTab === 'requirement' && hasSpec && canEditSpec ? (
 							<button
 								onClick={() => setEditingSpec((v) => !v)}
@@ -723,7 +733,13 @@ export default function BuildThread() {
 							{appReady ? (
 								<AppReadyCard appName={active?.title} run={appRun} />
 							) : null}
-							{appReady ? null : <SpecHighlights spec={spec} />}
+							{appReady ? null : (
+								<SpecHighlights
+									spec={spec}
+									format={active?.spec_format}
+									template={active?.template}
+								/>
+							)}
 						</div>
 					) : hasSpec ? (
 						<div className="flex min-h-0 grow flex-col overflow-y-auto">
@@ -734,6 +750,13 @@ export default function BuildThread() {
 									autoFocus
 									className="min-h-[360px] grow resize-none p-[16px] font-mono text-[12px] leading-[18px] text-[#111827] focus:outline-none"
 								/>
+							) : viewedFormat === 'yaml' ? (
+								// A template spec is configuration. Through a Markdown
+								// renderer its indentation collapses and the whole
+								// structure the user is being asked to check disappears.
+								<pre className="overflow-x-auto whitespace-pre p-[16px] font-mono text-[12px] leading-[18px] text-[#111827]">
+									{viewedSpec}
+								</pre>
 							) : (
 								<div className="overflow-x-auto break-words p-[16px] font-lato text-[13px] leading-[19px] text-[#111827]">
 									<Markdown text={viewedSpec} />
@@ -786,7 +809,12 @@ export default function BuildThread() {
 								</button>
 								<button
 									onClick={approveAndBuild}
-									disabled={busy || active?.is_thinking}
+									disabled={busy || active?.is_thinking || specIsDraft}
+									title={
+										specIsDraft
+											? 'Still being filled in — finish answering first'
+											: undefined
+									}
 									className="rounded-[8px] bg-gradient-to-br from-[#5048ED] to-[#346BD4] px-[16px] py-[8px] font-lato text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
 								>
 									Approve &amp; build →

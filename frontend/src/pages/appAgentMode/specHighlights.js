@@ -10,7 +10,11 @@
  * output against a template, so "Screens" may come back as "Screens and
  * pages" — a parser that demanded the template exactly would show an empty
  * panel for a perfectly good spec.
+ *
+ * A requirement built on a Zelthy app template is not a document at all — it
+ * is that template's own configuration — so it is read by its own scanner.
  */
+import journeyHighlights from './journeyHighlights';
 
 const GROUPS = [
 	{ key: 'entities', label: 'What it keeps track of', match: /keeps? track|entit|data/i },
@@ -43,9 +47,10 @@ function stripMarkdown(text) {
 	return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1').trim();
 }
 
-export default function specHighlights(spec) {
+export default function specHighlights(spec, format) {
 	const empty = { title: '', summary: '', groups: [] };
 	if (!spec || !spec.trim()) return empty;
+	if (format === 'yaml') return journeyHighlights(spec);
 
 	const sections = [];
 	let current = null;

@@ -195,8 +195,15 @@ class AgentRunListCreateView(
                         },
                         409,
                     )
+                from zango.apps.agent_mode.prompt import template_preamble
+
                 data = dict(request.data)
-                data["prompt"] = requirement.spec_markdown
+                # A template spec is configuration, not prose. Handing it over
+                # unannounced leaves the build agent guessing at what it is
+                # reading, so the template says so in one paragraph first.
+                data["prompt"] = (
+                    template_preamble(requirement.template) + requirement.spec_markdown
+                )
                 serializer = AgentRunCreateSerializer(data=data)
             else:
                 serializer = AgentRunCreateSerializer(data=request.data)

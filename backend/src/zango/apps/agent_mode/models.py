@@ -79,6 +79,20 @@ class SpecSource(models.TextChoices):
     USER = "user", "Edited by user"
 
 
+class SpecFormat(models.TextChoices):
+    """How the spec is written — which is decided by the template, if any.
+
+    A from-scratch requirement is Markdown the user reads and approves. A
+    template-based one is the template's own configuration format (journey.yaml
+    for PSP), because there the spec IS the thing that configures the product.
+    The panel needs to know which, or it renders YAML through a Markdown
+    renderer and shows the user a wall of run-together text.
+    """
+
+    MARKDOWN = "markdown", "Markdown"
+    YAML = "yaml", "YAML"
+
+
 class TriggerKind(models.TextChoices):
     UI = "ui", "App Settings UI"
     API = "api", "API"
@@ -170,6 +184,18 @@ class AgentRequirement(FullAuditMixin):
     # The current spec. History lives in AgentRequirementVersion.
     spec_markdown = models.TextField(blank=True, default="")
     spec_version = models.PositiveIntegerField(default=0)
+    spec_format = models.CharField(
+        max_length=16, choices=SpecFormat.choices, default=SpecFormat.MARKDOWN
+    )
+    # True while the spec on screen is the analyst's work-in-progress rather
+    # than a finished one. A template interview fills its YAML in as it goes,
+    # so the pane is populated long before there is anything to approve.
+    spec_is_draft = models.BooleanField(default=False)
+
+    # The app template this requirement is being built on, if the user chose
+    # one. Empty means a from-scratch build. Stored as the slug rather than a
+    # foreign key: templates ship with the code, so there is no row to point at.
+    template_slug = models.CharField(max_length=64, blank=True, default="")
 
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")
@@ -202,17 +228,61 @@ class AgentRequirement(FullAuditMixin):
     def can_build(self) -> bool:
         return self.status == RequirementStatus.APPROVED and bool(self.spec_markdown)
 
+    @property
+    def template(self):
+        """The template pack behind this requirement, or None."""
+        from .app_templates import get_template
+
+        return get_template(self.template_slug)
+
+    def adopt_template(self, slug: str) -> bool:
+        """Record that the user chose a template. Returns whether it changed.
+
+        The spec format follows from the template, so this is also the moment
+        the requirement stops being a Markdown one.
+        """
+        from .app_templates import get_template
+
+        template = get_template(slug)
+        if template is None or self.template_slug == template.slug:
+            return False
+        self.template_slug = template.slug
+        self.spec_format = SpecFormat.YAML if template.is_yaml else SpecFormat.MARKDOWN
+        return True
+
+    def record_draft_spec(self, text: str) -> bool:
+        """The spec as it stands mid-interview.
+
+        Deliberately *not* versioned: a template interview re-emits the whole
+        journey after every answer, and a version row per keystroke would bury
+        the revisions that were actually agreed. The pane reads this field, so
+        the user still watches the spec fill in.
+        """
+        text = (text or "").strip()
+        if not text or text == self.spec_markdown.strip():
+            return False
+        self.spec_markdown = text
+        self.spec_is_draft = True
+        return True
+
     def record_spec(self, markdown: str, source: str = SpecSource.AGENT) -> None:
         """Store a new spec revision, keeping the previous one."""
         markdown = (markdown or "").strip()
-        if not markdown or markdown == self.spec_markdown.strip():
+        if not markdown:
+            return
+        # A finished spec that matches the draft already on screen is still a
+        # revision worth recording: the draft was never versioned, so without
+        # this the first approved spec would have no history row at all.
+        if markdown == self.spec_markdown.strip() and not self.spec_is_draft:
             return
         self.spec_version += 1
         self.spec_markdown = markdown
+        self.spec_is_draft = False
         AgentRequirementVersion.objects.create(
             requirement=self,
             version=self.spec_version,
             spec_markdown=markdown,
+            spec_format=self.spec_format,
             source=source,
         )
 
@@ -260,6 +330,9 @@ class AgentRequirementVersion(models.Model):
     )
     version = models.PositiveIntegerField()
     spec_markdown = models.TextField()
+    spec_format = models.CharField(
+        max_length=16, choices=SpecFormat.choices, default=SpecFormat.MARKDOWN
+    )
     source = models.CharField(
         max_length=8, choices=SpecSource.choices, default=SpecSource.AGENT
     )
