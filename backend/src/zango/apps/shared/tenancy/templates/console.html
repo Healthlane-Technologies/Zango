@@ -1,0 +1,31 @@
+{% load static %}
+{% load zango_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Zango Console" />
+  <title>Zango</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Crect width=%2740%27 height=%2740%27 rx=%279%27 fill=%27%234F46E5%27/%3E%3Cpath d=%27M8 8 L32 8 L8 32 L32 32%27 stroke=%27%23fff%27 stroke-width=%275%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 fill=%27none%27/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="{% static 'console/console\..*\.min\.css$'|use_latest %}" />
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <script>
+    var csrf_token = "{{ csrf_token }}";
+    var platform_version = "{{ platform_version }}";
+  </script>
+  <script type="module" src="{% static 'console/console\..*\.min\.js$'|use_latest %}"></script>
+  <script src="{% static 'js/jquery/3.7.1/jquery.min.js' %}"></script>
+  {% include 'session_security/all.html' %}
+</body>
+
+</html>

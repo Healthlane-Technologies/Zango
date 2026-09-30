@@ -51,6 +51,24 @@ export default function ProfileMenu() {
 						<div className="p-[4px]">
 							<Menu.Item>
 								{({ active }) => (
+									<a href="/console/">
+										<div
+											className={`${
+												active ? 'bg-[#F0F3F4]' : ''
+											} flex w-full flex-col rounded-[2px] px-[12px] py-[8px]`}
+										>
+											<span className="text-start font-lato text-[14px] font-bold leading-[20px] tracking-[0.2px] text-[#212429]">
+												Try the new console
+											</span>
+											<span className="text-start font-lato text-[12px] leading-[16px] tracking-[0.2px] text-[#6C747D]">
+												Preview of the redesigned panel.
+											</span>
+										</div>
+									</a>
+								)}
+							</Menu.Item>
+							<Menu.Item>
+								{({ active }) => (
 									<a href="/auth/logout/">
 										<div
 											className={`${

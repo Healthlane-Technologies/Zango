@@ -1,0 +1,307 @@
+/* Builds panel. Ported from design/prototype.html (.bstat, .logv, .steps-ol); plain CSS
+   rather than @layer because this file is imported on its own, outside the Tailwind entry. */
+
+.rp-stat {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel);
+	box-shadow: var(--sh-card);
+}
+.rp-stat .spin {
+	color: var(--accent);
+	width: 14px;
+	height: 14px;
+}
+.rp-stat b {
+	color: var(--t1);
+	font-weight: 550;
+}
+.rp-stat .r {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--t3);
+	font-size: 12px;
+}
+.rp-okc {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	color: #fff;
+	background: var(--green);
+}
+.rp-okc.bad {
+	background: var(--red);
+}
+.rp-okc.warn {
+	background: var(--amber);
+}
+.rp-okc.off {
+	background: var(--t4);
+}
+
+.rp-steps {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+.rp-steps li {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	padding: 7px 0;
+	border-bottom: 1px solid var(--border-soft);
+}
+.rp-steps li:last-child {
+	border: 0;
+}
+.rp-steps .n {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--subtle);
+	color: var(--t3);
+	font-size: 11px;
+	font-weight: 600;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+}
+.rp-steps li.done .n {
+	background: var(--green-soft);
+	color: var(--green-t);
+}
+.rp-steps li.active .n {
+	background: var(--accent-soft);
+	color: var(--accent-t);
+}
+.rp-steps li.failed .n {
+	background: var(--red-soft);
+	color: var(--red-t);
+}
+.rp-steps li.todo b {
+	color: var(--t4);
+	font-weight: 500;
+}
+.rp-steps b {
+	display: block;
+	font-weight: 550;
+	color: var(--t1);
+}
+.rp-steps small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.rp-log {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel);
+	overflow: hidden;
+	box-shadow: var(--sh-card);
+}
+.rp-log .lh {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
+	font-size: 12px;
+	color: var(--t3);
+}
+.rp-log .lh b {
+	color: var(--t1);
+	font-weight: 550;
+}
+.rp-log .lb {
+	font-family: var(--mono);
+	font-size: 11.5px;
+	line-height: 1.8;
+	padding: 6px 0;
+	overflow-y: auto;
+	max-height: 420px;
+}
+.rp-log .ln {
+	display: grid;
+	grid-template-columns: 44px 60px 68px 1fr;
+	padding-right: 12px;
+	width: 100%;
+	text-align: left;
+	cursor: default;
+}
+.rp-log .ln.x {
+	cursor: pointer;
+}
+.rp-log .ln:hover {
+	background: var(--bg);
+}
+.rp-log .ln .no {
+	color: var(--t4);
+	text-align: right;
+	padding-right: 12px;
+	user-select: none;
+}
+.rp-log .ln .ts {
+	color: var(--t4);
+}
+.rp-log .ln .k {
+	color: var(--t4);
+	text-transform: uppercase;
+	font-size: 10px;
+	letter-spacing: 0.04em;
+}
+.rp-log .ln .tx {
+	color: var(--t2);
+	white-space: pre-wrap;
+	word-break: break-word;
+	min-width: 0;
+}
+.rp-log .ln.hd .tx {
+	color: var(--t1);
+	font-weight: 500;
+}
+.rp-log .ln.ok .tx {
+	color: var(--green-t);
+}
+.rp-log .ln.wn .tx {
+	color: var(--amber-t);
+}
+.rp-log .ln.er .tx,
+.rp-log .ln.er .k {
+	color: var(--red-t);
+}
+.rp-log .ln.ag .tx {
+	color: var(--violet-t);
+}
+.rp-log .ln.th .tx {
+	color: var(--t3);
+	font-style: italic;
+}
+.rp-log .raw {
+	margin: 2px 12px 6px 104px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: var(--bg);
+	border: 1px solid var(--border-soft);
+	max-height: 260px;
+	overflow: auto;
+	white-space: pre;
+	color: var(--t2);
+	font-size: 11px;
+	line-height: 1.6;
+}
+
+.rp-sec {
+	font-size: 11.5px;
+	font-weight: 550;
+	color: var(--t3);
+	margin-bottom: 6px;
+}
+.rp-metric small {
+	display: block;
+	font-size: 11.5px;
+	color: var(--t3);
+}
+.rp-metric b {
+	display: block;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--t1);
+	font-variant-numeric: tabular-nums;
+}
+.rp-mini {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+.rp-mini th {
+	text-align: left;
+	font-weight: 500;
+	color: var(--t3);
+	padding: 0 8px;
+	height: 28px;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg);
+	white-space: nowrap;
+}
+.rp-mini td {
+	padding: 0 8px;
+	height: 32px;
+	border-bottom: 1px solid var(--border-soft);
+	color: var(--t1);
+	white-space: nowrap;
+}
+.rp-mini tr:last-child td {
+	border-bottom: 0;
+}
+.rp-mini .ra {
+	text-align: right;
+}
+.rp-hist {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 9px 12px;
+	border-bottom: 1px solid var(--border-soft);
+	text-align: left;
+	font-size: 12.5px;
+}
+.rp-hist:last-child {
+	border-bottom: 0;
+}
+.rp-hist:hover {
+	background: var(--bg);
+}
+.rp-hist.on {
+	background: var(--accent-soft);
+}
+.rp-hist .r {
+	margin-left: auto;
+	display: flex;
+	gap: 12px;
+	color: var(--t3);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+.rp-note {
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+.rp-note.warn {
+	background: var(--amber-soft);
+	color: var(--amber-t);
+}
+.rp-note.err {
+	background: var(--red-soft);
+	color: var(--red-t);
+}
+.rp-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 5px;
+	background: var(--subtle);
+	color: var(--t2);
+	font-family: var(--mono);
+	font-size: 11px;
+}

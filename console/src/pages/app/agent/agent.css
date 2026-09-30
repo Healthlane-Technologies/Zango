@@ -1,0 +1,507 @@
+/*
+ * Agent workspace styles, ported from design/prototype.html (.ws, .wsh, .stepline, .split,
+ * .chat, .thread, .msg, .qc, .composer, .panel). Scoped under .ws so the generic names
+ * (.panel, .chat, .msg) can't collide with other screens. Plain CSS, not a Tailwind layer,
+ * so nothing is purged.
+ */
+.ws {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+.ws .wsh {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 0 16px 0 20px;
+	height: 52px;
+	border-bottom: 1px solid var(--border);
+	background: var(--panel);
+}
+.ws .wsh h2 {
+	font-size: 14px;
+}
+.ws .wsh .r {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.ws .stepline {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--t4);
+	font-size: 12.5px;
+	white-space: nowrap;
+	margin-left: 8px;
+}
+.ws .stepline span {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+.ws .stepline span.done {
+	color: var(--t3);
+}
+.ws .stepline span.done svg {
+	color: var(--green);
+}
+.ws .stepline span.cur {
+	color: var(--t1);
+	font-weight: 550;
+}
+.ws .stepline span.cur .cd {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
+}
+.ws .stepline span.cur.bad .cd {
+	background: var(--red);
+}
+.ws .stepline .ar {
+	color: var(--border-2);
+}
+.ws .ws-alert {
+	flex-shrink: 0;
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 9px 20px;
+	border-bottom: 1px solid #fde68a;
+	background: var(--amber-soft);
+	color: var(--amber-t);
+}
+.ws .split {
+	flex: 1;
+	min-height: 0;
+	display: grid;
+	grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+}
+
+/* ---------- chat ---------- */
+.ws .chat {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	border-right: 1px solid var(--border);
+	background: var(--panel);
+}
+.ws .thread {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 18px 16px 8px;
+}
+.ws .msg {
+	display: flex;
+	gap: 10px;
+}
+.ws .msg.fresh {
+	animation: fi 0.22s var(--ease) both;
+}
+.ws .msg .ma {
+	width: 22px;
+	height: 22px;
+	border-radius: 6px;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	margin-top: 1px;
+	background: var(--navy);
+	color: #fff;
+}
+.ws .msg .av {
+	margin-top: 1px;
+	width: 22px;
+	height: 22px;
+}
+.ws .msg .mb {
+	flex: 1;
+	min-width: 0;
+}
+.ws .msg .mn {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--t1);
+	margin-bottom: 4px;
+}
+.ws .msg .mn small {
+	font-weight: 400;
+	color: var(--t4);
+	font-size: 11.5px;
+}
+.ws .msg .mt {
+	color: var(--t2);
+	line-height: 1.6;
+	overflow-wrap: anywhere;
+}
+.ws .msg.user .mt {
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: 9px;
+	padding: 9px 11px;
+	color: var(--t1);
+	white-space: pre-wrap;
+}
+.ws .typing {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--t3);
+	font-size: 12.5px;
+	padding-top: 2px;
+}
+.ws .round {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 11.5px;
+	color: var(--t4);
+}
+.ws .round::before,
+.ws .round::after {
+	content: '';
+	height: 1px;
+	background: var(--border-soft);
+}
+.ws .round::before {
+	width: 12px;
+}
+.ws .round::after {
+	flex: 1;
+}
+.ws .round b {
+	color: var(--t3);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-size: 11px;
+}
+.ws .upd {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 12.5px;
+	color: var(--t3);
+	padding-left: 32px;
+}
+.ws .upd svg {
+	color: var(--green);
+}
+.ws .upd.bad svg {
+	color: var(--red);
+}
+.ws .upd b {
+	color: var(--t2);
+	font-weight: 550;
+}
+.ws .upd button {
+	color: var(--accent-t);
+	font-weight: 550;
+}
+.ws .upd button:hover {
+	text-decoration: underline;
+}
+
+/* ---------- question card ---------- */
+.ws .qc {
+	border: 1px solid var(--border);
+	border-radius: 9px;
+	overflow: hidden;
+	background: var(--panel);
+	box-shadow: var(--sh-card);
+}
+.ws .qc + .qc {
+	margin-top: 10px;
+}
+.ws .qc .qh {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px 0;
+	font-size: 11.5px;
+	color: var(--t3);
+}
+.ws .qc .qh b {
+	color: var(--accent-t);
+	font-weight: 600;
+}
+.ws .qc h4 {
+	font-size: 13px;
+	padding: 4px 12px 10px;
+	line-height: 1.45;
+}
+.ws .qc .qo {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 8px 12px;
+	border-top: 1px solid var(--border-soft);
+	color: var(--t2);
+	text-align: left;
+}
+.ws .qc .qo:hover:not([disabled]) {
+	background: #fafafb;
+	color: var(--t1);
+}
+.ws .qc .qo .rd {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 1.5px solid var(--border-2);
+	flex-shrink: 0;
+}
+.ws .qc .qo .rd.sq {
+	border-radius: 4px;
+	display: grid;
+	place-items: center;
+	color: #fff;
+}
+.ws .qc .qo.on {
+	color: var(--t1);
+	font-weight: 550;
+	background: var(--accent-soft);
+}
+.ws .qc .qo.on .rd {
+	border: 4.5px solid var(--accent);
+}
+.ws .qc .qo.on .rd.sq {
+	border: 0;
+	background: var(--accent);
+}
+.ws .qc .qo[disabled] {
+	cursor: default;
+}
+.ws .qc .qother {
+	border-top: 1px solid var(--border-soft);
+	padding: 6px 12px 8px;
+}
+.ws .qc .qother input {
+	width: 100%;
+	border: 0;
+	background: transparent;
+	color: var(--t1);
+	padding: 2px 0;
+}
+.ws .qc .qother input:focus {
+	outline: none;
+}
+.ws .qc .qf {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 12px;
+	border-top: 1px solid var(--border);
+	background: var(--bg);
+	font-size: 12px;
+	color: var(--t3);
+}
+
+/* ---------- composer ---------- */
+.ws .composer {
+	padding: 10px 12px 12px;
+	border-top: 1px solid var(--border);
+}
+.ws .composer form {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel);
+	box-shadow: var(--sh-card);
+	transition:
+		border-color 0.12s,
+		box-shadow 0.12s;
+}
+.ws .composer form:focus-within {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.ws .composer textarea {
+	display: block;
+	width: 100%;
+	border: 0;
+	resize: none;
+	background: transparent;
+	padding: 10px 12px 4px;
+	min-height: 40px;
+	max-height: 160px;
+	color: var(--t1);
+	line-height: 1.5;
+}
+.ws .composer textarea:focus {
+	outline: none;
+}
+.ws .composer textarea:disabled {
+	cursor: default;
+}
+.ws .composer .cb {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 6px 6px 12px;
+	color: var(--t4);
+	font-size: 11.5px;
+}
+.ws .composer .cb .r {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* ---------- right panel ---------- */
+.ws .panel {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	background: var(--bg);
+}
+.ws .panel .tabs {
+	background: var(--panel);
+	flex-shrink: 0;
+}
+.ws .panel .tabs .rounds {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+}
+.ws .pbody {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 20px;
+}
+.ws .pbody-in {
+	max-width: 980px;
+	margin: 0 auto;
+}
+.ws .pfoot {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 16px;
+	border-top: 1px solid var(--border);
+	background: var(--panel);
+}
+.ws .rq-top {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 14px;
+	flex-wrap: wrap;
+}
+.ws .rq-top h3 {
+	font-size: 15px;
+}
+.ws .rq-top .r {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.ws .sumstrip {
+	display: grid;
+	grid-auto-columns: minmax(0, 1fr);
+	grid-auto-flow: column;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel);
+	margin-bottom: 14px;
+	box-shadow: var(--sh-card);
+}
+.ws .sumstrip div {
+	padding: 10px 14px;
+	border-left: 1px solid var(--border-soft);
+	min-width: 0;
+}
+.ws .sumstrip div:first-child {
+	border: 0;
+}
+.ws .sumstrip small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.ws .sumstrip b {
+	display: block;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--t1);
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
+}
+.ws .rsec {
+	margin-bottom: 12px;
+}
+.ws .rsec .card-h {
+	padding: 10px 14px;
+}
+.ws .ritem {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	padding: 9px 14px;
+	border-bottom: 1px solid var(--border-soft);
+}
+.ws .ritem:last-child {
+	border: 0;
+}
+.ws .ritem .n {
+	width: 18px;
+	flex-shrink: 0;
+	color: var(--t4);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+.ws .ritem .tx {
+	flex: 1;
+	min-width: 0;
+	color: var(--t1);
+}
+.ws .ritem .tx small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+	margin-top: 1px;
+}
+.ws .ritem.muted .tx {
+	color: var(--t3);
+}
+.ws .spec-doc {
+	padding: 18px 20px;
+	color: var(--t1);
+	line-height: 1.6;
+}
+.ws .spec-edit {
+	display: block;
+	width: 100%;
+	min-height: 420px;
+	border: 0;
+	resize: vertical;
+	padding: 16px 20px;
+	background: transparent;
+	font-family: var(--mono);
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--t1);
+}
+.ws .spec-edit:focus {
+	outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ws .msg.fresh {
+		animation: none;
+	}
+}

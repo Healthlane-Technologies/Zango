@@ -16,6 +16,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.templatetags.static import static
 from django.utils.decorators import method_decorator
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
@@ -81,10 +82,22 @@ class PlatformUserLoginView(LoginView):
 
     template_name = "app_panel/app_panel_login.html"
 
+    @staticmethod
+    def _post_login_url(request):
+        """Return to the console when login was triggered from it; otherwise the App Panel."""
+        next_url = request.POST.get("next") or request.GET.get("next", "")
+        if next_url.startswith("/console/") and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return next_url
+        return "/platform"
+
     def post(self, request, *args, **kwargs):
         resp = super().post(request, *args, **kwargs)
         if resp.status_code == 302:
-            return redirect("/platform")
+            return redirect(self._post_login_url(request))
         else:
             context = self.get_context_data()
             context["error_message"] = (

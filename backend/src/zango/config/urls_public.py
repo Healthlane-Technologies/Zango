@@ -23,6 +23,12 @@ urlpatterns = [
         r"^platform/",
         decorator_include(internal_access_only, "zango.apps.shared.tenancy.urls"),
     ),
+    re_path(
+        r"^console/",
+        decorator_include(
+            internal_access_only, "zango.apps.shared.tenancy.console_urls"
+        ),
+    ),
 ]
 
 if settings.DEBUG:

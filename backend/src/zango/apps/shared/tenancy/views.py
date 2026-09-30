@@ -22,6 +22,21 @@ class AppPanelView(ZangoSessionPlatformTemplateView):
         return context
 
 
+class ConsoleView(ZangoSessionPlatformTemplateView):
+    """
+    View to render the new platform console, served alongside the App Panel.
+    """
+
+    template_name = "console.html"
+
+    def get_context_data(self, **kwargs):
+        import zango
+
+        context = super().get_context_data(**kwargs)
+        context["platform_version"] = zango.__version__
+        return context
+
+
 class CeleryStatusAPIView(ZangoGenericPlatformAPIView):
     def get(self, request, *args, **kwargs):
         try:

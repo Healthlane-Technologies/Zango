@@ -1,0 +1,53 @@
+@import './tokens.css';
+@import './components.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	html,
+	body,
+	#root {
+		height: 100%;
+	}
+	body {
+		margin: 0;
+		font-family: var(--font);
+		font-feature-settings: 'cv11', 'ss01';
+		-webkit-font-smoothing: antialiased;
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--t2);
+		background: var(--bg);
+	}
+	h1,
+	h2,
+	h3,
+	h4 {
+		color: var(--t1);
+		font-weight: 600;
+	}
+	:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+		border-radius: 6px;
+	}
+	::selection {
+		background: #e0e7ff;
+	}
+	button {
+		text-align: inherit;
+	}
+}
+
+@layer utilities {
+	.mono {
+		font-family: var(--mono);
+		font-size: 12px;
+		letter-spacing: -0.01em;
+	}
+	.num {
+		font-variant-numeric: tabular-nums;
+	}
+}
