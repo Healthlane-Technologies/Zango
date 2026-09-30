@@ -1,32 +1,39 @@
-"""The app template catalogue.
+"""The app template catalogue, as Agent Mode sees it.
 
 A template that fails to load does not raise anywhere — it is simply never
 offered, and the user pays for a from-scratch build of software Zelthy already
 maintains. These assertions are the only thing that notices.
+
+Templates live in the database; the bundled PSP pack is seeded by migrate, so
+the test database has it.
 """
 
-import json
 import unittest
 
 from pathlib import Path
 
 from zango.apps.agent_mode.app_templates import (
-    REQUIRED_FILES,
     catalogue_digest,
     get_template,
     load_templates,
     spec_format_for,
     templates_dir,
 )
+from zango.apps.shared.app_templates.seed import PACKS_DIR
+
+
+# What a template's interview needs on disk before the analyst can run it.
+REQUIRED_FILES = ("interview", "schema")
 
 
 class CatalogueTests(unittest.TestCase):
-    def test_templates_directory_ships_with_the_skill(self):
-        # The analyst reads the packs itself, so they have to live where it
-        # can reach them — inside the skill plugin, not next to the models.
-        root = Path(templates_dir())
-        self.assertTrue(root.is_dir(), f"missing templates dir: {root}")
-        self.assertEqual(root.parent.name, "zango-requirements-analyst")
+    def test_the_psp_pack_ships_with_zango(self):
+        self.assertTrue((PACKS_DIR / "psp" / "template.json").is_file())
+
+    def test_packs_are_materialised_where_the_analyst_can_read_them(self):
+        psp = get_template("psp")
+        self.assertIsNotNone(psp, "the PSP template was not seeded")
+        self.assertTrue(Path(psp.path).is_relative_to(Path(templates_dir())))
 
     def test_psp_template_loads(self):
         psp = get_template("psp")
@@ -44,12 +51,16 @@ class CatalogueTests(unittest.TestCase):
                 self.assertTrue(path, f"{slug} declares no {key}")
                 self.assertTrue(Path(path).is_file(), f"{slug}: missing {path}")
 
-    def test_manifest_matches_the_directory_name(self):
+    def test_every_template_has_a_build_skill(self):
         for slug, template in load_templates().items():
-            manifest = json.loads(
-                (Path(template.path) / "template.json").read_text(encoding="utf-8")
+            self.assertTrue(template.build_skill_name, f"{slug} has no build skill")
+            skill = (
+                Path(template.plugin_dir)
+                / "skills"
+                / template.build_skill_name
+                / "SKILL.md"
             )
-            self.assertEqual(manifest.get("slug"), slug)
+            self.assertTrue(skill.is_file(), f"{slug}: missing {skill}")
 
     def test_unknown_slug_is_not_a_template(self):
         self.assertIsNone(get_template("no-such-template"))

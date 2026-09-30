@@ -86,6 +86,7 @@ setup(
             # ".claude-plugin/plugin.json" is not matched by "**/*" and the
             # wheel would ship the skill with no plugin manifest.
             "apps/agent_mode/skill_plugin/**/*",
+            "apps/shared/app_templates/packs/**/*",
             "apps/agent_mode/skill_plugin/.claude-plugin/*",
         ],
     },

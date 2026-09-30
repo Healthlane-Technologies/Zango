@@ -87,6 +87,7 @@ PyMuPDF==1.26.3
 PyPDF2==3.0.1
 python3-saml==1.16.0
 pytz==2024.1
+ruamel.yaml==0.18.10
 setuptools==70.1.1
 single-beat==0.6.3
 sqlalchemy==2.0.41

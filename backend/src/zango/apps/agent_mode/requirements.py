@@ -356,16 +356,17 @@ def build_analyst_options(*, ctx, creds, requirement):
     from django.conf import settings as dj
 
     from .config import load_config
+    from .app_templates import templates_dir
     from .options import SKILL_PLUGIN_DIR, agent_home, build_env
 
     cfg = load_config()
 
     kwargs = dict(
         cwd=ctx.workspace_path,
-        # The template packs live inside the skill plugin and the analyst has
-        # to read them once a template is accepted. It has no write tool at
-        # all, so widening what it can *read* costs nothing.
-        add_dirs=[SKILL_PLUGIN_DIR],
+        # Template packs are materialised under templates_dir() and the
+        # analyst has to read them once a template is accepted. It has no
+        # write tool at all, so widening what it can *read* costs nothing.
+        add_dirs=[SKILL_PLUGIN_DIR, templates_dir()],
         setting_sources=["user"],
         plugins=[{"type": "local", "path": SKILL_PLUGIN_DIR}],
         skills=[ANALYST_SKILL],

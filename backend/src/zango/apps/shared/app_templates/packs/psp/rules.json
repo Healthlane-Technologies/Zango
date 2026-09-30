@@ -1,0 +1,39 @@
+[
+  { "id": "master_code_unique", "kind": "unique", "level": "error", "path": "/masters/*", "key": "code", "message": "Two reference lists share the code \"{value}\"." },
+  { "id": "program_code_unique", "kind": "unique", "level": "error", "path": "/programs/*", "key": "code", "message": "Two programs share the code \"{value}\"." },
+  { "id": "order_code_unique", "kind": "unique", "level": "error", "path": "/programs/*/orders/*", "key": "code", "message": "Two order types share the code \"{value}\"." },
+  { "id": "scheme_code_unique", "kind": "unique", "level": "error", "path": "/programs/*/schemes/*", "key": "code", "message": "Two schemes share the code \"{value}\"." },
+  { "id": "document_type_unique", "kind": "unique", "level": "error", "path": "/documents/types/*", "key": "", "message": "The document type \"{value}\" is declared twice." },
+  { "id": "patient_field_unique", "kind": "unique", "level": "error", "path": "/patient/attributes/*", "key": "", "message": "The patient field \"{value}\" is declared twice." },
+  { "id": "state_code_unique", "kind": "unique", "level": "error", "path": "/**/states/*", "key": "", "group_by_parent": true, "message": "The state \"{value}\" is declared twice in the same lifecycle." },
+
+  { "id": "step_role_known", "kind": "ref", "level": "error", "source": "/**/{steps,can_do}/*/by", "target": "/roles", "key": "", "message": "\"{value}\" takes an action here but is not a declared role." },
+  { "id": "label_role_known", "kind": "ref", "level": "error", "source": "/patient/labels/*/*/{apply,remove}/by", "target": "/roles", "key": "", "message": "A label is applied or removed by \"{value}\", which is not a declared role." },
+  { "id": "permission_role_known", "kind": "ref", "level": "error", "source": "/**/{create_by,create_roles,report_by,register_open_to,run_by}", "target": "/roles", "key": "", "message": "\"{value}\" is given a permission here but is not a declared role." },
+  { "id": "patient_create_role_known", "kind": "ref", "level": "error", "source": "/patient/create/by", "target": "/roles", "key": "", "message": "Patients are registered by \"{value}\", which is not a declared role." },
+  { "id": "consent_role_known", "kind": "ref", "level": "error", "source": "/patient/consent/*/{record_by,withdraw_by}", "target": "/roles", "key": "", "message": "Consent is recorded or withdrawn by \"{value}\", which is not a declared role." },
+  { "id": "table_role_known", "kind": "ref", "level": "error", "source": "/**/table/{access,owned_by,row_scope}/*/@key", "target": "/roles", "key": "", "message": "A list screen names \"{value}\", which is not a declared role." },
+  { "id": "column_role_known", "kind": "ref", "level": "error", "source": "/**/table/columns/*/*/roles", "target": "/roles", "key": "", "message": "A column is limited to \"{value}\", which is not a declared role." },
+  { "id": "app_user_role_known", "kind": "ref", "level": "error", "source": "/masters/*/app_user_role", "target": "/roles", "key": "", "message": "A reference list signs in as \"{value}\", which is not a declared role." },
+  { "id": "assigned_role_known", "kind": "ref", "level": "error", "source": "/programs/*/orders/*/assigned_by/role", "target": "/roles", "key": "", "message": "Orders are assigned to \"{value}\", which is not a declared role." },
+
+  { "id": "link_target_master", "kind": "ref", "level": "error", "source": "/**/{attributes,fields,collects}/*/*/to", "target": "/masters/*", "key": "code", "message": "A field links to \"{value}\", but there is no reference list with that code." },
+  { "id": "required_document_declared", "kind": "ref", "level": "error", "source": "/programs/*/requires_documents", "target": "/documents/types/*", "key": "", "message": "A program requires the document \"{value}\", which is not a declared document type." },
+  { "id": "document_rule_declared", "kind": "ref", "level": "error", "source": "/programs/*/document_rules/*/document", "target": "/documents/types/*", "key": "", "message": "A document rule refers to \"{value}\", which is not a declared document type." },
+  { "id": "linked_document_declared", "kind": "ref", "level": "error", "source": "/documents/types/*/*/linked_documents", "target": "/documents/types/*", "key": "", "message": "A document links to \"{value}\", which is not a declared document type." },
+  { "id": "order_sku_declared", "kind": "ref", "level": "error", "source": "/programs/*/orders/*/allowed_skus", "target": "/catalogue/skus/*", "key": "", "message": "An order allows the product \"{value}\", which is not in the catalogue." },
+  { "id": "scheme_sku_declared", "kind": "ref", "level": "error", "source": "/programs/*/schemes/*/equivalences/*/{sku,base_sku}", "target": "/catalogue/skus/*", "key": "", "message": "A scheme counts the product \"{value}\", which is not in the catalogue." },
+
+  { "id": "patient_step_states", "kind": "ref", "level": "error", "source": "/patient/steps/*/{from,to}", "target": "/patient/states/*", "key": "", "message": "A patient step moves to or from \"{value}\", which is not a declared patient state." },
+  { "id": "enrolment_step_states", "kind": "ref", "level": "error", "source": "/programs/*/enrolment/steps/*/{from,to}", "target": "/programs/$1/enrolment/states/*", "key": "", "message": "An enrolment step moves to or from \"{value}\", which is not a declared enrolment state." },
+  { "id": "order_step_states", "kind": "ref", "level": "error", "source": "/programs/*/orders/*/steps/*/{from,to}", "target": "/programs/$1/orders/$2/states/*", "key": "", "message": "An order step moves to or from \"{value}\", which is not a declared state of that order type." },
+  { "id": "document_step_states", "kind": "ref", "level": "error", "source": "/documents/steps/*/{from,to}", "target": "/documents/states/*", "key": "", "message": "A document step moves to or from \"{value}\", which is not a declared document state." },
+  { "id": "ae_step_states", "kind": "ref", "level": "error", "source": "/adverse_events/steps/*/{from,to}", "target": "/adverse_events/states/*", "key": "", "message": "An adverse-event step moves to or from \"{value}\", which is not a declared state." },
+
+  { "id": "one_start_state", "kind": "exactly_one", "level": "warning", "path": "/**/states", "where": { "key": "start", "equals": true }, "message": "A lifecycle should have exactly one start state." },
+
+  { "id": "scope_field_for_own", "kind": "required_when", "level": "error", "if": { "path": "/roles/*/sees_only", "equals": "own" }, "path": "/roles/$1/scope_field", "message": "A role that sees only its own records needs a scope field." },
+  { "id": "wallet_needs_scheme", "kind": "required_when", "level": "warning", "if": { "path": "/programs/*/orders/*/earns_credit", "equals": true }, "path": "/programs/$1/schemes", "message": "An order earns credit, but its program has no scheme to accrue it." },
+
+  { "id": "few_extra_modules", "kind": "max_items", "level": "warning", "path": "/extra_modules", "max": 5, "message": "More than five extra modules. Each one is hand-built, so keep them few." }
+]

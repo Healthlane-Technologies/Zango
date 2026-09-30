@@ -1,0 +1,18 @@
+{
+  "sections": [
+    { "id": "program", "title": "The program itself", "pointer": "", "fields": ["/journey", "/name"], "hint": "The journey code and the program's name.", "order": 1 },
+    { "id": "roles", "title": "Who uses it", "pointer": "/roles", "hint": "Every role that signs in, and whether it sees only its own records.", "order": 2 },
+    { "id": "patient", "title": "The patient record", "pointer": "/patient", "fields": ["/patient/attributes", "/patient/create", "/patient/labels", "/patient/table"], "hint": "What is recorded about a patient, how they are registered, and the list screen.", "order": 3 },
+    { "id": "patient_lifecycle", "title": "How a patient moves", "pointer": "/patient/states", "fields": ["/patient/states", "/patient/steps"], "hint": "The patient's statuses and the steps between them.", "order": 4 },
+    { "id": "consent", "title": "Consent", "pointer": "/patient/consent", "hint": "Data-processing, communication and program consent. Per-program consent lives on each program.", "order": 5 },
+    { "id": "masters", "title": "Reference lists", "pointer": "/masters", "hint": "City, doctor, hospital and the program's own lists. Mark unused suggested masters as not needed.", "order": 6 },
+    { "id": "documents", "title": "Documents", "pointer": "/documents", "hint": "Document types, where they attach and how they are verified.", "order": 7 },
+    { "id": "programs", "title": "Enrolment", "pointer": "/programs", "hint": "Each program: who is eligible, required documents and the enrolment lifecycle.", "order": 8 },
+    { "id": "orders", "title": "Dispensing and orders", "pointer": "/programs", "item": "orders", "hint": "Order types live under each program (programs → orders).", "order": 9 },
+    { "id": "schemes", "title": "Free-of-cost schemes", "pointer": "/programs", "item": "schemes", "fields": ["/catalogue"], "hint": "Buy-N-get-M schemes live under each program; the products they cover are in the catalogue.", "order": 10 },
+    { "id": "detail", "title": "The patient 360 page", "pointer": "/detail", "hint": "Which built-in tabs show, and any custom tabs.", "order": 11 },
+    { "id": "adverse_events", "title": "Adverse events", "pointer": "/adverse_events", "hint": "How AEs are captured, reviewed and sent to pharmacovigilance.", "order": 12 },
+    { "id": "reports", "title": "Reports", "pointer": "/reports", "hint": "Reports the program runs, who sees them and how often.", "order": 13 },
+    { "id": "extras", "title": "Anything else", "pointer": "/extra_modules", "fields": ["/extra_modules", "/custom_requirements"], "hint": "Capabilities and requirements the template vocabulary cannot express.", "order": 14 }
+  ]
+}

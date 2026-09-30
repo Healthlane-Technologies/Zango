@@ -1,0 +1,2279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zango.dev/schemas/templates/psp/journey.json",
+  "title": "PSP journey",
+  "description": "The requirement spec for the Patient Support Program template (journey.yaml).",
+  "type": "object",
+  "required": [
+    "journey",
+    "roles",
+    "patient",
+    "programs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "journey": {
+      "type": "string",
+      "title": "Journey code",
+      "description": "A short code for the program, e.g. enhertu_pap.",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": {
+      "type": "string",
+      "title": "Program name"
+    },
+    "roles": {
+      "type": "object",
+      "title": "Who uses it",
+      "description": "Each role that signs in, keyed by its name.",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9 _-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/role"
+      },
+      "x-ui": {
+        "widget": "map",
+        "keyTitle": "Role name",
+        "itemTitle": "{key}"
+      }
+    },
+    "masters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/master"
+      },
+      "title": "Reference lists",
+      "description": "Masters such as city, doctor and hospital."
+    },
+    "patient": {
+      "$ref": "#/$defs/patient"
+    },
+    "catalogue": {
+      "type": "object",
+      "title": "Catalogue",
+      "properties": {
+        "skus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Label"
+                },
+                "cold_chain": {
+                  "type": "boolean",
+                  "title": "Cold chain"
+                }
+              },
+              "additionalProperties": false
+            },
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "SKU",
+              "itemTitle": "{key}"
+            }
+          },
+          "title": "Products",
+          "description": "Products that can be dispensed, keyed by SKU."
+        }
+      },
+      "additionalProperties": false
+    },
+    "documents": {
+      "type": "object",
+      "title": "Documents",
+      "properties": {
+        "attaches_to": {
+          "type": "string",
+          "title": "Attached to",
+          "enum": [
+            "program_enrolment",
+            "patient"
+          ]
+        },
+        "select": {
+          "type": "string",
+          "title": "Which document counts",
+          "enum": [
+            "latest_active",
+            "latest"
+          ]
+        },
+        "states": {
+          "$ref": "#/$defs/stateList"
+        },
+        "steps": {
+          "$ref": "#/$defs/stepList"
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "title": "Document code"
+              },
+              {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "additionalProperties": {
+                  "$ref": "#/$defs/documentType"
+                }
+              }
+            ],
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Document code",
+              "itemTitle": "{key}",
+              "bareAllowed": true
+            }
+          },
+          "title": "Document types",
+          "description": "A prescription type is seeded in every journey."
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "additionalProperties": false
+    },
+    "programs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/program"
+      },
+      "title": "Programs",
+      "description": "One entry per program a patient can be enrolled onto."
+    },
+    "detail": {
+      "type": "object",
+      "title": "Patient 360 page",
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "enrolments",
+              "documents",
+              "orders",
+              "wallet",
+              "timeline",
+              "tasks",
+              "notes"
+            ]
+          },
+          "title": "Features",
+          "x-ui": {
+            "widget": "tags"
+          }
+        },
+        "custom_tabs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "title": "Code",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "label": {
+                "type": "string",
+                "title": "Label"
+              },
+              "text": {
+                "type": "string",
+                "title": "Shows",
+                "format": "textarea"
+              }
+            },
+            "required": [
+              "code"
+            ],
+            "additionalProperties": false,
+            "x-ui": {
+              "itemTitle": "{label}"
+            }
+          },
+          "title": "Custom tabs"
+        }
+      },
+      "additionalProperties": false
+    },
+    "extra_modules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/extraModule"
+      },
+      "title": "Extra modules",
+      "description": "Capabilities outside the template vocabulary. Keep them few."
+    },
+    "adverse_events": {
+      "type": "object",
+      "title": "Adverse events",
+      "description": "`awareness_date` and `serious` are built in; never declare them.",
+      "properties": {
+        "intake": {
+          "type": "string",
+          "title": "Intake",
+          "enum": [
+            "in_system",
+            "client_portal"
+          ]
+        },
+        "attaches_to": {
+          "type": "string",
+          "title": "Attached to",
+          "enum": [
+            "patient",
+            "enrolment"
+          ]
+        },
+        "report_by": {
+          "$ref": "#/$defs/roleList"
+        },
+        "patient_self_report": {
+          "type": "boolean",
+          "title": "Patients can self-report"
+        },
+        "show_on_patient_360": {
+          "type": "boolean",
+          "title": "Show on patient 360"
+        },
+        "serious_sla_hours": {
+          "type": "integer",
+          "title": "Serious SLA (hours)",
+          "minimum": 1
+        },
+        "processing_basis": {
+          "type": "string",
+          "title": "Processing basis"
+        },
+        "attributes": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "states": {
+          "$ref": "#/$defs/stateList"
+        },
+        "steps": {
+          "$ref": "#/$defs/stepList"
+        },
+        "notify_client": {
+          "type": "object",
+          "title": "Notify the client",
+          "properties": {
+            "on": {
+              "type": "string",
+              "title": "Notify on",
+              "enum": [
+                "serious",
+                "all"
+              ]
+            },
+            "to": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email"
+              },
+              "title": "Recipients",
+              "x-ui": {
+                "widget": "tags"
+              }
+            },
+            "attach_record": {
+              "type": "boolean",
+              "title": "Attach the record"
+            }
+          },
+          "additionalProperties": false
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reports": {
+      "type": "object",
+      "title": "Reports",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/report"
+          },
+          "title": "Reports"
+        }
+      },
+      "additionalProperties": false
+    },
+    "custom_requirements": {
+      "$ref": "#/$defs/customRequirements"
+    }
+  },
+  "$defs": {
+    "roleName": {
+      "type": "string",
+      "title": "Role",
+      "description": "A role declared under `roles:`.",
+      "minLength": 1,
+      "x-ui": {
+        "ref": "/roles"
+      }
+    },
+    "roles": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/roleName"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/roleName"
+          },
+          "minItems": 1
+        }
+      ],
+      "title": "Roles",
+      "description": "A single role, or a list of roles.",
+      "x-ui": {
+        "widget": "tags",
+        "ref": "/roles"
+      }
+    },
+    "roleList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/roleName"
+      },
+      "title": "Roles",
+      "x-ui": {
+        "widget": "tags",
+        "ref": "/roles"
+      }
+    },
+    "menuItem": {
+      "type": "object",
+      "title": "Menu item",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Page",
+          "enum": [
+            "patients",
+            "enrollments",
+            "orders",
+            "master_data"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "title": "Menu label"
+        },
+        "uri": {
+          "type": "string",
+          "title": "Path"
+        },
+        "component": {
+          "type": "string",
+          "title": "Page component"
+        },
+        "page_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Page key"
+        },
+        "icon": {
+          "type": "string",
+          "title": "Icon"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "x-ui": {
+        "itemTitle": "{title}"
+      }
+    },
+    "role": {
+      "type": "object",
+      "title": "Role",
+      "properties": {
+        "sees_only": {
+          "type": "string",
+          "title": "Sees only",
+          "description": "`own` scopes every screen to the rows that point at the signed-in user.",
+          "enum": [
+            "own"
+          ]
+        },
+        "scope_field": {
+          "type": "string",
+          "title": "Scope field",
+          "description": "The field on each record that points at the user, used with `sees_only: own`.",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "menu": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/menuItem"
+          },
+          "title": "Menu",
+          "description": "The pages in this role's sidebar, in order."
+        }
+      },
+      "additionalProperties": false,
+      "x-ui": {
+        "summary": "{sees_only}"
+      }
+    },
+    "choiceOption": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "label": {
+              "type": "string",
+              "title": "Label"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        }
+      ],
+      "title": "Choice"
+    },
+    "fieldSpec": {
+      "type": "object",
+      "title": "Field",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "enum": [
+            "text",
+            "long_text",
+            "phone",
+            "email",
+            "url",
+            "number",
+            "decimal",
+            "date",
+            "datetime",
+            "choice",
+            "multi_choice",
+            "boolean",
+            "link",
+            "file"
+          ]
+        },
+        "required": {
+          "type": "boolean",
+          "title": "Required"
+        },
+        "label": {
+          "type": "string",
+          "title": "Label"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choiceOption"
+          },
+          "title": "Options",
+          "description": "The allowed values of a choice field."
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choiceOption"
+          },
+          "title": "Choices",
+          "description": "Allowed values as {id, label} pairs."
+        },
+        "to": {
+          "type": "string",
+          "title": "Links to",
+          "description": "The master this field points at, by its code.",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "x-ui": {
+            "ref": "/masters",
+            "refKey": "code"
+          }
+        },
+        "multiple": {
+          "type": "boolean",
+          "title": "Many",
+          "description": "A link to many rows. Becomes its own mapping record."
+        },
+        "max_length": {
+          "type": "integer",
+          "title": "Max length",
+          "minimum": 1
+        },
+        "min_value": {
+          "type": "number",
+          "title": "Min value"
+        },
+        "max_value": {
+          "type": "number",
+          "title": "Max value"
+        },
+        "positive_only": {
+          "type": "boolean",
+          "title": "Positive only"
+        },
+        "multiple_of": {
+          "type": "number",
+          "title": "Multiple of"
+        },
+        "decimal_places": {
+          "type": "integer",
+          "title": "Decimal places",
+          "minimum": 0
+        },
+        "pattern": {
+          "type": "string",
+          "title": "Pattern (regex)"
+        },
+        "pattern_msg": {
+          "type": "string",
+          "title": "Pattern message"
+        },
+        "unique": {
+          "type": "boolean",
+          "title": "Must be unique"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Default"
+        },
+        "prefix": {
+          "type": "string",
+          "title": "Prefix"
+        },
+        "suffix": {
+          "type": "string",
+          "title": "Suffix"
+        },
+        "description": {
+          "type": "string",
+          "title": "Help text"
+        },
+        "tooltip": {
+          "type": "string",
+          "title": "Tooltip"
+        },
+        "readonly": {
+          "type": "boolean",
+          "title": "Read only"
+        },
+        "hidden": {
+          "type": "boolean",
+          "title": "Hidden"
+        }
+      },
+      "x-ui": {
+        "summary": "{type}"
+      }
+    },
+    "fieldList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": {
+          "$ref": "#/$defs/fieldSpec"
+        },
+        "x-ui": {
+          "widget": "keyed",
+          "keyTitle": "Field name",
+          "itemTitle": "{key}"
+        }
+      },
+      "title": "Fields",
+      "description": "Each field is `- name: { type: ..., ... }`."
+    },
+    "formItem": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "required": {
+                "type": "boolean",
+                "title": "Required"
+              }
+            }
+          }
+        }
+      ],
+      "title": "Form field",
+      "description": "A field already declared under `attributes:`; add `{ required: true }` to make it mandatory on the form.",
+      "x-ui": {
+        "widget": "keyed",
+        "keyTitle": "Field",
+        "bareAllowed": true
+      }
+    },
+    "stateList": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "State code"
+          },
+          {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "boolean",
+                  "title": "Start state",
+                  "description": "Exactly one state is the start."
+                },
+                "final": {
+                  "type": "boolean",
+                  "title": "Final state"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        ],
+        "x-ui": {
+          "widget": "keyed",
+          "keyTitle": "State code",
+          "itemTitle": "{key}",
+          "bareAllowed": true
+        }
+      },
+      "title": "States",
+      "description": "The stages a record moves through. Exactly one has `start: true`."
+    },
+    "actionItem": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "set_status",
+            "set_record_status",
+            "set_enrolment_status",
+            "set_sibling_enrolments_status",
+            "set_child_documents_status",
+            "set_child_orders_status",
+            "set_sibling_document_status",
+            "cascade_suspend_dependents",
+            "apply_scheme",
+            "accrue_to_wallet",
+            "redeem_from_wallet",
+            "reverse_credits",
+            "persist_order_lines",
+            "add_tag",
+            "remove_tag",
+            "create_task",
+            "add_timeline_entry",
+            "reject_save"
+          ]
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "propertyNames": {
+            "enum": [
+              "set_status",
+              "set_record_status",
+              "set_enrolment_status",
+              "set_sibling_enrolments_status",
+              "set_child_documents_status",
+              "set_child_orders_status",
+              "set_sibling_document_status",
+              "cascade_suspend_dependents",
+              "apply_scheme",
+              "accrue_to_wallet",
+              "redeem_from_wallet",
+              "reverse_credits",
+              "persist_order_lines",
+              "add_tag",
+              "remove_tag",
+              "create_task",
+              "add_timeline_entry",
+              "reject_save"
+            ]
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Action",
+      "description": "An action from the template vocabulary, bare or with a value, e.g. `add_timeline_entry: \"Enrolled\"`.",
+      "x-ui": {
+        "widget": "keyed",
+        "keyTitle": "Action",
+        "bareAllowed": true
+      }
+    },
+    "actionList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/actionItem"
+      },
+      "title": "Actions"
+    },
+    "condition": {
+      "type": "string",
+      "title": "Condition",
+      "description": "`field op value`, e.g. `age >= 18`, or `field is_true`.",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.]*\\s+(==|!=|>=|>|<=|<|in|contains)\\s+\\S.*$|^[A-Za-z_][A-Za-z0-9_.]*\\s+(is_true|is_false)$"
+    },
+    "gate": {
+      "type": "object",
+      "title": "Gate",
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "title": "All of",
+          "description": "Every condition must hold."
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "title": "Any of",
+          "description": "At least one condition must hold."
+        },
+        "explain": {
+          "type": "object",
+          "title": "Explanations",
+          "description": "What the user is told when a condition blocks them, keyed by field; `prefix` leads the message.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "custom": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "title": "Rule",
+                "format": "textarea"
+              },
+              "message": {
+                "type": "string",
+                "title": "Message"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "title": "Custom rules",
+          "description": "Rules the vocabulary cannot express, in plain English."
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "customActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "text": {
+            "type": "string",
+            "title": "What it does",
+            "format": "textarea"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false,
+        "x-ui": {
+          "itemTitle": "{name}"
+        }
+      },
+      "title": "Custom actions",
+      "description": "Extra behaviour at a point the template already has, described in plain English."
+    },
+    "customRequirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string",
+            "title": "Area",
+            "enum": [
+              "backend",
+              "api",
+              "frontend",
+              "form",
+              "report",
+              "integration",
+              "permission",
+              "notification"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Requirement",
+            "format": "textarea"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false,
+        "x-ui": {
+          "itemTitle": "{title}",
+          "summary": "{area}"
+        }
+      },
+      "title": "Custom requirements",
+      "description": "Requirements the vocabulary cannot express at all."
+    },
+    "step": {
+      "type": "object",
+      "title": "Step",
+      "properties": {
+        "do": {
+          "type": "string",
+          "title": "Step",
+          "description": "The button label, e.g. Approve."
+        },
+        "from": {
+          "type": "string",
+          "title": "From state",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "to": {
+          "type": "string",
+          "title": "To state",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "by": {
+          "$ref": "#/$defs/roles"
+        },
+        "automatic": {
+          "type": "boolean",
+          "title": "Automatic",
+          "description": "Runs without a user; omit `by`."
+        },
+        "then": {
+          "$ref": "#/$defs/actionList"
+        },
+        "collects": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "allowed_when": {
+          "$ref": "#/$defs/gate"
+        },
+        "custom_actions": {
+          "$ref": "#/$defs/customActions"
+        }
+      },
+      "required": [
+        "do",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{do}",
+        "summary": "{from} → {to}"
+      }
+    },
+    "stepList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      },
+      "title": "Steps",
+      "description": "How a record moves between states."
+    },
+    "duplicateCheck": {
+      "type": "object",
+      "title": "Duplicate check",
+      "properties": {
+        "scope": {
+          "type": "object",
+          "title": "Compare against",
+          "properties": {
+            "status_in": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Only in statuses"
+            },
+            "with_labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Only with labels"
+            },
+            "without_labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Only without labels"
+            },
+            "where": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/condition"
+              },
+              "title": "Only where"
+            }
+          },
+          "additionalProperties": false
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "title": "Match on fields"
+              },
+              "compare": {
+                "type": "string",
+                "title": "Compare",
+                "enum": [
+                  "exact",
+                  "normalised",
+                  "fuzzy",
+                  "custom"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "title": "Rule",
+                "description": "Plain-English rule, with `compare: custom`.",
+                "format": "textarea"
+              },
+              "on_match": {
+                "type": "string",
+                "title": "On a match",
+                "enum": [
+                  "block",
+                  "warn"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "title": "Message"
+              }
+            },
+            "required": [
+              "compare",
+              "on_match"
+            ],
+            "additionalProperties": false,
+            "x-ui": {
+              "summary": "{compare} · {on_match}"
+            }
+          },
+          "title": "Rules",
+          "minItems": 1
+        }
+      },
+      "required": [
+        "rules"
+      ],
+      "additionalProperties": false
+    },
+    "tableAccess": {
+      "type": "object",
+      "properties": {
+        "can": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "add",
+              "edit",
+              "download",
+              "upload"
+            ]
+          },
+          "title": "Can",
+          "x-ui": {
+            "widget": "tags"
+          }
+        },
+        "no_access": {
+          "type": "boolean",
+          "title": "No access",
+          "description": "The role must not see this list at all."
+        }
+      },
+      "additionalProperties": false
+    },
+    "tableColumn": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "title": "Label"
+        },
+        "as": {
+          "type": "string",
+          "title": "Kind",
+          "enum": [
+            "custom",
+            "status",
+            "tags"
+          ]
+        },
+        "shows": {
+          "type": "string",
+          "title": "Shows",
+          "description": "For a custom column: what it shows, in plain English."
+        },
+        "shows_from": {
+          "type": "string",
+          "title": "Shows from",
+          "description": "Which attribute of the linked row to display."
+        },
+        "searchable": {
+          "type": "boolean",
+          "title": "Searchable"
+        },
+        "sortable": {
+          "type": "boolean",
+          "title": "Sortable"
+        },
+        "search_choices": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "title": "Search choices"
+        },
+        "roles": {
+          "$ref": "#/$defs/roleList"
+        },
+        "in_export": {
+          "type": "boolean",
+          "title": "In export"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rowAction": {
+      "type": "object",
+      "title": "Row action",
+      "properties": {
+        "do": {
+          "type": "string",
+          "title": "Action label"
+        },
+        "key": {
+          "type": "string",
+          "title": "Key",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "kind": {
+          "type": "string",
+          "title": "Kind",
+          "enum": [
+            "confirm",
+            "form"
+          ]
+        },
+        "featured": {
+          "type": "boolean",
+          "title": "Featured",
+          "description": "Shown on the row rather than in its menu."
+        },
+        "asks": {
+          "type": "string",
+          "title": "Confirmation",
+          "description": "The question a confirm action asks."
+        },
+        "by": {
+          "$ref": "#/$defs/roles"
+        },
+        "then": {
+          "$ref": "#/$defs/actionList"
+        },
+        "collects": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "allowed_when": {
+          "$ref": "#/$defs/gate"
+        },
+        "custom_actions": {
+          "$ref": "#/$defs/customActions"
+        }
+      },
+      "required": [
+        "do",
+        "key"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{do}",
+        "summary": "{kind}"
+      }
+    },
+    "table": {
+      "type": "object",
+      "title": "List screen",
+      "properties": {
+        "access": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": {
+              "$ref": "#/$defs/tableAccess"
+            },
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Role",
+              "itemTitle": "{key}",
+              "keyRef": "/roles"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "title": "Access",
+          "description": "Per role. Say `no_access: true` explicitly — silence is not a denial."
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": {
+              "$ref": "#/$defs/tableColumn"
+            },
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Column",
+              "itemTitle": "{key}"
+            }
+          },
+          "title": "Columns",
+          "description": "In on-screen order."
+        },
+        "sort": {
+          "type": "string",
+          "title": "Default sort",
+          "description": "A field name; prefix `-` for descending.",
+          "pattern": "^-?[A-Za-z_][A-Za-z0-9_.]*$"
+        },
+        "can_do": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rowAction"
+          },
+          "title": "Row actions"
+        },
+        "owned_by": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "title": "Field",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "also": {
+                  "type": "string",
+                  "title": "Also"
+                }
+              },
+              "additionalProperties": false
+            },
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Role",
+              "itemTitle": "{key}",
+              "keyRef": "/roles"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "title": "Owned by",
+          "description": "A scoped role sees only rows whose field points at them."
+        },
+        "row_scope": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": {
+              "type": "string"
+            },
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Role",
+              "itemTitle": "{key}",
+              "keyRef": "/roles"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "title": "Row scope",
+          "description": "Plain-English row restrictions per role."
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "additionalProperties": false
+    },
+    "consentBlock": {
+      "type": "object",
+      "title": "Consent",
+      "properties": {
+        "version": {
+          "type": "string",
+          "title": "Version"
+        },
+        "notice": {
+          "type": "string",
+          "title": "Notice",
+          "description": "The wording the patient agrees to.",
+          "format": "textarea"
+        },
+        "record_by": {
+          "$ref": "#/$defs/roleList"
+        },
+        "withdraw_by": {
+          "$ref": "#/$defs/roleList"
+        },
+        "evidence_document": {
+          "type": "string",
+          "title": "Evidence document",
+          "description": "A document type code that holds the signed consent.",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "whatsapp",
+              "email",
+              "voice",
+              "in_app",
+              "post"
+            ]
+          },
+          "title": "Channels",
+          "x-ui": {
+            "widget": "tags"
+          }
+        },
+        "on_withdraw": {
+          "type": "object",
+          "title": "On withdrawal",
+          "properties": {
+            "patient_status": {
+              "type": "string",
+              "title": "Set patient status"
+            },
+            "stop_all_communication": {
+              "type": "boolean",
+              "title": "Stop all communication"
+            },
+            "open_archival_task": {
+              "type": "boolean",
+              "title": "Open an archival task"
+            }
+          }
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      }
+    },
+    "patientConsent": {
+      "type": "object",
+      "title": "Consent",
+      "description": "Data-processing consent always blocks patient creation until granted.",
+      "properties": {
+        "show_on_patient_360": {
+          "type": "boolean",
+          "title": "Show on patient 360"
+        },
+        "data_processing": {
+          "$ref": "#/$defs/consentBlock"
+        },
+        "communication": {
+          "$ref": "#/$defs/consentBlock"
+        },
+        "program": {
+          "$ref": "#/$defs/consentBlock"
+        },
+        "register_open_to": {
+          "$ref": "#/$defs/roleList"
+        }
+      },
+      "additionalProperties": false
+    },
+    "programConsent": {
+      "type": "object",
+      "title": "Program consent",
+      "properties": {
+        "use": {
+          "type": "string",
+          "title": "Use",
+          "description": "`blanket` reuses the patient-level program consent.",
+          "enum": [
+            "blanket",
+            "own"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "title": "Version"
+        },
+        "notice": {
+          "type": "string",
+          "title": "Notice",
+          "format": "textarea"
+        },
+        "record_by": {
+          "$ref": "#/$defs/roleList"
+        },
+        "withdraw_by": {
+          "$ref": "#/$defs/roleList"
+        },
+        "required_before": {
+          "type": "string",
+          "title": "Required before state",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "on_withdraw": {
+          "type": "object",
+          "title": "On withdrawal",
+          "properties": {
+            "enrolment_status": {
+              "type": "string",
+              "title": "Set enrolment status"
+            },
+            "cascade_suspend_dependents": {
+              "type": "boolean",
+              "title": "Suspend dependents"
+            },
+            "open_archival_task": {
+              "type": "boolean",
+              "title": "Open an archival task"
+            }
+          }
+        }
+      }
+    },
+    "master": {
+      "type": "object",
+      "title": "Master",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "Code",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "plural": {
+          "type": "string",
+          "title": "Plural"
+        },
+        "reserved": {
+          "type": "boolean",
+          "title": "Suggested by the template"
+        },
+        "enabled": {
+          "type": "boolean",
+          "title": "Needed",
+          "description": "Mark a suggested master `enabled: false` rather than deleting it."
+        },
+        "app_user_role": {
+          "$ref": "#/$defs/roleName",
+          "title": "Rows sign in as",
+          "description": "Each row becomes a signed-in user of this role."
+        },
+        "app_user_contact": {
+          "type": "object",
+          "title": "Sign-in contact",
+          "properties": {
+            "mobile": {
+              "type": "string",
+              "title": "Mobile field"
+            },
+            "email": {
+              "type": "string",
+              "title": "Email field"
+            }
+          },
+          "additionalProperties": false
+        },
+        "create_by": {
+          "$ref": "#/$defs/roleList"
+        },
+        "fields": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "states": {
+          "$ref": "#/$defs/stateList"
+        },
+        "steps": {
+          "$ref": "#/$defs/stepList"
+        },
+        "duplicate_check": {
+          "$ref": "#/$defs/duplicateCheck"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{name}",
+        "summary": "{code} · {fields.length} fields"
+      }
+    },
+    "labelSide": {
+      "type": "object",
+      "properties": {
+        "by": {
+          "$ref": "#/$defs/roles"
+        },
+        "then": {
+          "$ref": "#/$defs/actionList"
+        },
+        "collects": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "custom_actions": {
+          "$ref": "#/$defs/customActions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "patient": {
+      "type": "object",
+      "title": "Patient",
+      "properties": {
+        "attributes": {
+          "$ref": "#/$defs/fieldList",
+          "title": "Attributes"
+        },
+        "states": {
+          "$ref": "#/$defs/stateList"
+        },
+        "steps": {
+          "$ref": "#/$defs/stepList"
+        },
+        "create": {
+          "type": "object",
+          "title": "Registration",
+          "properties": {
+            "by": {
+              "$ref": "#/$defs/roleList"
+            },
+            "form": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/formItem"
+              },
+              "title": "Form"
+            },
+            "duplicate_check": {
+              "$ref": "#/$defs/duplicateCheck"
+            },
+            "on_create": {
+              "$ref": "#/$defs/actionList"
+            },
+            "custom_actions": {
+              "$ref": "#/$defs/customActions"
+            }
+          },
+          "additionalProperties": false
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "title": "Label code"
+              },
+              {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "apply": {
+                      "$ref": "#/$defs/labelSide",
+                      "title": "Apply"
+                    },
+                    "remove": {
+                      "$ref": "#/$defs/labelSide",
+                      "title": "Remove"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Label code",
+              "itemTitle": "{key}",
+              "bareAllowed": true
+            }
+          },
+          "title": "Labels",
+          "description": "Flags a team applies and removes by hand. Not the lifecycle."
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "consent": {
+          "$ref": "#/$defs/patientConsent"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "additionalProperties": false
+    },
+    "documentType": {
+      "type": "object",
+      "title": "Document type",
+      "properties": {
+        "reserved": {
+          "type": "boolean",
+          "title": "Suggested by the template"
+        },
+        "enabled": {
+          "type": "boolean",
+          "title": "Needed"
+        },
+        "kind": {
+          "type": "string",
+          "title": "Kind",
+          "enum": [
+            "prescription"
+          ]
+        },
+        "linked_documents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "title": "Linked documents"
+        },
+        "create_roles": {
+          "$ref": "#/$defs/roleList"
+        },
+        "fields": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scheme": {
+      "type": "object",
+      "title": "Scheme",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "Code",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "accrual": {
+          "type": "object",
+          "title": "Accrual",
+          "properties": {
+            "buy": {
+              "type": "integer",
+              "title": "Buy",
+              "minimum": 1
+            },
+            "get": {
+              "type": "integer",
+              "title": "Get",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "buy",
+            "get"
+          ],
+          "additionalProperties": false
+        },
+        "equivalences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sku": {
+                "type": "string",
+                "title": "SKU"
+              },
+              "factor": {
+                "type": "number",
+                "title": "Factor"
+              },
+              "base_sku": {
+                "type": "string",
+                "title": "Base SKU"
+              }
+            },
+            "required": [
+              "sku",
+              "factor",
+              "base_sku"
+            ],
+            "additionalProperties": false
+          },
+          "title": "Equivalences"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{name}",
+        "summary": "buy {accrual.buy} get {accrual.get}"
+      }
+    },
+    "documentRule": {
+      "type": "object",
+      "title": "Document rule",
+      "properties": {
+        "document": {
+          "type": "string",
+          "title": "Document",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "on_upload": {
+          "$ref": "#/$defs/gate"
+        },
+        "on_edit": {
+          "$ref": "#/$defs/gate"
+        },
+        "duplicate_check": {
+          "$ref": "#/$defs/duplicateCheck"
+        }
+      },
+      "required": [
+        "document"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{document}"
+      }
+    },
+    "order": {
+      "type": "object",
+      "title": "Order type",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "Code",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "earns_credit": {
+          "type": "boolean",
+          "title": "Earns credit",
+          "description": "A paid order that accrues to the wallet."
+        },
+        "spends_credit": {
+          "type": "boolean",
+          "title": "Spends credit",
+          "description": "A free dispense that redeems from the wallet."
+        },
+        "allowed_skus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Products",
+          "x-ui": {
+            "widget": "tags"
+          }
+        },
+        "lines_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "create"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "step": {
+                  "type": "string",
+                  "title": "At step"
+                }
+              },
+              "required": [
+                "step"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "title": "Products chosen",
+          "description": "`create`, or `{ step: <step label> }` for a later step."
+        },
+        "assigned_by": {
+          "type": "object",
+          "title": "Assigned to",
+          "properties": {
+            "role": {
+              "$ref": "#/$defs/roleName"
+            },
+            "field": {
+              "type": "string",
+              "title": "Field",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "attributes": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "collects": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "allowed_when": {
+          "$ref": "#/$defs/gate"
+        },
+        "create_roles": {
+          "$ref": "#/$defs/roleList"
+        },
+        "on_raise": {
+          "$ref": "#/$defs/actionList"
+        },
+        "custom_actions": {
+          "$ref": "#/$defs/customActions"
+        },
+        "states": {
+          "$ref": "#/$defs/stateList"
+        },
+        "steps": {
+          "$ref": "#/$defs/stepList"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{name}",
+        "summary": "{code}"
+      }
+    },
+    "program": {
+      "type": "object",
+      "title": "Program",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "Code",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "eligible_when": {
+          "$ref": "#/$defs/gate"
+        },
+        "create_roles": {
+          "$ref": "#/$defs/roleList"
+        },
+        "attributes": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "schemes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scheme"
+          },
+          "title": "Schemes"
+        },
+        "on_enrol": {
+          "$ref": "#/$defs/actionList"
+        },
+        "custom_actions": {
+          "$ref": "#/$defs/customActions"
+        },
+        "requires_documents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "title": "Required documents",
+          "x-ui": {
+            "widget": "tags"
+          }
+        },
+        "document_rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/documentRule"
+          },
+          "title": "Document rules"
+        },
+        "enrolment": {
+          "type": "object",
+          "title": "Enrolment",
+          "properties": {
+            "states": {
+              "$ref": "#/$defs/stateList"
+            },
+            "steps": {
+              "$ref": "#/$defs/stepList"
+            },
+            "table": {
+              "$ref": "#/$defs/table"
+            }
+          },
+          "additionalProperties": false
+        },
+        "consent": {
+          "$ref": "#/$defs/programConsent"
+        },
+        "orders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/order"
+          },
+          "title": "Orders"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{name}",
+        "summary": "{code} · {orders.length} order types"
+      }
+    },
+    "extraModule": {
+      "type": "object",
+      "title": "Extra module",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "Code",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "purpose": {
+          "type": "string",
+          "title": "Purpose",
+          "format": "textarea"
+        },
+        "attaches_to": {
+          "type": "string",
+          "title": "Attaches to",
+          "enum": [
+            "patient",
+            "enrolment",
+            "order",
+            "standalone"
+          ]
+        },
+        "ui": {
+          "type": "string",
+          "title": "Shown as",
+          "enum": [
+            "own_page",
+            "patient_tab",
+            "both",
+            "backend_only"
+          ]
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "title": "Name",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "label": {
+                "type": "string",
+                "title": "Label"
+              },
+              "fields": {
+                "$ref": "#/$defs/fieldList"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "title": "Records"
+        },
+        "text": {
+          "type": "string",
+          "title": "Notes",
+          "format": "textarea"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "x-ui": {
+        "itemTitle": "{name}"
+      }
+    },
+    "report": {
+      "type": "object",
+      "title": "Report",
+      "properties": {
+        "code": {
+          "type": "string",
+          "title": "Code",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string",
+          "title": "Label"
+        },
+        "purpose": {
+          "type": "string",
+          "title": "Purpose",
+          "format": "textarea"
+        },
+        "category": {
+          "type": "string",
+          "title": "Category",
+          "enum": [
+            "program",
+            "supply",
+            "field",
+            "governance"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "title": "Kind",
+          "enum": [
+            "listing",
+            "aggregate",
+            "audit"
+          ]
+        },
+        "audience": {
+          "type": "string",
+          "title": "Audience",
+          "enum": [
+            "internal",
+            "client",
+            "regulator",
+            "auditor"
+          ]
+        },
+        "primary": {
+          "type": "string",
+          "title": "Primary record"
+        },
+        "joins": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "title": "Joins"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "title": "Source"
+              },
+              "field": {
+                "type": "string",
+                "title": "Field"
+              },
+              "label": {
+                "type": "string",
+                "title": "Label"
+              },
+              "aggregate": {
+                "type": "string",
+                "title": "Aggregate"
+              }
+            },
+            "required": [
+              "source",
+              "field"
+            ]
+          },
+          "title": "Columns"
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "Group by"
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "title": "Filters"
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "title": "Name"
+              },
+              "type": {
+                "type": "string",
+                "title": "Type"
+              },
+              "required": {
+                "type": "boolean",
+                "title": "Required"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "title": "Parameters"
+        },
+        "privacy": {
+          "type": "object",
+          "title": "Privacy"
+        },
+        "access": {
+          "type": "object",
+          "title": "Access",
+          "properties": {
+            "run_by": {
+              "$ref": "#/$defs/roleList"
+            },
+            "schedule": {
+              "type": "string",
+              "title": "Schedule",
+              "enum": [
+                "on_demand",
+                "daily",
+                "weekly",
+                "monthly",
+                "month_close"
+              ]
+            },
+            "delivery": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "in_app",
+                  "csv",
+                  "xlsx",
+                  "pdf",
+                  "email"
+                ]
+              },
+              "title": "Delivery",
+              "x-ui": {
+                "widget": "tags"
+              }
+            },
+            "link_expiry_days": {
+              "type": "integer",
+              "title": "Link expiry (days)",
+              "minimum": 1
+            }
+          }
+        },
+        "layout": {
+          "type": "object",
+          "title": "Layout"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "x-ui": {
+        "itemTitle": "{label}",
+        "summary": "{kind} · {audience}"
+      }
+    }
+  }
+}

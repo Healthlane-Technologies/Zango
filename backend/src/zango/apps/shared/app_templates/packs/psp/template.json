@@ -1,0 +1,86 @@
+{
+  "slug": "psp",
+  "name": "Patient Support Program",
+  "version": "1.0.0",
+  "category": "Patient Services",
+  "icon": "heart",
+  "is_beta": false,
+  "aka": ["PSP", "PAP", "patient assistance program", "patient access program"],
+  "one_liner": "A ready-made foundation for pharma patient support and assistance programs: patients, enrolment, consent, documents, dispensing and free-of-cost schemes are already built; a program is described, not rebuilt.",
+  "fits_when": [
+    "patients are enrolled onto a therapy and supported through it",
+    "a pharma company or its partner runs the program",
+    "medicine is dispensed, sometimes free or discounted under a scheme (buy-N-get-M, free-of-cost)",
+    "consent, prescriptions and clinical documents have to be collected and verified",
+    "field staff, distributors, pharmacies or doctors work the same patient record",
+    "adverse events have to be captured and reported"
+  ],
+  "gives_you": [
+    "Patients and caretakers, with a full patient 360 page",
+    "Enrolment onto one or more programs, with its own lifecycle and approvals",
+    "Consent — data processing, communication and program consent, with a register",
+    "Documents and prescriptions with per-program upload rules and verification",
+    "Orders and dispensing, paid and free-of-cost, with credit wallets and schemes",
+    "Tasks, timeline, adverse events and reporting"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "journey",
+  "interview": "INTERVIEW.md",
+  "schema": "SCHEMA.md",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "json_schema": "schema.json",
+  "ui_schema": "ui.json",
+  "rules": "rules.json",
+  "skill_dir": "skill",
+  "build_skill_name": "zango-psp-builder",
+  "sections": [
+    {"id": "program", "title": "The program itself"},
+    {"id": "roles", "title": "Who uses it"},
+    {"id": "patient", "title": "The patient record"},
+    {"id": "patient_lifecycle", "title": "How a patient moves"},
+    {"id": "consent", "title": "Consent"},
+    {"id": "masters", "title": "Reference lists"},
+    {"id": "documents", "title": "Documents"},
+    {"id": "programs", "title": "Enrolment"},
+    {"id": "orders", "title": "Dispensing and orders"},
+    {"id": "schemes", "title": "Free-of-cost schemes"},
+    {"id": "detail", "title": "The patient 360 page"},
+    {"id": "adverse_events", "title": "Adverse events"},
+    {"id": "reports", "title": "Reports"},
+    {"id": "extras", "title": "Anything else"}
+  ],
+  "catalogue": {
+    "description": "Enrolment, eligibility, consent, document verification, free-of-cost dispensing and adherence for specialty therapies. The patient record, program lifecycles, wallet and schemes are already built; each program is configured from a journey spec rather than developed from scratch.",
+    "packages": [
+      {"name": "workflow", "description": "Status and transition engine behind every lifecycle"},
+      {"name": "crud", "description": "List screens, forms and detail views"},
+      {"name": "appbuilder", "description": "Pages, menus and app-level configuration"}
+    ],
+    "roles": [
+      {"name": "Program manager", "description": "Approves enrolments, verifies documents and runs reports"},
+      {"name": "Program executive", "description": "Registers patients, records consent and chases documents"},
+      {"name": "Distributor", "description": "Sees only its own patients and fulfils dispense orders"},
+      {"name": "Doctor / HCP", "description": "Optional: signs in to see and refer their own patients"}
+    ],
+    "workflows": [
+      {"name": "Patient registration", "description": "Consent-gated registration with duplicate checks"},
+      {"name": "Program enrolment", "description": "Eligibility rules, required documents and approval"},
+      {"name": "Document verification", "description": "Upload, verify or reject, with per-program rules"},
+      {"name": "Free-of-cost dispensing", "description": "Paid purchases earn credits; free dispenses redeem them"},
+      {"name": "Adverse event capture", "description": "Intake, review and submission to pharmacovigilance"}
+    ],
+    "data_objects": ["Patient", "Caretaker", "Program", "Enrolment", "Document", "Order", "Wallet", "Doctor", "Hospital", "Distributor"],
+    "integrations": ["SMS gateway", "WhatsApp", "Email"],
+    "compliance": [
+      "Data-processing consent captured before a patient is created",
+      "Consent withdrawal cascades to status, communication and archival",
+      "Adverse events captured regardless of communication consent",
+      "Role-scoped access, with every export logged",
+      "Client reports exclude patients who withdrew data consent"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Patient Assistance Program",
+    "app_prompt_prefill": "A patient assistance program for a specialty therapy: register patients with consent, enrol them after checking eligibility and documents, and dispense free vials under a buy-N-get-M scheme through distributors."
+  }
+}
