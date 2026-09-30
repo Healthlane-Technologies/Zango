@@ -236,3 +236,63 @@ class TemplateRequirementTests(AppTemplatesTestBase):
         )
         bind_app(self.tenant, v2, BindingSource.REQUIREMENT)
         self.assertEqual(binding_for(self.tenant).version_id, self.version.pk)
+
+
+class SpecTrackingTests(AppTemplatesTestBase):
+    def setUp(self):
+        super().setUp()
+        import_pack(self.pack(), publish_now=True)
+        catalogue.clear_caches()
+
+    def _requirement(self, spec):
+        from zango.apps.agent_mode.models import AgentRequirement
+        from zango.apps.agent_mode.template_binding import seed_template_requirement
+
+        requirement = AgentRequirement(initial_prompt="go")
+        seed_template_requirement(requirement, catalogue.get_template("demo"), spec)
+        return requirement
+
+    def test_seeding_validates_the_draft(self):
+        requirement = self._requirement("roles: nope\n")
+        self.assertTrue(
+            any(i["path"] == "/roles" for i in requirement.validation_issues)
+        )
+
+    def test_analyse_records_what_changed(self):
+        from zango.apps.agent_mode.template_spec import analyse
+
+        requirement = self._requirement("journey: demo\nroles:\n  - name: A\n")
+        previous = requirement.spec_markdown
+        requirement.spec_markdown = "journey: demo\nroles:\n  - name: B\n"
+        analyse(requirement, previous)
+        self.assertEqual(requirement.changed_paths, ["/roles/0/name"])
+
+    def test_approval_is_refused_for_drafts_errors_and_thinking(self):
+        from zango.apps.agent_mode.template_spec import approval_problem
+
+        requirement = self._requirement("journey: demo\n")
+        self.assertEqual(approval_problem(requirement)[0], 409)  # still a draft
+        requirement.spec_is_draft = False
+        self.assertIsNone(approval_problem(requirement))
+        requirement.spec_markdown = (
+            "roles: [a]\n"  # journey missing (strict) + wrong type
+        )
+        code, payload = approval_problem(requirement)
+        self.assertEqual(code, 400)
+        self.assertTrue(payload["issues"])
+        requirement.is_thinking = True
+        self.assertEqual(approval_problem(requirement)[0], 409)
+
+    def test_builder_endpoint_serves_the_pinned_version(self):
+        from zango.api.platform.app_templates.v1.views import TemplateBuilderView
+
+        view = catalogue.get_template("demo")
+        request = APIRequestFactory().get("/x/", HTTP_HOST="test.testserver.com")
+        force_authenticate(request, user=_user())
+        response = TemplateBuilderView.as_view()(
+            request, slug="demo", version_uuid=view.version_uuid
+        )
+        body = json.loads(response.content)["response"]
+        self.assertEqual(body["version"], "1.0.0")
+        self.assertEqual(body["ui_schema"]["sections"][0]["id"], "roles")
+        self.assertIn("properties", body["json_schema"])

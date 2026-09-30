@@ -83,6 +83,10 @@ def seed_template_requirement(requirement, template, base_spec: str = "") -> Non
         requirement.spec_is_draft = True
         requirement.draft_revision = max(requirement.draft_revision, 1)
 
+    from .template_spec import analyse
+
+    analyse(requirement)
+
 
 def seed_from_binding(requirement, tenant) -> bool:
     """For a requirement on a bound app: pin the binding's version and seed it.

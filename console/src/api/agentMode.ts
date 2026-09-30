@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query';
 import { appKeys } from './apps';
 import { api } from './client';
 import { useApiMutation } from './hooks';
@@ -84,6 +84,56 @@ export interface Requirement {
 	template?: RequirementTemplate | null;
 	/** Bumped on every draft write (agent tool call or manual save); poll-friendly. */
 	draft_revision?: number;
+	/** True while the spec is the agent's work in progress rather than a finished one. */
+	spec_is_draft?: boolean;
+	/** The last validation result for a template spec. */
+	validation_issues?: SpecIssue[];
+}
+
+/** One validation finding on a template spec. `path` is an RFC 6901 pointer into the YAML. */
+export interface SpecIssue {
+	level: 'error' | 'warning';
+	path: string;
+	message: string;
+	code?: string;
+	/** The ui.json section id the path falls in, when the server knows it. */
+	section?: string;
+	rule?: string;
+}
+
+/** GET requirements/<r>/spec/ — the spec as the builder panel reads it. */
+export interface RequirementSpec {
+	text: string;
+	format: 'yaml' | 'markdown';
+	status: RequirementStatus;
+	spec_version: number;
+	draft_revision: number;
+	is_draft: boolean;
+	issues: SpecIssue[];
+	/** Pointers the last agent turn (or manual save) changed. */
+	changed_paths: string[];
+	template: { slug: string; name: string; version: string; version_uuid: string } | null;
+}
+
+/** GET …/app-templates/templates/<slug>/versions/<uuid>/builder/ — immutable per version. */
+export interface TemplateBuilderDef {
+	json_schema: Record<string, unknown>;
+	ui_schema: {
+		sections: Array<{
+			id: string;
+			title: string;
+			pointer: string;
+			hint?: string;
+			order?: number;
+			fields?: string[];
+			item?: string;
+		}>;
+	};
+	rules: unknown[];
+	spec_root: string;
+	spec_format: 'yaml' | 'markdown';
+	starter_yaml: string;
+	example_yaml: string;
 }
 
 export interface RequirementTemplate {
@@ -123,6 +173,7 @@ export const agentKeys = {
 	requirement: (appId: string, reqId: string) => [...agentKeys.requirements(appId), reqId] as const,
 	runs: (appId: string) => [...agentKeys.all(appId), 'runs'] as const,
 	run: (appId: string, runId: string) => [...agentKeys.runs(appId), runId] as const,
+	spec: (appId: string, reqId: string) => [...agentKeys.requirement(appId, reqId), 'spec'] as const,
 };
 
 /** How often to re-read a requirement while the analyst is replying (the classic panel's cadence). */
@@ -217,5 +268,41 @@ export function useApproveRequirement(appId: string, reqId: string) {
 			),
 		invalidate: [agentKeys.requirement(appId, reqId), agentKeys.requirements(appId)],
 		success: 'Requirements approved',
+	});
+}
+
+/**
+ * A requirement's spec for the builder panel. Keyed on the revision the requirement reports,
+ * so every draft write (agent or manual) fetches afresh while the previous one stays on screen.
+ */
+export function useRequirementSpec(
+	appId: string,
+	reqId: string | undefined,
+	revision: { draft?: number; version?: number; status?: string },
+) {
+	return useQuery({
+		queryKey: [
+			...agentKeys.spec(appId, reqId ?? ''),
+			revision.draft ?? 0,
+			revision.version ?? 0,
+			revision.status ?? '',
+		],
+		queryFn: () => api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/spec/`),
+		enabled: !!reqId,
+		placeholderData: keepPreviousData,
+	});
+}
+
+/** A template version's builder definition. Published versions never change. */
+export function useTemplateBuilder(slug: string | undefined, versionUuid: string | undefined) {
+	return useQuery({
+		queryKey: ['template-builder', slug ?? '', versionUuid ?? ''],
+		queryFn: () =>
+			api<TemplateBuilderDef>(
+				`/api/v1/platform/app-templates/templates/${slug}/versions/${versionUuid}/builder/`,
+			),
+		enabled: !!slug && !!versionUuid,
+		staleTime: Infinity,
+		gcTime: Infinity,
 	});
 }

@@ -82,3 +82,49 @@ class TemplateDetailView(ZangoGenericPlatformAPIView):
         except Exception as exc:  # noqa: BLE001
             log.exception("app_templates: detail failed")
             return get_api_response(False, {"message": str(exc)}, 500)
+
+
+class TemplateBuilderView(ZangoGenericPlatformAPIView):
+    """GET templates/<slug>/versions/<version_uuid>/builder/
+
+    What the console's builder panel renders a spec with. Published versions
+    never change, so clients may cache the response for good. Deprecated
+    versions still resolve: apps built on them are pinned to them.
+    """
+
+    def get(self, request, slug, version_uuid, *args, **kwargs):
+        from zango.apps.shared.app_templates.models import (
+            AppTemplateVersion,
+            VersionStatus,
+        )
+
+        try:
+            version = (
+                AppTemplateVersion.objects.select_related("template")
+                .filter(template__slug=slug, object_uuid=version_uuid)
+                .exclude(status=VersionStatus.DRAFT)
+                .first()
+            )
+            if version is None:
+                return get_api_response(
+                    False, {"message": "No such template version."}, 404
+                )
+            return get_api_response(
+                True,
+                {
+                    "slug": version.template.slug,
+                    "version": version.version,
+                    "version_uuid": str(version.object_uuid),
+                    "json_schema": version.json_schema,
+                    "ui_schema": version.ui_schema,
+                    "rules": version.rules,
+                    "spec_root": version.spec_root,
+                    "spec_format": version.spec_format,
+                    "starter_yaml": version.starter_yaml,
+                    "example_yaml": version.example_yaml,
+                },
+                200,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.exception("app_templates: builder failed")
+            return get_api_response(False, {"message": str(exc)}, 500)

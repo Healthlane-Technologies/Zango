@@ -821,8 +821,24 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
 
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
+    def get(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        """GET requirements/{uuid}/spec/ — the spec, its checks and what changed."""
+        from zango.apps.agent_mode.template_spec import spec_payload
+
+        try:
+            _bind_tenant(self, app_uuid)
+            try:
+                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+            except AgentRequirement.DoesNotExist:
+                return get_api_response(False, {"message": "not found"}, 404)
+            return get_api_response(True, spec_payload(requirement), 200)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: spec read failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
     def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
         from zango.apps.agent_mode.models import RequirementStatus, SpecSource
+        from zango.apps.agent_mode.template_spec import analyse
 
         try:
             _bind_tenant(self, app_uuid)
@@ -836,14 +852,38 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
                     {"message": "This requirement is already approved."},
                     409,
                 )
+            if requirement.is_thinking:
+                return get_api_response(
+                    False,
+                    {"message": "The agent is still working on this spec. Try again in a moment."},
+                    409,
+                )
 
             markdown = (request.data.get("spec_markdown") or "").strip()
             if not markdown:
                 return get_api_response(False, {"message": "Spec is empty."}, 400)
 
+            template = requirement.template if requirement.template_slug else None
+            if template is not None and template.is_yaml:
+                from zango.apps.shared.app_templates.services.spec.validate import (
+                    structural_errors,
+                    validate_text,
+                )
+
+                _, issues = validate_text(markdown, template)
+                broken = structural_errors(issues)
+                if broken:
+                    return get_api_response(
+                        False,
+                        {"message": "The spec does not fit the template.", "issues": broken},
+                        400,
+                    )
+
+            previous = requirement.spec_markdown
             requirement.record_spec(markdown, source=SpecSource.USER)
             if requirement.status == RequirementStatus.GATHERING:
                 requirement.status = RequirementStatus.READY
+            analyse(requirement, previous)
             requirement.save()
             return get_api_response(
                 True,
@@ -855,6 +895,39 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
             )
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: spec edit failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementSpecValidateView(ZangoGenericPlatformAPIView, TenantMixin):
+    """POST requirements/{uuid}/spec/validate/ — check YAML without saving it.
+
+    Body ``{yaml?}``; without it, the stored spec is checked. Never calls the
+    agent, so the panel can call it as the user types.
+    """
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from zango.apps.shared.app_templates.services.spec.validate import validate_text
+
+        try:
+            _bind_tenant(self, app_uuid)
+            try:
+                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+            except AgentRequirement.DoesNotExist:
+                return get_api_response(False, {"message": "not found"}, 404)
+            template = requirement.template if requirement.template_slug else None
+            if template is None or not template.is_yaml:
+                return get_api_response(True, {"issues": []}, 200)
+            text = request.data.get("yaml")
+            if text is None:
+                text = requirement.spec_markdown
+            strict = str(request.data.get("strict", "")).lower() in ("1", "true")
+            _, issues = validate_text(str(text), template, strict=strict)
+            return get_api_response(True, {"issues": issues}, 200)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: spec validate failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 
@@ -876,12 +949,12 @@ class AgentRequirementApproveView(ZangoGenericPlatformAPIView, TenantMixin):
             except AgentRequirement.DoesNotExist:
                 return get_api_response(False, {"message": "not found"}, 404)
 
-            if not requirement.spec_markdown.strip():
-                return get_api_response(
-                    False,
-                    {"message": "There is no specification to approve yet."},
-                    400,
-                )
+            from zango.apps.agent_mode.template_spec import approval_problem
+
+            problem = approval_problem(requirement)
+            if problem is not None:
+                code, payload = problem
+                return get_api_response(False, payload, code)
 
             requirement.status = RequirementStatus.APPROVED
             requirement.approved_at = timezone.now()

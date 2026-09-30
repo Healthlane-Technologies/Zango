@@ -896,6 +896,7 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
     if template_slug:
         req.adopt_template(template_slug)
 
+    previous_spec = req.spec_markdown
     if spec:
         req.record_spec(spec)
         # The title starts life as the opening ask truncated to 80 characters
@@ -913,6 +914,11 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
         # nothing to approve until the analyst says it is finished.
         req.record_draft_spec(draft)
         req.title = derive_title(draft, req.title or req.initial_prompt)
+
+    if req.template_slug:
+        from .template_spec import analyse
+
+        analyse(req, previous_spec)
 
     req.is_thinking = False
     req.error_message = ""

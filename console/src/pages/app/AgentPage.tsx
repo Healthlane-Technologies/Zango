@@ -14,6 +14,7 @@ import {
 import { useAppId } from '@/api/hooks';
 import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
 import { RequirementsPanel } from './agent/RequirementsPanel';
+import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
 import { RunsPanel } from './agent/runs/RunsPanel';
 import { Thread } from './agent/Thread';
 import { STAGES, roundLabel, stageOf, type Round } from './agent/rounds';
@@ -103,6 +104,15 @@ export function AgentPage() {
 	const lastAssistant = [...(active?.messages ?? [])].reverse().find((m) => m.role === 'assistant');
 	const openQuestions = open && !active?.is_thinking ? (lastAssistant?.questions.length ?? 0) : 0;
 	const spec = draft ?? active?.spec_markdown ?? '';
+	// A template spec can't be approved while the agent is still filling it in, or with errors;
+	// the server refuses both, so say why up front.
+	const templateBlock = active?.template
+		? active.spec_is_draft
+			? 'The agent is still filling this in'
+			: (active.validation_issues ?? []).some((i) => i.level === 'error')
+				? 'Fix the problems in Checks first'
+				: null
+		: null;
 
 	// Approving locks the spec; the build itself starts from the Builds tab (RunsPanel owns runs).
 	const onApprove = async () => {
@@ -144,10 +154,13 @@ export function AgentPage() {
 				<Button
 					variant="primary"
 					icon="check"
-					disabled={blocked || active.is_thinking || !spec.trim()}
+					disabled={blocked || active.is_thinking || !spec.trim() || !!templateBlock}
 					loading={approve.isPending || saveSpec.isPending}
 					onClick={onApprove}
-					title={spec.trim() ? undefined : 'The agent hasn’t written a spec to approve yet'}
+					title={
+						templateBlock ??
+						(spec.trim() ? undefined : 'The agent hasn’t written a spec to approve yet')
+					}
 				>
 					Approve requirements
 				</Button>
@@ -172,9 +185,11 @@ export function AgentPage() {
 		);
 	}
 
-	const reqCount = viewed?.detail
-		? specHighlights(viewed.detail.spec_markdown).groups.reduce((n, g) => n + g.items.length, 0)
-		: 0;
+	// A template spec is YAML; the Markdown highlight count means nothing for it.
+	const reqCount =
+		viewed?.detail && !viewed.detail.template
+			? specHighlights(viewed.detail.spec_markdown).groups.reduce((n, g) => n + g.items.length, 0)
+			: 0;
 
 	return (
 		<div className="ws">
@@ -304,17 +319,33 @@ export function AgentPage() {
 									onRunChange={onRunChange}
 								/>
 							) : (
-								<RequirementsPanel
-									key={viewed.summary.uuid}
-									requirement={viewed.detail}
-									editable={viewingActive && open}
-									draft={viewingActive ? draft : null}
-									onDraft={setDraft}
-									onSave={() =>
-										draft !== null && saveSpec.mutate(draft, { onSuccess: () => setDraft(null) })
-									}
-									saving={saveSpec.isPending}
-								/>
+								(() => {
+									const detail = viewed.detail;
+									const markdown = () => (
+										<RequirementsPanel
+											key={viewed.summary.uuid}
+											requirement={detail}
+											editable={viewingActive && open}
+											draft={viewingActive ? draft : null}
+											onDraft={setDraft}
+											onSave={() =>
+												draft !== null &&
+												saveSpec.mutate(draft, { onSuccess: () => setDraft(null) })
+											}
+											saving={saveSpec.isPending}
+										/>
+									);
+									return detail.template ? (
+										<TemplateBuilderHost
+											key={viewed.summary.uuid}
+											appId={appId}
+											requirement={detail}
+											fallback={markdown}
+										/>
+									) : (
+										markdown()
+									);
+								})()
 							)}
 						</div>
 					</div>

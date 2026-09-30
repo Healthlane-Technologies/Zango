@@ -206,6 +206,9 @@ class AgentRequirement(FullAuditMixin):
     draft_revision = models.PositiveIntegerField(default=0)
     # The last validation result for a template spec: [{level, path, message}].
     validation_issues = models.JSONField(default=list, blank=True)
+    # JSON Pointers the last change (an analyst turn or a manual save) touched,
+    # so the panel can show the user what just moved.
+    changed_paths = models.JSONField(default=list, blank=True)
 
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")
