@@ -836,6 +836,39 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
             log.exception("agent_mode: spec read failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
+    def _manual(self, app_uuid, requirement_uuid, action):
+        try:
+            _bind_tenant(self, app_uuid)
+            try:
+                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+            except AgentRequirement.DoesNotExist:
+                return get_api_response(False, {"message": "not found"}, 404)
+            code, payload = action(requirement)
+            return get_api_response(code == 200, payload, code)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: spec edit failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+    def put(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        """PUT requirements/{uuid}/spec/ — {yaml, base_revision}: save the whole YAML."""
+        from zango.apps.agent_mode.template_spec import save_manual
+
+        return self._manual(
+            app_uuid,
+            requirement_uuid,
+            lambda r: save_manual(r, request.data.get("yaml"), request.data.get("base_revision")),
+        )
+
+    def patch(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        """PATCH requirements/{uuid}/spec/ — {ops, base_revision}: apply path edits."""
+        from zango.apps.agent_mode.template_spec import patch_manual
+
+        return self._manual(
+            app_uuid,
+            requirement_uuid,
+            lambda r: patch_manual(r, request.data.get("ops"), request.data.get("base_revision")),
+        )
+
     def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
         from zango.apps.agent_mode.models import RequirementStatus, SpecSource
         from zango.apps.agent_mode.template_spec import analyse
@@ -928,6 +961,28 @@ class AgentRequirementSpecValidateView(ZangoGenericPlatformAPIView, TenantMixin)
             return get_api_response(True, {"issues": issues}, 200)
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: spec validate failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementSpecFinalizeView(ZangoGenericPlatformAPIView, TenantMixin):
+    """POST requirements/{uuid}/spec/finalize/ — {base_revision}: mark the spec ready."""
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.template_spec import finalize
+
+        try:
+            _bind_tenant(self, app_uuid)
+            try:
+                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+            except AgentRequirement.DoesNotExist:
+                return get_api_response(False, {"message": "not found"}, 404)
+            code, payload = finalize(requirement, request.data.get("base_revision"))
+            return get_api_response(code == 200, payload, code)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: spec finalize failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 

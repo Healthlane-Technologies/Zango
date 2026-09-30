@@ -797,14 +797,32 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     session_id = ""
     cost = None
     stream = None
+    bench = None
     try:
         ctx = build_app_context(tenant)
         prompt = compose_analyst_prompt(req, ctx, last_user.content)
         stream = AgentStream(options=None, prompt=prompt)
-        stream.options = build_analyst_options(ctx=ctx, creds=creds, requirement=req)
+
+        # Template requirements are edited through spec tools. The workbench
+        # is built here, on the tenant-bound thread; its handlers run on the
+        # pump and only hand accepted edits back through the stream.
+        spec_server = None
+        template = req.template if req.template_slug else None
+        if template is not None and template.is_yaml:
+            from .spec_tools import SpecWorkbench, build_spec_server
+
+            bench = SpecWorkbench(
+                req.spec_markdown, template, emit=lambda edit: stream.push("spec", edit)
+            )
+            spec_server = build_spec_server(bench)
+        stream.options = build_analyst_options(
+            ctx=ctx, creds=creds, requirement=req, spec_server=spec_server
+        )
 
         for item in stream:
-            if item.kind == "message":
+            if item.kind == "spec":
+                _record_spec_edit(req, item.payload)
+            elif item.kind == "message":
                 message = item.payload
                 name = type(message).__name__
                 if name == "AssistantMessage":
@@ -831,14 +849,36 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
             stream.join(timeout=10)
 
     try:
-        return _record_analyst_reply(req, text_parts, session_id, cost)
+        return _record_analyst_reply(req, text_parts, session_id, cost, bench=bench)
     except Exception as exc:  # noqa: BLE001
         logger.exception("agent_mode: could not record the analyst reply")
         _finish(error_message=f"{type(exc).__name__}: {exc}"[:2000])
         return {"status": "failed"}
 
 
-def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
+def _record_spec_edit(req, edit: dict) -> None:
+    """Save one accepted spec-tool edit straight away, so the panel sees it land."""
+    text = (edit or {}).get("yaml") or ""
+    if not text.strip():
+        return
+    req.spec_markdown = text
+    req.spec_is_draft = True
+    req.draft_revision += 1
+    req.changed_paths = list(edit.get("changed_paths") or [])
+    req.validation_issues = list(edit.get("issues") or [])
+    req.save(
+        update_fields=[
+            "spec_markdown",
+            "spec_is_draft",
+            "draft_revision",
+            "changed_paths",
+            "validation_issues",
+            "modified_at",
+        ]
+    )
+
+
+def _record_analyst_reply(req, text_parts, session_id, cost, bench=None) -> dict:
     """Persist one analyst reply. Separated so the caller can guarantee that
     `is_thinking` is always cleared, whatever goes wrong in here."""
     from decimal import Decimal
@@ -897,6 +937,15 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
         req.adopt_template(template_slug)
 
     previous_spec = req.spec_markdown
+    used_tools = bench is not None and (bench.edits or bench.ready_summary)
+    if used_tools:
+        # The tools already saved every edit as it happened; the fences, if
+        # the model wrote any anyway, are not the authority.
+        spec = draft = ""
+        if bench.ready_summary and req.status == RequirementStatus.GATHERING:
+            req.record_spec(bench.text)
+            req.status = RequirementStatus.READY
+        req.changed_paths = list(bench.changed)
     if spec:
         req.record_spec(spec)
         # The title starts life as the opening ask truncated to 80 characters
@@ -918,7 +967,8 @@ def _record_analyst_reply(req, text_parts, session_id, cost) -> dict:
     if req.template_slug:
         from .template_spec import analyse
 
-        analyse(req, previous_spec)
+        # After tool edits the changed paths are already exact; only re-check.
+        analyse(req, None if used_tools else previous_spec)
 
     req.is_thinking = False
     req.error_message = ""

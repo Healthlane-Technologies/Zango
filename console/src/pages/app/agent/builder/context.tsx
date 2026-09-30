@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { SpecIssue } from '@/api/agentMode';
 import type { Schema } from './schema';
+import type { SpecEdit } from './yamlDoc';
 
 /** What every rendered node needs to know: the schema, the document, and what to mark. */
 export interface BuilderCtx {
@@ -15,6 +16,10 @@ export interface BuilderCtx {
 	changedExact: Set<string>;
 	isOpen: (pointer: string, fallback: boolean) => boolean;
 	toggle: (pointer: string, fallback: boolean) => void;
+	/** True when the section on screen is in edit mode and the spec may be changed. */
+	editing: boolean;
+	/** Apply a change to the draft (no-op when not editing). */
+	edit: (change: SpecEdit) => void;
 }
 
 export const BuilderContext = createContext<BuilderCtx | null>(null);

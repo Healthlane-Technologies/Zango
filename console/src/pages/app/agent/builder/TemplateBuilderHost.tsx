@@ -1,7 +1,7 @@
 import { Suspense, type ReactNode } from 'react';
 import { useRequirementSpec, useTemplateBuilder, type Requirement } from '@/api/agentMode';
 import { ErrorState, Skeleton } from '@/ui';
-import { builderOverrides } from './registry';
+import { builderOverrides, type BuilderProps } from './registry';
 import { TemplateBuilderPanel } from './TemplateBuilderPanel';
 
 function Loading() {
@@ -24,10 +24,14 @@ export function TemplateBuilderHost({
 	appId,
 	requirement,
 	fallback,
+	editable,
+	onController,
 }: {
 	appId: string;
 	requirement: Requirement;
 	fallback: () => ReactNode;
+	editable?: boolean;
+	onController?: BuilderProps['onController'];
 }) {
 	const template = requirement.template!;
 	const builder = useTemplateBuilder(template.slug, template.version_uuid);
@@ -58,6 +62,8 @@ export function TemplateBuilderHost({
 		builder: builder.data,
 		spec: spec.data,
 		changed: spec.data.changed_paths ?? [],
+		editable,
+		onController,
 	};
 	if (Override) {
 		return (

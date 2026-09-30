@@ -6,26 +6,52 @@ import { Issues, NodeView } from './render/Node';
 import { branchFor, subschemaAt, titleOf, ui } from './schema';
 import { isSectionEmpty, type BuilderSection } from './sections';
 import { fill } from './template';
+import { defaultFor } from './render/Edit';
 
 /** One builder section, read-only: its fields, or its list, or per-parent child lists. */
 export function SectionDetails({
 	section,
 	onExpandAll,
 	onCollapseAll,
+	canEdit = false,
+	editing = false,
+	onToggleEdit,
 }: {
 	section: BuilderSection;
 	onExpandAll: () => void;
 	onCollapseAll: () => void;
+	canEdit?: boolean;
+	editing?: boolean;
+	onToggleEdit?: () => void;
 }) {
-	const { root, doc } = useBuilder();
+	const { root, doc, edit } = useBuilder();
 	const empty = isSectionEmpty(section, doc);
 
+	/** Create a missing value, so its editor can take over. */
+	const start = (pointer: string) =>
+		edit({ op: 'set', path: pointer, value: defaultFor(root, subschemaAt(root, pointer, doc)) });
+
 	let body;
-	if (empty) {
+	if (empty && !editing) {
 		body = (
 			<div className="bv-empty">
 				<b>Not filled in yet</b>
 				{section.hint && <p>{section.hint}</p>}
+			</div>
+		);
+	} else if (
+		empty &&
+		!section.item &&
+		!section.fields?.length &&
+		valueAt(doc, section.pointer) === undefined
+	) {
+		body = (
+			<div className="bv-empty">
+				<b>Not filled in yet</b>
+				{section.hint && <p>{section.hint}</p>}
+				<Button size="sm" icon="plus" className="mt-3" onClick={() => start(section.pointer)}>
+					Start {section.title.toLowerCase()}
+				</Button>
 			</div>
 		);
 	} else if (section.item) {
@@ -44,7 +70,11 @@ export function SectionDetails({
 						<div key={i} className="bv-group" id={`f:${ptr}`} data-path={ptr}>
 							<div className="bv-gh">{title}</div>
 							<Issues pointer={ptr} />
-							{v === undefined || (Array.isArray(v) && !v.length) ? (
+							{v === undefined && editing ? (
+								<Button size="xs" icon="plus" onClick={() => start(ptr)}>
+									Add {section.title.toLowerCase()}
+								</Button>
+							) : v === undefined || (Array.isArray(v) && !v.length && !editing) ? (
 								<span className="bv-none">None</span>
 							) : (
 								<NodeView schema={subschemaAt(root, ptr, doc)} value={v} pointer={ptr} depth={0} />
@@ -75,7 +105,18 @@ export function SectionDetails({
 	function renderFields(fields: string[]) {
 		return fields.map((f) => {
 			const v = valueAt(doc, f);
-			if (v === undefined) return null;
+			if (v === undefined) {
+				if (!editing) return null;
+				const s = subschemaAt(root, f, doc);
+				return (
+					<div key={f} className="bv-group" id={`f:${f}`} data-path={f}>
+						<div className="bv-gh">{titleOf(s, parsePointer(f).pop())}</div>
+						<Button size="xs" icon="plus" onClick={() => start(f)}>
+							Add
+						</Button>
+					</div>
+				);
+			}
 			const s = subschemaAt(root, f, doc);
 			const key = parsePointer(f).pop();
 			const simple = v === null || typeof v !== 'object';
@@ -113,16 +154,28 @@ export function SectionDetails({
 					<h3>{section.title}</h3>
 					{section.hint && !empty && <p>{section.hint}</p>}
 				</div>
-				{!empty && (
-					<div className="ml-auto flex shrink-0 gap-1">
-						<Button size="xs" variant="ghost" onClick={onExpandAll}>
-							Expand all
+				<div className="ml-auto flex shrink-0 gap-1">
+					{!empty && (
+						<>
+							<Button size="xs" variant="ghost" onClick={onExpandAll}>
+								Expand all
+							</Button>
+							<Button size="xs" variant="ghost" onClick={onCollapseAll}>
+								Collapse all
+							</Button>
+						</>
+					)}
+					{canEdit && onToggleEdit && (
+						<Button
+							size="xs"
+							variant={editing ? 'primary' : 'secondary'}
+							icon={editing ? 'check' : undefined}
+							onClick={onToggleEdit}
+						>
+							{editing ? 'Done' : 'Edit'}
 						</Button>
-						<Button size="xs" variant="ghost" onClick={onCollapseAll}>
-							Collapse all
-						</Button>
-					</div>
-				)}
+					)}
+				</div>
 			</div>
 			{body}
 		</div>

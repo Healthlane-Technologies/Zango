@@ -306,3 +306,32 @@ export function useTemplateBuilder(slug: string | undefined, versionUuid: string
 		gcTime: Infinity,
 	});
 }
+
+// ---- template spec writes (F3) ------------------------------------------------------------
+// PUT/finalize answer with the same payload as GET …/spec/. A stale base_revision, a save
+// while the agent is thinking, or an approved spec → 409 {message, current}; a spec that
+// breaks the template's shape → 400 {message, issues}.
+
+export const saveSpecYaml = (appId: string, reqId: string, yaml: string, baseRevision: number) =>
+	api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/spec/`, 'PUT', {
+		yaml,
+		base_revision: baseRevision,
+	});
+
+export const finalizeSpec = (appId: string, reqId: string, baseRevision: number) =>
+	api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/spec/finalize/`, 'POST', {
+		base_revision: baseRevision,
+	});
+
+export const validateSpecYaml = (appId: string, reqId: string, yaml: string) =>
+	api<{ issues: SpecIssue[] }>(`${base(appId)}/requirements/${reqId}/spec/validate/`, 'POST', {
+		yaml,
+	});
+
+/** The 409 body's `current` spec, or the 400 body's `issues`, from an ApiError. */
+export function specErrorBody(err: unknown): { current?: RequirementSpec; issues?: SpecIssue[] } {
+	const body = (err as { body?: { response?: unknown } } | null)?.body?.response;
+	return body && typeof body === 'object'
+		? (body as { current?: RequirementSpec; issues?: SpecIssue[] })
+		: {};
+}

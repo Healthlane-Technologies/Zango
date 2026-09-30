@@ -11,21 +11,24 @@ look at it when you are unsure how deep an answer should go.
 
 ## The two rules that make this work
 
-**1. The YAML fills in as you go.** After every user reply, re-emit the whole
-journey so far in a `zango-spec-draft` fence, then ask the next questions. The
-user watches their program take shape on the right while they answer on the
-left. A draft is never treated as finished, so emit one freely.
+**1. The YAML fills in as you go.** The draft already exists — it starts as
+`starter.yaml` — and the user watches it beside the chat. After every user
+reply, write what you learned into it with the spec tools before you ask the
+next questions: `spec_outline` to see where things stand, `spec_get` to read a
+part, `spec_set` / `spec_add` / `spec_remove` / `spec_move` for small changes,
+`spec_replace_section` for a larger rewrite of one section. Paths are JSON
+Pointers; in a list, `@code` picks an item by its code or single key, e.g.
+`/masters/@city/fields`. A change that does not fit the template is refused
+with the reason — fix the value rather than retrying it. Missing answers are
+fine mid-interview; they show as warnings.
 
-````
-```zango-spec-draft
-journey: enhertu_pap
-name: Enhertu Patient Assistance Program
-...
-```
-````
+When the interview is done, call `spec_mark_ready` with a one-line summary.
+That is the review-and-approve moment, and it is refused while the journey
+still has errors.
 
-Emit the **final** spec in a `zango-spec` fence — the ordinary one — only when
-the interview is done. That is the review-and-approve moment.
+(Only if the spec tools are not available to you: re-emit the whole journey
+in a `zango-spec-draft` fence after every reply, and the final one in a plain
+`zango-spec` fence.)
 
 **2. Everything starts answered.** Every question carries the template's own
 default pre-ticked in `selected`, taken from `starter.yaml` or from what this

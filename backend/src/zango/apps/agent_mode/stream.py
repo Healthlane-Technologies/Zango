@@ -44,6 +44,7 @@ class StreamItem:
     kind:
       "message" -> payload is an SDK message object
       "hook"    -> payload is a dict describing a hook denial
+      "spec"    -> payload is an accepted spec-tool edit {yaml, changed_paths, issues}
       "idle"    -> nothing arrived within the poll window (lets the consumer
                    run its periodic work, e.g. abort checks and stale flushes)
       "done"    -> the stream finished normally
@@ -89,6 +90,10 @@ class AgentStream:
                     },
                 )
             )
+
+    def push(self, kind: str, payload: Any) -> None:
+        """Thread-safe, ORM-free: hand an item to the consumer (spec tools use it)."""
+        self._q.put(StreamItem(kind, payload))
 
     # -- iteration -------------------------------------------------------
 

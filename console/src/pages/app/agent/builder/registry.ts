@@ -3,6 +3,7 @@
 
 import type { ComponentType, LazyExoticComponent } from 'react';
 import type { Requirement, RequirementSpec, TemplateBuilderDef } from '@/api/agentMode';
+import type { SpecDraftController } from './useSpecDraft';
 
 export interface BuilderProps {
 	appId: string;
@@ -11,6 +12,10 @@ export interface BuilderProps {
 	spec: RequirementSpec;
 	/** Pointers changed by the last agent turn (server-reported, or diffed as a fallback). */
 	changed: string[];
+	/** The user may edit this spec (the active round, still open). */
+	editable?: boolean;
+	/** Receives the draft controller, so the page can save unsaved edits before sending/approving. */
+	onController?: (controller: SpecDraftController) => void;
 }
 
 export const builderOverrides: Record<

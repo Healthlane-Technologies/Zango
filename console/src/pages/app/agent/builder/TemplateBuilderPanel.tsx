@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SpecIssue } from '@/api/agentMode';
-import { Badge, Button, Icon, Tabs, TemplateBadge, type Tone } from '@/ui';
+import { Badge, Button, cx, Icon, SaveBar, Tabs, TemplateBadge, type Tone } from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
 import { BuilderContext, type BuilderCtx } from './context';
 import { changedPointers } from './diff';
@@ -11,7 +11,8 @@ import type { Schema } from './schema';
 import { SectionDetails } from './SectionDetails';
 import { SectionNav, type SectionState } from './SectionNav';
 import { orderedSections, sectionCount, sectionOf, type BuilderSection } from './sections';
-import { parseSpec, rangeOf } from './yamlDoc';
+import { rangeOf } from './yamlDoc';
+import { useSpecDraft } from './useSpecDraft';
 import { YamlView } from './YamlView';
 import './builder.css';
 
@@ -19,6 +20,7 @@ type Tab = 'details' | 'yaml' | 'checks';
 type Mode = 'default' | 'all' | 'none';
 
 const FLASH_MS = 1600;
+const NONE: string[] = [];
 
 function withAncestors(pointers: string[]): Set<string> {
 	const out = new Set<string>();
@@ -43,18 +45,33 @@ function flash(root: HTMLElement | null, pointer: string) {
 }
 
 export function TemplateBuilderPanel({
+	appId,
 	requirement,
 	builder,
-	spec,
-	changed: changedProp,
+	spec: serverSpec,
+	editable = false,
+	onController,
 }: BuilderProps) {
 	const root = builder.json_schema as Schema;
 	const sections = useMemo<BuilderSection[]>(
 		() => orderedSections(builder.ui_schema.sections),
 		[builder],
 	);
-	const parsed = useMemo(() => parseSpec(spec.text), [spec.text]);
+	const draft = useSpecDraft({ appId, reqId: requirement.uuid, server: serverSpec });
+	useEffect(() => onController?.(draft.controller), [onController, draft.controller]);
+	// What's on screen: the agent's version while reviewing a conflict, else the draft/newest.
+	const spec = draft.shown;
+	const parsed = draft.parsed;
 	const doc = parsed.value;
+	const thinking = requirement.is_thinking;
+	const locked = !editable || thinking || spec.status === 'approved' || draft.reviewing;
+	// Unsaved edits have no "changed by agent"; a conflict under review shows the agent's.
+	const changedProp =
+		draft.reviewing && draft.incoming
+			? draft.incoming.changed_paths
+			: draft.dirty
+				? NONE
+				: (spec.changed_paths ?? NONE);
 
 	// Changed pointers: what the server says the last turn touched, else a diff against what
 	// this panel last showed (so a poll that brings no changed_paths still highlights).
@@ -62,10 +79,11 @@ export function TemplateBuilderPanel({
 	const [diffed, setDiffed] = useState<string[]>([]);
 	useEffect(() => {
 		const prev = previous.current;
-		if (prev && spec.draft_revision > prev.rev && !changedProp.length)
+		if (prev && spec.draft_revision > prev.rev && !changedProp.length && !draft.dirty)
 			setDiffed(changedPointers(prev.value, doc));
-		else if (changedProp.length) setDiffed([]);
+		else if (changedProp.length) setDiffed((d) => (d.length ? NONE : d));
 		previous.current = { rev: spec.draft_revision, value: doc };
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [spec.draft_revision, doc, changedProp]);
 	const changed = useMemo(() => {
 		const list = changedProp.length ? changedProp : diffed;
@@ -83,9 +101,9 @@ export function TemplateBuilderPanel({
 				message: `YAML: ${e.message}`,
 				code: 'yaml',
 			})),
-			...spec.issues,
+			...draft.issues,
 		],
-		[parsed.errors, spec.issues],
+		[parsed.errors, draft.issues],
 	);
 	const issuesAt = useMemo(() => {
 		const m = new Map<string, SpecIssue[]>();
@@ -122,6 +140,9 @@ export function TemplateBuilderPanel({
 	const section = sections.find((s) => s.id === active) ?? sections[0];
 	const [overrides, setOverrides] = useState<Map<string, boolean>>(() => new Map());
 	const [mode, setMode] = useState<Record<string, Mode>>({});
+	const [editingSections, setEditingSections] = useState<Set<string>>(() => new Set());
+	const yamlBroken = parsed.errors.length > 0;
+	const editingHere = !locked && !yamlBroken && !!section && editingSections.has(section.id);
 	const [target, setTarget] = useState<{ pointer: string; nonce: number } | null>(null);
 	const [yamlJump, setYamlJump] = useState<{ line: number; nonce: number } | null>(null);
 	const body = useRef<HTMLDivElement>(null);
@@ -146,8 +167,23 @@ export function TemplateBuilderPanel({
 					next.set(p, !cur);
 					return next;
 				}),
+			editing: editingHere,
+			edit: (change) => {
+				if (editingHere) draft.edit(change);
+			},
 		}),
-		[root, doc, issuesAt, issueWithin, changedWithin, changed, overrides, sectionMode],
+		[
+			root,
+			doc,
+			issuesAt,
+			issueWithin,
+			changedWithin,
+			changed,
+			overrides,
+			sectionMode,
+			editingHere,
+			draft,
+		],
 	);
 
 	/** Show `pointer`: in the YAML tab move to its line, otherwise open its section and cards. */
@@ -219,6 +255,41 @@ export function TemplateBuilderPanel({
 	}, [changed, rows, parsed]);
 
 	const errors = issues.filter((i) => i.level === 'error').length;
+	const canFinalize =
+		editable &&
+		spec.is_draft &&
+		spec.status !== 'approved' &&
+		!thinking &&
+		!draft.incoming &&
+		!errors;
+	const yamlDiagnostics = useMemo(
+		() => [
+			...parsed.errors
+				.filter((e) => e.from !== undefined)
+				.map((e) => ({
+					from: e.from!,
+					to: e.to ?? e.from!,
+					severity: 'error' as const,
+					message: e.message,
+				})),
+			...rows
+				.filter((r) => r.issue.code !== 'yaml' && r.issue.path)
+				.flatMap((r) => {
+					const range = rangeOf(parsed, r.issue.path);
+					return range
+						? [
+								{
+									from: range.from,
+									to: Math.max(range.from, range.to - 1),
+									severity: r.issue.level === 'error' ? ('error' as const) : ('warning' as const),
+									message: r.issue.message,
+								},
+							]
+						: [];
+				}),
+		],
+		[parsed, rows],
+	);
 	const [tone, label]: [Tone, string] = spec.is_draft
 		? ['amber', 'Draft']
 		: spec.status === 'approved'
@@ -229,27 +300,75 @@ export function TemplateBuilderPanel({
 
 	return (
 		<BuilderContext.Provider value={ctx}>
-			<div className="bld">
+			<div className={cx('bld', draft.dirty && 'dirty')}>
 				<div className="bld-h">
 					{spec.template && <TemplateBadge template={spec.template} />}
 					<Badge tone={tone} dot>
 						{label}
 					</Badge>
 					<span className="mono text-[11.5px] text-t4">rev {spec.draft_revision}</span>
-					{requirement.is_thinking && (
+					{thinking && (
 						<span className="bld-thinking">
 							<span className="spin" />
 							Agent is editing…
 						</span>
 					)}
-					{changed.length > 0 && (
-						<Button size="xs" variant="secondary" className="ml-auto bld-chg" onClick={nextChanged}>
-							<i className="bv-dot chg" />
-							Changed by agent ({changed.length})
-							<Icon name="up" size={12} className="rotate-180" />
-						</Button>
-					)}
+					<span className="ml-auto flex items-center gap-1.5">
+						{changed.length > 0 && (
+							<Button size="xs" variant="secondary" className="bld-chg" onClick={nextChanged}>
+								<i className="bv-dot chg" />
+								Changed by agent ({changed.length})
+								<Icon name="up" size={12} className="rotate-180" />
+							</Button>
+						)}
+						{canFinalize && (
+							<Button
+								size="xs"
+								variant="primary"
+								icon="check"
+								loading={draft.busy === 'finalize'}
+								onClick={() => draft.finalize()}
+								title="Check the spec strictly and hand it over for approval"
+							>
+								Mark as ready
+							</Button>
+						)}
+					</span>
 				</div>
+				{draft.incoming && (
+					<div className="bld-conflict" role="alert">
+						<Icon name="alert" className="mt-[2px] shrink-0" />
+						<div className="min-w-0 flex-1">
+							<b>
+								{draft.reviewing
+									? 'You’re looking at the agent’s version.'
+									: 'The spec changed while you were editing.'}
+							</b>
+							<span>
+								{draft.reviewing
+									? ' Your edits are kept aside until you choose.'
+									: ` Revision ${draft.incoming.draft_revision} is newer than the one you started from (${draft.base.draft_revision}).`}
+							</span>
+						</div>
+						<div className="flex shrink-0 gap-1.5">
+							<Button size="xs" onClick={draft.toggleReview}>
+								{draft.reviewing ? 'Back to my edits' : 'Review agent changes'}
+							</Button>
+							<Button
+								size="xs"
+								variant="primary"
+								loading={draft.busy === 'save'}
+								disabled={thinking}
+								onClick={() => draft.keepMine()}
+							>
+								Keep mine
+							</Button>
+							<Button size="xs" variant="danger" onClick={draft.discard}>
+								Discard mine
+							</Button>
+						</div>
+					</div>
+				)}
 				<Tabs<Tab>
 					className="bld-tabs"
 					value={tab}
@@ -265,12 +384,34 @@ export function TemplateBuilderPanel({
 					]}
 				/>
 				<div ref={body} className="bld-b">
+					{tab === 'details' && yamlBroken && !draft.reviewing && (
+						<div className="bld-note err" role="status">
+							<Icon name="alert" size={13} />
+							The YAML has an error
+							{parsed.errors[0]?.line ? ` on line ${parsed.errors[0].line}` : ''}. Details are
+							read-only until it’s fixed in the
+							<button type="button" className="link" onClick={() => setTab('yaml')}>
+								YAML tab
+							</button>
+							.
+						</div>
+					)}
 					{tab === 'details' && section && (
 						<div className="bld-split">
 							<SectionNav sections={states} active={section.id} onSelect={setActive} />
 							<SectionDetails
 								key={section.id}
 								section={section}
+								canEdit={!locked && !yamlBroken}
+								editing={editingHere}
+								onToggleEdit={() =>
+									setEditingSections((set) => {
+										const next = new Set(set);
+										if (next.has(section.id)) next.delete(section.id);
+										else next.add(section.id);
+										return next;
+									})
+								}
 								onExpandAll={() => {
 									setOverrides(new Map());
 									setMode((m) => ({ ...m, [section.id]: 'all' }));
@@ -282,7 +423,16 @@ export function TemplateBuilderPanel({
 							/>
 						</div>
 					)}
-					{tab === 'yaml' && <YamlView text={spec.text} marks={lineMarks} jump={yamlJump} />}
+					{tab === 'yaml' && (
+						<YamlView
+							text={draft.text}
+							marks={lineMarks}
+							jump={yamlJump}
+							editable={!locked}
+							onChange={draft.type}
+							diagnostics={yamlDiagnostics}
+						/>
+					)}
 					{tab === 'checks' && (
 						<ChecksList
 							rows={rows}
@@ -294,6 +444,25 @@ export function TemplateBuilderPanel({
 						/>
 					)}
 				</div>
+				{draft.dirty && !draft.reviewing && (
+					<div className="bld-save">
+						<SaveBar
+							dirty
+							saving={draft.busy === 'save'}
+							onSave={() => {
+								if (!yamlBroken && !thinking) draft.save();
+							}}
+							onDiscard={draft.discard}
+							note={
+								thinking
+									? 'The agent is working; save once it’s done.'
+									: yamlBroken
+										? 'Fix the YAML errors to save.'
+										: 'The agent sees your changes once they’re saved.'
+							}
+						/>
+					</div>
+				)}
 			</div>
 		</BuilderContext.Provider>
 	);

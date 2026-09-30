@@ -1,11 +1,14 @@
-// CodeMirror 6, read-only for now (F3 makes it editable). Imported only via YamlView's
-// React.lazy, so CodeMirror lands in its own chunk.
+// CodeMirror 6 for the spec's YAML: read-only, or editable with lint diagnostics. Imported
+// only via YamlView's React.lazy, so CodeMirror lands in its own chunk.
 
 import { useEffect, useRef } from 'react';
 import { Compartment, EditorState, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, EditorView, lineNumbers, type DecorationSet } from '@codemirror/view';
 import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { yaml } from '@codemirror/lang-yaml';
+import { history, historyKeymap, defaultKeymap, indentWithTab } from '@codemirror/commands';
+import { keymap } from '@codemirror/view';
+import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
 
 export interface LineMarks {
 	changed: number[];
@@ -18,6 +21,10 @@ export interface YamlEditorProps {
 	marks: LineMarks;
 	/** Scroll to and select this 1-based line; `nonce` re-triggers the same line. */
 	jump?: { line: number; nonce: number } | null;
+	editable?: boolean;
+	onChange?: (text: string) => void;
+	/** Offsets into `text`. */
+	diagnostics?: Diagnostic[];
 }
 
 const theme = EditorView.theme({
@@ -51,10 +58,20 @@ function decorations(state: EditorState, marks: LineMarks, jumpLine?: number): D
 	return builder.finish();
 }
 
-export default function YamlEditor({ text, marks, jump }: YamlEditorProps) {
+export default function YamlEditor({
+	text,
+	marks,
+	jump,
+	editable = false,
+	onChange,
+	diagnostics = [],
+}: YamlEditorProps) {
 	const host = useRef<HTMLDivElement>(null);
 	const view = useRef<EditorView | null>(null);
 	const decoSlot = useRef(new Compartment());
+	const editSlot = useRef(new Compartment());
+	const change = useRef(onChange);
+	change.current = onChange;
 
 	useEffect(() => {
 		if (!host.current) return;
@@ -64,8 +81,24 @@ export default function YamlEditor({ text, marks, jump }: YamlEditorProps) {
 				lineNumbers(),
 				yaml(),
 				syntaxHighlighting(defaultHighlightStyle),
-				EditorState.readOnly.of(true),
-				EditorView.editable.of(false),
+				history(),
+				keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+				lintGutter(),
+				editSlot.current.of(editability(false)),
+				EditorView.updateListener.of((u) => {
+					if (
+						u.docChanged &&
+						u.transactions.some(
+							(t) =>
+								t.isUserEvent('input') ||
+								t.isUserEvent('delete') ||
+								t.isUserEvent('undo') ||
+								t.isUserEvent('redo') ||
+								t.isUserEvent('move'),
+						)
+					)
+						change.current?.(u.state.doc.toString());
+				}),
 				theme,
 				decoSlot.current.of(EditorView.decorations.of(Decoration.none)),
 			],
@@ -92,11 +125,29 @@ export default function YamlEditor({ text, marks, jump }: YamlEditorProps) {
 	}, [text, marks, jump]);
 
 	useEffect(() => {
+		view.current?.dispatch({ effects: editSlot.current.reconfigure(editability(editable)) });
+	}, [editable]);
+
+	useEffect(() => {
+		const v = view.current;
+		if (!v) return;
+		const max = v.state.doc.length;
+		const clamped = diagnostics
+			.filter((d) => d.from <= max)
+			.map((d) => ({ ...d, to: Math.min(Math.max(d.to, d.from), max) }));
+		v.dispatch(setDiagnostics(v.state, clamped));
+	}, [diagnostics, text]);
+
+	useEffect(() => {
 		const v = view.current;
 		if (!v || !jump || jump.line < 1 || jump.line > v.state.doc.lines) return;
 		const line = v.state.doc.line(jump.line);
 		v.dispatch({ effects: EditorView.scrollIntoView(line.from, { y: 'center' }) });
 	}, [jump]);
 
-	return <div ref={host} className="bv-yaml" data-testid="yaml-editor" />;
+	return <div ref={host} className="bv-yaml" data-testid="yaml-editor" data-editable={editable} />;
+}
+
+function editability(on: boolean) {
+	return [EditorState.readOnly.of(!on), EditorView.editable.of(on)];
 }

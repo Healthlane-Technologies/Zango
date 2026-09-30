@@ -1,7 +1,7 @@
-// Read-only, schema-driven view of a spec value. Every node carries id="f:<pointer>" so the
-// checks list and the changed chip can scroll to it; F3 swaps these views for editors.
+// Schema-driven view of a spec value, read-only unless the section is in edit mode. Every
+// node carries id="f:<pointer>" so the checks list and the changed chip can scroll to it.
 
-import { memo, type ReactNode } from 'react';
+import { memo, useState, type ReactNode } from 'react';
 import { cx, Icon } from '@/ui';
 import { useBuilder } from '../context';
 import { child } from '../pointer';
@@ -18,6 +18,18 @@ import {
 	type Schema,
 } from '../schema';
 import { fill } from '../template';
+import {
+	AddProperty,
+	AddRow,
+	collectionKeys,
+	defaultFor,
+	identityKey,
+	isScalarSchema,
+	ItemActions,
+	ScalarEditor,
+	TagsEditor,
+	TextEditor,
+} from './Edit';
 
 interface NodeProps {
 	schema: Schema;
@@ -63,9 +75,19 @@ function Marks({ pointer }: { pointer: string }) {
 }
 
 export const NodeView = memo(function NodeView({ schema, value, pointer, depth }: NodeProps) {
-	const { root } = useBuilder();
+	const { root, editing } = useBuilder();
 	const s = branchFor(root, schema, value);
-	switch (kindOf(root, s, value)) {
+	const kind = kindOf(root, s, value);
+	if (editing) {
+		if (kind === 'scalar' || (kind === 'tags' && !Array.isArray(value)))
+			return <ScalarEditor schema={s} value={value} pointer={pointer} />;
+		if (kind === 'text') return <TextEditor schema={s} value={value} pointer={pointer} />;
+		if (kind === 'tags')
+			return <TagsEditor schema={s} value={value as unknown[]} pointer={pointer} />;
+		if (kind === 'unknown' && isScalarSchema(root, s))
+			return <ScalarEditor schema={s} value={value} pointer={pointer} />;
+	}
+	switch (kind) {
 		case 'scalar':
 			return <Scalar schema={s} value={value} />;
 		case 'text':
@@ -129,13 +151,19 @@ function ObjectRows({
 	pointer,
 	depth,
 }: NodeProps & { value: Record<string, unknown> }) {
-	const { root } = useBuilder();
+	const { root, editing } = useBuilder();
 	const known = Object.keys(schema.properties ?? {});
+	const required = new Set(schema.required ?? []);
 	const keys = [
 		...known.filter((k) => k in value),
 		...Object.keys(value).filter((k) => !known.includes(k)),
 	];
-	if (!keys.length) return <span className="bv-none">No settings</span>;
+	if (!keys.length)
+		return editing ? (
+			<AddProperty schema={schema} value={value} pointer={pointer} />
+		) : (
+			<span className="bv-none">No settings</span>
+		);
 	return (
 		<dl className="bv-rows">
 			{keys.map((k) => {
@@ -152,7 +180,14 @@ function ObjectRows({
 								<Marks pointer={ptr} />
 							</dt>
 							<dd>
-								<NodeView schema={cs} value={cv} pointer={ptr} depth={depth + 1} />
+								<span className="flex items-start gap-1.5">
+									<span className="min-w-0 flex-1">
+										<NodeView schema={cs} value={cv} pointer={ptr} depth={depth + 1} />
+									</span>
+									{!required.has(k) && (
+										<ItemActions pointer={ptr} noun={label.toLowerCase() || 'setting'} />
+									)}
+								</span>
 								<Issues pointer={ptr} />
 							</dd>
 						</div>
@@ -164,12 +199,22 @@ function ObjectRows({
 							{label}
 							{Array.isArray(cv) && <span className="ct">{cv.length}</span>}
 							<Marks pointer={ptr} />
+							{!required.has(k) && (
+								<span className="ml-auto">
+									<ItemActions pointer={ptr} noun={label.toLowerCase() || 'setting'} />
+								</span>
+							)}
 						</div>
 						<Issues pointer={ptr} />
 						<NodeView schema={cs} value={cv} pointer={ptr} depth={depth + 1} />
 					</div>
 				);
 			})}
+			{editing && (
+				<div className="bv-row">
+					<AddProperty schema={schema} value={value} pointer={pointer} />
+				</div>
+			)}
 		</dl>
 	);
 }
@@ -183,9 +228,11 @@ interface CardProps {
 	children?: ReactNode;
 	/** Nothing to expand: render the header only. */
 	flat?: boolean;
+	/** Edit controls, shown beside the header. */
+	actions?: ReactNode;
 }
 
-export function Card({ pointer, title, summary, defaultOpen, children, flat }: CardProps) {
+export function Card({ pointer, title, summary, defaultOpen, children, flat, actions }: CardProps) {
 	const { isOpen, toggle, issueWithin, changedWithin } = useBuilder();
 	const open = !flat && isOpen(pointer, defaultOpen);
 	return (
@@ -199,20 +246,23 @@ export function Card({ pointer, title, summary, defaultOpen, children, flat }: C
 			id={`f:${pointer}`}
 			data-path={pointer}
 		>
-			<button
-				type="button"
-				className="bv-ch"
-				aria-expanded={flat ? undefined : open}
-				onClick={flat ? undefined : () => toggle(pointer, defaultOpen)}
-				disabled={flat}
-			>
-				{!flat && <Icon name="back" size={12} className="bv-chev" />}
-				<b>{title}</b>
-				{summary && <span className="bv-sum">{summary}</span>}
-				<span className="ml-auto flex items-center gap-1">
-					<Marks pointer={pointer} />
-				</span>
-			</button>
+			<div className="bv-chrow">
+				<button
+					type="button"
+					className="bv-ch"
+					aria-expanded={flat ? undefined : open}
+					onClick={flat ? undefined : () => toggle(pointer, defaultOpen)}
+					disabled={flat}
+				>
+					{!flat && <Icon name="back" size={12} className="bv-chev" />}
+					<b>{title}</b>
+					{summary && <span className="bv-sum">{summary}</span>}
+					<span className="ml-auto flex items-center gap-1">
+						<Marks pointer={pointer} />
+					</span>
+				</button>
+				{actions}
+			</div>
 			{open && (
 				<div className="bv-cb">
 					<Issues pointer={pointer} />
@@ -227,8 +277,10 @@ const openByDefault = (depth: number, count: number) => depth === 0 && count <= 
 
 /** A list of objects: one card each, titled by x-ui.itemTitle. */
 function Cards({ schema, value, pointer, depth }: NodeProps & { value: unknown[] }) {
-	const { root } = useBuilder();
+	const { root, editing, edit } = useBuilder();
 	const itemSchema = resolve(root, schema.items);
+	const idKey = identityKey(root, itemSchema);
+	const noun = (titleOf(itemSchema) || 'item').toLowerCase();
 	return (
 		<div className="bv-cards">
 			{value.map((item, i) => {
@@ -248,11 +300,35 @@ function Cards({ schema, value, pointer, depth }: NodeProps & { value: unknown[]
 						summary={fill(ui(s).summary, item)}
 						depth={depth}
 						defaultOpen={openByDefault(depth, value.length)}
+						actions={
+							<ItemActions
+								listPointer={pointer}
+								index={i}
+								count={value.length}
+								pointer={ptr}
+								noun={noun}
+							/>
+						}
 					>
 						<NodeView schema={s} value={item} pointer={ptr} depth={depth + 1} />
 					</Card>
 				);
 			})}
+			{editing && (
+				<AddRow
+					label={`Add ${noun}`}
+					needsName={!!idKey}
+					placeholder={idKey ? `New ${noun} ${idKey}` : undefined}
+					onAdd={(name) => {
+						const base = defaultFor(root, itemSchema);
+						const value =
+							idKey && base && typeof base === 'object' && !Array.isArray(base)
+								? { ...(base as object), [idKey]: name }
+								: base;
+						edit({ op: 'add', path: pointer, value });
+					}}
+				/>
+			)}
 		</div>
 	);
 }
@@ -284,7 +360,7 @@ function inlineDetail(schema: Schema, v: unknown, root: Schema): string {
  * Small entries render as chips; entries with substance render as cards titled by their key.
  */
 function KeyedList({ schema, value, pointer, depth }: NodeProps & { value: unknown[] }) {
-	const { root } = useBuilder();
+	const { root, editing, edit, doc } = useBuilder();
 	const itemSchema = resolve(root, schema.items);
 	const entries = value.map((item, i) => {
 		const ptr = child(pointer, i);
@@ -300,8 +376,29 @@ function KeyedList({ schema, value, pointer, depth }: NodeProps & { value: unkno
 		return { ptr, key, v: item[key], item, bare: false };
 	});
 	const hint = { ...ui(itemSchema), ...ui(schema) };
+	const noun =
+		(hint.keyTitle ?? titleOf(itemSchema) ?? 'entry').replace(/ name$/i, '').toLowerCase() ||
+		'entry';
+	const existing = new Set(entries.map((e) => e.key));
+	const keyOptions = hint.keyRef
+		? collectionKeys(doc, hint.keyRef).filter((k) => !existing.has(k))
+		: undefined;
+	const adder = editing && (
+		<AddRow
+			label={`Add ${noun}`}
+			needsName
+			placeholder={hint.keyRef ? 'Choose…' : `New ${noun}`}
+			options={keyOptions}
+			onAdd={(name) => {
+				if (hint.bareAllowed) return edit({ op: 'add', path: pointer, value: name });
+				const branch = branchFor(root, itemSchema, { [name]: {} });
+				const vs = childSchema(root, branch, name, { [name]: {} });
+				edit({ op: 'add', path: pointer, value: { [name]: defaultFor(root, vs) } });
+			}}
+		/>
+	);
 	const allCompact = entries.every((e) => e.bare || compact(e.v));
-	if (allCompact) {
+	if (allCompact && !editing) {
 		return (
 			<ul className="bv-keyed">
 				{entries.map((e, i) => {
@@ -342,11 +439,21 @@ function KeyedList({ schema, value, pointer, depth }: NodeProps & { value: unkno
 						depth={depth}
 						defaultOpen={openByDefault(depth, entries.length)}
 						flat={!body}
+						actions={
+							<ItemActions
+								listPointer={pointer}
+								index={i}
+								count={entries.length}
+								pointer={e.ptr}
+								noun={noun}
+							/>
+						}
 					>
 						{body}
 					</Card>
 				);
 			})}
+			{adder}
 		</div>
 	);
 }
@@ -358,9 +465,29 @@ function MapCards({
 	pointer,
 	depth,
 }: NodeProps & { value: Record<string, unknown> }) {
-	const { root } = useBuilder();
+	const { root, editing, edit, doc } = useBuilder();
 	const keys = Object.keys(value);
-	if (!keys.length) return <span className="bv-none">None yet</span>;
+	const hint = ui(schema);
+	const noun = (hint.keyTitle ?? 'entry').replace(/ name$/i, '').toLowerCase();
+	const keyOptions = hint.keyRef
+		? collectionKeys(doc, hint.keyRef).filter((k) => !(k in value))
+		: undefined;
+	const adder = editing && (
+		<AddRow
+			label={`Add ${noun}`}
+			needsName
+			placeholder={hint.keyRef ? 'Choose…' : `New ${noun}`}
+			options={keyOptions}
+			onAdd={(name) =>
+				edit({
+					op: 'add',
+					path: child(pointer, name),
+					value: defaultFor(root, childSchema(root, schema, name, value)),
+				})
+			}
+		/>
+	);
+	if (!keys.length) return editing ? adder : <span className="bv-none">None yet</span>;
 	return (
 		<div className="bv-cards">
 			{keys.map((k) => {
@@ -376,12 +503,53 @@ function MapCards({
 						summary={fill(ui(s).summary, v, k) || (empty ? 'No settings' : '')}
 						depth={depth}
 						defaultOpen={openByDefault(depth, keys.length)}
-						flat={empty}
+						flat={empty && !editing}
+						actions={
+							editing && (
+								<span className="bv-acts">
+									<RenameKey pointer={ptr} current={k} />
+									<ItemActions pointer={ptr} noun={noun} />
+								</span>
+							)
+						}
 					>
 						<NodeView schema={s} value={v} pointer={ptr} depth={depth + 1} />
 					</Card>
 				);
 			})}
+			{adder}
 		</div>
+	);
+}
+
+/** Rename a map key in place. */
+function RenameKey({ pointer, current }: { pointer: string; current: string }) {
+	const { edit } = useBuilder();
+	const [open, setOpen] = useState(false);
+	const [name, setName] = useState(current);
+	if (!open)
+		return (
+			<button type="button" className="bv-txtbtn" onClick={() => setOpen(true)}>
+				Rename
+			</button>
+		);
+	const commit = () => {
+		if (name.trim() && name.trim() !== current)
+			edit({ op: 'rename', path: pointer, to: name.trim() });
+		setOpen(false);
+	};
+	return (
+		<input
+			className="input h-6 w-[150px] text-[12px]"
+			value={name}
+			autoFocus
+			aria-label={`Rename ${current}`}
+			onChange={(e) => setName(e.target.value)}
+			onBlur={commit}
+			onKeyDown={(e) => {
+				if (e.key === 'Enter') commit();
+				if (e.key === 'Escape') setOpen(false);
+			}}
+		/>
 	);
 }

@@ -284,7 +284,7 @@
 	transform: rotate(180deg);
 	transition: transform 0.12s;
 }
-.bv-card.open > .bv-ch .bv-chev {
+.bv-card.open > .bv-chrow .bv-chev {
 	transform: rotate(270deg);
 }
 .bv-cb {
@@ -388,4 +388,138 @@
 		animation: none;
 		background: #fef3c7;
 	}
+}
+
+/* ---- editing (F3) ---- */
+.bv-chrow {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding-right: 6px;
+}
+.bv-chrow > .bv-ch {
+	flex: 1;
+	min-width: 0;
+}
+.bv-acts {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	flex-shrink: 0;
+}
+.bv-ib {
+	width: 22px;
+	height: 22px;
+	border-radius: 5px;
+	display: grid;
+	place-items: center;
+	color: var(--t3);
+}
+.bv-ib:hover:not(:disabled) {
+	background: var(--hover);
+	color: var(--t1);
+}
+.bv-ib:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+.bv-ib.danger:hover:not(:disabled) {
+	background: var(--red-soft);
+	color: var(--red-t);
+}
+.bv-txtbtn {
+	font-size: 12px;
+	color: var(--t3);
+	padding: 0 6px;
+	height: 22px;
+	border-radius: 5px;
+}
+.bv-txtbtn:hover {
+	background: var(--hover);
+	color: var(--t1);
+}
+.bv-add {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: 26px;
+	padding: 0 8px;
+	border: 1px dashed var(--border-2);
+	border-radius: 6px;
+	color: var(--accent-t);
+	font-size: 12px;
+	font-weight: 550;
+	justify-self: start;
+	width: fit-content;
+}
+.bv-add:hover {
+	background: var(--accent-soft);
+	border-color: var(--accent);
+}
+.bv-addform {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+.bv-tags.edit {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+}
+.bv-chipx {
+	margin-left: 3px;
+	display: inline-grid;
+	place-items: center;
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+	color: inherit;
+	opacity: 0.6;
+}
+.bv-chipx:hover {
+	opacity: 1;
+	background: rgba(0, 0, 0, 0.06);
+}
+.bld-conflict {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	margin-bottom: 10px;
+	border: 1px solid #fcd34d;
+	border-radius: 9px;
+	background: var(--amber-soft);
+	color: var(--amber-t);
+	flex-wrap: wrap;
+}
+.bld-conflict b {
+	color: var(--t1);
+	font-weight: 550;
+}
+.bld-conflict span {
+	color: var(--t2);
+}
+.bld-note {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+	padding: 8px 10px;
+	margin-bottom: 10px;
+	border-radius: 8px;
+	font-size: 12.5px;
+}
+.bld-note.err {
+	background: var(--red-soft);
+	color: var(--red-t);
+}
+.bld-save {
+	position: sticky;
+	bottom: 0;
+	z-index: 5;
+}
+.bld-save > * {
+	margin-top: 8px;
 }

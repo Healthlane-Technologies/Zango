@@ -322,9 +322,10 @@ then `{schema}`, and follow that interview instead of your general one. The
 spec is YAML in the template's own vocabulary, rooted at `{root}`.
 
 {draft}
-Re-emit the whole journey in a ```zango-spec-draft fence after every reply,
-as the interview says, and use a plain ```zango-spec fence only when it is
-finished.
+Change the draft with the spec tools (spec_outline, spec_get, spec_set,
+spec_add, spec_remove, spec_move, spec_replace_section, spec_validate) as the
+answers come in, and call spec_mark_ready when the interview is finished. They
+replace the fences the interview mentions.
 """
 
 _TEMPLATE_FIRST_DRAFT = """\
@@ -404,8 +405,27 @@ Read the workspace first, then ask your opening questions.
 """
 
 
-def build_analyst_options(*, ctx, creds, requirement):
-    """Read-only ClaudeAgentOptions for a gathering turn."""
+_SPEC_TOOLS_APPEND = (
+    "\n\nThis requirement is built on an app template, and its YAML journey is "
+    "edited ONLY through the mcp__spec__* tools: spec_outline and spec_get to "
+    "read it, spec_set / spec_add / spec_remove / spec_move / "
+    "spec_replace_section to change it, spec_validate to check it, and "
+    "spec_mark_ready when the interview is finished. After every answer, write "
+    "what you learned into the draft with these tools before you reply — the "
+    "user watches it change beside the chat. Do not paste the journey into your "
+    "reply and do not use zango-spec or zango-spec-draft fences, even where the "
+    "template's interview says to; the tools replace them. A refused change "
+    "tells you why: fix the value, don't retry it unchanged."
+)
+
+
+def build_analyst_options(*, ctx, creds, requirement, spec_server=None):
+    """Read-only ClaudeAgentOptions for a gathering turn.
+
+    ``spec_server`` (template requirements) exposes the spec tools; with it the
+    analyst edits the draft through tools rather than fences, and gets more
+    turns, since every tool call is one.
+    """
     from claude_agent_sdk import ClaudeAgentOptions
 
     from django.conf import settings as dj
@@ -463,6 +483,20 @@ def build_analyst_options(*, ctx, creds, requirement):
         max_turns=int(cfg.analyst_max_turns or 40),
         max_budget_usd=float(cfg.analyst_budget_usd or 2.0),
     )
+    if spec_server is not None:
+        from .spec_tools import ALLOWED_TOOL_NAMES, SERVER_NAME
+
+        kwargs["mcp_servers"] = {SERVER_NAME: spec_server}
+        kwargs["allowed_tools"] = [*kwargs["allowed_tools"], *ALLOWED_TOOL_NAMES]
+        kwargs["max_turns"] = max(kwargs["max_turns"], 80)
+        kwargs["max_budget_usd"] = float(
+            getattr(dj, "AGENT_MODE_ANALYST_TEMPLATE_BUDGET_USD", 0)
+            or max(kwargs["max_budget_usd"], 4.0)
+        )
+        kwargs["system_prompt"] = {
+            **kwargs["system_prompt"],
+            "append": kwargs["system_prompt"]["append"] + _SPEC_TOOLS_APPEND,
+        }
     if cfg.analyst_model:
         kwargs["model"] = cfg.analyst_model
     if cfg.analyst_effort:

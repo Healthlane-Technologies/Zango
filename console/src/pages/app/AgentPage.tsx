@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -15,6 +15,7 @@ import { useAppId } from '@/api/hooks';
 import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
 import { RequirementsPanel } from './agent/RequirementsPanel';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
+import type { SpecDraftController } from './agent/builder/useSpecDraft';
 import { RunsPanel } from './agent/runs/RunsPanel';
 import { Thread } from './agent/Thread';
 import { STAGES, roundLabel, stageOf, type Round } from './agent/rounds';
@@ -91,6 +92,14 @@ export function AgentPage() {
 	const [draft, setDraft] = useState<string | null>(null);
 	useEffect(() => setDraft(null), [activeId]);
 	const [focusSignal, setFocusSignal] = useState(0);
+	// The template builder's unsaved edits: saved before a message goes out or the spec is approved,
+	// so the agent (and the approval) always see what's on screen.
+	const templateDraft = useRef<SpecDraftController | null>(null);
+	const onController = useCallback((c: SpecDraftController) => {
+		templateDraft.current = c;
+	}, []);
+	const flushTemplate = async () =>
+		templateDraft.current?.dirty ? templateDraft.current.flush() : true;
 
 	const create = useCreateRequirement(appId, () => setView({ round: null, tab: 'requirements' }));
 	const sendMessage = useSendMessage(appId, activeId);
@@ -108,7 +117,7 @@ export function AgentPage() {
 	// the server refuses both, so say why up front.
 	const templateBlock = active?.template
 		? active.spec_is_draft
-			? 'The agent is still filling this in'
+			? 'Mark the spec as ready (or let the agent finish) first'
 			: (active.validation_issues ?? []).some((i) => i.level === 'error')
 				? 'Fix the problems in Checks first'
 				: null
@@ -116,6 +125,7 @@ export function AgentPage() {
 
 	// Approving locks the spec; the build itself starts from the Builds tab (RunsPanel owns runs).
 	const onApprove = async () => {
+		if (active?.template && !(await flushTemplate())) return;
 		if (
 			draft !== null &&
 			draft !== active?.spec_markdown &&
@@ -255,7 +265,9 @@ export function AgentPage() {
 						active={active}
 						enabled={!blocked}
 						sending={sendMessage.isPending || create.isPending}
-						onSend={(c) => attempt(sendMessage.mutateAsync(c))}
+						onSend={async (c) =>
+							(!active?.template || (await flushTemplate())) && attempt(sendMessage.mutateAsync(c))
+						}
 						onNewRound={(p) => attempt(create.mutateAsync(p))}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
@@ -341,6 +353,8 @@ export function AgentPage() {
 											appId={appId}
 											requirement={detail}
 											fallback={markdown}
+											editable={viewingActive && open && !blocked}
+											onController={viewingActive ? onController : undefined}
 										/>
 									) : (
 										markdown()
