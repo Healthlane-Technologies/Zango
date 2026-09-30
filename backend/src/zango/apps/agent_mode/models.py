@@ -440,6 +440,10 @@ class AgentRun(FullAuditMixin):
         max_digits=10, decimal_places=4, null=True, blank=True
     )
     skill_name = models.CharField(max_length=128, blank=True, default="")
+    # A build of a template requirement: the version it was built against,
+    # and the approved journey written to disk for the build agent to read.
+    template_version_uuid = models.UUIDField(null=True, blank=True)
+    spec_path = models.CharField(max_length=1024, blank=True, default="")
     workspace_path = models.CharField(max_length=1024, blank=True, default="")
 
     # --- session (resume / fork) -----------------------------------------

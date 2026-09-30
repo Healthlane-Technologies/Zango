@@ -248,6 +248,21 @@ def agent_run_executor(self, run_uuid: str, tenant_name: str) -> dict:
     return _execute(run, tenant, creds, workspaces_root(), build_app_context)
 
 
+def _build_ask(run, template_build) -> str:
+    """What the build is asked to do: the stored prompt, or the template build request."""
+    if template_build is None:
+        return run.prompt
+    from zango.apps.shared.app_templates.models import AppTemplateVersion
+
+    from .prompt import template_build_request
+
+    version = AppTemplateVersion.objects.filter(
+        object_uuid=template_build.template.version_uuid
+    ).first()
+    engine_paths = list(version.workspace_engine_paths or []) if version and version.has_workspace else []
+    return template_build_request(template_build.template, template_build.spec_path, engine_paths)
+
+
 def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
     from .mapper import record_message
     from .models import RUN_PHASE_ORDER, EventKind, EventLevel, RunPhase, RunStatus  # noqa: F401
@@ -264,6 +279,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
     from django.conf import settings as dj
 
     recorder = EventRecorder(run)
+    template_build = None
     state: dict = {}
     baseline_manifest = None
     stream = None
@@ -285,9 +301,35 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             base_dir=str(dj.BASE_DIR),
             project_name=os.path.basename(str(dj.BASE_DIR)),
         )
+        # Template builds: engine restored, journey on disk, template skill.
+        from .template_build import prepare as prepare_template_build
+
+        template_build = prepare_template_build(run, ctx.workspace_path, run_dir)
+        skill = template_build.skill if template_build and template_build.skill else QUALIFIED_SKILL
         run.workspace_path = ctx.workspace_path[:1024]
-        run.skill_name = QUALIFIED_SKILL[:128]
-        run.save(update_fields=["workspace_path", "skill_name", "modified_at"])
+        run.skill_name = skill[:128]
+        update = ["workspace_path", "skill_name", "modified_at"]
+        if template_build is not None:
+            run.spec_path = template_build.spec_path[:1024]
+            run.template_version_uuid = template_build.template.version_uuid or None
+            update += ["spec_path", "template_version_uuid"]
+        run.save(update_fields=update)
+        if template_build is not None:
+            recorder.emit(
+                EventKind.SYS,
+                f"Building on the {template_build.template.name} template "
+                f"v{template_build.template.version}; the approved journey is at "
+                f"{template_build.spec_path}",
+                level=EventLevel.SYS,
+            )
+            if template_build.restored:
+                recorder.emit(
+                    EventKind.SYS,
+                    f"Restored {len(template_build.restored)} engine file(s) that did not "
+                    "match the template: "
+                    + ", ".join(p for p, _ in template_build.restored[:10]),
+                    level=EventLevel.WARN,
+                )
 
         recorder.emit(
             EventKind.SYS,
@@ -389,7 +431,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
                 f"{previous.error_type or previous.status}: "
                 f"{(previous.error_message or '').strip()[:300]}"
             ).strip(": ")
-            prompt = compose_resume_prompt(run.prompt, ctx, reason)
+            prompt = compose_resume_prompt(_build_ask(run, template_build), ctx, reason, skill=skill)
             recorder.emit(
                 EventKind.SYS,
                 f"Resuming run {str(previous.object_uuid)[:8]} "
@@ -397,7 +439,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
                 level=EventLevel.SYS,
             )
         else:
-            prompt = compose_prompt(run.prompt, ctx)
+            prompt = compose_prompt(_build_ask(run, template_build), ctx, skill=skill)
         stream = AgentStream(options=None, prompt=prompt)
         stream.options = build_agent_options(
             run=run,
@@ -406,6 +448,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             settings_path=settings_path,
             hook_sink=stream.hook_sink,
             stderr_sink=recorder.emit_stderr,
+            template_build=template_build,
         )
 
         last_abort_check = 0.0

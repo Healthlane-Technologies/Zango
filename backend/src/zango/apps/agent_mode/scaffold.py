@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 
 from django.db import IntegrityError
 
@@ -124,27 +125,65 @@ def launch_app(scaffold) -> None:
     identity = suggest_identity(scaffold.prompt, creds)
     name = unique_name(identity.name)
 
+    # A template with a workspace: the new app starts from its skeleton
+    # (engine, configuration layer, frontend) rather than a blank Zango app.
+    workspace_dir = run_migrations = None
+    version = scaffold.template_version
+    if version is not None and version.has_workspace:
+        from zango.apps.shared.app_templates.services.workspace import (
+            WorkspaceError,
+            check_zango_version,
+            extract_workspace,
+            temp_dir,
+        )
+
+        try:
+            workspace_dir = temp_dir()
+            info = extract_workspace(version, workspace_dir, name)
+            check_zango_version(info)
+            run_migrations = info.run_migrations
+        except WorkspaceError as exc:
+            if workspace_dir is not None:
+                shutil.rmtree(workspace_dir, ignore_errors=True)
+            scaffold.fail(f"The template's workspace cannot be used: {exc.message}")
+            return
+
     # unique_name reads the table, so two launches racing on the same stem can
     # both pick it; the unique constraint is what actually decides.
     app = init_task_id = None
-    for attempt in range(3):
-        try:
-            app, init_task_id = TenantModel.create(
-                name=name,
-                schema_name=name,
-                description=identity.description or scaffold.prompt[:500],
-                app_template_name=None,
-                tenant_type="app",
-                status="staged",
-            )
-            break
-        except IntegrityError:
-            if attempt == 2:
-                raise
-            logger.warning("agent_mode: app name '%s' was taken; retrying", name)
-            # The winner is committed by now, so the next read sees it and
-            # picks the next free suffix.
-            name = unique_name(identity.name)
+    try:
+        for attempt in range(3):
+            try:
+                if workspace_dir is not None:
+                    from zango.apps.shared.app_templates.services.workspace import (
+                        set_app_name,
+                    )
+
+                    set_app_name(workspace_dir, name)
+                app, init_task_id = TenantModel.create(
+                    name=name,
+                    schema_name=name,
+                    description=identity.description or scaffold.prompt[:500],
+                    app_template_name=None,
+                    run_migrations=bool(run_migrations),
+                    app_template_dir=workspace_dir,
+                    tenant_type="app",
+                    status="staged",
+                )
+                break
+            except IntegrityError:
+                if attempt == 2:
+                    raise
+                logger.warning("agent_mode: app name '%s' was taken; retrying", name)
+                # The winner is committed by now, so the next read sees it and
+                # picks the next free suffix.
+                name = unique_name(identity.name)
+    except Exception:
+        # initialize_workspace removes the directory once it has copied it;
+        # if the app was never created, nobody will.
+        if workspace_dir is not None and app is None:
+            shutil.rmtree(workspace_dir, ignore_errors=True)
+        raise
 
     scaffold.app_name = name
     scaffold.app_label = identity.label or name

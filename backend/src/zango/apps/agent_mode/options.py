@@ -105,8 +105,14 @@ def build_agent_options(
     settings_path: str,
     hook_sink=None,
     stderr_sink=None,
+    template_build=None,
 ):
-    """Construct ClaudeAgentOptions for a run. Imports the SDK lazily."""
+    """Construct ClaudeAgentOptions for a run. Imports the SDK lazily.
+
+    ``template_build`` (a template_build.TemplateBuild) adds the template's
+    plugin and build skill, and lets the agent read the plugin and the
+    approved journey written for this run.
+    """
     from claude_agent_sdk import ClaudeAgentOptions, HookMatcher
 
     from django.conf import settings as dj
@@ -126,7 +132,10 @@ def build_agent_options(
     guard = make_pre_tool_use_guard(
         ctx.workspace_path,
         hook_sink,
-        read_roots=[SKILL_PLUGIN_DIR],
+        read_roots=[
+            SKILL_PLUGIN_DIR,
+            *([template_build.plugin_dir, template_build.spec_dir] if template_build else []),
+        ],
         # curl is for the AppBuilder route/menu API on this app's own domain.
         allowed_hosts=[h for h in [ctx.primary_domain] if h],
         app_name=ctx.app_name,
@@ -162,6 +171,11 @@ def build_agent_options(
         },
         env=build_env(creds, home),
     )
+
+    if template_build is not None and template_build.skill:
+        kwargs["plugins"] = [*kwargs["plugins"], {"type": "local", "path": template_build.plugin_dir}]
+        kwargs["skills"] = [*kwargs["skills"], template_build.skill]
+        kwargs["add_dirs"] = [template_build.spec_dir]
 
     # Per-run override wins; otherwise the platform setting.
     if run.model or cfg.model:

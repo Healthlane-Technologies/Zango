@@ -222,8 +222,16 @@ class TenantModel(TenantMixin, FullAuditMixin):
         description,
         app_template_name,
         run_migrations=False,
+        app_template_dir=None,
         **other_params,
     ):
+        """Create an app and start building its workspace.
+
+        ``app_template_dir`` is an already-unpacked app template (Zango layout)
+        to build the workspace from — e.g. one taken from an app template
+        stored in the database. It must be reachable by the worker, and is
+        removed once copied.
+        """
         _check_tenant_name(name)
 
         # Platform defaults are stamped on at creation and owned by the app
@@ -252,8 +260,8 @@ class TenantModel(TenantMixin, FullAuditMixin):
             from ..platform_settings.domains import allocate_domain
 
             allocate_domain(obj, platform_settings)
-        app_template_path = None
-        if obj.app_template:
+        app_template_path = str(app_template_dir) if app_template_dir else None
+        if app_template_path is None and obj.app_template:
             if obj.app_template.url.startswith("https://"):
                 downloaded_file_path = cls.download_file(obj.app_template.url)
             else:

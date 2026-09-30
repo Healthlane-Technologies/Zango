@@ -1,7 +1,7 @@
 ---
 name: zango-psp-builder
 description: Build a Zango app from an approved PSP (Patient Support Program) journey spec. Use when the build prompt names this skill and gives a journey YAML file — configure the PSP template's custom/ modules from the spec, hand-author the parts the vocabulary marks as custom, and verify the program loads. Works alongside zango-app-developer-server, which still owns migrations, sync, policies and the frontend build.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # PSP builder
@@ -40,8 +40,13 @@ backend/
 app_config.json manifest · endpoints · page_config
 ```
 
-If `backend/template/` or `app_config.json` is missing, **stop**. The app was not
-created from the PSP template, and configuring it would mean re-implementing the
+The platform installs this layout when an app is created from the template, and
+restores `backend/template/` (and `frontend/src/template/`) from the template before
+every build, so you always start from the published engine. Never edit those paths:
+changes there are overwritten on the next build.
+
+If `backend/template/` or `app_config.json` is missing anyway, **stop**. The app was
+not created from the PSP template, and configuring it would mean re-implementing the
 engine. Report that plainly as the run's outcome.
 
 ## How the spec maps onto the template
@@ -128,8 +133,6 @@ Then register every configuration module in `app_config.json` → `manifest`
 These are not settled in the material available to this skill. Handle them
 conservatively and report what you did:
 
-- **How the template engine arrives in the workspace.** If `backend/template/` is not
-  present, stop (see "First, check the workspace"). Do not copy it in from elsewhere.
 - **Consent, catalogue, adverse events and reports.** The template docs cover patient,
   programs, schemes, documents, masters, activity and detail views, but they do not
   document spec models for these four. Look in `backend/template/` for existing

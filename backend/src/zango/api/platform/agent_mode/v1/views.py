@@ -198,12 +198,19 @@ class AgentRunListCreateView(
                 from zango.apps.agent_mode.prompt import template_preamble
 
                 data = dict(request.data)
-                # A template spec is configuration, not prose. Handing it over
-                # unannounced leaves the build agent guessing at what it is
-                # reading, so the template says so in one paragraph first.
-                data["prompt"] = (
-                    template_preamble(requirement.template) + requirement.spec_markdown
-                )
+                template = requirement.template if requirement.template_slug else None
+                if template is not None and template.is_yaml:
+                    # The executor writes the approved journey to a file and
+                    # builds the ask around it (template_build.py); a real
+                    # program's journey runs past the inline prompt limit.
+                    data["prompt"] = f"Build the approved {template.name} journey."
+                else:
+                    # A template spec is configuration, not prose. Handing it
+                    # over unannounced leaves the build agent guessing at what
+                    # it is reading, so the template says so in one paragraph.
+                    data["prompt"] = (
+                        template_preamble(template) + requirement.spec_markdown
+                    )
                 serializer = AgentRunCreateSerializer(data=data)
             else:
                 serializer = AgentRunCreateSerializer(data=request.data)

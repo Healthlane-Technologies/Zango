@@ -34,12 +34,16 @@ def sha256_text(text: str) -> str:
     return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
 
 
-def content_sha(version, files=None) -> str:
+def content_sha(version, files=None, *, include_workspace: bool = True) -> str:
     """Hash of everything that makes up a version: its content and its files.
 
     ``files`` is an iterable of (path, sha256); defaults to the version's rows.
+    ``include_workspace=False`` leaves out the attached workspace zip, to tell
+    whether two versions came from the same *pack*.
     """
     payload = {f: getattr(version, f) for f in version.CONTENT_FIELDS}
+    if not include_workspace:
+        payload.pop("workspace_sha", None)
     if files is None:
         files = version.files.values_list("path", "sha256")
     payload["files"] = sorted([list(pair) for pair in files])

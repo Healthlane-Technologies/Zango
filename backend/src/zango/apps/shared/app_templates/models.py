@@ -120,6 +120,8 @@ class AppTemplateVersion(FullAuditMixin):
         "example_yaml",
         "rules",
         "build_skill_name",
+        "workspace_sha",
+        "workspace_engine_paths",
     )
 
     object_uuid = models.UUIDField(
@@ -160,6 +162,18 @@ class AppTemplateVersion(FullAuditMixin):
     # --- build skill (files live in AppTemplateFile)
     build_skill_name = models.CharField(max_length=64, blank=True, default="")
 
+    # --- workspace: the app skeleton (engine, config layer, frontend…) a new
+    # app starts from, as one zip in Zango's app-template layout. Optional: a
+    # template without one is built on a blank Zango app. Its hash is part of
+    # the version's content, so a published zip can never change.
+    workspace_zip = models.BinaryField(null=True, blank=True, editable=False)
+    workspace_sha = models.CharField(max_length=64, blank=True, default="")
+    workspace_size = models.PositiveIntegerField(default=0)
+    # Paths inside the workspace that belong to the template, not the app
+    # (e.g. backend/template/). Restored from the zip before every build;
+    # everything else is the app's own.
+    workspace_engine_paths = models.JSONField(default=list, blank=True)
+
     # Set at publish, over every content field and file: the cache key and
     # the on-disk directory name, so it can never go stale.
     content_sha = models.CharField(max_length=64, blank=True, default="")
@@ -186,6 +200,10 @@ class AppTemplateVersion(FullAuditMixin):
     @property
     def is_draft(self) -> bool:
         return self.status == VersionStatus.DRAFT
+
+    @property
+    def has_workspace(self) -> bool:
+        return bool(self.workspace_sha)
 
     @property
     def sections(self) -> list:

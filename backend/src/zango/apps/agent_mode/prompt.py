@@ -155,11 +155,13 @@ left off. **Do not start over.**
 """
 
 
-def compose_resume_prompt(requirement_text: str, ctx, reason: str) -> str:
+def compose_resume_prompt(
+    requirement_text: str, ctx, reason: str, skill: str = QUALIFIED_SKILL
+) -> str:
     """Prompt for a run that continues an interrupted one."""
     return RESUME_PREAMBLE.format(
         reason=(reason or "the run was interrupted").strip()
-    ) + compose_prompt(requirement_text, ctx)
+    ) + compose_prompt(requirement_text, ctx, skill=skill)
 
 
 def _manage_py_path() -> str:
@@ -168,8 +170,48 @@ def _manage_py_path() -> str:
     return f"{settings.BASE_DIR}/manage.py"
 
 
-def compose_prompt(requirement: str, ctx) -> str:
-    """Build the full prompt: skill dispatch, run context, constraints, ask."""
+_TEMPLATE_BUILD = """\
+## Build this app from its {name} journey
+
+This app runs on Zelthy's **{name}** template (version {version}). The user
+answered the template's interview and approved the result: a {spec_format}
+journey in the template's own vocabulary. It is at
+
+    {spec_path}
+
+Read it in full before changing anything. Every key in it is a decision the
+user signed off — implement all of it, and say in your summary what you could
+not honour and why. The `{skill}` skill explains how each section maps onto
+the template; follow it.{engine}
+"""
+
+
+def template_build_request(template, spec_path: str, engine_paths=()) -> str:
+    """The ask for a template build: where the approved journey is, which skill."""
+    engine = ""
+    if engine_paths:
+        engine = (
+            "\n\nThe template's engine ("
+            + ", ".join(f"`{p}`" for p in engine_paths)
+            + ") is already in the workspace and is restored before every build. "
+            "Do not edit it; anything the engine cannot do goes in the app's own code."
+        )
+    return _TEMPLATE_BUILD.format(
+        name=template.name,
+        version=template.version or "current",
+        spec_format=template.spec_format,
+        spec_path=spec_path,
+        skill=template.qualified_skill or QUALIFIED_SKILL,
+        engine=engine,
+    )
+
+
+def compose_prompt(requirement: str, ctx, skill: str = QUALIFIED_SKILL) -> str:
+    """Build the full prompt: skill dispatch, run context, constraints, ask.
+
+    ``skill`` is the skill the prompt dispatches — a template's own build
+    skill for template builds, otherwise the general app developer.
+    """
     requirement = (requirement or "").strip()
     if not requirement:
         raise ValueError("requirement must not be empty")
@@ -243,7 +285,7 @@ def compose_prompt(requirement: str, ctx) -> str:
         .replace("{app_name}", ctx.app_name)
         .replace("{frontend_rule}", frontend_rule)
     )
-    return f"""/{QUALIFIED_SKILL}
+    return f"""/{skill}
 
 ## Run context (authoritative — do not re-discover this)
 

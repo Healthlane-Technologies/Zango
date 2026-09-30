@@ -215,7 +215,17 @@ def _version_fields(pack: Pack) -> dict:
         "example_yaml": pack.documents.get("example", ""),
         "rules": _json_doc(pack, "rules", []),
         "build_skill_name": str(m.get("build_skill_name") or ""),
+        "workspace_engine_paths": _engine_paths(m),
     }
+
+
+def _engine_paths(manifest: dict) -> list:
+    from .workspace import WorkspaceError, normalise_engine_paths
+
+    try:
+        return normalise_engine_paths((manifest.get("workspace") or {}).get("engine_paths") or [])
+    except WorkspaceError as exc:
+        raise PackError(exc.message) from exc
 
 
 # ---------------------------------------------------------------- linting --
@@ -381,6 +391,14 @@ def lint(version: AppTemplateVersion, files=None) -> list:
                     _issue("error", "rules.json", "Each rule needs a message.", where)
                 )
 
+    if version.has_workspace:
+        from .workspace import WorkspaceError, check_zango_version, inspect_zip
+
+        try:
+            check_zango_version(inspect_zip(bytes(version.workspace_zip)))
+        except WorkspaceError as exc:
+            issues.append(_issue("error", "workspace.zip", exc.message))
+
     if files is None:
         files = {row.path: row.content for row in version.files.all()}
     if version.build_skill_name:
@@ -454,7 +472,11 @@ def _pack_sha(
     template: AppTemplate, version: str, fields: dict, skill_files: dict
 ) -> str:
     probe = AppTemplateVersion(template=template, version=version, **fields)
-    return content_sha(probe, [(p, sha256_text(t)) for p, t in skill_files.items()])
+    return content_sha(
+        probe,
+        [(p, sha256_text(t)) for p, t in skill_files.items()],
+        include_workspace=False,
+    )
 
 
 @transaction.atomic
@@ -492,9 +514,10 @@ def import_pack(
 
     fields = _version_fields(pack)
     sha = _pack_sha(template, version_str, fields, pack.skill_files)
-    existing = template.versions.filter(content_sha=sha).first()
-    if existing:
-        return existing, False
+    # The same pack, whether or not a workspace was attached to it since.
+    for existing in template.versions.exclude(status=VersionStatus.DRAFT):
+        if content_sha(existing, include_workspace=False) == sha:
+            return existing, False
 
     clash = (
         template.versions.filter(version=version_str)
@@ -513,6 +536,13 @@ def import_pack(
     draft.version = version_str
     for key, value in fields.items():
         setattr(draft, key, value)
+    # Packs don't carry the workspace (it may be private code, attached per
+    # platform); a newer pack keeps the one the current version has.
+    source = template.current_version
+    if not draft.has_workspace and source is not None and source.has_workspace:
+        draft.workspace_zip = source.workspace_zip
+        draft.workspace_sha = source.workspace_sha
+        draft.workspace_size = source.workspace_size
     draft.save()
 
     draft.files.all().delete()
