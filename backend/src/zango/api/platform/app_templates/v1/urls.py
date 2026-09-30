@@ -1,6 +1,11 @@
 from django.urls import path
 
-from .views import TemplateBuilderView, TemplateDetailView, TemplateListView
+from .views import (
+    TemplateBuilderPageView,
+    TemplateBuilderView,
+    TemplateDetailView,
+    TemplateListView,
+)
 
 
 urlpatterns = [
@@ -9,5 +14,9 @@ urlpatterns = [
     path(
         "templates/<slug:slug>/versions/<uuid:version_uuid>/builder/",
         TemplateBuilderView.as_view(),
+    ),
+    path(
+        "templates/<slug:slug>/versions/<uuid:version_uuid>/builder.html",
+        TemplateBuilderPageView.as_view(),
     ),
 ]

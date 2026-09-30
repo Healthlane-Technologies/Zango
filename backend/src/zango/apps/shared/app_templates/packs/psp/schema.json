@@ -470,7 +470,14 @@
               ]
             },
             "label": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ],
               "title": "Label"
             }
           },
@@ -673,7 +680,10 @@
       }
     },
     "stateList": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "items": {
         "anyOf": [
           {

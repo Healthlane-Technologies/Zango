@@ -132,6 +132,8 @@ export interface TemplateBuilderDef {
 	rules: unknown[];
 	spec_root: string;
 	spec_format: 'yaml' | 'markdown';
+	/** Same-origin URL of the template's own builder page (text/html), when it ships one. */
+	builder_url?: string | null;
 	starter_yaml: string;
 	example_yaml: string;
 }
@@ -334,4 +336,23 @@ export function specErrorBody(err: unknown): { current?: RequirementSpec; issues
 	return body && typeof body === 'object'
 		? (body as { current?: RequirementSpec; issues?: SpecIssue[] })
 		: {};
+}
+
+/**
+ * A template's own builder page (e.g. Journey Studio), composed by the server with the
+ * platform adapter already injected. Immutable per template version.
+ */
+export function useBuilderHtml(url: string | null | undefined) {
+	return useQuery({
+		queryKey: ['template-builder-html', url ?? ''],
+		queryFn: async () => {
+			const res = await fetch(url!, { credentials: 'same-origin' });
+			if (!res.ok) throw new Error(`The template's builder could not be loaded (${res.status}).`);
+			return res.text();
+		},
+		enabled: !!url,
+		staleTime: Infinity,
+		gcTime: Infinity,
+		retry: 1,
+	});
 }

@@ -40,6 +40,22 @@ class Command(BaseCommand):
             help="Extra path to leave out (dir/ or file).",
         )
 
+        bld = sub.add_parser(
+            "attach-builder",
+            help="Attach a custom builder page (e.g. Journey Studio) to a template as its next version.",
+        )
+        bld.add_argument("slug")
+        bld.add_argument("html", help="The builder page (.html).")
+        bld.add_argument(
+            "--adapter",
+            help="Replace the adapter script (.js); default: keep the pack's.",
+        )
+        bld.add_argument(
+            "--version", help="Version for the new draft (default: next patch)."
+        )
+        bld.add_argument("--changelog", default="")
+        bld.add_argument("--publish", action="store_true")
+
         att = sub.add_parser(
             "attach-workspace",
             help="Attach a workspace zip to a template as its next version.",
@@ -138,6 +154,9 @@ class Command(BaseCommand):
         if action == "attach-workspace":
             return self._attach(opts)
 
+        if action == "attach-builder":
+            return self._attach_builder(opts)
+
         for template in AppTemplate.objects.all():
             current = template.current_version_id
             self.stdout.write(f"{template.slug}  {template.name}  [{template.status}]")
@@ -197,6 +216,66 @@ class Command(BaseCommand):
             raise CommandError(str(exc.message)) from exc
         except WorkspaceError as exc:
             raise CommandError(exc.message) from exc
+        clear_caches()
+        state = "published" if opts["publish"] else "draft"
+        self.stdout.write(
+            self.style.SUCCESS(f"{template.slug} {draft.version} is {state}.")
+        )
+
+    def _attach_builder(self, opts):
+        from django.core.exceptions import ValidationError
+        from django.db import transaction
+
+        from zango.apps.shared.app_templates.models import AppTemplate, VersionStatus
+        from zango.apps.shared.app_templates.services.builder import attach_builder
+        from zango.apps.shared.app_templates.services.catalogue import clear_caches
+        from zango.apps.shared.app_templates.services.packs import LintFailed, publish
+        from zango.apps.shared.app_templates.services.workspace import (
+            bump_patch,
+            new_draft_from,
+        )
+
+        template = AppTemplate.objects.filter(slug=opts["slug"]).first()
+        if template is None:
+            raise CommandError(f"No template {opts['slug']!r}. Import its pack first.")
+        html = Path(opts["html"]).read_text(encoding="utf-8")
+        adapter = (
+            Path(opts["adapter"]).read_text(encoding="utf-8")
+            if opts.get("adapter")
+            else None
+        )
+        try:
+            with transaction.atomic():
+                draft = template.versions.filter(status=VersionStatus.DRAFT).first()
+                if draft is None:
+                    base = template.current_version
+                    if base is None:
+                        raise CommandError(
+                            f"{template.slug} has no published version to build on."
+                        )
+                    draft = new_draft_from(
+                        base, opts.get("version") or bump_patch(base.version)
+                    )
+                elif opts.get("version"):
+                    draft.version = opts["version"]
+                attach_builder(draft, html, adapter)
+                self.stdout.write(
+                    f"Attached a builder to {template.slug} {draft.version} (draft): {len(html) / 1e6:.1f} MB."
+                )
+                if opts["publish"]:
+                    publish(
+                        draft,
+                        changelog=opts["changelog"] or "Builder attached.",
+                        by="cli",
+                    )
+        except LintFailed as exc:
+            for issue in exc.issues:
+                self.stderr.write(
+                    f"  {issue['level']}: {issue['file']} {issue['pointer']} {issue['message']}"
+                )
+            raise CommandError(str(exc.message)) from exc
+        except ValidationError as exc:
+            raise CommandError("; ".join(exc.messages)) from exc
         clear_caches()
         state = "published" if opts["publish"] else "draft"
         self.stdout.write(

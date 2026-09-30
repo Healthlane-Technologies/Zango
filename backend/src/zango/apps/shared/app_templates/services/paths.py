@@ -43,7 +43,9 @@ def content_sha(version, files=None, *, include_workspace: bool = True) -> str:
     """
     payload = {f: getattr(version, f) for f in version.CONTENT_FIELDS}
     if not include_workspace:
+        # Attached per platform, not part of the pack.
         payload.pop("workspace_sha", None)
+        payload.pop("builder_html", None)
     if files is None:
         files = version.files.values_list("path", "sha256")
     payload["files"] = sorted([list(pair) for pair in files])

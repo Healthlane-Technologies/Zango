@@ -10,6 +10,7 @@ import {
 	useRequirements,
 	useSaveSpec,
 	useSendMessage,
+	useTemplateBuilder,
 } from '@/api/agentMode';
 import { useAppId } from '@/api/hooks';
 import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
@@ -35,6 +36,24 @@ const REASON_TEXT: Record<string, string> = {
 };
 
 type PanelTab = 'requirements' | 'builds';
+
+const CHAT_COLLAPSED_KEY = 'console.agent.chatCollapsed';
+
+function readCollapsed(): boolean {
+	try {
+		return window.localStorage.getItem(CHAT_COLLAPSED_KEY) === '1';
+	} catch {
+		return false;
+	}
+}
+
+function writeCollapsed(on: boolean) {
+	try {
+		window.localStorage.setItem(CHAT_COLLAPSED_KEY, on ? '1' : '0');
+	} catch {
+		// Private windows and blocked storage: the choice just isn't remembered.
+	}
+}
 
 /** Resolve true when the mutation succeeded; useApiMutation has already toasted any error. */
 async function attempt(p: Promise<unknown>): Promise<boolean> {
@@ -100,6 +119,19 @@ export function AgentPage() {
 	}, []);
 	const flushTemplate = async () =>
 		templateDraft.current?.dirty ? templateDraft.current.flush() : true;
+
+	// A template that ships its own builder (Journey Studio…) gets the builder-first layout:
+	// the builder takes the width, the chat a narrow column that can fold to a rail.
+	const viewedTemplate = viewed?.detail?.template ?? active?.template ?? null;
+	const builderDef = useTemplateBuilder(viewedTemplate?.slug, viewedTemplate?.version_uuid);
+	const builderFirst = !!builderDef.data?.builder_url;
+	const [chatCollapsed, setChatCollapsed] = useState(readCollapsed);
+	const toggleChat = () =>
+		setChatCollapsed((on) => {
+			writeCollapsed(!on);
+			return !on;
+		});
+	const folded = builderFirst && chatCollapsed;
 
 	const create = useCreateRequirement(appId, () => setView({ round: null, tab: 'requirements' }));
 	const sendMessage = useSendMessage(appId, activeId);
@@ -250,7 +282,22 @@ export function AgentPage() {
 				</div>
 			)}
 
-			<div className="split">
+			<div className={cx('split', builderFirst && 'builder-first', folded && 'chat-folded')}>
+				{folded && (
+					<aside className="chat-rail" aria-label="Conversation (hidden)">
+						<button
+							type="button"
+							className="ib"
+							onClick={toggleChat}
+							aria-label="Show chat"
+							title="Show chat"
+						>
+							<Icon name="back" className="rotate-180" />
+						</button>
+						<span className="chat-rail-label">Chat</span>
+						{active?.is_thinking && <span className="spin" aria-label="Agent is replying" />}
+					</aside>
+				)}
 				{list.isLoading ? (
 					<section className="chat">
 						<div className="thread">
@@ -276,6 +323,17 @@ export function AgentPage() {
 
 				<section className="panel" aria-label="Requirements and builds">
 					<div className="tabs items-center">
+						{builderFirst && !folded && (
+							<button
+								type="button"
+								className="ib mr-1"
+								onClick={toggleChat}
+								aria-label="Hide chat"
+								title="Hide chat"
+							>
+								<Icon name="back" />
+							</button>
+						)}
 						<Tabs<PanelTab>
 							className="!border-0 !p-0"
 							value={tab}
@@ -307,7 +365,7 @@ export function AgentPage() {
 							</div>
 						)}
 					</div>
-					<div className="pbody">
+					<div className={cx('pbody', builderFirst && tab === 'requirements' && 'fill')}>
 						<div className="pbody-in">
 							{!viewed ? (
 								<div className="card">

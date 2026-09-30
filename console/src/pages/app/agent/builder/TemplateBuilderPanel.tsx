@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SpecIssue } from '@/api/agentMode';
 import { Badge, Button, cx, Icon, SaveBar, Tabs, TemplateBadge, type Tone } from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
+import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { BuilderContext, type BuilderCtx } from './context';
 import { changedPointers } from './diff';
 import { humanPath } from './labels';
@@ -16,7 +17,7 @@ import { useSpecDraft } from './useSpecDraft';
 import { YamlView } from './YamlView';
 import './builder.css';
 
-type Tab = 'details' | 'yaml' | 'checks';
+type Tab = 'builder' | 'details' | 'yaml' | 'checks';
 type Mode = 'default' | 'all' | 'none';
 
 const FLASH_MS = 1600;
@@ -58,6 +59,8 @@ export function TemplateBuilderPanel({
 		[builder],
 	);
 	const draft = useSpecDraft({ appId, reqId: requirement.uuid, server: serverSpec });
+	// The template ships its own builder (e.g. Journey Studio): it replaces Details.
+	const embedUrl = builder.builder_url || null;
 	useEffect(() => onController?.(draft.controller), [onController, draft.controller]);
 	// What's on screen: the agent's version while reviewing a conflict, else the draft/newest.
 	const spec = draft.shown;
@@ -135,7 +138,7 @@ export function TemplateBuilderPanel({
 		[sections, doc, issues, changed, sectionFor],
 	);
 
-	const [tab, setTab] = useState<Tab>('details');
+	const [tab, setTab] = useState<Tab>(embedUrl ? 'builder' : 'details');
 	const [active, setActive] = useState<string>(() => sections[0]?.id ?? '');
 	const section = sections.find((s) => s.id === active) ?? sections[0];
 	const [overrides, setOverrides] = useState<Map<string, boolean>>(() => new Map());
@@ -190,7 +193,8 @@ export function TemplateBuilderPanel({
 	const jumpTo = useCallback(
 		(pointer: string, opts: { sectionHint?: string; line?: number; inTab?: Tab } = {}) => {
 			const where = opts.inTab ?? (tab === 'yaml' ? 'yaml' : 'details');
-			if (where === 'yaml') {
+			// With the template's own builder there is no Details tab to jump into.
+			if (where === 'yaml' || embedUrl) {
 				setTab('yaml');
 				setYamlJump({ line: opts.line ?? rangeOf(parsed, pointer)?.line ?? 1, nonce: Date.now() });
 				return;
@@ -205,7 +209,7 @@ export function TemplateBuilderPanel({
 			setTab('details');
 			setTarget({ pointer, nonce: Date.now() });
 		},
-		[tab, parsed, sectionFor],
+		[tab, parsed, sectionFor, embedUrl],
 	);
 
 	useEffect(() => {
@@ -300,7 +304,7 @@ export function TemplateBuilderPanel({
 
 	return (
 		<BuilderContext.Provider value={ctx}>
-			<div className={cx('bld', draft.dirty && 'dirty')}>
+			<div className={cx('bld', draft.dirty && 'dirty', embedUrl && 'fill')}>
 				<div className="bld-h">
 					{spec.template && <TemplateBadge template={spec.template} />}
 					<Badge tone={tone} dot>
@@ -374,7 +378,9 @@ export function TemplateBuilderPanel({
 					value={tab}
 					onChange={setTab}
 					items={[
-						{ value: 'details', label: 'Details' },
+						embedUrl
+							? { value: 'builder', label: 'Builder' }
+							: { value: 'details', label: 'Details' },
 						{ value: 'yaml', label: 'YAML' },
 						{
 							value: 'checks',
@@ -384,6 +390,15 @@ export function TemplateBuilderPanel({
 					]}
 				/>
 				<div ref={body} className="bld-b">
+					{embedUrl && (
+						<EmbeddedBuilder
+							url={embedUrl}
+							text={draft.text}
+							readOnly={locked || !!draft.incoming}
+							onChange={draft.type}
+							hidden={tab !== 'builder'}
+						/>
+					)}
 					{tab === 'details' && yamlBroken && !draft.reviewing && (
 						<div className="bld-note err" role="status">
 							<Icon name="alert" size={13} />
@@ -396,7 +411,7 @@ export function TemplateBuilderPanel({
 							.
 						</div>
 					)}
-					{tab === 'details' && section && (
+					{tab === 'details' && !embedUrl && section && (
 						<div className="bld-split">
 							<SectionNav sections={states} active={section.id} onSelect={setActive} />
 							<SectionDetails

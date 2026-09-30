@@ -505,3 +505,45 @@
 		animation: none;
 	}
 }
+
+/* ---------- builder-first: a template's own builder takes the width ---------- */
+.ws .split.builder-first {
+	grid-template-columns: 360px minmax(0, 1fr);
+}
+.ws .split.builder-first.chat-folded {
+	grid-template-columns: 44px minmax(0, 1fr);
+}
+.ws .split.chat-folded .chat {
+	display: none;
+}
+.ws .chat-rail {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding-top: 10px;
+	border-right: 1px solid var(--border);
+	background: var(--panel);
+	color: var(--t3);
+}
+.ws .chat-rail-label {
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+	font-size: 12px;
+	font-weight: 550;
+	letter-spacing: 0.02em;
+}
+.ws .pbody.fill {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 12px 16px;
+}
+.ws .pbody.fill .pbody-in {
+	flex: 1;
+	min-height: 0;
+	max-width: none;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+}

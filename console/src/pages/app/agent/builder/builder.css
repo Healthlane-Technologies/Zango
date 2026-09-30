@@ -523,3 +523,38 @@
 .bld-save > * {
 	margin-top: 8px;
 }
+
+/* ---------- a template's own builder (embedded page) ---------- */
+.bld.fill {
+	flex: 1;
+	height: 100%;
+}
+.bld.fill .bld-b {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+.bld.fill .bld-tabs {
+	margin-bottom: 10px;
+}
+.emb {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.emb[hidden] {
+	display: none;
+}
+.emb-frame {
+	flex: 1;
+	min-height: 480px;
+	width: 100%;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: var(--sh-card);
+}

@@ -146,6 +146,15 @@ def read_pack(source) -> Pack:
                 )
             documents[key] = files[name]
 
+    for key in ("adapter", "html"):
+        name = str((manifest.get("builder") or {}).get(key) or "").strip()
+        if name:
+            if name not in files:
+                raise PackError(
+                    f"{MANIFEST} names builder {key} = {name!r}, which is not in the pack."
+                )
+            documents[f"builder_{key}"] = files[name]
+
     skill_files = {}
     skill_dir = str(manifest.get("skill_dir") or "").strip().strip("/")
     if skill_dir:
@@ -216,6 +225,8 @@ def _version_fields(pack: Pack) -> dict:
         "rules": _json_doc(pack, "rules", []),
         "build_skill_name": str(m.get("build_skill_name") or ""),
         "workspace_engine_paths": _engine_paths(m),
+        "builder_html": pack.documents.get("builder_html", ""),
+        "builder_adapter": pack.documents.get("builder_adapter", ""),
     }
 
 
@@ -223,7 +234,9 @@ def _engine_paths(manifest: dict) -> list:
     from .workspace import WorkspaceError, normalise_engine_paths
 
     try:
-        return normalise_engine_paths((manifest.get("workspace") or {}).get("engine_paths") or [])
+        return normalise_engine_paths(
+            (manifest.get("workspace") or {}).get("engine_paths") or []
+        )
     except WorkspaceError as exc:
         raise PackError(exc.message) from exc
 
@@ -399,6 +412,23 @@ def lint(version: AppTemplateVersion, files=None) -> list:
         except WorkspaceError as exc:
             issues.append(_issue("error", "workspace.zip", exc.message))
 
+    if version.builder_html and not version.builder_adapter:
+        issues.append(
+            _issue(
+                "error",
+                "builder",
+                "The builder page needs an adapter (builder.adapter in template.json).",
+            )
+        )
+    if version.builder_html and "</body>" not in version.builder_html.lower():
+        issues.append(
+            _issue(
+                "error",
+                "builder",
+                "The builder page has no </body> to inject the adapter before.",
+            )
+        )
+
     if files is None:
         files = {row.path: row.content for row in version.files.all()}
     if version.build_skill_name:
@@ -543,6 +573,9 @@ def import_pack(
         draft.workspace_zip = source.workspace_zip
         draft.workspace_sha = source.workspace_sha
         draft.workspace_size = source.workspace_size
+    # Likewise the builder page: packs ship the adapter, the page is attached.
+    if not draft.builder_html and source is not None and source.builder_html:
+        draft.builder_html = source.builder_html
     draft.save()
 
     draft.files.all().delete()

@@ -122,9 +122,55 @@ class TemplateBuilderView(ZangoGenericPlatformAPIView):
                     "spec_format": version.spec_format,
                     "starter_yaml": version.starter_yaml,
                     "example_yaml": version.example_yaml,
+                    "builder_url": (
+                        f"/api/v1/platform/app-templates/templates/{version.template.slug}"
+                        f"/versions/{version.object_uuid}/builder.html"
+                        if version.has_builder
+                        else None
+                    ),
                 },
                 200,
             )
         except Exception as exc:  # noqa: BLE001
             log.exception("app_templates: builder failed")
             return get_api_response(False, {"message": str(exc)}, 500)
+
+
+class TemplateBuilderPageView(ZangoGenericPlatformAPIView):
+    """GET templates/<slug>/versions/<version_uuid>/builder.html
+
+    The template's own builder page with the platform adapter injected. The
+    console fetches it and renders it in a sandboxed iframe (scripts only, no
+    same-origin access). Immutable per version.
+    """
+
+    def get(self, request, slug, version_uuid, *args, **kwargs):
+        from django.http import HttpResponse
+
+        from zango.apps.shared.app_templates.models import (
+            AppTemplateVersion,
+            VersionStatus,
+        )
+        from zango.apps.shared.app_templates.services.builder import compose
+
+        version = (
+            AppTemplateVersion.objects.select_related("template")
+            .filter(template__slug=slug, object_uuid=version_uuid)
+            .exclude(status=VersionStatus.DRAFT)
+            .first()
+        )
+        if version is None or not version.has_builder:
+            return get_api_response(
+                False, {"message": "No builder for this template version."}, 404
+            )
+        response = HttpResponse(
+            compose(version), content_type="text/html; charset=utf-8"
+        )
+        response["Cache-Control"] = "private, max-age=31536000, immutable"
+        response["X-Content-Type-Options"] = "nosniff"
+        # Opened directly (not via the console's sandboxed iframe) it must still
+        # get an opaque origin: superadmin-authored script, never the console's.
+        response["Content-Security-Policy"] = (
+            "sandbox allow-scripts allow-downloads allow-popups allow-modals"
+        )
+        return response

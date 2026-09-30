@@ -122,6 +122,8 @@ class AppTemplateVersion(FullAuditMixin):
         "build_skill_name",
         "workspace_sha",
         "workspace_engine_paths",
+        "builder_html",
+        "builder_adapter",
     )
 
     object_uuid = models.UUIDField(
@@ -174,6 +176,13 @@ class AppTemplateVersion(FullAuditMixin):
     # everything else is the app's own.
     workspace_engine_paths = models.JSONField(default=list, blank=True)
 
+    # --- custom builder: a template's own requirement-builder page (for PSP,
+    # Journey Studio) shown in the Agent tab instead of the schema-driven
+    # panel. The page is used as-is; ``builder_adapter`` is the small script
+    # injected after it that speaks the platform's postMessage protocol.
+    builder_html = models.TextField(blank=True, default="")
+    builder_adapter = models.TextField(blank=True, default="")
+
     # Set at publish, over every content field and file: the cache key and
     # the on-disk directory name, so it can never go stale.
     content_sha = models.CharField(max_length=64, blank=True, default="")
@@ -204,6 +213,10 @@ class AppTemplateVersion(FullAuditMixin):
     @property
     def has_workspace(self) -> bool:
         return bool(self.workspace_sha)
+
+    @property
+    def has_builder(self) -> bool:
+        return bool(self.builder_html and self.builder_adapter)
 
     @property
     def sections(self) -> list:
