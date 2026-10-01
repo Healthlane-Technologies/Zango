@@ -65,6 +65,7 @@ class TemplateView:
     example_yaml: str = ""
     build_skill_name: str = ""
     plugin_dir: str = ""  # materialised plugin root (for the build agent)
+    references: tuple = ()  # ({id, title, summary, tags, path}, ...)
 
     @property
     def is_yaml(self) -> bool:
@@ -126,6 +127,16 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         example_yaml=version.example_yaml,
         build_skill_name=version.build_skill_name,
         plugin_dir=str(plugin_dir),
+        references=tuple(
+            {
+                "id": r["id"],
+                "title": r.get("title", r["id"]),
+                "summary": r.get("summary", ""),
+                "tags": list(r.get("tags") or []),
+                "path": str(req_dir / "references" / f"{r['id']}.yaml"),
+            }
+            for r in version.references or []
+        ),
     )
 
 

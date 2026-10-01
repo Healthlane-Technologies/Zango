@@ -246,6 +246,13 @@ def handoff_requirement(scaffold):
         if template is None:
             raise RuntimeError("The template this app was started from no longer loads.")
 
+    from .documents import wants_draft
+    from .models import AgentRequirementDocument
+
+    # Read on the public schema before switching: the scaffold's documents
+    # move into the app's requirement.
+    documents = list(scaffold.documents.all()) if template else []
+
     with schema_context(tenant.schema_name):
         requirement = AgentRequirement(
             initial_prompt=scaffold.prompt,
@@ -255,7 +262,21 @@ def handoff_requirement(scaffold):
         )
         if template:
             seed_template_requirement(requirement, template)
+            requirement.reference_id = scaffold.reference_id
+            requirement.mode = "draft" if wants_draft(scaffold.prompt, len(documents)) else "interview"
         requirement.save()
+        for doc in documents:
+            AgentRequirementDocument.objects.create(
+                requirement=requirement,
+                name=doc.name,
+                content_type=doc.content_type,
+                size=doc.size,
+                sha256=doc.sha256,
+                data=bytes(doc.data),
+                extracted_text=doc.extracted_text,
+                pages=doc.pages,
+                sheets=doc.sheets,
+            )
         AgentRequirementMessage.objects.create(
             requirement=requirement,
             seq=1,
@@ -340,7 +361,15 @@ def state_payload(scaffold) -> dict:
         "error_message": scaffold.error_message or app_error,
         "created_at": scaffold.created_at.isoformat() if scaffold.created_at else None,
         "template": _template_ref(scaffold.template_version),
+        "reference": scaffold.reference_id or None,
+        "documents": _scaffold_documents(scaffold),
     }
+
+
+def _scaffold_documents(scaffold) -> list:
+    from .documents import document_list
+
+    return document_list(scaffold.documents.all().defer("data", "extracted_text"))
 
 
 def _template_ref(version):

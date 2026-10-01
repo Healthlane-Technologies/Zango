@@ -843,7 +843,13 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     bench = None
     try:
         ctx = build_app_context(tenant)
-        prompt = compose_analyst_prompt(req, ctx, last_user.content)
+        # The user's documents, where the analyst can read them.
+        from .documents import write_docs_dir
+
+        docs_path = write_docs_dir(tenant.name, req)
+        prompt = compose_analyst_prompt(
+            req, ctx, last_user.content, docs_dir=str(docs_path) if docs_path else ""
+        )
         stream = AgentStream(options=None, prompt=prompt)
 
         # Template requirements are edited through spec tools. The workbench
@@ -855,11 +861,19 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
             from .spec_tools import SpecWorkbench, build_spec_server
 
             bench = SpecWorkbench(
-                req.spec_markdown, template, emit=lambda edit: stream.push("spec", edit)
+                req.spec_markdown,
+                template,
+                emit=lambda edit: stream.push("spec", edit),
+                flags=req.spec_flags,
+                open_decisions=req.open_decisions,
             )
             spec_server = build_spec_server(bench)
         stream.options = build_analyst_options(
-            ctx=ctx, creds=creds, requirement=req, spec_server=spec_server
+            ctx=ctx,
+            creds=creds,
+            requirement=req,
+            spec_server=spec_server,
+            docs_dir=str(docs_path) if docs_path else "",
         )
 
         for item in stream:
@@ -900,25 +914,29 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
 
 
 def _record_spec_edit(req, edit: dict) -> None:
-    """Save one accepted spec-tool edit straight away, so the panel sees it land."""
-    text = (edit or {}).get("yaml") or ""
-    if not text.strip():
-        return
-    req.spec_markdown = text
-    req.spec_is_draft = True
-    req.draft_revision += 1
-    req.changed_paths = list(edit.get("changed_paths") or [])
-    req.validation_issues = list(edit.get("issues") or [])
-    req.save(
-        update_fields=[
-            "spec_markdown",
-            "spec_is_draft",
-            "draft_revision",
-            "changed_paths",
-            "validation_issues",
-            "modified_at",
-        ]
-    )
+    """Save one spec-tool result straight away, so the panel sees it land.
+
+    An edit carries the new YAML; a provenance call (spec_flag, spec_unflag,
+    spec_open_decisions) carries only flags and open decisions.
+    """
+    edit = edit or {}
+    fields = ["modified_at"]
+    text = edit.get("yaml") or ""
+    if text.strip():
+        req.spec_markdown = text
+        req.spec_is_draft = True
+        req.draft_revision += 1
+        req.changed_paths = list(edit.get("changed_paths") or [])
+        req.validation_issues = list(edit.get("issues") or [])
+        fields += ["spec_markdown", "spec_is_draft", "draft_revision", "changed_paths", "validation_issues"]
+    if "flags" in edit:
+        req.spec_flags = list(edit["flags"])
+        fields.append("spec_flags")
+    if "open_decisions" in edit:
+        req.open_decisions = list(edit["open_decisions"])
+        fields.append("open_decisions")
+    if len(fields) > 1:
+        req.save(update_fields=fields)
 
 
 def _record_analyst_reply(req, text_parts, session_id, cost, bench=None) -> dict:

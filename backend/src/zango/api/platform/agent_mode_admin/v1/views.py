@@ -310,6 +310,14 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                 )
 
             prompt = (request.data.get("prompt") or "").strip()
+            reference = (request.data.get("reference") or "").strip()[:64]
+
+            from zango.apps.agent_mode.documents import DocumentError, read_uploads
+
+            try:
+                documents = read_uploads(request)
+            except DocumentError as exc:
+                return get_api_response(False, {"message": str(exc)}, 400)
 
             # Starting from a template pins its current published version now,
             # so a publish during app creation cannot change what was chosen.
@@ -331,12 +339,24 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                         False, {"message": "That template is not available."}, 400
                     )
                 template_version = template.current_version
+                if reference and reference not in {
+                    r.get("id") for r in template_version.references or []
+                }:
+                    return get_api_response(
+                        False, {"message": "That reference journey is not part of the template."}, 400
+                    )
                 if not prompt:
                     catalogue = template_version.catalogue or {}
                     prompt = (
                         catalogue.get("app_prompt_prefill")
                         or f"A new {template.name} app."
                     ).strip()
+                    if documents:
+                        prompt = f"{prompt} The details are in the documents I uploaded."
+            elif documents:
+                return get_api_response(
+                    False, {"message": "Documents can be used with a template only."}, 400
+                )
 
             if not prompt:
                 return get_api_response(
@@ -350,9 +370,14 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
             user = getattr(request, "user", None)
             scaffold = AgentAppScaffold.objects.create(
                 prompt=prompt,
+                reference_id=reference if template_version else "",
                 template_version=template_version,
                 created_by_label=(getattr(user, "email", "") or str(user or ""))[:255],
             )
+            from zango.apps.shared.agent_mode.models import AgentScaffoldDocument
+
+            for doc in documents:
+                AgentScaffoldDocument.objects.create(scaffold=scaffold, **doc.model_fields())
 
             def _dispatch():
                 result = agent_app_scaffold.apply_async(
@@ -452,3 +477,4 @@ class AgentAppScaffoldRequirementView(ZangoGenericPlatformAPIView):
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: scaffold hand-off failed")
             return get_api_response(False, {"message": str(exc)}, 500)
+

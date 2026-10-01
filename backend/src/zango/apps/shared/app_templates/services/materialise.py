@@ -43,6 +43,7 @@ REQUIREMENT_FILES = {
     "rules": "rules.json",
     "starter": "starter.yaml",
     "example": "example.yaml",
+    "drafting": "DRAFTING.md",
 }
 
 
@@ -77,6 +78,10 @@ def _requirement_documents(version) -> dict:
         docs["ui.json"] = json.dumps(version.ui_schema, indent=2)
     if version.rules:
         docs["rules.json"] = json.dumps(version.rules, indent=2)
+    if version.drafting_md:
+        docs["DRAFTING.md"] = version.drafting_md
+    for ref in version.references or []:
+        docs[f"references/{ref['id']}.yaml"] = ref.get("yaml", "")
     return {name: text for name, text in docs.items() if text}
 
 

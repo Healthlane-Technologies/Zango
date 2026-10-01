@@ -16,6 +16,7 @@ from django.utils.decorators import method_decorator
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from zango.apps.agent_mode.models import (
+    AgentRequirementDocument,
     RUN_PHASE_ORDER,
     TERMINAL_STATUSES,
     AgentRequirement,
@@ -712,7 +713,20 @@ class AgentRequirementListCreateView(
                     409,
                 )
 
+            from zango.apps.agent_mode.documents import (
+                DocumentError,
+                read_uploads,
+                wants_draft,
+            )
+            from zango.apps.agent_mode.models import AgentRequirementDocument
+
+            try:
+                documents = read_uploads(request)
+            except DocumentError as exc:
+                return get_api_response(False, {"message": str(exc)}, 400)
             prompt = (request.data.get("prompt") or "").strip()
+            if not prompt and documents:
+                prompt = "The change is described in the documents I uploaded."
             if not prompt:
                 return get_api_response(
                     False, {"message": "Describe what you want to build."}, 400
@@ -733,8 +747,23 @@ class AgentRequirementListCreateView(
                 )
                 # An app built on a template stays on it: the change request
                 # starts from the journey it was last approved on.
-                seed_from_binding(requirement, tenant)
+                bound = seed_from_binding(requirement, tenant)
+                if documents and not bound:
+                    return get_api_response(
+                        False, {"message": "Documents can be used on template apps only."}, 400
+                    )
+                if bound:
+                    reference = (request.data.get("reference") or "").strip()[:64]
+                    known = {r["id"] for r in requirement.template.references}
+                    if reference and reference not in known:
+                        return get_api_response(
+                            False, {"message": "That reference journey is not part of the template."}, 400
+                        )
+                    requirement.reference_id = reference
+                    requirement.mode = "draft" if wants_draft(prompt, len(documents)) else "interview"
                 requirement.save()
+                for doc in documents:
+                    AgentRequirementDocument.objects.create(requirement=requirement, **doc.model_fields())
                 _append_user_message(requirement, prompt)
 
             _dispatch_turn(requirement, tenant)
@@ -794,7 +823,12 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
                     False, {"message": "The agent is still replying."}, 409
                 )
 
-            content = (request.data.get("content") or "").strip()
+            from zango.apps.agent_mode.template_spec import decisions_message
+
+            # Answers to the Review tab's open decisions arrive as one batch.
+            content, answered = decisions_message(
+                request.data.get("content") or "", request.data.get("answers")
+            )
             if not content:
                 return get_api_response(False, {"message": "Message is empty."}, 400)
             if len(content) > MAX_MESSAGE_CHARS:
@@ -804,9 +838,13 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
                 _append_user_message(requirement, content)
                 requirement.is_thinking = True
                 requirement.error_message = ""
-                requirement.save(
-                    update_fields=["is_thinking", "error_message", "modified_at"]
-                )
+                update = ["is_thinking", "error_message", "modified_at"]
+                if answered:
+                    requirement.open_decisions = [
+                        d for d in requirement.open_decisions or [] if d.get("id") not in answered
+                    ]
+                    update.append("open_decisions")
+                requirement.save(update_fields=update)
 
             _dispatch_turn(requirement, tenant)
             # 200, not 202: the panel's useApi hook treats only 200/201 as
@@ -990,6 +1028,74 @@ class AgentRequirementSpecFinalizeView(ZangoGenericPlatformAPIView, TenantMixin)
             return get_api_response(code == 200, payload, code)
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: spec finalize failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementDocumentsView(ZangoGenericPlatformAPIView, TenantMixin):
+    """GET requirements/{uuid}/documents/ — what the user gave the analyst."""
+
+    def get(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.documents import document_list
+
+        try:
+            _bind_tenant(self, app_uuid)
+            requirement = AgentRequirement.objects.filter(object_uuid=requirement_uuid).first()
+            if requirement is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            rows = requirement.documents.all().defer("data", "extracted_text")
+            return get_api_response(True, {"documents": document_list(rows)}, 200)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: document list failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementDocumentFileView(ZangoGenericPlatformAPIView, TenantMixin):
+    """GET requirements/{uuid}/documents/{id}/ — the original file, as a download."""
+
+    def get(self, request, app_uuid, requirement_uuid, doc_id, *args, **kwargs):
+        from django.http import HttpResponse
+
+        try:
+            _bind_tenant(self, app_uuid)
+            doc = (
+                AgentRequirementDocument.objects.filter(
+                    requirement__object_uuid=requirement_uuid, pk=doc_id
+                ).first()
+            )
+            if doc is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            response = HttpResponse(bytes(doc.data), content_type=doc.content_type)
+            # Always a download: an uploaded file must never render as a page.
+            response["Content-Disposition"] = f'attachment; filename="{doc.name}"'
+            response["X-Content-Type-Options"] = "nosniff"
+            return response
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: document download failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementFlagsConfirmView(ZangoGenericPlatformAPIView, TenantMixin):
+    """POST requirements/{uuid}/flags/confirm/ — {paths}: the user accepts these assumptions."""
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.template_spec import confirm_flags
+
+        try:
+            _bind_tenant(self, app_uuid)
+            requirement = AgentRequirement.objects.filter(object_uuid=requirement_uuid).first()
+            if requirement is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            if requirement.is_thinking:
+                return get_api_response(False, {"message": "The agent is still working on this spec."}, 409)
+            code, payload = confirm_flags(requirement, request.data.get("paths"))
+            return get_api_response(code == 200, payload, code)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: flag confirm failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 

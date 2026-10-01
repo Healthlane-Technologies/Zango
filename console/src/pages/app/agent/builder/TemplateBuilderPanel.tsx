@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { SpecIssue } from '@/api/agentMode';
-import { Badge, Button, cx, Icon, SaveBar, Tabs, TemplateBadge, type Tone } from '@/ui';
+import { documentUrl, type SpecIssue } from '@/api/agentMode';
+import { Badge, Button, cx, Icon, Menu, SaveBar, Tabs, TemplateBadge, type Tone } from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { BuilderContext, type BuilderCtx } from './context';
@@ -9,6 +9,7 @@ import { humanPath } from './labels';
 import { ancestors } from './pointer';
 import type { BuilderProps } from './registry';
 import type { Schema } from './schema';
+import { ReviewPanel } from './ReviewPanel';
 import { SectionDetails } from './SectionDetails';
 import { SectionNav, type SectionState } from './SectionNav';
 import { orderedSections, sectionCount, sectionOf, type BuilderSection } from './sections';
@@ -17,7 +18,7 @@ import { useSpecDraft } from './useSpecDraft';
 import { YamlView } from './YamlView';
 import './builder.css';
 
-type Tab = 'builder' | 'details' | 'yaml' | 'checks';
+type Tab = 'builder' | 'details' | 'yaml' | 'checks' | 'review';
 type Mode = 'default' | 'all' | 'none';
 
 const FLASH_MS = 1600;
@@ -294,6 +295,26 @@ export function TemplateBuilderPanel({
 		],
 		[parsed, rows],
 	);
+	// One-pass drafting: the agent's open decisions and flags, and the documents it drew on.
+	const decisions = serverSpec.open_decisions ?? [];
+	const flags = serverSpec.flags ?? [];
+	const documents = serverSpec.documents ?? [];
+	const reviewCount = decisions.length + flags.length;
+	const drafting = serverSpec.mode === 'draft' && thinking;
+	const canReview = editable && !thinking && spec.status !== 'approved';
+	const whereOf = useCallback(
+		(p: string) => (p ? humanPath(root, doc, p) : 'The whole journey'),
+		[root, doc],
+	);
+	// A finished draft with things to review opens on them, once.
+	const reviewed = useRef(false);
+	useEffect(() => {
+		if (!reviewed.current && serverSpec.mode === 'draft' && !thinking && reviewCount > 0) {
+			reviewed.current = true;
+			setTab('review');
+		}
+	}, [serverSpec.mode, thinking, reviewCount]);
+
 	const [tone, label]: [Tone, string] = spec.is_draft
 		? ['amber', 'Draft']
 		: spec.status === 'approved'
@@ -318,6 +339,21 @@ export function TemplateBuilderPanel({
 						</span>
 					)}
 					<span className="ml-auto flex items-center gap-1.5">
+						{documents.length > 0 && (
+							<Menu
+								items={documents.map((d) => ({
+									label: d.name,
+									icon: 'file' as const,
+									onSelect: () =>
+										window.open(documentUrl(appId, requirement.uuid, d.id), '_blank', 'noopener'),
+								}))}
+								trigger={
+									<Button size="xs" icon="clip">
+										Documents ({documents.length})
+									</Button>
+								}
+							/>
+						)}
 						{changed.length > 0 && (
 							<Button size="xs" variant="secondary" className="bld-chg" onClick={nextChanged}>
 								<i className="bv-dot chg" />
@@ -339,6 +375,33 @@ export function TemplateBuilderPanel({
 						)}
 					</span>
 				</div>
+				{drafting && (
+					<div className="bld-drafting" role="status">
+						<span className="spin" />
+						<span className="min-w-0">
+							<b>
+								Drafting
+								{documents.length
+									? ` from ${documents.length} document${documents.length > 1 ? 's' : ''}`
+									: ' from your brief'}
+								…
+							</b>{' '}
+							{states.filter((st) => st.changed > 0).length} of {states.length} sections written
+						</span>
+						<ul className="bld-ticks" aria-label="Sections">
+							{states.map((st) => (
+								<li
+									key={st.section.id}
+									className={cx(st.changed > 0 && 'done')}
+									title={st.section.title}
+								>
+									{st.changed > 0 ? <Icon name="check" size={11} weight={2.6} /> : <i />}
+									{st.section.title}
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
 				{draft.incoming && (
 					<div className="bld-conflict" role="alert">
 						<Icon name="alert" className="mt-[2px] shrink-0" />
@@ -387,6 +450,7 @@ export function TemplateBuilderPanel({
 							label: errors ? `Checks · ${errors} to fix` : 'Checks',
 							count: issues.length || undefined,
 						},
+						{ value: 'review', label: 'Review', count: reviewCount || undefined },
 					]}
 				/>
 				<div ref={body} className="bld-b">
@@ -446,6 +510,22 @@ export function TemplateBuilderPanel({
 							editable={!locked}
 							onChange={draft.type}
 							diagnostics={yamlDiagnostics}
+						/>
+					)}
+					{tab === 'review' && (
+						<ReviewPanel
+							appId={appId}
+							reqId={requirement.uuid}
+							decisions={decisions}
+							flags={flags}
+							documents={documents}
+							sections={sections}
+							sectionFor={sectionFor}
+							whereOf={whereOf}
+							canAct={canReview}
+							thinking={thinking}
+							flush={() => draft.controller.flush()}
+							onShowInYaml={(p) => jumpTo(p, { inTab: 'yaml' })}
 						/>
 					)}
 					{tab === 'checks' && (

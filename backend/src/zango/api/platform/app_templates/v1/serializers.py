@@ -68,7 +68,21 @@ def template_detail(template, version, apps_using: int = 0) -> dict:
     ]
     data["starter_yaml"] = version.starter_yaml
     data["example_yaml"] = version.example_yaml
+    data["references"] = reference_list(version)
     return data
+
+
+def reference_list(version) -> list:
+    """The reference journeys a draft can start from, without their YAML."""
+    return [
+        {
+            "id": r["id"],
+            "title": r.get("title", r["id"]),
+            "summary": r.get("summary", ""),
+            "tags": r.get("tags", []),
+        }
+        for r in version.references or []
+    ]
 
 
 def app_template_ref(tenant) -> dict | None:

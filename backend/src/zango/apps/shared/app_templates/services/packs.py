@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import io
 import json
+import posixpath
 import re
 import zipfile
 
@@ -70,6 +71,7 @@ class Pack:
     manifest: dict
     documents: dict  # file name -> text (manifest-referenced files)
     skill_files: dict = field(default_factory=dict)  # path in skill dir -> text
+    references: list = field(default_factory=list)  # [{id, title, summary, tags, yaml}]
 
 
 # ---------------------------------------------------------------- reading --
@@ -146,6 +148,38 @@ def read_pack(source) -> Pack:
                 )
             documents[key] = files[name]
 
+    for key in ("drafting",):
+        name = str(manifest.get(key) or "").strip()
+        if name:
+            if name not in files:
+                raise PackError(f"{MANIFEST} names {key} = {name!r}, which is not in the pack.")
+            documents[key] = files[name]
+
+    references = []
+    index_name = str(manifest.get("references") or "").strip()
+    if index_name:
+        if index_name not in files:
+            raise PackError(f"{MANIFEST} names references = {index_name!r}, which is not in the pack.")
+        try:
+            entries = json.loads(files[index_name])
+        except ValueError as exc:
+            raise PackError(f"{index_name} is not valid JSON: {exc}") from exc
+        base = posixpath.dirname(index_name)
+        for entry in entries if isinstance(entries, list) else []:
+            rid = str((entry or {}).get("id") or "").strip()
+            rel = posixpath.join(base, str(entry.get("file") or f"{rid}.yaml")) if base else str(entry.get("file") or f"{rid}.yaml")
+            if not re.match(r"^[a-z][a-z0-9_-]{1,63}$", rid) or rel not in files:
+                raise PackError(f"Reference {rid!r} in {index_name} is missing or misnamed.")
+            references.append(
+                {
+                    "id": rid,
+                    "title": str(entry.get("title") or rid),
+                    "summary": str(entry.get("summary") or ""),
+                    "tags": [str(t) for t in entry.get("tags") or []][:12],
+                    "yaml": files[rel],
+                }
+            )
+
     for key in ("adapter", "html"):
         name = str((manifest.get("builder") or {}).get(key) or "").strip()
         if name:
@@ -170,7 +204,7 @@ def read_pack(source) -> Pack:
     )
     if total > MAX_VERSION_BYTES:
         raise PackError(f"The pack is larger than {MAX_VERSION_BYTES} bytes.")
-    return Pack(manifest=manifest, documents=documents, skill_files=skill_files)
+    return Pack(manifest=manifest, documents=documents, skill_files=skill_files, references=references)
 
 
 def _json_doc(pack: Pack, key: str, default):
@@ -227,6 +261,8 @@ def _version_fields(pack: Pack) -> dict:
         "workspace_engine_paths": _engine_paths(m),
         "builder_html": pack.documents.get("builder_html", ""),
         "builder_adapter": pack.documents.get("builder_adapter", ""),
+        "references": pack.references,
+        "drafting_md": pack.documents.get("drafting", ""),
     }
 
 
@@ -351,6 +387,24 @@ def lint(version: AppTemplateVersion, files=None) -> list:
                 ):
                     pointer = "/" + "/".join(str(p) for p in err.absolute_path)
                     issues.append(_issue("error", name, err.message, pointer))
+
+    if validator is not None:
+        from .spec import yamlio
+
+        seen_refs = set()
+        for ref in version.references or []:
+            name = f"references/{ref.get('id')}.yaml"
+            if ref.get("id") in seen_refs:
+                issues.append(_issue("error", name, "Two references share this id."))
+            seen_refs.add(ref.get("id"))
+            try:
+                doc = yamlio.load(ref.get("yaml") or "")
+            except yamlio.SpecYAMLError as exc:
+                issues.append(_issue("error", name, f"Not valid YAML: {exc}"))
+                continue
+            for err in validator.iter_errors(doc):
+                pointer = "/" + "/".join(str(p) for p in err.absolute_path)
+                issues.append(_issue("error", name, err.message, pointer))
 
     for section in version.sections:
         pointer = section.get("pointer")

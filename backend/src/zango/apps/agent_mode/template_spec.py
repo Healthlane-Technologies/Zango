@@ -67,6 +67,10 @@ def spec_payload(requirement) -> dict:
         "sections": [
             {"id": s.get("id"), "title": s.get("title", "")} for s in sections
         ],
+        "mode": requirement.mode or None,
+        "flags": _with_sections(requirement.spec_flags or [], sections),
+        "open_decisions": requirement.open_decisions or [],
+        "documents": _documents(requirement),
         "template": (
             {
                 "slug": template.slug,
@@ -86,6 +90,11 @@ def approval_problem(requirement):
         return 400, {"message": "There is no specification to approve yet."}
     if requirement.is_thinking:
         return 409, {"message": "The agent is still working on this spec."}
+    if requirement.open_decisions:
+        return 409, {
+            "message": "Answer the open decisions on the Review tab before approving.",
+            "open_decisions": requirement.open_decisions,
+        }
     template = requirement.template if requirement.template_slug else None
     if template is None or not template.is_yaml:
         return None
@@ -168,6 +177,7 @@ def save_manual(requirement, text: str, base_revision):
         requirement.record_spec(text, source=SpecSource.USER)
     requirement.draft_revision += 1
     analyse(requirement, previous)
+    drop_flags_for(requirement, requirement.changed_paths)
     requirement.save()
     return 200, spec_payload(requirement)
 
@@ -229,3 +239,73 @@ def finalize(requirement, base_revision):
     requirement.validation_issues = issues
     requirement.save()
     return 200, spec_payload(requirement)
+
+
+def _with_sections(flags, sections) -> list:
+    from zango.apps.shared.app_templates.services.spec.document import section_for
+
+    return [
+        {**f, "section": f.get("section") or section_for(f.get("path", ""), sections)}
+        for f in flags
+    ]
+
+
+def _documents(requirement) -> list:
+    from .documents import document_list
+
+    if requirement.pk is None:
+        return []
+    return document_list(requirement.documents.all().defer("data", "extracted_text"))
+
+
+def _covers(changed: str, flagged: str) -> bool:
+    return (
+        flagged == changed
+        or flagged.startswith(changed + "/")
+        or changed.startswith(flagged + "/")
+    )
+
+
+def drop_flags_for(requirement, changed_paths) -> None:
+    """A path the user edited by hand is no longer an assumption."""
+    changed = [p for p in changed_paths or [] if p is not None]
+    if not changed or not requirement.spec_flags:
+        return
+    requirement.spec_flags = [
+        f
+        for f in requirement.spec_flags
+        if not any(_covers(c, f.get("path", "")) for c in changed)
+    ]
+
+
+def confirm_flags(requirement, paths):
+    """The user confirmed these assumptions: drop their flags."""
+    if not isinstance(paths, list) or not paths:
+        return 400, {"message": "paths must be a non-empty list."}
+    wanted = {str(p) for p in paths}
+    requirement.spec_flags = [
+        f for f in requirement.spec_flags or [] if f.get("path") not in wanted
+    ]
+    requirement.save(update_fields=["spec_flags", "modified_at"])
+    return 200, spec_payload(requirement)
+
+
+def decisions_message(content: str, answers) -> tuple[str, list]:
+    """The chat message for answered decisions, and the ids answered."""
+    lines, ids = [], []
+    for a in answers or []:
+        if not isinstance(a, dict) or not str(a.get("answer") or "").strip():
+            continue
+        ids.append(str(a.get("id") or ""))
+        where = f" ({a['path']})" if a.get("path") else ""
+        lines.append(
+            f"- {a.get('question') or a.get('id')}{where}: {str(a['answer']).strip()}"
+        )
+    body = (content or "").strip()
+    if lines:
+        body = (
+            (body + "\n\n" if body else "")
+            + "My answers to the open decisions:\n"
+            + "\n".join(lines)
+        )
+    return body, ids

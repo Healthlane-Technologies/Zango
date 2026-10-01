@@ -6,7 +6,12 @@ import logging
 
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 
-from .serializers import apps_using_counts, template_detail, template_summary
+from .serializers import (
+    apps_using_counts,
+    reference_list,
+    template_detail,
+    template_summary,
+)
 
 
 log = logging.getLogger("zango.app_templates")
@@ -122,6 +127,7 @@ class TemplateBuilderView(ZangoGenericPlatformAPIView):
                     "spec_format": version.spec_format,
                     "starter_yaml": version.starter_yaml,
                     "example_yaml": version.example_yaml,
+                    "references": reference_list(version),
                     "builder_url": (
                         f"/api/v1/platform/app-templates/templates/{version.template.slug}"
                         f"/versions/{version.object_uuid}/builder.html"

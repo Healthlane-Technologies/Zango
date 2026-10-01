@@ -143,6 +143,9 @@ class AgentAppScaffold(FullAuditMixin):
     # The requirement conversation the user is handed off to.
     requirement_uuid = models.UUIDField(null=True, blank=True)
 
+    # The reference journey the user asked to start from ("" = agent's choice).
+    reference_id = models.CharField(max_length=64, blank=True, default="")
+
     # The template the user started from, pinned at creation; null for a
     # from-scratch app.
     template_version = models.ForeignKey(
@@ -173,3 +176,27 @@ class AgentAppScaffold(FullAuditMixin):
         self.status = ScaffoldStatus.FAILED
         self.error_message = (message or "")[:2000]
         self.save(update_fields=["status", "error_message", "modified_at"])
+
+
+class AgentScaffoldDocument(models.Model):
+    """A document uploaded with a "describe it" hand-off, before the app exists.
+
+    Copied into the app's requirement at hand-off (AgentRequirementDocument).
+    """
+
+    scaffold = models.ForeignKey(
+        AgentAppScaffold, on_delete=models.CASCADE, related_name="documents"
+    )
+    name = models.CharField(max_length=160)
+    content_type = models.CharField(max_length=120)
+    size = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64)
+    data = models.BinaryField()
+    extracted_text = models.TextField(blank=True, default="")
+    pages = models.PositiveIntegerField(default=0)
+    sheets = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "agent_mode_scaffold_document"
+        ordering = ["scaffold", "pk"]

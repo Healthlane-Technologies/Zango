@@ -8,7 +8,7 @@ import {
 	type Scaffold,
 } from '@/api/scaffolds';
 import { useApiMutation } from '@/api/hooks';
-import { useTemplates } from '@/api/templates';
+import { useTemplate, useTemplates } from '@/api/templates';
 import {
 	Button,
 	ButtonLink,
@@ -22,6 +22,7 @@ import {
 	Skeleton,
 	Textarea,
 } from '@/ui';
+import { DocumentDrop, DRAFT_GUIDANCE, ReferencePicker } from './intake';
 import { Section, SourceOption, SummaryRow } from './parts';
 import { TemplatePicker } from './TemplatePicker';
 
@@ -77,12 +78,18 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	const [source, setSource] = useState<StartingPoint>(preselected ? 'template' : 'brief');
 	const [templateSlug, setTemplateSlug] = useState<string | null>(preselected);
 	const [prompt, setPrompt] = useState('');
+	const [files, setFiles] = useState<File[]>([]);
+	const [reference, setReference] = useState('');
 	const { data: availability, isLoading: checking } = useAgentAvailability();
 	const templates = useTemplates();
 	const create = useApiMutation({ fn: createScaffold, onSuccess: (s) => onStarted(s) });
 
 	const template =
 		source === 'template' ? (templates.data?.find((t) => t.slug === templateSlug) ?? null) : null;
+	// References come with the template's detail, not the catalogue list.
+	const detail = useTemplate(template?.slug);
+	const references = detail.data?.references;
+	useEffect(() => setReference(''), [template?.slug]);
 	// A deep link to a template that isn't published (any more) falls back to the first one.
 	useEffect(() => {
 		if (source !== 'template' || !templates.data?.length) return;
@@ -94,14 +101,20 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	const blocked = !!availability && !availability.available;
 	const trimmed = prompt.trim();
 	const tooLong = trimmed.length > MAX_PROMPT_CHARS;
-	// With a template the brief is optional: the template's interview does the asking.
-	const hasInput = source === 'template' ? !!template : !!trimmed;
+	// A template draft needs material to work from: a detailed brief, documents, or both.
+	const hasInput =
+		source === 'template' ? !!template && (!!trimmed || files.length > 0) : !!trimmed;
 	const canStart = !blocked && !checking && hasInput && !tooLong && !create.isPending;
 	const start = () =>
 		canStart &&
 		create.mutate(
 			source === 'template' && template
-				? { prompt: trimmed || undefined, template_slug: template.slug }
+				? {
+						prompt: trimmed || undefined,
+						template_slug: template.slug,
+						reference: reference || undefined,
+						documents: files,
+					}
 				: { prompt: trimmed },
 		);
 
@@ -149,23 +162,27 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 							title="Requirements"
 							hint={
 								source === 'template'
-									? "Optional. The agent walks you through the template's questions in the Agent tab; add anything it should know up front."
+									? 'The agent drafts the whole journey from this in one pass and flags what it had to infer. Describe the program in detail, upload documents, or both.'
 									: "Plain language, the way you'd explain it to a colleague: who uses it, the steps, what gets recorded."
 							}
 						>
 							<Field
-								label={source === 'template' ? 'Anything to add? (optional)' : 'Describe the app'}
+								label={source === 'template' ? 'Describe the program' : 'Describe the app'}
 								error={
 									tooLong
 										? `Keep it under ${MAX_PROMPT_CHARS.toLocaleString()} characters.`
 										: undefined
 								}
-								hint={`${isMac ? '⌘' : 'Ctrl'} + Enter to start. The agent asks follow-up questions, so a sentence or two is enough.`}
+								hint={
+									source === 'template'
+										? `${DRAFT_GUIDANCE} ${isMac ? '⌘' : 'Ctrl'} + Enter to start.`
+										: `${isMac ? '⌘' : 'Ctrl'} + Enter to start. The agent asks follow-up questions, so a sentence or two is enough.`
+								}
 							>
 								{(p) => (
 									<Textarea
 										{...p}
-										rows={7}
+										rows={source === 'template' ? 9 : 7}
 										autoFocus={source === 'brief'}
 										value={prompt}
 										placeholder={
@@ -184,6 +201,21 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 									/>
 								)}
 							</Field>
+							{source === 'template' && (
+								<div className="mt-4 grid gap-4">
+									<DocumentDrop
+										files={files}
+										onChange={setFiles}
+										disabled={blocked || create.isPending}
+									/>
+									<ReferencePicker
+										references={references}
+										value={reference}
+										onChange={setReference}
+										disabled={create.isPending}
+									/>
+								</div>
+							)}
 						</Section>
 					</div>
 					<aside className="sticky top-0">
@@ -210,6 +242,14 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 										<SummaryRow label="Workflows included">
 											{template ? (template.catalogue.workflows?.length ?? 0) : '—'}
 										</SummaryRow>
+										<SummaryRow label="Documents">{files.length || '—'}</SummaryRow>
+										{!!references?.length && (
+											<SummaryRow label="Start from">
+												{references.find((r) => r.id === reference)?.title ?? (
+													<span className="font-normal text-t3">Agent's choice</span>
+												)}
+											</SummaryRow>
+										)}
 									</>
 								)}
 								<SummaryRow label="App name">
@@ -219,7 +259,7 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 									{checking ? <Skeleton width={90} /> : (availability?.config.analyst_model ?? '—')}
 								</SummaryRow>
 								<SummaryRow label="First step">
-									{source === 'template' ? 'Template interview' : 'Requirements chat'}
+									{source === 'template' ? 'One-pass draft' : 'Requirements chat'}
 								</SummaryRow>
 								<div className="divider my-3" />
 								<p className="text-[12px] text-t3">

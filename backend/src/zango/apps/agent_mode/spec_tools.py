@@ -31,7 +31,14 @@ MAX_RESULT_ISSUES = 25
 class SpecWorkbench:
     """The draft being edited this turn, and every edit applied to it."""
 
-    def __init__(self, text: str, template, emit: Callable[[dict], None]):
+    def __init__(
+        self,
+        text: str,
+        template,
+        emit: Callable[[dict], None],
+        flags=None,
+        open_decisions=None,
+    ):
         from zango.apps.shared.app_templates.services.spec import yamlio
 
         self.template = template
@@ -40,6 +47,9 @@ class SpecWorkbench:
         self.changed: list[str] = []
         self.ready_summary: str | None = None
         self.edits = 0
+        self.flags: list = [dict(f) for f in flags or []]
+        self.open_decisions: list = [dict(d) for d in open_decisions or []]
+        self.decisions_set = False
         self._lock = threading.Lock()
         try:
             self.doc = yamlio.load_rt(self.text) if self.text.strip() else {}
@@ -215,8 +225,93 @@ class SpecWorkbench:
             return "No problems found."
         return _format_issues(issues)
 
+    # -- provenance (one-pass drafting) ---------------------------------------
+
+    FLAG_KINDS = ("inferred", "reference", "default", "missing")
+    MAX_DECISIONS = 8
+
+    def _emit_review(self) -> None:
+        self.emit(
+            {"flags": list(self.flags), "open_decisions": list(self.open_decisions)}
+        )
+
+    def flag(self, path: str, kind: str, note: str, source=None) -> str:
+        from zango.apps.shared.app_templates.services.spec import document
+
+        self._need_doc()
+        if kind not in self.FLAG_KINDS:
+            raise ToolRefused(f"kind must be one of {', '.join(self.FLAG_KINDS)}.")
+        concrete = document.to_pointer(document.resolve(self.doc, path)) if path else ""
+        entry = {"path": concrete, "kind": kind, "note": (note or "").strip()[:500]}
+        if isinstance(source, dict):
+            entry["source"] = {
+                "document": _document_name(source.get("document")),
+                "locator": str(source.get("locator") or "")[:80],
+                "quote": str(source.get("quote") or "")[:400],
+            }
+        self.flags = [f for f in self.flags if f["path"] != concrete] + [entry]
+        self._emit_review()
+        return (
+            f"Flagged {concrete or '/'} as {kind}. {len(self.flags)} flag(s) in total."
+        )
+
+    def unflag(self, path: str) -> str:
+        from zango.apps.shared.app_templates.services.spec import document
+
+        try:
+            concrete = (
+                document.to_pointer(document.resolve(self.doc, path)) if path else ""
+            )
+        except document.PathError:
+            concrete = path
+        before = len(self.flags)
+        self.flags = [f for f in self.flags if f["path"] != concrete]
+        self._emit_review()
+        return f"Removed {before - len(self.flags)} flag(s)."
+
+    def set_open_decisions(self, items) -> str:
+        if not isinstance(items, list):
+            raise ToolRefused("items must be a list.")
+        if len(items) > self.MAX_DECISIONS:
+            raise ToolRefused(
+                f"At most {self.MAX_DECISIONS} open decisions; make the rest flags with your best assumption."
+            )
+        clean = []
+        for i, item in enumerate(items):
+            if (
+                not isinstance(item, dict)
+                or not str(item.get("question") or "").strip()
+            ):
+                raise ToolRefused(f"Decision {i + 1} needs a question.")
+            options = [str(o) for o in item.get("options") or [] if str(o).strip()][:5]
+            clean.append(
+                {
+                    "id": str(item.get("id") or f"d{i + 1}")[:40],
+                    "path": str(item.get("path") or ""),
+                    "question": str(item["question"]).strip()[:400],
+                    "options": options,
+                    "recommended": str(
+                        item.get("recommended") or (options[0] if options else "")
+                    )[:200],
+                    "why": str(item.get("why") or "").strip()[:300],
+                }
+            )
+        self.open_decisions = clean
+        self.decisions_set = True
+        self._emit_review()
+        return (
+            f"{len(clean)} open decision(s) recorded."
+            if clean
+            else "No open decisions."
+        )
+
     def mark_ready(self, summary: str) -> str:
         self._need_doc()
+        if self.open_decisions:
+            raise ToolRefused(
+                "Not ready — the user still has open decisions to answer. Clear them with "
+                "spec_open_decisions once they are answered."
+            )
         errors = [i for i in self.issues(strict=True) if i["level"] == "error"]
         if errors:
             raise ToolRefused(
@@ -225,6 +320,21 @@ class SpecWorkbench:
             )
         self.ready_summary = (summary or "").strip() or "The spec is complete."
         return "Marked ready. Tell the user the spec is ready for them to review and approve."
+
+
+def _document_name(value) -> str:
+    """The uploaded document's own name, from however the model cited it.
+
+    On disk documents are numbered (``01-sop.pdf``) and have ``.txt``
+    extracts; the panel links a citation by the name the user uploaded.
+    """
+    import os
+    import re
+
+    name = os.path.basename(str(value or "").strip())
+    if name.endswith(".txt") and "." in name[:-4]:
+        name = name[:-4]
+    return re.sub(r"^\d{2}-", "", name)[:160]
 
 
 class ToolRefused(Exception):
@@ -253,6 +363,9 @@ TOOL_NAMES = (
     "spec_move",
     "spec_replace_section",
     "spec_validate",
+    "spec_flag",
+    "spec_unflag",
+    "spec_open_decisions",
     "spec_mark_ready",
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
@@ -349,6 +462,72 @@ def tool_specs(bench: SpecWorkbench) -> list:
             "Every problem in the journey right now.",
             _schema({}, []),
             lambda a: bench.validate(),
+        ),
+        (
+            "spec_flag",
+            (
+                "Record that a value was not stated in the user's material: inferred (cite the passage), "
+                "reference (kept from the reference journey), default (template default) or missing."
+            ),
+            _schema(
+                {
+                    "path": path,
+                    "kind": {"type": "string", "enum": list(SpecWorkbench.FLAG_KINDS)},
+                    "note": {
+                        "type": "string",
+                        "description": "What you assumed, in plain words.",
+                    },
+                    "source": {
+                        "type": "object",
+                        "properties": {
+                            "document": {"type": "string"},
+                            "locator": {
+                                "type": "string",
+                                "description": "e.g. p. 4, sheet Orders",
+                            },
+                            "quote": {"type": "string"},
+                        },
+                    },
+                },
+                ["path", "kind", "note"],
+            ),
+            lambda a: bench.flag(
+                a["path"], a["kind"], a.get("note", ""), a.get("source")
+            ),
+        ),
+        (
+            "spec_unflag",
+            "Remove the flag on a path (the user confirmed it, or you now have it from their material).",
+            _schema({"path": path}, ["path"]),
+            lambda a: bench.unflag(a["path"]),
+        ),
+        (
+            "spec_open_decisions",
+            "Replace the list of questions only the user can answer (at most 8). Empty list when none.",
+            _schema(
+                {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "path": {"type": "string"},
+                                "question": {"type": "string"},
+                                "options": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "recommended": {"type": "string"},
+                                "why": {"type": "string"},
+                            },
+                            "required": ["question"],
+                        },
+                    }
+                },
+                ["items"],
+            ),
+            lambda a: bench.set_open_decisions(a.get("items") or []),
         ),
         (
             "spec_mark_ready",

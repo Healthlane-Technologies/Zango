@@ -210,6 +210,16 @@ class AgentRequirement(FullAuditMixin):
     # so the panel can show the user what just moved.
     changed_paths = models.JSONField(default=list, blank=True)
 
+    # One-pass drafting (template requirements): the analyst drafts the whole
+    # journey from the user's documents, flags every value it did not take
+    # straight from them, and leaves only real gaps as open decisions.
+    mode = models.CharField(max_length=16, blank=True, default="")  # draft | interview
+    reference_id = models.CharField(max_length=64, blank=True, default="")
+    # [{path, kind: inferred|reference|default|missing, note, source?}]
+    spec_flags = models.JSONField(default=list, blank=True)
+    # [{id, path, question, options, recommended, why}]
+    open_decisions = models.JSONField(default=list, blank=True)
+
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")
 
@@ -347,6 +357,30 @@ class AgentRequirementMessage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.requirement_id}:{self.seq}:{self.role}"
+
+
+class AgentRequirementDocument(models.Model):
+    """A document the user gave the analyst (SOP, RFP, protocol…), with its text."""
+
+    requirement = models.ForeignKey(
+        AgentRequirement, on_delete=models.CASCADE, related_name="documents"
+    )
+    name = models.CharField(max_length=160)
+    content_type = models.CharField(max_length=120)
+    size = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64)
+    data = models.BinaryField()
+    extracted_text = models.TextField(blank=True, default="")
+    pages = models.PositiveIntegerField(default=0)
+    sheets = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "agent_mode_requirement_document"
+        ordering = ["requirement", "pk"]
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class AgentRequirementVersion(models.Model):

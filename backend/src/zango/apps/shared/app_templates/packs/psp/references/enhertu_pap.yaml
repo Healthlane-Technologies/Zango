@@ -1,0 +1,414 @@
+# A fully-answered journey, for reference only. It shows how deep an answer
+# should go — not what to ask. Never copy its therapy, roles or wording into a
+# real spec.
+
+journey: enhertu_pap
+name: Enhertu Patient Assistance Program
+
+roles:
+  Manager: {}
+  Executive: {}
+  Distributor:
+    sees_only: own
+    scope_field: distributor
+
+masters:
+  - code: city
+    name: City
+    plural: Cities
+    reserved: true
+    fields:
+      - state: { type: text }
+  - code: indication
+    name: Indication
+    plural: Indications
+    reserved: true
+    fields:
+      - therapy_area: { type: choice, options: [oncology, haematology] }
+  - code: doctor
+    name: Doctor
+    plural: Doctors
+    reserved: true
+    create_by: [Manager]
+    fields:
+      - registration_no: { type: text, required: true }
+      - specialty: { type: choice, options: [oncology, haematology] }
+      - hospital: { type: link, to: hospital, multiple: true }
+      - verified: { type: boolean }
+  - code: hospital
+    name: Hospital
+    plural: Hospitals
+    reserved: true
+    fields:
+      - city: { type: link, to: city }
+  - code: distributor
+    name: Distributor
+    plural: Distributors
+    reserved: true
+    app_user_role: Distributor
+    app_user_contact: { mobile: phone, email: email }
+    fields:
+      - territory: { type: text }
+      - phone: { type: phone }
+      - email: { type: email }
+  - code: pharmacy
+    reserved: true
+    enabled: false
+
+patient:
+  attributes:
+    - name: { type: text, required: true }
+    - mobile: { type: phone, required: true }
+    - email: { type: email }
+    - date_of_birth: { type: date, required: true }
+    - gender: { type: choice, options: [female, male, other] }
+    - weight_kg: { type: number }
+    - her2_status: { type: choice, options: [her2_positive, her2_low, her2_mutant, unknown] }
+    - ecog_score: { type: choice, options: [0, 1, 2, 3, 4] }
+    - city: { type: link, to: city }
+    - distributor: { type: link, to: distributor }
+  states:
+    - new: { start: true }
+    - active
+    - inactive
+  steps:
+    - { do: Activate, from: new, to: active, by: [Executive, Manager], then: [add_timeline_entry: "Patient activated"] }
+    - do: Deactivate
+      from: active
+      to: inactive
+      by: Manager
+      then: [add_tag: lead_dropped]
+      collects:
+        - inactive_reason: { type: text, required: true }
+    - { do: Reactivate, from: inactive, to: active, by: Manager }
+  create:
+    by: [Executive]
+    form:
+      - name: { required: true }
+      - mobile: { required: true }
+      - date_of_birth: { required: true }
+      - her2_status
+      - city
+    duplicate_check:
+      scope:
+        status_in: [new, active]
+      rules:
+        - match: [mobile]
+          compare: normalised
+          on_match: block
+          message: "A patient with this mobile number already exists."
+        - compare: custom
+          text: "Same full name and date of birth under the same doctor."
+          on_match: warn
+    on_create: [add_timeline_entry: "Lead received into Enhertu PAP"]
+  labels:
+    - lead_received
+    - consent_signed:
+        apply:
+          by: [Executive, Manager]
+          then: [add_timeline_entry: "Informed consent captured"]
+        remove:
+          by: [Manager]
+    - ild_risk_flagged:
+        apply:
+          by: [Manager]
+          then: [create_task: "Review ILD/pneumonitis risk before next dispense", add_timeline_entry: "ILD risk flagged"]
+          collects:
+            - ild_note: { type: text, required: true }
+        remove:
+          by: [Manager]
+          collects:
+            - ild_cleared_note: { type: text, required: true }
+    - lead_dropped:
+        apply:
+          by: [Executive, Manager]
+          then: [create_task: "Re-engagement follow-up", add_timeline_entry: "Patient dropped from program"]
+          collects:
+            - drop_reason: { type: choice, options: [not eligible, declined, unreachable, deceased, treated elsewhere], required: true }
+        remove:
+          by: [Manager]
+  table:
+    access:
+      - Manager: { can: [add, edit, download] }
+      - Executive: { can: [add, edit] }
+      - Distributor: { can: [] }
+    columns:
+      - name: { searchable: true, sortable: true }
+      - mobile: { searchable: true, roles: [Manager, Executive] }
+      - status: { search_choices: [new, active, inactive] }
+      - her2_status: { label: HER2 }
+      - city: { shows_from: name, searchable: true }
+      - next_dispense: { as: custom, label: "Next dispense due", shows: "the due date of the earliest unfulfilled dispense order" }
+    sort: -created_at
+    can_do:
+      - do: Log a call
+        key: log_call
+        kind: form
+        by: [Executive]
+        then: [add_timeline_entry: "Call logged"]
+        collects:
+          - outcome: { type: choice, options: [reached, no answer, wrong number, call back], required: true }
+          - note: { type: text }
+    owned_by:
+      - Distributor: { field: distributor }
+  consent:
+    show_on_patient_360: true
+    data_processing:
+      version: "1.0"
+      notice: "I consent to my personal and health information being collected and processed by the program team in order to assess my eligibility and support my treatment."
+      record_by: [Executive]
+      withdraw_by: [Executive, Manager]
+      evidence_document: patient_consent
+      on_withdraw: { patient_status: inactive, stop_all_communication: true, open_archival_task: true }
+    communication:
+      version: "1.0"
+      notice: "I agree to be contacted about my treatment and this program."
+      record_by: [Executive]
+      withdraw_by: [Executive, Manager]
+      channels: [sms, whatsapp, voice]
+    program:
+      version: "1.0"
+      notice: "I consent to my prescription, HER2 status and dispensing history being shared with the program team and its logistics partner for the purpose of supplying free vials under the program scheme."
+      record_by: [Executive]
+      withdraw_by: [Executive, Manager]
+    register_open_to: [Manager]
+
+catalogue:
+  skus:
+    - ENH100: { label: "Enhertu 100mg vial", cold_chain: true }
+
+documents:
+  attaches_to: program_enrolment
+  select: latest_active
+  states:
+    - pending_verification: { start: true }
+    - active
+    - rejected
+    - suspended
+  steps:
+    - { do: Verify, from: pending_verification, to: active, by: Manager, then: [add_timeline_entry: "Document verified"] }
+    - do: Reject
+      from: pending_verification
+      to: rejected
+      by: Manager
+      collects:
+        - rejection_reason: { type: text, required: true }
+    - { do: Suspend, from: active, to: suspended, by: Manager }
+  types:
+    - prescription:
+        reserved: true
+        kind: prescription
+        fields:
+          - indication: { type: link, to: indication, required: true }
+          - doctor: { type: link, to: doctor, required: true }
+          - prescription_date: { type: date, required: true }
+          - dosage: { type: text }
+          - frequency: { type: text }
+    - patient_consent
+    - income_proof:
+        fields:
+          - annual_income: { type: number, required: true }
+    - hcp_recommendation:
+        linked_documents: [prescription]
+
+programs:
+  - code: pap
+    name: Patient Assistance Program
+    eligible_when:
+      all:
+        - her2_status == her2_positive
+        - consent_signed is_true
+      explain:
+        prefix: "This patient cannot be enrolled yet:"
+        her2_status: "The program covers HER2-positive patients only."
+        consent_signed: "Capture informed consent before enrolling."
+    attributes:
+      - annual_income: { type: number }
+      - treatment_start_date: { type: date }
+    schemes:
+      - code: bxgy
+        name: Buy 3 get 2
+        accrual: { buy: 3, get: 2 }
+        equivalences:
+          - { sku: ENH100, factor: 1, base_sku: ENH100 }
+    on_enrol: [add_timeline_entry: "Enrolled into the assistance program"]
+    requires_documents: [prescription, patient_consent, income_proof]
+    document_rules:
+      - document: prescription
+        on_upload:
+          all:
+            - prescription_date >= treatment_start_date
+          explain:
+            prescription_date: "The prescription cannot pre-date the start of treatment."
+        duplicate_check:
+          rules:
+            - match: [doctor, prescription_date]
+              compare: exact
+              on_match: warn
+              message: "This prescription looks like one already on file."
+    enrolment:
+      states:
+        - pending: { start: true }
+        - awaiting_documents
+        - active
+        - suspended
+        - closed: { final: true }
+      steps:
+        - { do: Request documents, from: pending, to: awaiting_documents, by: Executive, then: [create_task: "Chase the patient for documents"] }
+        - do: Approve
+          from: awaiting_documents
+          to: active
+          by: Manager
+          allowed_when:
+            all:
+              - documents_verified is_true
+            explain:
+              documents_verified: "Verify every mandatory document before approving."
+          then: [apply_scheme, add_timeline_entry: "Enrolment approved"]
+        - { do: Suspend, from: active, to: suspended, by: Manager, then: [cascade_suspend_dependents] }
+        - { do: Reactivate, from: suspended, to: active, by: Manager }
+        - do: Close
+          from: active
+          to: closed
+          by: Manager
+          collects:
+            - closure_reason: { type: choice, options: [therapy complete, discontinued, lost to follow-up, deceased], required: true }
+      table:
+        access:
+          - Manager: { can: [add, edit, download] }
+          - Executive: { can: [add, edit] }
+          - Distributor: { can: [] }
+        columns:
+          - patient: { shows_from: name, searchable: true }
+          - status: { search_choices: [pending, awaiting_documents, active, suspended, closed] }
+          - treatment_start_date: { sortable: true }
+          - credits: { as: custom, label: "Free vials earned", shows: "the wallet balance for this enrolment" }
+        sort: -created_at
+        owned_by:
+          - Distributor: { field: distributor }
+    consent:
+      use: blanket
+      required_before: active
+      on_withdraw: { enrolment_status: suspended, cascade_suspend_dependents: true, open_archival_task: true }
+    orders:
+      - code: paid_purchase
+        name: Paid purchase
+        earns_credit: true
+        allowed_skus: [ENH100]
+        lines_at: create
+        assigned_by: { role: Distributor, field: distributor }
+        collects:
+          - invoice_number: { type: text, required: true }
+          - invoice_date: { type: date, required: true }
+        on_raise: [persist_order_lines]
+        states:
+          - raised: { start: true }
+          - verified
+          - rejected: { final: true }
+        steps:
+          - { do: Verify invoice, from: raised, to: verified, by: Manager, then: [accrue_to_wallet, apply_scheme, add_timeline_entry: "Paid purchase verified"] }
+          - do: Reject
+            from: raised
+            to: rejected
+            by: Manager
+            collects:
+              - rejection_reason: { type: text, required: true }
+      - code: free_dispense
+        name: Free dispense
+        spends_credit: true
+        allowed_skus: [ENH100]
+        lines_at: { step: Approve }
+        assigned_by: { role: Distributor, field: distributor }
+        allowed_when:
+          all:
+            - wallet_balance >= 1
+            - ild_risk_flagged is_false
+          explain:
+            wallet_balance: "The patient has not yet earned a free vial."
+            ild_risk_flagged: "Clear the ILD risk flag before dispensing."
+        states:
+          - requested: { start: true }
+          - approved
+          - dispatched
+          - delivered: { final: true }
+          - cancelled: { final: true }
+        steps:
+          - { do: Approve, from: requested, to: approved, by: Manager, then: [redeem_from_wallet, persist_order_lines] }
+          - { do: Dispatch, from: approved, to: dispatched, by: Distributor }
+          - do: Confirm delivery
+            from: dispatched
+            to: delivered
+            by: Distributor
+            then: [add_timeline_entry: "Free vial delivered"]
+            collects:
+              - delivered_on: { type: date, required: true }
+          - { do: Cancel, from: requested, to: cancelled, by: Manager, then: [reverse_credits] }
+        table:
+          access:
+            - Manager: { can: [add, edit, download] }
+            - Distributor: { can: [edit] }
+          columns:
+            - patient: { shows_from: name, searchable: true }
+            - status: { search_choices: [requested, approved, dispatched, delivered, cancelled] }
+            - distributor: { shows_from: name }
+          owned_by:
+            - Distributor: { field: distributor }
+
+detail:
+  features: [enrolments, documents, orders, wallet, timeline, tasks, notes]
+  custom_tabs:
+    - code: clinical
+      label: Clinical
+      text: "HER2 status, ECOG score, body weight and the dose history, newest first, with the current prescription alongside."
+
+adverse_events:
+  intake: in_system
+  attaches_to: patient
+  report_by: [Executive, Manager]
+  show_on_patient_360: true
+  serious_sla_hours: 24
+  processing_basis: legal_obligation
+  attributes:
+    - description: { type: text, required: true }
+    - suspected_drug: { type: text }
+    - outcome: { type: choice, options: [recovered, recovering, not recovered, fatal, unknown] }
+  states:
+    - reported: { start: true }
+    - under_review
+    - submitted: { final: true }
+  steps:
+    - { do: Review, from: reported, to: under_review, by: Manager }
+    - { do: Submit to PV, from: under_review, to: submitted, by: Manager, then: [add_timeline_entry: "Adverse event submitted to pharmacovigilance"] }
+  notify_client:
+    on: serious
+    to: [pv@client.example]
+    attach_record: true
+
+reports:
+  items:
+    - code: enrolment_summary
+      label: Enrolment summary
+      purpose: "How many patients are enrolled and active, by city and by month."
+      category: program
+      kind: aggregate
+      audience: client
+      primary: enrolment
+      joins:
+        - { to: patient, on: patient = patient.id, type: left, cardinality: many_to_one, origin: journey }
+      columns:
+        - { source: patient, field: city, label: City }
+        - { source: enrolment, field: id, aggregate: count, label: Patients }
+      group_by: [patient.city, enrolment.created_at by month]
+      filters:
+        - { source: enrolment, field: status, op: "==", value: active }
+      parameters:
+        - { name: period, type: date_range, required: true }
+      privacy:
+        exclude_withdrawn_consent: true
+        small_cell_suppression: below 5
+      access:
+        run_by: [Manager]
+        schedule: monthly
+        delivery: [in_app, xlsx]
+        link_expiry_days: 7
+      layout: { sort: city asc, totals: true }

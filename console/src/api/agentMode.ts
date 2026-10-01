@@ -2,6 +2,8 @@ import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { appKeys } from './apps';
 import { api } from './client';
 import { useApiMutation } from './hooks';
+import type { UploadedDocument } from './scaffolds';
+import type { TemplateReference } from './templates';
 
 // Agent Mode, phase 1: requirement gathering. Endpoints live under
 // /api/v1/apps/<uuid>/agent-mode/ (backend/src/zango/api/platform/agent_mode/v1).
@@ -113,6 +115,39 @@ export interface RequirementSpec {
 	/** Pointers the last agent turn (or manual save) changed. */
 	changed_paths: string[];
 	template: { slug: string; name: string; version: string; version_uuid: string } | null;
+	/** What the agent didn't take straight from the user's material, per path. */
+	flags?: SpecFlag[];
+	/** Real gaps only, each tied to a path with a recommended answer; answered in one go. */
+	open_decisions?: OpenDecision[];
+	/** Documents the requirement was drafted from. */
+	documents?: UploadedDocument[];
+	/** 'draft' while the agent drafts the whole journey in one pass; null when unknown. */
+	mode?: 'draft' | 'interview' | null;
+}
+
+export type FlagKind = 'inferred' | 'reference' | 'default' | 'missing';
+
+export interface SpecFlag {
+	path: string;
+	kind: FlagKind;
+	note: string;
+	section?: string;
+	source?: { document?: string; locator?: string; quote?: string } | null;
+}
+
+export interface OpenDecision {
+	id: string;
+	path: string;
+	question: string;
+	options: string[];
+	recommended?: string;
+	why?: string;
+}
+
+export interface DecisionAnswer {
+	id: string;
+	path: string;
+	answer: string;
 }
 
 /** GET …/app-templates/templates/<slug>/versions/<uuid>/builder/ — immutable per version. */
@@ -134,6 +169,8 @@ export interface TemplateBuilderDef {
 	spec_format: 'yaml' | 'markdown';
 	/** Same-origin URL of the template's own builder page (text/html), when it ships one. */
 	builder_url?: string | null;
+	/** Reference journeys the draft can start from. */
+	references?: TemplateReference[];
 	starter_yaml: string;
 	example_yaml: string;
 }
@@ -226,12 +263,21 @@ export function useRequirement(appId: string, reqId: string | undefined) {
 	return useQuery(requirementQuery(appId, reqId));
 }
 
+/** A new round: plain text, or (template apps) a brief with documents and a reference. */
+export type NewRoundInput = string | { prompt?: string; reference?: string; documents?: File[] };
+
 export function useCreateRequirement(appId: string, onCreated: (uuid: string) => void) {
 	return useApiMutation({
-		fn: (prompt: string) =>
-			api<{ uuid: string; status: RequirementStatus }>(`${base(appId)}/requirements/`, 'POST', {
-				prompt,
-			}),
+		fn: (input: NewRoundInput) => {
+			const url = `${base(appId)}/requirements/`;
+			if (typeof input === 'string')
+				return api<{ uuid: string; status: RequirementStatus }>(url, 'POST', { prompt: input });
+			const body = new FormData();
+			if (input.prompt) body.append('prompt', input.prompt);
+			if (input.reference) body.append('reference', input.reference);
+			for (const file of input.documents ?? []) body.append('documents', file, file.name);
+			return api<{ uuid: string; status: RequirementStatus }>(url, 'POST', body);
+		},
 		invalidate: [agentKeys.requirements(appId)],
 		onSuccess: (r) => onCreated(r.uuid),
 	});
@@ -356,3 +402,33 @@ export function useBuilderHtml(url: string | null | undefined) {
 		retry: 1,
 	});
 }
+
+// ---- one-pass drafting: decisions, flags, documents -----------------------------------------
+
+/** Answer every open decision in one message; the agent applies them in one turn. */
+export function useAnswerDecisions(appId: string, reqId: string) {
+	return useApiMutation({
+		fn: ({ content, answers }: { content: string; answers: DecisionAnswer[] }) =>
+			api<{ status: RequirementStatus }>(`${base(appId)}/requirements/${reqId}/messages/`, 'POST', {
+				content,
+				answers,
+			}),
+		invalidate: [agentKeys.requirement(appId, reqId)],
+		success: 'Answers sent',
+	});
+}
+
+/** Accept the agent's assumptions at these paths; returns the spec without those flags. */
+export function useConfirmFlags(appId: string, reqId: string) {
+	return useApiMutation({
+		fn: (paths: string[]) =>
+			api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/flags/confirm/`, 'POST', {
+				paths,
+			}),
+		invalidate: [agentKeys.spec(appId, reqId), agentKeys.requirement(appId, reqId)],
+	});
+}
+
+/** Where a requirement's uploaded document can be downloaded. */
+export const documentUrl = (appId: string, reqId: string, id: string | number) =>
+	`${base(appId)}/requirements/${reqId}/documents/${id}/`;

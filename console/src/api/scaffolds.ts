@@ -45,6 +45,18 @@ export interface Scaffold {
 	created_at: string | null;
 	/** The template the app is being created from, or null for a described app. */
 	template?: TemplateRef | null;
+	/** Documents uploaded with the ask (SOPs, RFPs…), handed to the analyst. */
+	documents?: UploadedDocument[];
+	/** The reference journey the draft starts from, or null to let the agent choose. */
+	reference?: string | null;
+}
+
+export interface UploadedDocument {
+	id: string | number;
+	name: string;
+	size: number;
+	content_type: string;
+	pages?: number | null;
 }
 
 /** The backend rejects longer prompts (AgentAppScaffoldCreateView.MAX_PROMPT_CHARS). */
@@ -80,16 +92,24 @@ export function useScaffold(uuid: string | null, { paused = false } = {}) {
 }
 
 export interface ScaffoldInput {
-	/** Optional with a template: the server falls back to its app_prompt_prefill. */
+	/** Optional with a template: documents can stand in for it, or the server's prefill. */
 	prompt?: string;
 	template_slug?: string;
+	/** A template reference journey id; omitted lets the agent choose. */
+	reference?: string;
+	/** Files to draft from (pdf, docx, xlsx, csv, txt, md). */
+	documents?: File[];
 }
 
-export const createScaffold = ({ prompt, template_slug }: ScaffoldInput) =>
-	api<Scaffold>(`${BASE}/scaffolds/`, 'POST', {
-		...(prompt ? { prompt } : {}),
-		...(template_slug ? { template_slug } : {}),
-	});
+/** Multipart: the ask, the template, and any documents (one `documents` part per file). */
+export const createScaffold = ({ prompt, template_slug, reference, documents }: ScaffoldInput) => {
+	const body = new FormData();
+	if (prompt) body.append('prompt', prompt);
+	if (template_slug) body.append('template_slug', template_slug);
+	if (reference) body.append('reference', reference);
+	for (const file of documents ?? []) body.append('documents', file, file.name);
+	return api<Scaffold>(`${BASE}/scaffolds/`, 'POST', body);
+};
 
 /** Open the requirement conversation in the new app. 409 while the app is still being created. */
 export const handOffScaffold = (uuid: string) =>

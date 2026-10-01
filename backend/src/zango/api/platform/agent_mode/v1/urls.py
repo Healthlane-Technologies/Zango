@@ -4,6 +4,9 @@ from .views import (
     AgentModeAvailabilityView,
     AgentRequirementApproveView,
     AgentRequirementDetailView,
+    AgentRequirementDocumentFileView,
+    AgentRequirementDocumentsView,
+    AgentRequirementFlagsConfirmView,
     AgentRequirementListCreateView,
     AgentRequirementMessageView,
     AgentRequirementSpecFinalizeView,
@@ -33,6 +36,18 @@ urlpatterns = [
     path(
         "requirements/<uuid:requirement_uuid>/spec/validate/",
         AgentRequirementSpecValidateView.as_view(),
+    ),
+    path(
+        "requirements/<uuid:requirement_uuid>/flags/confirm/",
+        AgentRequirementFlagsConfirmView.as_view(),
+    ),
+    path(
+        "requirements/<uuid:requirement_uuid>/documents/",
+        AgentRequirementDocumentsView.as_view(),
+    ),
+    path(
+        "requirements/<uuid:requirement_uuid>/documents/<int:doc_id>/",
+        AgentRequirementDocumentFileView.as_view(),
     ),
     path(
         "requirements/<uuid:requirement_uuid>/spec/finalize/",

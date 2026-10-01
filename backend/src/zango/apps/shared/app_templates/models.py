@@ -124,6 +124,8 @@ class AppTemplateVersion(FullAuditMixin):
         "workspace_engine_paths",
         "builder_html",
         "builder_adapter",
+        "references",
+        "drafting_md",
     )
 
     object_uuid = models.UUIDField(
@@ -182,6 +184,12 @@ class AppTemplateVersion(FullAuditMixin):
     # injected after it that speaks the platform's postMessage protocol.
     builder_html = models.TextField(blank=True, default="")
     builder_adapter = models.TextField(blank=True, default="")
+
+    # --- one-pass drafting: curated reference journeys a draft can start
+    # from ([{id, title, summary, tags, yaml}]), and the guide the analyst
+    # follows to draft a whole journey from the user's documents.
+    references = models.JSONField(default=list, blank=True)
+    drafting_md = models.TextField(blank=True, default="")
 
     # Set at publish, over every content field and file: the cache key and
     # the on-disk directory name, so it can never go stale.

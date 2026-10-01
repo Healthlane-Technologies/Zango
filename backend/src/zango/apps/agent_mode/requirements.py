@@ -343,6 +343,63 @@ asks for and keep everything else exactly as it is.
 ```"""
 
 
+_TEMPLATE_DRAFT = """\
+## Draft this journey in one pass
+
+Template: {name} (slug `{slug}`, version {version})
+
+The user gave you their material instead of answering an interview. Do not
+interview them. Follow `{drafting}` exactly: read everything, draft EVERY
+section of the journey with the spec tools (spec_replace_section, one call per
+section), flag every value you did not take straight from their material with
+spec_flag, fix every error spec_validate reports, and finish with one
+spec_open_decisions call holding only the real gaps (at most 8).
+
+Vocabulary: `{schema}`. The draft currently holds `{starting_point}`.
+
+{documents}
+Reference journeys you may start from (each is a complete, valid journey):
+{references}
+{base}
+Reply in three or four lines when you are done; the user reviews the flags and
+decisions on the Review tab.
+"""
+
+
+def _template_draft_block(requirement, template, docs_dir: str) -> str:
+    refs = "\n".join(
+        f"- `{r['id']}` — {r['title']}: {r['summary']}  ({r['path']})" for r in template.references
+    ) or "- (none; start from the starter journey)"
+    chosen = next((r for r in template.references if r["id"] == requirement.reference_id), None)
+    base = (
+        f"The user chose `{chosen['id']}` as the base: start from it.\n"
+        if chosen
+        else "Pick the closest reference as your base, or keep the starter if none is close.\n"
+    )
+    documents = (
+        f"The user's documents are in `{docs_dir}` — start with `{docs_dir}/INDEX.md`.\n"
+        if docs_dir
+        else "There are no documents: draft from the written brief below.\n"
+    )
+    spec = (requirement.spec_markdown or "").strip()
+    starting_point = (
+        "the template's starter journey"
+        if spec == (template.starter_yaml or "").strip()
+        else "the journey this app was last approved on — change only what the material asks for"
+    )
+    return _TEMPLATE_DRAFT.format(
+        name=template.name,
+        slug=template.slug,
+        version=template.version or "current",
+        drafting=template.file_path("drafting") or "DRAFTING.md",
+        schema=template.file_path("schema"),
+        starting_point=starting_point,
+        documents=documents,
+        references=refs,
+        base=base,
+    )
+
+
 def _template_mode_block(requirement, template) -> str:
     spec = (requirement.spec_markdown or "").strip()
     is_change = bool(spec) and spec != (template.starter_yaml or "").strip()
@@ -362,7 +419,7 @@ def _template_mode_block(requirement, template) -> str:
     )
 
 
-def compose_analyst_prompt(requirement, ctx, user_message: str) -> str:
+def compose_analyst_prompt(requirement, ctx, user_message: str, docs_dir: str = "") -> str:
     """First turn dispatches the skill and supplies context; later turns are
     just the user's reply, since the session is resumed."""
     if requirement.session_id:
@@ -379,7 +436,9 @@ def compose_analyst_prompt(requirement, ctx, user_message: str) -> str:
 
     # A requirement bound to a template up front skips the offer entirely.
     bound = requirement.template if getattr(requirement, "template_slug", "") else None
-    if bound is not None:
+    if bound is not None and getattr(requirement, "mode", "") == "draft":
+        templates = "\n" + _template_draft_block(requirement, bound, docs_dir)
+    elif bound is not None:
         templates = "\n" + _template_mode_block(requirement, bound)
     else:
         catalogue = catalogue_digest()
@@ -387,6 +446,11 @@ def compose_analyst_prompt(requirement, ctx, user_message: str) -> str:
             "\n" + _TEMPLATE_BRIEF.format(catalogue=catalogue) if catalogue else ""
         )
 
+    closing = (
+        "Draft now; do not ask questions before the journey is written."
+        if bound is not None and getattr(requirement, "mode", "") == "draft"
+        else "Read the workspace first, then ask your opening questions."
+    )
     return f"""/{ANALYST_SKILL}
 
 ## The app you are scoping
@@ -401,7 +465,7 @@ existing_roles: {roles}
 
 {user_message.strip()}
 {templates}
-Read the workspace first, then ask your opening questions.
+{closing}
 """
 
 
@@ -419,7 +483,7 @@ _SPEC_TOOLS_APPEND = (
 )
 
 
-def build_analyst_options(*, ctx, creds, requirement, spec_server=None):
+def build_analyst_options(*, ctx, creds, requirement, spec_server=None, docs_dir=""):
     """Read-only ClaudeAgentOptions for a gathering turn.
 
     ``spec_server`` (template requirements) exposes the spec tools; with it the
@@ -441,7 +505,7 @@ def build_analyst_options(*, ctx, creds, requirement, spec_server=None):
         # Template packs are materialised under templates_dir() and the
         # analyst has to read them once a template is accepted. It has no
         # write tool at all, so widening what it can *read* costs nothing.
-        add_dirs=[SKILL_PLUGIN_DIR, templates_dir()],
+        add_dirs=[SKILL_PLUGIN_DIR, templates_dir(), *([docs_dir] if docs_dir else [])],
         setting_sources=["user"],
         plugins=[{"type": "local", "path": SKILL_PLUGIN_DIR}],
         skills=[ANALYST_SKILL],
@@ -493,6 +557,13 @@ def build_analyst_options(*, ctx, creds, requirement, spec_server=None):
             getattr(dj, "AGENT_MODE_ANALYST_TEMPLATE_BUDGET_USD", 0)
             or max(kwargs["max_budget_usd"], 4.0)
         )
+        if getattr(requirement, "mode", "") == "draft" and not requirement.session_id:
+            # One pass over a whole journey: many tool calls in one turn.
+            kwargs["max_turns"] = max(kwargs["max_turns"], 150)
+            kwargs["max_budget_usd"] = float(
+                getattr(dj, "AGENT_MODE_ANALYST_DRAFT_BUDGET_USD", 0)
+                or max(kwargs["max_budget_usd"], 8.0)
+            )
         kwargs["system_prompt"] = {
             **kwargs["system_prompt"],
             "append": kwargs["system_prompt"]["append"] + _SPEC_TOOLS_APPEND,

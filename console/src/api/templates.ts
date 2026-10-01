@@ -58,10 +58,20 @@ export interface TemplateVersionRef {
 	changelog: string;
 }
 
+/** A curated example journey a draft can start from (template-owned). */
+export interface TemplateReference {
+	id: string;
+	title: string;
+	summary?: string;
+	tags?: string[];
+}
+
 export interface TemplateDetail extends TemplateSummary {
 	versions: TemplateVersionRef[];
 	starter_yaml: string;
 	example_yaml: string;
+	/** Reference journeys the agent can draft from. */
+	references?: TemplateReference[];
 }
 
 /** What apps, scaffolds and requirements say about the template they're built on. */

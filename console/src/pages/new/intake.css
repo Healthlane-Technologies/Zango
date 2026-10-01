@@ -1,0 +1,75 @@
+/* Document intake (pages/new/intake.tsx): drop zone and file list. */
+.docdrop {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 16px;
+	border: 1px dashed var(--border-2);
+	border-radius: 10px;
+	background: var(--bg);
+	color: var(--t3);
+	cursor: pointer;
+	transition: border-color 0.12s, background 0.12s;
+}
+.docdrop:hover,
+.docdrop.over {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+	color: var(--accent-t);
+}
+.docdrop.disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+.docdrop b {
+	color: var(--t1);
+	font-weight: 550;
+}
+.docdrop small {
+	display: block;
+	font-size: 12px;
+	color: var(--t4);
+}
+.docdrop-err {
+	margin: 0;
+	padding-left: 18px;
+	font-size: 12px;
+	color: var(--red-t);
+}
+.docs {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel);
+}
+.docs li {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 8px 6px 12px;
+	border-bottom: 1px solid var(--border-soft);
+	font-size: 12.5px;
+	color: var(--t1);
+}
+.docs li:last-child {
+	border-bottom: 0;
+}
+.docs .docext {
+	flex-shrink: 0;
+	min-width: 38px;
+	padding: 1px 5px;
+	border-radius: 5px;
+	background: var(--subtle);
+	color: var(--t2);
+	font: 600 10.5px var(--mono);
+	text-align: center;
+}
+.docs .docs-total {
+	justify-content: flex-end;
+	color: var(--t3);
+	font-size: 12px;
+	background: var(--bg);
+	border-radius: 0 0 10px 10px;
+}

@@ -8,12 +8,15 @@ import {
 	useAvailability,
 	useCreateRequirement,
 	useRequirements,
+	useRequirementSpec,
 	useSaveSpec,
 	useSendMessage,
 	useTemplateBuilder,
+	type NewRoundInput,
 } from '@/api/agentMode';
 import { useAppId } from '@/api/hooks';
 import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
+import { NewChangeModal } from './agent/NewChangeModal';
 import { RequirementsPanel } from './agent/RequirementsPanel';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
 import type { SpecDraftController } from './agent/builder/useSpecDraft';
@@ -134,6 +137,16 @@ export function AgentPage() {
 	const folded = builderFirst && chatCollapsed;
 
 	const create = useCreateRequirement(appId, () => setView({ round: null, tab: 'requirements' }));
+	// Template apps start a change from a brief and/or documents (one-pass draft).
+	const [changeOpen, setChangeOpen] = useState(false);
+	const activeBuilder = useTemplateBuilder(active?.template?.slug, active?.template?.version_uuid);
+	// Shares the panel's cache (same key), so this costs no extra request.
+	const activeSpec = useRequirementSpec(appId, active?.template ? activeId : undefined, {
+		draft: active?.draft_revision,
+		version: active?.spec_version,
+		status: active?.status,
+	});
+	const openDecisions = activeSpec.data?.open_decisions?.length ?? 0;
 	const sendMessage = useSendMessage(appId, activeId);
 	const saveSpec = useSaveSpec(appId, activeId);
 	const approve = useApproveRequirement(appId, activeId);
@@ -148,11 +161,13 @@ export function AgentPage() {
 	// A template spec can't be approved while the agent is still filling it in, or with errors;
 	// the server refuses both, so say why up front.
 	const templateBlock = active?.template
-		? active.spec_is_draft
-			? 'Mark the spec as ready (or let the agent finish) first'
-			: (active.validation_issues ?? []).some((i) => i.level === 'error')
-				? 'Fix the problems in Checks first'
-				: null
+		? openDecisions > 0
+			? `Answer the ${openDecisions} open decision${openDecisions > 1 ? 's' : ''} in Review first`
+			: active.spec_is_draft
+				? 'Mark the spec as ready (or let the agent finish) first'
+				: (active.validation_issues ?? []).some((i) => i.level === 'error')
+					? 'Fix the problems in Checks first'
+					: null
 		: null;
 
 	// Approving locks the spec; the build itself starts from the Builds tab (RunsPanel owns runs).
@@ -211,7 +226,11 @@ export function AgentPage() {
 	} else if (active) {
 		actions = (
 			<>
-				<Button icon="plus" onClick={() => setFocusSignal((n) => n + 1)} disabled={blocked}>
+				<Button
+					icon="plus"
+					onClick={() => (active.template ? setChangeOpen(true) : setFocusSignal((n) => n + 1))}
+					disabled={blocked}
+				>
 					New change
 				</Button>
 				{tab !== 'builds' && active.status === 'approved' && (
@@ -233,8 +252,16 @@ export function AgentPage() {
 			? specHighlights(viewed.detail.spec_markdown).groups.reduce((n, g) => n + g.items.length, 0)
 			: 0;
 
+	const newChange = (input: NewRoundInput) => attempt(create.mutateAsync(input));
+
 	return (
 		<div className="ws">
+			<NewChangeModal
+				open={changeOpen}
+				onOpenChange={setChangeOpen}
+				references={activeBuilder.data?.references}
+				onSubmit={newChange}
+			/>
 			<div className="wsh">
 				<h2>Agent</h2>
 				{activeRound && (

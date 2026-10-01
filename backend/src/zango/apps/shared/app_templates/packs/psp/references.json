@@ -1,0 +1,9 @@
+[
+  {
+    "id": "enhertu_pap",
+    "file": "references/enhertu_pap.yaml",
+    "title": "Enhertu Patient Assistance Program",
+    "summary": "An oncology PAP: HER2-positive eligibility with document checks and approval, consent, prescriptions verified per program, distributors who see only their own orders, and a buy-N-get-M free-vial scheme with a credit wallet.",
+    "tags": ["oncology", "PAP", "eligibility", "free-of-cost", "buy-N-get-M", "distributors", "wallet"]
+  }
+]
