@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Bedrock LLM Provider — Implementation Plan</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px;
+       background: #f6f8fa; color: #24292f; line-height: 1.6; }
+.doc { max-width: 900px; margin: 40px auto; padding: 0 24px 80px; }
+header { border-bottom: 2px solid #d0d7de; padding-bottom: 20px; margin-bottom: 32px; }
+.doc-type { font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+            color: #0969da; margin-bottom: 8px; }
+h1 { font-size: 22px; color: #1f2328; font-weight: 700; }
+.meta { font-size: 11px; color: #656d76; margin-top: 6px; }
+h2 { font-size: 12px; font-weight: 700; color: #1f2328; margin: 28px 0 10px;
+     text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #d0d7de;
+     padding-bottom: 6px; }
+h3 { font-size: 13px; font-weight: 600; color: #24292f; margin: 18px 0 6px; }
+p { color: #57606a; margin-bottom: 8px; }
+ul, ol { padding-left: 20px; }
+li { color: #57606a; margin-bottom: 6px; }
+code { background: #eaeef2; color: #0550ae; padding: 2px 5px;
+       border-radius: 3px; font-size: 12px; }
+pre { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
+      padding: 14px; overflow-x: auto; margin: 10px 0; }
+pre code { background: none; padding: 0; color: #24292f; }
+.section { margin-bottom: 32px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px;
+       font-size: 11px; font-weight: 600; margin-right: 4px; }
+.tag-blue { background: #ddf4ff; color: #0969da; border: 1px solid #b6e3ff; }
+.tag-green { background: #dcffe4; color: #116329; border: 1px solid #a7f0b5; }
+.tag-yellow { background: #fff8c5; color: #7d4e00; border: 1px solid #e3b341; }
+.tag-red { background: #ffebe9; color: #cf222e; border: 1px solid #ff818266; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; color: #656d76;
+     border-bottom: 2px solid #d0d7de; padding: 6px 10px; background: #f6f8fa; }
+td { padding: 8px 10px; border-bottom: 1px solid #eaeef2; color: #57606a;
+     vertical-align: top; }
+td:first-child { color: #24292f; }
+hr { border: none; border-top: 1px solid #eaeef2; margin: 24px 0; }
+.mockup { border: 1px solid #d0d7de; border-radius: 6px; overflow: hidden;
+          margin: 14px 0; font-size: 11px; background: #fff; }
+.mockup-chrome { background: #eaeef2; padding: 8px 12px; color: #656d76;
+                 letter-spacing: .05em; border-bottom: 1px solid #d0d7de;
+                 font-family: 'SF Mono', monospace; }
+.mockup-chrome .dot { display: inline-block; width: 9px; height: 9px;
+                      border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.mockup-chrome .dot.r { background: #ff5f57; }
+.mockup-chrome .dot.y { background: #febc2e; }
+.mockup-chrome .dot.g { background: #28c840; }
+.mockup-chrome .url { margin-left: 14px; color: #57606a; }
+.mockup-body { display: flex; min-height: 380px; }
+.mockup-sidebar { width: 160px; background: #f6f8fa; border-right: 1px solid #d0d7de;
+                  padding: 12px 0; color: #57606a; }
+.mockup-sidebar .nav-item { padding: 6px 14px; cursor: default; }
+.mockup-sidebar .nav-item.active { background: #ddf4ff; color: #0969da;
+                                    border-left: 2px solid #0969da; padding-left: 12px; font-weight: 600; }
+.mockup-main { flex: 1; padding: 18px 22px; color: #24292f; background: #fff; }
+.mockup-main h4 { font-size: 13px; font-weight: 700; color: #1f2328; margin-bottom: 4px; }
+.mockup-main .subtitle { font-size: 11px; color: #656d76; margin-bottom: 16px; }
+.provider-pill { display: inline-flex; align-items: center; gap: 6px;
+                 padding: 4px 10px; border: 1px solid #d0d7de; border-radius: 12px;
+                 background: #f6f8fa; font-size: 11px; color: #24292f; margin-right: 6px; }
+.provider-pill.selected { border-color: #0969da; background: #ddf4ff; color: #0969da; font-weight: 600; }
+.provider-pill .icon { width: 14px; height: 14px; border-radius: 3px;
+                       display: inline-block; text-align: center; line-height: 14px;
+                       font-size: 9px; color: #fff; font-weight: 700; }
+.icon-openai { background: #10a37f; }
+.icon-anthropic { background: #d97757; }
+.icon-azure { background: #0078d4; }
+.icon-aws { background: #ff9900; color: #232f3e; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; color: #424a53; font-weight: 600;
+               margin-bottom: 4px; }
+.field label .req { color: #cf222e; margin-left: 2px; }
+.field .input { display: block; width: 100%; padding: 6px 10px; border: 1px solid #d0d7de;
+                border-radius: 4px; background: #fff; color: #24292f; font-size: 11px;
+                font-family: inherit; }
+.field .input.select::after { content: " ▾"; color: #656d76; }
+.field .input.secret { color: #6e7781; letter-spacing: .15em; }
+.field .help { font-size: 10px; color: #656d76; margin-top: 3px; }
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+.badge-derived { display: inline-block; background: #dcffe4; color: #116329;
+                 border: 1px solid #a7f0b5; padding: 1px 6px; border-radius: 3px;
+                 font-size: 10px; font-weight: 600; margin-left: 6px; }
+.btn-row { margin-top: 18px; padding-top: 14px; border-top: 1px solid #eaeef2; }
+.btn { display: inline-block; padding: 6px 14px; border-radius: 4px; font-size: 11px;
+       font-weight: 600; border: 1px solid transparent; margin-right: 6px; }
+.btn-primary { background: #1f883d; color: #fff; }
+.btn-secondary { background: #fff; color: #24292f; border-color: #d0d7de; }
+.mockup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.mini-mockup { border: 1px solid #d0d7de; border-radius: 6px; overflow: hidden;
+               background: #fff; }
+.mini-mockup .mini-head { background: #f6f8fa; padding: 8px 12px;
+                          border-bottom: 1px solid #d0d7de; font-size: 11px;
+                          font-weight: 600; color: #1f2328; display: flex;
+                          align-items: center; gap: 6px; }
+.mini-mockup .mini-body { padding: 12px 14px; }
+.risk { border-left: 3px solid #e3b341; padding: 8px 12px; background: #fff8c5;
+        margin: 8px 0; color: #57606a; border-radius: 0 4px 4px 0; }
+ol.steps { padding-left: 22px; }
+ol.steps > li { margin-bottom: 14px; }
+ol.steps > li > strong { color: #1f2328; font-size: 13px; }
+ol.steps > li > .detail { display: block; margin-top: 4px; color: #57606a; }
+.kv { color: #6e7781; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <div class="doc-type">Implementation Plan</div>
+    <h1>AWS Bedrock LLM Provider — Zango AI Module</h1>
+    <div class="meta">Author: Backend · Date: 2026-06-04 · Status: Draft</div>
+  </header>
+
+  <div class="section">
+    <h2>Context</h2>
+    <p>The Zango AI module exposes an LLM provider abstraction (<code>BaseLLMProvider</code>) with three working providers — OpenAI, Anthropic, Azure OpenAI — plus a <strong>stub</strong> for AWS Bedrock at <code>backend/src/zango/ai/providers/bedrock.py</code>. The stub registers itself, defines config fields, and implements <code>fetch_models()</code> via <code>boto3.bedrock.list_foundation_models</code>, but <code>complete()</code> and <code>stream()</code> raise <code>NotImplementedError</code>.</p>
+    <p>This plan fills in the stub to make Bedrock a fully usable provider on parity with OpenAI and Anthropic. Two design decisions are locked:</p>
+    <ul>
+      <li><strong>API surface:</strong> Bedrock <strong>Converse API</strong> (<code>bedrock-runtime.converse</code> / <code>converse_stream</code>) — unified message + tool-use format across model families.</li>
+      <li><strong>Auth:</strong> Static access keys only (existing <code>config_fields</code> unchanged).</li>
+    </ul>
+    <p>No database migration is required — <code>AppLLMProvider.provider_slug</code> and <code>config_encrypted</code> are provider-agnostic, and the existing Fernet helpers in <code>encryption.py</code> already encrypt/mask any field marked <code>type: "secret"</code>.</p>
+  </div>
+
+  <div class="section">
+    <h2>Overview</h2>
+    <ul>
+      <li>Primary file: <code>backend/src/zango/ai/providers/bedrock.py</code> — replace stub body, populate <code>supported_models</code>, implement <code>complete()</code> / <code>stream()</code>, override <code>format_tools_for_api()</code>, add a Bedrock-specific message converter.</li>
+      <li>New: <code>backend/src/zango/tests/apps/ai/test_bedrock_provider.py</code> — mock-based unit tests mirroring <code>test_provider_client.py</code>.</li>
+      <li>Packaging: add <code>boto3</code> as an optional extra in <code>backend/setup.py</code> (do not promote to base install_requires).</li>
+      <li>Untouched: registry, base class, models, encryption, routing, migrations.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>API Contract Differences (vs. OpenAI / Anthropic)</h2>
+    <table>
+      <thead><tr><th>Concern</th><th>OpenAI</th><th>Anthropic</th><th>Bedrock Converse</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Message content</td>
+          <td>flat string or content-parts array</td>
+          <td>typed content blocks</td>
+          <td>list of single-key dicts: <code>text</code> / <code>image</code> / <code>toolUse</code> / <code>toolResult</code></td>
+        </tr>
+        <tr>
+          <td>System prompt</td>
+          <td>message with <code>role: "system"</code></td>
+          <td>top-level <code>system</code> kwarg (string)</td>
+          <td>top-level <code>system=[{"text": ...}]</code></td>
+        </tr>
+        <tr>
+          <td>Inference params</td>
+          <td>top-level kwargs</td>
+          <td>top-level kwargs</td>
+          <td>nested under <code>inferenceConfig</code> (<code>temperature</code>, <code>maxTokens</code>, <code>stopSequences</code>)</td>
+        </tr>
+        <tr>
+          <td>Tool definitions</td>
+          <td><code>{"type": "function", "function": {...}}</code></td>
+          <td>flat <code>{name, description, input_schema}</code></td>
+          <td><code>toolConfig.tools[*].toolSpec.inputSchema.json</code></td>
+        </tr>
+        <tr>
+          <td>Tool results</td>
+          <td>separate <code>role: "tool"</code> message</td>
+          <td><code>tool_result</code> block in user message</td>
+          <td><code>toolResult</code> block in user message</td>
+        </tr>
+        <tr>
+          <td>Streaming events</td>
+          <td>SSE chunks with <code>.choices[0].delta</code></td>
+          <td>SDK objects with <code>.type</code> attribute</td>
+          <td>dicts keyed by event type (<code>contentBlockDelta</code>, <code>messageStop</code>, <code>metadata</code>)</td>
+        </tr>
+        <tr>
+          <td>Error types</td>
+          <td>SDK exception classes</td>
+          <td>SDK exception classes</td>
+          <td><code>botocore.ClientError</code> with code in <code>e.response["Error"]["Code"]</code></td>
+        </tr>
+        <tr>
+          <td>Prompt caching</td>
+          <td>n/a in cost</td>
+          <td>cache_creation × 1.25, cache_read × 0.1</td>
+          <td>not exposed in Converse — default <code>compute_cost()</code> suffices</td>
+        </tr>
+        <tr>
+          <td>Model IDs</td>
+          <td>friendly names</td>
+          <td>friendly names</td>
+          <td>inference profile IDs (e.g. <code>anthropic.claude-3-5-sonnet-20241022-v2:0</code>); newer Claudes <strong>require</strong> a cross-region profile prefix (<code>us.</code>/<code>eu.</code>/<code>apac.</code>) derived from the configured region</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Abstractions needed: a new local <code>_convert_messages_for_bedrock()</code> on the provider (the existing <code>LLMMessage.build_content_for_anthropic/openai()</code> helpers don't fit Converse's shape), plus an override of <code>format_tools_for_api()</code>.</p>
+  </div>
+
+  <div class="section">
+    <h2>UI Mockup — Admin "Add LLM Provider" Form</h2>
+    <p>Same shell, provider switcher at the top, fields driven by each provider's <code>config_fields</code>. Bedrock fits naturally into the existing form — only the field set differs.</p>
+
+    <h3>Bedrock — full form (new)</h3>
+    <div class="mockup">
+      <div class="mockup-chrome">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="url">zango.app / admin / ai / providers / new</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-sidebar">
+          <div class="nav-item">Dashboard</div>
+          <div class="nav-item">Agents</div>
+          <div class="nav-item">Prompts</div>
+          <div class="nav-item active">Providers</div>
+          <div class="nav-item">Invocations</div>
+          <div class="nav-item">Tools</div>
+        </div>
+        <div class="mockup-main">
+          <h4>Add LLM Provider</h4>
+          <div class="subtitle">Configure credentials for a new LLM backend. Secrets are encrypted at rest.</div>
+
+          <div class="field">
+            <label>Provider type <span class="req">*</span></label>
+            <div>
+              <span class="provider-pill"><span class="icon icon-openai">O</span>OpenAI</span>
+              <span class="provider-pill"><span class="icon icon-anthropic">A</span>Anthropic</span>
+              <span class="provider-pill"><span class="icon icon-azure">⌂</span>Azure OpenAI</span>
+              <span class="provider-pill selected"><span class="icon icon-aws">aws</span>AWS Bedrock</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Name <span class="req">*</span></label>
+            <div class="input">bedrock-primary</div>
+            <div class="help">Unique identifier used in code: <code>zango.ai.get_provider("bedrock-primary")</code></div>
+          </div>
+
+          <div class="field">
+            <label>AWS Access Key ID <span class="req">*</span></label>
+            <div class="input secret">AKIA••••••••••••XJ4P</div>
+          </div>
+
+          <div class="field">
+            <label>AWS Secret Access Key <span class="req">*</span></label>
+            <div class="input secret">••••••••••••••••••••••••••••••••</div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label>AWS Region <span class="req">*</span></label>
+              <div class="input select">us-east-1 ▾</div>
+              <div class="help">us-east-1 · us-west-2 · eu-west-1 · ap-northeast-1 · …</div>
+            </div>
+            <div class="field">
+              <label>Default Model <span class="req">*</span></label>
+              <div class="input select">us.anthropic.claude-3-5-sonnet-20241022-v2:0 ▾<span class="badge-derived">resolved for us-east-1</span></div>
+              <div class="help">IDs shown with the cross-region prefix that will be sent to AWS.</div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label>Max Retries</label>
+              <div class="input">2</div>
+            </div>
+            <div class="field">
+              <label>Timeout (seconds)</label>
+              <div class="input">120</div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <span class="btn btn-primary">Save &amp; validate</span>
+            <span class="btn btn-secondary">Test connection</span>
+            <span class="btn btn-secondary">Cancel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Side-by-side — field shape across providers</h3>
+    <div class="mockup-grid">
+      <div class="mini-mockup">
+        <div class="mini-head"><span class="icon icon-openai" style="width:14px;height:14px;border-radius:3px;color:#fff;display:inline-block;text-align:center;line-height:14px;font-size:9px;font-weight:700;">O</span>OpenAI</div>
+        <div class="mini-body">
+          <div class="field"><label>API Key <span class="req">*</span></label><div class="input secret">sk-••••••••••••••••</div></div>
+          <div class="field"><label>Organization ID</label><div class="input">org-xyz</div></div>
+          <div class="field"><label>Default Model <span class="req">*</span></label><div class="input select">gpt-4o ▾</div></div>
+        </div>
+      </div>
+
+      <div class="mini-mockup">
+        <div class="mini-head"><span class="icon icon-anthropic" style="width:14px;height:14px;border-radius:3px;color:#fff;display:inline-block;text-align:center;line-height:14px;font-size:9px;font-weight:700;">A</span>Anthropic</div>
+        <div class="mini-body">
+          <div class="field"><label>API Key <span class="req">*</span></label><div class="input secret">sk-ant-••••••••••</div></div>
+          <div class="field"><label>Default Model <span class="req">*</span></label><div class="input select">claude-opus-4-7 ▾</div></div>
+          <div class="field"><label>Max Retries</label><div class="input">2</div></div>
+          <div class="field"><label>Timeout (seconds)</label><div class="input">120</div></div>
+        </div>
+      </div>
+
+      <div class="mini-mockup">
+        <div class="mini-head"><span class="icon icon-azure" style="width:14px;height:14px;border-radius:3px;color:#fff;display:inline-block;text-align:center;line-height:14px;font-size:9px;font-weight:700;">⌂</span>Azure OpenAI</div>
+        <div class="mini-body">
+          <div class="field"><label>API Key <span class="req">*</span></label><div class="input secret">••••••••••••••••</div></div>
+          <div class="field"><label>Azure Endpoint <span class="req">*</span></label><div class="input">https://acme.openai.azure.com/</div></div>
+          <div class="field"><label>API Version <span class="req">*</span></label><div class="input">2024-10-21</div></div>
+          <div class="field"><label>Default Deployment <span class="req">*</span></label><div class="input">gpt-4o-prod</div></div>
+        </div>
+      </div>
+
+      <div class="mini-mockup" style="border-color:#0969da; box-shadow:0 0 0 2px #ddf4ff;">
+        <div class="mini-head"><span class="icon icon-aws" style="width:14px;height:14px;border-radius:3px;color:#232f3e;display:inline-block;text-align:center;line-height:14px;font-size:8px;font-weight:700;background:#ff9900;">aws</span>AWS Bedrock <span style="margin-left:auto;color:#0969da;font-size:10px;">NEW</span></div>
+        <div class="mini-body">
+          <div class="field"><label>AWS Access Key ID <span class="req">*</span></label><div class="input secret">AKIA••••••••XJ4P</div></div>
+          <div class="field"><label>AWS Secret Access Key <span class="req">*</span></label><div class="input secret">••••••••••••••••</div></div>
+          <div class="field"><label>AWS Region <span class="req">*</span></label><div class="input select">us-east-1 ▾</div></div>
+          <div class="field"><label>Default Model <span class="req">*</span></label><div class="input select">us.anthropic.claude-3-5-sonnet… ▾</div></div>
+        </div>
+      </div>
+    </div>
+
+    <p><strong>Notes on the Bedrock UX:</strong></p>
+    <ul>
+      <li>Two-secret pattern (Access Key + Secret Key) is the only structural difference from Anthropic / OpenAI — both render via the same generic <code>config_fields</code> renderer.</li>
+      <li><code>aws_region</code> is a curated <code>select</code>, not free text — prevents typos and steers users to Bedrock-enabled regions.</li>
+      <li>The <strong>Default Model</strong> dropdown shows <em>resolved</em> IDs (with <code>us.</code> / <code>eu.</code> / <code>apac.</code> prefixes derived from the chosen region) — what you see is what's sent to AWS. The <span class="badge-derived">resolved for us-east-1</span> badge makes the derivation visible.</li>
+      <li>Changing the region re-resolves the model dropdown options — models whose region geography is unsupported (e.g. <code>ca-central-1</code> + Claude 3.5 Sonnet v2) drop out of the list rather than showing a broken option.</li>
+      <li>"Test connection" hits <code>validate_config()</code> — which now also flags region/model geography mismatches up front, not as a runtime error.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Steps</h2>
+    <ol class="steps">
+      <li>
+        <strong>Step 1 — Populate <code>supported_models</code> with bare IDs + cross-region flag</strong>
+        <span class="detail">Replace the empty list with 6–10 entries covering Anthropic-on-Bedrock (<code>anthropic.claude-3-5-sonnet-20241022-v2:0</code>, <code>anthropic.claude-3-5-haiku-20241022-v1:0</code>, <code>anthropic.claude-3-opus-20240229-v1:0</code>), Amazon Nova (<code>amazon.nova-pro-v1:0</code>, <code>amazon.nova-lite-v1:0</code>, <code>amazon.nova-micro-v1:0</code>), Meta Llama (<code>meta.llama3-1-70b-instruct-v1:0</code>), and a Mistral entry. Each: <code>id</code> (bare, region-agnostic), <code>name</code>, <code>context_window</code>, <code>max_output_tokens</code>, <code>input_cost_per_mtok</code>, <code>output_cost_per_mtok</code>, <code>supports_tools</code>, <code>supports_vision</code>, <code>supports_streaming</code>, and a new <code>requires_inference_profile: bool</code> flag (<code>True</code> for Claude 3.5 Sonnet v2 and newer — they <strong>only</strong> work via cross-region profile; <code>False</code> for older Claude 3, Nova, Llama, Mistral). Pricing source: <code>https://aws.amazon.com/bedrock/pricing/</code> (note URL + review cadence in a comment).</span>
+      </li>
+      <li>
+        <strong>Step 2 — Extend <code>config_fields</code> for parity + region dropdown</strong>
+        <span class="detail">Change <code>aws_region</code> from <code>type: "string"</code> to <code>type: "select"</code> with an inline <code>options</code> list of Bedrock-enabled regions (<code>us-east-1</code>, <code>us-east-2</code>, <code>us-west-2</code>, <code>eu-west-1</code>, <code>eu-west-3</code>, <code>eu-central-1</code>, <code>ap-northeast-1</code>, <code>ap-south-1</code>, <code>ap-southeast-1</code>, <code>ap-southeast-2</code>, <code>ca-central-1</code>, <code>sa-east-1</code>); default remains <code>us-east-1</code>. Append <code>default_model</code> (<code>type: "select"</code>, <code>options_from: "supported_models"</code>), <code>max_retries</code> (default <code>2</code>), and <code>timeout_seconds</code> (default <code>120</code>). <strong>No</strong> separate "inference profile" field — the prefix is auto-derived from the chosen region (see Step 6). <em>Frontend dependency: FE-2 in the Frontend Changes section must land alongside this step — the credential-field renderer in <code>Providers.jsx</code> needs a <code>select</code> branch or <code>aws_region</code> will silently degrade to a plain text input.</em></span>
+      </li>
+      <li>
+        <strong>Step 3 — Initialize the <code>bedrock-runtime</code> client in <code>__init__</code></strong>
+        <span class="detail">Lazy-import <code>boto3</code> and <code>botocore.config</code> inside <code>__init__</code>. Build <code>self._client = boto3.client("bedrock-runtime", aws_access_key_id=..., aws_secret_access_key=..., region_name=..., config=Config(read_timeout=timeout_seconds, retries={"max_attempts": max_retries}))</code>. Stash the <code>ClientError</code> / <code>ReadTimeoutError</code> classes on <code>self</code> for exception mapping. Note: unlike Anthropic/OpenAI SDKs, <code>boto3</code> does not support per-call timeout overrides — the timeout is baked into the client at init. The agent-level <code>timeout_seconds</code> kwarg forwarded by <code>client.py</code> should therefore be used here at init time (read from <code>config["timeout_seconds"]</code>), making it consistent with how Anthropic reads it. Per-call override is not possible with botocore's current API.</span>
+      </li>
+      <li>
+        <strong>Step 4 — Implement <code>_convert_messages_for_bedrock(messages)</code></strong>
+        <span class="detail">Walk <code>list[LLMMessage]</code> and produce Converse messages. Strings → <code>{"text": s}</code>. <code>LLMFile</code> images → <code>{"image": {"format": "png|jpeg|gif|webp", "source": {"bytes": data}}}</code>. Assistant tool calls → <code>{"toolUse": {"toolUseId": id, "name": name, "input": dict}}</code>. <code>role="tool"</code> entries → user message containing <code>{"toolResult": {"toolUseId": tool_call_id, "content": [{"text": str_content}]}}</code>. <code>role="system"</code> is stripped from messages and surfaced via the top-level <code>system</code> param.</span>
+      </li>
+      <li>
+        <strong>Step 5 — Override <code>format_tools_for_api(tools)</code></strong>
+        <span class="detail">Return <code>[{"toolSpec": {"name": t.name, "description": t.description, "inputSchema": {"json": t.input_schema}}} for t in tools]</code>. Caller passes this as <code>toolConfig={"tools": [...]}</code>.</span>
+      </li>
+      <li>
+        <strong>Step 6 — Implement <code>complete()</code> with model-ID resolution</strong>
+        <span class="detail">Add a private helper <code>_resolve_model_id(model)</code>: look the bare ID up in <code>supported_models</code>; if its <code>requires_inference_profile</code> is <code>True</code>, prepend the geography prefix derived from <code>self.config["aws_region"]</code> (<code>us-*</code> → <code>us.</code>, <code>eu-*</code> → <code>eu.</code>, <code>ap-*</code> → <code>apac.</code>; raise a clear <code>LLMAPIError</code> for unsupported geographies like <code>ca-central-1</code> / <code>sa-east-1</code>). Pass-through if the model is not in the catalog (user override). Build kwargs (<code>modelId=_resolve_model_id(model)</code>, <code>messages</code>, conditional <code>system</code>, <code>inferenceConfig</code>, conditional <code>toolConfig</code>). Time with <code>time.monotonic()</code>. Parse <code>response["output"]["message"]["content"]</code>: collect <code>block["text"]</code> entries; convert <code>block["toolUse"]</code> into <code>LLMToolCall(id=toolUseId, name=name, input=input)</code>. Map <code>response["stopReason"]</code> via <code>_map_stop_reason()</code> (<code>end_turn</code>, <code>tool_use</code>, <code>max_tokens</code>, <code>stop_sequence</code>, <code>content_filtered</code>). Build <code>LLMUsage(input_tokens=response["usage"]["inputTokens"], output_tokens=response["usage"]["outputTokens"])</code>. Wrap exceptions: <code>ClientError</code> with code <code>ThrottlingException</code> → <code>RateLimitExceeded</code>; <code>ReadTimeoutError</code> → <code>LLMTimeoutError</code>; other <code>ClientError</code> → <code>LLMAPIError(status_code=response["ResponseMetadata"]["HTTPStatusCode"], original_error=e)</code>. The <code>timeout_seconds</code> kwarg will be forwarded by <code>client.py</code> but should be silently ignored in <code>complete()</code>/<code>stream()</code> — boto3 does not support per-call timeouts, so the provider-level <code>Config(read_timeout=...)</code> set at <code>__init__</code> is the effective timeout. Just consume the kwarg via <code>kwargs.get("timeout_seconds")</code> without using it to avoid unexpected-keyword errors.</span>
+      </li>
+      <li>
+        <strong>Step 7 — Implement <code>stream()</code> with <code>converse_stream</code></strong>
+        <span class="detail">Resolve the model via <code>_resolve_model_id()</code> the same way as <code>complete()</code>. Iterate <code>self._client.converse_stream(...)["stream"]</code>. For <code>contentBlockDelta</code>: yield <code>LLMStreamChunk(delta_text=...)</code> for <code>delta.text</code>, or <code>delta_tool_call={"partial_json": ...}</code> for <code>delta.toolUse.input</code>. Capture <code>stopReason</code> from <code>messageStop</code>; capture <code>usage</code> from <code>metadata</code>. End with <code>LLMStreamChunk(is_final=True, usage=..., stop_reason=_map_stop_reason(...))</code>. Same exception mapping as <code>complete()</code>.</span>
+      </li>
+      <li>
+        <strong>Step 8 — Tighten <code>validate_config()</code> with region/model compatibility check</strong>
+        <span class="detail">Drop the unused second client. Issue a single <code>bedrock.list_foundation_models(maxResults=1)</code> call to test credentials. Then, if the configured <code>default_model</code> has <code>requires_inference_profile=True</code>, verify the configured region maps to a supported geography (<code>us-*</code> / <code>eu-*</code> / <code>ap-*</code>) — otherwise return <code>(False, "&lt;model&gt; requires a US, EU, or APAC region; &lt;region&gt; is not in a supported geography.")</code>. This catches misconfiguration up front rather than as a runtime <code>ValidationException</code>.</span>
+      </li>
+      <li>
+        <strong>Step 9 — Override <code>get_models()</code> to surface resolved IDs</strong>
+        <span class="detail">Return a copy of <code>supported_models</code> where each entry's <code>id</code> is the <strong>resolved</strong> ID for the configured region (i.e. <code>us.anthropic.claude-3-5-sonnet-20241022-v2:0</code> when region is <code>us-east-1</code>). Entries whose <code>requires_inference_profile=True</code> but whose region has no geography mapping are filtered out (so the admin UI dropdown doesn't offer broken choices). The user sees exactly what will be sent to AWS — no hidden magic.</span>
+      </li>
+      <li>
+        <strong>Step 10 — Tests</strong>
+        <span class="detail">Create <code>backend/src/zango/tests/apps/ai/test_bedrock_provider.py</code> following the mock pattern in <code>test_provider_client.py</code>. Cover: <code>complete()</code> builds the correct <code>converse()</code> payload; tool calls extracted from <code>toolUse</code> blocks; stop-reason mapping; <code>stream()</code> yields text deltas then a final chunk with usage; <code>ClientError("ThrottlingException")</code> → <code>RateLimitExceeded</code>; missing <code>boto3</code> surfaces as <code>ValueError</code> from <code>fetch_models()</code>.</span>
+      </li>
+      <li>
+        <strong>Step 11 — Optional dependency</strong>
+        <span class="detail">In <code>backend/setup.py</code>, add <code>extras_require["bedrock"] = ["boto3&gt;=1.34"]</code> (mirror the optional pattern used for <code>openai</code> / <code>anthropic</code>). Install via <code>pip install zango[bedrock]</code>.</span>
+      </li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>File Manifest</h2>
+    <table>
+      <thead><tr><th>File</th><th>Action</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>backend/src/zango/ai/providers/bedrock.py</code></td>
+          <td><span class="tag tag-blue">MODIFY</span></td>
+          <td>Populate <code>supported_models</code> (with <code>requires_inference_profile</code> flag); switch <code>aws_region</code> to a select dropdown and extend <code>config_fields</code>; init <code>bedrock-runtime</code> client in <code>__init__</code>; add <code>_convert_messages_for_bedrock()</code>, <code>_map_stop_reason()</code>, <code>_resolve_model_id()</code>; override <code>format_tools_for_api()</code> and <code>get_models()</code>; implement <code>complete()</code> and <code>stream()</code>; tighten <code>validate_config()</code> with region/model compatibility check.</td>
+        </tr>
+        <tr>
+          <td><code>backend/src/zango/tests/apps/ai/test_bedrock_provider.py</code></td>
+          <td><span class="tag tag-green">CREATE</span></td>
+          <td>Mock-based unit tests for payload shape, tool-call extraction, stream chunks, exception mapping.</td>
+        </tr>
+        <tr>
+          <td><code>backend/setup.py</code></td>
+          <td><span class="tag tag-blue">MODIFY</span></td>
+          <td>Add optional <code>[bedrock]</code> extra pinning <code>boto3</code>.</td>
+        </tr>
+        <tr>
+          <td><code>frontend/src/pages/appAi/components/Providers.jsx</code></td>
+          <td><span class="tag tag-blue">MODIFY</span></td>
+          <td>Remove <code>'bedrock'</code> from <code>COMING_SOON_PROVIDERS</code>; add <code>select</code> field rendering branch to both <code>AddProviderWizard</code> and <code>EditProviderForm</code> credential-field loops.</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Files explicitly NOT changed</h3>
+    <ul>
+      <li><code>backend/src/zango/ai/providers/registry.py</code> — registration already works via existing decorator on the stub.</li>
+      <li><code>backend/src/zango/ai/providers/__init__.py</code> — auto-discovery already imports <code>bedrock</code> in a <code>try/except ImportError</code>.</li>
+      <li><code>backend/src/zango/ai/providers/base.py</code> — abstract interface is sufficient.</li>
+      <li><code>backend/src/zango/apps/ai/models/provider.py</code> — <code>provider_slug</code> + <code>config_encrypted</code> are provider-agnostic.</li>
+      <li><code>backend/src/zango/ai/client.py</code> — <strong>already updated</strong> (timeout fix): <code>_extract_timeout()</code> pops <code>timeout_seconds</code> from kwargs and forwards it to the raw provider <code>complete()</code>. No further changes needed for Bedrock.</li>
+      <li><code>backend/src/zango/ai/encryption.py</code> — Fernet encrypt/decrypt + <code>mask_config()</code> handle <code>aws_*</code> secret fields automatically (any field with <code>type: "secret"</code>).</li>
+      <li><code>backend/src/zango/apps/ai/migrations/*</code> — no schema changes.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Frontend Changes</h2>
+    <p>All AI-provider UI lives in one file: <code>frontend/src/pages/appAi/components/Providers.jsx</code>. Three separate things need to change there.</p>
+
+    <h3>FE-1 — Remove Bedrock from <code>COMING_SOON_PROVIDERS</code></h3>
+    <p>Line 196 currently reads:</p>
+    <pre><code>const COMING_SOON_PROVIDERS = ['bedrock', 'azure_openai'];</code></pre>
+    <p>Remove <code>'bedrock'</code> from the array:</p>
+    <pre><code>const COMING_SOON_PROVIDERS = ['azure_openai'];</code></pre>
+    <p>This is the only change needed to make the Bedrock card in the "Add Provider" wizard become selectable. The rest of the card behaviour (disabled state, opacity, non-clickable) is fully driven by membership in that array, so nothing else needs to change to un-gate it.</p>
+
+    <h3>FE-2 — Add <code>select</code> field rendering to the credential-field loop</h3>
+    <p>Both the <strong>Add Provider wizard</strong> (step 1 credential loop, ~line 499) and the <strong>Edit Provider form</strong> (credential loop, ~line 930) map over <code>credentialFields</code> and render only <code>&lt;input type="password"&gt;</code> or <code>&lt;input type="text"&gt;</code>. There is no branch for <code>field.type === 'select'</code>.</p>
+    <p>The Bedrock backend plan changes <code>aws_region</code> to <code>type: "select"</code> with an inline <code>options</code> list. Because the <code>credentialFields</code> filter already passes through any <code>select</code> field whose <code>options_from</code> is <strong>not</strong> <code>"supported_models"</code>, <code>aws_region</code> will appear in the list — but the current renderer falls through to a plain text input, losing the curated dropdown entirely.</p>
+    <p>Both loops must be extended with a <code>select</code> branch:</p>
+    <pre><code>// In AddProviderWizard → credentialFields.map (step 1), ~line 499
+// In EditProviderForm → credentialFields.map (~line 930)
+
+if (field.type === 'select') {
+  return (
+    &lt;div key={field.name}&gt;
+      &lt;label className="font-lato text-[12px] font-semibold text-[#A3ABB1]"&gt;
+        {field.label}{field.required &amp;&amp; &lt;span className="ml-[2px] text-[#EF4444]"&gt;*&lt;/span&gt;}
+      &lt;/label&gt;
+      &lt;select
+        value={credentials[field.name] ?? field.default ?? ''}
+        onChange={(e) =&gt; setCredentials((prev) =&gt; ({ ...prev, [field.name]: e.target.value }))}
+        className="mt-[4px] w-full rounded-[6px] border border-[#DDE2E5] px-[16px] py-[14px] font-lato text-[14px] text-[#111827] focus:outline-0 focus:border-[#5048ED] bg-white appearance-none cursor-pointer"
+      &gt;
+        {(field.options || []).map((opt) =&gt; (
+          &lt;option key={opt.value} value={opt.value}&gt;{opt.label}&lt;/option&gt;
+        ))}
+      &lt;/select&gt;
+      {field.help_text &amp;&amp; (
+        &lt;p className="mt-[3px] font-lato text-[11px] text-[#9CA3AF]"&gt;{field.help_text}&lt;/p&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</code></pre>
+    <p>The <code>options</code> shape expected by the frontend matches what the backend plan defines for <code>aws_region</code>: an array of <code>{ value, label }</code> objects. The <code>field.default</code> fallback ensures <code>us-east-1</code> is pre-selected without any user interaction.</p>
+    <p>The Edit form version differs only in the placeholder / keep-existing semantics: because region is not a secret, changing it takes effect immediately, so the normal onChange is correct. The "leave blank to keep existing" note in the Edit form credential section remains accurate for <em>secret</em> fields only — no copy change needed.</p>
+
+    <h3>FE-3 — <code>buildConfig</code> must preserve the region default even if the user never touches it</h3>
+    <p>The existing <code>buildConfig()</code> helper in <code>AddProviderWizard</code> (~line 328) already falls back to <code>field.default</code> when <code>credentials[field.name]</code> is empty:</p>
+    <pre><code>} else if (field.default !== undefined) {
+  config[field.name] = field.default;
+}</code></pre>
+    <p>This is correct — but only if the field is present in <code>credentialFields</code>. Since the filter for <code>credentialFields</code> already passes <code>select</code> fields that are not <code>options_from: supported_models</code>, and the new <code>select</code> branch pre-selects <code>field.default</code> into the dropdown, the initial credential state will be empty for <code>aws_region</code> (<code>credentials</code> is initialized to <code>{}</code>). Result: if the user leaves the dropdown at its default value without clicking, <code>credentials["aws_region"]</code> is <code>undefined</code>, and <code>buildConfig</code> correctly picks up <code>field.default = "us-east-1"</code>. <strong>No change needed here</strong> — just document the invariant so no one "fixes" it incorrectly.</p>
+
+    <h3>Summary of frontend changes</h3>
+    <table>
+      <thead><tr><th>File</th><th>Change</th><th>Lines affected</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>frontend/src/pages/appAi/components/Providers.jsx</code></td>
+          <td>Remove <code>'bedrock'</code> from <code>COMING_SOON_PROVIDERS</code></td>
+          <td>~196</td>
+        </tr>
+        <tr>
+          <td><code>frontend/src/pages/appAi/components/Providers.jsx</code></td>
+          <td>Add <code>select</code> branch to credential-field renderer in <code>AddProviderWizard</code></td>
+          <td>~499–518</td>
+        </tr>
+        <tr>
+          <td><code>frontend/src/pages/appAi/components/Providers.jsx</code></td>
+          <td>Add <code>select</code> branch to credential-field renderer in <code>EditProviderForm</code></td>
+          <td>~930–941</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>UI flow — Bedrock add-provider walkthrough</h3>
+    <div class="mockup">
+      <div class="mockup-chrome">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="url">Add LLM Provider — Step 1 of 3 · Provider &amp; Credentials</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-main" style="min-height:320px;">
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="border:2px solid #E5E7EB;border-radius:10px;padding:14px 16px;width:140px;opacity:0.7;background:#F9FAFB;position:relative;font-size:11px;">
+              <span style="position:absolute;right:8px;top:8px;background:#F3F4F6;border-radius:20px;padding:2px 7px;font-size:10px;color:#6B7280;font-weight:600;letter-spacing:.05em;">Coming Soon</span>
+              <div style="background:#EFF6FF;width:36px;height:36px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#2563EB;">AZ</div>
+              <div style="font-weight:600;color:#111827;">Azure OpenAI</div>
+              <div style="color:#6B7280;font-size:10px;margin-top:2px;">Azure-hosted deployments</div>
+            </div>
+            <div style="border:2px solid #5048ED;border-radius:10px;padding:14px 16px;width:140px;background:#FFFBEB;position:relative;font-size:11px;box-shadow:0 0 0 3px rgba(80,72,237,.1);">
+              <span style="position:absolute;right:8px;top:8px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#5048ED"/><path d="M5 8L7 10L11 6" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+              <div style="background:#FEF3C7;width:36px;height:36px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#92400E;">aws</div>
+              <div style="font-weight:600;color:#111827;">AWS Bedrock</div>
+              <div style="color:#6B7280;font-size:10px;margin-top:2px;">AWS-managed models</div>
+            </div>
+          </div>
+          <div style="height:1px;background:#F3F4F6;margin-bottom:14px;"></div>
+          <div style="font-size:10px;font-weight:700;color:#6C747D;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">Credentials</div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#A3ABB1;font-weight:600;margin-bottom:3px;">AWS Access Key ID <span style="color:#EF4444;">*</span></div>
+            <div style="border:1px solid #DDE2E5;border-radius:6px;padding:10px 14px;font-size:12px;color:#9A9A9A;letter-spacing:.08em;">AKIA••••••••••••XJ4P</div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#A3ABB1;font-weight:600;margin-bottom:3px;">AWS Secret Access Key <span style="color:#EF4444;">*</span></div>
+            <div style="border:1px solid #DDE2E5;border-radius:6px;padding:10px 14px;font-size:12px;color:#9A9A9A;letter-spacing:.1em;">••••••••••••••••••••••••••••••••</div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#A3ABB1;font-weight:600;margin-bottom:3px;">AWS Region <span style="color:#EF4444;">*</span></div>
+            <div style="border:1px solid #DDE2E5;border-radius:6px;padding:10px 14px;font-size:12px;color:#111827;background:white;display:flex;align-items:center;justify-content:space-between;">
+              us-east-1 <span style="color:#9CA3AF;font-size:10px;">▾</span>
+            </div>
+            <div style="font-size:10px;color:#9CA3AF;margin-top:3px;">us-east-1 · us-west-2 · eu-west-1 · ap-northeast-1 · …</div>
+          </div>
+          <div style="margin-top:14px;">
+            <div style="background:#5048ED;border-radius:8px;padding:10px 14px;color:white;font-size:12px;font-weight:600;text-align:center;">Continue — Fetch available models →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p><strong>Key UX notes after "Coming Soon" removal:</strong></p>
+    <ul>
+      <li>The Bedrock card is visually identical to OpenAI / Anthropic cards — no special treatment once it is live.</li>
+      <li>Step 1 "Continue" calls <code>fetch-models/</code>, which hits <code>validate_config()</code> + <code>fetch_models()</code> on the backend. A region/model mismatch surfaces here as an <code>auth_error</code> — the wizard stays on step 1 and shows the inline red error banner (no code change needed, the existing error path covers it).</li>
+      <li>Step 2 shows the live model list returned by Bedrock's <code>list_foundation_models</code> with region-resolved IDs (e.g. <code>us.anthropic.claude-3-5-sonnet-20241022-v2:0</code>). The <code>ModelCard</code> already renders <code>model.id</code> and <code>model.name</code> correctly — no change needed.</li>
+      <li>Because Bedrock has no static <code>fallback_models</code> list in its <code>supported_models</code> (they are populated via <code>get_models()</code>), an <code>auth_error</code> on step 1 always blocks advancement (the existing check at line 367 already gates on <code>fallbackModels.length === 0</code>).</li>
+    </ul>
+  </div>
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+  <div class="section">
+    <h2>Database / Migrations</h2>
+    <p><span class="tag tag-green">NO MIGRATION</span> The <code>AppLLMProvider</code> model already supports the Bedrock provider:</p>
+    <ul>
+      <li><code>provider_slug</code> (<code>CharField</code>) — accepts the existing <code>"bedrock"</code> slug.</li>
+      <li><code>config_encrypted</code> (<code>BinaryField</code>) — JSON-encrypted blob holding <code>aws_access_key_id</code>, <code>aws_secret_access_key</code>, <code>aws_region</code>, <code>default_model</code>.</li>
+      <li><code>mask_config()</code> in <code>encryption.py</code> masks any field where <code>config_fields[*].type == "secret"</code> — already correct for the two AWS keys.</li>
+      <li><code>AppLLMProviderModel</code> (per-model overrides) — unchanged; per-model cost overrides keep working.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Dependencies</h2>
+    <ul>
+      <li><code>boto3 &gt;= 1.34</code> — Converse API support landed in <code>1.34.x</code>; pin conservatively. Add to <code>extras_require["bedrock"]</code> only; never to base.</li>
+      <li><code>botocore</code> — pulled in transitively by <code>boto3</code>; used for <code>Config</code>, <code>ClientError</code>, <code>ReadTimeoutError</code>.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Verification</h2>
+    <ol>
+      <li><strong>Unit tests:</strong> <code>pytest backend/src/zango/tests/apps/ai/test_bedrock_provider.py -v</code> — all green, with <code>boto3</code> fully mocked.</li>
+      <li><strong>End-to-end smoke</strong> (requires AWS creds with <code>bedrock:InvokeModel</code> permission):
+        <ul>
+          <li>Create an <code>AppLLMProvider</code> via <code>POST /api/v1/platform/ai/providers/</code> with <code>provider_slug="bedrock"</code>.</li>
+          <li>Call <code>zango.ai.get_provider("&lt;name&gt;").complete(messages=[LLMMessage(role="user", content="hello")], model="anthropic.claude-3-5-haiku-20241022-v1:0")</code>.</li>
+          <li>Assert <code>response.content</code> non-empty, <code>usage.input_tokens/output_tokens &gt; 0</code>, <code>latency_ms</code> recorded.</li>
+          <li>Confirm an <code>AppLLMInvocation</code> row exists with the provider name, model, and computed cost.</li>
+        </ul>
+      </li>
+      <li><strong>Streaming smoke:</strong> iterate <code>get_provider(...).stream(...)</code> — earlier chunks have <code>delta_text</code>; final chunk has <code>is_final=True</code>, populated <code>usage</code>, and a mapped <code>stop_reason</code>.</li>
+      <li><strong>Tool-use smoke:</strong> pass one <code>LLMToolDef</code>; confirm <code>response.tool_calls[0]</code> has correct <code>name</code> and <code>input</code> dict.</li>
+      <li><strong>Validation endpoint:</strong> hit the provider validate API → <code>is_validated=True</code>, <code>last_validated_at</code> set, no <code>validation_error</code>.</li>
+      <li><strong>Model discovery:</strong> hit the fetch-models endpoint → returns the live region's Bedrock catalog (already working in the stub).</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>Risk Notes</h2>
+    <div class="risk">⚠ <strong>Cross-region inference profile prefix is auto-derived</strong> from <code>aws_region</code> by <code>_resolve_model_id()</code>. Mapping covers <code>us-*</code>, <code>eu-*</code>, <code>ap-*</code>; <code>ca-central-1</code> and <code>sa-east-1</code> have no geography prefix, so models with <code>requires_inference_profile=True</code> are filtered from <code>get_models()</code> and rejected by <code>validate_config()</code> for those regions. Users wanting a different geography must change region — there is no separate inference-profile field by design.</div>
+    <div class="risk">⚠ <strong>Bedrock model availability varies by region.</strong> <code>list_foundation_models</code> already filters to the configured region, but users may be surprised if their region lacks Claude. Surface region clearly in the admin UI.</div>
+    <div class="risk">⚠ <strong>Not every Bedrock model supports Converse.</strong> Older Titan text and some Cohere variants don't. Curate <code>supported_models</code> to Converse-compatible entries and mark <code>supports_streaming</code> / <code>supports_tools</code> per model accurately.</div>
+    <div class="risk">⚠ <strong><code>boto3</code> is heavy</strong> (~30 MB with transitive deps). Keep it optional via <code>extras_require</code>; do not promote to base <code>install_requires</code>. The existing <code>try/except ImportError</code> in <code>providers/__init__.py</code> makes the absence non-fatal.</div>
+    <div class="risk">⚠ <strong>Bedrock pricing drifts.</strong> Hardcoded <code>input_cost_per_mtok</code> / <code>output_cost_per_mtok</code> will go stale. Add a source-URL comment and review on each release — mirroring how the Anthropic / OpenAI providers handle this.</div>
+    <div class="risk">⚠ <strong>boto3 has no per-call timeout override.</strong> Unlike the Anthropic and OpenAI SDKs (which accept <code>timeout=</code> on each <code>.create()</code> call), botocore bakes the timeout into the client at init via <code>Config(read_timeout=...)</code>. The agent-level <code>timeout_seconds</code> field therefore only takes effect for Bedrock if it is read from <code>config["timeout_seconds"]</code> at provider init — not per call. Callers should be aware that changing an agent's timeout for a Bedrock-backed agent requires a provider reconfigure, not just an agent edit.</div>
+    <div class="risk">⚠ <strong>Streaming tool-call accumulation.</strong> Converse emits partial JSON for <code>toolUse</code> across multiple <code>contentBlockDelta</code> events. The stream loop must accumulate per <code>contentBlockIndex</code> and only finalize a tool call when the matching <code>contentBlockStop</code> arrives — otherwise downstream consumers see fragmented input.</div>
+  </div>
+
+  <div class="section">
+    <h2>Design Decisions</h2>
+    <ul>
+      <li><strong>Region:</strong> <code>aws_region</code> is a curated dropdown of Bedrock-enabled regions; default <code>us-east-1</code>. Free-text invites silent typos — a dropdown is self-documenting and steers users away from non-Bedrock regions.</li>
+      <li><strong>Model IDs:</strong> <code>supported_models</code> stores <strong>bare</strong>, region-agnostic IDs plus a <code>requires_inference_profile</code> flag. The geography prefix (<code>us.</code> / <code>eu.</code> / <code>apac.</code>) is derived from <code>aws_region</code> at call time — one catalog entry works for any region.</li>
+      <li><strong>No separate inference-profile field:</strong> the prefix is fully determined by the already-selected region. A second field would either duplicate info or only ever have one valid option.</li>
+      <li><strong>Resolved IDs are surfaced</strong> by <code>get_models()</code> — the admin UI dropdown shows exactly what will be sent to AWS (e.g. <code>us.anthropic.claude-3-5-sonnet-20241022-v2:0</code>), so there's no hidden magic.</li>
+      <li><strong>Future:</strong> <code>aws_session_token</code> for STS / SSO is out of scope per the locked auth decision (static keys only).</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

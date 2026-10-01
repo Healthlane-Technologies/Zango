@@ -242,7 +242,9 @@ class AppLLMProviderUpdateSerializer(serializers.Serializer):
         config = validated_data.pop("config", None)
 
         if config is not None:
-            # If config contains masked secret values, preserve existing values
+            # Always merge incoming config onto the existing decrypted config so
+            # partial updates (e.g. only changing aws_region or default_model)
+            # don't wipe other fields like access keys.
             try:
                 existing_config = instance._decrypt_config()
             except Exception:
@@ -259,11 +261,21 @@ class AppLLMProviderUpdateSerializer(serializers.Serializer):
 
             for field_name in secret_fields:
                 new_val = config.get(field_name, "")
-                if new_val and "****" in str(new_val):
-                    # Masked value — keep existing
+                if not new_val or "****" in str(new_val):
+                    # Blank or masked → keep existing
                     config[field_name] = existing_config.get(field_name, "")
 
-            instance.config_encrypted = encrypt_config(config)
+            merged = {
+                **existing_config,
+                **{k: v for k, v in config.items() if v not in (None, "")},
+            }
+            # Ensure preserved secrets land in the merged dict even if the
+            # incoming config carried them as empty strings.
+            for field_name in secret_fields:
+                if not merged.get(field_name) and existing_config.get(field_name):
+                    merged[field_name] = existing_config[field_name]
+
+            instance.config_encrypted = encrypt_config(merged)
 
         for attr in [
             "name",
@@ -591,8 +603,10 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
     provider_name = serializers.SerializerMethodField()
     provider_slug = serializers.SerializerMethodField()
     system_prompt_name = serializers.SerializerMethodField()
+    system_prompt_version = serializers.SerializerMethodField()
     system_prompt_variables = serializers.SerializerMethodField()
     user_prompt_name = serializers.SerializerMethodField()
+    user_prompt_version = serializers.SerializerMethodField()
     user_prompt_variables = serializers.SerializerMethodField()
     metrics = serializers.SerializerMethodField()
     session_count = serializers.SerializerMethodField()
@@ -611,9 +625,11 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
             "model",
             "system_prompt",
             "system_prompt_name",
+            "system_prompt_version",
             "system_prompt_variables",
             "user_prompt",
             "user_prompt_name",
+            "user_prompt_version",
             "user_prompt_variables",
             "temperature",
             "max_tokens",
@@ -645,6 +661,11 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
     def get_system_prompt_name(self, obj):
         return obj.system_prompt.name if obj.system_prompt else None
 
+    def get_system_prompt_version(self, obj):
+        if obj.system_prompt and obj.system_prompt.active_version_id:
+            return obj.system_prompt.active_version.version_number
+        return None
+
     def get_system_prompt_variables(self, obj):
         if obj.system_prompt and obj.system_prompt.active_version_id:
             return obj.system_prompt.active_version.variables
@@ -652,6 +673,11 @@ class AppLLMAgentListSerializer(serializers.ModelSerializer):
 
     def get_user_prompt_name(self, obj):
         return obj.user_prompt.name if obj.user_prompt else None
+
+    def get_user_prompt_version(self, obj):
+        if obj.user_prompt and obj.user_prompt.active_version_id:
+            return obj.user_prompt.active_version.version_number
+        return None
 
     def get_user_prompt_variables(self, obj):
         if obj.user_prompt and obj.user_prompt.active_version_id:

@@ -420,11 +420,17 @@ class AgentClient:
         if files:
             files = raw_provider.prepare_files(files)
             is_openai_style = self._is_openai_style_provider()
+            is_bedrock = self._agent.provider.provider_slug == "bedrock"
             for msg in messages:
                 if msg.role == "user" and msg.files:
                     # Build provider-specific file blocks
                     if is_openai_style:
                         file_blocks = [f.to_openai_block() for f in files]
+                    elif is_bedrock:
+                        # Bedrock uses its own native block format; keep files on the
+                        # message so _convert_messages_for_bedrock handles them via _file_to_block.
+                        msg.files = list(files)
+                        break
                     else:
                         file_blocks = [f.to_anthropic_block() for f in files]
                     # Prepend file blocks into content permanently
