@@ -70,6 +70,7 @@ def spec_payload(requirement) -> dict:
         "mode": requirement.mode or None,
         "flags": _with_sections(requirement.spec_flags or [], sections),
         "open_decisions": requirement.open_decisions or [],
+        "workflows": requirement.workflows or None,
         "documents": _documents(requirement),
         "template": (
             {

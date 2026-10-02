@@ -9,6 +9,7 @@
  * Protocol ("zango-builder/1", window.postMessage):
  *   host → builder  {source:'zango-host', type:'load', yaml, readOnly}
  *                   {source:'zango-host', type:'lock', readOnly}
+ *                   {source:'zango-host', type:'preview', on}   (the app preview)
  *   builder → host  {source:'zango-builder', type:'ready', protocol}
  *                   {source:'zango-builder', type:'change', yaml}
  *                   {source:'zango-builder', type:'error', message}
@@ -66,14 +67,33 @@
 			lock(msg.readOnly);
 		} else if (msg.type === 'lock') {
 			lock(msg.readOnly);
+		} else if (msg.type === 'preview') {
+			try {
+				setPreview(!!msg.on);
+			} catch (err) {
+				send({ type: 'error', message: 'Could not open the preview: ' + err });
+			}
 		}
 	});
+
+	// The host's tabs own the preview mode; keep the builder's shortcut from
+	// switching it behind their back.
+	document.addEventListener(
+		'keydown',
+		function (e) {
+			if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) e.stopImmediatePropagation();
+		},
+		true
+	);
 
 	// The host owns the data: starting over or loading the demo journey here would
 	// silently replace the app's journey, so those two header actions are hidden.
 	var style = document.createElement('style');
 	style.textContent =
 		'[data-act="new"],[data-act="example"]{display:none!important}' +
+		// Design/Preview is the host's Builder and Preview tabs, and the
+		// preview's checks link is its Checks tab.
+		'[data-pvmode],:has(>[data-pvmode]),[data-pvchecks]{display:none!important}' +
 		'.zango-locked .body,.zango-locked .hd input{pointer-events:none;opacity:.6}' +
 		'.zango-locked .hd::after{content:"The agent is editing — read only";margin-left:12px;' +
 		'font:500 12px Inter,sans-serif;color:#b45309}';

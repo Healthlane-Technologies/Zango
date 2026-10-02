@@ -331,3 +331,79 @@ class DraftModeTests(AppTemplatesTestBase):
         )
         self.assertIn("Who approves? (/programs): Manager", body)
         self.assertEqual(ids, ["d1"])
+
+
+class WorkflowToolTests(AppTemplatesTestBase):
+    def setUp(self):
+        super().setUp()
+        import_pack(PACKS_DIR / "psp", publish_now=True)
+        catalogue.clear_caches()
+        self.template = catalogue.get_template("psp")
+
+    requirement = DraftModeTests.requirement
+    Ctx = DraftModeTests.Ctx
+
+    PROCESS = {
+        "title": "3.b To upload trainings",
+        "group": "Training",
+        "lanes": [{"role": "Admin"}, {"id": "ops", "role": "Clinic manager"}],
+        "nodes": [
+            {"id": "s", "lane": "admin", "kind": "start"},
+            {"id": "login", "lane": "Admin", "kind": "task", "label": "Login"},
+            {"id": "up", "lane": "admin", "kind": "event", "label": "Uploaded", "note": "PDF / video"},
+            {"id": "mail", "lane": "Clinic manager", "kind": "message", "label": "Email"},
+            {"id": "e", "lane": "ops", "kind": "end"},
+        ],
+        "flows": [
+            {"from": "s", "to": "login"},
+            {"from": "login", "to": "up"},
+            {"from": "up", "to": "mail", "kind": "message", "label": "Email notification"},
+            {"from": "mail", "to": "e"},
+        ],
+    }
+
+    def test_workflows_are_validated_emitted_and_saved(self):
+        from zango.apps.agent_mode.spec_tools import (
+            ALLOWED_TOOL_NAMES,
+            SpecWorkbench,
+            make_handler,
+            tool_specs,
+        )
+        from zango.apps.agent_mode.tasks import _record_spec_edit
+        from zango.apps.agent_mode.template_spec import spec_payload
+
+        self.assertIn("mcp__spec__spec_set_workflows", ALLOWED_TOOL_NAMES)
+        emitted = []
+        bench = SpecWorkbench(self.template.starter_yaml, self.template, emit=emitted.append)
+        handlers = {n: make_handler(bench, fn) for n, _, _, fn in tool_specs(bench)}
+        bad = dict(self.PROCESS, nodes=self.PROCESS["nodes"] + [{"id": "x", "lane": "nobody", "kind": "task"}])
+        with _NoQueries():
+            ok = asyncio.run(handlers["spec_set_workflows"]({"processes": [self.PROCESS]}))
+            refused = asyncio.run(handlers["spec_set_workflows"]({"processes": [bad]}))
+        self.assertNotIn("is_error", ok)
+        self.assertTrue(refused["is_error"])
+        self.assertIn("nobody", refused["content"][0]["text"])
+        proc = emitted[-1]["workflows"]["processes"][0]
+        self.assertEqual(proc["id"], "3_b_to_upload_trainings")
+        self.assertEqual(proc["source"], "agent")
+        self.assertEqual([n["lane"] for n in proc["nodes"]], ["admin", "admin", "admin", "ops", "ops"])
+        self.assertEqual(proc["flows"][2]["kind"], "message")
+        self.assertEqual(proc["nodes"][2]["note"], "PDF / video")
+
+        r = self.requirement()
+        before = r.spec_markdown
+        _record_spec_edit(r, emitted[-1])
+        self.assertEqual(r.spec_markdown, before)
+        self.assertEqual(spec_payload(r)["workflows"]["processes"][0]["title"], self.PROCESS["title"])
+        bench.set_workflows([])
+        self.assertEqual(emitted[-1], {"workflows": {}})
+        self.assertIsNone(spec_payload(self.requirement())["workflows"])
+
+    def test_the_draft_prompt_and_pack_ask_for_workflows(self):
+        from zango.apps.agent_mode.requirements import compose_analyst_prompt
+
+        text = compose_analyst_prompt(self.requirement(), self.Ctx(), "see docs", docs_dir="/d")
+        self.assertIn("spec_set_workflows", text)
+        self.assertIn("spec_set_workflows", self.template.drafting_md if hasattr(self.template, "drafting_md") else Path(self.template.file_path("drafting")).read_text())
+        adapter = (PACKS_DIR / "psp" / "builder" / "adapter.js").read_text()
+        self.assertIn("setPreview(!!msg.on)", adapter)

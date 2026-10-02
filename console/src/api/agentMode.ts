@@ -103,6 +103,50 @@ export interface SpecIssue {
 	rule?: string;
 }
 
+// ---- workflows drawn as swimlanes (agent-described on the payload; lifecycles derived) ----
+
+export type WfNodeKind = 'start' | 'end' | 'task' | 'event' | 'gateway' | 'message';
+
+export interface WfLane {
+	id: string;
+	/** The role written down the lane's header strip. */
+	role: string;
+}
+
+export interface WfNode {
+	id: string;
+	lane: string;
+	kind: WfNodeKind;
+	label: string;
+	/** A small grey annotation under the shape. */
+	note?: string;
+	/** Where it comes from in the journey (derived nodes), for "show in YAML". */
+	pointer?: string;
+}
+
+export interface WfFlow {
+	from: string;
+	to: string;
+	kind: 'sequence' | 'message';
+	label?: string;
+}
+
+export interface WfProcess {
+	id: string;
+	title: string;
+	group?: string;
+	source: 'lifecycle' | 'agent';
+	lanes: WfLane[];
+	nodes: WfNode[];
+	flows: WfFlow[];
+	/** The lifecycle's object in the journey (derived processes). */
+	pointer?: string;
+}
+
+export interface Workflows {
+	processes: WfProcess[];
+}
+
 /** GET requirements/<r>/spec/ — the spec as the builder panel reads it. */
 export interface RequirementSpec {
 	text: string;
@@ -123,6 +167,8 @@ export interface RequirementSpec {
 	documents?: UploadedDocument[];
 	/** 'draft' while the agent drafts the whole journey in one pass; null when unknown. */
 	mode?: 'draft' | 'interview' | null;
+	/** User journeys the agent described while drafting, drawn as swimlanes. */
+	workflows?: Workflows | null;
 }
 
 export type FlagKind = 'inferred' | 'reference' | 'default' | 'missing';

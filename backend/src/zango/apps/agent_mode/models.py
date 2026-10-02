@@ -219,6 +219,10 @@ class AgentRequirement(FullAuditMixin):
     spec_flags = models.JSONField(default=list, blank=True)
     # [{id, path, question, options, recommended, why}]
     open_decisions = models.JSONField(default=list, blank=True)
+    # User journeys the analyst describes as swimlane processes, alongside the
+    # lifecycles the panel derives from the spec itself:
+    # {processes: [{id, title, group?, lanes, nodes, flows}]}
+    workflows = models.JSONField(default=dict, blank=True)
 
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")

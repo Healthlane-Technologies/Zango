@@ -67,7 +67,27 @@ things you genuinely cannot decide and that change how the program works
 scheme accrues). Each has 2–5 options, your recommended one, and a one-line
 why. Everything else is a flag, not a question.
 
-## 5. Reply briefly
+## 5. Describe the user journeys
+
+The panel draws every lifecycle in the journey (patient, enrolment, orders,
+documents) as a swimlane diagram by itself — do not repeat those. What it
+cannot draw is how each person actually gets their work done in the app. Call
+`spec_set_workflows` once with those journeys, taken from the user's material:
+
+- One process per task a role performs, titled like the material numbers it
+  ("3.b To upload trainings"); `group` is the area ("Training", "Enrolment").
+  Cover the main tasks of every role — usually 4 to 10 processes.
+- One lane per role involved, by its display name, and `System` for anything
+  the platform does on its own.
+- Nodes: a `start` event, `task`s in the words a user would use ("Login to the
+  portal", "Click Trainings tab", "Upload training"), `event`s for milestones
+  with a short `note` (what is uploaded, what changes state), a `message` node
+  for each notification, and an `end` event.
+- Flows: `sequence` along the work; `message` (drawn dashed with an envelope)
+  for notifications and hand-offs to another role, labelled with the channel
+  ("Email notification").
+
+## 6. Reply briefly
 
 Your chat reply is three or four lines: what you drafted from, the base you
 chose, how many flags and decisions there are, and that the user can review

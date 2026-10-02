@@ -5,6 +5,7 @@
 // ("zango-builder/1", see the template's adapter.js): we `load` the draft into it and `lock`
 // it while the agent works; it reports every edit as a `change` with the whole YAML, which
 // becomes an ordinary draft edit (SaveBar, conflicts, validation all as for the YAML tab).
+// The same page is the Preview tab: `preview` switches it into its simulated app.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBuilderHtml } from '@/api/agentMode';
@@ -26,6 +27,7 @@ export function EmbeddedBuilder({
 	readOnly,
 	onChange,
 	hidden,
+	preview = false,
 }: {
 	url: string;
 	/** The draft on screen. Loaded into the builder whenever it changes from outside it. */
@@ -34,6 +36,8 @@ export function EmbeddedBuilder({
 	onChange: (yaml: string) => void;
 	/** Kept mounted (and its UI state alive) while another tab is showing. */
 	hidden?: boolean;
+	/** Show the builder's own preview of the app instead of its editor. */
+	preview?: boolean;
 }) {
 	const page = useBuilderHtml(url);
 	const frame = useRef<HTMLIFrameElement>(null);
@@ -42,8 +46,8 @@ export function EmbeddedBuilder({
 	const known = useRef<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	const latest = useRef({ text, readOnly, onChange });
-	latest.current = { text, readOnly, onChange };
+	const latest = useRef({ text, readOnly, onChange, preview });
+	latest.current = { text, readOnly, onChange, preview };
 
 	const post = useCallback((message: Record<string, unknown>) => {
 		frame.current?.contentWindow?.postMessage({ source: 'zango-host', ...message }, '*');
@@ -53,6 +57,8 @@ export function EmbeddedBuilder({
 		const { text: t, readOnly: ro } = latest.current;
 		known.current = norm(t);
 		post({ type: 'load', yaml: t, readOnly: ro });
+		// A reload re-renders the editor; the preview is rebuilt from the new journey.
+		if (latest.current.preview) post({ type: 'preview', on: true });
 	}, [post]);
 
 	useEffect(() => {
@@ -92,6 +98,11 @@ export function EmbeddedBuilder({
 		if (ready.current) post({ type: 'lock', readOnly });
 	}, [readOnly, post]);
 
+	// Re-sent whenever the page comes on screen, so the tab wins over the page's own switch.
+	useEffect(() => {
+		if (ready.current && !hidden) post({ type: 'preview', on: preview });
+	}, [preview, hidden, post]);
+
 	if (page.error) {
 		return (
 			<div className="card">
@@ -111,7 +122,7 @@ export function EmbeddedBuilder({
 				<iframe
 					ref={frame}
 					className="emb-frame"
-					title="Template builder"
+					title={preview ? 'App preview' : 'Template builder'}
 					sandbox={SANDBOX}
 					srcDoc={page.data}
 				/>

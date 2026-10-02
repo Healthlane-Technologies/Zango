@@ -352,7 +352,8 @@ The user gave you their material instead of answering an interview. Do not
 interview them. Follow `{drafting}` exactly: read everything, draft EVERY
 section of the journey with the spec tools (spec_replace_section, one call per
 section), flag every value you did not take straight from their material with
-spec_flag, fix every error spec_validate reports, and finish with one
+spec_flag, fix every error spec_validate reports, describe how each role gets
+its work done with one spec_set_workflows call, and finish with one
 spec_open_decisions call holding only the real gaps (at most 8).
 
 Vocabulary: `{schema}`. The draft currently holds `{starting_point}`.

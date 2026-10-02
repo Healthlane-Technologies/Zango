@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { documentUrl, type SpecIssue } from '@/api/agentMode';
-import { Badge, Button, cx, Icon, Menu, SaveBar, Tabs, TemplateBadge, type Tone } from '@/ui';
+import { Badge, Button, cx, Icon, Menu, SaveBar, Skeleton, Tabs, TemplateBadge, type Tone } from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { BuilderContext, type BuilderCtx } from './context';
@@ -18,7 +18,10 @@ import { useSpecDraft } from './useSpecDraft';
 import { YamlView } from './YamlView';
 import './builder.css';
 
-type Tab = 'builder' | 'details' | 'yaml' | 'checks' | 'review';
+// The swimlane renderer only loads when the Workflows tab is opened.
+const WorkflowsPanel = lazy(() => import('./WorkflowsPanel'));
+
+type Tab = 'builder' | 'preview' | 'details' | 'workflows' | 'yaml' | 'checks' | 'review';
 type Mode = 'default' | 'all' | 'none';
 
 const FLASH_MS = 1600;
@@ -441,9 +444,13 @@ export function TemplateBuilderPanel({
 					value={tab}
 					onChange={setTab}
 					items={[
-						embedUrl
-							? { value: 'builder', label: 'Builder' }
-							: { value: 'details', label: 'Details' },
+						...(embedUrl
+							? [
+									{ value: 'builder' as const, label: 'Builder' },
+									{ value: 'preview' as const, label: 'Preview' },
+								]
+							: [{ value: 'details' as const, label: 'Details' }]),
+						{ value: 'workflows', label: 'Workflows' },
 						{ value: 'yaml', label: 'YAML' },
 						{
 							value: 'checks',
@@ -460,8 +467,26 @@ export function TemplateBuilderPanel({
 							text={draft.text}
 							readOnly={locked || !!draft.incoming}
 							onChange={draft.type}
-							hidden={tab !== 'builder'}
+							hidden={tab !== 'builder' && tab !== 'preview'}
+							preview={tab === 'preview'}
 						/>
+					)}
+					{tab === 'workflows' && (
+						<Suspense
+							fallback={
+								<div className="grid gap-3">
+									<Skeleton width="30%" height={18} />
+									<Skeleton height={240} />
+								</div>
+							}
+						>
+							<WorkflowsPanel
+								doc={yamlBroken ? undefined : doc}
+								agent={serverSpec.workflows?.processes}
+								thinking={thinking}
+								onJump={(p) => jumpTo(p, { inTab: 'yaml' })}
+							/>
+						</Suspense>
 					)}
 					{tab === 'details' && yamlBroken && !draft.reviewing && (
 						<div className="bld-note err" role="status">

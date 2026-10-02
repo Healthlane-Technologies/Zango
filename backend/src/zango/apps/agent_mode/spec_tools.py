@@ -38,6 +38,7 @@ class SpecWorkbench:
         emit: Callable[[dict], None],
         flags=None,
         open_decisions=None,
+        workflows=None,
     ):
         from zango.apps.shared.app_templates.services.spec import yamlio
 
@@ -50,6 +51,7 @@ class SpecWorkbench:
         self.flags: list = [dict(f) for f in flags or []]
         self.open_decisions: list = [dict(d) for d in open_decisions or []]
         self.decisions_set = False
+        self.workflows: dict = dict(workflows or {})
         self._lock = threading.Lock()
         try:
             self.doc = yamlio.load_rt(self.text) if self.text.strip() else {}
@@ -305,6 +307,113 @@ class SpecWorkbench:
             else "No open decisions."
         )
 
+    # -- user journeys (swimlanes) ---------------------------------------------
+
+    MAX_PROCESSES = 12
+    MAX_NODES = 40
+    NODE_KINDS = ("start", "end", "task", "event", "gateway", "message")
+    FLOW_KINDS = ("sequence", "message")
+
+    def set_workflows(self, processes) -> str:
+        """Replace the narrative user journeys shown as swimlanes.
+
+        The lifecycles in the spec are drawn by the panel itself; these are
+        the journeys a person walks through (sign in, open a tab, act), which
+        the spec does not spell out.
+        """
+        if not isinstance(processes, list):
+            raise ToolRefused("processes must be a list.")
+        if len(processes) > self.MAX_PROCESSES:
+            raise ToolRefused(f"At most {self.MAX_PROCESSES} processes.")
+        clean, ids = [], set()
+        for p_i, proc in enumerate(processes, 1):
+            if not isinstance(proc, dict) or not str(proc.get("title") or "").strip():
+                raise ToolRefused(f"Process {p_i} needs a title.")
+            pid = _slug(proc.get("id") or proc["title"]) or f"p{p_i}"
+            if pid in ids:
+                pid = f"{pid}_{p_i}"
+            ids.add(pid)
+            where = f"Process {p_i} ({proc['title']})"
+            lanes, lane_ids, by_role = [], set(), {}
+            for l_i, lane in enumerate(proc.get("lanes") or [], 1):
+                if isinstance(lane, str):
+                    lane = {"role": lane}
+                role = str((lane or {}).get("role") or "").strip()
+                if not role:
+                    raise ToolRefused(f"{where}: lane {l_i} needs a role.")
+                lid = _slug(lane.get("id") or role)
+                if lid in lane_ids:
+                    raise ToolRefused(f"{where}: lane {role} appears twice.")
+                lane_ids.add(lid)
+                by_role[_slug(role)] = lid
+                lanes.append({"id": lid, "role": role[:60]})
+            if not lanes:
+                raise ToolRefused(f"{where} needs at least one lane.")
+            raw_nodes = proc.get("nodes") or []
+            if not raw_nodes or len(raw_nodes) > self.MAX_NODES:
+                raise ToolRefused(f"{where} needs 1–{self.MAX_NODES} nodes.")
+            nodes, node_ids = [], set()
+            for n_i, node in enumerate(raw_nodes, 1):
+                node = node if isinstance(node, dict) else {}
+                nid = _slug(node.get("id")) or f"n{n_i}"
+                kind = node.get("kind") or "task"
+                lane = _slug(node.get("lane"))
+                lane = lane if lane in lane_ids else by_role.get(lane, lane)
+                if nid in node_ids:
+                    raise ToolRefused(f"{where}: node id {nid} appears twice.")
+                if kind not in self.NODE_KINDS:
+                    raise ToolRefused(
+                        f"{where}: node {nid} kind must be one of {', '.join(self.NODE_KINDS)}."
+                    )
+                if lane not in lane_ids:
+                    raise ToolRefused(
+                        f"{where}: node {nid} is in lane {node.get('lane')!r}, which is not one of "
+                        f"{', '.join(sorted(lane_ids))}."
+                    )
+                node_ids.add(nid)
+                entry = {
+                    "id": nid,
+                    "lane": lane,
+                    "kind": kind,
+                    "label": str(node.get("label") or "").strip()[:120],
+                }
+                if str(node.get("note") or "").strip():
+                    entry["note"] = str(node["note"]).strip()[:160]
+                nodes.append(entry)
+            flows = []
+            for f_i, flow in enumerate(proc.get("flows") or [], 1):
+                flow = flow if isinstance(flow, dict) else {}
+                src, dst = _slug(flow.get("from")), _slug(flow.get("to"))
+                if src not in node_ids or dst not in node_ids:
+                    raise ToolRefused(
+                        f"{where}: flow {f_i} must join two of its nodes (got {flow.get('from')!r} → {flow.get('to')!r})."
+                    )
+                kind = flow.get("kind") or "sequence"
+                if kind not in self.FLOW_KINDS:
+                    raise ToolRefused(f"{where}: flow {f_i} kind must be sequence or message.")
+                entry = {"from": src, "to": dst, "kind": kind}
+                if str(flow.get("label") or "").strip():
+                    entry["label"] = str(flow["label"]).strip()[:80]
+                flows.append(entry)
+            item = {
+                "id": pid,
+                "title": str(proc["title"]).strip()[:120],
+                "source": "agent",
+                "lanes": lanes,
+                "nodes": nodes,
+                "flows": flows,
+            }
+            if str(proc.get("group") or "").strip():
+                item["group"] = str(proc["group"]).strip()[:80]
+            clean.append(item)
+        self.workflows = {"processes": clean} if clean else {}
+        self.emit({"workflows": self.workflows})
+        return (
+            f"{len(clean)} user journey(s) recorded."
+            if clean
+            else "User journeys cleared."
+        )
+
     def mark_ready(self, summary: str) -> str:
         self._need_doc()
         if self.open_decisions:
@@ -337,6 +446,12 @@ def _document_name(value) -> str:
     return re.sub(r"^\d{2}-", "", name)[:160]
 
 
+def _slug(value) -> str:
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")[:60]
+
+
 class ToolRefused(Exception):
     """A tool call the model should correct; its message is shown to it."""
 
@@ -366,6 +481,7 @@ TOOL_NAMES = (
     "spec_flag",
     "spec_unflag",
     "spec_open_decisions",
+    "spec_set_workflows",
     "spec_mark_ready",
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
@@ -528,6 +644,85 @@ def tool_specs(bench: SpecWorkbench) -> list:
                 ["items"],
             ),
             lambda a: bench.set_open_decisions(a.get("items") or []),
+        ),
+        (
+            "spec_set_workflows",
+            (
+                "Replace the user journeys shown to the user as swimlane diagrams: what each role does, "
+                "step by step, to get something done in the app (sign in, open a tab, act, who gets "
+                "notified). Not the lifecycles — the panel draws those from the journey itself."
+            ),
+            _schema(
+                {
+                    "processes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "title": {
+                                    "type": "string",
+                                    "description": "e.g. 3.b To upload trainings",
+                                },
+                                "group": {"type": "string"},
+                                "lanes": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "string"},
+                                            "role": {"type": "string"},
+                                        },
+                                        "required": ["role"],
+                                    },
+                                },
+                                "nodes": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "string"},
+                                            "lane": {
+                                                "type": "string",
+                                                "description": "A lane id (or role).",
+                                            },
+                                            "kind": {
+                                                "type": "string",
+                                                "enum": list(SpecWorkbench.NODE_KINDS),
+                                            },
+                                            "label": {"type": "string"},
+                                            "note": {
+                                                "type": "string",
+                                                "description": "A short annotation under the node.",
+                                            },
+                                        },
+                                        "required": ["id", "lane", "kind"],
+                                    },
+                                },
+                                "flows": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "from": {"type": "string"},
+                                            "to": {"type": "string"},
+                                            "kind": {
+                                                "type": "string",
+                                                "enum": list(SpecWorkbench.FLOW_KINDS),
+                                            },
+                                            "label": {"type": "string"},
+                                        },
+                                        "required": ["from", "to"],
+                                    },
+                                },
+                            },
+                            "required": ["title", "lanes", "nodes", "flows"],
+                        },
+                    }
+                },
+                ["processes"],
+            ),
+            lambda a: bench.set_workflows(a.get("processes") or []),
         ),
         (
             "spec_mark_ready",

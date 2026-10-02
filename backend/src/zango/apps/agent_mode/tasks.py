@@ -866,6 +866,7 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
                 emit=lambda edit: stream.push("spec", edit),
                 flags=req.spec_flags,
                 open_decisions=req.open_decisions,
+                workflows=req.workflows,
             )
             spec_server = build_spec_server(bench)
         stream.options = build_analyst_options(
@@ -917,7 +918,8 @@ def _record_spec_edit(req, edit: dict) -> None:
     """Save one spec-tool result straight away, so the panel sees it land.
 
     An edit carries the new YAML; a provenance call (spec_flag, spec_unflag,
-    spec_open_decisions) carries only flags and open decisions.
+    spec_open_decisions) carries only flags and open decisions, and
+    spec_set_workflows only the narrative workflows.
     """
     edit = edit or {}
     fields = ["modified_at"]
@@ -935,6 +937,9 @@ def _record_spec_edit(req, edit: dict) -> None:
     if "open_decisions" in edit:
         req.open_decisions = list(edit["open_decisions"])
         fields.append("open_decisions")
+    if "workflows" in edit:
+        req.workflows = dict(edit["workflows"] or {})
+        fields.append("workflows")
     if len(fields) > 1:
         req.save(update_fields=fields)
 
