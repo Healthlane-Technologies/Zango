@@ -1,0 +1,9 @@
+[
+  {
+    "id": "distributor_hub_west",
+    "file": "references/distributor_hub_west.yaml",
+    "title": "Distributor Hub — West (140 distributors, West India)",
+    "summary": "Weekly secondary sales and stock uploads by Excel or ERP API with invoice lines, a West India region and territory master, distributor KYC with licence expiry, near-expiry by region, trade schemes with budgets, claims approved by area managers and settled through SAP credit notes, and distributor and scheme 360 pages.",
+    "tags": ["distributor management", "secondary sales", "stock and expiry", "schemes", "claims", "external users", "SAP", "360 page"]
+  }
+]

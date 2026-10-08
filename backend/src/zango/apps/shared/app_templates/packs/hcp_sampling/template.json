@@ -1,0 +1,73 @@
+{
+  "slug": "hcp-sampling",
+  "name": "HCP Sampling",
+  "version": "1.0.0",
+  "category": "Commercial Operations",
+  "icon": "gift",
+  "is_beta": false,
+  "aka": [
+    "sample management",
+    "drug sampling",
+    "physician samples",
+    "sample request app",
+    "sample accountability"
+  ],
+  "one_liner": "Sample requests, rep allocation, delivery acknowledgement and quarterly reconciliation.",
+  "fits_when": [
+    "HCPs request product samples directly or through their medical reps",
+    "sample stock is allocated per territory and quarter",
+    "every delivery needs proof of receipt from the HCP (signature or OTP)",
+    "per-HCP sample limits must be enforced and exceptions reviewed by compliance",
+    "compliance reconciles samples issued against acknowledgements every quarter",
+    "reps and HCPs sign in and see only their own requests and deliveries"
+  ],
+  "gives_you": [
+    "Sample requests with rep endorsement, quarterly limit checks and compliance exceptions",
+    "Territory allocations by product and quarter, with units issued tracked on approval",
+    "Deliveries by rep hand-over or courier, acknowledged by e-signature or OTP",
+    "Quarterly reconciliation of issued vs acknowledged units, with sign-off",
+    "HCP 360 page with open requests, deliveries awaiting acknowledgement and history",
+    "Row-level access: reps see their HCPs, HCPs see only their own requests"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "Field sampling from request to reconciliation: HCPs ask for samples through their reps, sample ops allocates stock by territory and dispatches, the HCP acknowledges each delivery, and compliance reconciles issued against acknowledged units every quarter. The app is described in the Zango app spec and previewed live as a clickable app with demo data while the requirement is shaped.",
+    "packages": [
+      { "name": "workflow", "description": "Request, delivery, allocation and reconciliation lifecycles" },
+      { "name": "crm", "description": "HCP master with territory and rep mapping" },
+      { "name": "forms", "description": "Request, dispatch and acknowledgement forms with limit checks" },
+      { "name": "communication", "description": "SMS OTP, rep reminders and HCP receipts" },
+      { "name": "reports", "description": "Quarterly reconciliation and audit exports" }
+    ],
+    "roles": [
+      { "name": "Medical rep", "description": "Raises and endorses requests for their HCPs and collects delivery acknowledgement" },
+      { "name": "HCP", "description": "Requests samples and acknowledges each delivery; sees only their own records" },
+      { "name": "Sample ops", "description": "Allocates stock by territory, approves requests and dispatches" },
+      { "name": "Compliance reviewer", "description": "Clears over-limit exceptions and signs off the quarterly reconciliation" }
+    ],
+    "workflows": [
+      { "name": "Sample request", "description": "Endorsement, limit check, approval or compliance exception, then dispatch" },
+      { "name": "Allocation by territory", "description": "Quarterly units per territory and product, with top-ups and low-balance flags" },
+      { "name": "Delivery acknowledgement", "description": "Rep hand-over or courier, proven by e-signature or OTP" },
+      { "name": "Reconciliation", "description": "Issued vs acknowledged units per territory and rep, explained and signed off" }
+    ],
+    "data_objects": ["HCP", "Product", "Allocation", "Request", "Delivery", "Stock batch", "Reconciliation", "Territory"],
+    "integrations": ["Courier API"],
+    "compliance": [
+      "Delivery acknowledgement evidence (signature or OTP) on every delivery",
+      "Per-HCP quarterly sample limits with compliance-reviewed exceptions",
+      "Quarterly reconciliation report with sign-off",
+      "UCPMP sample norms",
+      "Audit trail of every request, dispatch and status change"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Sample Desk",
+    "app_prompt_prefill": "Sampling app where HCPs request samples through reps, sample ops allocates stock by territory, the HCP signs on delivery, and compliance reconciles quarterly."
+  },
+  "changelog": "First version: HCP sampling on the Zango app spec v1, with requests, territory allocation, delivery acknowledgement and quarterly reconciliation."
+}

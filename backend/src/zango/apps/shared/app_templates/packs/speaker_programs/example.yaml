@@ -1,0 +1,807 @@
+# Speaker Programs (worked example): a cardio-diabetes franchise in India runs
+# HCP speaker meetings. Brand managers nominate speakers, compliance sets the
+# fair-market-value rate from a tier table and enforces annual caps, contracts
+# go out for e-signature, event ops logs venues, attendees and every rupee
+# spent, and compliance reconciles spend into a per-HCP transfer-of-value report.
+
+spec_version: 1
+
+# -----------------------------------------------------------------------------
+#  APP
+# -----------------------------------------------------------------------------
+app:
+  code: speaker_programs
+  name: Speaker Programs
+  description: Nominate HCP speakers, set fair market value and caps, contract them by e-signature, run events and report spend per HCP.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#7C3AED", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: e-signature
+      text: >
+        Sending a contract creates an envelope with the e-signature provider (contract PDF, speaker
+        as signer, compliance reviewer in copy). The provider's webhook posts signed / declined back;
+        on signed, store the signed PDF and signing timestamp and move the contract to Signed.
+    - area: permission
+      title: Audit trail
+      text: Every change to speakers, contracts, events and spend lines is kept with old and new values, user and time, and can be exported by compliance.
+    - area: report
+      title: Transfer-of-value disclosure
+      text: >
+        Quarterly CSV of every reported spend line grouped by recipient HCP: HCP name, registration no.,
+        speciality, institution, spend type, amount and event, with totals per HCP. Compliance downloads it
+        from the Disclosure page.
+
+# -----------------------------------------------------------------------------
+#  CHOICE SETS
+# -----------------------------------------------------------------------------
+choice_sets:
+  hcp_tier:
+    - { id: national_kol, label: National KOL, color: purple }
+    - { id: regional_kol, label: Regional KOL, color: indigo }
+    - { id: local_expert, label: Local Expert, color: blue }
+  event_format:
+    - { id: in_person, label: In person }
+    - { id: virtual,   label: Virtual }
+    - { id: hybrid,    label: Hybrid }
+  event_topic:
+    - { id: hf_update,        label: Heart failure update }
+    - { id: sglt2_data,       label: SGLT2 inhibitor outcomes data }
+    - { id: diabetes_cases,   label: Type 2 diabetes case discussion }
+    - { id: lipid_guidelines, label: Lipid management guidelines }
+    - { id: htn_workshop,     label: Resistant hypertension workshop }
+  venue_type:
+    - { id: hotel,      label: Hotel conference room }
+    - { id: hospital,   label: Hospital auditorium }
+    - { id: restaurant, label: Restaurant (meal meeting) }
+    - { id: online,     label: Online platform }
+  spend_type:
+    - { id: honorarium,    label: Honorarium,    color: purple }
+    - { id: travel,        label: Travel,        color: blue }
+    - { id: accommodation, label: Accommodation, color: teal }
+    - { id: meals,         label: Meals,         color: amber }
+    - { id: venue,         label: Venue and AV,  color: gray }
+    - { id: material,      label: Printed material, color: pink }
+  doc_type:
+    - { id: cv,                label: CV }
+    - { id: registration_cert, label: Medical registration certificate }
+    - { id: coi_declaration,   label: Conflict of interest declaration }
+    - { id: pan_card,          label: PAN card }
+
+# -----------------------------------------------------------------------------
+#  ROLES
+# -----------------------------------------------------------------------------
+roles:
+  - name: Brand Manager
+    description: Nominates speakers for the brand and plans speaker meetings within budget.
+    landing: events
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: speakers,  icon: mic }
+      - { page: events,    icon: calendar-days }
+      - { page: spend,     label: Spend by HCP, icon: indian-rupee }
+
+  - name: Compliance Reviewer
+    description: Sets FMV and caps, approves speakers and events, sends contracts and reconciles spend into the disclosure.
+    landing: speakers
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: speakers,   icon: mic }
+      - { page: contracts,  icon: file-signature }
+      - { page: events,     icon: calendar-days }
+      - { page: spend,      label: Spend Ledger, icon: indian-rupee }
+      - { page: disclosure, icon: file-bar-chart }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: specialities }
+          - { page: therapy_areas }
+          - { page: fmv_tiers }
+
+  - name: Event Ops
+    description: Books venues and travel, logs attendees and records every spend line with its invoice.
+    landing: events
+    menu:
+      - { page: events,    icon: calendar-days }
+      - { page: attendees, icon: users }
+      - { page: spend,     label: Spend Lines, icon: receipt }
+
+  - name: Speaker
+    description: External HCP login; signs contracts, sees own events and own payments only.
+    landing: contracts
+    menu:
+      - { page: contracts, label: My Contracts, icon: file-signature }
+      - { page: events,    label: My Events,    icon: calendar-days }
+      - { page: spend,     label: My Payments,  icon: wallet }
+
+# -----------------------------------------------------------------------------
+#  PAGES
+# -----------------------------------------------------------------------------
+pages:
+  - { code: speakers,      type: crud,   entity: speaker,      route: /app/speakers,      title: Speakers }
+  - { code: speaker_360,   type: detail, detail_view: speaker_360, route: /app/speakers/:id }
+  - { code: contracts,     type: crud,   entity: contract,     route: /app/contracts,     title: Contracts }
+  - { code: events,        type: crud,   entity: event,        route: /app/events,        title: Speaker Events }
+  - { code: event_360,     type: detail, detail_view: event_360, route: /app/events/:id }
+  - { code: attendees,     type: crud,   entity: attendee,     route: /app/attendees,     title: Attendees }
+  - { code: spend,         type: crud,   entity: spend_line,   route: /app/spend,         title: Spend Lines }
+  - { code: specialities,  type: crud,   entity: speciality,   route: /app/masters/specialities,  title: Specialities }
+  - { code: therapy_areas, type: crud,   entity: therapy_area, route: /app/masters/therapy-areas, title: Therapy Areas }
+  - { code: fmv_tiers,     type: crud,   entity: fmv_tier,     route: /app/masters/fmv-tiers,     title: FMV Tiers }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Program Dashboard
+    component: SpeakerProgramDashboard
+    roles: [Brand Manager, Compliance Reviewer]
+    text: >
+      KPI row: speakers awaiting FMV review, contracts awaiting signature, events in the next 30 days,
+      spend this quarter against the brand budget. Below: spend by HCP (top 10, stacked by spend type),
+      events per month (last 6 months) and a table of speakers above 90% of their annual cap.
+  - code: disclosure
+    type: custom
+    route: /app/disclosure
+    title: Disclosure
+    component: TransferOfValueReport
+    roles: [Compliance Reviewer]
+    text: >
+      Pick a quarter. Table of recipient HCPs with honorarium, travel, accommodation, meals and total,
+      drilling into the spend lines behind each number. "Lock quarter" runs the report transition on
+      every verified spend line in the quarter; "Download CSV" exports the disclosure file.
+
+# -----------------------------------------------------------------------------
+#  MODULES
+# -----------------------------------------------------------------------------
+modules:
+
+  # ===========================================================================
+  - code: masters
+    name: Master Data
+    description: Specialities, therapy areas and the FMV tier table.
+    entities:
+
+      - code: speciality
+        name: Speciality
+        plural: Specialities
+        kind: master
+        display: name
+        fields:
+          - name: { type: text, required: true, unique: true }
+        access:
+          Brand Manager:       { actions: [view] }
+          Compliance Reviewer: { actions: [view, add, edit, export] }
+          Event Ops:           { actions: [view] }
+        table:
+          columns:
+            - name: { label: Speciality, searchable: true, sortable: true }
+          default_sort: name
+        form:
+          create: { fields: [name] }
+          edit:   { same_as: create }
+
+      - code: therapy_area
+        name: Therapy Area
+        plural: Therapy Areas
+        kind: master
+        display: name
+        fields:
+          - name:      { type: text, required: true, unique: true }
+          - is_active: { type: boolean, default: true }
+        access:
+          Brand Manager:       { actions: [view] }
+          Compliance Reviewer: { actions: [view, add, edit] }
+          Event Ops:           { actions: [view] }
+        table:
+          columns:
+            - name:      { label: Therapy area, searchable: true, sortable: true }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+        form:
+          create: { fields: [name, is_active] }
+          edit:   { same_as: create }
+
+      - code: fmv_tier
+        name: FMV Tier
+        plural: FMV Tiers
+        kind: master
+        display: hcp_tier
+        description: The fair-market-value table compliance uses to price a speaker.
+        fields:
+          - hcp_tier:        { type: choice, choices: hcp_tier, required: true, unique: true }
+          - min_hourly_rate: { type: money, label: Min rate / hr, required: true, min: 0 }
+          - max_hourly_rate: { type: money, label: Max rate / hr, required: true, min: 0 }
+          - max_hours:       { type: integer, label: Max paid hours per event, required: true, min: 1, max: 8, default: 3 }
+          - annual_cap:      { type: money, label: Annual cap per HCP, required: true }
+          - effective_from:  { type: date, required: true }
+        validation:
+          rules:
+            - { when: max_hourly_rate is_set, require_expr: max_hourly_rate >= min_hourly_rate, message: The maximum rate must be at least the minimum rate. }
+        access:
+          Compliance Reviewer: { actions: [view, add, edit, export] }
+          Brand Manager:       { actions: [view] }
+        table:
+          columns:
+            - hcp_tier:        { label: Tier, filterable: true }
+            - min_hourly_rate: { label: Min / hr, format: money }
+            - max_hourly_rate: { label: Max / hr, format: money }
+            - max_hours:       { label: Max hours }
+            - annual_cap:      { label: Annual cap, format: money }
+            - effective_from:  { label: Effective from, sortable: true }
+          default_sort: hcp_tier
+        form:
+          create: { fields: [hcp_tier, min_hourly_rate, max_hourly_rate, max_hours, annual_cap, effective_from] }
+          edit:   { same_as: create }
+
+  # ===========================================================================
+  - code: speakers
+    name: Speakers
+    description: Nomination, FMV review, documents and contracts.
+    entities:
+
+      - code: speaker
+        name: Speaker
+        plural: Speakers
+        kind: hero
+        display: full_name
+        description: An HCP engaged to speak. Centre of the Speaker 360 page.
+        app_user: { role: Speaker, name: full_name, email: email, mobile: phone, create_on: status == approved }
+        fields:
+          - speaker_ref:       { type: text, label: Speaker ID, readonly: true, unique: true, auto: { sequence: "SPK-{0000}" } }
+          - full_name:         { type: text, required: true, max_length: 150, help: As on the medical registration certificate. }
+          - speciality:        { type: link, to: speciality, required: true, display: name }
+          - therapy_area:      { type: link, to: therapy_area, required: true, display: name, limit_choices: is_active is_true }
+          - institution:       { type: text, required: true }
+          - city:              { type: text, required: true }
+          - registration_no:   { type: text, label: Medical registration no., required: true, unique: true }
+          - pan:               { type: text, label: PAN, max_length: 10, pattern: "^[A-Z]{5}[0-9]{4}[A-Z]$", pattern_msg: Enter a valid PAN. }
+          - email:             { type: email, required: true }
+          - phone:             { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile without +91. }
+          - hcp_tier:          { type: choice, label: HCP tier, choices: hcp_tier, required: true }
+          - is_government_hcp: { type: boolean, label: Government-employed HCP, default: false, tooltip: Government HCPs need employer permission before contracting. }
+          - nomination_reason: { type: long_text, required: true, help: "Expertise, topics and the audiences this HCP will address." }
+          - fmv_tier:          { type: link, to: fmv_tier, label: FMV tier, display: hcp_tier, readonly: true }
+          - hourly_rate:       { type: money, label: FMV rate / hr, readonly: true }
+          - annual_cap:        { type: money, label: Annual cap, readonly: true }
+          - ytd_spend:         { type: money, label: Spend this year, readonly: true, computed: Sum of spend_line.amount for this speaker in the current calendar year. }
+          - approved_on:       { type: date, readonly: true }
+        validation:
+          rules:
+            - { when: is_government_hcp is_true, require: [pan], message: PAN is needed for government HCPs. }
+          duplicate_check:
+            scope: { where: "status not_in [rejected]" }
+            rules:
+              - { match: [registration_no], compare: normalised, on_match: block, message: This HCP is already nominated. }
+              - { match: [full_name, institution], compare: fuzzy, threshold: 0.85, on_match: warn, message: A speaker with a similar name exists at this institution. }
+        access:
+          Brand Manager:       { actions: [view, add, edit, export, detail] }
+          Compliance Reviewer: { actions: [view, edit, export, detail] }
+          Event Ops:           { actions: [view], rows: { where: status == approved } }
+          Speaker:             { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: nominated,   label: Nominated,   color: blue, initial: true }
+            - { code: fmv_review,  label: FMV Review,  color: amber }
+            - { code: approved,    label: Approved,    color: green }
+            - { code: rejected,    label: Rejected,    color: red, final: true }
+            - { code: deactivated, label: Deactivated, color: gray, final: true }
+          transitions:
+            - name: submit
+              label: Submit for FMV Review
+              from: nominated
+              to: fmv_review
+              roles: [Brand Manager]
+              confirm: "Send this nomination to compliance?"
+              condition: { text: "CV, registration certificate and conflict-of-interest declaration are uploaded." }
+              condition_msg: Upload the CV, registration certificate and COI declaration first.
+              on_done: Email the compliance reviewers that a nomination is waiting.
+            - name: approve
+              label: Approve at FMV
+              from: fmv_review
+              to: approved
+              roles: [Compliance Reviewer]
+              primary: true
+              form:
+                - fmv_tier:      { type: link, to: fmv_tier, required: true }
+                - hourly_rate:   { type: money, required: true }
+                - justification: { type: long_text, help: Needed when the rate is above the tier maximum. }
+              condition:
+                all:
+                  - text: The hourly rate is within the tier's min and max, or a justification is given.
+                  - text: The speaker is not on the debarment list (screening result is clear).
+              condition_msg: Rate is outside the FMV range without a justification, or debarment screening is not clear.
+              on_done: >
+                Save fmv_tier, hourly_rate and the tier's annual_cap on the speaker, set approved_on = today,
+                provision the Speaker login and email the nominating brand manager.
+            - { name: reject, label: Reject, from: fmv_review, to: rejected, roles: [Compliance Reviewer], tone: danger, form: [ { reject_reason: { type: long_text, required: true } } ], on_done: Email the brand manager the reason. }
+            - { name: send_back, label: Send Back, from: fmv_review, to: nominated, roles: [Compliance Reviewer], form: [ { send_back_reason: { type: long_text, required: true } } ] }
+            - { name: deactivate, label: Deactivate, from: approved, to: deactivated, roles: [Compliance Reviewer], tone: danger, confirm: "Deactivate this speaker? Their login is disabled.", form: [ { deactivate_reason: { type: long_text, required: true } } ], on_done: Disable the Speaker login and cancel planned events that are not yet approved. }
+          tags:
+            - code: kol
+              label: KOL
+              color: purple
+              enable:  { roles: [Brand Manager], condition: "hcp_tier in [national_kol, regional_kol]" }
+              disable: { roles: [Brand Manager] }
+            - code: on_hold
+              label: On hold
+              color: red
+              enable:  { roles: [Compliance Reviewer], condition: status == approved, form: [ { hold_reason: { type: long_text, required: true } } ] }
+              disable: { roles: [Compliance Reviewer] }
+            - { code: cap_near, label: Near annual cap, color: amber, system: true, text: Set when ytd_spend reaches 90% of annual_cap; cleared on 1 January. }
+        form:
+          create:
+            roles: [Brand Manager]
+            title: Nominate Speaker
+            sections:
+              - { title: HCP, fields: [full_name, speciality, therapy_area, institution, city, registration_no, hcp_tier, is_government_hcp] }
+              - { title: Contact and tax, fields: [email, phone, pan] }
+              - { title: Nomination, fields: [nomination_reason] }
+            on_create: Run debarment screening on full_name and registration_no and log the result.
+            after_create: speaker_360
+          edit:
+            same_as: create
+            roles: [Brand Manager, Compliance Reviewer]
+            readonly_when:
+              - { when: status == approved, fields: [full_name, registration_no, hcp_tier] }
+            editable_in: [nominated, fmv_review, approved]
+        table:
+          columns:
+            - speaker_ref:  { label: ID, searchable: true }
+            - full_name:    { label: Speaker, searchable: true, sortable: true, link_to: speaker_360 }
+            - speciality:   { label: Speciality, display: name, filterable: true }
+            - institution:  { label: Institution, searchable: true }
+            - city:         { label: City, filterable: true }
+            - hcp_tier:     { label: Tier, filterable: true }
+            - hourly_rate:  { label: FMV / hr, format: money }
+            - ytd_spend:    { label: Spend YTD, format: money, sortable: true }
+            - cap_used:     { source: computed, label: Cap used, format: percent, shows: ytd_spend / annual_cap }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Tags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Awaiting FMV review, where: status == fmv_review, roles: [Compliance Reviewer], default: true }
+            - { label: Approved, where: status == approved }
+            - { label: Near cap, where: has_tag cap_near }
+          row_click: speaker_360
+          add_button: Nominate Speaker
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - { key: open_360, label: Open 360, type: navigate, to: speaker_360 }
+            - key: update_bank
+              label: Update Bank Details
+              type: form
+              roles: [Compliance Reviewer]
+              show_when: status == approved
+              form:
+                - account_no: { type: text, required: true }
+                - ifsc:       { type: text, required: true, pattern: "^[A-Z]{4}0[A-Z0-9]{6}$" }
+              on_done: Save the bank details for honorarium payouts and log old and new values.
+        custom_requirements:
+          - area: integration
+            title: Debarment screening
+            text: On create and every 90 days, screen full_name and registration_no against the debarment list; put the speaker on hold and email compliance on a match.
+          - area: scheduled
+            title: Cap sweep
+            text: Nightly, set or clear cap_near from ytd_spend / annual_cap, and on 1 January reset ytd_spend and clear the tag.
+
+      - code: speaker_document
+        name: Speaker Document
+        plural: Speaker Documents
+        kind: child
+        parent: { entity: speaker, field: speaker }
+        display: doc_type
+        fields:
+          - speaker:     { type: link, to: speaker, required: true, on_delete: cascade }
+          - doc_type:    { type: choice, choices: doc_type, required: true }
+          - file:        { type: file, required: true, accept: [pdf, jpg, png], max_size_mb: 10 }
+          - valid_until: { type: date }
+        access:
+          Brand Manager:       { actions: [view, add] }
+          Compliance Reviewer: { actions: [view] }
+          Speaker:             { actions: [view, add], rows: { own: speaker } }
+        workflow:
+          statuses:
+            - { code: uploaded, label: Uploaded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: rejected, label: Rejected, color: red }
+          transitions:
+            - { name: verify, label: Verify, from: uploaded, to: verified, roles: [Compliance Reviewer] }
+            - { name: reject, label: Reject, from: uploaded, to: rejected, roles: [Compliance Reviewer], form: [ { reject_reason: { type: text, required: true } } ], on_done: Email the brand manager the reason. }
+        table:
+          columns:
+            - doc_type:    { label: Document, filterable: true }
+            - file:        { label: File }
+            - valid_until: { label: Valid until, sortable: true }
+            - status:      { source: status, label: Status }
+          default_sort: -created_at
+        form:
+          create: { fields: [doc_type, file, valid_until] }
+
+      - code: contract
+        name: Contract
+        plural: Contracts
+        kind: transactional
+        display: contract_ref
+        fields:
+          - contract_ref:     { type: text, readonly: true, unique: true, auto: { sequence: "SC-{YY}-{0000}" } }
+          - speaker:          { type: link, to: speaker, required: true, display: full_name, limit_choices: status == approved }
+          - start_date:       { type: date, required: true, default: today }
+          - end_date:         { type: date, required: true }
+          - max_events:       { type: integer, label: Max events, required: true, min: 1, max: 12 }
+          - hours_per_event:  { type: integer, label: Paid hours per event, required: true, min: 1, max: 8, default: 2 }
+          - fee_per_event:    { type: money, required: true, help: FMV rate x paid hours. }
+          - travel_covered:   { type: boolean, default: true }
+          - contract_value:   { type: money, readonly: true, computed: fee_per_event * max_events }
+          - envelope_id:      { type: text, label: e-signature envelope, readonly: true }
+          - signed_on:        { type: datetime, readonly: true }
+          - signed_document:  { type: file, readonly: true }
+        validation:
+          rules:
+            - { when: end_date is_set, require_expr: end_date > start_date, message: End date must be after the start date. }
+            - { text: fee_per_event equals the speaker's hourly_rate x hours_per_event., message: The fee does not match the FMV rate for these hours. }
+            - { text: contract_value plus the speaker's ytd_spend stays within the annual cap., message: This contract takes the speaker over the annual cap., on_fail: warn }
+        access:
+          Compliance Reviewer: { actions: [view, add, edit, export] }
+          Brand Manager:       { actions: [view] }
+          Speaker:             { actions: [view], rows: { own: speaker } }
+        workflow:
+          statuses:
+            - { code: draft,    label: Draft,              color: gray, initial: true }
+            - { code: sent,     label: Sent for Signature, color: blue }
+            - { code: signed,   label: Signed,             color: green }
+            - { code: declined, label: Declined,           color: red }
+            - { code: expired,  label: Expired,            color: gray, final: true }
+            - { code: voided,   label: Voided,             color: red, final: true }
+          transitions:
+            - { name: send, label: Send for e-signature, from: draft, to: sent, roles: [Compliance Reviewer], primary: true, confirm: "Send this contract to the speaker for e-signature?", on_done: Create the e-signature envelope and save envelope_id; email the speaker the signing link. }
+            - { name: sign, label: Sign Contract, from: sent, to: signed, roles: [Speaker], primary: true, on_done: Store the signed PDF and signed_on and email the brand manager that the speaker is contracted. }
+            - { name: decline, label: Decline, from: sent, to: declined, roles: [Speaker], tone: danger, form: [ { decline_reason: { type: long_text } } ], on_done: Email the compliance reviewer the reason. }
+            - { name: redraft, label: Revise, from: declined, to: draft, roles: [Compliance Reviewer] }
+            - { name: void, label: Void, from: [sent, signed], to: voided, roles: [Compliance Reviewer], tone: danger, form: [ { void_reason: { type: long_text, required: true } } ], on_done: Void the envelope with the provider if still open. }
+            - { name: expire, label: Expire, from: signed, to: expired, trigger: system, text: Nightly when end_date < today. }
+          tags:
+            - { code: expiring, label: Expiring soon, color: amber, system: true, text: Set when a signed contract's end_date is within 30 days. }
+        form:
+          create:
+            roles: [Compliance Reviewer]
+            title: New Contract
+            sections:
+              - { title: Speaker, fields: [speaker] }
+              - { title: Terms, fields: [start_date, end_date, max_events, hours_per_event, fee_per_event, travel_covered] }
+          edit:
+            same_as: create
+            editable_in: [draft]
+        table:
+          columns:
+            - contract_ref:   { label: Contract, searchable: true }
+            - speaker:        { label: Speaker, display: full_name, searchable: true }
+            - start_date:     { label: From, sortable: true }
+            - end_date:       { label: To, sortable: true }
+            - max_events:     { label: Events }
+            - fee_per_event:  { label: Fee / event, format: money }
+            - contract_value: { label: Value, format: money }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Tags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Awaiting signature, where: status == sent, default: true, roles: [Compliance Reviewer, Speaker] }
+            - { label: Active, where: status == signed }
+          add_button: New Contract
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - { key: pdf, label: Download PDF, type: download, text: "The contract PDF, the signed copy once signed." }
+            - { key: resend, label: Resend Signing Link, type: confirm, roles: [Compliance Reviewer], show_when: status == sent, confirm: "Send the signing link again?", on_done: Ask the e-signature provider to resend the envelope. }
+
+  # ===========================================================================
+  - code: events
+    name: Events
+    description: Speaker meetings, attendees and spend.
+    entities:
+
+      - code: event
+        name: Event
+        plural: Events
+        kind: hero
+        display: event_ref
+        description: One speaker meeting. Centre of the Event 360 page.
+        fields:
+          - event_ref:         { type: text, label: Event ID, readonly: true, unique: true, auto: { sequence: "EV-{YY}-{000}" } }
+          - topic:             { type: choice, choices: event_topic, required: true }
+          - therapy_area:      { type: link, to: therapy_area, required: true, display: name }
+          - speaker:           { type: link, to: speaker, required: true, display: full_name, limit_choices: status == approved }
+          - event_date:        { type: date, required: true }
+          - start_time:        { type: time, required: true }
+          - format:            { type: choice, choices: event_format, required: true, default: in_person }
+          - venue_type:        { type: choice, choices: venue_type, show_when: format != virtual }
+          - city:              { type: text }
+          - planned_attendees: { type: integer, required: true, min: 5, max: 200 }
+          - actual_attendees:  { type: integer, readonly: true, computed: Count of attendee rows on this event with attended = true. }
+          - budget:            { type: money, required: true }
+          - actual_spend:      { type: money, readonly: true, computed: Sum of spend_line.amount for this event. }
+          - agenda:            { type: file, accept: [pdf] }
+        validation:
+          rules:
+            - { when: format != virtual, require: [venue_type, city], message: In-person and hybrid events need a venue type and city. }
+            - { text: Meal spend per attendee stays within the per-head meal limit., message: Meal budget per attendee is above the limit., on_fail: warn }
+        access:
+          Brand Manager:       { actions: [view, add, edit, export, detail] }
+          Compliance Reviewer: { actions: [view, export, detail] }
+          Event Ops:           { actions: [view, edit, detail], rows: { where: "status in [approved, completed, reconciled]" } }
+          Speaker:             { actions: [view, detail], rows: { own: speaker } }
+        workflow:
+          statuses:
+            - { code: planned,    label: Planned,          color: gray, initial: true }
+            - { code: submitted,  label: Pending Approval, color: amber }
+            - { code: approved,   label: Approved,         color: green }
+            - { code: completed,  label: Completed,        color: teal }
+            - { code: reconciled, label: Reconciled,       color: indigo, final: true }
+            - { code: cancelled,  label: Cancelled,        color: red, final: true }
+          transitions:
+            - { name: submit, label: Submit for Approval, from: planned, to: submitted, roles: [Brand Manager], confirm: "Submit this event to compliance?", condition: agenda is_set, condition_msg: Attach the agenda first. }
+            - name: approve
+              label: Approve
+              from: submitted
+              to: approved
+              roles: [Compliance Reviewer]
+              primary: true
+              condition:
+                all:
+                  - speaker.status == approved
+                  - text: The speaker has a signed contract covering event_date with events left.
+                  - text: The event's honorarium plus the speaker's ytd_spend stays within the annual cap.
+              condition_msg: The speaker needs a signed contract with events left and room under the annual cap.
+              on_done: Email event ops to book logistics and the speaker with the event brief and agenda.
+            - { name: send_back, label: Send Back, from: submitted, to: planned, roles: [Compliance Reviewer], form: [ { send_back_reason: { type: long_text, required: true } } ] }
+            - name: complete
+              label: Mark Completed
+              from: approved
+              to: completed
+              roles: [Event Ops]
+              primary: true
+              form:
+                - sign_in_sheet: { type: file, required: true }
+              condition: { text: At least five attendees are marked attended. }
+              condition_msg: Log the attendees (at least five attended) first.
+              on_done: Create the honorarium spend line for the speaker at fee_per_event from the active contract.
+            - { name: reconcile, label: Reconcile Spend, from: completed, to: reconciled, roles: [Compliance Reviewer], condition: { text: Every spend line on the event is verified. }, condition_msg: Verify all spend lines first. }
+            - { name: cancel, label: Cancel Event, from: [planned, submitted, approved], to: cancelled, roles: [Brand Manager], tone: danger, form: [ { cancel_reason: { type: long_text, required: true } } ], on_done: Email event ops and the speaker; release any held venue booking. }
+          tags:
+            - { code: over_budget, label: Over budget, color: red, system: true, text: Set when actual_spend exceeds budget. }
+            - { code: low_turnout, label: Low turnout, color: amber, system: true, text: Set on completion when actual_attendees < 50% of planned_attendees. }
+        form:
+          create:
+            roles: [Brand Manager]
+            title: Plan Event
+            sections:
+              - { title: Event, fields: [topic, therapy_area, speaker, event_date, start_time] }
+              - { title: Venue, fields: [format, venue_type, city, planned_attendees] }
+              - { title: Budget, fields: [budget, agenda] }
+            after_create: event_360
+          edit:
+            same_as: create
+            roles: [Brand Manager, Event Ops]
+            readonly_when:
+              - { when: status == approved, fields: [speaker, topic, event_date] }
+            editable_in: [planned, submitted, approved]
+        table:
+          columns:
+            - event_ref:         { label: Event, searchable: true, link_to: event_360 }
+            - topic:             { label: Topic, filterable: true }
+            - speaker:           { label: Speaker, display: full_name, searchable: true }
+            - event_date:        { label: Date, sortable: true }
+            - format:            { label: Format, filterable: true }
+            - city:              { label: City, filterable: true }
+            - planned_attendees: { label: Planned }
+            - budget:            { label: Budget, format: money }
+            - actual_spend:      { label: Spend, format: money }
+            - status:            { source: status, label: Status, filterable: true }
+            - tags:              { source: tags, label: Tags }
+          default_sort: -event_date
+          quick_filters:
+            - { label: Pending my approval, where: status == submitted, roles: [Compliance Reviewer], default: true }
+            - { label: Upcoming, where: status == approved, roles: [Event Ops] }
+            - { label: To reconcile, where: status == completed }
+          row_click: event_360
+          add_button: Plan Event
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - { key: open_360, label: Open 360, type: navigate, to: event_360 }
+
+      - code: attendee
+        name: Attendee
+        plural: Attendees
+        kind: child
+        parent: { entity: event, field: event }
+        display: full_name
+        fields:
+          - event:           { type: link, to: event, required: true, display: event_ref, on_delete: cascade }
+          - full_name:       { type: text, required: true }
+          - attendee_type:   { type: choice, required: true, choices: [ { id: hcp, label: HCP, color: blue }, { id: non_hcp, label: Non-HCP, color: gray }, { id: staff, label: Company staff, color: purple } ] }
+          - speciality:      { type: link, to: speciality, display: name, show_when: attendee_type == hcp }
+          - registration_no: { type: text, label: Registration no. }
+          - institution:     { type: text }
+          - attended:        { type: boolean, default: false }
+          - meal_provided:   { type: boolean, default: false }
+        validation:
+          rules:
+            - { when: attendee_type == hcp, require: [registration_no], message: HCP attendees need a registration number. }
+          duplicate_check:
+            rules:
+              - { match: [event, registration_no], compare: exact, on_match: block, message: This HCP is already on the attendee list. }
+        access:
+          Event Ops:           { actions: [view, add, edit, delete, export] }
+          Compliance Reviewer: { actions: [view, export] }
+          Brand Manager:       { actions: [view] }
+        table:
+          columns:
+            - full_name:     { label: Attendee, searchable: true }
+            - event:         { label: Event, display: event_ref, filterable: true }
+            - attendee_type: { label: Type, filterable: true }
+            - speciality:    { label: Speciality, display: name }
+            - institution:   { label: Institution }
+            - attended:      { label: Attended, filterable: true }
+            - meal_provided: { label: Meal }
+          default_sort: -created_at
+          quick_filters:
+            - { label: HCPs only, where: attendee_type == hcp }
+          add_button: Add Attendee
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [event, full_name, attendee_type, speciality, registration_no, institution, attended, meal_provided] }
+          edit:   { same_as: create }
+
+      - code: spend_line
+        name: Spend Line
+        plural: Spend Lines
+        kind: transactional
+        display: line_ref
+        fields:
+          - line_ref:    { type: text, readonly: true, unique: true, auto: { sequence: "TOV-{00000}" } }
+          - event:       { type: link, to: event, required: true, display: event_ref }
+          - speaker:     { type: link, to: speaker, label: Recipient HCP, display: full_name, limit_choices: status == approved, help: Leave empty for spend that is not a transfer of value to an HCP. }
+          - spend_type:  { type: choice, choices: spend_type, required: true }
+          - vendor_name: { type: text, label: Paid to, help: "Hotel, travel agent or caterer; the HCP for honoraria." }
+          - invoice_no:  { type: text }
+          - amount:      { type: money, required: true, min: 0 }
+          - incurred_on: { type: date, required: true }
+          - invoice:     { type: file, accept: [pdf, jpg, png] }
+        validation:
+          rules:
+            - { when: spend_type == honorarium, require: [speaker], message: An honorarium needs the recipient HCP. }
+        access:
+          Event Ops:           { actions: [view, add, edit] }
+          Compliance Reviewer: { actions: [view, edit, export] }
+          Brand Manager:       { actions: [view, export] }
+          Speaker:             { actions: [view], rows: { own: speaker } }
+        workflow:
+          statuses:
+            - { code: recorded, label: Recorded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: disputed, label: Disputed, color: red }
+            - { code: reported, label: Reported, color: indigo, final: true }
+          transitions:
+            - { name: verify, label: Verify, from: [recorded, disputed], to: verified, roles: [Compliance Reviewer], condition: invoice is_set, condition_msg: Attach the invoice before verifying. }
+            - { name: dispute, label: Dispute, from: recorded, to: disputed, roles: [Compliance Reviewer], form: [ { dispute_reason: { type: long_text, required: true } } ], on_done: Email event ops the reason and a link to correct the line. }
+            - { name: report, label: Include in Disclosure, from: verified, to: reported, trigger: system, text: Run by "Lock quarter" on the Disclosure page for verified lines in that quarter. }
+        form:
+          create:
+            roles: [Event Ops]
+            fields: [event, spend_type, speaker, vendor_name, invoice_no, amount, incurred_on, invoice]
+          edit:
+            same_as: create
+            editable_in: [recorded, disputed]
+        table:
+          columns:
+            - line_ref:    { label: Line, searchable: true }
+            - event:       { label: Event, display: event_ref, filterable: true }
+            - speaker:     { label: Recipient HCP, display: full_name, filterable: true }
+            - spend_type:  { label: Type, filterable: true }
+            - vendor_name: { label: Paid to }
+            - amount:      { label: Amount, format: money, sortable: true }
+            - incurred_on: { label: Incurred on, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+          default_sort: -incurred_on
+          footer_totals: [amount]
+          quick_filters:
+            - { label: To verify, where: status == recorded, roles: [Compliance Reviewer], default: true }
+            - { label: Honoraria, where: spend_type == honorarium }
+            - { label: HCP transfers, where: speaker is_set }
+          add_button: Add Spend Line
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - { key: invoice, label: View Invoice, type: navigate, to: { field: invoice }, show_when: invoice is_set }
+
+# -----------------------------------------------------------------------------
+#  360 PAGES
+# -----------------------------------------------------------------------------
+detail_views:
+
+  - code: speaker_360
+    hero: speaker
+    title: "{full_name}"
+    back_to: speakers
+    layout: header_tabs_sidebar
+    roles: [Brand Manager, Compliance Reviewer, Speaker]
+    header:
+      avatar: { fallback_initials: full_name }
+      title: full_name
+      subtitle: ["{speaker_ref}", "{speciality.name}", "{institution}, {city}"]
+      badges: [ { source: status }, { source: tags }, { field: hcp_tier } ]
+      facts:
+        - { label: Registration no., field: registration_no, copyable: true }
+        - { label: FMV rate / hr, field: hourly_rate, format: money, emphasis: true }
+        - { label: Annual cap, field: annual_cap, format: money }
+        - { label: Approved on, field: approved_on, fallback: "—" }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: new_contract, label: New Contract, type: create_related, entity: contract, prefill: { speaker: hero }, roles: [Compliance Reviewer], show_when: status == approved }
+          - { key: edit, label: Edit, type: edit }
+      banners:
+        - { show_when: has_tag cap_near, tone: warning, text: "Spend this year is close to the annual cap of {annual_cap}." }
+        - { show_when: has_tag on_hold, tone: danger, text: "On hold: no new contracts or events." }
+    stats:
+      - { label: Events, value: { count: event, via: speaker, where: "status in [approved, completed, reconciled]" }, tone: blue, link_to_tab: events }
+      - { label: Spend YTD, value: { field: ytd_spend }, format: money, tone: amber, link_to_tab: spend }
+      - { label: Cap used, value: { text: ytd_spend / annual_cap }, format: percent, tone: { when: "> 0.9", is: red, else: green } }
+      - { label: Signed contracts, value: { count: contract, via: speaker, where: status == signed }, tone: green, link_to_tab: contracts }
+    sidebar:
+      - { type: fields, title: Profile, fields: [speciality, therapy_area, institution, city, hcp_tier, is_government_hcp] }
+      - { type: fields, title: Contact, fields: [email, phone, pan], roles: [Brand Manager, Compliance Reviewer] }
+      - { type: custom, title: Readiness, text: "Ticks for the three required documents verified, debarment screening clear and an active signed contract; shows \"3 of 5 done\"." }
+    tabs:
+      - { code: overview, label: Overview, type: summary, sections: [ { title: Nomination, fields: [nomination_reason] }, { title: Recent events, type: mini_table, entity: event, via: speaker, columns: [event_ref, topic, event_date, status], limit: 5, sort: -event_date, see_all_tab: events } ] }
+      - { code: documents, label: Documents, type: related_table, entity: speaker_document, via: speaker, count_badge: { where: status == uploaded, tone: amber }, columns: inherit, add: { label: Upload Document, prefill: { speaker: hero } }, row_actions: inherit, empty_state: { title: No documents, text: "Upload the CV, registration certificate and COI declaration to submit for FMV review.", cta: add } }
+      - { code: contracts, label: Contracts, type: related_table, entity: contract, via: speaker, count_badge: true, columns: [contract_ref, start_date, end_date, max_events, fee_per_event, status], add: { label: New Contract, prefill: { speaker: hero }, show_when: status == approved }, row_click: drawer }
+      - { code: events, label: Events, type: related_table, entity: event, via: speaker, count_badge: true, columns: [event_ref, topic, event_date, format, city, status], row_click: event_360 }
+      - { code: spend, label: Spend, type: related_table, entity: spend_line, via: speaker, columns: [line_ref, event, spend_type, amount, incurred_on, status], footer_totals: [amount], group_by: spend_type }
+      - code: activity
+        label: Activity
+        type: timeline
+        roles: [Brand Manager, Compliance Reviewer]
+        sources:
+          - { entity: speaker, events: [created, updated, transition, tag] }
+          - { entity: speaker_document, via: speaker, events: [created, transition] }
+          - { entity: contract, via: speaker, events: [created, transition] }
+        show_field_changes: true
+    states:
+      not_found: { title: Speaker not found, text: It may have been removed or you may not have access., back_to: speakers }
+
+  - code: event_360
+    hero: event
+    title: "{event_ref}"
+    back_to: events
+    layout: header_tabs
+    roles: [Brand Manager, Compliance Reviewer, Event Ops, Speaker]
+    header:
+      title: event_ref
+      subtitle: ["{topic}", "{event_date}", "{city}"]
+      badges: [ { source: status }, { source: tags }, { field: format } ]
+      facts:
+        - { label: Speaker, field: speaker, link_to: speaker_360 }
+        - { label: Therapy area, field: therapy_area }
+        - { label: Planned attendees, field: planned_attendees }
+        - { label: Budget, field: budget, format: money, emphasis: true }
+      actions: { transitions: true, tags: true, buttons: [ { key: edit, label: Edit, type: edit } ] }
+      banners:
+        - { show_when: has_tag over_budget, tone: danger, text: "Spend {actual_spend} is above the budget of {budget}." }
+    stats:
+      - { label: Attended, value: { count: attendee, via: event, where: attended is_true }, tone: teal, link_to_tab: attendees }
+      - { label: HCPs, value: { count: attendee, via: event, where: attendee_type == hcp } }
+      - { label: Spend, value: { sum: spend_line.amount, via: event }, format: money, tone: amber, link_to_tab: spend }
+      - { label: Unverified lines, value: { count: spend_line, via: event, where: status == recorded }, tone: red, link_to_tab: spend, roles: [Compliance Reviewer, Event Ops] }
+    tabs:
+      - { code: attendees, label: Attendees, type: related_table, entity: attendee, via: event, count_badge: true, columns: inherit, add: { label: Add Attendee, prefill: { event: hero }, show_when: "status in [approved, completed]" }, row_actions: inherit, roles: [Brand Manager, Compliance Reviewer, Event Ops], empty_state: { title: No attendees yet, text: Log attendees from the sign-in sheet., cta: add } }
+      - { code: spend, label: Spend, type: related_table, entity: spend_line, via: event, count_badge: { where: status == recorded, tone: amber }, columns: [line_ref, spend_type, speaker, vendor_name, amount, status], add: { label: Add Spend Line, prefill: { event: hero }, show_when: "status in [approved, completed]" }, footer_totals: [amount], row_click: drawer }
+      - { code: details, label: Details, type: fields, sections: [ { title: Event, columns: 2, fields: [topic, therapy_area, speaker, event_date, start_time, format, venue_type, city] }, { title: Agenda, fields: [agenda] } ] }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: event, events: [created, updated, transition, tag] }
+          - { entity: spend_line, via: event, events: [created, transition] }
+    states:
+      not_found: { title: Event not found, back_to: events }

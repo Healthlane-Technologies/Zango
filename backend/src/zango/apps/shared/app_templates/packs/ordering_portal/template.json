@@ -1,0 +1,72 @@
+{
+  "slug": "ordering-portal",
+  "name": "Ordering Portal",
+  "version": "1.0.0",
+  "category": "Commercial Operations",
+  "icon": "cart",
+  "is_beta": false,
+  "aka": [
+    "B2B ordering portal",
+    "clinic ordering",
+    "pharmacy ordering",
+    "order management",
+    "distributor order fulfilment"
+  ],
+  "one_liner": "Clinic and pharmacy ordering with catalogue, credit limits and delivery tracking.",
+  "fits_when": [
+    "clinics, pharmacies or hospitals order products from a priced catalogue",
+    "every order is checked against a customer's credit limit before it is fulfilled",
+    "distributors or a warehouse fulfil orders and need their own login",
+    "customers want to track shipments and see their invoices themselves",
+    "customer service needs one place to chase credit holds, delays and failed deliveries"
+  ],
+  "gives_you": [
+    "A product catalogue with list prices, minimum order quantities and stock status",
+    "Customer self-service: place orders, reorder, track deliveries and download invoices",
+    "Automatic credit checks with credit holds and a logged override",
+    "Distributor logins that see only their assigned orders and confirm dispatch and delivery",
+    "Shipment tracking with AWB, expected dates, proof of delivery and delay flags",
+    "An order 360 page with lines, shipments, invoices and an activity timeline"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "A B2B ordering portal for clinics, pharmacies and hospitals: a priced product catalogue, orders checked against each customer's credit limit, distributor fulfilment and shipment tracking through to delivery and invoice. Customers and distributors sign in and see only their own records; customer service sees everything.",
+    "packages": [
+      { "name": "workflow", "description": "Order, shipment and invoice lifecycles with credit holds" },
+      { "name": "crm", "description": "Clinic and distributor records with contacts and terms" },
+      { "name": "forms", "description": "Order, onboarding and dispatch forms with validation" },
+      { "name": "communication", "description": "Order acknowledgements, dispatch SMS and delivery emails" },
+      { "name": "reports", "description": "Order value, credit holds and delivery performance" },
+      { "name": "integrations", "description": "ERP and payment gateway connectors" }
+    ],
+    "roles": [
+      { "name": "Clinic buyer", "description": "Browses the catalogue, places orders and tracks its own deliveries and invoices" },
+      { "name": "Distributor", "description": "Sees only its assigned orders; dispatches them and confirms delivery" },
+      { "name": "Customer service", "description": "Onboards clinics, releases credit holds and keeps every order moving" }
+    ],
+    "workflows": [
+      { "name": "Catalogue & pricing", "description": "Orderable products, list prices, minimum quantities and stock status" },
+      { "name": "Order placement", "description": "Draft, place, confirm and reorder, with minimum-quantity checks" },
+      { "name": "Credit checks", "description": "Orders over the credit limit go on hold until released with a reason" },
+      { "name": "Delivery tracking", "description": "Dispatch with AWB, out for delivery, proof of delivery and failed attempts" }
+    ],
+    "data_objects": ["Clinic", "Product", "Order", "Order line", "Invoice", "Shipment", "Distributor"],
+    "integrations": ["ERP connector", "Payment gateway"],
+    "compliance": [
+      "Orders accepted only from clinics with a verified drug licence",
+      "Credit-limit overrides logged with the user and reason",
+      "Cold-chain products flagged through dispatch and delivery",
+      "Customers and distributors see only their own orders",
+      "Audit trail of every status change and invoice"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Clinic Ordering",
+    "app_prompt_prefill": "Ordering portal for clinics to order vaccines, with a catalogue, credit limits per clinic, distributor fulfilment and delivery tracking."
+  },
+  "changelog": "First version: Zango app spec v1 starter for clinic ordering, with credit checks, distributor fulfilment and delivery tracking, and a vaccine-ordering reference."
+}

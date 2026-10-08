@@ -1,0 +1,9 @@
+[
+  {
+    "id": "clinic_ordering",
+    "file": "references/clinic_ordering.yaml",
+    "title": "Clinic Ordering (vaccine ordering for clinics)",
+    "summary": "Clinics order vaccines from a cold-chain catalogue with tier pricing; orders pass a per-clinic credit check or wait for a credit controller, the clinic's distributor accepts and dispatches, and shipments are tracked with temperature logs to proof of delivery and invoice. Clinic and order 360 pages.",
+    "tags": ["ordering", "vaccines", "credit limits", "distributor fulfilment", "delivery tracking", "cold chain", "external users", "360 page"]
+  }
+]

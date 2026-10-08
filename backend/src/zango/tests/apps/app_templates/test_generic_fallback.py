@@ -241,3 +241,12 @@ class CommitForBuildTests(AdoptMidConversationTests):
         decided.open_decisions = [{"id": "d1", "question": "?"}]
         self.assertIsNone(commit_draft(decided, 3))  # left to approval_problem
         self.assertEqual(approval_problem(decided)[0], 409)
+
+
+class SeedOrderTests(AppTemplatesTestBase):
+    def test_the_generic_pack_is_seeded_before_the_packs_that_borrow_from_it(self):
+        from zango.apps.shared.app_templates.seed import bundled_packs
+
+        slugs = [json.loads((p / "template.json").read_text())["slug"] for p in bundled_packs()]
+        self.assertEqual(slugs[0], GENERIC_SLUG)
+        self.assertEqual(len(slugs), len(set(slugs)))

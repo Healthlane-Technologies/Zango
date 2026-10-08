@@ -1,0 +1,959 @@
+# Sample Desk: a full HCP sampling app. HCPs request samples through their reps,
+# sample ops allocates stock by territory and dispatches by batch, the HCP
+# acknowledges delivery (e-signature or OTP), and compliance reconciles every
+# quarter rep by rep.
+
+spec_version: 1
+
+app:
+  code: sample_desk
+  name: Sample Desk
+  description: HCP sample requests through reps, territory allocation by batch, signed delivery acknowledgement and quarterly compliance reconciliation.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme:
+    primary: "#0F766E"
+    secondary: "#64748B"
+  custom_requirements:
+    - area: permission
+      title: Field force SSO
+      text: Medical reps and sample ops sign in with the company's Azure AD; HCPs sign in with mobile OTP only.
+    - area: report
+      title: Audit export
+      text: Compliance can export every request, delivery, acknowledgement proof and status change for any date range as one Excel file.
+
+choice_sets:
+  specialty:
+    - { id: general_physician, label: General Physician }
+    - { id: cardiology,        label: Cardiology }
+    - { id: diabetology,       label: Diabetology }
+    - { id: dermatology,       label: Dermatology }
+    - { id: paediatrics,       label: Paediatrics }
+    - { id: gynaecology,       label: Gynaecology }
+  product_form:
+    - { id: tablet,    label: Tablet }
+    - { id: capsule,   label: Capsule }
+    - { id: syrup,     label: Syrup }
+    - { id: injection, label: Injection }
+    - { id: cream,     label: Cream }
+  schedule:
+    - { id: otc,  label: OTC,         color: green }
+    - { id: h,    label: Schedule H,  color: amber }
+    - { id: h1,   label: Schedule H1, color: red }
+  quarter:
+    - { id: q1, label: Q1 (Apr-Jun) }
+    - { id: q2, label: Q2 (Jul-Sep) }
+    - { id: q3, label: Q3 (Oct-Dec) }
+    - { id: q4, label: Q4 (Jan-Mar) }
+  request_channel:
+    - { id: rep_visit,  label: Rep visit,  color: blue }
+    - { id: hcp_portal, label: HCP portal, color: purple }
+  delivery_mode:
+    - { id: rep_handover, label: Rep hand-over }
+    - { id: courier,      label: Courier }
+  ack_method:
+    - { id: e_signature, label: e-Signature on rep device, color: blue }
+    - { id: otp,         label: OTP to HCP mobile,        color: indigo }
+
+roles:
+  - name: Medical Rep
+    description: Endorses and raises sample requests for the HCPs in their territory, hands over samples and collects acknowledgement.
+    landing: sample_requests
+    menu:
+      - { page: sample_requests, label: My Requests,  icon: clipboard-list }
+      - { page: hcps,            label: My HCPs,      icon: stethoscope }
+      - { page: deliveries,      label: My Deliveries, icon: truck }
+      - { page: allocations,     label: My Allocation, icon: boxes }
+
+  - name: HCP
+    description: Doctor who requests samples on the portal and acknowledges each delivery.
+    landing: sample_requests
+    menu:
+      - { page: sample_requests, label: My Requests,   icon: clipboard-list }
+      - { page: deliveries,      label: My Deliveries, icon: package-check }
+
+  - name: Sample Ops
+    description: Plans territory allocations, receives stock by batch, approves requests and dispatches.
+    landing: sample_requests
+    menu:
+      - { page: dashboard,       icon: layout-dashboard }
+      - { page: sample_requests, icon: clipboard-list }
+      - { page: deliveries,      icon: truck }
+      - { page: allocations,     icon: boxes }
+      - { page: batches,         icon: package }
+      - { page: hcps,            icon: stethoscope }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products,    icon: pill }
+          - { page: territories, icon: map }
+          - { page: reps,        icon: users }
+
+  - name: Compliance Reviewer
+    description: Reviews over-limit requests and signs off the quarterly reconciliation per territory.
+    landing: reconciliations
+    menu:
+      - { page: reconciliations, icon: scale }
+      - { page: sample_requests, icon: clipboard-list }
+      - { page: deliveries,      icon: truck }
+      - { page: hcps,            icon: stethoscope }
+      - { page: products,        icon: pill }
+
+pages:
+  - { code: sample_requests, type: crud,   entity: sample_request, route: /app/requests,              title: Sample Requests }
+  - { code: request_360,     type: detail, detail_view: request_360, route: /app/requests/:id }
+  - { code: hcps,            type: crud,   entity: hcp,            route: /app/hcps,                  title: HCPs }
+  - { code: hcp_360,         type: detail, detail_view: hcp_360,   route: /app/hcps/:id }
+  - { code: allocations,     type: crud,   entity: allocation,     route: /app/allocations,           title: Allocations }
+  - { code: batches,         type: crud,   entity: sample_batch,   route: /app/batches,               title: Stock Batches }
+  - { code: deliveries,      type: crud,   entity: delivery,       route: /app/deliveries,            title: Deliveries }
+  - { code: reconciliations, type: crud,   entity: reconciliation, route: /app/reconciliations,       title: Reconciliations }
+  - { code: recon_360,       type: detail, detail_view: recon_360, route: /app/reconciliations/:id }
+  - { code: products,        type: crud,   entity: product,        route: /app/masters/products,      title: Products }
+  - { code: territories,     type: crud,   entity: territory,      route: /app/masters/territories,   title: Territories }
+  - { code: reps,            type: crud,   entity: medical_rep,    route: /app/masters/reps,          title: Medical Reps }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Dashboard
+    component: SampleDeskDashboard
+    roles: [Sample Ops]
+    text: >
+      KPI row: requests awaiting approval, units dispatched this quarter, deliveries awaiting
+      acknowledgement for more than 7 days, allocation used % this quarter. Below: allocated vs
+      issued units per territory (stacked bar), batches expiring in 60 days, and the 10 oldest
+      unacknowledged deliveries with the rep's name.
+
+modules:
+  # ===========================================================================
+  - code: masters
+    name: Master Data
+    description: Territories, products and the field force.
+    entities:
+      - code: territory
+        name: Territory
+        plural: Territories
+        kind: master
+        display: name
+        fields:
+          - name:   { type: text, required: true, unique: true, max_length: 100 }
+          - region: { type: choice, required: true, choices: [ { id: north, label: North }, { id: south, label: South }, { id: east, label: East }, { id: west, label: West } ] }
+          - hq_city: { type: text, label: HQ city }
+          - is_active: { type: boolean, default: true }
+        access:
+          Sample Ops:          { actions: [view, add, edit, export] }
+          Medical Rep:         { actions: [view] }
+          Compliance Reviewer: { actions: [view] }
+        table:
+          columns:
+            - name:      { label: Territory, searchable: true, sortable: true }
+            - region:    { label: Region, filterable: true }
+            - hq_city:   { label: HQ }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Territory
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, region, hq_city, is_active] }
+          edit:   { same_as: create }
+
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - sku:             { type: text, label: SKU, required: true, unique: true, pattern: "^SMP-[0-9]{4}$", pattern_msg: "Format SMP-0000." }
+          - name:            { type: text, label: Brand, required: true }
+          - strength:        { type: text, help: e.g. 500 mg }
+          - form:            { type: choice, choices: product_form, required: true }
+          - schedule:        { type: choice, choices: schedule, required: true, default: h }
+          - pack_size:       { type: text, help: e.g. strip of 10 }
+          - max_per_hcp_qtr: { type: integer, label: Max units per HCP per quarter, required: true, min: 1, max: 30 }
+          - is_active:       { type: boolean, default: true }
+        validation:
+          rules:
+            - when: schedule == h1
+              require_expr: max_per_hcp_qtr <= 6
+              message: Schedule H1 products allow at most 6 sample units per HCP per quarter.
+        access:
+          Sample Ops:          { actions: [view, add, edit, export] }
+          Medical Rep:         { actions: [view] }
+          Compliance Reviewer: { actions: [view, edit, export] }
+        table:
+          columns:
+            - sku:             { label: SKU, searchable: true, sortable: true }
+            - name:            { label: Brand, searchable: true, sortable: true }
+            - strength:        { label: Strength }
+            - form:            { label: Form, filterable: true }
+            - schedule:        { label: Schedule, filterable: true }
+            - max_per_hcp_qtr: { label: Max / HCP / qtr }
+            - is_active:       { label: Active, filterable: true }
+          default_sort: name
+          quick_filters:
+            - { label: Active only, where: is_active is_true, default: true }
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create:
+            sections:
+              - { title: Product, fields: [sku, name, strength, form, pack_size] }
+              - { title: Sampling rules, fields: [schedule, max_per_hcp_qtr, is_active] }
+          edit:
+            same_as: create
+            roles: [Sample Ops, Compliance Reviewer]
+
+      - code: medical_rep
+        name: Medical Rep
+        plural: Medical Reps
+        kind: master
+        display: full_name
+        app_user:
+          role: Medical Rep
+          name: full_name
+          email: email
+          mobile: mobile
+          create_on: create
+        fields:
+          - employee_code: { type: text, required: true, unique: true, pattern: "^EMP[0-9]{5}$", pattern_msg: "Format EMP00000." }
+          - full_name:     { type: text, required: true }
+          - email:         { type: email, required: true }
+          - mobile:        { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile without +91. }
+          - territory:     { type: link, to: territory, required: true, display: name, limit_choices: is_active is_true }
+          - manager_name:  { type: text, label: Area manager }
+          - is_active:     { type: boolean, default: true }
+        access:
+          Sample Ops:          { actions: [view, add, edit, export] }
+          Compliance Reviewer: { actions: [view] }
+          Medical Rep:         { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - employee_code: { label: Employee, searchable: true, sortable: true }
+            - full_name:     { label: Name, searchable: true, sortable: true }
+            - territory:     { label: Territory, display: name, filterable: true }
+            - manager_name:  { label: Area manager }
+            - mobile:        { label: Mobile }
+            - is_active:     { label: Active, filterable: true }
+          default_sort: full_name
+          add_button: Add Rep
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - key: transfer
+              label: Transfer Territory
+              type: form
+              form:
+                - new_territory: { type: link, to: territory, required: true }
+                - effective_from: { type: date, required: true, default: today }
+              on_done: Move the rep to the new territory from the effective date; open requests stay with the old territory's allocation.
+        form:
+          create: { fields: [employee_code, full_name, email, mobile, territory, manager_name, is_active] }
+          edit:   { same_as: create }
+
+  # ===========================================================================
+  - code: hcps
+    name: HCPs
+    description: The doctors who receive samples.
+    entities:
+      - code: hcp
+        name: HCP
+        plural: HCPs
+        kind: hero
+        display: name
+        app_user:
+          role: HCP
+          name: name
+          email: email
+          mobile: mobile
+          create_on: has_tag portal_enabled
+        fields:
+          - hcp_ref:         { type: text, label: HCP ID, readonly: true, unique: true, auto: { sequence: "HCP-{00000}" } }
+          - name:            { type: text, required: true, max_length: 200, help: As on the medical registration. }
+          - specialty:       { type: choice, choices: specialty, required: true }
+          - registration_no: { type: text, label: Medical registration no., required: true, unique: true }
+          - council:         { type: text, label: Registering council, help: e.g. Maharashtra Medical Council }
+          - mobile:          { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile without +91. }
+          - email:           { type: email }
+          - clinic:          { type: text, label: Clinic / hospital }
+          - address:         { type: long_text }
+          - city:            { type: text }
+          - territory:       { type: link, to: territory, required: true, display: name }
+          - rep:             { type: link, to: medical_rep, required: true, display: full_name, limit_choices: "territory == form.territory" }
+          - consent_on:      { type: date, label: Sampling consent on, help: Date the HCP consented to receive samples and be contacted. }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [registration_no], compare: normalised, on_match: block, message: An HCP with this registration number already exists. }
+              - { match: [name, city], compare: fuzzy, threshold: 0.88, on_match: warn, message: An HCP with a similar name exists in this city. Check before adding. }
+        access:
+          Sample Ops:          { actions: [view, add, edit, export, detail] }
+          Medical Rep:         { actions: [view, add, edit, detail], rows: { own: rep } }
+          Compliance Reviewer: { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: active,   label: Active,   color: green, initial: true }
+            - { code: blocked,  label: Blocked,  color: red }
+          transitions:
+            - { name: block, label: Block Sampling, from: active, to: blocked, roles: [Compliance Reviewer], tone: danger,
+                form: [ { block_reason: { type: long_text, required: true } } ],
+                on_done: Reject the HCP's open requests and notify the rep with the reason. }
+            - { name: unblock, label: Unblock, from: blocked, to: active, roles: [Compliance Reviewer] }
+          tags:
+            - code: portal_enabled
+              label: Portal enabled
+              color: purple
+              enable:  { roles: [Sample Ops, Medical Rep], condition: consent_on is_set, condition_msg: Record the HCP's consent first. }
+              disable: { roles: [Sample Ops] }
+            - { code: at_limit, label: At quarterly limit, color: amber, system: true, text: Set when the HCP has reached the quarterly limit for any product; cleared at quarter start. }
+        table:
+          columns:
+            - hcp_ref:        { label: HCP ID, searchable: true, sortable: true }
+            - name:           { label: Name, searchable: true, sortable: true, link_to: hcp_360 }
+            - specialty:      { label: Specialty, filterable: true }
+            - clinic:         { label: Clinic }
+            - territory:      { label: Territory, display: name, filterable: true }
+            - rep:            { label: Rep, display: full_name, filterable: true, roles: [Sample Ops, Compliance Reviewer] }
+            - units_this_qtr: { source: computed, label: Units this quarter, format: integer, shows: Sum of delivered sample_request quantity for this HCP in the current quarter. }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Tags }
+          default_sort: name
+          quick_filters:
+            - { label: At limit, where: has_tag at_limit }
+            - { label: Blocked, where: status == blocked, roles: [Compliance Reviewer, Sample Ops] }
+          row_click: hcp_360
+          add_button: Add HCP
+          row_actions:
+            - { key: edit, label: Edit, type: edit, roles: [Sample Ops, Medical Rep] }
+            - { key: open_360, label: Open 360, type: navigate, to: hcp_360 }
+        form:
+          create:
+            roles: [Sample Ops, Medical Rep]
+            title: Add HCP
+            sections:
+              - { title: Doctor, fields: [name, specialty, registration_no, council] }
+              - { title: Contact, fields: [mobile, email, clinic, address, city] }
+              - { title: Coverage, fields: [territory, rep, consent_on] }
+          edit:
+            same_as: create
+            roles: [Sample Ops, Medical Rep]
+            readonly_when:
+              - { when: status == blocked, fields: [registration_no, territory, rep] }
+        custom_requirements:
+          - area: integration
+            title: Registration lookup
+            text: On create, check registration_no against the national medical register and warn if the name or council differs.
+
+  # ===========================================================================
+  - code: stock
+    name: Stock & Allocation
+    description: Sample stock by batch and quarterly allocation per territory.
+    entities:
+      - code: sample_batch
+        name: Stock Batch
+        plural: Stock Batches
+        kind: transactional
+        display: batch_no
+        fields:
+          - batch_no:        { type: text, label: Batch no., required: true, unique: true, pattern: "^B[0-9]{6}$", pattern_msg: "Format B000000." }
+          - product:         { type: link, to: product, required: true, display: name }
+          - mfg_date:        { type: date, label: Manufactured, required: true }
+          - expiry_date:     { type: date, label: Expires, required: true }
+          - units_received:  { type: integer, required: true, min: 1, max: 5000 }
+          - units_available: { type: integer, readonly: true, max: 2000, help: Units received minus units dispatched against this batch. }
+          - coa:             { type: file, label: Certificate of analysis, accept: [pdf] }
+        validation:
+          rules:
+            - when: expiry_date is_set
+              require_expr: expiry_date > mfg_date
+              message: Expiry must be after the manufacturing date.
+          duplicate_check:
+            rules:
+              - { match: [batch_no], compare: normalised, on_match: block, message: This batch is already in stock. }
+        access:
+          Sample Ops:          { actions: [view, add, edit, export] }
+          Compliance Reviewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: quarantine, label: Quarantine, color: amber, initial: true }
+            - { code: released,   label: Released,   color: green }
+            - { code: expired,    label: Expired,    color: gray, final: true }
+          transitions:
+            - { name: release, label: Release, from: quarantine, to: released, roles: [Sample Ops], primary: true,
+                condition: coa is_set, condition_msg: Upload the certificate of analysis before releasing. }
+            - { name: expire, label: Expire, from: released, to: expired, trigger: system,
+                text: Nightly when expiry_date < today; remaining units are written off. }
+          tags:
+            - { code: near_expiry, label: Near expiry, color: amber, system: true, text: Set when expiry_date is within 60 days. }
+        table:
+          columns:
+            - batch_no:        { label: Batch, searchable: true, sortable: true }
+            - product:         { label: Product, display: name, filterable: true }
+            - expiry_date:     { label: Expires, sortable: true, highlight: { when: "has_tag near_expiry", tone: amber } }
+            - units_received:  { label: Received }
+            - units_available: { label: Available, sortable: true }
+            - status:          { source: status, label: Status, filterable: true }
+            - tags:            { source: tags, label: Flags }
+          default_sort: expiry_date
+          quick_filters:
+            - { label: Released, where: status == released, default: true }
+            - { label: Near expiry, where: has_tag near_expiry }
+          add_button: Receive Batch
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == quarantine }
+        form:
+          create: { roles: [Sample Ops], fields: [product, batch_no, mfg_date, expiry_date, units_received, coa] }
+          edit:   { same_as: create, editable_in: [quarantine] }
+
+      - code: allocation
+        name: Allocation
+        plural: Allocations
+        kind: transactional
+        display: allocation_ref
+        fields:
+          - allocation_ref: { type: text, label: Allocation ID, readonly: true, unique: true, auto: { sequence: "ALC-{YY}-{0000}" } }
+          - territory:      { type: link, to: territory, required: true, display: name, limit_choices: is_active is_true }
+          - product:        { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - quarter:        { type: choice, choices: quarter, required: true }
+          - units:          { type: integer, label: Units allocated, required: true, min: 1, max: 3000 }
+          - units_issued:   { type: integer, readonly: true, computed: "Sum of quantity on approved, dispatched and delivered requests against this allocation." }
+          - notes:          { type: long_text }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [territory, product, quarter], compare: exact, on_match: block, message: This territory already has an allocation of this product for the quarter. }
+          rules:
+            - text: The sum of active allocations for a product in a quarter must not exceed the released units of that product.
+              message: Not enough released stock for this allocation.
+              on_fail: warn
+        access:
+          Sample Ops:          { actions: [view, add, edit, export] }
+          Medical Rep:         { actions: [view], rows: { text: Allocations for the current rep's territory. } }
+          Compliance Reviewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: draft,  label: Draft,  color: gray, initial: true }
+            - { code: active, label: Active, color: green }
+            - { code: closed, label: Closed, color: purple, final: true }
+          transitions:
+            - { name: activate, label: Activate, from: draft, to: active, roles: [Sample Ops], primary: true,
+                on_done: Email each rep in the territory the units available per product this quarter. }
+            - { name: close, label: Close, from: active, to: closed, trigger: system,
+                text: When the territory's reconciliation for the quarter is signed off. }
+          tags:
+            - { code: low_balance, label: Low balance, color: amber, system: true, text: Set when units_issued is 90% or more of units. }
+        table:
+          columns:
+            - allocation_ref: { label: Allocation, searchable: true, sortable: true }
+            - territory:      { label: Territory, display: name, filterable: true }
+            - product:        { label: Product, display: name, filterable: true }
+            - quarter:        { label: Quarter, filterable: true }
+            - units:          { label: Allocated, sortable: true }
+            - units_issued:   { label: Issued, sortable: true }
+            - used_pct:       { source: computed, label: Used, format: percent, shows: units_issued / units. }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Active, where: status == active, default: true }
+            - { label: Low balance, where: has_tag low_balance }
+          add_button: New Allocation
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: "status in [draft, active]" }
+            - key: top_up
+              label: Top Up
+              type: form
+              roles: [Sample Ops]
+              show_when: status == active
+              form:
+                - extra_units: { type: integer, required: true, min: 1 }
+                - reason:      { type: text, required: true }
+              on_done: Add extra_units to units and log the reason on the allocation's activity.
+        form:
+          create: { roles: [Sample Ops], fields: [territory, product, quarter, units, notes] }
+          edit:   { same_as: create, editable_in: [draft, active], readonly_when: [ { when: status == active, fields: [territory, product, quarter] } ] }
+
+  # ===========================================================================
+  - code: sampling
+    name: Sampling
+    description: Requests and deliveries.
+    entities:
+      - code: sample_request
+        name: Sample Request
+        plural: Sample Requests
+        kind: hero
+        display: request_ref
+        fields:
+          - request_ref:  { type: text, label: Request ID, readonly: true, unique: true, auto: { sequence: "SR-{YY}-{00000}" } }
+          - hcp:          { type: link, to: hcp, required: true, display: name, limit_choices: status == active }
+          - rep:          { type: link, to: medical_rep, required: true, display: full_name }
+          - product:      { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - quantity:     { type: integer, label: Units, required: true, min: 1, max: 30 }
+          - channel:      { type: choice, choices: request_channel, required: true, default: rep_visit }
+          - request_date: { type: date, required: true, default: today }
+          - allocation:   { type: link, to: allocation, display: allocation_ref, readonly: true }
+          - notes:        { type: long_text, label: Clinical use / notes }
+        validation:
+          rules:
+            - text: quantity plus this HCP's delivered and open requests for the product this quarter must not exceed product.max_per_hcp_qtr.
+              message: This exceeds the quarterly sample limit for this HCP and product; it will go to compliance review.
+              on_fail: warn
+          duplicate_check:
+            scope: { where: "status in [requested, submitted, approved]" }
+            rules:
+              - { match: [hcp, product], compare: exact, on_match: warn, message: This HCP already has an open request for this product. }
+        access:
+          Medical Rep:         { actions: [view, add, edit, detail], rows: { own: rep } }
+          HCP:                 { actions: [view, add, detail], rows: { own: hcp } }
+          Sample Ops:          { actions: [view, edit, export, detail] }
+          Compliance Reviewer: { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: requested,         label: Requested by HCP,  color: purple, initial: true }
+            - { code: submitted,         label: Submitted,         color: blue }
+            - { code: compliance_review, label: Compliance Review, color: pink }
+            - { code: approved,          label: Approved,          color: indigo }
+            - { code: dispatched,        label: Dispatched,        color: amber }
+            - { code: delivered,         label: Delivered,         color: green, final: true }
+            - { code: rejected,          label: Rejected,          color: red,   final: true }
+            - { code: cancelled,         label: Cancelled,         color: gray,  final: true }
+          transitions:
+            - name: endorse
+              label: Endorse
+              from: requested
+              to: submitted
+              roles: [Medical Rep]
+              primary: true
+              on_done: Notify the HCP that the rep has endorsed the request.
+            - name: submit_direct
+              label: Submit
+              from: requested
+              to: submitted
+              trigger: system
+              text: Immediately on create when the rep raises the request during a visit (channel == rep_visit).
+            - name: refer
+              label: Refer to Compliance
+              from: submitted
+              to: compliance_review
+              roles: [Sample Ops]
+              form: [ { refer_note: { type: long_text, required: true } } ]
+              on_done: Notify the compliance reviewers with the HCP's quarter-to-date units for the product.
+            - name: approve
+              label: Approve & Allocate
+              from: submitted
+              to: approved
+              roles: [Sample Ops]
+              primary: true
+              condition:
+                all:
+                  - text: The HCP's territory has an active allocation of the product with at least quantity units left.
+                  - text: The request is within the product's quarterly limit for this HCP.
+              condition_msg: No allocation left, or the request is over the quarterly limit (refer it to compliance).
+              on_done: Link the active allocation, add quantity to its units_issued and notify the rep.
+            - name: clear
+              label: Clear Exception
+              from: compliance_review
+              to: approved
+              roles: [Compliance Reviewer]
+              primary: true
+              form: [ { justification: { type: long_text, required: true } } ]
+              on_done: Record the justification on the request, link the allocation and tag the request as exception_approved.
+            - { name: reject, label: Reject, from: [submitted, compliance_review], to: rejected, roles: [Sample Ops, Compliance Reviewer], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ],
+                on_done: Notify the rep and the HCP with the reason. }
+            - { name: dispatch, label: Mark Dispatched, from: approved, to: dispatched, trigger: system,
+                text: When a delivery is created for this request. }
+            - { name: deliver, label: Mark Delivered, from: dispatched, to: delivered, trigger: system,
+                text: When the linked delivery is acknowledged by the HCP. }
+            - { name: cancel, label: Cancel, from: [requested, submitted, approved], to: cancelled, roles: [Medical Rep, HCP, Sample Ops],
+                confirm: "Cancel this request?", on_done: "If it was approved, release the units back to the allocation." }
+          tags:
+            - { code: over_limit, label: Over limit, color: red, system: true, text: Set on save when the request would take the HCP above the product's quarterly limit. }
+            - { code: exception_approved, label: Exception approved, color: pink, system: true, text: Set when compliance clears an over-limit request. }
+            - code: urgent
+              label: Urgent
+              color: amber
+              enable:  { roles: [Medical Rep, Sample Ops] }
+              disable: { roles: [Medical Rep, Sample Ops] }
+        table:
+          columns:
+            - request_ref:  { label: Request, searchable: true, sortable: true, link_to: request_360 }
+            - hcp:          { label: HCP, display: name, searchable: true, link_to: hcp_360 }
+            - product:      { label: Product, display: name, filterable: true }
+            - quantity:     { label: Units }
+            - rep:          { label: Rep, display: full_name, filterable: true, roles: [Sample Ops, Compliance Reviewer] }
+            - territory:    { source: computed, label: Territory, path: hcp.territory.name, filterable: true }
+            - channel:      { label: Channel, filterable: true }
+            - request_date: { label: Requested, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: -request_date
+          quick_filters:
+            - { label: To endorse, where: status == requested, roles: [Medical Rep], default: true }
+            - { label: To approve, where: status == submitted, roles: [Sample Ops], default: true }
+            - { label: Compliance review, where: status == compliance_review, roles: [Compliance Reviewer, Sample Ops] }
+            - { label: Open, where: "status in [requested, submitted, compliance_review, approved, dispatched]", roles: [HCP] }
+            - { label: Over limit, where: has_tag over_limit, roles: [Compliance Reviewer] }
+          row_click: request_360
+          add_button: New Request
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: "status in [requested, submitted]", roles: [Medical Rep, Sample Ops] }
+            - { key: open_360, label: Open, type: navigate, to: request_360 }
+        form:
+          create:
+            roles: [Medical Rep, HCP]
+            title: New Sample Request
+            fields: [hcp, rep, product, quantity, channel, request_date, notes]
+            after_create: request_360
+          edit: { same_as: create, roles: [Medical Rep, Sample Ops], editable_in: [requested, submitted] }
+        custom_requirements:
+          - area: backend
+            title: Prefill rep and channel
+            text: When an HCP creates a request, set rep to the HCP's rep and channel to hcp_portal; when a rep creates one, set rep to themselves and channel to rep_visit.
+
+      - code: delivery
+        name: Delivery
+        plural: Deliveries
+        kind: transactional
+        display: delivery_ref
+        fields:
+          - delivery_ref:   { type: text, label: Delivery ID, readonly: true, unique: true, auto: { sequence: "DL-{YY}-{00000}" } }
+          - sample_request: { type: link, to: sample_request, required: true, display: request_ref, limit_choices: status == approved }
+          - batch:          { type: link, to: sample_batch, required: true, display: batch_no, limit_choices: status == released }
+          - mode:           { type: choice, required: true, choices: delivery_mode }
+          - courier_awb:    { type: text, label: Courier AWB }
+          - dispatched_on:  { type: date, required: true, default: today }
+          - delivered_on:   { type: date, readonly: true }
+          - ack_method:     { type: choice, choices: ack_method, readonly: true }
+          - signature:      { type: image, readonly: true }
+          - ack_geo:        { type: text, label: "Acknowledged at (lat, long)", readonly: true }
+        validation:
+          rules:
+            - when: mode == courier
+              require: [courier_awb]
+              message: Enter the courier AWB for courier deliveries.
+            - text: The batch must not expire within 30 days of dispatched_on.
+              message: This batch expires too soon to be sampled.
+        access:
+          Sample Ops:          { actions: [view, add, edit, export] }
+          Medical Rep:         { actions: [view], rows: { own: sample_request.rep } }
+          HCP:                 { actions: [view], rows: { own: sample_request.hcp } }
+          Compliance Reviewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: in_transit,   label: In Transit,   color: amber, initial: true }
+            - { code: acknowledged, label: Acknowledged, color: green, final: true }
+            - { code: returned,     label: Returned,     color: red,   final: true }
+          transitions:
+            - name: acknowledge
+              label: Acknowledge Receipt
+              from: in_transit
+              to: acknowledged
+              roles: [HCP, Medical Rep]
+              primary: true
+              form:
+                - ack_method: { type: choice, choices: ack_method, required: true }
+                - signature:  { type: image, show_when: ack_method == e_signature }
+                - otp:        { type: text, pattern: "^[0-9]{6}$", show_when: ack_method == otp }
+              condition: { text: "For OTP, the code matches the one sent to the HCP's registered mobile in the last 10 minutes." }
+              condition_msg: The OTP is wrong or has expired; send a new one.
+              on_done: Set delivered_on = today, store the signature or OTP proof with the rep's device location, move the request to delivered and SMS the HCP a receipt.
+            - { name: mark_returned, label: Mark Returned, from: in_transit, to: returned, roles: [Sample Ops], tone: danger,
+                form: [ { return_reason: { type: long_text, required: true } } ],
+                on_done: Release the units back to the allocation and the batch. }
+          tags:
+            - { code: ack_overdue, label: Ack overdue, color: amber, system: true, text: Set when in transit for more than 7 days; the rep gets a daily reminder. }
+        table:
+          columns:
+            - delivery_ref:   { label: Delivery, searchable: true, sortable: true }
+            - sample_request: { label: Request, display: request_ref, searchable: true, link_to: request_360 }
+            - hcp:            { source: computed, label: HCP, path: sample_request.hcp.name, searchable: true }
+            - product:        { source: computed, label: Product, path: sample_request.product.name }
+            - batch:          { label: Batch, display: batch_no }
+            - mode:           { label: Mode, filterable: true }
+            - dispatched_on:  { label: Dispatched, sortable: true }
+            - ack_method:     { label: Acknowledged by, filterable: true }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: -dispatched_on
+          quick_filters:
+            - { label: Awaiting acknowledgement, where: status == in_transit, default: true }
+            - { label: Ack overdue, where: has_tag ack_overdue, roles: [Sample Ops, Compliance Reviewer] }
+          add_button: New Delivery
+          row_actions:
+            - { key: resend_otp, label: Send OTP, type: confirm, confirm: "Send a delivery OTP to the HCP's mobile?", roles: [Medical Rep], show_when: status == in_transit,
+                on_done: SMS a 6-digit OTP valid for 10 minutes to the HCP's registered mobile. }
+            - { key: track, label: Track Shipment, type: navigate, to: { text: Courier tracking page for courier_awb }, show_when: mode == courier }
+            - { key: receipt, label: Download Receipt, type: download, show_when: status == acknowledged, text: "Delivery receipt with batch, units, acknowledgement method and signature." }
+        form:
+          create: { roles: [Sample Ops], fields: [sample_request, batch, mode, courier_awb, dispatched_on] }
+          edit:   { same_as: create, editable_in: [in_transit] }
+        custom_requirements:
+          - area: integration
+            title: Courier API
+            text: On create with mode == courier, book the shipment with the courier API, store the AWB, and poll status every 2 hours; on "delivered" send the HCP the acknowledgement OTP.
+
+  # ===========================================================================
+  - code: compliance
+    name: Compliance
+    description: Quarterly reconciliation of samples issued against acknowledgements, rep by rep.
+    entities:
+      - code: reconciliation
+        name: Reconciliation
+        plural: Reconciliations
+        kind: hero
+        display: recon_ref
+        fields:
+          - recon_ref:          { type: text, label: Reconciliation ID, readonly: true, unique: true, auto: { sequence: "REC-{YY}-{000}" } }
+          - territory:          { type: link, to: territory, required: true, display: name }
+          - quarter:            { type: choice, choices: quarter, required: true }
+          - units_issued:       { type: integer, readonly: true, required: true, min: 20, max: 400, help: Units on the territory's dispatched and delivered requests in the quarter; set when the reconciliation starts. }
+          - variance:           { type: integer, label: Unacknowledged units, readonly: true, min: 0, max: 12, help: Units issued with no HCP acknowledgement; recalculated nightly. }
+          - units_acknowledged: { type: integer, readonly: true, computed: units_issued - variance }
+          - findings:           { type: long_text }
+          - signed_off_on:      { type: date, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [territory, quarter], compare: exact, on_match: block, message: This territory already has a reconciliation for the quarter. }
+        access:
+          Compliance Reviewer: { actions: [view, add, edit, export, detail] }
+          Sample Ops:          { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: open,        label: Open,        color: blue, initial: true }
+            - { code: in_review,   label: In Review,   color: amber }
+            - { code: discrepancy, label: Discrepancy, color: red }
+            - { code: signed_off,  label: Signed Off,  color: green, final: true }
+          transitions:
+            - { name: start_review, label: Start Review, from: open, to: in_review, roles: [Compliance Reviewer], primary: true,
+                on_done: Freeze the issued and acknowledged counts and create one reconciliation line per rep in the territory. }
+            - { name: flag, label: Flag Discrepancy, from: in_review, to: discrepancy, roles: [Compliance Reviewer], tone: danger,
+                form: [ { findings: { type: long_text, required: true } } ],
+                on_done: "Email Sample Ops and each rep with an unexplained line, listing their unacknowledged deliveries." }
+            - name: sign_off
+              label: Sign Off
+              from: [in_review, discrepancy]
+              to: signed_off
+              roles: [Compliance Reviewer]
+              primary: true
+              confirm: Sign off this quarter? The report is locked after this.
+              condition: { text: "Every reconciliation line with a variance has an explanation." }
+              condition_msg: Explain every rep's unacknowledged units before signing off.
+              on_done: Set signed_off_on = today, close the territory's allocations for the quarter and lock the report.
+        table:
+          columns:
+            - recon_ref:          { label: Reconciliation, searchable: true, sortable: true, link_to: recon_360 }
+            - territory:          { label: Territory, display: name, filterable: true }
+            - quarter:            { label: Quarter, filterable: true }
+            - units_issued:       { label: Issued, sortable: true }
+            - units_acknowledged: { label: Acknowledged }
+            - variance:           { label: Unacknowledged, sortable: true, highlight: { when: "variance > 0", tone: red } }
+            - status:             { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Open, where: "status in [open, in_review, discrepancy]", default: true }
+          row_click: recon_360
+          add_button: Start Reconciliation
+          row_actions:
+            - { key: report, label: Download Report, type: download, text: "Reconciliation report: per rep and product, units issued, acknowledged and unexplained, with each delivery's acknowledgement proof." }
+        form:
+          create: { roles: [Compliance Reviewer], fields: [territory, quarter] }
+          edit:   { same_as: create, roles: [Compliance Reviewer], editable_in: [open] }
+        custom_requirements:
+          - area: scheduled
+            title: Quarter-end reconciliations
+            text: On the 5th day after each quarter ends, create an open reconciliation for every active territory and email the compliance reviewers.
+
+      - code: recon_line
+        name: Rep Line
+        plural: Rep Lines
+        kind: child
+        parent: { entity: reconciliation, field: reconciliation }
+        display: rep
+        fields:
+          - reconciliation:  { type: link, to: reconciliation, required: true, on_delete: cascade }
+          - rep:             { type: link, to: medical_rep, required: true, display: full_name }
+          - units_issued:    { type: integer, readonly: true, required: true, min: 5, max: 80 }
+          - variance:        { type: integer, label: Unacknowledged, readonly: true, min: 0, max: 4 }
+          - units_acknowledged: { type: integer, readonly: true, computed: units_issued - variance }
+          - explanation:     { type: long_text }
+          - evidence:        { type: file, accept: [pdf, jpg, png] }
+        access:
+          Compliance Reviewer: { actions: [view, edit] }
+          Sample Ops:          { actions: [view] }
+        table:
+          columns:
+            - rep:                { label: Rep, display: full_name, searchable: true }
+            - units_issued:       { label: Issued }
+            - units_acknowledged: { label: Acknowledged }
+            - variance:           { label: Unacknowledged, highlight: { when: "variance > 0", tone: red } }
+            - explanation:        { label: Explanation }
+          footer_totals: [units_issued, units_acknowledged, variance]
+          row_actions:
+            - { key: edit, label: Explain, type: edit }
+        form:
+          create: { fields: [rep, explanation, evidence] }
+          edit:   { fields: [explanation, evidence] }
+
+detail_views:
+  - code: hcp_360
+    hero: hcp
+    title: "{name}"
+    back_to: hcps
+    layout: header_tabs_sidebar
+    roles: [Sample Ops, Medical Rep, Compliance Reviewer]
+    header:
+      avatar: { fallback_initials: name }
+      title: name
+      subtitle: ["{hcp_ref}", "{specialty}", "{territory.name}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Registration no., field: registration_no, copyable: true }
+        - { label: Clinic, field: clinic }
+        - { label: Rep, field: rep }
+        - { label: Mobile, field: mobile }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: new_request, label: New Request, icon: plus, type: create_related, entity: sample_request, prefill: { hcp: hero }, roles: [Medical Rep], show_when: status == active }
+          - { key: edit, label: Edit, type: edit, roles: [Sample Ops, Medical Rep] }
+      banners:
+        - { show_when: status == blocked, tone: danger, text: "Sampling blocked: {block_reason}" }
+        - { show_when: has_tag at_limit, tone: warning, text: This HCP has reached the quarterly limit for at least one product. }
+    stats:
+      - { label: Open requests, value: { count: sample_request, via: hcp, where: "status in [requested, submitted, compliance_review, approved, dispatched]" }, icon: clipboard-list, tone: blue, link_to_tab: requests }
+      - { label: Units this quarter, value: { sum: sample_request.quantity, via: hcp, where: status == delivered }, tone: teal }
+      - { label: Awaiting acknowledgement, value: { count: delivery, via: sample_request.hcp, where: status == in_transit }, tone: amber, link_to_tab: deliveries }
+    sidebar:
+      - { type: fields, title: Doctor, fields: [specialty, registration_no, council, consent_on] }
+      - { type: fields, title: Contact, fields: [mobile, email, address, city] }
+      - type: custom
+        title: Quarterly limits
+        text: One row per product sampled this quarter with units delivered vs max_per_hcp_qtr as a progress bar; red when at the limit.
+    tabs:
+      - code: requests
+        label: Requests
+        type: related_table
+        entity: sample_request
+        via: hcp
+        count_badge: true
+        columns: [request_ref, product, quantity, channel, request_date, status, tags]
+        add: { label: New Request, prefill: { hcp: hero }, show_when: status == active }
+        row_click: request_360
+        empty_state: { title: No requests yet, text: Requests raised by the rep or the HCP appear here., cta: add }
+      - code: deliveries
+        label: Deliveries
+        type: related_table
+        entity: delivery
+        via: sample_request.hcp
+        count_badge: { where: status == in_transit, tone: amber }
+        columns: [delivery_ref, sample_request, batch, mode, dispatched_on, ack_method, status]
+        add: false
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: hcp, events: [created, updated, transition, tag] }
+          - { entity: sample_request, via: hcp, events: [created, transition] }
+          - { entity: delivery, via: sample_request.hcp, events: [created, transition] }
+    states:
+      not_found: { title: HCP not found, back_to: hcps }
+
+  - code: request_360
+    hero: sample_request
+    title: "{request_ref}"
+    back_to: sample_requests
+    layout: header_tabs
+    roles: [Sample Ops, Medical Rep, HCP, Compliance Reviewer]
+    header:
+      title: request_ref
+      subtitle: ["{hcp.name}", "{product.name}", "{quantity} units"]
+      badges: [ { source: status }, { source: tags }, { field: channel } ]
+      facts:
+        - { label: HCP, field: hcp, link_to: hcp_360, roles: [Sample Ops, Medical Rep, Compliance Reviewer] }
+        - { label: Rep, field: rep }
+        - { label: Requested, field: request_date }
+        - { label: Allocation, field: allocation, fallback: "—" }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: new_delivery, label: Dispatch, icon: truck, type: create_related, entity: delivery, prefill: { sample_request: hero }, roles: [Sample Ops], show_when: status == approved }
+      banners:
+        - { show_when: has_tag over_limit, tone: warning, text: This request takes the HCP over the product's quarterly limit. }
+        - { show_when: status == rejected, tone: danger, text: "Rejected: {reject_reason}" }
+    stats:
+      - { label: Units, value: { field: quantity } }
+      - { label: Deliveries, value: { count: delivery, via: sample_request }, icon: truck, tone: blue, link_to_tab: deliveries }
+      - { label: Acknowledged, value: { count: delivery, via: sample_request, where: status == acknowledged }, icon: package-check, tone: green }
+    tabs:
+      - code: details
+        label: Details
+        type: fields
+        sections:
+          - { title: Request, columns: 2, fields: [hcp, rep, product, quantity, channel, request_date] }
+          - { title: Notes, fields: [notes] }
+      - code: deliveries
+        label: Deliveries
+        type: related_table
+        entity: delivery
+        via: sample_request
+        columns: [delivery_ref, batch, mode, courier_awb, dispatched_on, delivered_on, ack_method, status]
+        add: { label: Dispatch, prefill: { sample_request: hero }, show_when: status == approved }
+        row_click: drawer
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: sample_request, events: [created, updated, transition, tag] }
+          - { entity: delivery, via: sample_request, events: [created, transition] }
+    states:
+      not_found: { title: Request not found, back_to: sample_requests }
+
+  - code: recon_360
+    hero: reconciliation
+    title: "{recon_ref}"
+    back_to: reconciliations
+    layout: header_tabs
+    roles: [Compliance Reviewer, Sample Ops]
+    header:
+      title: recon_ref
+      subtitle: ["{territory.name}", "{quarter}"]
+      badges: [ { source: status } ]
+      facts:
+        - { label: Issued, field: units_issued }
+        - { label: Acknowledged, field: units_acknowledged }
+        - { label: Unacknowledged, field: variance, emphasis: true }
+        - { label: Signed off, field: signed_off_on, show_when: status == signed_off }
+      actions:
+        transitions: true
+        buttons:
+          - { key: report, row_action: report }
+      banners:
+        - { show_when: status == discrepancy, tone: danger, text: "Discrepancy: {findings}" }
+    stats:
+      - { label: Units issued, value: { field: units_issued }, tone: blue }
+      - { label: Acknowledged, value: { field: units_acknowledged }, tone: green }
+      - { label: Unacknowledged, value: { field: variance }, tone: red, link_to_tab: lines }
+      - { label: Reps unexplained, value: { count: recon_line, via: reconciliation, where: "variance > 0 and explanation is_empty" }, tone: amber, link_to_tab: lines }
+    tabs:
+      - code: lines
+        label: Reps
+        type: related_table
+        entity: recon_line
+        via: reconciliation
+        count_badge: true
+        columns: inherit
+        add: false
+        footer_totals: [units_issued, units_acknowledged, variance]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: reconciliation, events: [created, updated, transition] }
+          - { entity: recon_line, via: reconciliation, events: [updated] }
+    states:
+      not_found: { title: Reconciliation not found, back_to: reconciliations }

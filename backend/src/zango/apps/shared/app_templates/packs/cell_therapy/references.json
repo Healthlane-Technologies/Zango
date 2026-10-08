@@ -1,0 +1,9 @@
+[
+  {
+    "id": "car_t_scheduling_east",
+    "file": "references/car_t_scheduling_east.yaml",
+    "title": "CAR-T Scheduling — East (vein-to-vein orchestration)",
+    "summary": "12 treatment centres with per-site quotas, centrally approved apheresis slots against weekly manufacturing capacity, batches with QA release and documents, inbound and outbound shipments with courier tracking, a custody log with COI and temperature checks, and patient and batch 360 pages.",
+    "tags": ["cell therapy", "CAR-T", "chain of identity", "chain of custody", "slot booking", "capacity", "batch release", "courier", "external users", "360 page"]
+  }
+]

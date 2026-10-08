@@ -24,7 +24,22 @@ PACKS_DIR = Path(__file__).parent / "packs"
 def bundled_packs() -> list[Path]:
     if not PACKS_DIR.is_dir():
         return []
-    return sorted(p for p in PACKS_DIR.iterdir() if (p / "template.json").is_file())
+    import json
+
+    from .services.generic import GENERIC_SLUG
+
+    def generic_first(pack: Path):
+        # Lean packs borrow from the generic one: it must be published first.
+        try:
+            slug = json.loads((pack / "template.json").read_text()).get("slug")
+        except ValueError:
+            slug = None
+        return (slug != GENERIC_SLUG, pack.name)
+
+    return sorted(
+        (p for p in PACKS_DIR.iterdir() if (p / "template.json").is_file()),
+        key=generic_first,
+    )
 
 
 def seed_bundled_packs(sender=None, **kwargs):

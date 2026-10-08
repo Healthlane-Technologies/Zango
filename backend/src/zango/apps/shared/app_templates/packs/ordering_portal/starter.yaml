@@ -1,0 +1,576 @@
+# Ordering Portal: the template's starting point. Clinics and pharmacies order
+# from a priced catalogue, each order is checked against the clinic's credit
+# limit, a distributor fulfils it, and the shipment is tracked to delivery.
+# The analyst tailors every part of this to your requirement; the preview
+# redraws with each change.
+spec_version: 1
+
+app:
+  code: ordering_portal
+  name: Ordering Portal
+  description: Clinic and pharmacy ordering with a priced catalogue, credit limits, distributor fulfilment and delivery tracking.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#0F766E", secondary: "#64748B" }
+  custom_requirements: []
+
+choice_sets:
+  customer_type:
+    - { id: clinic,       label: Clinic }
+    - { id: pharmacy,     label: Pharmacy }
+    - { id: hospital,     label: Hospital }
+    - { id: nursing_home, label: Nursing Home }
+  product_category:
+    - { id: vaccines,     label: Vaccines,     color: teal }
+    - { id: injectables,  label: Injectables,  color: blue }
+    - { id: oral,         label: Oral Solids,  color: indigo }
+    - { id: consumables,  label: Consumables,  color: gray }
+  stock_status:
+    - { id: in_stock,     label: In Stock,     color: green }
+    - { id: low,          label: Low Stock,    color: amber }
+    - { id: out_of_stock, label: Out of Stock, color: red }
+  payment_terms:
+    - { id: advance, label: Advance }
+    - { id: net_15,  label: Net 15 }
+    - { id: net_30,  label: Net 30 }
+  region:
+    - { id: north, label: North }
+    - { id: south, label: South }
+    - { id: east,  label: East }
+    - { id: west,  label: West }
+  carrier:
+    - { id: own_fleet,  label: Own Fleet }
+    - { id: courier,    label: Courier }
+    - { id: cold_chain, label: Cold-chain Courier }
+
+roles:
+  - name: Customer Service
+    description: Onboards clinics, watches credit holds and keeps orders moving to delivery.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: orders,    icon: shopping-cart }
+      - { page: clinics,   icon: building-2 }
+      - { page: shipments, icon: truck }
+      - { page: invoices,  icon: receipt }
+      - group: Catalogue
+        icon: package
+        items:
+          - { page: products }
+          - { page: distributors }
+
+  - name: Clinic Buyer
+    description: Clinic or pharmacy login; browses the catalogue, places orders and tracks its own deliveries and invoices.
+    landing: orders
+    menu:
+      - { page: products,  label: Catalogue,     icon: package }
+      - { page: orders,    label: My Orders,     icon: shopping-cart }
+      - { page: shipments, label: My Deliveries, icon: truck }
+      - { page: invoices,  label: My Invoices,   icon: receipt }
+
+  - name: Distributor
+    description: Distributor login; accepts and dispatches the orders assigned to it and confirms delivery.
+    landing: orders
+    menu:
+      - { page: orders,    label: Assigned Orders, icon: shopping-cart }
+      - { page: shipments, label: Shipments,       icon: truck }
+
+pages:
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Dashboard
+    component: OrderingDashboard
+    roles: [Customer Service]
+    text: >
+      KPI row: orders placed this month, order value this month, orders on credit hold,
+      shipments delayed. Below: order value by week (bar, last 12 weeks) and a table of
+      the 10 oldest orders on credit hold with clinic, amount and credit headroom.
+  - { code: orders,       type: crud,   entity: order,       route: /app/orders,       title: Orders }
+  - { code: order_360,    type: detail, detail_view: order_360, route: /app/orders/:id }
+  - { code: clinics,      type: crud,   entity: clinic,      route: /app/clinics,      title: Clinics }
+  - { code: products,     type: crud,   entity: product,     route: /app/products,     title: Products }
+  - { code: distributors, type: crud,   entity: distributor, route: /app/distributors, title: Distributors }
+  - { code: shipments,    type: crud,   entity: shipment,    route: /app/shipments,    title: Shipments }
+  - { code: invoices,     type: crud,   entity: invoice,     route: /app/invoices,     title: Invoices }
+
+modules:
+  - code: catalogue
+    name: Catalogue and Pricing
+    description: The products clinics can order and their list prices.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:          { type: text, required: true, max_length: 200 }
+          - sku:           { type: text, label: SKU, required: true, unique: true, pattern: "^SKU-[0-9]{5}$", pattern_msg: "Use SKU- and five digits." }
+          - category:      { type: choice, required: true, choices: product_category }
+          - list_price:    { type: money, required: true, min: 0, help: Price per pack before tax. }
+          - gst_rate:      { type: choice, label: GST, choices: [ { id: "5", label: 5% }, { id: "12", label: 12% }, { id: "18", label: 18% } ], default: "12" }
+          - min_order_qty: { type: integer, label: Min order qty, min: 1, max: 50 }
+          - cold_chain:    { type: boolean, label: Cold chain, help: Ships at 2–8 °C. }
+          - stock_status:  { type: choice, choices: stock_status, default: in_stock }
+          - is_active:     { type: boolean, label: Orderable, default: true }
+        access:
+          Customer Service: { actions: [view, add, edit, export] }
+          Clinic Buyer:     { actions: [view], rows: { where: is_active is_true } }
+        table:
+          columns:
+            - name:          { label: Product, searchable: true, sortable: true }
+            - sku:           { label: SKU, searchable: true }
+            - category:      { label: Category, filterable: true }
+            - list_price:    { label: List price, sortable: true, format: money }
+            - min_order_qty: { label: MOQ }
+            - cold_chain:    { label: Cold chain, filterable: true }
+            - stock_status:  { label: Stock, filterable: true }
+          default_sort: name
+          quick_filters:
+            - { label: Orderable, where: is_active is_true, default: true }
+            - { label: Cold chain, where: cold_chain is_true }
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit, roles: [Customer Service] }
+        form:
+          create:
+            roles: [Customer Service]
+            fields: [name, sku, category, list_price, gst_rate, min_order_qty, cold_chain, stock_status, is_active]
+          edit: { same_as: create }
+
+  - code: customers
+    name: Clinics and Distributors
+    description: The clinics that order, their credit terms, and the distributors that fulfil.
+    entities:
+      - code: distributor
+        name: Distributor
+        plural: Distributors
+        kind: master
+        display: name
+        app_user: { role: Distributor, name: name, email: email, mobile: phone, create_on: is_active is_true }
+        fields:
+          - name:      { type: text, required: true, max_length: 200 }
+          - region:    { type: choice, required: true, choices: region }
+          - city:      { type: text, required: true }
+          - email:     { type: email, required: true }
+          - phone:     { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile number. }
+          - is_active: { type: boolean, label: Active, default: true }
+        access:
+          Customer Service: { actions: [view, add, edit, export] }
+        table:
+          columns:
+            - name:      { label: Distributor, searchable: true, sortable: true }
+            - region:    { label: Region, filterable: true }
+            - city:      { label: City, searchable: true }
+            - phone:     { label: Phone }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Distributor
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, region, city, email, phone, is_active] }
+          edit:   { same_as: create }
+
+      - code: clinic
+        name: Clinic
+        plural: Clinics
+        kind: hero
+        display: clinic_name
+        app_user: { role: Clinic Buyer, name: clinic_name, email: email, mobile: phone, create_on: status == active }
+        fields:
+          - clinic_ref:      { type: text, label: Clinic ID, readonly: true, unique: true, auto: { sequence: "CLN-{00000}" } }
+          - clinic_name:     { type: text, required: true, max_length: 200 }
+          - customer_type:   { type: choice, required: true, choices: customer_type }
+          - contact_person:  { type: text, required: true }
+          - email:           { type: email, required: true }
+          - phone:           { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile number. }
+          - city:            { type: text, required: true }
+          - drug_license_no: { type: text, label: Drug licence no, required: true }
+          - distributor:     { type: link, to: distributor, required: true, display: name, limit_choices: is_active is_true, help: The distributor that fulfils this clinic's orders. }
+          - credit_limit:    { type: money, min: 0 }
+          - payment_terms:   { type: choice, choices: payment_terms, default: net_30 }
+          - outstanding:     { type: money, readonly: true, computed: Sum of invoice.amount for this clinic's unpaid invoices. }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [drug_license_no], compare: normalised, on_match: block, message: A clinic with this drug licence is already registered. }
+              - { match: [clinic_name, city], compare: fuzzy, threshold: 0.85, on_match: warn, message: A clinic with a similar name exists in this city. }
+        access:
+          Customer Service: { actions: [view, add, edit, export, detail] }
+          Clinic Buyer:     { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: pending_verification, label: Pending Verification, color: amber, initial: true }
+            - { code: active,               label: Active,               color: green }
+            - { code: on_hold,              label: On Hold,              color: red }
+            - { code: inactive,             label: Inactive,             color: gray }
+          transitions:
+            - name: verify
+              label: Verify and Activate
+              from: pending_verification
+              to: active
+              roles: [Customer Service]
+              primary: true
+              condition: { all: [ drug_license_no is_set, credit_limit is_set, distributor is_set ] }
+              condition_msg: Add the drug licence, a credit limit and a distributor first.
+              on_done: Create the Clinic Buyer login and email the contact person a portal invite.
+            - name: hold
+              label: Put on Hold
+              from: active
+              to: on_hold
+              roles: [Customer Service]
+              tone: danger
+              form: [ { hold_reason: { type: long_text, required: true } } ]
+              on_done: Block new orders from this clinic and email the contact person the reason.
+            - { name: release, label: Release Hold, from: on_hold, to: active, roles: [Customer Service] }
+            - { name: deactivate, label: Deactivate, from: [active, on_hold], to: inactive, roles: [Customer Service], tone: danger, confirm: Deactivate this clinic and disable its login? }
+        table:
+          columns:
+            - clinic_ref:    { label: Clinic ID, searchable: true, sortable: true }
+            - clinic_name:   { label: Clinic, searchable: true, sortable: true }
+            - city:          { label: City, searchable: true, filterable: true }
+            - distributor:   { label: Distributor, display: name, filterable: true }
+            - credit_limit:  { label: Credit limit, sortable: true, format: money }
+            - outstanding:   { label: Outstanding, sortable: true, format: money }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: clinic_name
+          quick_filters:
+            - { label: To verify, where: status == pending_verification }
+            - { label: On hold,   where: status == on_hold }
+          add_button: Add Clinic
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create:
+            roles: [Customer Service]
+            sections:
+              - { title: Clinic, fields: [clinic_name, customer_type, drug_license_no, city] }
+              - { title: Contact, fields: [contact_person, email, phone] }
+              - { title: Commercials, fields: [distributor, credit_limit, payment_terms] }
+          edit: { same_as: create }
+
+  - code: ordering
+    name: Orders and Fulfilment
+    description: Orders with their lines, credit checks, shipments and invoices.
+    entities:
+      - code: order
+        name: Order
+        plural: Orders
+        kind: hero
+        display: order_ref
+        fields:
+          - order_ref:         { type: text, label: Order no, readonly: true, unique: true, auto: { sequence: "ORD-{YY}-{00000}" } }
+          - clinic:            { type: link, to: clinic, required: true, display: clinic_name, limit_choices: status == active }
+          - distributor:       { type: link, to: distributor, required: true, readonly: true, display: name, help: Set from the clinic's distributor; Customer Service can reassign it. }
+          - order_date:        { type: date, required: true, default: today }
+          - expected_delivery: { type: date }
+          - po_number:         { type: text, label: Clinic PO no }
+          - total_amount:      { type: money, readonly: true, computed: Sum of order_line.amount, recalculated on every line change. }
+          - notes:             { type: long_text }
+        access:
+          Customer Service: { actions: [view, add, edit, export, detail] }
+          Clinic Buyer:     { actions: [view, add, edit, detail], rows: { own: clinic } }
+          Distributor:      { actions: [view, detail], rows: { own: distributor } }
+        workflow:
+          statuses:
+            - { code: draft,       label: Draft,       color: gray, initial: true }
+            - { code: placed,      label: Placed,      color: blue }
+            - { code: credit_hold, label: Credit Hold, color: amber }
+            - { code: confirmed,   label: Confirmed,   color: indigo }
+            - { code: dispatched,  label: Dispatched,  color: purple }
+            - { code: delivered,   label: Delivered,   color: green, final: true }
+            - { code: cancelled,   label: Cancelled,   color: red,   final: true }
+          transitions:
+            - name: place
+              label: Place Order
+              from: draft
+              to: placed
+              roles: [Clinic Buyer, Customer Service]
+              primary: true
+              condition: { text: The order has at least one line and every line meets the product's minimum order quantity. }
+              condition_msg: Add at least one line and meet each product's minimum quantity.
+              on_done: Email the clinic an order acknowledgement and run the credit check.
+            - { name: pass_credit, label: Credit Approved, from: placed, to: confirmed, trigger: system,
+                text: "Right after placing: when clinic.outstanding + total_amount <= clinic.credit_limit, confirm and notify the distributor." }
+            - { name: fail_credit, label: Credit Hold, from: placed, to: credit_hold, trigger: system,
+                text: "Right after placing: when the order would take the clinic over its credit limit, hold it and alert Customer Service." }
+            - name: release_credit
+              label: Release Credit Hold
+              from: credit_hold
+              to: confirmed
+              roles: [Customer Service]
+              primary: true
+              form: [ { override_reason: { type: long_text, required: true } } ]
+              on_done: Log the override with the reason and notify the distributor of the new order.
+            - name: dispatch
+              label: Dispatch
+              from: confirmed
+              to: dispatched
+              roles: [Distributor]
+              primary: true
+              form:
+                - awb_no:            { type: text, label: AWB / docket no, required: true }
+                - carrier:           { type: choice, choices: carrier, required: true }
+                - expected_delivery: { type: date, required: true }
+              on_done: Create the shipment from the form, copy expected_delivery onto the order and SMS the clinic the tracking details.
+            - { name: deliver, label: Mark Delivered, from: dispatched, to: delivered, trigger: system,
+                text: When the order's shipment is delivered. }
+            - name: cancel
+              label: Cancel Order
+              from: [draft, placed, credit_hold, confirmed]
+              to: cancelled
+              roles: [Clinic Buyer, Customer Service]
+              tone: danger
+              confirm: Cancel this order? The distributor will be told.
+              form: [ { cancel_reason: { type: long_text, required: true } } ]
+          tags:
+            - { code: urgent, label: Urgent, color: red, enable: { roles: [Clinic Buyer, Customer Service] }, disable: { roles: [Customer Service] } }
+            - { code: delayed, label: Delayed, color: amber, system: true, text: Set when expected_delivery < today and the order is not delivered or cancelled. }
+        table:
+          columns:
+            - order_ref:         { label: Order no, searchable: true, sortable: true, link_to: order_360 }
+            - clinic:            { label: Clinic, display: clinic_name, searchable: true, filterable: true }
+            - distributor:       { label: Distributor, display: name, filterable: true, roles: [Customer Service] }
+            - order_date:        { label: Ordered, sortable: true }
+            - expected_delivery: { label: Expected, sortable: true }
+            - total_amount:      { label: Amount, sortable: true, format: money }
+            - status:            { source: status, label: Status, filterable: true }
+            - tags:              { source: tags, label: Flags }
+          default_sort: -order_date
+          quick_filters:
+            - { label: On credit hold, where: status == credit_hold, roles: [Customer Service] }
+            - { label: To dispatch,    where: status == confirmed, roles: [Distributor] }
+            - { label: In transit,     where: status == dispatched }
+            - { label: Delayed,        where: has_tag delayed }
+          row_click: order_360
+          add_button: New Order
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft }
+            - key: reassign
+              label: Reassign Distributor
+              type: form
+              roles: [Customer Service]
+              show_when: "status in [placed, credit_hold, confirmed]"
+              form: [ { new_distributor: { type: link, to: distributor, required: true } } ]
+              on_done: Set distributor to the chosen one and notify both distributors.
+            - { key: reorder, label: Reorder, type: confirm, roles: [Clinic Buyer], confirm: Create a new draft with the same lines?, on_done: Copy the order and its lines into a new draft at current list prices and open it. }
+        form:
+          create:
+            roles: [Clinic Buyer, Customer Service]
+            fields: [clinic, po_number, notes]
+            on_create: Set distributor from clinic.distributor.
+            after_create: order_360
+          edit: { same_as: create, editable_in: [draft] }
+
+      - code: order_line
+        name: Order Line
+        plural: Order Lines
+        kind: child
+        parent: { entity: order, field: order }
+        display: product
+        fields:
+          - order:      { type: link, to: order, required: true, on_delete: cascade }
+          - product:    { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - quantity:   { type: integer, required: true, min: 1, max: 100 }
+          - unit_price: { type: money, readonly: true, help: The product's list price when the line was added. }
+          - amount:     { type: money, readonly: true, computed: quantity * unit_price }
+        access:
+          Customer Service: { actions: [view, add, edit, delete] }
+          Clinic Buyer:     { actions: [view, add, edit, delete], rows: { own: order.clinic } }
+          Distributor:      { actions: [view], rows: { own: order.distributor } }
+        table:
+          columns:
+            - product:    { label: Product, display: name }
+            - quantity:   { label: Qty }
+            - unit_price: { label: Unit price, format: money }
+            - amount:     { label: Amount, format: money }
+          footer_totals: [amount]
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: order.status == draft }
+        form:
+          create: { fields: [product, quantity] }
+          edit:   { same_as: create }
+
+      - code: shipment
+        name: Shipment
+        plural: Shipments
+        kind: transactional
+        display: awb_no
+        fields:
+          - awb_no:            { type: text, label: AWB / docket no, required: true }
+          - order:             { type: link, to: order, required: true, display: order_ref }
+          - carrier:           { type: choice, required: true, choices: carrier }
+          - dispatched_on:     { type: date, required: true, default: today }
+          - expected_delivery: { type: date, required: true }
+          - delivered_on:      { type: date, readonly: true }
+          - proof_of_delivery: { type: file, accept: [pdf, jpg, png], max_size_mb: 5 }
+        access:
+          Customer Service: { actions: [view, edit, export] }
+          Distributor:      { actions: [view, edit], rows: { own: order.distributor } }
+          Clinic Buyer:     { actions: [view], rows: { own: order.clinic } }
+        workflow:
+          statuses:
+            - { code: in_transit,       label: In Transit,       color: blue, initial: true }
+            - { code: out_for_delivery, label: Out for Delivery, color: purple }
+            - { code: delivered,        label: Delivered,        color: green, final: true }
+            - { code: failed,           label: Delivery Failed,  color: red }
+          transitions:
+            - { name: out_for_delivery, label: Out for Delivery, from: in_transit, to: out_for_delivery, roles: [Distributor] }
+            - name: deliver
+              label: Confirm Delivery
+              from: [in_transit, out_for_delivery]
+              to: delivered
+              roles: [Distributor]
+              primary: true
+              form:
+                - delivered_on:      { type: date, required: true, default: today }
+                - proof_of_delivery: { type: file, required: true }
+              on_done: Save delivered_on and the proof, move the order to delivered and email the clinic.
+            - name: fail
+              label: Delivery Failed
+              from: [in_transit, out_for_delivery]
+              to: failed
+              roles: [Distributor]
+              tone: danger
+              form: [ { failure_reason: { type: long_text, required: true } } ]
+              on_done: Alert Customer Service with the reason so they can rebook with the clinic.
+            - { name: retry, label: Reattempt, from: failed, to: in_transit, roles: [Distributor, Customer Service] }
+        table:
+          columns:
+            - awb_no:            { label: AWB, searchable: true }
+            - order:             { label: Order, display: order_ref, searchable: true, link_to: order_360 }
+            - clinic:            { source: computed, label: Clinic, path: order.clinic.clinic_name }
+            - carrier:           { label: Carrier, filterable: true }
+            - dispatched_on:     { label: Dispatched, sortable: true }
+            - expected_delivery: { label: Expected, sortable: true, highlight: { when: "expected_delivery < today", tone: red } }
+            - status:            { source: status, label: Status, filterable: true }
+          default_sort: -dispatched_on
+          quick_filters:
+            - { label: Open, where: "status in [in_transit, out_for_delivery]", default: true }
+            - { label: Failed, where: status == failed }
+          row_click: drawer
+        form:
+          edit: { roles: [Distributor, Customer Service], fields: [carrier, expected_delivery], editable_in: [in_transit, out_for_delivery] }
+
+      - code: invoice
+        name: Invoice
+        plural: Invoices
+        kind: transactional
+        display: invoice_no
+        fields:
+          - invoice_no:   { type: text, label: Invoice no, readonly: true, unique: true, auto: { sequence: "INV-{YY}-{00000}" } }
+          - order:        { type: link, to: order, required: true, display: order_ref }
+          - clinic:       { type: link, to: clinic, readonly: true, display: clinic_name, help: Copied from the order. }
+          - invoice_date: { type: date, required: true, default: today }
+          - amount:       { type: money, required: true, min: 0 }
+          - due_date:     { type: date, readonly: true, computed: invoice_date plus the clinic's payment terms }
+          - paid_on:      { type: date, readonly: true }
+        access:
+          Customer Service: { actions: [view, add, export] }
+          Clinic Buyer:     { actions: [view], rows: { own: clinic } }
+        workflow:
+          statuses:
+            - { code: issued,    label: Issued,    color: blue, initial: true }
+            - { code: paid,      label: Paid,      color: green, final: true }
+            - { code: cancelled, label: Cancelled, color: gray,  final: true }
+          transitions:
+            - name: mark_paid
+              label: Mark Paid
+              from: issued
+              to: paid
+              roles: [Customer Service]
+              primary: true
+              form:
+                - paid_on:     { type: date, required: true, default: today }
+                - payment_ref: { type: text, required: true }
+              on_done: Save paid_on, reduce the clinic's outstanding and email a receipt.
+            - { name: cancel, label: Cancel, from: issued, to: cancelled, roles: [Customer Service], tone: danger, form: [ { cancel_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set nightly when due_date < today and the invoice is unpaid. }
+        table:
+          columns:
+            - invoice_no:   { label: Invoice, searchable: true, sortable: true }
+            - order:        { label: Order, display: order_ref, link_to: order_360 }
+            - clinic:       { label: Clinic, display: clinic_name, searchable: true, roles: [Customer Service] }
+            - invoice_date: { label: Date, sortable: true }
+            - amount:       { label: Amount, sortable: true, format: money }
+            - due_date:     { label: Due, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: -invoice_date
+          quick_filters:
+            - { label: Unpaid,  where: status == issued, default: true }
+            - { label: Overdue, where: has_tag overdue }
+          footer_totals: [amount]
+          add_button: Raise Invoice
+          row_actions:
+            - { key: download, label: Download PDF, type: download, text: The tax invoice PDF with lines, GST and payment details. }
+        form:
+          create: { roles: [Customer Service], fields: [order, invoice_date, amount] }
+
+detail_views:
+  - code: order_360
+    hero: order
+    title: "{order_ref}"
+    back_to: orders
+    layout: header_tabs
+    roles: [Customer Service, Clinic Buyer, Distributor]
+    header:
+      title: order_ref
+      subtitle: ["{clinic.clinic_name}", "Ordered {order_date}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Clinic,      field: clinic }
+        - { label: Distributor, field: distributor }
+        - { label: Expected,    field: expected_delivery, fallback: "—" }
+        - { label: Total,       field: total_amount, format: money, emphasis: true }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: edit, label: Edit, type: edit, show_when: status == draft }
+      banners:
+        - { show_when: status == credit_hold, tone: warning, text: This order is over the clinic's credit limit and waits for Customer Service. }
+        - { show_when: has_tag delayed, tone: warning, text: "Expected by {expected_delivery}; not yet delivered." }
+    stats:
+      - { label: Order value, value: { field: total_amount }, format: money, tone: blue }
+      - { label: Lines, value: { count: order_line, via: order }, link_to_tab: lines }
+      - { label: Invoiced, value: { sum: invoice.amount, via: order }, format: money, tone: indigo }
+    tabs:
+      - code: lines
+        label: Lines
+        type: related_table
+        entity: order_line
+        via: order
+        columns: inherit
+        footer_totals: [amount]
+        add: { label: Add Product, prefill: { order: hero }, show_when: status == draft }
+        empty_state: { title: No products yet, text: Add products from the catalogue to place this order., cta: add }
+      - code: shipments
+        label: Shipments
+        type: related_table
+        entity: shipment
+        via: order
+        count_badge: true
+        columns: [awb_no, carrier, dispatched_on, expected_delivery, status]
+        add: false
+        row_click: drawer
+      - code: invoices
+        label: Invoices
+        type: related_table
+        entity: invoice
+        via: order
+        columns: [invoice_no, invoice_date, amount, due_date, status]
+        add: { label: Raise Invoice, prefill: { order: hero }, show_when: "status in [dispatched, delivered]" }
+        roles: [Customer Service, Clinic Buyer]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: order, events: [created, updated, transition, tag] }
+          - { entity: shipment, via: order, events: [created, transition] }
+    states:
+      not_found: { title: Order not found, back_to: orders }

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "sample_desk",
+    "file": "references/sample_desk.yaml",
+    "title": "Sample Desk (HCP sampling with quarterly reconciliation)",
+    "summary": "Four roles including external HCP and field rep logins scoped to their own records, products with per-HCP quarterly limits, stock batches with release and expiry, territory allocations, a request lifecycle with rep endorsement and compliance exceptions, deliveries acknowledged by e-signature or OTP with a courier API, and a quarterly reconciliation with per-rep lines and three 360 pages.",
+    "tags": ["hcp sampling", "sample requests", "territory allocation", "delivery acknowledgement", "otp", "reconciliation", "ucpmp", "external users", "360 page"]
+  }
+]

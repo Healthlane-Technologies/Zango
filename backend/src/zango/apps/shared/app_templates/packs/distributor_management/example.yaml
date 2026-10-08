@@ -1,0 +1,913 @@
+# Distributor Hub — West: distributor management for 140 distributors across
+# West India. Distributors upload secondary sales and stock weekly (Excel or
+# their ERP's API), area sales managers approve scheme claims, and commercial
+# ops sees stock and near-expiry by region. A filled-in instance of the
+# Distributor Management template.
+spec_version: 1
+
+# -----------------------------------------------------------------------------
+#  APP
+# -----------------------------------------------------------------------------
+app:
+  code: distributor_hub_west
+  name: Distributor Hub — West
+  description: Onboard and KYC 140 West India distributors, collect their weekly secondary sales and stock, watch near-expiry by region, and settle scheme claims through SAP.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#0F766E", secondary: "#475569" }
+  custom_requirements:
+    - area: integration
+      title: SAP connector
+      text: >
+        Nightly at 01:00, pull the distributor master (sold-to codes), product master with PTR
+        and primary invoices from SAP. When a claim is approved, post a credit note request to
+        SAP with the claim_ref; when SAP returns the credit note number, run the claim's settle
+        transition.
+    - area: integration
+      title: Distributor ERP API
+      text: >
+        A token-authenticated REST endpoint per distributor accepts weekly secondary sales and
+        stock as JSON in the same shape as the Excel template; each call creates a sales_upload
+        with source = api.
+    - area: permission
+      title: Region and area scoping
+      text: Area Sales Managers see distributors (and their uploads, stock and claims) whose area_manager is them; Commercial Ops sees all regions.
+
+# -----------------------------------------------------------------------------
+#  CHOICE SETS
+# -----------------------------------------------------------------------------
+choice_sets:
+  region:
+    - { id: mumbai,     label: Mumbai }
+    - { id: pune,       label: Pune }
+    - { id: nashik,     label: Nashik }
+    - { id: nagpur,     label: Nagpur }
+    - { id: ahmedabad,  label: Ahmedabad }
+    - { id: surat,      label: Surat }
+    - { id: vadodara,   label: Vadodara }
+    - { id: goa,        label: Goa }
+  division:
+    - { id: acute,     label: Acute }
+    - { id: chronic,   label: Chronic }
+    - { id: specialty, label: Specialty }
+    - { id: otc,       label: OTC }
+  distributor_type:
+    - { id: super_stockist, label: Super Stockist }
+    - { id: distributor,    label: Distributor }
+    - { id: cnf,            label: C&F Agent }
+  submission_source:
+    - { id: excel, label: Excel upload,          color: blue }
+    - { id: api,   label: Distributor ERP (API), color: indigo }
+  expiry_bucket:
+    - { id: expired, label: Expired,      color: red }
+    - { id: lt_90,   label: "< 90 days",  color: amber }
+    - { id: d90_180, label: 90–180 days,  color: blue }
+    - { id: gt_180,  label: "> 180 days", color: green }
+  scheme_type:
+    - { id: volume_discount, label: Volume discount }
+    - { id: free_goods,      label: Free goods }
+    - { id: display,         label: Display incentive }
+    - { id: expiry_return,   label: Expiry return }
+  payment_terms:
+    - { id: advance, label: Advance }
+    - { id: net_15,  label: Net 15 }
+    - { id: net_30,  label: Net 30 }
+
+# -----------------------------------------------------------------------------
+#  ROLES
+# -----------------------------------------------------------------------------
+roles:
+  - name: Distributor
+    description: External login for one of the 140 distributors; uploads weekly secondary sales and stock, raises scheme claims and answers queries, and sees only its own records.
+    landing: sales_uploads
+    menu:
+      - { page: sales_uploads, label: My Sales Uploads, icon: upload }
+      - { page: invoices,      label: My Invoices,      icon: file-text }
+      - { page: stock,         label: My Stock,         icon: boxes }
+      - { page: claims,        label: My Claims,        icon: receipt }
+      - { page: schemes,       label: Live Schemes,     icon: badge-percent }
+
+  - name: Area Sales Manager
+    description: Owns the distributors of one area; onboards them, chases and reviews weekly uploads, and gives the first approval on claims.
+    landing: distributors
+    menu:
+      - { page: dashboard,     icon: layout-dashboard }
+      - { page: distributors,  label: My Distributors, icon: truck }
+      - { page: sales_uploads, icon: upload }
+      - { page: stock,         icon: boxes }
+      - { page: claims,        icon: receipt }
+      - { page: schemes,       icon: badge-percent }
+
+  - name: Commercial Ops
+    description: Central team; approves distributor KYC, runs schemes, validates and settles claims, and watches stock days and near-expiry across all West regions.
+    landing: stock
+    menu:
+      - { page: dashboard,     icon: layout-dashboard }
+      - { page: distributors,  icon: truck }
+      - group: Secondary Sales
+        icon: bar-chart-3
+        items:
+          - { page: sales_uploads }
+          - { page: invoices }
+      - { page: stock,         label: Stock & Expiry, icon: boxes }
+      - group: Schemes & Claims
+        icon: badge-percent
+        items:
+          - { page: schemes }
+          - { page: claims }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products }
+
+# -----------------------------------------------------------------------------
+#  PAGES
+# -----------------------------------------------------------------------------
+pages:
+  - { code: distributors,    type: crud,   entity: distributor,       route: /app/distributors,          title: Distributors }
+  - { code: distributor_360, type: detail, detail_view: distributor_360, route: /app/distributors/:id }
+  - { code: sales_uploads,   type: crud,   entity: sales_upload,      route: /app/secondary-sales,       title: Secondary Sales Uploads }
+  - { code: invoices,        type: crud,   entity: sales_invoice,     route: /app/secondary-sales/invoices, title: Secondary Invoices }
+  - { code: stock,           type: crud,   entity: stock_position,    route: /app/stock,                 title: Stock & Expiry }
+  - { code: schemes,         type: crud,   entity: scheme,            route: /app/schemes,               title: Schemes }
+  - { code: scheme_360,      type: detail, detail_view: scheme_360,   route: /app/schemes/:id }
+  - { code: claims,          type: crud,   entity: claim,             route: /app/claims,                title: Claims }
+  - { code: products,        type: crud,   entity: product,           route: /app/masters/products,      title: Products }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: West Region Dashboard
+    component: DistributorDashboard
+    roles: [Area Sales Manager, Commercial Ops]
+    text: >
+      KPI row: active distributors (of 140), secondary sales this month with % change on last
+      month, near-expiry stock value (< 90 days), open claims. Below, left: secondary sales by
+      region (stacked bar, last 6 months, Mumbai / Pune / Nashik / Nagpur / Ahmedabad / Surat /
+      Vadodara / Goa). Right: upload compliance — distributors with no accepted upload for last
+      week, grouped by area sales manager. Bottom: the 10 largest near-expiry batches with
+      distributor, product, batch, expiry and value, and a stock-days heatmap (region x division).
+      Area Sales Managers see only their own distributors.
+
+# -----------------------------------------------------------------------------
+#  MODULES
+# -----------------------------------------------------------------------------
+modules:
+
+  # ===========================================================================
+  - code: catalogue
+    name: Product Catalogue
+    description: Products sold through distributors; synced from SAP nightly.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:        { type: text, required: true, max_length: 150 }
+          - sku_code:    { type: text, label: SAP material code, required: true, unique: true }
+          - division:    { type: choice, choices: division, required: true }
+          - pack_size:   { type: text, placeholder: "10 x 10 tablets" }
+          - ptr:         { type: money, label: PTR, required: true, help: Price to retailer per pack. }
+          - pts:         { type: money, label: PTS, help: Price to stockist per pack. }
+          - shelf_life_months: { type: integer, label: Shelf life (months), min: 6, max: 60 }
+          - is_active:   { type: boolean, default: true }
+        access:
+          Commercial Ops:     { actions: [view, add, edit, export] }
+          Area Sales Manager: { actions: [view] }
+          Distributor:        { actions: [view] }
+        table:
+          columns:
+            - name:      { label: Product, searchable: true, sortable: true }
+            - sku_code:  { label: Material code, searchable: true }
+            - division:  { label: Division, filterable: true }
+            - pack_size: { label: Pack }
+            - ptr:       { label: PTR, format: money, sortable: true }
+            - pts:       { label: PTS, format: money }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+          quick_filters:
+            - { label: Active only, where: is_active is_true, default: true }
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, sku_code, division, pack_size, ptr, pts, shelf_life_months, is_active] }
+          edit:   { same_as: create }
+        custom_requirements:
+          - { area: integration, title: SAP product sync, text: "Products are created and updated by the nightly SAP sync; manual edits are allowed only for pack_size and is_active." }
+
+  # ===========================================================================
+  - code: distributors
+    name: Distributors
+    description: Distributor master, onboarding, KYC documents and contacts.
+    entities:
+      - code: distributor
+        name: Distributor
+        plural: Distributors
+        kind: hero
+        display: name
+        app_user: { role: Distributor, name: name, email: email, mobile: phone, create_on: status == active }
+        fields:
+          - distributor_code: { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "WD-{0000}" } }
+          - sap_code:         { type: text, label: SAP sold-to code, unique: true, pattern: "^[0-9]{8}$", pattern_msg: 8-digit SAP customer number. }
+          - name:             { type: text, required: true, max_length: 200, help: Legal name as on the drug licence. }
+          - distributor_type: { type: choice, label: Type, choices: distributor_type, required: true, default: distributor }
+          - region:           { type: choice, choices: region, required: true }
+          - pincode:          { type: text, required: true, pattern: "^[1-9][0-9]{5}$", pattern_msg: Enter a 6-digit PIN code. }
+          - address:          { type: long_text }
+          - gstin:            { type: text, label: GSTIN, required: true, unique: true, pattern: "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$", pattern_msg: Enter a valid 15-character GSTIN. }
+          - drug_license_no:  { type: text, label: Drug licence no., required: true, tooltip: Form 20B / 21B licence number. }
+          - dl_valid_until:   { type: date, label: Licence valid until, required: true }
+          - email:            { type: email, required: true }
+          - phone:            { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile without +91. }
+          - area_manager:     { type: link, to: app_user, label: Area Sales Manager, required: true }
+          - payment_terms:    { type: choice, choices: payment_terms, default: net_15 }
+          - credit_limit:     { type: money, min: 0 }
+          - retailers_served: { type: integer, label: Retailers served, min: 40, max: 900 }
+          - stock_days:       { type: integer, label: Stock days, readonly: true, min: 8, max: 45, computed: Latest stock value divided by average daily secondary sales of the last 30 days. }
+          - last_upload_on:   { type: date, label: Last upload, readonly: true, computed: Week-ending date of the latest accepted sales upload. }
+          - activated_on:     { type: date, readonly: true }
+        validation:
+          rules:
+            - { when: dl_valid_until is_set, require_expr: dl_valid_until > today, message: The drug licence has already expired. }
+            - text: The first two digits of the GSTIN must match the state of the region (27 Maharashtra, 24 Gujarat, 30 Goa).
+              message: GSTIN does not belong to the selected state.
+          duplicate_check:
+            scope: { where: "status != terminated" }
+            rules:
+              - { match: [gstin], compare: exact, on_match: block, message: A distributor with this GSTIN already exists. }
+              - { match: [drug_license_no], compare: normalised, on_match: block, message: This drug licence is already registered. }
+              - { match: [name, region], compare: fuzzy, threshold: 0.85, on_match: warn, message: A distributor with a similar name exists in this region. }
+        access:
+          Area Sales Manager: { actions: [view, add, edit, export, detail], rows: { text: Distributors whose area_manager is the current user. } }
+          Commercial Ops:     { actions: [view, edit, export, detail] }
+          Distributor:        { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: draft,      label: Draft,      color: gray, initial: true }
+            - { code: kyc_review, label: KYC Review, color: amber }
+            - { code: active,     label: Active,     color: green }
+            - { code: on_hold,    label: On Hold,    color: purple }
+            - { code: terminated, label: Terminated, color: red, final: true }
+          transitions:
+            - name: submit
+              label: Submit for KYC
+              from: draft
+              to: kyc_review
+              roles: [Area Sales Manager]
+              confirm: Send this distributor to Commercial Ops for KYC review?
+              condition:
+                all:
+                  - gstin is_set
+                  - text: Drug licence, GST certificate, PAN and the signed distribution agreement are uploaded.
+              condition_msg: Upload the drug licence, GST certificate, PAN and signed agreement first.
+              on_done: Notify Commercial Ops that a distributor is waiting for KYC review.
+            - name: approve
+              label: Approve & Activate
+              from: kyc_review
+              to: active
+              roles: [Commercial Ops]
+              primary: true
+              form:
+                - sap_code: { type: text, required: true, label: SAP sold-to code }
+              condition:
+                all:
+                  - dl_valid_until > today
+                  - text: Every KYC document is verified.
+              condition_msg: Verify every KYC document and check the licence is valid.
+              on_done: >
+                Save the SAP code, set activated_on = today, create the Distributor login and email
+                the welcome kit (portal link, weekly Excel template and API token request form).
+            - { name: send_back, label: Send Back, from: kyc_review, to: draft, roles: [Commercial Ops],
+                form: [ { send_back_reason: { type: long_text, required: true } } ],
+                on_done: Email the Area Sales Manager the reason. }
+            - { name: hold, label: Put on Hold, from: active, to: on_hold, roles: [Commercial Ops, Area Sales Manager],
+                form: [ { hold_reason: { type: long_text, required: true } } ],
+                on_done: Block new claims and uploads and disable the Distributor login until released. }
+            - { name: release, label: Release Hold, from: on_hold, to: active, roles: [Commercial Ops], on_done: Re-enable the Distributor login. }
+            - { name: terminate, label: Terminate, from: [active, on_hold], to: terminated, roles: [Commercial Ops], tone: danger,
+                confirm: "Terminate this distributor? Their login will be disabled and open claims rejected.",
+                form: [ { termination_reason: { type: long_text, required: true } } ] }
+            - { name: auto_hold, label: Licence Expired, from: active, to: on_hold, trigger: system,
+                text: Nightly when dl_valid_until < today; hold_reason = "Drug licence expired". }
+          tags:
+            - { code: key_account, label: Key Account, color: indigo, enable: { roles: [Commercial Ops] }, disable: { roles: [Commercial Ops] } }
+            - { code: upload_overdue, label: Upload Overdue, color: amber, system: true,
+                text: Set every Monday 10:00 when no sales upload was received for the week ending the previous Saturday; cleared on the next upload. }
+            - { code: dl_expiring, label: Licence Expiring, color: red, system: true, text: Set when dl_valid_until is within 30 days. }
+            - { code: high_stock, label: High Stock, color: pink, system: true, text: Set when stock_days > 35 after an accepted stock upload. }
+        form:
+          create:
+            roles: [Area Sales Manager]
+            title: Onboard Distributor
+            sections:
+              - { title: Business, fields: [name, distributor_type, gstin, drug_license_no, dl_valid_until] }
+              - { title: Location, fields: [region, address, pincode] }
+              - { title: Contact, fields: [email, phone, area_manager] }
+              - { title: Commercials, fields: [payment_terms, credit_limit, retailers_served] }
+            on_create: Write "Distributor onboarding started" to the activity log.
+            after_create: distributor_360
+          edit:
+            same_as: create
+            roles: [Area Sales Manager, Commercial Ops]
+            readonly_when:
+              - { when: "status in [active, on_hold]", fields: [name, gstin, drug_license_no] }
+            editable_in: [draft, kyc_review, active, on_hold]
+        table:
+          columns:
+            - distributor_code: { label: Code, searchable: true, sortable: true }
+            - name:             { label: Distributor, searchable: true, sortable: true, link_to: distributor_360 }
+            - distributor_type: { label: Type, filterable: true }
+            - region:           { label: Region, filterable: true, sortable: true }
+            - last_upload_on:   { label: Last upload, sortable: true, highlight: { when: has_tag upload_overdue, tone: amber } }
+            - stock_days:       { label: Stock days, sortable: true, highlight: { when: stock_days > 35, tone: red } }
+            - status:           { source: status, label: Status, filterable: true }
+            - tags:             { source: tags, label: Flags }
+          default_sort: name
+          page_size: 25
+          quick_filters:
+            - { label: Active, where: status == active, default: true }
+            - { label: Awaiting KYC, where: status == kyc_review, roles: [Commercial Ops] }
+            - { label: Upload overdue, where: has_tag upload_overdue }
+            - { label: Licence expiring, where: has_tag dl_expiring }
+          row_click: distributor_360
+          add_button: Onboard Distributor
+          row_actions:
+            - { key: edit, label: Edit, type: edit, roles: [Area Sales Manager, Commercial Ops] }
+            - { key: open_360, label: Open 360, type: navigate, to: distributor_360 }
+            - key: remind_upload
+              label: Send Upload Reminder
+              type: confirm
+              roles: [Area Sales Manager, Commercial Ops]
+              show_when: has_tag upload_overdue
+              confirm: Email and SMS this distributor a reminder to upload last week's sales?
+              on_done: Send the reminder with the Excel template and log it on the timeline.
+        custom_requirements:
+          - { area: scheduled, title: Upload compliance sweep, text: "Every Monday at 10:00, tag distributors with no upload for last week as upload_overdue and email each Area Sales Manager a list of theirs." }
+          - { area: notification, title: Licence expiry, text: "30 and 7 days before dl_valid_until, email the distributor and their Area Sales Manager to upload a renewed licence." }
+
+      - code: distributor_contact
+        name: Contact
+        plural: Contacts
+        kind: child
+        parent: { entity: distributor, field: distributor }
+        display: name
+        fields:
+          - distributor: { type: link, to: distributor, required: true, on_delete: cascade }
+          - name:        { type: text, required: true }
+          - designation: { type: text }
+          - email:       { type: email }
+          - phone:       { type: phone, pattern: "^[6-9][0-9]{9}$" }
+          - is_primary:  { type: boolean, default: false }
+        access:
+          Area Sales Manager: { actions: [view, add, edit] }
+          Commercial Ops:     { actions: [view] }
+          Distributor:        { actions: [view, add, edit], rows: { own: distributor } }
+        table:
+          columns:
+            - name:        { label: Name, searchable: true }
+            - designation: { label: Designation }
+            - email:       { label: Email }
+            - phone:       { label: Phone }
+            - is_primary:  { label: Primary }
+          default_sort: -is_primary
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, designation, email, phone, is_primary] }
+          edit:   { same_as: create }
+
+      - code: distributor_document
+        name: KYC Document
+        plural: KYC Documents
+        kind: child
+        parent: { entity: distributor, field: distributor }
+        display: doc_type
+        fields:
+          - distributor: { type: link, to: distributor, required: true, on_delete: cascade }
+          - doc_type:    { type: choice, required: true, choices: [ {id: drug_license, label: Drug Licence}, {id: gst_certificate, label: GST Certificate}, {id: pan_card, label: PAN Card}, {id: agreement, label: Distribution Agreement}, {id: cancelled_cheque, label: Cancelled Cheque} ] }
+          - file:        { type: file, required: true, accept: [pdf, jpg, png], max_size_mb: 10 }
+          - expiry_date: { type: date }
+        validation:
+          rules:
+            - { when: doc_type == drug_license, require: [expiry_date], message: Enter the licence expiry date. }
+        access:
+          Area Sales Manager: { actions: [view, add] }
+          Commercial Ops:     { actions: [view] }
+          Distributor:        { actions: [view, add], rows: { own: distributor } }
+        workflow:
+          statuses:
+            - { code: uploaded, label: Uploaded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: rejected, label: Rejected, color: red }
+          transitions:
+            - { name: verify, label: Verify, from: uploaded, to: verified, roles: [Commercial Ops],
+                on_done: "If this is a drug licence, copy expiry_date to the distributor's dl_valid_until." }
+            - { name: reject, label: Reject, from: uploaded, to: rejected, roles: [Commercial Ops],
+                form: [ { reject_reason: { type: text, required: true } } ],
+                on_done: Email the distributor and the Area Sales Manager the reason and a re-upload link. }
+        table:
+          columns:
+            - doc_type:    { label: Document, filterable: true }
+            - file:        { label: File }
+            - expiry_date: { label: Expires, sortable: true }
+            - status:      { source: status, label: Status }
+            - created_at:  { label: Uploaded, sortable: true }
+          default_sort: doc_type
+        form:
+          create: { fields: [doc_type, file, expiry_date] }
+
+  # ===========================================================================
+  - code: secondary_sales
+    name: Secondary Sales & Stock
+    description: Weekly secondary sales uploads, their invoice lines, and stock positions by batch.
+    entities:
+      - code: sales_upload
+        name: Sales Upload
+        plural: Sales Uploads
+        kind: transactional
+        display: upload_ref
+        fields:
+          - upload_ref:    { type: text, label: Upload, readonly: true, unique: true, auto: { sequence: "SSU-{YY}-{00000}" } }
+          - distributor:   { type: link, to: distributor, required: true, display: name, limit_choices: status == active }
+          - week_closing:  { type: date, label: Week ending, required: true, help: The Saturday the week ends on. }
+          - source:        { type: choice, choices: submission_source, required: true, default: excel }
+          - file:          { type: file, accept: [xlsx, csv], max_size_mb: 20, help: Use the weekly template; one row per invoice line plus a Stock sheet. }
+          - includes_stock: { type: boolean, label: Includes stock sheet, default: true }
+          - invoice_count: { type: integer, label: Invoices, readonly: true, min: 20, max: 400 }
+          - retailer_count: { type: integer, label: Retailers, readonly: true, min: 15, max: 300 }
+          - sales_value:   { type: money, label: Sales value, readonly: true, computed: Sum of sales_invoice.value }
+          - error_rows:    { type: integer, label: Rows with errors, readonly: true, min: 0, max: 12 }
+          - reviewed_by:   { type: link, to: app_user, readonly: true }
+        validation:
+          rules:
+            - { when: week_closing is_set, require_expr: week_closing <= today, message: The week has not ended yet. }
+          duplicate_check:
+            scope: { where: "status != rejected" }
+            rules:
+              - { match: [distributor, week_closing], compare: exact, on_match: block, message: Sales for this week are already uploaded; ask your ASM to reject the earlier upload to replace it. }
+        access:
+          Distributor:        { actions: [view, add], rows: { own: distributor } }
+          Area Sales Manager: { actions: [view, export], rows: { text: Uploads of distributors whose area_manager is the current user. } }
+          Commercial Ops:     { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: processing, label: Processing, color: blue, initial: true }
+            - { code: has_errors, label: Has Errors, color: amber }
+            - { code: in_review,  label: In Review,  color: indigo }
+            - { code: accepted,   label: Accepted,   color: green, final: true }
+            - { code: rejected,   label: Rejected,   color: red, final: true }
+          transitions:
+            - { name: flag_errors, label: Flag Errors, from: processing, to: has_errors, trigger: system,
+                text: "After parsing, when any row has an unknown material code, a missing batch or expiry, a negative quantity or a duplicate invoice number." }
+            - { name: parsed, label: Parsed, from: processing, to: in_review, trigger: system,
+                text: After parsing with no row errors; create one sales_invoice per invoice line and replace the distributor's stock positions with the Stock sheet. }
+            - { name: resubmit, label: Resubmit, from: has_errors, to: processing, roles: [Distributor], primary: true,
+                form: [ { corrected_file: { type: file, required: true, accept: [xlsx, csv] } } ],
+                on_done: Replace the file and parse it again. }
+            - name: accept
+              label: Accept
+              from: in_review
+              to: accepted
+              roles: [Area Sales Manager, Commercial Ops]
+              primary: true
+              condition: { text: "The sales value is within 3x of the distributor's 8-week average, or the reviewer confirms it." }
+              condition_msg: This week's value is unusually high; confirm with the distributor first.
+              on_done: Set reviewed_by, update the distributor's last_upload_on and stock_days, and clear the upload_overdue tag.
+            - { name: reject, label: Reject, from: [in_review, has_errors], to: rejected, roles: [Area Sales Manager, Commercial Ops], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ],
+                on_done: Email the distributor the reason and ask for a fresh upload. }
+            - { name: auto_accept, label: Auto-accept, from: in_review, to: accepted, trigger: system,
+                text: API uploads with no errors are accepted automatically after 48 hours if no one has reviewed them. }
+        table:
+          columns:
+            - upload_ref:     { label: Upload, searchable: true, sortable: true }
+            - distributor:    { label: Distributor, display: name, searchable: true, filterable: true, link_to: distributor_360 }
+            - region:         { source: computed, label: Region, path: distributor.region }
+            - week_closing:    { label: Week ending, sortable: true }
+            - source:         { label: Source, filterable: true }
+            - invoice_count:  { label: Invoices }
+            - sales_value:    { label: Sales value, format: money, sortable: true }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -week_closing
+          quick_filters:
+            - { label: To review, where: status == in_review, roles: [Area Sales Manager, Commercial Ops], default: true }
+            - { label: Has errors, where: status == has_errors }
+            - { label: Via API, where: source == api, roles: [Commercial Ops] }
+          footer_totals: [sales_value]
+          add_button: Upload Sales
+          row_actions:
+            - { key: error_report, label: Download Error Report, type: download, show_when: status == has_errors, text: An Excel of the rejected rows with the reason for each. }
+            - { key: template, label: Download Template, type: download, roles: [Distributor], text: The weekly Excel template with this distributor's code prefilled. }
+        form:
+          create:
+            roles: [Distributor]
+            title: Upload Secondary Sales
+            fields: [week_closing, source, file, includes_stock]
+            on_create: Link the upload to the logged-in distributor and start parsing in the background.
+
+      - code: sales_invoice
+        name: Secondary Invoice
+        plural: Secondary Invoices
+        kind: child
+        parent: { entity: sales_upload, field: sales_upload }
+        display: invoice_no
+        fields:
+          - sales_upload:  { type: link, to: sales_upload, required: true, display: upload_ref, on_delete: cascade }
+          - invoice_no:    { type: text, label: Invoice no., required: true }
+          - invoice_date:  { type: date, required: true }
+          - retailer_firm: { type: text, label: Retailer, required: true }
+          - product:       { type: link, to: product, required: true, display: name }
+          - batch_no:      { type: text, label: Batch, required: true }
+          - quantity:      { type: integer, label: Qty, required: true, min: 1, max: 240 }
+          - free_qty:      { type: integer, label: Free qty, min: 0, max: 24 }
+          - value:         { type: money, required: true, min: 0 }
+        access:
+          Distributor:        { actions: [view], rows: { own: sales_upload.distributor } }
+          Area Sales Manager: { actions: [view, export], rows: { text: Lines of distributors whose area_manager is the current user. } }
+          Commercial Ops:     { actions: [view, export] }
+        table:
+          columns:
+            - invoice_no:    { label: Invoice, searchable: true }
+            - invoice_date:  { label: Date, sortable: true }
+            - distributor:   { source: computed, label: Distributor, path: sales_upload.distributor.name, searchable: true }
+            - retailer_firm: { label: Retailer, searchable: true }
+            - product:       { label: Product, display: name, filterable: true }
+            - batch_no:      { label: Batch }
+            - quantity:      { label: Qty }
+            - free_qty:      { label: Free }
+            - value:         { label: Value, format: money, sortable: true }
+          default_sort: -invoice_date
+          footer_totals: [quantity, value]
+
+      - code: stock_position
+        name: Stock Position
+        plural: Stock Positions
+        kind: child
+        parent: { entity: distributor, field: distributor }
+        display: batch_no
+        fields:
+          - distributor:   { type: link, to: distributor, required: true, display: name }
+          - product:       { type: link, to: product, required: true, display: name }
+          - batch_no:      { type: text, label: Batch, required: true }
+          - expiry_date:   { type: date, required: true }
+          - quantity:      { type: integer, label: Qty (packs), required: true, min: 0, max: 2400 }
+          - stock_value:   { type: money, label: Value, readonly: true, computed: quantity x product PTS. }
+          - expiry_bucket: { type: choice, label: Expiry, choices: expiry_bucket, readonly: true, computed: From expiry_date against today. }
+          - as_of:         { type: date, label: As of, required: true }
+          - return_requested: { type: boolean, label: Return requested, default: false }
+        access:
+          Distributor:        { actions: [view], rows: { own: distributor } }
+          Area Sales Manager: { actions: [view, export], rows: { text: Stock of distributors whose area_manager is the current user. } }
+          Commercial Ops:     { actions: [view, export] }
+        table:
+          columns:
+            - distributor:   { label: Distributor, display: name, searchable: true, filterable: true, link_to: distributor_360 }
+            - region:        { source: computed, label: Region, path: distributor.region }
+            - product:       { label: Product, display: name, searchable: true, filterable: true }
+            - batch_no:      { label: Batch, searchable: true }
+            - expiry_bucket: { label: Expiry, filterable: true }
+            - quantity:      { label: Qty, sortable: true }
+            - stock_value:   { label: Value, format: money, sortable: true }
+            - as_of:         { label: As of, sortable: true }
+          default_sort: expiry_bucket
+          quick_filters:
+            - { label: Near expiry, where: "expiry_bucket in [expired, lt_90]", default: true, roles: [Commercial Ops, Area Sales Manager] }
+            - { label: Expired, where: expiry_bucket == expired }
+          footer_totals: [quantity, stock_value]
+          row_actions:
+            - key: request_return
+              label: Request Expiry Return
+              type: form
+              roles: [Distributor]
+              show_when: "expiry_bucket in [expired, lt_90]"
+              form:
+                - return_qty: { type: integer, required: true, min: 1 }
+                - remarks:    { type: long_text }
+              on_done: Set return_requested and raise a claim under the live expiry_return scheme for return_qty x PTS.
+        custom_requirements:
+          - { area: report, title: Near-expiry by region, text: "A pivot of stock_value by region and expiry bucket, downloadable as Excel, for Commercial Ops every Monday." }
+
+  # ===========================================================================
+  - code: schemes
+    name: Schemes & Claims
+    description: Trade schemes run by Commercial Ops and the claims distributors raise against them.
+    entities:
+      - code: scheme
+        name: Scheme
+        plural: Schemes
+        kind: hero
+        display: scheme_code
+        fields:
+          - scheme_code: { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "SCH-{YY}-{000}" } }
+          - title:       { type: text, label: Scheme name, required: true }
+          - scheme_type: { type: choice, label: Type, choices: scheme_type, required: true }
+          - product:     { type: link, to: product, display: name, limit_choices: is_active is_true }
+          - regions:     { type: multi_choice, choices: region, required: true }
+          - start_date:  { type: date, required: true }
+          - end_date:    { type: date, required: true }
+          - benefit_pct: { type: percent, label: Benefit }
+          - budget:      { type: money, required: true, min: 0 }
+          - utilised:    { type: money, readonly: true, computed: Sum of claim.approved_amount }
+          - circular:    { type: file, accept: [pdf] }
+        validation:
+          rules:
+            - { when: end_date is_set, require_expr: end_date > start_date, message: End date must be after the start date. }
+        access:
+          Commercial Ops:     { actions: [view, add, edit, export, detail] }
+          Area Sales Manager: { actions: [view, detail] }
+          Distributor:        { actions: [view, detail], rows: { where: status == live } }
+        workflow:
+          statuses:
+            - { code: draft,  label: Draft,  color: gray, initial: true }
+            - { code: live,   label: Live,   color: green }
+            - { code: paused, label: Paused, color: amber }
+            - { code: closed, label: Closed, color: blue, final: true }
+          transitions:
+            - { name: launch, label: Launch, from: draft, to: live, roles: [Commercial Ops], primary: true,
+                condition: circular is_set, condition_msg: "Attach the scheme circular first.",
+                on_done: Email the circular to every active distributor in the scheme's regions and their Area Sales Managers. }
+            - { name: pause, label: Pause, from: live, to: paused, roles: [Commercial Ops], form: [ { pause_reason: { type: text, required: true } } ] }
+            - { name: resume, label: Resume, from: paused, to: live, roles: [Commercial Ops] }
+            - { name: close, label: Close, from: [live, paused], to: closed, roles: [Commercial Ops], confirm: "Close the scheme? No new claims will be accepted." }
+            - { name: auto_close, label: Expire, from: live, to: closed, trigger: system, text: Nightly when end_date < today; claims stay open for 30 days after. }
+          tags:
+            - { code: budget_alert, label: Budget 90%, color: red, system: true, text: Set when utilised >= 90% of budget. }
+        form:
+          create: { roles: [Commercial Ops], fields: [title, scheme_type, product, regions, start_date, end_date, benefit_pct, budget, circular], after_create: scheme_360 }
+          edit:   { same_as: create, editable_in: [draft, paused] }
+        table:
+          columns:
+            - scheme_code: { label: Scheme, searchable: true, sortable: true, link_to: scheme_360 }
+            - scheme_type: { label: Type, filterable: true }
+            - product:     { label: Product, display: name }
+            - start_date:  { label: From, sortable: true }
+            - end_date:    { label: To, sortable: true }
+            - budget:      { label: Budget, format: money, roles: [Commercial Ops] }
+            - utilised:    { label: Utilised, format: money, roles: [Commercial Ops] }
+            - status:      { source: status, label: Status, filterable: true }
+            - tags:        { source: tags, label: Flags }
+          default_sort: -start_date
+          quick_filters:
+            - { label: Live, where: status == live, default: true }
+          row_click: scheme_360
+          add_button: New Scheme
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: "status in [draft, paused]" }
+            - { key: circular, label: Download Circular, type: download, text: The scheme circular PDF. }
+
+      - code: claim
+        name: Claim
+        plural: Claims
+        kind: transactional
+        display: claim_ref
+        fields:
+          - claim_ref:       { type: text, label: Claim, readonly: true, unique: true, auto: { sequence: "CLM-{YY}-{00000}" } }
+          - distributor:     { type: link, to: distributor, required: true, display: name, limit_choices: status == active }
+          - scheme:          { type: link, to: scheme, required: true, display: scheme_code, limit_choices: status == live }
+          - period_from:     { type: date, required: true }
+          - period_to:       { type: date, required: true }
+          - claimed_amount:  { type: money, label: Claimed, required: true, min: 0 }
+          - approved_amount: { type: money, label: Approved, readonly: true }
+          - supporting_file: { type: file, label: Supporting sheet, required: true, accept: [xlsx, pdf] }
+          - credit_note_no:  { type: text, label: Credit note, readonly: true }
+          - settled_on:      { type: date, readonly: true }
+        validation:
+          rules:
+            - { when: period_to is_set, require_expr: period_to >= period_from, message: The period end must be on or after its start. }
+            - text: claimed_amount must not exceed the scheme benefit on the distributor's accepted secondary sales of the scheme product in the period.
+              message: The claim is higher than the scheme allows for these sales.
+              on_fail: warn
+          duplicate_check:
+            scope: { where: "status != rejected" }
+            rules:
+              - { match: [distributor, scheme, period_from], compare: exact, on_match: block, message: A claim for this scheme and period already exists. }
+        access:
+          Distributor:        { actions: [view, add], rows: { own: distributor } }
+          Area Sales Manager: { actions: [view, export], rows: { text: Claims of distributors whose area_manager is the current user. } }
+          Commercial Ops:     { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: submitted,    label: Submitted,    color: blue, initial: true }
+            - { code: asm_approved, label: ASM Approved, color: indigo }
+            - { code: query,        label: Query Raised, color: amber }
+            - { code: approved,     label: Approved,     color: teal }
+            - { code: settled,      label: Settled,      color: green, final: true }
+            - { code: rejected,     label: Rejected,     color: red, final: true }
+          transitions:
+            - { name: asm_approve, label: Approve, from: submitted, to: asm_approved, roles: [Area Sales Manager], primary: true,
+                form: [ { asm_remarks: { type: long_text } } ],
+                on_done: Send the claim to Commercial Ops for validation. }
+            - { name: raise_query, label: Raise Query, from: [submitted, asm_approved], to: query, roles: [Area Sales Manager, Commercial Ops],
+                form: [ { query_text: { type: long_text, required: true } } ],
+                on_done: Email and SMS the distributor the query with a link to respond. }
+            - { name: respond, label: Respond, from: query, to: submitted, roles: [Distributor], primary: true,
+                form: [ { response: { type: long_text, required: true } }, { revised_file: { type: file, accept: [xlsx, pdf] } } ] }
+            - name: validate
+              label: Validate & Approve
+              from: asm_approved
+              to: approved
+              roles: [Commercial Ops]
+              primary: true
+              form:
+                - approved_amount: { type: money, required: true, min: 0 }
+                - validation_note: { type: long_text }
+              condition: { text: "The approved amount does not exceed the scheme's remaining budget, and the approver is not the ASM who approved it." }
+              condition_msg: The scheme budget is exhausted, or you already approved this claim as ASM.
+              on_done: Save approved_amount, add it to the scheme's utilised, and post a credit note request to SAP.
+            - { name: settle, label: Mark Settled, from: approved, to: settled, trigger: system,
+                text: When SAP returns the credit note; store credit_note_no and settled_on and email the distributor. }
+            - { name: reject, label: Reject, from: [submitted, asm_approved, query], to: rejected, roles: [Area Sales Manager, Commercial Ops], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ],
+                on_done: Email the distributor the reason. }
+          tags:
+            - { code: escalated, label: Escalated, color: red, system: true, text: Set when a claim sits in submitted or asm_approved for more than 10 days. }
+        table:
+          columns:
+            - claim_ref:       { label: Claim, searchable: true, sortable: true }
+            - distributor:     { label: Distributor, display: name, searchable: true, filterable: true, link_to: distributor_360 }
+            - scheme:          { label: Scheme, display: scheme_code, filterable: true, link_to: scheme_360 }
+            - period_to:       { label: Period end, sortable: true }
+            - claimed_amount:  { label: Claimed, format: money, sortable: true }
+            - approved_amount: { label: Approved, format: money }
+            - credit_note_no:  { label: Credit note }
+            - status:          { source: status, label: Status, filterable: true }
+            - tags:            { source: tags, label: Flags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Awaiting my approval, where: status == submitted, roles: [Area Sales Manager], default: true }
+            - { label: To validate, where: status == asm_approved, roles: [Commercial Ops], default: true }
+            - { label: Queries, where: status == query, roles: [Distributor], default: true }
+            - { label: Escalated, where: has_tag escalated, roles: [Commercial Ops] }
+          footer_totals: [claimed_amount, approved_amount]
+          add_button: Raise Claim
+          row_actions:
+            - { key: support, label: Download Supporting Sheet, type: download, text: The distributor's supporting sheet. }
+        form:
+          create:
+            roles: [Distributor]
+            title: Raise Claim
+            fields: [scheme, period_from, period_to, claimed_amount, supporting_file]
+            on_create: Link the claim to the logged-in distributor and notify their Area Sales Manager.
+
+# -----------------------------------------------------------------------------
+#  DETAIL VIEWS
+# -----------------------------------------------------------------------------
+detail_views:
+  - code: distributor_360
+    hero: distributor
+    title: "{name}"
+    back_to: distributors
+    layout: header_tabs_sidebar
+    roles: [Area Sales Manager, Commercial Ops, Distributor]
+    header:
+      avatar: { fallback_initials: name }
+      title: name
+      subtitle: ["{distributor_code}", "{distributor_type}", "{region}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: SAP code, field: sap_code, copyable: true }
+        - { label: Drug licence, field: drug_license_no, copyable: true }
+        - { label: Licence valid until, field: dl_valid_until }
+        - { label: Last upload, field: last_upload_on }
+        - { label: Stock days, field: stock_days }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: edit, label: Edit, type: edit, roles: [Area Sales Manager, Commercial Ops] }
+          - { key: remind_upload, row_action: remind_upload }
+      banners:
+        - { show_when: has_tag upload_overdue, tone: warning, text: No secondary sales upload was received for last week. }
+        - { show_when: has_tag dl_expiring, tone: danger, text: "The drug licence expires on {dl_valid_until}." }
+        - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}" }
+    stats:
+      - { label: Secondary sales, value: { sum: sales_upload.sales_value, via: distributor, where: status == accepted }, format: money, icon: trending-up, tone: teal, link_to_tab: sales }
+      - { label: Stock value, value: { sum: stock_position.stock_value, via: distributor }, format: money, icon: boxes, tone: blue, link_to_tab: stock }
+      - { label: Near-expiry value, value: { sum: stock_position.stock_value, via: distributor, where: "expiry_bucket in [expired, lt_90]" }, format: money, icon: hourglass, tone: amber, link_to_tab: stock }
+      - { label: Open claims, value: { count: claim, via: distributor, where: "status in [submitted, asm_approved, query, approved]" }, icon: receipt, tone: indigo, link_to_tab: claims }
+    sidebar:
+      - { type: fields, title: Business, fields: [distributor_type, gstin, drug_license_no, dl_valid_until, retailers_served] }
+      - { type: fields, title: Location, fields: [region, address, pincode] }
+      - { type: fields, title: Commercials, fields: [area_manager, payment_terms, credit_limit, activated_on], roles: [Area Sales Manager, Commercial Ops] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - title: Latest uploads
+            type: mini_table
+            entity: sales_upload
+            via: distributor
+            columns: [upload_ref, week_closing, sales_value, status]
+            limit: 5
+            sort: -week_closing
+            see_all_tab: sales
+          - title: Near-expiry batches
+            type: mini_table
+            entity: stock_position
+            via: distributor
+            where: "expiry_bucket in [expired, lt_90]"
+            columns: [product, batch_no, expiry_bucket, stock_value]
+            limit: 5
+            sort: expiry_bucket
+            see_all_tab: stock
+      - code: sales
+        label: Sales Uploads
+        type: related_table
+        entity: sales_upload
+        via: distributor
+        count_badge: { where: status == has_errors, tone: amber }
+        columns: [upload_ref, week_closing, source, invoice_count, sales_value, status]
+        add: { label: Upload Sales, prefill: { distributor: hero }, roles: [Distributor] }
+      - code: stock
+        label: Stock
+        type: related_table
+        entity: stock_position
+        via: distributor
+        columns: [product, batch_no, expiry_bucket, quantity, stock_value, as_of]
+        footer_totals: [stock_value]
+      - code: claims
+        label: Claims
+        type: related_table
+        entity: claim
+        via: distributor
+        count_badge: true
+        columns: [claim_ref, scheme, period_to, claimed_amount, approved_amount, status]
+        add: { label: Raise Claim, prefill: { distributor: hero }, roles: [Distributor] }
+      - code: contacts
+        label: Contacts
+        type: related_table
+        entity: distributor_contact
+        via: distributor
+        columns: inherit
+        add: { label: Add Contact, prefill: { distributor: hero } }
+      - code: documents
+        label: KYC Documents
+        type: related_table
+        entity: distributor_document
+        via: distributor
+        count_badge: { where: status == uploaded, tone: amber }
+        columns: [doc_type, file, expiry_date, status, created_at]
+        add: { label: Upload Document, prefill: { distributor: hero } }
+        empty_state: { title: No documents, text: "Upload the drug licence, GST certificate, PAN and signed agreement to submit for KYC.", cta: add }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: distributor, events: [created, updated, transition, tag] }
+          - { entity: distributor_document, via: distributor, events: [created, transition] }
+          - { entity: sales_upload, via: distributor, events: [created, transition] }
+          - { entity: claim, via: distributor, events: [created, transition] }
+    states:
+      not_found: { title: Distributor not found, back_to: distributors }
+
+  - code: scheme_360
+    hero: scheme
+    title: "{scheme_code}"
+    back_to: schemes
+    layout: header_tabs
+    roles: [Commercial Ops, Area Sales Manager, Distributor]
+    header:
+      title: scheme_code
+      subtitle: ["{scheme_type}", "{start_date} – {end_date}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Product, field: product }
+        - { label: Benefit, field: benefit_pct, format: percent }
+        - { label: Budget, field: budget, format: money, roles: [Commercial Ops] }
+      actions:
+        transitions: true
+        buttons:
+          - { key: raise_claim, label: Raise Claim, icon: plus, type: create_related, entity: claim, prefill: { scheme: hero }, roles: [Distributor], show_when: status == live }
+      banners:
+        - { show_when: has_tag budget_alert, tone: danger, text: 90% of this scheme's budget is used. }
+    stats:
+      - { label: Claims, value: { count: claim, via: scheme }, tone: blue, link_to_tab: claims }
+      - { label: Claimed, value: { sum: claim.claimed_amount, via: scheme }, format: money, tone: indigo }
+      - { label: Approved, value: { sum: claim.approved_amount, via: scheme, where: "status in [approved, settled]" }, format: money, tone: teal, roles: [Commercial Ops] }
+      - { label: Budget left, value: { text: budget minus utilised }, format: money, tone: amber, roles: [Commercial Ops] }
+    tabs:
+      - code: claims
+        label: Claims
+        type: related_table
+        entity: claim
+        via: scheme
+        count_badge: true
+        columns: [claim_ref, distributor, period_to, claimed_amount, approved_amount, status]
+      - code: details
+        label: Details
+        type: fields
+        sections:
+          - { title: Scheme, columns: 2, fields: [scheme_type, product, regions, start_date, end_date, benefit_pct] }
+          - { title: Budget, columns: 2, fields: [budget, utilised, circular], roles: [Commercial Ops] }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: scheme, events: [created, updated, transition, tag] }
+          - { entity: claim, via: scheme, events: [created, transition] }
+    states:
+      not_found: { title: Scheme not found, back_to: schemes }

@@ -1,0 +1,74 @@
+{
+  "slug": "cell-therapy",
+  "name": "Cell Therapy Orchestration",
+  "version": "1.0.0",
+  "category": "Advanced Therapies",
+  "icon": "dna",
+  "is_beta": false,
+  "aka": [
+    "CAR-T scheduling",
+    "cell and gene therapy orchestration",
+    "chain of identity",
+    "chain of custody",
+    "vein-to-vein tracking"
+  ],
+  "one_liner": "Chain of identity and custody from apheresis slot booking to infusion, across treatment sites, manufacturing and couriers.",
+  "fits_when": [
+    "an autologous cell or gene therapy is made per patient and must carry one chain-of-identity ID end to end",
+    "treatment sites request apheresis slots against limited manufacturing capacity",
+    "manufacturing batches move through production, QC and release before shipping back to the site",
+    "couriers must log every pickup, handover and receipt as a custody event",
+    "the treatment site confirms receipt and infusion with a COI check at the bedside",
+    "different parties (sites, apheresis units, couriers) may only see their own patients and shipments"
+  ],
+  "gives_you": [
+    "Patient record keyed by a chain-of-identity (COI) ID, with a COI 360 page and printable label",
+    "Slot requests with capacity-checked confirmation, waitlisting and cancellation",
+    "Batch lifecycle from awaiting material to QC and release, with certificate of analysis",
+    "Inbound and outbound shipments with courier pickup, transit, delivery and receipt",
+    "A custody log of every handoff with COI verification and temperature status",
+    "Row-level access so sites, apheresis centres and couriers see only their own records"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "Vein-to-vein orchestration for autologous cell therapies. Treatment sites enrol patients under a chain-of-identity ID and request apheresis slots, the manufacturing scheduler confirms capacity and runs each batch to release, couriers log every custody handoff, and the site confirms receipt and infusion. Every record and screen carries the COI ID.",
+    "packages": [
+      { "name": "workflow", "description": "Patient, slot, batch and shipment lifecycles with role-gated steps" },
+      { "name": "scheduling", "description": "Apheresis slots against weekly manufacturing capacity" },
+      { "name": "communication", "description": "Emails and alerts at every handoff and exception" },
+      { "name": "forms", "description": "Enrolment, slot request, release and custody forms" },
+      { "name": "documents", "description": "COI labels and certificates of analysis" },
+      { "name": "reports", "description": "Capacity, turnaround and on-time infusion" }
+    ],
+    "roles": [
+      { "name": "Site coordinator", "description": "Enrols patients, requests slots, receives the product and confirms infusion for their own site" },
+      { "name": "Apheresis center", "description": "Sees its schedule, confirms collection against the COI and hands material to the courier" },
+      { "name": "Manufacturing scheduler", "description": "Allocates capacity, confirms slots, runs batches through QC and release, and books shipments" },
+      { "name": "Courier", "description": "Sees only its own shipments and logs pickup, transit, delivery and every custody event" }
+    ],
+    "workflows": [
+      { "name": "Slot booking", "description": "Request, capacity check, confirm or waitlist, and cancel with capacity release" },
+      { "name": "Chain-of-identity labels", "description": "A COI ID generated at enrolment and verified on every bag, shipper and handoff" },
+      { "name": "Custody handoffs", "description": "Courier pickup, transit, delivery and receipt, each logged as a custody event" },
+      { "name": "Infusion confirmation", "description": "Bedside COI scan and infusion date close the chain" }
+    ],
+    "data_objects": ["Patient", "Treatment site", "Slot", "Batch", "Shipment", "Custody event"],
+    "integrations": ["Courier tracking API"],
+    "compliance": [
+      "Chain of identity: one COI ID on every record, label and handoff, verified at collection, receipt and infusion",
+      "Chain of custody: every handover logged with who, where, when and temperature status",
+      "Patient name stays at the treatment site; other parties see only COI and initials",
+      "Role-scoped access for sites, apheresis centres and couriers",
+      "Audit trail of every transition, aligned to GxP and 21 CFR Part 11 expectations"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "CAR-T Scheduling — East",
+    "app_prompt_prefill": "CAR-T scheduling for 12 authorised treatment centres. Coordinators request apheresis slots, manufacturing confirms capacity, couriers log every custody handoff, and the site confirms infusion. Every step carries the chain-of-identity ID."
+  },
+  "changelog": "First version: COI-keyed patient journey, slot booking, batches, shipments and custody log on the Zango app spec v1."
+}

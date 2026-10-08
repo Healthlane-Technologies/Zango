@@ -1,0 +1,72 @@
+{
+  "slug": "speaker-programs",
+  "name": "Speaker Programs",
+  "version": "1.0.0",
+  "category": "Commercial Operations",
+  "icon": "mic",
+  "is_beta": false,
+  "aka": [
+    "HCP speaker bureau",
+    "speaker engagement",
+    "HCP contracting",
+    "speaker meetings",
+    "fee-for-service HCP engagements"
+  ],
+  "one_liner": "HCP speaker contracting, fair-market-value checks, event logistics and spend transparency.",
+  "fits_when": [
+    "brand teams engage HCPs as paid speakers at meetings or webinars",
+    "compliance must check fair market value and annual caps before an HCP is contracted",
+    "speaker contracts go out for e-signature and must be signed before an event is approved",
+    "events, attendees and every rupee spent on them must be logged with evidence",
+    "transfers of value have to be reported per HCP for disclosure or UCPMP / EFPIA rules"
+  ],
+  "gives_you": [
+    "Speaker nomination with duplicate checks and an FMV review by compliance",
+    "Rate and annual cap set at approval, with a near-cap flag on every speaker",
+    "Contracts sent for e-signature and signed by the speaker in their own login",
+    "Event lifecycle from planning through approval, completion and spend reconciliation",
+    "Attendee log and spend lines per event, verified against invoices",
+    "Speaker 360 page with contracts, events, spend and an activity timeline"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "A speaker program app for HCP engagements: brand managers nominate speakers, compliance sets fair market value and caps, contracts go out for e-signature, event ops runs events and logs attendees and spend, and every transfer of value is reported per HCP. The spec is previewed live as a clickable app with demo data while the requirement is shaped.",
+    "packages": [
+      { "name": "workflow", "description": "Nomination, contract, event and spend lifecycles with role-gated transitions" },
+      { "name": "crm", "description": "Speaker master with HCP tier, speciality and a 360 page" },
+      { "name": "forms", "description": "Nomination, contract, event and spend forms with validation" },
+      { "name": "documents", "description": "Speaker CVs, registration certificates, signed contracts and invoices" },
+      { "name": "reports", "description": "Spend by HCP and the transfer-of-value disclosure" }
+    ],
+    "roles": [
+      { "name": "Brand manager", "description": "Nominates speakers and plans events within the brand budget" },
+      { "name": "Event ops", "description": "Runs event logistics, logs attendees and records spend lines" },
+      { "name": "Compliance reviewer", "description": "Checks FMV and caps, approves speakers and events, sends contracts and reconciles spend" },
+      { "name": "Speaker", "description": "External HCP login that signs contracts and sees only their own events and payments" }
+    ],
+    "workflows": [
+      { "name": "Speaker nomination", "description": "Nominate, submit for review, approve or reject, with duplicate checks" },
+      { "name": "FMV check & contract", "description": "Rate and cap from the FMV method, contract sent for e-signature and signed by the speaker" },
+      { "name": "Event logistics", "description": "Plan, approve against a signed contract, run, log attendees and complete" },
+      { "name": "Spend reporting", "description": "Spend lines verified against invoices, reconciled per event and reported per HCP" }
+    ],
+    "data_objects": ["Speaker", "Event", "Contract", "Attendee", "Spend line", "Speciality"],
+    "integrations": ["e-signature"],
+    "compliance": [
+      "FMV rate and annual cap approved before an HCP is contracted",
+      "No event approved without a signed contract with events remaining",
+      "Spend transparency: every transfer of value tied to a recipient HCP and an invoice",
+      "UCPMP / EFPIA disclosure reporting per HCP",
+      "Audit trail of every approval, signature and spend change"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Speaker Programs",
+    "app_prompt_prefill": "Speaker program app: brand nominates speakers, compliance checks fair market value and caps, contracts go out for e-signature, events and attendees are logged, and spend is reported per HCP."
+  },
+  "changelog": "First version: speaker nomination with FMV review, e-signature contracts, events with attendees and spend lines, and per-HCP spend reporting on the Zango app spec v1."
+}

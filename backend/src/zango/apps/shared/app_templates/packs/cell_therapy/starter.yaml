@@ -1,0 +1,555 @@
+# Cell Therapy Orchestration: the template's starting point. Chain of identity
+# and custody from apheresis slot booking to infusion, across treatment sites,
+# manufacturing and couriers. The analyst tailors every part of it to your
+# requirement; the preview redraws with each change.
+spec_version: 1
+
+app:
+  code: cell_therapy_orchestration
+  name: Cell Therapy Orchestration
+  description: Book apheresis and manufacturing slots, track every batch and custody handoff under one chain-of-identity ID, and confirm infusion at the treatment site.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#7C3AED", secondary: "#64748B" }
+  custom_requirements:
+    - area: permission
+      title: Chain-of-identity on every record
+      text: Every patient-linked record and screen shows the COI ID; patient name never leaves the treatment site, so other roles see only the COI and initials.
+
+choice_sets:
+  indication:
+    - { id: dlbcl, label: DLBCL }
+    - { id: b_all, label: B-ALL }
+    - { id: mm,    label: Multiple Myeloma }
+    - { id: mcl,   label: Mantle Cell Lymphoma }
+    - { id: fl,    label: Follicular Lymphoma }
+  therapy_product:
+    - { id: anti_cd19, label: Anti-CD19 CAR-T }
+    - { id: anti_bcma, label: Anti-BCMA CAR-T }
+  shipment_leg:
+    - { id: inbound,  label: Apheresis to manufacturing, color: blue }
+    - { id: outbound, label: Manufacturing to site,      color: purple }
+  custody_event_type:
+    - { id: handover,     label: Handover,       color: blue }
+    - { id: receipt,      label: Receipt,        color: green }
+    - { id: scan,         label: Checkpoint scan, color: gray }
+    - { id: storage,      label: Into storage,   color: indigo }
+    - { id: excursion,    label: Temperature excursion, color: red }
+  temperature_status:
+    - { id: in_range,  label: In range,  color: green }
+    - { id: excursion, label: Excursion, color: red }
+
+roles:
+  - name: Site Coordinator
+    description: Treatment-site coordinator who enrols patients, requests slots, receives the product and confirms infusion.
+    landing: patients
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: patients,  label: My Patients, icon: users }
+      - { page: slots,     label: Slot Requests, icon: calendar-clock }
+      - { page: shipments, icon: truck }
+  - name: Apheresis Center
+    description: Collects the starting material on the confirmed slot and hands it to the courier.
+    landing: slots
+    menu:
+      - { page: slots,     label: Apheresis Schedule, icon: calendar-clock }
+      - { page: patients,  icon: users }
+      - { page: shipments, icon: truck }
+  - name: Manufacturing Scheduler
+    description: Allocates manufacturing capacity, confirms slots and moves batches through manufacturing and release.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: slots,     label: Slot Requests, icon: calendar-clock }
+      - { page: batches,   icon: flask-conical }
+      - { page: patients,  icon: users }
+      - { page: shipments, icon: truck }
+      - { page: custody_events, icon: link }
+      - group: Network
+        icon: network
+        items:
+          - { page: treatment_sites }
+          - { page: apheresis_centres }
+          - { page: manufacturing_sites }
+          - { page: couriers }
+  - name: Courier
+    description: Courier partner that picks up, transports and hands over the product, logging every custody event.
+    landing: shipments
+    menu:
+      - { page: shipments,      label: My Shipments, icon: truck }
+      - { page: custody_events, label: Custody Log,  icon: link }
+
+pages:
+  - { code: dashboard,           type: custom, route: /app/dashboard, title: Orchestration Dashboard, component: OrchestrationDashboard,
+      roles: [Site Coordinator, Manufacturing Scheduler],
+      text: "KPI row: slots booked this month, batches in manufacturing, shipments in transit, on-time infusion rate. Below: a 4-week capacity strip per manufacturing site (booked vs available slots) and a table of patients by stage with days in stage, oldest first. Site Coordinators see only their own site's numbers." }
+  - { code: patients,            type: crud,   entity: patient,            route: /app/patients,            title: Patients }
+  - { code: patient_360,         type: detail, detail_view: patient_360,   route: /app/patients/:id }
+  - { code: slots,               type: crud,   entity: slot,               route: /app/slots,               title: Slots }
+  - { code: batches,             type: crud,   entity: batch,              route: /app/batches,             title: Batches }
+  - { code: shipments,           type: crud,   entity: shipment,           route: /app/shipments,           title: Shipments }
+  - { code: custody_events,      type: crud,   entity: custody_event,      route: /app/custody-events,      title: Custody Events }
+  - { code: treatment_sites,     type: crud,   entity: treatment_site,     route: /app/network/treatment-sites,     title: Treatment Sites }
+  - { code: apheresis_centres,   type: crud,   entity: apheresis_centre,   route: /app/network/apheresis-centres,   title: Apheresis Centres }
+  - { code: manufacturing_sites, type: crud,   entity: manufacturing_site, route: /app/network/manufacturing-sites, title: Manufacturing Sites }
+  - { code: couriers,            type: crud,   entity: courier,            route: /app/network/couriers,            title: Couriers }
+
+modules:
+  - code: network
+    name: Network
+    description: Treatment sites, apheresis centres, manufacturing sites and couriers.
+    entities:
+      - code: treatment_site
+        name: Treatment Site
+        kind: master
+        display: centre_name
+        app_user: { role: Site Coordinator, name: coordinator_name, email: coordinator_email, create_on: is_active is_true }
+        fields:
+          - centre_name:       { type: text, label: Centre, required: true, unique: true }
+          - city:              { type: text, required: true }
+          - coordinator_name:  { type: text, required: true }
+          - coordinator_email: { type: email, required: true }
+          - is_active:         { type: boolean, label: Authorised, default: true }
+        access:
+          Manufacturing Scheduler: { actions: [view, add, edit, export] }
+          Site Coordinator:        { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - centre_name:      { label: Centre, searchable: true, sortable: true }
+            - city:             { label: City, filterable: true }
+            - coordinator_name: { label: Coordinator }
+            - is_active:        { label: Authorised, filterable: true }
+          default_sort: centre_name
+        form:
+          create: { fields: [centre_name, city, coordinator_name, coordinator_email, is_active] }
+          edit:   { same_as: create }
+
+      - code: apheresis_centre
+        name: Apheresis Centre
+        kind: master
+        display: centre_name
+        app_user: { role: Apheresis Center, name: centre_name, email: contact_email }
+        fields:
+          - centre_name:    { type: text, label: Centre, required: true, unique: true }
+          - treatment_site: { type: link, to: treatment_site, display: centre_name, help: The treatment site this unit serves. }
+          - city:           { type: text }
+          - contact_email:  { type: email, required: true }
+        access:
+          Manufacturing Scheduler: { actions: [view, add, edit] }
+          Apheresis Center:        { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - centre_name:    { label: Centre, searchable: true }
+            - treatment_site: { label: Treatment site, display: centre_name, filterable: true }
+            - city:           { label: City }
+          default_sort: centre_name
+        form:
+          create: { fields: [centre_name, treatment_site, city, contact_email] }
+          edit:   { same_as: create }
+
+      - code: manufacturing_site
+        name: Manufacturing Site
+        kind: master
+        display: name
+        fields:
+          - name:            { type: text, required: true, unique: true }
+          - weekly_capacity: { type: integer, label: Slots per week, min: 1, max: 20, required: true }
+        access:
+          Manufacturing Scheduler: { actions: [view, add, edit] }
+        table:
+          columns:
+            - name:            { label: Site, searchable: true }
+            - weekly_capacity: { label: Slots per week }
+        form:
+          create: { fields: [name, weekly_capacity] }
+          edit:   { same_as: create }
+
+      - code: courier
+        name: Courier
+        kind: master
+        display: legal_name
+        app_user: { role: Courier, name: legal_name, email: ops_email }
+        fields:
+          - legal_name: { type: text, label: Courier, required: true, unique: true }
+          - ops_email:  { type: email, label: Operations email, required: true }
+          - ops_phone:  { type: phone }
+        access:
+          Manufacturing Scheduler: { actions: [view, add, edit] }
+          Courier:                 { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - legal_name: { label: Courier, searchable: true }
+            - ops_email:  { label: Operations email }
+            - ops_phone:  { label: Phone }
+        form:
+          create: { fields: [legal_name, ops_email, ops_phone] }
+          edit:   { same_as: create }
+
+  - code: therapy
+    name: Therapy Journey
+    description: The patient's chain of identity, slot booking and manufacturing.
+    entities:
+      - code: patient
+        name: Patient
+        kind: hero
+        display: coi_id
+        description: One patient's therapy order, identified everywhere by its chain-of-identity (COI) ID.
+        fields:
+          - coi_id:           { type: text, label: COI ID, readonly: true, unique: true, auto: { sequence: "COI-{YY}{0000}" } }
+          - patient_initials: { type: text, label: Initials, required: true, pattern: "^[A-Z]{2,3}$", pattern_msg: 2-3 capital letters. }
+          - year_of_birth:    { type: integer, min: 1940, max: 2015, required: true }
+          - treatment_site:   { type: link, to: treatment_site, display: centre_name, required: true, limit_choices: is_active is_true }
+          - treating_physician: { type: text, required: true }
+          - indication:       { type: choice, choices: indication, required: true }
+          - therapy_product:  { type: choice, label: Product, choices: therapy_product, required: true }
+          - apheresis_centre: { type: link, to: apheresis_centre, display: centre_name, limit_choices: treatment_site == form.treatment_site }
+          - expected_infusion_date: { type: date, label: Target infusion }
+          - infusion_date:    { type: date, readonly: true }
+          - hold_reason:      { type: long_text, readonly: true }
+        access:
+          Site Coordinator:        { actions: [view, add, edit, detail], rows: { own: treatment_site } }
+          Apheresis Center:        { actions: [view, detail], rows: { own: apheresis_centre } }
+          Manufacturing Scheduler: { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: enrolled,             label: Enrolled,            color: gray, initial: true }
+            - { code: apheresis_scheduled,  label: Apheresis Scheduled, color: blue }
+            - { code: apheresis_collected,  label: Apheresis Collected, color: teal }
+            - { code: in_manufacturing,     label: In Manufacturing,    color: indigo }
+            - { code: ready_to_infuse,      label: Ready to Infuse,     color: purple }
+            - { code: infused,              label: Infused,             color: green }
+            - { code: on_hold,              label: On Hold,             color: amber }
+            - { code: withdrawn,            label: Withdrawn,           color: red, final: true }
+          transitions:
+            - { name: schedule_apheresis, label: Apheresis Scheduled, from: enrolled, to: apheresis_scheduled, trigger: system,
+                text: When the patient's slot is confirmed by manufacturing. }
+            - name: collect
+              label: Confirm Collection
+              from: apheresis_scheduled
+              to: apheresis_collected
+              roles: [Apheresis Center]
+              primary: true
+              form:
+                - collection_date: { type: date, required: true }
+                - coi_verified:    { type: boolean, label: COI label checked against patient wristband, required: true }
+              condition: { text: The COI label on the collection bag matches the patient's COI ID. }
+              condition_msg: Check the COI label against the patient before confirming.
+              on_done: Create the inbound shipment for the collected material and email the courier and the Manufacturing Scheduler.
+            - { name: start_manufacturing, label: Manufacturing Started, from: apheresis_collected, to: in_manufacturing, trigger: system,
+                text: When the batch for this patient moves to In Manufacturing. }
+            - { name: product_received, label: Product Received, from: in_manufacturing, to: ready_to_infuse, trigger: system,
+                text: When the outbound shipment is received at the treatment site. }
+            - name: infuse
+              label: Confirm Infusion
+              from: ready_to_infuse
+              to: infused
+              roles: [Site Coordinator]
+              primary: true
+              confirm: Confirm this patient has been infused?
+              form:
+                - infusion_date: { type: date, required: true }
+                - coi_scanned:   { type: boolean, label: Bag COI scanned at bedside and matched, required: true }
+              condition: { text: The released batch's COI equals the patient's COI and the bag has not passed its expiry. }
+              condition_msg: The product's COI must match this patient before infusion.
+              on_done: Set infusion_date from the form, close the chain of custody and notify the Manufacturing Scheduler.
+            - { name: hold, label: Put on Hold, from: [enrolled, apheresis_scheduled, ready_to_infuse], to: on_hold, roles: [Site Coordinator],
+                form: [ { hold_reason: { type: long_text, required: true } } ],
+                on_done: Save hold_reason on the patient and email the Manufacturing Scheduler so the slot can be re-planned. }
+            - { name: resume, label: Resume, from: on_hold, to: enrolled, roles: [Site Coordinator] }
+            - { name: withdraw, label: Withdraw, from: [enrolled, apheresis_scheduled, on_hold], to: withdrawn, roles: [Site Coordinator], tone: danger,
+                form: [ { withdrawal_reason: { type: long_text, required: true } } ],
+                on_done: Cancel any open slot request and release the manufacturing capacity. }
+        form:
+          create:
+            roles: [Site Coordinator]
+            title: Enrol Patient
+            sections:
+              - { title: Patient, fields: [patient_initials, year_of_birth, indication, therapy_product] }
+              - { title: Care team, fields: [treatment_site, treating_physician, apheresis_centre, expected_infusion_date] }
+            on_create: Generate the COI ID and show it with a printable COI label.
+            after_create: patient_360
+          edit:
+            same_as: create
+            roles: [Site Coordinator]
+            editable_in: [enrolled, on_hold]
+        table:
+          columns:
+            - coi_id:           { label: COI, searchable: true, sortable: true, link_to: patient_360 }
+            - patient_initials: { label: Initials }
+            - treatment_site:   { label: Site, display: centre_name, filterable: true }
+            - therapy_product:  { label: Product, filterable: true }
+            - status:           { source: status, label: Stage, filterable: true }
+            - expected_infusion_date: { label: Target infusion, sortable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: In manufacturing, where: status == in_manufacturing }
+            - { label: Ready to infuse, where: status == ready_to_infuse, roles: [Site Coordinator] }
+          row_click: patient_360
+          add_button: Enrol Patient
+          row_actions:
+            - { key: open_360, label: Open COI 360, type: navigate, to: patient_360 }
+            - { key: coi_label, label: Print COI Label, type: download, roles: [Site Coordinator, Apheresis Center],
+                text: "A 2x1 inch label with the COI ID, initials, year of birth and a DataMatrix barcode." }
+
+      - code: slot
+        name: Slot
+        kind: transactional
+        display: slot_ref
+        description: An apheresis date and the manufacturing capacity reserved for it.
+        fields:
+          - slot_ref:           { type: text, label: Slot, readonly: true, unique: true, auto: { sequence: "SLT-{00000}" } }
+          - patient:            { type: link, to: patient, display: coi_id, required: true }
+          - apheresis_centre:   { type: link, to: apheresis_centre, display: centre_name, required: true }
+          - preferred_date:     { type: date, label: Preferred apheresis date, required: true }
+          - manufacturing_site: { type: link, to: manufacturing_site, display: name }
+          - apheresis_date:     { type: date, label: Confirmed apheresis date, readonly: true }
+          - expected_release:   { type: date, label: Expected release, readonly: true }
+        validation:
+          rules:
+            - text: A slot can be requested only for an enrolled patient with no other open slot request.
+              message: This patient already has an open slot or is past enrolment.
+        access:
+          Site Coordinator:        { actions: [view, add], rows: { own: patient.treatment_site } }
+          Apheresis Center:        { actions: [view], rows: { own: apheresis_centre } }
+          Manufacturing Scheduler: { actions: [view, edit, export] }
+        workflow:
+          statuses:
+            - { code: requested,  label: Requested,  color: amber, initial: true }
+            - { code: confirmed,  label: Confirmed,  color: green }
+            - { code: waitlisted, label: Waitlisted, color: purple }
+            - { code: used,       label: Used,       color: blue, final: true }
+            - { code: cancelled,  label: Cancelled,  color: red, final: true }
+          transitions:
+            - name: confirm
+              label: Confirm Slot
+              from: [requested, waitlisted]
+              to: confirmed
+              roles: [Manufacturing Scheduler]
+              primary: true
+              form:
+                - manufacturing_site: { type: link, to: manufacturing_site, required: true }
+                - apheresis_date:     { type: date, required: true }
+                - expected_release:   { type: date, required: true }
+              condition: { text: The manufacturing site has free capacity in the week of the apheresis date. }
+              condition_msg: That week is full at this site; waitlist the request or pick another week.
+              on_done: Save the dates, move the patient to Apheresis Scheduled, and email the site coordinator and apheresis centre.
+            - { name: waitlist, label: Waitlist, from: requested, to: waitlisted, roles: [Manufacturing Scheduler],
+                form: [ { waitlist_note: { type: text } } ], on_done: Tell the site coordinator the earliest week likely to free up. }
+            - { name: cancel, label: Cancel, from: [requested, waitlisted, confirmed], to: cancelled, roles: [Site Coordinator, Manufacturing Scheduler], tone: danger,
+                form: [ { cancel_reason: { type: long_text, required: true } } ], on_done: Release the reserved manufacturing capacity. }
+            - { name: mark_used, label: Mark Used, from: confirmed, to: used, trigger: system, text: When the apheresis centre confirms collection for the patient. }
+        form:
+          create:
+            roles: [Site Coordinator]
+            title: Request Slot
+            fields: [patient, apheresis_centre, preferred_date]
+        table:
+          columns:
+            - slot_ref:           { label: Slot, searchable: true }
+            - patient:            { label: COI, display: coi_id, link_to: patient_360 }
+            - apheresis_centre:   { label: Apheresis centre, display: centre_name, filterable: true }
+            - preferred_date:     { label: Preferred, sortable: true }
+            - apheresis_date:     { label: Confirmed, sortable: true }
+            - manufacturing_site: { label: Manufacturing, display: name, filterable: true }
+            - status:             { source: status, label: Status, filterable: true }
+          default_sort: preferred_date
+          quick_filters:
+            - { label: Awaiting decision, where: "status in [requested, waitlisted]", roles: [Manufacturing Scheduler], default: true }
+          add_button: Request Slot
+
+      - code: batch
+        name: Batch
+        plural: Batches
+        kind: transactional
+        display: batch_no
+        fields:
+          - batch_no:           { type: text, label: Batch, readonly: true, unique: true, auto: { sequence: "B{YY}-{0000}" } }
+          - patient:            { type: link, to: patient, display: coi_id, required: true }
+          - manufacturing_site: { type: link, to: manufacturing_site, display: name, required: true }
+          - material_received_on: { type: date }
+          - expected_release:   { type: date }
+          - dose_million_cells: { type: decimal, label: Dose (million CAR+ cells) }
+        access:
+          Site Coordinator:        { actions: [view], rows: { own: patient.treatment_site } }
+          Manufacturing Scheduler: { actions: [view, add, edit, export] }
+        workflow:
+          statuses:
+            - { code: awaiting_material, label: Awaiting Material, color: gray, initial: true }
+            - { code: in_manufacturing,  label: In Manufacturing,  color: indigo }
+            - { code: qc_testing,        label: QC Testing,        color: amber }
+            - { code: released,          label: Released,          color: green }
+            - { code: failed,            label: Failed,            color: red, final: true }
+          transitions:
+            - { name: start, label: Start Manufacturing, from: awaiting_material, to: in_manufacturing, roles: [Manufacturing Scheduler], primary: true,
+                condition: material_received_on is_set, condition_msg: Record when the starting material arrived first.,
+                on_done: Move the patient to In Manufacturing. }
+            - { name: to_qc, label: Send to QC, from: in_manufacturing, to: qc_testing, roles: [Manufacturing Scheduler] }
+            - name: release
+              label: Release
+              from: qc_testing
+              to: released
+              roles: [Manufacturing Scheduler]
+              primary: true
+              form:
+                - dose_million_cells: { type: decimal, required: true }
+                - coa_file:           { type: file, label: Certificate of analysis, required: true, accept: [pdf] }
+              condition: { text: The COI printed on the final product bag equals the patient's COI. }
+              on_done: Create the outbound shipment and email the site coordinator the expected delivery date.
+            - { name: fail, label: Fail Batch, from: [in_manufacturing, qc_testing], to: failed, roles: [Manufacturing Scheduler], tone: danger,
+                form: [ { failure_reason: { type: long_text, required: true } } ],
+                on_done: Email the site coordinator to discuss a re-collection slot. }
+        form:
+          create: { roles: [Manufacturing Scheduler], title: New Batch, fields: [patient, manufacturing_site, material_received_on, expected_release] }
+          edit:   { same_as: create, editable_in: [awaiting_material, in_manufacturing] }
+        table:
+          columns:
+            - batch_no:           { label: Batch, searchable: true }
+            - patient:            { label: COI, display: coi_id, link_to: patient_360 }
+            - manufacturing_site: { label: Site, display: name, filterable: true }
+            - expected_release:   { label: Expected release, sortable: true }
+            - status:             { source: status, label: Status, filterable: true }
+          default_sort: expected_release
+          add_button: New Batch
+
+  - code: logistics
+    name: Logistics and Custody
+    description: Shipments of starting material and finished product, and every custody handoff.
+    entities:
+      - code: shipment
+        name: Shipment
+        kind: transactional
+        display: shipment_ref
+        fields:
+          - shipment_ref:      { type: text, label: Shipment, readonly: true, unique: true, auto: { sequence: "SHP-{00000}" } }
+          - patient:           { type: link, to: patient, display: coi_id, required: true }
+          - leg:               { type: choice, choices: shipment_leg, required: true }
+          - courier:           { type: link, to: courier, display: legal_name, required: true }
+          - awb_no:            { type: text, label: AWB }
+          - pickup_date:       { type: date, required: true }
+          - expected_delivery: { type: date, required: true }
+        access:
+          Site Coordinator:        { actions: [view], rows: { own: patient.treatment_site } }
+          Apheresis Center:        { actions: [view], rows: { own: patient.apheresis_centre } }
+          Manufacturing Scheduler: { actions: [view, add, edit, export] }
+          Courier:                 { actions: [view], rows: { own: courier } }
+        workflow:
+          statuses:
+            - { code: booked,     label: Booked,     color: gray, initial: true }
+            - { code: picked_up,  label: Picked Up,  color: blue }
+            - { code: in_transit, label: In Transit, color: indigo }
+            - { code: delivered,  label: Delivered,  color: teal }
+            - { code: received,   label: Received,   color: green, final: true }
+            - { code: exception,  label: Exception,  color: red }
+          transitions:
+            - { name: pick_up, label: Pick Up, from: booked, to: picked_up, roles: [Courier], primary: true,
+                form: [ { awb_no: { type: text, required: true } } ], on_done: Log a handover custody event with the courier and time. }
+            - { name: depart, label: In Transit, from: picked_up, to: in_transit, roles: [Courier] }
+            - { name: deliver, label: Deliver, from: in_transit, to: delivered, roles: [Courier], primary: true, on_done: Log a handover custody event at the destination. }
+            - name: receive
+              label: Confirm Receipt
+              from: delivered
+              to: received
+              roles: [Site Coordinator, Manufacturing Scheduler]
+              primary: true
+              form:
+                - coi_matched:   { type: boolean, label: COI on the shipper matches, required: true }
+                - logger_ok:     { type: boolean, label: Temperature logger within range, required: true }
+              on_done: Log a receipt custody event; for an outbound leg move the patient to Ready to Infuse.
+            - { name: report_exception, label: Report Exception, from: [picked_up, in_transit, delivered], to: exception, roles: [Courier, Site Coordinator, Manufacturing Scheduler], tone: danger,
+                form: [ { exception_note: { type: long_text, required: true } } ], on_done: Page the Manufacturing Scheduler and the site coordinator at once. }
+            - { name: resolve, label: Resolve, from: exception, to: in_transit, roles: [Manufacturing Scheduler] }
+          tags:
+            - { code: temp_excursion, label: Temperature Excursion, color: red, system: true, text: Set when a custody event records a temperature excursion. }
+        form:
+          create: { roles: [Manufacturing Scheduler], title: Book Shipment, fields: [patient, leg, courier, pickup_date, expected_delivery] }
+          edit:   { same_as: create, editable_in: [booked] }
+        table:
+          columns:
+            - shipment_ref:      { label: Shipment, searchable: true }
+            - patient:           { label: COI, display: coi_id }
+            - leg:               { label: Leg, filterable: true }
+            - courier:           { label: Courier, display: legal_name, filterable: true }
+            - expected_delivery: { label: Due, sortable: true }
+            - status:            { source: status, label: Status, filterable: true }
+            - tags:              { source: tags, label: Flags }
+          default_sort: expected_delivery
+          quick_filters:
+            - { label: Moving now, where: "status in [picked_up, in_transit]", default: true }
+          add_button: Book Shipment
+
+      - code: custody_event
+        name: Custody Event
+        kind: transactional
+        display: event_type
+        fields:
+          - shipment:     { type: link, to: shipment, display: shipment_ref, required: true, on_delete: protect }
+          - event_type:   { type: choice, choices: custody_event_type, required: true }
+          - event_at:     { type: datetime, label: When, required: true }
+          - city:         { type: text, label: Location, required: true }
+          - handed_by_name:   { type: text, label: Handed by, required: true }
+          - received_by_name: { type: text, label: Received by }
+          - coi_verified: { type: boolean, label: COI verified, required: true }
+          - temperature:  { type: choice, choices: temperature_status, required: true }
+        access:
+          Courier:                 { actions: [view, add], rows: { own: shipment.courier } }
+          Manufacturing Scheduler: { actions: [view, export] }
+          Site Coordinator:        { actions: [view, add], rows: { own: shipment.patient.treatment_site } }
+        validation:
+          rules:
+            - { when: coi_verified is_false, require: [received_by_name], message: Name who received the material when the COI could not be verified. }
+        form:
+          create: { title: Log Custody Event, fields: [shipment, event_type, event_at, city, handed_by_name, received_by_name, coi_verified, temperature] }
+        table:
+          columns:
+            - shipment:     { label: Shipment, display: shipment_ref, searchable: true }
+            - event_type:   { label: Event, filterable: true }
+            - event_at:     { label: When, sortable: true }
+            - city:         { label: Location }
+            - handed_by_name: { label: Handed by }
+            - coi_verified: { label: COI verified, filterable: true }
+            - temperature:  { label: Temperature, filterable: true }
+          default_sort: -event_at
+          add_button: Log Custody Event
+
+detail_views:
+  - code: patient_360
+    hero: patient
+    title: "{coi_id}"
+    back_to: patients
+    layout: header_tabs_sidebar
+    roles: [Site Coordinator, Apheresis Center, Manufacturing Scheduler]
+    header:
+      title: coi_id
+      subtitle: ["{patient_initials}", "{therapy_product}", "{treatment_site.centre_name}"]
+      badges: [ { source: status } ]
+      facts:
+        - { label: Indication, field: indication }
+        - { label: Physician,  field: treating_physician }
+        - { label: Target infusion, field: expected_infusion_date }
+      actions: { transitions: true }
+      banners:
+        - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}" }
+    stats:
+      - { label: Slots, value: { count: slot, via: patient }, link_to_tab: slots, tone: blue }
+      - { label: Shipments, value: { count: shipment, via: patient }, link_to_tab: shipments, tone: indigo }
+      - { label: Custody events, value: { count: custody_event, via: shipment.patient }, link_to_tab: custody, tone: teal }
+    sidebar:
+      - { type: fields, title: Patient, fields: [patient_initials, year_of_birth, indication, therapy_product] }
+      - { type: fields, title: Sites, fields: [treatment_site, apheresis_centre] }
+    tabs:
+      - { code: slots, label: Slots, type: related_table, entity: slot, via: patient, columns: inherit, count_badge: true,
+          add: { label: Request Slot, prefill: { patient: hero }, show_when: status == enrolled } }
+      - { code: batches, label: Manufacturing, type: related_table, entity: batch, via: patient, columns: inherit }
+      - { code: shipments, label: Shipments, type: related_table, entity: shipment, via: patient, columns: inherit, count_badge: true }
+      - { code: custody, label: Chain of Custody, type: related_table, entity: custody_event, via: shipment.patient, columns: inherit, add: false }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: patient, events: [created, transition] }
+          - { entity: slot, via: patient, events: [created, transition] }
+          - { entity: batch, via: patient, events: [transition] }
+          - { entity: shipment, via: patient, events: [transition] }
+    states:
+      not_found: { title: Patient not found, back_to: patients }
