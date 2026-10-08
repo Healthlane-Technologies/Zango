@@ -133,3 +133,67 @@ class GenericFallbackTests(AppTemplatesTestBase):
         issues = lint(version)
         self.assertTrue(any(GENERIC_SLUG in i["message"] for i in issues))
         self.assertTrue(any(i["file"] == "schema.json" for i in issues))
+
+
+class AdoptMidConversationTests(AppTemplatesTestBase):
+    """A plain requirement whose user accepts the generic template in chat."""
+
+    def setUp(self):
+        super().setUp()
+        from zango.apps.shared.app_templates.seed import PACKS_DIR
+
+        import_pack(PACKS_DIR / "zango_app", publish_now=True)
+        catalogue.clear_caches()
+
+    def test_markdown_never_replaces_the_yaml_and_the_next_turn_gets_the_template(self):
+        from zango.apps.agent_mode.models import AgentRequirement
+        from zango.apps.agent_mode.requirements import compose_analyst_prompt
+        from zango.apps.agent_mode.tasks import _record_analyst_reply
+
+        req = AgentRequirement(initial_prompt="a policy document manager")
+        req.spec_markdown = ""
+        req.session_id = "s1"
+        req.save = lambda *a, **k: None
+        reply = (
+            "Building this on the ready-made toolkit.\n\n"
+            "```zango-template\nzango-app\n```\n\n"
+            "```zango-spec-draft\n## Policy manager\n\n- **Policy Document** — title\n```\n"
+        )
+        from unittest import mock
+
+        messages = mock.MagicMock()
+        messages.order_by.return_value.values_list.return_value.first.return_value = 2
+        patches = [
+            mock.patch.object(
+                AgentRequirement, "messages", new_callable=mock.PropertyMock, return_value=messages
+            ),
+            mock.patch("zango.apps.agent_mode.models.AgentRequirementMessage.objects.create"),
+        ]
+        for p in patches:
+            p.start()
+            self.addCleanup(p.stop)
+        _record_analyst_reply(req, [reply], "s1", None)
+
+        self.assertEqual(req.template_slug, GENERIC_SLUG)
+        self.assertEqual(req.spec_format, "yaml")
+        self.assertEqual(req.mode, "adopted")
+        self.assertIn("spec_version", req.spec_markdown)  # the starter, not the Markdown
+        self.assertNotIn("Policy Document", req.spec_markdown)
+        self.assertFalse(
+            [i for i in req.validation_issues or [] if i.get("code") == "yaml"]
+        )
+
+        class Ctx:
+            app_name, workspace_path, packages, modules, roles = "x", "/w", [], [], []
+
+        prompt = compose_analyst_prompt(req, Ctx(), "Approver is the department head")
+        self.assertIn("has just chosen this template", prompt)
+        self.assertIn("spec_replace_section", prompt)
+        self.assertTrue(prompt.endswith("Approver is the department head"))
+
+        # Once that turn has run, later turns are just the reply again.
+        _record_analyst_reply(req, ["Noted."], "s1", None)
+        self.assertEqual(req.mode, "interview")
+        self.assertEqual(
+            compose_analyst_prompt(req, Ctx(), "ok"), "ok"
+        )

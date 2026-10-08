@@ -944,6 +944,37 @@ def _record_spec_edit(req, edit: dict) -> None:
         req.save(update_fields=fields)
 
 
+def _is_yaml_spec(text: str) -> bool:
+    """Whether a fenced spec is a YAML document (a mapping), not prose."""
+    if not (text or "").strip():
+        return False
+    from zango.apps.shared.app_templates.services.spec import yamlio
+
+    try:
+        return isinstance(yamlio.load(text), dict)
+    except yamlio.SpecYAMLError:
+        return False
+
+
+def _start_template_draft(req) -> None:
+    """The user just took the template the analyst offered.
+
+    A YAML template starts from its starter spec — what the panel previews and
+    the spec tools edit from the next turn on. Whatever was gathered before
+    is in the conversation, and the next turn writes it in.
+    """
+    template = req.template
+    if template is None or not template.is_yaml:
+        return
+    if not _is_yaml_spec(req.spec_markdown):
+        req.spec_markdown = (template.starter_yaml or "").strip()
+        req.spec_is_draft = True
+        req.draft_revision += 1
+    # The analyst's session predates the template: its next prompt carries
+    # the template's instructions once (requirements.compose_analyst_prompt).
+    req.mode = "adopted"
+
+
 def _record_analyst_reply(req, text_parts, session_id, cost, bench=None) -> dict:
     """Persist one analyst reply. Separated so the caller can guarantee that
     `is_thinking` is always cleared, whatever goes wrong in here."""
@@ -999,8 +1030,17 @@ def _record_analyst_reply(req, text_parts, session_id, cost, bench=None) -> dict
         req.total_cost_usd = (req.total_cost_usd or Decimal("0")) + Decimal(str(cost))
     # Before the spec is recorded: the template decides the format, and the
     # version row stores the format it was written in.
-    if template_slug:
-        req.adopt_template(template_slug)
+    if req.mode == "adopted":
+        req.mode = "interview"  # the template's instructions went out this turn
+    if template_slug and req.adopt_template(template_slug):
+        _start_template_draft(req)
+
+    if req.spec_format == "yaml" and not (bench is not None and bench.edits):
+        # A YAML template's spec is only ever YAML: the Markdown write-up an
+        # analyst may still fence (it adopted the template this very turn,
+        # before it had the spec tools) must not replace the journey.
+        spec = spec if _is_yaml_spec(spec) else ""
+        draft = draft if _is_yaml_spec(draft) else ""
 
     previous_spec = req.spec_markdown
     used_tools = bench is not None and (bench.edits or bench.ready_summary)

@@ -213,7 +213,7 @@ class AgentRequirement(FullAuditMixin):
     # One-pass drafting (template requirements): the analyst drafts the whole
     # journey from the user's documents, flags every value it did not take
     # straight from them, and leaves only real gaps as open decisions.
-    mode = models.CharField(max_length=16, blank=True, default="")  # draft | interview
+    mode = models.CharField(max_length=16, blank=True, default="")  # draft | interview | adopted (see tasks._start_template_draft)
     reference_id = models.CharField(max_length=64, blank=True, default="")
     # [{path, kind: inferred|reference|default|missing, note, source?}]
     spec_flags = models.JSONField(default=list, blank=True)

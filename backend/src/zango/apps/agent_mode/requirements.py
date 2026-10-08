@@ -333,6 +333,14 @@ The requirement already holds the template's starter journey as a draft —
 it is at `{starter}` — and the user watches it fill in beside the chat. Every
 answer should change that draft; nothing is built until they approve it."""
 
+_TEMPLATE_ADOPTED = """\
+The user has just chosen this template, part-way through the conversation.
+From now on the spec is the template's YAML, edited only with the spec tools —
+never a Markdown write-up or a fenced spec. Before anything else, write into
+the draft everything already agreed in this conversation (one
+spec_replace_section per section), so the preview beside the chat shows their
+app; then carry on with the interview."""
+
 _TEMPLATE_CHANGE_DRAFT = """\
 This is a change to an app that already runs on the template. The draft
 below is the journey the app was last approved on; change only what the user
@@ -424,6 +432,16 @@ def compose_analyst_prompt(requirement, ctx, user_message: str, docs_dir: str = 
     """First turn dispatches the skill and supplies context; later turns are
     just the user's reply, since the session is resumed."""
     if requirement.session_id:
+        adopted = getattr(requirement, "mode", "") == "adopted"
+        template = requirement.template if adopted and requirement.template_slug else None
+        if template is not None and template.is_yaml:
+            return (
+                _template_mode_block(requirement, template)
+                + "\n\n"
+                + _TEMPLATE_ADOPTED
+                + "\n\n## The user's reply\n\n"
+                + user_message.strip()
+            )
         return user_message.strip()
 
     packages = (
