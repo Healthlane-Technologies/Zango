@@ -250,6 +250,7 @@ def _version_fields(pack: Pack) -> dict:
         "catalogue": _catalogue(m),
         "spec_format": spec_format,
         "spec_root": str(m.get("spec_root") or ""),
+        "spec_dialect": str(m.get("spec_dialect") or "").strip()[:32],
         "json_schema": _json_doc(pack, "json_schema", {}),
         "ui_schema": _ui_schema(pack),
         "interview_md": pack.documents.get("interview", ""),
@@ -347,7 +348,19 @@ def lint(version: AppTemplateVersion, files=None) -> list:
             _issue("error", MANIFEST, f"{version.version!r} is not a semver version.")
         )
 
-    schema = version.json_schema or {}
+    from .generic import GENERIC_SLUG, borrows, effective, fallback_for
+
+    generic = fallback_for(version)
+    if borrows(version) and generic is None:
+        issues.append(
+            _issue(
+                "warning",
+                MANIFEST,
+                f"The generic template {GENERIC_SLUG!r} is not published; "
+                "whatever this template leaves out has nothing to fall back to.",
+            )
+        )
+    schema = effective(version, "json_schema", generic) or {}
     validator = None
     if version.spec_format == SpecFormat.YAML and not schema:
         issues.append(
@@ -362,7 +375,7 @@ def lint(version: AppTemplateVersion, files=None) -> list:
                 _issue("error", "schema.json", f"Invalid JSON Schema: {exc.message}")
             )
 
-    if not version.interview_md:
+    if not effective(version, "interview_md", generic):
         issues.append(_issue("error", "INTERVIEW.md", "The template has no interview."))
 
     if version.spec_format == SpecFormat.YAML:
@@ -666,6 +679,7 @@ def export_pack(version: AppTemplateVersion) -> bytes:
         "catalogue": cat,
         "spec_format": version.spec_format,
         "spec_root": version.spec_root,
+        "spec_dialect": version.spec_dialect,
         "build_skill_name": version.build_skill_name,
         "sections": [
             {"id": s["id"], "title": s.get("title", "")} for s in version.sections

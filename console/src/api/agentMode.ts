@@ -215,6 +215,14 @@ export interface TemplateBuilderDef {
 	spec_format: 'yaml' | 'markdown';
 	/** Same-origin URL of the template's own builder page (text/html), when it ships one. */
 	builder_url?: string | null;
+	/**
+	 * The page that renders the app's live preview from the spec: the template's own, or the
+	 * platform's generic one (App Studio) for specs in the generic dialect. Null: no preview.
+	 */
+	preview_url?: string | null;
+	preview_source?: 'template' | 'generic' | null;
+	/** The spec's vocabulary: 'zango-app/1' for the generic app spec, '' for a template's own. */
+	spec_dialect?: string;
 	/** Reference journeys the draft can start from. */
 	references?: TemplateReference[];
 	starter_yaml: string;

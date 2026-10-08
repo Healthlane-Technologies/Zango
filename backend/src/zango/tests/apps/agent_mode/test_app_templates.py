@@ -51,9 +51,12 @@ class CatalogueTests(unittest.TestCase):
                 self.assertTrue(path, f"{slug} declares no {key}")
                 self.assertTrue(Path(path).is_file(), f"{slug}: missing {path}")
 
-    def test_every_template_has_a_build_skill(self):
+    def test_every_template_build_skill_is_on_disk(self):
+        # A template without its own build skill is built with the platform's
+        # generic one (prompt.QUALIFIED_SKILL).
         for slug, template in load_templates().items():
-            self.assertTrue(template.build_skill_name, f"{slug} has no build skill")
+            if not template.build_skill_name:
+                continue
             skill = (
                 Path(template.plugin_dir)
                 / "skills"

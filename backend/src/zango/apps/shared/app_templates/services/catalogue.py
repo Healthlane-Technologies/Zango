@@ -45,6 +45,7 @@ class TemplateView:
     path: str  # materialised requirements dir (what the analyst reads)
     spec_format: str = "markdown"
     spec_root: str = ""
+    spec_dialect: str = ""
     aka: tuple = ()
     fits_when: tuple = ()
     gives_you: tuple = ()
@@ -66,6 +67,7 @@ class TemplateView:
     build_skill_name: str = ""
     plugin_dir: str = ""  # materialised plugin root (for the build agent)
     references: tuple = ()  # ({id, title, summary, tags, path}, ...)
+    borrowed_from: str = ""  # "zango-app@1.0.0" when pieces come from the generic template
 
     @property
     def is_yaml(self) -> bool:
@@ -101,6 +103,22 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         if (req_dir / name).is_file()
     }
     cat = version.catalogue or {}
+
+    # Pieces the template leaves to the generic one (see generic.py): its
+    # documents are read where the generic version is materialised.
+    from .generic import BORROWED_FIELDS, fallback_for
+
+    generic = fallback_for(version)
+    borrowed = {}
+    if generic is not None:
+        generic_dir = materialise(generic) / REQUIREMENTS_DIR
+        for attr, key in BORROWED_FIELDS:
+            if getattr(version, attr) or key in files:
+                continue
+            name = REQUIREMENT_FILES[key]
+            if (generic_dir / name).is_file():
+                files[key] = str(generic_dir / name)
+                borrowed[attr] = getattr(generic, attr)
     return TemplateView(
         slug=template.slug,
         name=template.name,
@@ -108,10 +126,18 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         path=str(req_dir),
         spec_format=version.spec_format,
         spec_root=version.spec_root,
+        spec_dialect=version.spec_dialect,
         aka=_strings(cat.get("aka"), 8),
         fits_when=_strings(cat.get("fits_when")),
         gives_you=_strings(cat.get("gives_you")),
-        sections=tuple((s["id"], s.get("title", "")) for s in version.sections),
+        sections=tuple(
+            (s["id"], s.get("title", ""))
+            for s in (
+                generic.sections
+                if "ui_schema" in borrowed and not version.sections
+                else version.sections
+            )
+        ),
         files=files,
         version=version.version,
         version_uuid=str(version.object_uuid),
@@ -120,9 +146,9 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         icon=template.icon,
         is_beta=template.is_beta,
         catalogue=cat,
-        json_schema=version.json_schema or {},
-        ui_schema=version.ui_schema or {},
-        rules=tuple(version.rules or ()),
+        json_schema=version.json_schema or borrowed.get("json_schema") or {},
+        ui_schema=version.ui_schema or borrowed.get("ui_schema") or {},
+        rules=tuple(version.rules or borrowed.get("rules") or ()),
         starter_yaml=version.starter_yaml,
         example_yaml=version.example_yaml,
         build_skill_name=version.build_skill_name,
@@ -136,6 +162,9 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
                 "path": str(req_dir / "references" / f"{r['id']}.yaml"),
             }
             for r in version.references or []
+        ),
+        borrowed_from=(
+            f"{generic.template.slug}@{generic.version}" if borrowed else ""
         ),
     )
 
@@ -160,6 +189,12 @@ def _view_for(version: AppTemplateVersion) -> TemplateView:
     if version.is_draft:
         return build_view(version)  # drafts change; never cache them
     key = (version.object_uuid, version.content_sha)
+    if version.spec_dialect:
+        # What it borrows follows the generic template's current version.
+        from .generic import fallback_for
+
+        generic = fallback_for(version)
+        key += (generic.content_sha if generic is not None else "",)
     view = _views.get(key)
     if view is None:
         view = _views[key] = build_view(version)

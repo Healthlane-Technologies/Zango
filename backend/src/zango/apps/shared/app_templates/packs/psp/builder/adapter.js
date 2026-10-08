@@ -10,7 +10,7 @@
  *   host → builder  {source:'zango-host', type:'load', yaml, readOnly}
  *                   {source:'zango-host', type:'lock', readOnly}
  *                   {source:'zango-host', type:'preview', on}   (the app preview)
- *   builder → host  {source:'zango-builder', type:'ready', protocol}
+ *   builder → host  {source:'zango-builder', type:'ready', protocol, capabilities}
  *                   {source:'zango-builder', type:'change', yaml}
  *                   {source:'zango-builder', type:'error', message}
  */
@@ -94,10 +94,13 @@
 		// Design/Preview is the host's Builder and Preview tabs, and the
 		// preview's checks link is its Checks tab.
 		'[data-pvmode],:has(>[data-pvmode]),[data-pvchecks]{display:none!important}' +
+		// In the preview the host shows only the app: no builder title bar.
+		'.app.pv-on>.hd{display:none!important}' +
 		'.zango-locked .body,.zango-locked .hd input{pointer-events:none;opacity:.6}' +
 		'.zango-locked .hd::after{content:"The agent is editing — read only";margin-left:12px;' +
 		'font:500 12px Inter,sans-serif;color:#b45309}';
 	document.head.appendChild(style);
 
-	send({ type: 'ready', protocol: PROTOCOL });
+	// Journey Studio is an editor with a preview mode; preview-only pages send [].
+	send({ type: 'ready', protocol: PROTOCOL, capabilities: ['edit', 'preview'] });
 })();

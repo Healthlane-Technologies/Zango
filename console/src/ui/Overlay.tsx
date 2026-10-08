@@ -23,19 +23,34 @@ function CloseButton() {
 }
 
 /** Right-hand panel for detail and edit forms. */
-export function Drawer({ open, onOpenChange, title, subtitle, footer, children }: OverlayProps) {
+export function Drawer({
+	open,
+	onOpenChange,
+	title,
+	subtitle,
+	footer,
+	children,
+	wide,
+	actions,
+}: OverlayProps & {
+	/** For content that needs the room: a code editor, a diagram. */
+	wide?: boolean;
+	/** Controls in the header, before the close button. */
+	actions?: ReactNode;
+}) {
 	return (
 		<Dialog.Root open={open} onOpenChange={onOpenChange}>
 			<Dialog.Portal>
 				<Dialog.Overlay className="scrim" />
-				<Dialog.Content className="drawer" aria-describedby={undefined}>
+				<Dialog.Content className={cx('drawer', wide && 'wide')} aria-describedby={undefined}>
 					<div className="dh">
-						<div className="min-w-0">
+						<div className="min-w-0 flex-1">
 							<Dialog.Title asChild>
 								<h3>{title}</h3>
 							</Dialog.Title>
 							{subtitle && <small className="text-t3">{subtitle}</small>}
 						</div>
+						{actions && <div className="flex items-center gap-1.5">{actions}</div>}
 						<CloseButton />
 					</div>
 					<div className="db">{children}</div>

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "vendor_hub",
+    "file": "references/vendor_hub.yaml",
+    "title": "Vendor Hub (vendor onboarding and procurement)",
+    "summary": "Every spec v1 construct filled in: four roles including an external vendor login, masters, a vendor hero with maker-checker approval, tags and duplicate checks, contracts, purchase orders with line items and invoices, and two 360 pages.",
+    "tags": ["procurement", "vendor onboarding", "approvals", "maker-checker", "external users", "360 page", "invoices"]
+  }
+]

@@ -43,7 +43,16 @@ interface ReviewPanelProps {
 	onShowInYaml: (pointer: string) => void;
 }
 
-function Decisions({
+export type DecisionsProps = Pick<
+	ReviewPanelProps,
+	'appId' | 'reqId' | 'decisions' | 'canAct' | 'thinking' | 'flush' | 'whereOf' | 'onShowInYaml'
+> & {
+	/** In the chat: a card from the agent rather than a panel section. */
+	inChat?: boolean;
+};
+
+/** The open decisions, answered together in one message. */
+export function Decisions({
 	appId,
 	reqId,
 	decisions,
@@ -52,10 +61,8 @@ function Decisions({
 	flush,
 	whereOf,
 	onShowInYaml,
-}: Pick<
-	ReviewPanelProps,
-	'appId' | 'reqId' | 'decisions' | 'canAct' | 'thinking' | 'flush' | 'whereOf' | 'onShowInYaml'
->) {
+	inChat,
+}: DecisionsProps) {
 	const answer = useAnswerDecisions(appId, reqId);
 	const seed = () =>
 		Object.fromEntries(decisions.map((d) => [d.id, d.recommended ?? d.options[0] ?? OTHER]));
@@ -80,11 +87,11 @@ function Decisions({
 	};
 
 	return (
-		<section className="rv-sec">
+		<section className={cx('rv-sec', inChat && 'rv-chat')}>
 			<div className="rv-h">
-				<h4>Open decisions</h4>
+				<h4>{inChat ? 'A few decisions only you can make' : 'Open decisions'}</h4>
 				<span className="ct">{decisions.length}</span>
-				<span className="ml-auto text-[12px] text-t3">
+				<span className={cx('text-[12px] text-t3', inChat ? 'rv-hsub' : 'ml-auto')}>
 					The agent's recommendation is picked; change what you like and send them together.
 				</span>
 			</div>
@@ -102,7 +109,7 @@ function Decisions({
 									type="button"
 									className="rv-where"
 									onClick={() => onShowInYaml(d.path)}
-									title="Show in YAML"
+									title="Show in the spec"
 								>
 									{whereOf(d.path)}
 								</button>
@@ -145,7 +152,11 @@ function Decisions({
 			</ol>
 			<div className="rv-f">
 				<span className="text-[12px] text-t3">
-					{thinking ? 'The agent is working; answer once it’s done.' : 'Sent as one message.'}
+					{thinking
+						? 'The agent is working; answer once it’s done.'
+						: inChat
+							? 'Sent together; the preview follows.'
+							: 'Sent as one message.'}
 				</span>
 				<Button
 					variant="primary"
@@ -172,6 +183,7 @@ function Flags({
 	whereOf,
 	canAct,
 	onShowInYaml,
+	bare,
 }: Pick<
 	ReviewPanelProps,
 	| 'appId'
@@ -183,7 +195,7 @@ function Flags({
 	| 'whereOf'
 	| 'canAct'
 	| 'onShowInYaml'
->) {
+> & { bare?: boolean }) {
 	const confirm = useConfirmFlags(appId, reqId);
 	const groups = useMemo(() => {
 		const order = new Map(sections.map((s, i) => [s.id, i]));
@@ -208,12 +220,12 @@ function Flags({
 
 	return (
 		<section className="rv-sec">
-			<div className="rv-h">
+			<div className="rv-h" hidden={bare}>
 				<h4>Flagged by the agent</h4>
 				<span className="ct">{flags.length}</span>
 				<span className="ml-auto text-[12px] text-t3">
-					Values the agent didn’t take straight from your material. Confirm them, or fix them in the
-					builder — editing a value clears its flag.
+					Values the agent didn’t take straight from your material. Confirm them, or ask the agent to change
+					them — editing a value clears its flag.
 				</span>
 			</div>
 			{groups.map((g) => (
@@ -242,7 +254,7 @@ function Flags({
 											type="button"
 											className="rv-where"
 											onClick={() => onShowInYaml(f.path)}
-											title="Show in YAML"
+											title="Show in the spec"
 										>
 											{whereOf(f.path)}
 										</button>
@@ -279,7 +291,7 @@ function Flags({
 											Confirm
 										</Button>
 										<Button size="xs" variant="ghost" onClick={() => onShowInYaml(f.path)}>
-											Show in YAML
+											Show in spec
 										</Button>
 									</div>
 								</li>
@@ -292,8 +304,28 @@ function Flags({
 	);
 }
 
-export function ReviewPanel(props: ReviewPanelProps) {
-	const { decisions, flags } = props;
+export function ReviewPanel(props: ReviewPanelProps & { flagsOnly?: boolean }) {
+	const { decisions, flags, flagsOnly } = props;
+	if (flagsOnly) {
+		return flags.length ? (
+			<div className="rv">
+				<p className="rv-intro">
+					Values the agent didn’t take straight from your material. Confirm them, or ask the agent
+					to change them — editing a value clears its flag.
+				</p>
+				<Flags {...props} bare />
+			</div>
+		) : (
+			<div className="card">
+				<div className="empty">
+					<b>Nothing flagged</b>
+					{props.thinking
+						? 'The agent is still drafting. Anything it has to assume shows up here.'
+						: 'Everything in the spec came from your material, or you’ve confirmed it.'}
+				</div>
+			</div>
+		);
+	}
 	if (!decisions.length && !flags.length) {
 		return (
 			<div className="card">

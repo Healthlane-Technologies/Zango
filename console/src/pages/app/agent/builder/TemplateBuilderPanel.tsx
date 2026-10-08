@@ -1,6 +1,19 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { documentUrl, type SpecIssue } from '@/api/agentMode';
-import { Badge, Button, cx, Icon, Menu, SaveBar, Skeleton, Tabs, TemplateBadge, type Tone } from '@/ui';
+import {
+	Badge,
+	Button,
+	cx,
+	Drawer,
+	Icon,
+	Menu,
+	SaveBar,
+	Skeleton,
+	Tabs,
+	TemplateBadge,
+	type MenuItem,
+	type Tone,
+} from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { BuilderContext, type BuilderCtx } from './context';
@@ -22,6 +35,8 @@ import './builder.css';
 const WorkflowsPanel = lazy(() => import('./WorkflowsPanel'));
 
 type Tab = 'builder' | 'preview' | 'details' | 'workflows' | 'yaml' | 'checks' | 'review';
+/** What the preview pane's ⋯ menu opens over the preview. */
+type Sheet = 'spec' | 'workflows' | 'checks' | 'flags' | 'documents';
 type Mode = 'default' | 'all' | 'none';
 
 const FLASH_MS = 1600;
@@ -56,6 +71,7 @@ export function TemplateBuilderPanel({
 	spec: serverSpec,
 	editable = false,
 	onController,
+	jump,
 }: BuilderProps) {
 	const root = builder.json_schema as Schema;
 	const sections = useMemo<BuilderSection[]>(
@@ -63,8 +79,19 @@ export function TemplateBuilderPanel({
 		[builder],
 	);
 	const draft = useSpecDraft({ appId, reqId: requirement.uuid, server: serverSpec });
-	// The template ships its own builder (e.g. Journey Studio): it replaces Details.
-	const embedUrl = builder.builder_url || null;
+	// The page that renders the app from the spec (Journey Studio, App Studio…). With one, the
+	// pane is just the live preview; the spec, workflows and checks open from its ⋯ menu.
+	const previewUrl = builder.preview_url ?? builder.builder_url ?? null;
+	const previewMode = !!previewUrl;
+	// Without a preview page, a template's own builder replaces Details (older servers).
+	const embedUrl = previewMode ? null : builder.builder_url || null;
+	const [sheet, setSheet] = useState<Sheet | null>(null);
+	const [inBuilder, setInBuilder] = useState(false);
+	// What the page says it can do; older adapters don't say, and only builders had an editor.
+	const [caps, setCaps] = useState<string[] | undefined>();
+	const canEditInBuilder = caps
+		? caps.includes('edit')
+		: builder.preview_source !== 'generic' && !!builder.builder_url && previewUrl === builder.builder_url;
 	useEffect(() => onController?.(draft.controller), [onController, draft.controller]);
 	// What's on screen: the agent's version while reviewing a conflict, else the draft/newest.
 	const spec = draft.shown;
@@ -196,6 +223,11 @@ export function TemplateBuilderPanel({
 	/** Show `pointer`: in the YAML tab move to its line, otherwise open its section and cards. */
 	const jumpTo = useCallback(
 		(pointer: string, opts: { sectionHint?: string; line?: number; inTab?: Tab } = {}) => {
+			if (previewMode) {
+				setSheet('spec');
+				setYamlJump({ line: opts.line ?? rangeOf(parsed, pointer)?.line ?? 1, nonce: Date.now() });
+				return;
+			}
 			const where = opts.inTab ?? (tab === 'yaml' ? 'yaml' : 'details');
 			// With the template's own builder there is no Details tab to jump into.
 			if (where === 'yaml' || embedUrl) {
@@ -213,8 +245,14 @@ export function TemplateBuilderPanel({
 			setTab('details');
 			setTarget({ pointer, nonce: Date.now() });
 		},
-		[tab, parsed, sectionFor, embedUrl],
+		[tab, parsed, sectionFor, embedUrl, previewMode],
 	);
+
+	// A pointer to show, sent from outside the pane (a decision in the chat).
+	useEffect(() => {
+		if (jump) jumpTo(jump.pointer);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [jump]);
 
 	useEffect(() => {
 		if (!target) return;
@@ -312,11 +350,12 @@ export function TemplateBuilderPanel({
 	// A finished draft with things to review opens on them, once.
 	const reviewed = useRef(false);
 	useEffect(() => {
+		if (previewMode) return; // decisions are in the chat; flags behind the pill
 		if (!reviewed.current && serverSpec.mode === 'draft' && !thinking && reviewCount > 0) {
 			reviewed.current = true;
 			setTab('review');
 		}
-	}, [serverSpec.mode, thinking, reviewCount]);
+	}, [serverSpec.mode, thinking, reviewCount, previewMode]);
 
 	const [tone, label]: [Tone, string] = spec.is_draft
 		? ['amber', 'Draft']
@@ -325,6 +364,350 @@ export function TemplateBuilderPanel({
 			: spec.status === 'ready'
 				? ['accent', 'Ready for review']
 				: ['amber', 'Draft'];
+
+	const draftingStrip = drafting && (
+		<div className="bld-drafting" role="status">
+			<span className="spin" />
+			<span className="min-w-0">
+				<b>
+					Drafting
+					{documents.length
+						? ` from ${documents.length} document${documents.length > 1 ? 's' : ''}`
+						: ' from your brief'}
+					…
+				</b>{' '}
+				{states.length > 0 &&
+					`${states.filter((st) => st.changed > 0).length} of ${states.length} sections written`}
+			</span>
+			<ul className="bld-ticks" aria-label="Sections">
+				{states.map((st) => (
+					<li
+						key={st.section.id}
+						className={cx(st.changed > 0 && 'done')}
+						title={st.section.title}
+					>
+						{st.changed > 0 ? <Icon name="check" size={11} weight={2.6} /> : <i />}
+						{st.section.title}
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+	const conflictBar = draft.incoming && (
+		<div className="bld-conflict" role="alert">
+			<Icon name="alert" className="mt-[2px] shrink-0" />
+			<div className="min-w-0 flex-1">
+				<b>
+					{draft.reviewing
+						? 'You’re looking at the agent’s version.'
+						: 'The spec changed while you were editing.'}
+				</b>
+				<span>
+					{draft.reviewing
+						? ' Your edits are kept aside until you choose.'
+						: ` Revision ${draft.incoming.draft_revision} is newer than the one you started from (${draft.base.draft_revision}).`}
+				</span>
+			</div>
+			<div className="flex shrink-0 gap-1.5">
+				<Button size="xs" onClick={draft.toggleReview}>
+					{draft.reviewing ? 'Back to my edits' : 'Review agent changes'}
+				</Button>
+				<Button
+					size="xs"
+					variant="primary"
+					loading={draft.busy === 'save'}
+					disabled={thinking}
+					onClick={() => draft.keepMine()}
+				>
+					Keep mine
+				</Button>
+				<Button size="xs" variant="danger" onClick={draft.discard}>
+					Discard mine
+				</Button>
+			</div>
+		</div>
+	);
+	const saveBar = draft.dirty && !draft.reviewing && (
+		<div className="bld-save">
+			<SaveBar
+				dirty
+				saving={draft.busy === 'save'}
+				onSave={() => {
+					if (!yamlBroken && !thinking) draft.save();
+				}}
+				onDiscard={draft.discard}
+				note={
+					thinking
+						? 'The agent is working; save once it’s done.'
+						: yamlBroken
+							? 'Fix the YAML errors to save.'
+							: 'The agent sees your changes once they’re saved.'
+				}
+			/>
+		</div>
+	);
+
+	if (previewMode) {
+		const warnings = issues.length - errors;
+		const fileName = `${builder.spec_root || 'spec'}.yaml`;
+		const menu: Array<MenuItem | null> = [
+			{ label: 'Spec (YAML)', icon: 'file', onSelect: () => setSheet('spec') },
+			{ label: 'Workflows', icon: 'flow', onSelect: () => setSheet('workflows') },
+			{
+				label: errors ? `Checks · ${errors} to fix` : `Checks${issues.length ? ` · ${issues.length}` : ''}`,
+				icon: 'alert',
+				onSelect: () => setSheet('checks'),
+			},
+			{
+				label: `Flagged by the agent${flags.length ? ` · ${flags.length}` : ''}`,
+				icon: 'flag',
+				onSelect: () => setSheet('flags'),
+			},
+			{
+				label: `Documents${documents.length ? ` · ${documents.length}` : ''}`,
+				icon: 'clip',
+				onSelect: () => setSheet('documents'),
+			},
+			...(canEditInBuilder
+				? [
+						null,
+						inBuilder
+							? { label: 'Back to preview', icon: 'eye' as const, onSelect: () => setInBuilder(false) }
+							: {
+									label: 'Edit in builder',
+									icon: 'pen' as const,
+									onSelect: () => setInBuilder(true),
+									disabled: locked,
+								},
+					]
+				: []),
+		];
+		const sheetTitle: Record<Sheet, string> = {
+			spec: 'Spec',
+			workflows: 'Workflows',
+			checks: 'Checks',
+			flags: 'Flagged by the agent',
+			documents: 'Documents',
+		};
+		return (
+			<BuilderContext.Provider value={ctx}>
+				<div className={cx('bld fill pv', draft.dirty && 'dirty')}>
+					{/* The template is named in the page header already. */}
+					<div className="bld-h pv-h">
+						<Badge tone={tone} dot>
+							{label}
+						</Badge>
+						<span className="mono text-[11.5px] text-t4" title="Spec revision">
+							rev {spec.draft_revision}
+						</span>
+						{thinking && (
+							<span className="bld-thinking">
+								<span className="spin" />
+								{drafting ? 'Drafting the app…' : 'Updating the app…'}
+							</span>
+						)}
+						<span className="ml-auto flex items-center gap-1.5">
+							<button
+								type="button"
+								className={cx('pv-pill', errors ? 'err' : warnings ? 'warn' : 'ok')}
+								onClick={() => setSheet('checks')}
+								title="Checks"
+							>
+								<Icon name={errors || warnings ? 'alert' : 'check'} size={12} weight={2.4} />
+								{errors
+									? `${errors} to fix`
+									: warnings
+										? `${warnings} warning${warnings > 1 ? 's' : ''}`
+										: 'Valid'}
+							</button>
+							{flags.length > 0 && (
+								<button
+									type="button"
+									className="pv-pill flag"
+									onClick={() => setSheet('flags')}
+									title="Values the agent assumed"
+								>
+									<Icon name="flag" size={12} />
+									{flags.length} flagged
+								</button>
+							)}
+							{changed.length > 0 && !thinking && (
+								<button
+									type="button"
+									className="pv-pill chg"
+									onClick={nextChanged}
+									title="Show what the last update changed, in the spec"
+								>
+									<i className="bv-dot chg" />
+									{changed.length} changed
+								</button>
+							)}
+							{canFinalize && (
+								<Button
+									size="xs"
+									variant="primary"
+									icon="check"
+									loading={draft.busy === 'finalize'}
+									onClick={() => draft.finalize()}
+									title="Check the spec strictly and hand it over for approval"
+								>
+									Mark as ready
+								</Button>
+							)}
+							<Menu
+								items={menu}
+								trigger={
+									<button type="button" className="ib" aria-label="Spec and details" title="Spec and details">
+										<Icon name="dots" />
+									</button>
+								}
+							/>
+						</span>
+					</div>
+					{draftingStrip}
+					{conflictBar}
+					<div className="bld-b">
+						{inBuilder && (
+							<div className="pv-editing" role="status">
+								<Icon name="pen" size={13} />
+								<span className="min-w-0 flex-1">
+									<b>Editing in the builder.</b> Your changes are a draft until you save them.
+								</span>
+								<Button size="xs" icon="eye" onClick={() => setInBuilder(false)}>
+									Back to preview
+								</Button>
+							</div>
+						)}
+						<EmbeddedBuilder
+							url={previewUrl!}
+							text={draft.text}
+							readOnly={locked || !!draft.incoming}
+							onChange={draft.type}
+							preview={!inBuilder}
+							onReady={setCaps}
+						/>
+					</div>
+					{!sheet && saveBar}
+				</div>
+				<Drawer
+					open={!!sheet}
+					onOpenChange={(o) => !o && setSheet(null)}
+					wide={sheet === 'spec' || sheet === 'workflows'}
+					title={sheet ? sheetTitle[sheet] : ''}
+					subtitle={
+						sheet === 'spec'
+							? `${fileName} · revision ${spec.draft_revision}${locked ? ' · read only' : ''}`
+							: sheet === 'workflows'
+								? 'How records move, and who moves them'
+								: undefined
+					}
+					footer={
+						sheet === 'spec' && draft.dirty && !draft.reviewing ? (
+							<>
+								<span className="mr-auto self-center text-[12px] text-t3">
+									{thinking
+										? 'The agent is working; save once it’s done.'
+										: yamlBroken
+											? 'Fix the YAML errors to save.'
+											: 'Unsaved — the agent and the preview see it once saved.'}
+								</span>
+								<Button size="sm" onClick={draft.discard}>
+									Discard
+								</Button>
+								<Button
+									size="sm"
+									variant="primary"
+									loading={draft.busy === 'save'}
+									disabled={yamlBroken || thinking}
+									onClick={() => draft.save()}
+								>
+									Save
+								</Button>
+							</>
+						) : undefined
+					}
+				>
+					<div className={cx('pv-sheet', sheet && `pv-${sheet}`)}>
+						{sheet === 'spec' && (
+							<YamlView
+								text={draft.text}
+								marks={lineMarks}
+								jump={yamlJump}
+								editable={!locked}
+								onChange={draft.type}
+								diagnostics={yamlDiagnostics}
+							/>
+						)}
+						{sheet === 'workflows' && (
+							<Suspense fallback={<Skeleton height={240} />}>
+								<WorkflowsPanel
+									doc={yamlBroken ? undefined : doc}
+									dialect={builder.spec_dialect}
+									agent={serverSpec.workflows?.processes}
+									thinking={thinking}
+									onJump={(p) => jumpTo(p)}
+								/>
+							</Suspense>
+						)}
+						{sheet === 'checks' && (
+							<ChecksList
+								rows={rows}
+								onJump={(r) =>
+									r.issue.code === 'yaml' ? jumpTo('', { line: r.line }) : jumpTo(r.issue.path)
+								}
+							/>
+						)}
+						{sheet === 'flags' && (
+							<ReviewPanel
+								flagsOnly
+								appId={appId}
+								reqId={requirement.uuid}
+								decisions={decisions}
+								flags={flags}
+								documents={documents}
+								sections={sections}
+								sectionFor={sectionFor}
+								whereOf={whereOf}
+								canAct={canReview}
+								thinking={thinking}
+								flush={() => draft.controller.flush()}
+								onShowInYaml={(p) => jumpTo(p)}
+							/>
+						)}
+						{sheet === 'documents' &&
+							(documents.length ? (
+								<ul className="pv-docs">
+									{documents.map((d) => (
+										<li key={d.id}>
+											<Icon name="file" size={15} />
+											<a
+												href={documentUrl(appId, requirement.uuid, d.id)}
+												target="_blank"
+												rel="noreferrer"
+												className="min-w-0 flex-1 truncate"
+											>
+												{d.name}
+											</a>
+											<small>
+												{d.pages ? `${d.pages} pages · ` : ''}
+												{Math.max(1, Math.round(d.size / 1024))} KB
+											</small>
+										</li>
+									))}
+								</ul>
+							) : (
+								<div className="card">
+									<div className="empty">
+										<b>No documents</b>
+										This requirement was written from a brief and the chat.
+									</div>
+								</div>
+							))}
+					</div>
+				</Drawer>
+			</BuilderContext.Provider>
+		);
+	}
 
 	return (
 		<BuilderContext.Provider value={ctx}>
@@ -378,67 +761,8 @@ export function TemplateBuilderPanel({
 						)}
 					</span>
 				</div>
-				{drafting && (
-					<div className="bld-drafting" role="status">
-						<span className="spin" />
-						<span className="min-w-0">
-							<b>
-								Drafting
-								{documents.length
-									? ` from ${documents.length} document${documents.length > 1 ? 's' : ''}`
-									: ' from your brief'}
-								…
-							</b>{' '}
-							{states.filter((st) => st.changed > 0).length} of {states.length} sections written
-						</span>
-						<ul className="bld-ticks" aria-label="Sections">
-							{states.map((st) => (
-								<li
-									key={st.section.id}
-									className={cx(st.changed > 0 && 'done')}
-									title={st.section.title}
-								>
-									{st.changed > 0 ? <Icon name="check" size={11} weight={2.6} /> : <i />}
-									{st.section.title}
-								</li>
-							))}
-						</ul>
-					</div>
-				)}
-				{draft.incoming && (
-					<div className="bld-conflict" role="alert">
-						<Icon name="alert" className="mt-[2px] shrink-0" />
-						<div className="min-w-0 flex-1">
-							<b>
-								{draft.reviewing
-									? 'You’re looking at the agent’s version.'
-									: 'The spec changed while you were editing.'}
-							</b>
-							<span>
-								{draft.reviewing
-									? ' Your edits are kept aside until you choose.'
-									: ` Revision ${draft.incoming.draft_revision} is newer than the one you started from (${draft.base.draft_revision}).`}
-							</span>
-						</div>
-						<div className="flex shrink-0 gap-1.5">
-							<Button size="xs" onClick={draft.toggleReview}>
-								{draft.reviewing ? 'Back to my edits' : 'Review agent changes'}
-							</Button>
-							<Button
-								size="xs"
-								variant="primary"
-								loading={draft.busy === 'save'}
-								disabled={thinking}
-								onClick={() => draft.keepMine()}
-							>
-								Keep mine
-							</Button>
-							<Button size="xs" variant="danger" onClick={draft.discard}>
-								Discard mine
-							</Button>
-						</div>
-					</div>
-				)}
+				{draftingStrip}
+				{conflictBar}
 				<Tabs<Tab>
 					className="bld-tabs"
 					value={tab}
@@ -564,25 +888,7 @@ export function TemplateBuilderPanel({
 						/>
 					)}
 				</div>
-				{draft.dirty && !draft.reviewing && (
-					<div className="bld-save">
-						<SaveBar
-							dirty
-							saving={draft.busy === 'save'}
-							onSave={() => {
-								if (!yamlBroken && !thinking) draft.save();
-							}}
-							onDiscard={draft.discard}
-							note={
-								thinking
-									? 'The agent is working; save once it’s done.'
-									: yamlBroken
-										? 'Fix the YAML errors to save.'
-										: 'The agent sees your changes once they’re saved.'
-							}
-						/>
-					</div>
-				)}
+				{saveBar}
 			</div>
 		</BuilderContext.Provider>
 	);

@@ -1,0 +1,385 @@
+# Zango app spec v1 — reference
+
+One file (`app_spec.yaml`) describes one Zango app: who uses it, what it
+stores, how records move, and what every screen shows. It is written from the
+user's requirement, previewed live as a clickable app with demo data, and later
+turned into plain Zango code (no template codebase):
+
+| Spec                     | Becomes in Zango                                                         |
+|--------------------------|--------------------------------------------------------------------------|
+| `roles`, `pages`, menu   | UserRoleModel, AppBuilder routes and menus, policies                     |
+| `modules`                | one `backend/<module>/` folder each (models, forms, tables, workflow…)   |
+| `entity.fields`          | a DynamicModelBase model                                                 |
+| `entity.form`            | BaseForm (create / edit); `clean()` for validation and duplicates        |
+| `entity.table`           | ModelTable (columns, filters, row actions)                               |
+| `entity.workflow`        | WorkflowBase (statuses, transitions, tags, conditions, done hooks)        |
+| `entity.access`          | view policies and `get_queryset()` row scoping                           |
+| `detail_views`           | a custom React 360 page and one aggregate API endpoint                   |
+
+`example.yaml` (Vendor Hub) uses every construct below; read it when unsure
+how deep an answer should go. `starter.yaml` is the smallest valid app.
+
+## Conventions
+
+- **Codes** (`code`, field keys, status codes, transition names) are
+  `snake_case` and unique in their scope. Entity codes are singular and unique
+  across all modules.
+- **Roles** are referenced everywhere by their exact `name` ("Procurement
+  Manager"), never by a code.
+- **Field paths** use dots across link fields: `purchase_order.vendor.city`.
+- **Built-in fields** on every entity: `id`, `created_at`, `created_by`,
+  `modified_at`, `modified_by`. Entities with a workflow also have `status`
+  and `tags`.
+- **Lists of keyed things** (fields, columns, form fields) are lists of
+  single-key maps: `- legal_name: { type: text, required: true }`. In tool
+  paths pick one with `@key`: `/modules/@vendors/entities/@vendor/fields/@gstin`.
+- **Plain language** goes in `text`, `on_done`, `on_create`, `shows`,
+  `computed` and `custom_requirements[].text`. The build hand-writes code for
+  these, so make them specific and testable ("email the vendor contact the
+  reason and a re-upload link"), never vague ("notify relevant people").
+
+### Expressions
+
+Used in `condition`, `where`, `show_when`, `limit_choices`, `create_on`,
+`readonly_when.when`:
+
+```
+<path> == | != | > | >= | < | <= <value>
+<path> in [a, b]          <path> not_in [a, b]
+<path> is_set | is_empty | is_true | is_false
+status == <code>          has_tag <code>
+current_user.role == "<Role>"
+```
+
+Combine with `all: [...]` / `any: [...]`. Anything the grammar cannot express
+goes in a `text:` item as plain language:
+
+```yaml
+condition:
+  all:
+    - gstin is_set
+    - text: At least one GST certificate document is verified.
+```
+
+### Enums
+
+| Key                | Values                                                                                 |
+|--------------------|----------------------------------------------------------------------------------------|
+| `field.type`       | text, long_text, integer, decimal, money, percent, boolean, date, datetime, time, email, phone, url, choice, multi_choice, link, multi_link, file, image, json |
+| `entity.kind`      | hero (centre of a 360 page), transactional (own lifecycle and list page), child (only under a parent), master (reference data) |
+| access `actions`   | view, add, edit, delete, export, detail                                                |
+| `row_action.type`  | edit, form, confirm, navigate, download                                                |
+| `page.type`        | crud, detail, custom                                                                   |
+| `tab.type`         | summary, related_table, timeline, fields, custom                                       |
+| colours            | gray, blue, green, amber, red, purple, teal, indigo, pink                              |
+| `custom_requirements[].area` | backend, frontend, integration, permission, notification, scheduled, report  |
+
+## Top level
+
+```yaml
+spec_version: 1         # always 1
+app: {...}
+choice_sets: {...}      # optional
+roles: [...]
+pages: [...]
+modules: [...]
+detail_views: [...]     # optional
+```
+
+## `app`
+
+`code` (snake_case), `name`, `description`, `timezone` (e.g. Asia/Kolkata),
+`locale` (en-IN), `currency` (ISO code, INR), `theme: {primary, secondary}`
+(hex colours; the preview uses `primary` as the brand colour), and
+`custom_requirements` for app-wide needs (SSO, audit export…).
+
+## `choice_sets`
+
+Shared option lists keyed by code. Each option is `{id, label, color?}`;
+`color` drives badge tones. A field uses one with `choices: <set code>`, or
+lists options inline with the same shape.
+
+```yaml
+choice_sets:
+  risk_rating:
+    - { id: low,  label: Low,  color: green }
+    - { id: high, label: High, color: red }
+```
+
+## `roles`
+
+```yaml
+- name: Procurement Manager
+  description: Approves vendors and purchase orders.
+  landing: purchase_orders          # page code opened after login
+  menu:
+    - { page: dashboard, icon: layout-dashboard }
+    - { page: vendors, label: My Vendors, icon: building-2 }
+    - group: Master Data            # collapsible menu section
+      icon: database
+      items:
+        - { page: cities }
+```
+
+Icons are lucide icon names. A role only sees pages that are in its menu (or
+reached from one, such as a 360 page) and that its entity access allows.
+
+## `pages`
+
+Global routes; menus refer to them by `code`.
+
+- `crud` — the list page of one `entity` (table, create form, row actions).
+- `detail` — a 360 page; `detail_view` names its spec in `detail_views`.
+  `route` carries `:id`, e.g. `/app/vendors/:id`.
+- `custom` — any other screen (dashboards, wizards). Name a `component` and
+  describe it precisely in `text`; `roles` limits who sees it.
+
+Every page has a `route` starting with `/app/` and usually a `title`.
+
+## `modules` and entities
+
+A module is one backend folder: `code`, `name`, `description`, `entities`.
+
+### Entity keys
+
+| Key        | Meaning                                                                                 |
+|------------|-----------------------------------------------------------------------------------------|
+| `code`, `name`, `plural` | identity; `plural` defaults to name + "s"                                  |
+| `kind`     | hero, transactional, child, master                                                      |
+| `display`  | the field used as the record's label (and in link dropdowns)                            |
+| `parent`   | children only: `{entity, field}` — the FK to the parent; managed from the parent's 360  |
+| `app_user` | the record owns a login: `{role, name, email, mobile, create_on}`                       |
+| `fields`   | list of `- key: {field}`                                                                 |
+| `validation` | `rules` (cross-field) and `duplicate_check`                                           |
+| `access`   | per role: `{actions, rows}`                                                             |
+| `workflow` | `statuses`, `transitions`, `tags`                                                       |
+| `form`     | `create`, `edit`                                                                        |
+| `table`    | the list page                                                                           |
+| `custom_requirements` | anything the spec cannot express, as `{area, title, text}`                   |
+
+### Fields
+
+Every key except `type` is optional:
+
+`label`, `required`, `readonly` (system-set, never on a form), `unique`,
+`max_length`, `min`, `max`, `pattern` + `pattern_msg`, `help` (under the
+input), `tooltip`, `placeholder`, `default` (`today` for dates),
+`choices` (choice/multi_choice), `to` (link/multi_link: an entity code or
+`app_user`), `display` (which attribute of the linked record to show),
+`limit_choices` (expression filtering link options; `form.<field>` refers to
+another field on the same form), `on_delete` (cascade | protect | set_null),
+`auto: {sequence: "VEN-{00000}"}` (`{YY}`, `{YYYY}` allowed),
+`computed` (plain-language formula, with `readonly: true`),
+`accept: [pdf, jpg]` and `max_size_mb` (file/image).
+
+### Validation
+
+```yaml
+validation:
+  rules:
+    - when: vendor_type == manufacturer
+      require: [gstin]
+      message: GSTIN is mandatory for manufacturers.
+    - when: end_date is_set
+      require_expr: end_date > start_date
+      message: End date must be after the start date.
+    - text: The PO must not exceed the vendor's credit limit.
+      message: This PO exceeds the credit limit.
+      on_fail: warn                    # block (default) | warn
+  duplicate_check:
+    scope: { where: "status not_in [rejected]" }
+    rules:
+      - { match: [gstin], compare: exact, on_match: block, message: ... }
+      - { match: [legal_name, city], compare: fuzzy, threshold: 0.85, on_match: warn, message: ... }
+```
+
+`compare`: exact | normalised | fuzzy. `on_match`: block | warn.
+
+### Access
+
+Keyed by role name. A role not listed has no access to the entity.
+
+```yaml
+access:
+  Procurement Executive: { actions: [view, add, edit, export, detail] }
+  Finance:               { actions: [view, detail], rows: { where: "status == approved" } }
+  Vendor User:           { actions: [view, detail], rows: { own: id } }
+```
+
+`rows`: `all` (default), `created_by_me`, `{own: <path>}` (the path resolves
+to the record linked to the current user's login, e.g. `own: vendor` or
+`own: purchase_order.vendor`), `{where: <expression>}`, or `{text: ...}`.
+`detail` lets the role open the entity's 360 page.
+
+### Workflow
+
+```yaml
+workflow:
+  statuses:
+    - { code: draft, label: Draft, color: gray, initial: true }
+    - { code: approved, label: Approved, color: green }
+    - { code: rejected, label: Rejected, color: red, final: true }
+  transitions:
+    - name: approve                    # code: approve_condition / approve_done
+      label: Approve
+      from: pending_approval           # one status or a list
+      to: approved
+      roles: [Procurement Manager]
+      primary: true                    # main button on the 360 header
+      tone: danger                     # destructive styling
+      confirm: Approve this vendor?
+      form:                            # fields collected in the transition modal
+        - approval_note: { type: long_text }
+      condition: { text: The approver is not the creator (maker-checker). }
+      condition_msg: Another manager must approve a vendor you created.
+      on_done: Set approved_on = today and approved_by = current user.
+    - { name: expire, label: Expire, from: active, to: expired, trigger: system,
+        text: Nightly when end_date < today. }   # system: run by code, no button
+  tags:
+    - code: preferred
+      label: Preferred
+      color: indigo
+      enable:  { roles: [Procurement Manager], condition: status == approved }
+      disable: { roles: [Procurement Manager] }
+    - { code: overdue, label: Overdue, color: amber, system: true, text: Set when ... }
+```
+
+Exactly one status should be `initial`. Every user transition names its
+`roles`; a transition without roles can be run by anyone.
+
+### Forms
+
+```yaml
+form:
+  create:
+    roles: [Procurement Executive]     # who sees the Add button (with access `add`)
+    title: Add Vendor
+    sections:                          # or a flat `fields: [...]`
+      - title: Company
+        fields: [legal_name, vendor_type]
+      - title: Commercials
+        fields:
+          - payment_terms
+          - credit_limit: { show_when: vendor_type != service }   # per-form override
+    on_create: Write "Vendor created" to the activity log.
+    after_create: vendor_360           # where to land after saving
+  edit:
+    same_as: create
+    roles: [Procurement Executive, Procurement Manager]
+    readonly_when:
+      - { when: "status in [approved]", fields: [legal_name, gstin] }
+    editable_in: [draft, pending_approval]   # edit is hidden in other statuses
+```
+
+Form fields must be fields of the entity. A child's parent link is prefilled
+from the parent's 360 tab, so leave it off the child's form.
+
+### Table
+
+```yaml
+table:
+  columns:
+    - legal_name:  { label: Name, searchable: true, sortable: true, link_to: vendor_360 }
+    - category:    { label: Category, display: name, filterable: true }
+    - status:      { source: status, label: Status, filterable: true }
+    - tags:        { source: tags, label: Tags }
+    - open_value:  { source: computed, label: Open PO value, format: money, shows: "Sum of ..." }
+    - vendor:      { source: computed, path: purchase_order.vendor.legal_name }
+    - risk_rating: { label: Risk, roles: [Procurement Manager] }
+  default_sort: -created_at
+  page_size: 25
+  quick_filters:
+    - { label: Pending my approval, where: status == pending_approval, roles: [Procurement Manager], default: true }
+  row_click: vendor_360              # a detail_view code | drawer | none
+  add_button: Add Vendor
+  row_actions:
+    - { key: edit, label: Edit, type: edit, show_when: status == draft }
+    - { key: open_360, label: Open 360, type: navigate, to: vendor_360 }
+    - { key: resend, label: Resend Invite, type: confirm, confirm: Send again?, on_done: ... }
+    - { key: update_bank, label: Update Bank, type: form, form: [ { ifsc: { type: text } } ], on_done: ... }
+    - { key: pdf, label: Download PDF, type: download, text: The PO PDF with lines and terms. }
+  footer_totals: [amount]
+  group_by: doc_type
+```
+
+Column `source`: field (default), status, tags, computed (describe it in
+`shows`) or a `path`. Workflow transitions and tag toggles are added to the
+row menu automatically.
+
+## `detail_views` (360 pages)
+
+One per hero entity that needs a 360 page; a `detail` page points at it.
+
+```yaml
+- code: vendor_360
+  hero: vendor
+  title: "{legal_name}"
+  back_to: vendors                     # page code
+  layout: header_tabs_sidebar          # header_tabs | header_tabs_sidebar | header_sidebar_tabs_left
+  roles: [...]
+  header:
+    avatar: { image: logo, fallback_initials: legal_name }
+    title: legal_name
+    subtitle: ["{vendor_ref}", "{city.name}"]
+    badges: [ { source: status }, { source: tags }, { field: risk_rating, prefix: "Risk: " } ]
+    facts:
+      - { label: GSTIN, field: gstin, copyable: true }
+      - { label: Primary contact, path: "vendor_contact[is_primary].name", fallback: "—" }
+    actions:
+      transitions: true
+      tags: true
+      buttons:
+        - { key: new_po, label: New PO, type: create_related, entity: purchase_order, prefill: { vendor: hero } }
+        - { key: edit, label: Edit, type: edit }
+        - { key: resend_invite, row_action: resend_invite }
+    banners:
+      - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}" }
+  stats:
+    - { label: Open POs, value: { count: purchase_order, via: vendor, where: "status not_in [closed]" }, tone: blue, link_to_tab: purchase_orders }
+    - { label: PO value, value: { sum: purchase_order.total_amount, via: vendor }, format: money }
+  sidebar:
+    - { type: fields, title: Company, fields: [legal_name, gstin] }
+    - { type: custom, title: Checklist, text: ... }
+  tabs:
+    - { code: overview, label: Overview, type: summary, sections: [ { title: Commercials, columns: 2, fields: [...] } ] }
+    - code: contacts
+      label: Contacts
+      type: related_table
+      entity: vendor_contact
+      via: vendor                      # FK path from the related entity to the hero
+      columns: inherit                 # or a list of column keys
+      add: { label: Add Contact, prefill: { vendor: hero } }
+      row_actions: inherit
+      row_click: drawer
+      count_badge: true
+      empty_state: { title: No contacts yet, text: ..., cta: add }
+    - code: activity
+      label: Activity
+      type: timeline
+      sources:
+        - { entity: vendor, events: [created, updated, transition, tag] }
+        - { entity: purchase_order, via: vendor, events: [created, transition] }
+  states:
+    not_found: { title: Vendor not found, back_to: vendors }
+```
+
+`via` must be a link path on the tab's entity that ends at the hero
+(`purchase_order.vendor` for invoices under a vendor). Every block accepts
+`roles` and `show_when`.
+
+## What the checks enforce
+
+Structural (a change is refused): unknown keys at the fixed levels (app,
+role, page, module, entity, workflow, table, form), wrong types, values outside
+the enums above.
+
+Cross-references (errors until fixed): menu and landing pages exist; every
+role named anywhere is declared; pages point at existing entities and detail
+views; transitions and `editable_in` use statuses of their own workflow; form
+fields and `display` are fields of the entity; `choices: <code>` names a
+declared choice set; link fields have `to`; choice fields have `choices`;
+codes, names and keys are unique in their scope.
+
+Completeness (warnings while drafting, errors at approval): `app.code` and
+`name`, at least one role with a menu, at least one page and module, and every
+entity's `code`, `name`, `kind`, `fields` and `access`.

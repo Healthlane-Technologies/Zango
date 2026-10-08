@@ -5,7 +5,9 @@
 // ("zango-builder/1", see the template's adapter.js): we `load` the draft into it and `lock`
 // it while the agent works; it reports every edit as a `change` with the whole YAML, which
 // becomes an ordinary draft edit (SaveBar, conflicts, validation all as for the YAML tab).
-// The same page is the Preview tab: `preview` switches it into its simulated app.
+// The same page shows the app's live preview: `preview` switches it into its simulated app.
+// A preview-only page (App Studio) ignores `preview` and never reports a `change`; `ready`
+// says which the page is through `capabilities` ('edit', 'preview').
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBuilderHtml } from '@/api/agentMode';
@@ -14,7 +16,7 @@ import { ErrorState, Icon, Skeleton } from '@/ui';
 const SANDBOX = 'allow-scripts allow-downloads allow-popups allow-modals';
 
 type FromBuilder =
-	| { source: 'zango-builder'; type: 'ready'; protocol?: string }
+	| { source: 'zango-builder'; type: 'ready'; protocol?: string; capabilities?: string[] }
 	| { source: 'zango-builder'; type: 'change'; yaml: string }
 	| { source: 'zango-builder'; type: 'error'; message: string };
 
@@ -28,6 +30,7 @@ export function EmbeddedBuilder({
 	onChange,
 	hidden,
 	preview = false,
+	onReady,
 }: {
 	url: string;
 	/** The draft on screen. Loaded into the builder whenever it changes from outside it. */
@@ -38,6 +41,8 @@ export function EmbeddedBuilder({
 	hidden?: boolean;
 	/** Show the builder's own preview of the app instead of its editor. */
 	preview?: boolean;
+	/** The page's declared capabilities, once it is ready (undefined: it didn't say). */
+	onReady?: (capabilities: string[] | undefined) => void;
 }) {
 	const page = useBuilderHtml(url);
 	const frame = useRef<HTMLIFrameElement>(null);
@@ -46,8 +51,8 @@ export function EmbeddedBuilder({
 	const known = useRef<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	const latest = useRef({ text, readOnly, onChange, preview });
-	latest.current = { text, readOnly, onChange, preview };
+	const latest = useRef({ text, readOnly, onChange, preview, onReady });
+	latest.current = { text, readOnly, onChange, preview, onReady };
 
 	const post = useCallback((message: Record<string, unknown>) => {
 		frame.current?.contentWindow?.postMessage({ source: 'zango-host', ...message }, '*');
@@ -69,6 +74,9 @@ export function EmbeddedBuilder({
 			if (msg.type === 'ready') {
 				ready.current = true;
 				setError(null);
+				latest.current.onReady?.(
+					Array.isArray(msg.capabilities) ? msg.capabilities.map(String) : undefined,
+				);
 				load();
 			} else if (msg.type === 'change' && typeof msg.yaml === 'string') {
 				known.current = norm(msg.yaml);

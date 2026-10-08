@@ -16,6 +16,8 @@ export interface BuilderProps {
 	editable?: boolean;
 	/** Receives the draft controller, so the page can save unsaved edits before sending/approving. */
 	onController?: (controller: SpecDraftController) => void;
+	/** Show this pointer in the spec (e.g. "show me" on a decision in the chat). */
+	jump?: { pointer: string; nonce: number } | null;
 }
 
 export const builderOverrides: Record<

@@ -886,6 +886,9 @@
 		flex-direction: column;
 		animation: sl 0.22s var(--ease);
 	}
+	.drawer.wide {
+		width: min(920px, 100%);
+	}
 	.drawer .dh {
 		display: flex;
 		align-items: center;

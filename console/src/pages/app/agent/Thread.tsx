@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import {
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type FormEvent,
+	type KeyboardEvent,
+	type ReactNode,
+} from 'react';
 import {
 	isRunActive,
 	type AnalystQuestion,
@@ -187,6 +195,8 @@ interface ThreadProps {
 	onOpenBuild: (roundUuid: string) => void;
 	/** Incremented to focus the composer (the header's "New change"). */
 	focusSignal: number;
+	/** A card from the agent after the newest message (e.g. its open decisions). */
+	agentCard?: ReactNode;
 }
 
 export function Thread({
@@ -198,6 +208,7 @@ export function Thread({
 	onNewRound,
 	onOpenBuild,
 	focusSignal,
+	agentCard,
 }: ThreadProps) {
 	const { data: me } = useMe();
 	const you = me?.name || me?.email || 'You';
@@ -374,6 +385,12 @@ export function Thread({
 							extra={draft}
 							onSend={(c) => send(c)}
 						/>
+					)}
+					{agentCard && (
+						<div className="msg fresh">
+							<AgentMark />
+							<div className="mb">{agentCard}</div>
+						</div>
 					)}
 				</div>
 			</div>

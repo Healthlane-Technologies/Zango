@@ -89,6 +89,13 @@ class TemplateDetailView(ZangoGenericPlatformAPIView):
             return get_api_response(False, {"message": str(exc)}, 500)
 
 
+def _page_url(version) -> str:
+    return (
+        f"/api/v1/platform/app-templates/templates/{version.template.slug}"
+        f"/versions/{version.object_uuid}/builder.html"
+    )
+
+
 class TemplateBuilderView(ZangoGenericPlatformAPIView):
     """GET templates/<slug>/versions/<version_uuid>/builder/
 
@@ -114,26 +121,34 @@ class TemplateBuilderView(ZangoGenericPlatformAPIView):
                 return get_api_response(
                     False, {"message": "No such template version."}, 404
                 )
+            from zango.apps.shared.app_templates.services.generic import (
+                effective,
+                fallback_for,
+                preview_version,
+            )
+
+            generic = fallback_for(version)
+            page, preview_source = preview_version(version)
             return get_api_response(
                 True,
                 {
                     "slug": version.template.slug,
                     "version": version.version,
                     "version_uuid": str(version.object_uuid),
-                    "json_schema": version.json_schema,
-                    "ui_schema": version.ui_schema,
-                    "rules": version.rules,
+                    "json_schema": effective(version, "json_schema", generic),
+                    "ui_schema": effective(version, "ui_schema", generic),
+                    "rules": effective(version, "rules", generic),
                     "spec_root": version.spec_root,
                     "spec_format": version.spec_format,
+                    "spec_dialect": version.spec_dialect,
+                    # The page that renders this spec as the app: the
+                    # template's own, or the generic template's.
+                    "preview_url": _page_url(page) if page else None,
+                    "preview_source": preview_source,
                     "starter_yaml": version.starter_yaml,
                     "example_yaml": version.example_yaml,
                     "references": reference_list(version),
-                    "builder_url": (
-                        f"/api/v1/platform/app-templates/templates/{version.template.slug}"
-                        f"/versions/{version.object_uuid}/builder.html"
-                        if version.has_builder
-                        else None
-                    ),
+                    "builder_url": _page_url(version) if version.has_builder else None,
                 },
                 200,
             )

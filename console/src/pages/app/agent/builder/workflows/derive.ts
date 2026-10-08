@@ -116,9 +116,26 @@ function* lifecycles(node: unknown, path: Array<string | number> = []): Generato
 	}
 }
 
+/** Where a lifecycle's parts live in the spec, when it isn't PSP's `states`/`steps` shape. */
+interface Shape {
+	title: string;
+	group: string;
+	step: (i: number) => string;
+	action: (i: number, j: number) => string;
+	state: (i: number) => string;
+}
+
 /** One lifecycle as a process. `null` when it has no usable step. */
-export function processFor(obj: Obj, path: Array<string | number>, doc: unknown): WfProcess | null {
+export function processFor(
+	obj: Obj,
+	path: Array<string | number>,
+	doc: unknown,
+	shape?: Shape,
+): WfProcess | null {
 	const base = joinPointer(path);
+	const stepAt = shape?.step ?? ((i: number) => `${base}/steps/${i}`);
+	const actionAt = shape?.action ?? ((i: number, j: number) => `${base}/steps/${i}/then/${j}`);
+	const stateAt = shape?.state ?? ((i: number) => `${base}/states/${i}`);
 	const steps = (obj.steps as unknown[]).filter(isObj);
 	if (!steps.length) return null;
 
@@ -164,7 +181,7 @@ export function processFor(obj: Obj, path: Array<string | number>, doc: unknown)
 			kind: 'task',
 			label: String(step.do ?? '').trim() || `Step ${i + 1}`,
 			note: actor.also.length ? `${actor.role === SYSTEM ? 'Automatic' : 'or'} ${actor.also.join(', ')}` : step.automatic || step.auto ? 'Automatic' : undefined,
-			pointer: `${base}/steps/${i}`,
+			pointer: stepAt(i),
 		});
 		for (const from of list(step.from).map(String)) {
 			touch(from);
@@ -180,7 +197,7 @@ export function processFor(obj: Obj, path: Array<string | number>, doc: unknown)
 		parseActions(step.then).forEach(({ action, value }, j) => {
 			if (!MESSAGE_ACTION.test(action)) return;
 			const mid = `m:${i}:${j}`;
-			messages.push({ id: mid, lane, kind: 'message', label: messageLabel(action, value), pointer: `${base}/steps/${i}/then/${j}` });
+			messages.push({ id: mid, lane, kind: 'message', label: messageLabel(action, value), pointer: actionAt(i, j) });
 			flows.push({ from: id, to: mid, kind: 'message' });
 		});
 	});
@@ -206,7 +223,7 @@ export function processFor(obj: Obj, path: Array<string | number>, doc: unknown)
 			kind,
 			label: humanise(code),
 			note: humanise(code),
-			pointer: idx >= 0 ? `${base}/states/${idx}` : undefined,
+			pointer: idx >= 0 ? stateAt(idx) : undefined,
 		};
 	});
 
@@ -236,7 +253,7 @@ export function processFor(obj: Obj, path: Array<string | number>, doc: unknown)
 		}
 	}
 
-	const { title, group } = place(doc, path);
+	const { title, group } = shape ?? place(doc, path);
 	return {
 		id: `lc:${base || '/'}`,
 		title,
@@ -249,8 +266,84 @@ export function processFor(obj: Obj, path: Array<string | number>, doc: unknown)
 	};
 }
 
-/** Every lifecycle in the journey, in document order. */
-export function deriveWorkflows(doc: unknown): WfProcess[] {
+// --- Zango app spec v1 ('zango-app/1') ------------------------------------------------------
+//
+//   modules: [{code, name, entities: [{code, name, workflow: {statuses, transitions}}]}]
+//   statuses:    [{code, label, initial?, final?}]
+//   transitions: [{name, label, from (code | list), to, roles: [...], trigger: system?, on_done?}]
+// Mapped onto the same states/steps shape: a transition is a task in its first role's lane,
+// `trigger: system` is the System lane, and an `on_done` that tells someone is a message flow.
+
+export const ZANGO_APP_DIALECT = 'zango-app/1';
+
+const TELLS = /\b(e-?mail|sms|whatsapp|notif\w*|push)\b/i;
+
+function tellLabel(text: string): string {
+	const m = TELLS.exec(text)?.[1].toLowerCase() ?? '';
+	if (m.startsWith('e')) return 'Email';
+	if (m === 'sms') return 'SMS';
+	if (m === 'whatsapp') return 'WhatsApp';
+	return 'Notification';
+}
+
+export function isZangoAppSpec(doc: unknown): boolean {
+	return isObj(doc) && Array.isArray(doc.modules) && ('spec_version' in doc || isObj(doc.app));
+}
+
+function zangoAppWorkflows(doc: Obj): WfProcess[] {
+	const out: WfProcess[] = [];
+	list(doc.modules).forEach((mod, mi) => {
+		if (!isObj(mod)) return;
+		const group = nameOf(mod, `Module ${mi + 1}`);
+		list(mod.entities).forEach((ent, ei) => {
+			if (!isObj(ent) || !isObj(ent.workflow)) return;
+			const wf = ent.workflow as Obj;
+			const transitions = list(wf.transitions);
+			if (!transitions.some(isObj)) return;
+			const path = ['modules', mi, 'entities', ei, 'workflow'];
+			const base = joinPointer(path);
+			const states = list(wf.statuses).map((st) =>
+				isObj(st) && st.code != null
+					? { [String(st.code)]: { start: !!st.initial, final: !!st.final } }
+					: st,
+			);
+			const steps = transitions.map((t) => {
+				if (!isObj(t)) return t;
+				const tells = [t.on_done, t.text, t.confirm]
+					.filter((v): v is string => typeof v === 'string' && TELLS.test(v))
+					.slice(0, 1)
+					.map((v) => ({ notify: `${tellLabel(v)} notification` }));
+				return {
+					do: String(t.label ?? '').trim() || humanise(String(t.name ?? '')),
+					from: t.from,
+					to: t.to,
+					by: t.roles,
+					automatic: t.trigger === 'system',
+					then: tells,
+				};
+			});
+			const name = nameOf(ent, `Entity ${ei + 1}`);
+			const p = processFor({ states, steps }, path, doc, {
+				title: `${name} lifecycle`,
+				group,
+				step: (i) => `${base}/transitions/${i}`,
+				action: (i) => {
+					const t = transitions[i];
+					const key = isObj(t) ? ['on_done', 'text', 'confirm'].find((k) => typeof t[k] === 'string' && TELLS.test(t[k] as string)) : undefined;
+					return `${base}/transitions/${i}${key ? `/${key}` : ''}`;
+				},
+				state: (i) => `${base}/statuses/${i}`,
+			});
+			if (p) out.push(p);
+		});
+	});
+	return out;
+}
+
+/** Every lifecycle in the spec, in document order. `dialect` picks the spec's vocabulary. */
+export function deriveWorkflows(doc: unknown, dialect?: string): WfProcess[] {
+	if (dialect === ZANGO_APP_DIALECT || (!dialect && isZangoAppSpec(doc)))
+		return isObj(doc) ? zangoAppWorkflows(doc) : [];
 	const out: WfProcess[] = [];
 	for (const { obj, path } of lifecycles(doc)) {
 		const p = processFor(obj, path, doc);

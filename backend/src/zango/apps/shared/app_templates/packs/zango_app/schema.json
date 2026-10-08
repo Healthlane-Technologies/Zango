@@ -1,0 +1,1435 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zango.dev/schemas/templates/zango-app/app_spec.v1.json",
+  "title": "Zango app spec v1",
+  "description": "A generic, framework-native description of a Zango app (app_spec.yaml).",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "app",
+    "roles",
+    "pages",
+    "modules"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "spec_version": {
+      "const": 1,
+      "title": "Spec version"
+    },
+    "app": {
+      "type": "object",
+      "title": "The app",
+      "required": [
+        "code",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "title": "App name"
+        },
+        "description": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "locale": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "theme": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "primary": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "secondary": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            }
+          }
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      }
+    },
+    "choice_sets": {
+      "type": "object",
+      "title": "Choice sets",
+      "description": "Shared option lists, keyed by code.",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/choiceOption"
+        }
+      },
+      "x-ui": {
+        "widget": "map",
+        "keyTitle": "Set code",
+        "itemTitle": "{key}"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "title": "Roles",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/role"
+      }
+    },
+    "pages": {
+      "type": "array",
+      "title": "Pages",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/page"
+      }
+    },
+    "modules": {
+      "type": "array",
+      "title": "Modules",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "detail_views": {
+      "type": "array",
+      "title": "Detail (360) views",
+      "items": {
+        "$ref": "#/$defs/detailView"
+      }
+    }
+  },
+  "$defs": {
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "color": {
+      "type": "string",
+      "enum": [
+        "gray",
+        "blue",
+        "green",
+        "amber",
+        "red",
+        "purple",
+        "teal",
+        "indigo",
+        "pink"
+      ],
+      "title": "Colour"
+    },
+    "roles": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "title": "Roles",
+      "description": "Role names, exactly as declared under roles."
+    },
+    "expr": {
+      "title": "Expression",
+      "description": "<path> == | != | > | >= | < | <= <value>; <path> in [a, b]; <path> not_in [a, b]; <path> is_set | is_empty | is_true | is_false; status == <code>; has_tag <code>; current_user.role == \"<Role>\". Combine with all: / any:, or say it in text:.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              }
+            },
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              }
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "choiceOption": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "additionalProperties": true
+    },
+    "choices": {
+      "title": "Choices",
+      "description": "The code of a choice set, or the options inline.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choiceOption"
+          }
+        }
+      ]
+    },
+    "field": {
+      "type": "object",
+      "title": "Field",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "long_text",
+            "integer",
+            "decimal",
+            "money",
+            "percent",
+            "boolean",
+            "date",
+            "datetime",
+            "time",
+            "email",
+            "phone",
+            "url",
+            "choice",
+            "multi_choice",
+            "link",
+            "multi_link",
+            "file",
+            "image",
+            "json"
+          ],
+          "title": "Type"
+        },
+        "label": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "readonly": {
+          "type": "boolean"
+        },
+        "unique": {
+          "type": "boolean"
+        },
+        "max_length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "pattern_msg": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "tooltip": {
+          "type": "string"
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "default": {},
+        "choices": {
+          "$ref": "#/$defs/choices"
+        },
+        "to": {
+          "type": "string",
+          "title": "Links to",
+          "description": "Entity code, or app_user."
+        },
+        "display": {
+          "type": "string"
+        },
+        "limit_choices": {
+          "$ref": "#/$defs/expr"
+        },
+        "on_delete": {
+          "type": "string",
+          "enum": [
+            "cascade",
+            "protect",
+            "set_null"
+          ]
+        },
+        "auto": {
+          "type": "object"
+        },
+        "computed": {
+          "type": "string"
+        },
+        "accept": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_size_mb": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "show_when": {
+          "$ref": "#/$defs/expr"
+        }
+      }
+    },
+    "fieldList": {
+      "type": "array",
+      "title": "Fields",
+      "items": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "additionalProperties": {
+          "$ref": "#/$defs/field"
+        },
+        "x-ui": {
+          "widget": "keyed",
+          "keyTitle": "Field key",
+          "itemTitle": "{key}"
+        }
+      }
+    },
+    "customRequirement": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "area": {
+          "type": "string",
+          "enum": [
+            "backend",
+            "frontend",
+            "integration",
+            "permission",
+            "notification",
+            "scheduled",
+            "report"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "customRequirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/customRequirement"
+      },
+      "title": "Custom requirements"
+    },
+    "rows": {
+      "title": "Rows the role sees",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "all",
+            "created_by_me"
+          ]
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "own": {
+              "type": "string"
+            },
+            "where": {
+              "$ref": "#/$defs/expr"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "accessEntry": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "view",
+                  "add",
+                  "edit",
+                  "delete",
+                  "export",
+                  "detail"
+                ]
+              }
+            },
+            "rows": {
+              "$ref": "#/$defs/rows"
+            },
+            "no_access": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "access": {
+      "type": "object",
+      "title": "Access",
+      "description": "What each role can do, keyed by role name.",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/accessEntry"
+      },
+      "x-ui": {
+        "widget": "map",
+        "keyTitle": "Role",
+        "itemTitle": "{key}"
+      }
+    },
+    "status": {
+      "type": "object",
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "initial": {
+          "type": "boolean"
+        },
+        "final": {
+          "type": "boolean"
+        }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "required": [
+        "name",
+        "from",
+        "to"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "to": {
+          "type": "string"
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "user",
+            "system"
+          ]
+        },
+        "confirm": {
+          "type": "string"
+        },
+        "condition": {
+          "$ref": "#/$defs/expr"
+        },
+        "condition_msg": {
+          "type": "string"
+        },
+        "on_done": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "boolean"
+        },
+        "tone": {
+          "type": "string",
+          "enum": [
+            "default",
+            "danger"
+          ]
+        },
+        "form": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "tagToggle": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "confirm": {
+          "type": "string"
+        },
+        "condition": {
+          "$ref": "#/$defs/expr"
+        },
+        "condition_msg": {
+          "type": "string"
+        },
+        "form": {
+          "$ref": "#/$defs/fieldList"
+        }
+      }
+    },
+    "tag": {
+      "type": "object",
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "enable": {
+          "$ref": "#/$defs/tagToggle"
+        },
+        "disable": {
+          "$ref": "#/$defs/tagToggle"
+        },
+        "system": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "title": "Workflow",
+      "required": [
+        "statuses"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "statuses": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/status"
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/transition"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tag"
+          }
+        }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "field",
+            "status",
+            "tags",
+            "computed",
+            "path",
+            "custom"
+          ]
+        },
+        "searchable": {
+          "type": "boolean"
+        },
+        "sortable": {
+          "type": "boolean"
+        },
+        "filterable": {
+          "type": "boolean"
+        },
+        "exportable": {
+          "type": "boolean"
+        },
+        "display": {
+          "type": "string"
+        },
+        "link_to": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "shows": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "highlight": {
+          "type": "object"
+        }
+      }
+    },
+    "quickFilter": {
+      "type": "object",
+      "required": [
+        "label",
+        "where"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "where": {
+          "$ref": "#/$defs/expr"
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "default": {
+          "type": "boolean"
+        }
+      }
+    },
+    "rowAction": {
+      "type": "object",
+      "required": [
+        "key",
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "edit",
+            "form",
+            "confirm",
+            "navigate",
+            "download"
+          ]
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "show_when": {
+          "$ref": "#/$defs/expr"
+        },
+        "confirm": {
+          "type": "string"
+        },
+        "on_done": {
+          "type": "string"
+        },
+        "form": {
+          "$ref": "#/$defs/fieldList"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "title": "List table",
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/column"
+            },
+            "x-ui": {
+              "widget": "keyed",
+              "keyTitle": "Column",
+              "itemTitle": "{key}"
+            }
+          }
+        },
+        "default_sort": {
+          "type": "string"
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quick_filters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quickFilter"
+          }
+        },
+        "row_click": {
+          "type": "string"
+        },
+        "add_button": {
+          "type": [
+            "string",
+            "boolean"
+          ]
+        },
+        "row_actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rowAction"
+          }
+        },
+        "footer_totals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group_by": {
+          "type": "string"
+        }
+      }
+    },
+    "formFieldRef": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/fieldOverride"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "x-ui": {
+            "widget": "keyed",
+            "keyTitle": "Field",
+            "itemTitle": "{key}"
+          }
+        }
+      ]
+    },
+    "formDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "title": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formFieldRef"
+          }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fields"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "columns": {
+                "type": "integer"
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/formFieldRef"
+                }
+              }
+            }
+          }
+        },
+        "same_as": {
+          "type": "string",
+          "enum": [
+            "create"
+          ]
+        },
+        "readonly_when": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "when": {
+                "$ref": "#/$defs/expr"
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "editable_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "on_create": {
+          "type": "string"
+        },
+        "after_create": {
+          "type": "string"
+        }
+      }
+    },
+    "form": {
+      "type": "object",
+      "title": "Forms",
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "$ref": "#/$defs/formDef"
+        },
+        "edit": {
+          "$ref": "#/$defs/formDef"
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "title": "Entity",
+      "required": [
+        "code",
+        "name",
+        "kind",
+        "fields",
+        "access"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "plural": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "hero",
+            "transactional",
+            "child",
+            "master"
+          ]
+        },
+        "display": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "object",
+          "required": [
+            "entity"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "entity": {
+              "type": "string"
+            },
+            "field": {
+              "type": "string"
+            }
+          }
+        },
+        "app_user": {
+          "type": "object",
+          "required": [
+            "role"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "role": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "mobile": {
+              "type": "string"
+            },
+            "create_on": {
+              "$ref": "#/$defs/expr"
+            }
+          }
+        },
+        "fields": {
+          "$ref": "#/$defs/fieldList",
+          "minItems": 1
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "duplicate_check": {
+              "type": "object"
+            }
+          }
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        },
+        "workflow": {
+          "$ref": "#/$defs/workflow"
+        },
+        "form": {
+          "$ref": "#/$defs/form"
+        },
+        "table": {
+          "$ref": "#/$defs/table"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      }
+    },
+    "module": {
+      "type": "object",
+      "required": [
+        "code",
+        "name",
+        "entities"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "entities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/entity"
+          }
+        }
+      }
+    },
+    "menuItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "page": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "page"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "page": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "icon": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "role": {
+      "type": "object",
+      "required": [
+        "name",
+        "menu"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9 _&/-]*$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "landing": {
+          "type": "string"
+        },
+        "menu": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/menuItem"
+          }
+        }
+      }
+    },
+    "page": {
+      "type": "object",
+      "required": [
+        "code",
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "crud",
+            "detail",
+            "custom"
+          ]
+        },
+        "entity": {
+          "type": "string"
+        },
+        "detail_view": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "title": {
+          "type": "string"
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "component": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "tab": {
+      "type": "object",
+      "required": [
+        "code",
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "related_table",
+            "timeline",
+            "fields",
+            "custom"
+          ]
+        },
+        "entity": {
+          "type": "string"
+        },
+        "via": {
+          "type": "string"
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "show_when": {
+          "$ref": "#/$defs/expr"
+        }
+      }
+    },
+    "detailView": {
+      "type": "object",
+      "required": [
+        "code",
+        "hero"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "hero": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "back_to": {
+          "type": "string"
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "header_tabs",
+            "header_tabs_sidebar",
+            "header_sidebar_tabs_left"
+          ]
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "header": {
+          "type": "object"
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "sidebar": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "tabs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tab"
+          }
+        },
+        "states": {
+          "type": "object"
+        },
+        "custom_requirements": {
+          "$ref": "#/$defs/customRequirements"
+        }
+      }
+    },
+    "fieldOverride": {
+      "type": "object",
+      "title": "Per-form field override",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "long_text",
+            "integer",
+            "decimal",
+            "money",
+            "percent",
+            "boolean",
+            "date",
+            "datetime",
+            "time",
+            "email",
+            "phone",
+            "url",
+            "choice",
+            "multi_choice",
+            "link",
+            "multi_link",
+            "file",
+            "image",
+            "json"
+          ],
+          "title": "Type"
+        },
+        "label": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "readonly": {
+          "type": "boolean"
+        },
+        "unique": {
+          "type": "boolean"
+        },
+        "max_length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "pattern_msg": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "tooltip": {
+          "type": "string"
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "default": {},
+        "choices": {
+          "$ref": "#/$defs/choices"
+        },
+        "to": {
+          "type": "string",
+          "title": "Links to",
+          "description": "Entity code, or app_user."
+        },
+        "display": {
+          "type": "string"
+        },
+        "limit_choices": {
+          "$ref": "#/$defs/expr"
+        },
+        "on_delete": {
+          "type": "string",
+          "enum": [
+            "cascade",
+            "protect",
+            "set_null"
+          ]
+        },
+        "auto": {
+          "type": "object"
+        },
+        "computed": {
+          "type": "string"
+        },
+        "accept": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_size_mb": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "show_when": {
+          "$ref": "#/$defs/expr"
+        }
+      }
+    }
+  }
+}

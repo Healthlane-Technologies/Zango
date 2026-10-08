@@ -1,0 +1,53 @@
+# A new Zango app. The analyst rewrites every part of this from your requirement;
+# the preview on the right redraws with each change.
+spec_version: 1
+
+app:
+  code: new_app
+  name: New App
+  description: What the app is for, in one sentence.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  custom_requirements: []
+
+choice_sets: {}
+
+roles:
+  - name: Admin
+    description: Runs the app and manages every record.
+    landing: records
+    menu:
+      - { page: records, icon: list }
+
+pages:
+  - { code: records, type: crud, entity: record, route: /app/records, title: Records }
+
+modules:
+  - code: core
+    name: Core
+    description: The app's main records.
+    entities:
+      - code: record
+        name: Record
+        plural: Records
+        kind: transactional
+        display: name
+        fields:
+          - name:  { type: text, required: true, max_length: 200 }
+          - notes: { type: long_text }
+        access:
+          Admin: { actions: [view, add, edit, delete, export] }
+        table:
+          columns:
+            - name:       { label: Name, searchable: true, sortable: true }
+            - created_at: { label: Created, sortable: true }
+          default_sort: -created_at
+          add_button: Add Record
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, notes] }
+          edit:   { same_as: create }
+
+detail_views: []

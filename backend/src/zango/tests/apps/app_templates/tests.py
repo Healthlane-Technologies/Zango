@@ -145,7 +145,11 @@ class AppTemplatesTestBase(ZangoTestCase):
         self.addCleanup(catalogue.clear_caches)
         # Keep these tests independent of whatever packs ship with Zango.
         AppTemplate.objects.exclude(
-            slug__in=[p.name for p in PACKS_DIR.iterdir()]
+            slug__in=[
+                json.loads((p / "template.json").read_text())["slug"]
+                for p in PACKS_DIR.iterdir()
+                if (p / "template.json").is_file()
+            ]
         ).delete()
 
     def pack(self, name="demo", **kw):

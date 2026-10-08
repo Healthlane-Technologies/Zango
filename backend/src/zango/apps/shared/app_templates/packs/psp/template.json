@@ -1,7 +1,7 @@
 {
   "slug": "psp",
   "name": "Patient Support Program",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "category": "Patient Services",
   "icon": "heart",
   "is_beta": false,
@@ -181,7 +181,7 @@
     "app_name_prefill": "Patient Assistance Program",
     "app_prompt_prefill": "A patient assistance program for a specialty therapy: register patients with consent, enrol them after checking eligibility and documents, and dispense free vials under a buy-N-get-M scheme through distributors."
   },
-  "changelog": "User journeys as swimlanes (spec_set_workflows in DRAFTING.md); the builder opens its app preview on request.",
+  "changelog": "The builder tells the host what it can do (edit, preview), for the preview-first panel.",
   "workspace": {
     "engine_paths": [
       "backend/template/",

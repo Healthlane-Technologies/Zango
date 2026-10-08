@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { parse as parseYaml } from 'yaml';
 import {
 	agentKeys,
 	requirementQuery,
@@ -18,6 +19,9 @@ import { useAppId } from '@/api/hooks';
 import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
 import { NewChangeModal } from './agent/NewChangeModal';
 import { RequirementsPanel } from './agent/RequirementsPanel';
+import { humanPath } from './agent/builder/labels';
+import { Decisions } from './agent/builder/ReviewPanel';
+import type { Schema } from './agent/builder/schema';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
 import type { SpecDraftController } from './agent/builder/useSpecDraft';
 import { RunsPanel } from './agent/runs/RunsPanel';
@@ -123,11 +127,11 @@ export function AgentPage() {
 	const flushTemplate = async () =>
 		templateDraft.current?.dirty ? templateDraft.current.flush() : true;
 
-	// A template that ships its own builder (Journey Studio…) gets the builder-first layout:
-	// the builder takes the width, the chat a narrow column that can fold to a rail.
+	// A template with a preview page (its own, or the generic App Studio) gets the preview-first
+	// layout: the app's live preview takes the width, the chat a column that can fold to a rail.
 	const viewedTemplate = viewed?.detail?.template ?? active?.template ?? null;
 	const builderDef = useTemplateBuilder(viewedTemplate?.slug, viewedTemplate?.version_uuid);
-	const builderFirst = !!builderDef.data?.builder_url;
+	const builderFirst = !!(builderDef.data?.preview_url ?? builderDef.data?.builder_url);
 	const [chatCollapsed, setChatCollapsed] = useState(readCollapsed);
 	const toggleChat = () =>
 		setChatCollapsed((on) => {
@@ -146,7 +150,20 @@ export function AgentPage() {
 		version: active?.spec_version,
 		status: active?.status,
 	});
-	const openDecisions = activeSpec.data?.open_decisions?.length ?? 0;
+	const decisions = activeSpec.data?.open_decisions ?? [];
+	const openDecisions = decisions.length;
+	// With a preview pane the agent's open decisions are asked in the chat, not in the pane.
+	const decisionsInChat = !!(activeBuilder.data?.preview_url ?? activeBuilder.data?.builder_url);
+	const activeDoc = useMemo(() => {
+		if (!decisionsInChat || !openDecisions) return undefined;
+		try {
+			return parseYaml(activeSpec.data?.text ?? '') as unknown;
+		} catch {
+			return undefined;
+		}
+	}, [decisionsInChat, openDecisions, activeSpec.data?.text]);
+	// "Show me" on a decision: the pane opens the spec at that place.
+	const [specJump, setSpecJump] = useState<{ pointer: string; nonce: number } | null>(null);
 	const sendMessage = useSendMessage(appId, activeId);
 	const saveSpec = useSaveSpec(appId, activeId);
 	const approve = useApproveRequirement(appId, activeId);
@@ -162,7 +179,7 @@ export function AgentPage() {
 	// the server refuses both, so say why up front.
 	const templateBlock = active?.template
 		? openDecisions > 0
-			? `Answer the ${openDecisions} open decision${openDecisions > 1 ? 's' : ''} in Review first`
+			? `Answer the ${openDecisions} open decision${openDecisions > 1 ? 's' : ''} ${decisionsInChat ? 'in the chat' : 'in Review'} first`
 			: active.spec_is_draft
 				? 'Mark the spec as ready (or let the agent finish) first'
 				: (active.validation_issues ?? []).some((i) => i.level === 'error')
@@ -253,6 +270,32 @@ export function AgentPage() {
 			: 0;
 
 	const newChange = (input: NewRoundInput) => attempt(create.mutateAsync(input));
+
+	const decisionsCard =
+		decisionsInChat && open && openDecisions > 0 && active ? (
+			<Decisions
+				inChat
+				appId={appId}
+				reqId={activeId}
+				decisions={decisions}
+				canAct={!blocked && !active.is_thinking}
+				thinking={active.is_thinking}
+				flush={async () => !!(await flushTemplate())}
+				whereOf={(p) => {
+					if (!p) return 'The whole spec';
+					const schema = activeBuilder.data?.json_schema as Schema | undefined;
+					try {
+						return schema && activeDoc !== undefined ? humanPath(schema, activeDoc, p) : p;
+					} catch {
+						return p;
+					}
+				}}
+				onShowInYaml={(pointer) => {
+					setView({ round: null, tab: 'requirements' });
+					setSpecJump({ pointer, nonce: Date.now() });
+				}}
+			/>
+		) : null;
 
 	return (
 		<div className="ws">
@@ -345,6 +388,7 @@ export function AgentPage() {
 						onNewRound={(p) => attempt(create.mutateAsync(p))}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
+						agentCard={decisionsCard}
 					/>
 				)}
 
@@ -440,6 +484,7 @@ export function AgentPage() {
 											fallback={markdown}
 											editable={viewingActive && open && !blocked}
 											onController={viewingActive ? onController : undefined}
+											jump={viewingActive ? specJump : null}
 										/>
 									) : (
 										markdown()

@@ -26,12 +26,14 @@ export function TemplateBuilderHost({
 	fallback,
 	editable,
 	onController,
+	jump,
 }: {
 	appId: string;
 	requirement: Requirement;
 	fallback: () => ReactNode;
 	editable?: boolean;
 	onController?: BuilderProps['onController'];
+	jump?: BuilderProps['jump'];
 }) {
 	const template = requirement.template!;
 	const builder = useTemplateBuilder(template.slug, template.version_uuid);
@@ -64,6 +66,7 @@ export function TemplateBuilderHost({
 		changed: spec.data.changed_paths ?? [],
 		editable,
 		onController,
+		jump,
 	};
 	if (Override) {
 		return (

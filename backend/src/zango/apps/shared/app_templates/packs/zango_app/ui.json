@@ -1,0 +1,10 @@
+{
+  "sections": [
+    { "id": "app", "title": "The app", "pointer": "/app", "fields": ["/spec_version", "/app"], "hint": "Name, code, locale, currency, theme and app-wide requirements.", "order": 1 },
+    { "id": "choice_sets", "title": "Choice lists", "pointer": "/choice_sets", "hint": "Shared option lists (types, ratings, terms) that fields refer to by code.", "order": 2 },
+    { "id": "roles", "title": "Who uses it", "pointer": "/roles", "hint": "Every role that signs in, where it lands and the menu it sees.", "order": 3 },
+    { "id": "pages", "title": "Pages", "pointer": "/pages", "hint": "Every screen: list (crud), 360 (detail) or custom, with its route.", "order": 4 },
+    { "id": "modules", "title": "Data and workflows", "pointer": "/modules", "hint": "Modules and their entities: fields, access, workflow, forms and list tables.", "order": 5 },
+    { "id": "detail_views", "title": "360 pages", "pointer": "/detail_views", "hint": "Header, stats, sidebar and tabs of each hero's 360 page.", "order": 6 }
+  ]
+}

@@ -129,12 +129,15 @@ function Groups({
 
 export default function WorkflowsPanel({
 	doc,
+	dialect,
 	agent,
 	thinking,
 	onJump,
 }: {
 	/** The parsed draft on screen; undefined while its YAML doesn't parse. */
 	doc: unknown;
+	/** The spec's vocabulary (`spec_dialect`); '' for PSP-style journeys. */
+	dialect?: string;
 	agent: WfProcess[] | null | undefined;
 	thinking?: boolean;
 	onJump: (pointer: string) => void;
@@ -144,12 +147,12 @@ export default function WorkflowsPanel({
 	const derived = useMemo(() => {
 		if (doc === undefined) return last.current;
 		try {
-			last.current = deriveWorkflows(doc);
+			last.current = deriveWorkflows(doc, dialect || undefined);
 		} catch {
 			/* a half-typed journey: keep the last drawing */
 		}
 		return last.current;
-	}, [doc]);
+	}, [doc, dialect]);
 	const described = useMemo(() => (agent ?? []).map((p) => ({ ...p, source: 'agent' as const })), [agent]);
 	const [size, setSize] = useState<Size>('fit');
 	const derivedGroups = new Set(derived.map((p) => p.group || 'User journeys')).size;
@@ -176,14 +179,14 @@ export default function WorkflowsPanel({
 
 			<div className="sw-sec">
 				<div className="sw-sh">
-					<h4>From the journey</h4>
-					<span>How each record moves between states, and who moves it. Click a step to see it in the YAML.</span>
+					<h4>From the spec</h4>
+					<span>How each record moves between states, and who moves it. Click a step to see it in the spec.</span>
 				</div>
 				{derived.length ? (
 					<Groups processes={derived} start={1} size={size} onJump={onJump} />
 				) : (
-					<EmptyState title="Workflows appear once the journey has lifecycles">
-						A lifecycle is a record with states and steps — the patient, an enrolment, an order.
+					<EmptyState title="Workflows appear once the spec has lifecycles">
+						A lifecycle is a record with states and the steps between them — an enrolment, an order, an approval.
 					</EmptyState>
 				)}
 			</div>

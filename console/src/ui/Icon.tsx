@@ -182,6 +182,23 @@ const paths = {
 			<circle cx="12" cy="12" r="3" />
 		</>
 	),
+	flow: (
+		<>
+			<rect x="3" y="4" width="18" height="16" rx="2" />
+			<path d="M3 12h18M7 8h4M13 16h4M9 8v8h4" />
+		</>
+	),
+	flag: (
+		<>
+			<path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+		</>
+	),
+	pen: (
+		<>
+			<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" />
+			<path d="m13.5 6.5 4 4" />
+		</>
+	),
 	zap: (
 		<>
 			<path d="M13 3 4 14h7l-1 7 9-11h-7z" />

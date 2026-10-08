@@ -112,6 +112,7 @@ class AppTemplateVersion(FullAuditMixin):
         "catalogue",
         "spec_format",
         "spec_root",
+        "spec_dialect",
         "json_schema",
         "ui_schema",
         "interview_md",
@@ -153,6 +154,10 @@ class AppTemplateVersion(FullAuditMixin):
         max_length=16, choices=SpecFormat.choices, default=SpecFormat.YAML
     )
     spec_root = models.CharField(max_length=64, blank=True, default="")
+    # Which spec language the YAML is written in. Templates in the generic
+    # Zango app spec ("zango-app/1") borrow whatever they do not ship —
+    # schema, requirement docs, preview page — from the generic template.
+    spec_dialect = models.CharField(max_length=32, blank=True, default="")
     json_schema = models.JSONField(default=dict, blank=True)
     # {"sections": [{"id", "title", "pointer", "hint", "order"}]}
     ui_schema = models.JSONField(default=dict, blank=True)
