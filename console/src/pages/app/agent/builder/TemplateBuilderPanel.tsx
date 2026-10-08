@@ -574,19 +574,7 @@ export function TemplateBuilderPanel({
 											{changed.length} changed
 										</button>
 									)}
-									{commit && spec.status !== 'approved' && (
-										<Button
-											size="xs"
-											variant="primary"
-											icon="rocket"
-											loading={commit.loading}
-											disabled={!!commit.blocked}
-											onClick={commit.onClick}
-											title={commit.blocked ?? 'Build the app exactly as previewed'}
-										>
-											Commit for build
-										</Button>
-									)}
+									{/* With a commit action the page header's Commit for build is the only one. */}
 									{!commit && canFinalize && (
 										<Button
 											size="xs"
