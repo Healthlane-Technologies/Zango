@@ -1117,7 +1117,18 @@ class AgentRequirementApproveView(ZangoGenericPlatformAPIView, TenantMixin):
             except AgentRequirement.DoesNotExist:
                 return get_api_response(False, {"message": "not found"}, 404)
 
-            from zango.apps.agent_mode.template_spec import approval_problem
+            from zango.apps.agent_mode.template_spec import (
+                approval_problem,
+                commit_draft,
+            )
+
+            # "Commit for build": a template draft the user is happy with is
+            # finalized and approved in one step.
+            if str(request.data.get("commit", "")).lower() in ("true", "1"):
+                problem = commit_draft(requirement, request.data.get("base_revision"))
+                if problem is not None:
+                    code, payload = problem
+                    return get_api_response(False, payload, code)
 
             problem = approval_problem(requirement)
             if problem is not None:

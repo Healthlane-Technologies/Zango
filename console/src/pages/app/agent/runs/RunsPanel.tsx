@@ -101,8 +101,8 @@ export function RunsPanel({
 			<Card>
 				<EmptyState title="No builds yet" action={canBuild ? buildButton : undefined}>
 					{canBuild
-						? 'The requirements are approved. Start a build to create the app on this server.'
-						: 'Approve the requirements to start the first build.'}
+						? 'Ready to build. Start a build to create the app on this server.'
+						: 'Approve (or commit) the requirements to start the first build.'}
 				</EmptyState>
 			</Card>
 		);

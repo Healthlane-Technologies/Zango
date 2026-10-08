@@ -27,6 +27,8 @@ export function TemplateBuilderHost({
 	editable,
 	onController,
 	jump,
+	commit,
+	sheet,
 }: {
 	appId: string;
 	requirement: Requirement;
@@ -34,6 +36,8 @@ export function TemplateBuilderHost({
 	editable?: boolean;
 	onController?: BuilderProps['onController'];
 	jump?: BuilderProps['jump'];
+	commit?: BuilderProps['commit'];
+	sheet?: BuilderProps['sheet'];
 }) {
 	const template = requirement.template!;
 	const builder = useTemplateBuilder(template.slug, template.version_uuid);
@@ -67,6 +71,8 @@ export function TemplateBuilderHost({
 		editable,
 		onController,
 		jump,
+		commit,
+		sheet,
 	};
 	if (Override) {
 		return (

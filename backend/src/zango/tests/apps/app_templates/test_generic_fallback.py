@@ -197,3 +197,47 @@ class AdoptMidConversationTests(AppTemplatesTestBase):
         self.assertEqual(
             compose_analyst_prompt(req, Ctx(), "ok"), "ok"
         )
+
+
+class CommitForBuildTests(AdoptMidConversationTests):
+    def requirement(self, text):
+        from zango.apps.agent_mode.models import AgentRequirement
+        from zango.apps.agent_mode.template_binding import seed_template_requirement
+
+        r = AgentRequirement(initial_prompt="go")
+        seed_template_requirement(r, catalogue.get_template(GENERIC_SLUG))
+        r.spec_markdown, r.draft_revision = text, 3
+        r.save = lambda *a, **k: None
+        return r
+
+    def test_markdown_never_replaces_the_yaml_and_the_next_turn_gets_the_template(self):
+        pass  # covered by the parent class
+
+    def test_a_valid_draft_is_finalized_and_a_broken_one_refused(self):
+        from unittest import mock
+
+        from zango.apps.agent_mode.models import RequirementStatus
+        from zango.apps.agent_mode.template_spec import approval_problem, commit_draft
+
+        example = catalogue.get_template(GENERIC_SLUG).example_yaml
+        r = self.requirement(example)
+        with mock.patch.object(type(r), "record_spec", lambda self, text, source=None: setattr(self, "spec_is_draft", False)), \
+                mock.patch("zango.apps.agent_mode.template_spec._documents", return_value=[]):
+            self.assertIsNone(commit_draft(r, 3))
+        self.assertFalse(r.spec_is_draft)
+        self.assertEqual(r.status, RequirementStatus.READY)
+        self.assertIsNone(approval_problem(r))
+
+        stale = self.requirement(example)
+        code, _ = commit_draft(stale, 1)
+        self.assertEqual(code, 409)
+
+        broken = self.requirement(example.replace("spec_version: 1", "spec_version: one"))
+        code, payload = commit_draft(broken, 3)
+        self.assertEqual(code, 400)
+        self.assertTrue(payload["issues"])
+
+        decided = self.requirement(example)
+        decided.open_decisions = [{"id": "d1", "question": "?"}]
+        self.assertIsNone(commit_draft(decided, 3))  # left to approval_problem
+        self.assertEqual(approval_problem(decided)[0], 409)

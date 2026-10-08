@@ -242,6 +242,21 @@ def finalize(requirement, base_revision):
     return 200, spec_payload(requirement)
 
 
+def commit_draft(requirement, base_revision):
+    """Finalize a template draft on its way to approval; (status, payload) if refused.
+
+    Anything approval itself would refuse (open decisions, the agent still
+    working) is left to ``approval_problem``, so the reasons stay in one place.
+    """
+    template = requirement.template if requirement.template_slug else None
+    if template is None or not template.is_yaml or not requirement.spec_is_draft:
+        return None
+    if requirement.open_decisions or requirement.is_thinking:
+        return None
+    code, payload = finalize(requirement, base_revision)
+    return None if code == 200 else (code, payload)
+
+
 def _with_sections(flags, sections) -> list:
     from zango.apps.shared.app_templates.services.spec.document import section_for
 

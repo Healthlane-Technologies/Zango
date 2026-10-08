@@ -1,4 +1,10 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query';
+import {
+	keepPreviousData,
+	queryOptions,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from '@tanstack/react-query';
 import { appKeys } from './apps';
 import { api } from './client';
 import { useApiMutation } from './hooks';
@@ -370,6 +376,28 @@ export function useApproveRequirement(appId: string, reqId: string) {
 			),
 		invalidate: [agentKeys.requirement(appId, reqId), agentKeys.requirements(appId)],
 		success: 'Requirements approved',
+	});
+}
+
+/**
+ * Preview-first "Commit for build": the server finalizes a draft spec and approves it in one
+ * step, refusing as approve does (400 spec errors, 409 open decisions / agent working / stale
+ * revision). Errors are left to the caller, which turns each into the right next step.
+ */
+export function useCommitRequirement(appId: string, reqId: string) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (baseRevision: number) =>
+			api<{ status: RequirementStatus; can_build: boolean }>(
+				`${base(appId)}/requirements/${reqId}/approve/`,
+				'POST',
+				{ commit: true, base_revision: baseRevision },
+			),
+		onSettled: () =>
+			Promise.all([
+				qc.invalidateQueries({ queryKey: agentKeys.requirement(appId, reqId) }),
+				qc.invalidateQueries({ queryKey: agentKeys.requirements(appId) }),
+			]),
 	});
 }
 

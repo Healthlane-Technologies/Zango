@@ -18,6 +18,17 @@ export interface BuilderProps {
 	onController?: (controller: SpecDraftController) => void;
 	/** Show this pointer in the spec (e.g. "show me" on a decision in the chat). */
 	jump?: { pointer: string; nonce: number } | null;
+	/** Preview-first: the page's "Commit for build" action, shown in the pane header too. */
+	commit?: CommitAction;
+	/** Open one of the preview pane's sheets from outside (e.g. Checks after a refused commit). */
+	sheet?: { sheet: 'checks' | 'flags' | 'spec'; nonce: number } | null;
+}
+
+export interface CommitAction {
+	onClick: () => void;
+	/** Why it can't be used right now; null when it can. */
+	blocked: string | null;
+	loading: boolean;
 }
 
 export const builderOverrides: Record<

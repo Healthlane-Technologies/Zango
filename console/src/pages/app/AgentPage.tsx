@@ -7,6 +7,7 @@ import {
 	requirementQuery,
 	useApproveRequirement,
 	useAvailability,
+	useCommitRequirement,
 	useCreateRequirement,
 	useRequirements,
 	useRequirementSpec,
@@ -16,10 +17,23 @@ import {
 	type NewRoundInput,
 } from '@/api/agentMode';
 import { useAppId } from '@/api/hooks';
-import { Badge, Button, cx, ErrorState, Icon, Skeleton, Tabs, TemplateBadge } from '@/ui';
+import { ApiError } from '@/api/client';
+import {
+	Badge,
+	Button,
+	ConfirmModal,
+	cx,
+	ErrorState,
+	Icon,
+	Skeleton,
+	Tabs,
+	TemplateBadge,
+	toast,
+} from '@/ui';
 import { NewChangeModal } from './agent/NewChangeModal';
 import { RequirementsPanel } from './agent/RequirementsPanel';
 import { humanPath } from './agent/builder/labels';
+import { isGeneratingPreview } from './agent/builder/generating';
 import { Decisions } from './agent/builder/ReviewPanel';
 import type { Schema } from './agent/builder/schema';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
@@ -43,6 +57,12 @@ const REASON_TEXT: Record<string, string> = {
 };
 
 type PanelTab = 'requirements' | 'builds';
+
+// Preview-first apps: you preview the app, then commit it for build.
+const PREVIEW_STAGE_LABEL: Record<string, string> = {
+	requirements: 'Preview',
+	approved: 'Committed',
+};
 
 const CHAT_COLLAPSED_KEY = 'console.agent.chatCollapsed';
 
@@ -167,6 +187,20 @@ export function AgentPage() {
 	const sendMessage = useSendMessage(appId, activeId);
 	const saveSpec = useSaveSpec(appId, activeId);
 	const approve = useApproveRequirement(appId, activeId);
+	const commit = useCommitRequirement(appId, activeId);
+	// Preview-first apps commit the previewed app for build in one step (finalize + approve).
+	const previewFlow = decisionsInChat;
+	const [confirmCommit, setConfirmCommit] = useState(false);
+	const [sheetSignal, setSheetSignal] = useState<{ sheet: 'checks'; nonce: number } | null>(null);
+	const generating =
+		!!active &&
+		isGeneratingPreview({
+			thinking: active.is_thinking,
+			text: activeSpec.data?.text ?? active.spec_markdown ?? '',
+			starter: activeBuilder.data?.starter_yaml,
+			draftRevision: activeSpec.data?.draft_revision ?? active.draft_revision ?? 0,
+			yamlBroken: (activeSpec.data?.issues ?? []).some((i) => i.code === 'yaml'),
+		});
 
 	const blocked = availability ? !availability.available : false;
 	const open = active?.status === 'gathering' || active?.status === 'ready';
@@ -201,6 +235,62 @@ export function AgentPage() {
 			setView({ round: null, tab: 'builds' });
 		}
 	};
+	const commitBlocked = !active
+		? 'Nothing to commit yet'
+		: blocked
+			? 'Build with AI isn’t ready for this app'
+			: generating
+				? 'The agent is still generating the preview'
+				: active.is_thinking
+					? 'The agent is updating the preview'
+					: openDecisions > 0
+						? `Answer the ${openDecisions} open decision${openDecisions > 1 ? 's' : ''} in the chat first`
+						: !(activeSpec.data?.text ?? active.spec_markdown ?? '').trim()
+							? 'The agent hasn’t generated a preview yet'
+							: null;
+	const showDecisionsCard = () => {
+		const el = document.getElementById('agent-decisions');
+		if (!el) return;
+		el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+		el.classList.remove('bv-flash');
+		void el.offsetWidth;
+		el.classList.add('bv-flash');
+		window.setTimeout(() => el.classList.remove('bv-flash'), 1600);
+	};
+	const onCommit = async () => {
+		if (!(await flushTemplate())) return;
+		// Saving edits moves the revision on; commit against what the server now holds.
+		const fresh = await qc.fetchQuery({ ...requirementQuery(appId, activeId), staleTime: 0 });
+		try {
+			await commit.mutateAsync(fresh.draft_revision ?? 0);
+			setConfirmCommit(false);
+			toast.success('Committed for build. Start the build when you’re ready.');
+			setView({ round: null, tab: 'builds' });
+		} catch (err) {
+			setConfirmCommit(false);
+			const status = err instanceof ApiError ? err.status : 0;
+			const raw = (err instanceof ApiError ? err.body : null) as Record<string, unknown> | null;
+			const detail = ((raw?.response as Record<string, unknown> | undefined) ?? raw ?? {}) as {
+				open_decisions?: unknown[];
+				issues?: unknown[];
+			};
+			toast.error((err as Error).message);
+			if (status === 400 && detail.issues?.length) {
+				setView({ round: null, tab: 'requirements' });
+				setSheetSignal({ sheet: 'checks', nonce: Date.now() });
+			} else if (status === 409 && detail.open_decisions?.length) {
+				window.setTimeout(showDecisionsCard, 60);
+			}
+		}
+	};
+	const commitAction = previewFlow
+		? {
+				onClick: () => setConfirmCommit(true),
+				blocked: commitBlocked,
+				loading: commit.isPending,
+			}
+		: undefined;
+
 	const onRunChange = () => {
 		qc.invalidateQueries({ queryKey: agentKeys.requirements(appId) });
 		qc.invalidateQueries({ queryKey: agentKeys.availability(appId) });
@@ -217,7 +307,20 @@ export function AgentPage() {
 	}
 
 	let actions: ReactNode = null;
-	if (active && open) {
+	if (active && open && previewFlow) {
+		actions = (
+			<Button
+				variant="primary"
+				icon="rocket"
+				disabled={!!commitBlocked}
+				loading={commit.isPending}
+				onClick={() => setConfirmCommit(true)}
+				title={commitBlocked ?? 'Build the app exactly as previewed'}
+			>
+				Commit for build
+			</Button>
+		);
+	} else if (active && open) {
 		actions = (
 			<>
 				{openQuestions > 0 && (
@@ -256,7 +359,11 @@ export function AgentPage() {
 						icon="rocket"
 						onClick={() => setView({ round: null, tab: 'builds' })}
 					>
-						{stage === 'approved' ? 'Go to build' : 'View builds'}
+						{stage === 'approved'
+							? previewFlow
+								? 'Start the build'
+								: 'Go to build'
+							: 'View builds'}
 					</Button>
 				)}
 			</>
@@ -299,6 +406,19 @@ export function AgentPage() {
 
 	return (
 		<div className="ws">
+			<ConfirmModal
+				open={confirmCommit}
+				onOpenChange={setConfirmCommit}
+				title="Commit this preview for build?"
+				confirmLabel="Commit for build"
+				loading={commit.isPending}
+				onConfirm={onCommit}
+			>
+				<p className="text-[13px] leading-[1.55] text-t2">
+					The app will be built exactly as previewed. You can still change it later with a new
+					change request.
+				</p>
+			</ConfirmModal>
 			<NewChangeModal
 				open={changeOpen}
 				onOpenChange={setChangeOpen}
@@ -314,26 +434,29 @@ export function AgentPage() {
 				)}
 				{active?.template && <TemplateBadge template={active.template} />}
 				<div className="stepline" aria-label="Progress">
-					{STAGES.map(([k, label], i) => (
-						<Fragment key={k}>
-							{i > 0 && <span className="ar">›</span>}
-							<span
-								className={cx(
-									i < stageIdx && 'done',
-									i === stageIdx && 'cur',
-									i === stageIdx && failed && 'bad',
-								)}
-								aria-current={i === stageIdx ? 'step' : undefined}
-							>
-								{i < stageIdx ? (
-									<Icon name="check" size={13} weight={2.6} />
-								) : i === stageIdx ? (
-									<i className="cd" />
-								) : null}
-								{k === 'build' && failed ? 'Build failed' : label}
-							</span>
-						</Fragment>
-					))}
+					{STAGES.map(([k, classic], i) => {
+						const label = previewFlow ? (PREVIEW_STAGE_LABEL[k] ?? classic) : classic;
+						return (
+							<Fragment key={k}>
+								{i > 0 && <span className="ar">›</span>}
+								<span
+									className={cx(
+										i < stageIdx && 'done',
+										i === stageIdx && 'cur',
+										i === stageIdx && failed && 'bad',
+									)}
+									aria-current={i === stageIdx ? 'step' : undefined}
+								>
+									{i < stageIdx ? (
+										<Icon name="check" size={13} weight={2.6} />
+									) : i === stageIdx ? (
+										<i className="cd" />
+									) : null}
+									{k === 'build' && failed ? 'Build failed' : label}
+								</span>
+							</Fragment>
+						);
+					})}
 				</div>
 				<div className="r">{actions}</div>
 			</div>
@@ -388,7 +511,16 @@ export function AgentPage() {
 						onNewRound={(p) => attempt(create.mutateAsync(p))}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
-						agentCard={decisionsCard}
+						agentCard={
+							decisionsCard && (
+								<div id="agent-decisions" className="rounded-[12px]">
+									{decisionsCard}
+								</div>
+							)
+						}
+						idlePlaceholder={
+							previewFlow && !generating ? 'Ask for changes to the preview…' : undefined
+						}
 					/>
 				)}
 
@@ -410,7 +542,11 @@ export function AgentPage() {
 							value={tab}
 							onChange={(t) => setView({ tab: t })}
 							items={[
-								{ value: 'requirements', label: 'Requirements', count: reqCount || undefined },
+								{
+									value: 'requirements',
+									label: builderFirst ? 'Preview' : 'Requirements',
+									count: reqCount || undefined,
+								},
 								{
 									value: 'builds',
 									label: 'Builds',
@@ -485,6 +621,8 @@ export function AgentPage() {
 											editable={viewingActive && open && !blocked}
 											onController={viewingActive ? onController : undefined}
 											jump={viewingActive ? specJump : null}
+											commit={viewingActive && open ? commitAction : undefined}
+											sheet={viewingActive ? sheetSignal : null}
 										/>
 									) : (
 										markdown()

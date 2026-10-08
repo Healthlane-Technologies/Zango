@@ -1048,3 +1048,218 @@
 	font-size: 12.5px;
 	color: var(--t3);
 }
+
+/* ---------- generating the first preview: an app window assembling itself ---------- */
+.bld.pv .bld-b {
+	position: relative;
+}
+.gp {
+	position: absolute;
+	inset: 0;
+	z-index: 4;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	border-radius: 12px;
+	background:
+		radial-gradient(60% 50% at 50% 38%, var(--accent-soft) 0%, transparent 70%),
+		var(--panel);
+	border: 1px solid var(--border);
+	opacity: 1;
+	transition: opacity 0.42s var(--ease);
+}
+.gp.out {
+	opacity: 0;
+	pointer-events: none;
+}
+.gp-in {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	width: min(480px, 100%);
+}
+.gp-art {
+	width: min(440px, 86%);
+	height: auto;
+	margin-bottom: 22px;
+	filter: drop-shadow(0 18px 30px rgba(79, 70, 229, 0.12)) drop-shadow(0 2px 6px rgba(24, 24, 27, 0.06));
+}
+.gp-win {
+	fill: var(--panel);
+	stroke: var(--border);
+}
+.gp-bar {
+	fill: var(--subtle);
+}
+.gp-dot {
+	fill: var(--border-2);
+}
+.gp-side {
+	fill: var(--bg);
+}
+.gp-logo {
+	fill: var(--accent);
+}
+.gp-ln {
+	fill: var(--border);
+}
+.gp-nav {
+	fill: var(--border-soft);
+}
+.gp-nav.on {
+	fill: var(--accent-soft);
+	stroke: #c7d2fe;
+}
+.gp-h1 {
+	fill: var(--t2);
+	opacity: 0.85;
+}
+.gp-btn {
+	fill: var(--accent);
+}
+.gp-card {
+	fill: var(--panel);
+	stroke: var(--border);
+}
+.gp-num {
+	fill: var(--accent);
+	opacity: 0.75;
+}
+.gp-num.g,
+.gp-chip.g {
+	fill: var(--green);
+	opacity: 0.55;
+}
+.gp-num.a {
+	fill: var(--amber);
+	opacity: 0.6;
+}
+.gp-chip {
+	fill: var(--accent);
+	opacity: 0.35;
+}
+/* Each piece appears in turn; the whole build loops. */
+.gp-s {
+	opacity: 0;
+	transform-box: fill-box;
+	transform-origin: left center;
+	animation: gp-in 6.4s var(--ease) infinite;
+}
+.gp-s1 { animation-delay: 0.1s; }
+.gp-s2 { animation-delay: 0.45s; }
+.gp-s3 { animation-delay: 0.8s; }
+.gp-s4 { animation-delay: 1.15s; }
+.gp-s5 { animation-delay: 1.5s; }
+.gp-s6 { animation-delay: 1.85s; }
+.gp-s7 { animation-delay: 2.2s; }
+.gp-s8 { animation-delay: 2.5s; }
+.gp-s9 { animation-delay: 2.8s; }
+@keyframes gp-in {
+	0% { opacity: 0; transform: scaleX(0.6) translateY(3px); }
+	9% { opacity: 1; transform: none; }
+	82% { opacity: 1; transform: none; }
+	92%, 100% { opacity: 0; transform: none; }
+}
+.gp-sheen {
+	animation: gp-sheen 3.2s ease-in-out infinite;
+}
+@keyframes gp-sheen {
+	0% { transform: translateX(0); }
+	60%, 100% { transform: translateX(560px); }
+}
+.gp-pen {
+	animation: gp-pen 6.4s var(--ease) infinite;
+}
+.gp-spark {
+	fill: var(--accent);
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: gp-twinkle 1.1s ease-in-out infinite;
+}
+@keyframes gp-pen {
+	0% { transform: translate(40px, 56px); }
+	8% { transform: translate(78px, 78px); }
+	16% { transform: translate(178px, 56px); }
+	24% { transform: translate(140px, 90px); }
+	32% { transform: translate(208px, 90px); }
+	40% { transform: translate(272px, 90px); }
+	50% { transform: translate(158px, 132px); }
+	60% { transform: translate(234px, 147px); }
+	70% { transform: translate(266px, 162px); }
+	82% { transform: translate(282px, 58px); }
+	100% { transform: translate(40px, 56px); }
+}
+@keyframes gp-twinkle {
+	0%, 100% { transform: scale(0.8) rotate(0deg); opacity: 0.85; }
+	50% { transform: scale(1.15) rotate(45deg); opacity: 1; }
+}
+.gp-title {
+	font-size: 17px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--t1);
+}
+.gp-line {
+	margin-top: 6px;
+	font-size: 13px;
+	color: var(--accent-t);
+	font-weight: 500;
+	animation: gp-line 0.5s var(--ease);
+}
+@keyframes gp-line {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: none; }
+}
+.gp-note {
+	margin-top: 14px;
+	font-size: 12px;
+	color: var(--t4);
+}
+@media (prefers-reduced-motion: reduce) {
+	.gp-s { animation: none; opacity: 1; }
+	.gp-sheen, .gp-pen, .gp-spark, .gp-line { animation: none; }
+	.gp-pen { transform: translate(272px, 90px); }
+}
+
+/* ---------- the agent is changing an existing preview: stay out of the way ---------- */
+.gp-upd {
+	position: absolute;
+	inset: 0;
+	z-index: 4;
+	pointer-events: none;
+}
+.gp-upd-bar {
+	height: 2px;
+	border-radius: 2px;
+	background: linear-gradient(90deg, transparent, var(--accent), transparent);
+	background-size: 40% 100%;
+	background-repeat: no-repeat;
+	animation: gp-upd 1.3s ease-in-out infinite;
+}
+@keyframes gp-upd {
+	from { background-position: -40% 0; }
+	to { background-position: 140% 0; }
+}
+.gp-upd-chip {
+	position: absolute;
+	bottom: 16px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 26px;
+	padding: 0 11px;
+	border-radius: 999px;
+	border: 1px solid #c7d2fe;
+	background: color-mix(in srgb, var(--panel) 92%, transparent);
+	backdrop-filter: blur(6px);
+	box-shadow: var(--sh-pop);
+	color: var(--accent-t);
+	font-size: 12px;
+	font-weight: 550;
+}
+@media (prefers-reduced-motion: reduce) {
+	.gp-upd-bar { animation: none; background-size: 100% 100%; opacity: 0.4; }
+}

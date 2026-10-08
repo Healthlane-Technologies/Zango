@@ -197,6 +197,8 @@ interface ThreadProps {
 	focusSignal: number;
 	/** A card from the agent after the newest message (e.g. its open decisions). */
 	agentCard?: ReactNode;
+	/** The composer's prompt once the agent has replied (e.g. "Ask for changes to the preview…"). */
+	idlePlaceholder?: string;
 }
 
 export function Thread({
@@ -209,6 +211,7 @@ export function Thread({
 	onOpenBuild,
 	focusSignal,
 	agentCard,
+	idlePlaceholder,
 }: ThreadProps) {
 	const { data: me } = useMe();
 	const you = me?.name || me?.email || 'You';
@@ -315,7 +318,7 @@ export function Thread({
 					? 'The agent is replying…'
 					: openQuestions
 						? 'Anything to add? (optional)'
-						: 'Reply, or ask for changes…';
+						: (idlePlaceholder ?? 'Reply, or ask for changes…');
 	const hint =
 		mode === 'next'
 			? 'Starts a new change — nothing is built until you approve it.'

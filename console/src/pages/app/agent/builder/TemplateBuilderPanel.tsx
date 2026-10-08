@@ -16,6 +16,8 @@ import {
 } from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
+import { GeneratingPreview, UpdatingPreview } from './GeneratingPreview';
+import { isGeneratingPreview } from './generating';
 import { BuilderContext, type BuilderCtx } from './context';
 import { changedPointers } from './diff';
 import { humanPath } from './labels';
@@ -72,6 +74,8 @@ export function TemplateBuilderPanel({
 	editable = false,
 	onController,
 	jump,
+	commit,
+	sheet: sheetSignal,
 }: BuilderProps) {
 	const root = builder.json_schema as Schema;
 	const sections = useMemo<BuilderSection[]>(
@@ -91,7 +95,9 @@ export function TemplateBuilderPanel({
 	const [caps, setCaps] = useState<string[] | undefined>();
 	const canEditInBuilder = caps
 		? caps.includes('edit')
-		: builder.preview_source !== 'generic' && !!builder.builder_url && previewUrl === builder.builder_url;
+		: builder.preview_source !== 'generic' &&
+			!!builder.builder_url &&
+			previewUrl === builder.builder_url;
 	useEffect(() => onController?.(draft.controller), [onController, draft.controller]);
 	// What's on screen: the agent's version while reviewing a conflict, else the draft/newest.
 	const spec = draft.shown;
@@ -248,6 +254,12 @@ export function TemplateBuilderPanel({
 		[tab, parsed, sectionFor, embedUrl, previewMode],
 	);
 
+	// A sheet to open, sent from outside the pane (Checks after a refused commit).
+	useEffect(() => {
+		if (sheetSignal && previewMode) setSheet(sheetSignal.sheet);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [sheetSignal]);
+
 	// A pointer to show, sent from outside the pane (a decision in the chat).
 	useEffect(() => {
 		if (jump) jumpTo(jump.pointer);
@@ -381,11 +393,7 @@ export function TemplateBuilderPanel({
 			</span>
 			<ul className="bld-ticks" aria-label="Sections">
 				{states.map((st) => (
-					<li
-						key={st.section.id}
-						className={cx(st.changed > 0 && 'done')}
-						title={st.section.title}
-					>
+					<li key={st.section.id} className={cx(st.changed > 0 && 'done')} title={st.section.title}>
 						{st.changed > 0 ? <Icon name="check" size={11} weight={2.6} /> : <i />}
 						{st.section.title}
 					</li>
@@ -449,12 +457,27 @@ export function TemplateBuilderPanel({
 
 	if (previewMode) {
 		const warnings = issues.length - errors;
+		// The first version of the app is still being written: the preview has nothing to show.
+		const generating = isGeneratingPreview({
+			thinking,
+			text: spec.text,
+			starter: builder.starter_yaml,
+			draftRevision: spec.draft_revision,
+			yamlBroken,
+		});
+		const writtenSections = [
+			...new Set(
+				(spec.changed_paths ?? []).map((p) => sectionFor(p)?.id).filter((id): id is string => !!id),
+			),
+		];
 		const fileName = `${builder.spec_root || 'spec'}.yaml`;
 		const menu: Array<MenuItem | null> = [
 			{ label: 'Spec (YAML)', icon: 'file', onSelect: () => setSheet('spec') },
 			{ label: 'Workflows', icon: 'flow', onSelect: () => setSheet('workflows') },
 			{
-				label: errors ? `Checks · ${errors} to fix` : `Checks${issues.length ? ` · ${issues.length}` : ''}`,
+				label: errors
+					? `Checks · ${errors} to fix`
+					: `Checks${issues.length ? ` · ${issues.length}` : ''}`,
 				icon: 'alert',
 				onSelect: () => setSheet('checks'),
 			},
@@ -472,7 +495,11 @@ export function TemplateBuilderPanel({
 				? [
 						null,
 						inBuilder
-							? { label: 'Back to preview', icon: 'eye' as const, onSelect: () => setInBuilder(false) }
+							? {
+									label: 'Back to preview',
+									icon: 'eye' as const,
+									onSelect: () => setInBuilder(false),
+								}
 							: {
 									label: 'Edit in builder',
 									icon: 'pen' as const,
@@ -494,79 +521,110 @@ export function TemplateBuilderPanel({
 				<div className={cx('bld fill pv', draft.dirty && 'dirty')}>
 					{/* The template is named in the page header already. */}
 					<div className="bld-h pv-h">
-						<Badge tone={tone} dot>
-							{label}
-						</Badge>
-						<span className="mono text-[11.5px] text-t4" title="Spec revision">
-							rev {spec.draft_revision}
-						</span>
-						{thinking && (
-							<span className="bld-thinking">
-								<span className="spin" />
-								{drafting ? 'Drafting the app…' : 'Updating the app…'}
-							</span>
+						{generating ? (
+							<Badge tone="accent" dot>
+								Generating
+							</Badge>
+						) : (
+							<>
+								<Badge tone={tone} dot>
+									{label}
+								</Badge>
+								<span className="mono text-[11.5px] text-t4" title="Spec revision">
+									rev {spec.draft_revision}
+								</span>
+							</>
 						)}
 						<span className="ml-auto flex items-center gap-1.5">
-							<button
-								type="button"
-								className={cx('pv-pill', errors ? 'err' : warnings ? 'warn' : 'ok')}
-								onClick={() => setSheet('checks')}
-								title="Checks"
-							>
-								<Icon name={errors || warnings ? 'alert' : 'check'} size={12} weight={2.4} />
-								{errors
-									? `${errors} to fix`
-									: warnings
-										? `${warnings} warning${warnings > 1 ? 's' : ''}`
-										: 'Valid'}
-							</button>
-							{flags.length > 0 && (
-								<button
-									type="button"
-									className="pv-pill flag"
-									onClick={() => setSheet('flags')}
-									title="Values the agent assumed"
-								>
-									<Icon name="flag" size={12} />
-									{flags.length} flagged
-								</button>
-							)}
-							{changed.length > 0 && !thinking && (
-								<button
-									type="button"
-									className="pv-pill chg"
-									onClick={nextChanged}
-									title="Show what the last update changed, in the spec"
-								>
-									<i className="bv-dot chg" />
-									{changed.length} changed
-								</button>
-							)}
-							{canFinalize && (
-								<Button
-									size="xs"
-									variant="primary"
-									icon="check"
-									loading={draft.busy === 'finalize'}
-									onClick={() => draft.finalize()}
-									title="Check the spec strictly and hand it over for approval"
-								>
-									Mark as ready
-								</Button>
+							{/* Nothing to check or commit until there is an app to look at. */}
+							{!generating && (
+								<>
+									<button
+										type="button"
+										className={cx('pv-pill', errors ? 'err' : warnings ? 'warn' : 'ok')}
+										onClick={() => setSheet('checks')}
+										title="Checks"
+									>
+										<Icon name={errors || warnings ? 'alert' : 'check'} size={12} weight={2.4} />
+										{errors
+											? `${errors} to fix`
+											: warnings
+												? `${warnings} warning${warnings > 1 ? 's' : ''}`
+												: 'Valid'}
+									</button>
+									{flags.length > 0 && (
+										<button
+											type="button"
+											className="pv-pill flag"
+											onClick={() => setSheet('flags')}
+											title="Values the agent assumed"
+										>
+											<Icon name="flag" size={12} />
+											{flags.length} flagged
+										</button>
+									)}
+									{changed.length > 0 && !thinking && (
+										<button
+											type="button"
+											className="pv-pill chg"
+											onClick={nextChanged}
+											title="Show what the last update changed, in the spec"
+										>
+											<i className="bv-dot chg" />
+											{changed.length} changed
+										</button>
+									)}
+									{commit && spec.status !== 'approved' && (
+										<Button
+											size="xs"
+											variant="primary"
+											icon="rocket"
+											loading={commit.loading}
+											disabled={!!commit.blocked}
+											onClick={commit.onClick}
+											title={commit.blocked ?? 'Build the app exactly as previewed'}
+										>
+											Commit for build
+										</Button>
+									)}
+									{!commit && canFinalize && (
+										<Button
+											size="xs"
+											variant="primary"
+											icon="check"
+											loading={draft.busy === 'finalize'}
+											onClick={() => draft.finalize()}
+											title="Check the spec strictly and hand it over for approval"
+										>
+											Mark as ready
+										</Button>
+									)}
+								</>
 							)}
 							<Menu
 								items={menu}
 								trigger={
-									<button type="button" className="ib" aria-label="Spec and details" title="Spec and details">
+									<button
+										type="button"
+										className="ib"
+										aria-label="Spec and details"
+										title="Spec and details"
+									>
 										<Icon name="dots" />
 									</button>
 								}
 							/>
 						</span>
 					</div>
-					{draftingStrip}
 					{conflictBar}
 					<div className="bld-b">
+						<GeneratingPreview
+							shown={generating}
+							documents={documents.length}
+							sections={sections}
+							changedSections={writtenSections}
+						/>
+						{thinking && !generating && <UpdatingPreview />}
 						{inBuilder && (
 							<div className="pv-editing" role="status">
 								<Icon name="pen" size={13} />
