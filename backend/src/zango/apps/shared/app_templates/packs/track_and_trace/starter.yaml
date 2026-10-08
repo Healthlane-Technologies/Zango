@@ -1,0 +1,655 @@
+# Track & Trace: the template's starting point. Packaging lines commission
+# GS1 serial numbers, units are aggregated into cases and pallets, every
+# movement between plant, warehouse and distributor is logged as an event, and
+# QA can quarantine or recall a batch and trace every unit. The analyst tailors
+# every part of this to the requirement; the preview redraws with each change.
+spec_version: 1
+
+app:
+  code: track_and_trace
+  name: Track & Trace
+  description: GS1 serialization, case and pallet aggregation, pack-level movement events and batch recall across the supply chain.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#1D4ED8", secondary: "#64748B" }
+  custom_requirements: []
+
+choice_sets:
+  location_type:
+    - { id: plant,       label: Plant,       color: indigo }
+    - { id: warehouse,   label: Warehouse,   color: blue }
+    - { id: distributor, label: Distributor, color: teal }
+    - { id: pharmacy,    label: Pharmacy,    color: gray }
+  dosage_form:
+    - { id: tablet,    label: Tablet }
+    - { id: capsule,   label: Capsule }
+    - { id: injection, label: Injection }
+    - { id: syrup,     label: Syrup }
+  pack_level:
+    - { id: case,   label: Case,   color: blue }
+    - { id: pallet, label: Pallet, color: purple }
+  event_type:
+    - { id: commission,   label: Commission,   color: gray }
+    - { id: pack,         label: Pack,         color: blue }
+    - { id: ship,         label: Ship,         color: indigo }
+    - { id: receive,      label: Receive,      color: teal }
+    - { id: unpack,       label: Unpack,       color: amber }
+    - { id: decommission, label: Decommission, color: red }
+  decommission_reason:
+    - { id: damaged,   label: Damaged }
+    - { id: destroyed, label: Destroyed }
+    - { id: sample,    label: QA Sample }
+    - { id: stolen,    label: Stolen / Lost }
+    - { id: recalled,  label: Recalled }
+  recall_class:
+    - { id: class_i,   label: Class I,   color: red }
+    - { id: class_ii,  label: Class II,  color: amber }
+    - { id: class_iii, label: Class III, color: gray }
+
+roles:
+  - name: Plant Operator
+    description: Runs the packaging line; commissions serial numbers and aggregates units into cases and pallets.
+    landing: batches
+    menu:
+      - { page: batches,      icon: factory }
+      - { page: serials,      label: Serial Numbers, icon: barcode }
+      - { page: aggregations, label: Cases & Pallets, icon: boxes }
+      - { page: events,       label: Movement Events, icon: history }
+
+  - name: Warehouse
+    description: Receives and ships pallets and cases between plants, warehouses and distributors and resolves event exceptions.
+    landing: aggregations
+    menu:
+      - { page: aggregations, label: Cases & Pallets, icon: boxes }
+      - { page: events,       label: Movement Events, icon: history }
+      - { page: serials,      label: Serial Numbers, icon: barcode }
+      - { page: locations,    icon: map-pin }
+
+  - name: Distributor
+    description: Distributor login; receives shipments at its own location and acts on recalls of what it holds.
+    landing: aggregations
+    menu:
+      - { page: aggregations,     label: My Stock, icon: boxes }
+      - { page: events,           label: My Receipts, icon: truck }
+      - { page: recall_locations, label: Recall Notices, icon: shield-alert }
+
+  - name: Quality Assurance
+    description: Releases and quarantines batches, runs recalls by batch and closes them once stock is recovered.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: batches,   icon: factory }
+      - { page: recalls,   icon: shield-alert }
+      - { page: events,    label: Movement Events, icon: history }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products, icon: pill }
+          - { page: locations, icon: map-pin }
+
+  - name: Regulatory Viewer
+    description: Read-only access to batches, serial history, movement events and recalls for audits and inspections.
+    landing: batches
+    menu:
+      - { page: batches, icon: factory }
+      - { page: serials, label: Serial Numbers, icon: barcode }
+      - { page: events,  label: Movement Events, icon: history }
+      - { page: recalls, icon: shield-alert }
+
+pages:
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Traceability Dashboard
+    component: TraceDashboard
+    roles: [Quality Assurance]
+    text: >
+      KPI row: serial numbers commissioned this week, cases and pallets sealed this week,
+      movement events in exception, open recalls. Below: events per day by type (stacked bar,
+      last 14 days) and a table of the 10 oldest open exceptions with event type, serial or
+      SSCC, location and age.
+  - { code: batches,          type: crud,   entity: batch,           route: /app/batches,          title: Batches }
+  - { code: batch_360,        type: detail, detail_view: batch_360,  route: /app/batches/:id }
+  - { code: products,         type: crud,   entity: product,         route: /app/products,         title: Products }
+  - { code: locations,        type: crud,   entity: location,        route: /app/locations,        title: Locations }
+  - { code: serials,          type: crud,   entity: serial_number,   route: /app/serials,          title: Serial Numbers }
+  - { code: aggregations,     type: crud,   entity: aggregation,     route: /app/aggregations,     title: Cases & Pallets }
+  - { code: events,           type: crud,   entity: movement_event,  route: /app/events,           title: Movement Events }
+  - { code: recalls,          type: crud,   entity: recall,          route: /app/recalls,          title: Recalls }
+  - { code: recall_locations, type: crud,   entity: recall_location, route: /app/recall-notices,   title: Recall Notices }
+
+modules:
+  - code: masters
+    name: Products and Locations
+    description: Serialized products (GTINs) and the plants, warehouses and distributors stock moves through.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:        { type: text, required: true, max_length: 200 }
+          - gtin:        { type: text, label: GTIN, required: true, unique: true, pattern: "^0890[0-9]{10}$", pattern_msg: 14-digit GS1 GTIN. }
+          - strength:    { type: text, placeholder: 500 mg }
+          - dosage_form: { type: choice, required: true, choices: dosage_form }
+          - units_per_case:  { type: integer, label: Units per case, required: true, min: 1, max: 200 }
+          - cases_per_pallet: { type: integer, label: Cases per pallet, required: true, min: 1, max: 80 }
+          - is_active:   { type: boolean, label: Active, default: true }
+        access:
+          Quality Assurance: { actions: [view, add, edit, export] }
+          Plant Operator:    { actions: [view] }
+          Regulatory Viewer: { actions: [view, export] }
+        table:
+          columns:
+            - name:             { label: Product, searchable: true, sortable: true }
+            - gtin:             { label: GTIN, searchable: true }
+            - strength:         { label: Strength }
+            - dosage_form:      { label: Form, filterable: true }
+            - units_per_case:   { label: Units / case }
+            - cases_per_pallet: { label: Cases / pallet }
+            - is_active:        { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { roles: [Quality Assurance], fields: [name, gtin, strength, dosage_form, units_per_case, cases_per_pallet, is_active] }
+          edit:   { same_as: create }
+
+      - code: location
+        name: Location
+        plural: Locations
+        kind: master
+        display: legal_name
+        app_user: { role: Distributor, name: legal_name, email: email, mobile: phone, create_on: location_type == distributor }
+        fields:
+          - legal_name:    { type: text, label: Name, required: true, max_length: 200 }
+          - location_type: { type: choice, label: Type, required: true, choices: location_type }
+          - gln:           { type: text, label: GLN, required: true, unique: true, pattern: "^890[0-9]{10}$", pattern_msg: 13-digit GS1 Global Location Number. }
+          - city:          { type: text, required: true }
+          - email:         { type: email, required: true }
+          - phone:         { type: phone, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile number. }
+          - is_active:     { type: boolean, label: Active, default: true }
+        access:
+          Quality Assurance: { actions: [view, add, edit, export] }
+          Warehouse:         { actions: [view] }
+          Regulatory Viewer: { actions: [view] }
+        table:
+          columns:
+            - legal_name:    { label: Location, searchable: true, sortable: true }
+            - location_type: { label: Type, filterable: true }
+            - gln:           { label: GLN, searchable: true }
+            - city:          { label: City, searchable: true, filterable: true }
+            - is_active:     { label: Active, filterable: true }
+          default_sort: legal_name
+          quick_filters:
+            - { label: Plants,       where: location_type == plant }
+            - { label: Distributors, where: location_type == distributor }
+          add_button: Add Location
+          row_actions:
+            - { key: edit, label: Edit, type: edit, roles: [Quality Assurance] }
+        form:
+          create: { roles: [Quality Assurance], fields: [legal_name, location_type, gln, city, email, phone, is_active] }
+          edit:   { same_as: create }
+
+  - code: serialization
+    name: Batches and Serial Numbers
+    description: Batches made at a plant and the GS1 serial number commissioned on every saleable unit.
+    entities:
+      - code: batch
+        name: Batch
+        plural: Batches
+        kind: hero
+        display: batch_no
+        fields:
+          - batch_no:     { type: text, label: Batch no, required: true, unique: true, pattern: "^B[0-9]{2}[A-Z][0-9]{4}$", pattern_msg: "B, two digits, a letter and four digits." }
+          - product:      { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - plant:        { type: link, to: location, required: true, display: legal_name, limit_choices: location_type == plant }
+          - mfg_date:     { type: date, label: Manufactured, required: true }
+          - expiry_date:  { type: date, label: Expiry, required: true }
+          - planned_qty:  { type: integer, label: Planned units, required: true, min: 1000, max: 200000 }
+          - serialized_qty: { type: integer, label: Serialized units, readonly: true, min: 1000, max: 120000, computed: Count of serial_number records for this batch that are not decommissioned. }
+          - hold_reason:  { type: long_text, readonly: true }
+        validation:
+          rules:
+            - { when: expiry_date is_set, require_expr: expiry_date > mfg_date, message: Expiry must be after the manufacturing date. }
+        access:
+          Plant Operator:    { actions: [view, add, edit, detail] }
+          Quality Assurance: { actions: [view, edit, export, detail] }
+          Regulatory Viewer: { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: in_production, label: In Production, color: blue, initial: true }
+            - { code: released,      label: Released,      color: green }
+            - { code: quarantined,   label: Quarantined,   color: amber }
+            - { code: recalled,      label: Recalled,      color: red }
+            - { code: expired,       label: Expired,       color: gray, final: true }
+          transitions:
+            - name: release
+              label: QA Release
+              from: in_production
+              to: released
+              roles: [Quality Assurance]
+              primary: true
+              condition:
+                all:
+                  - serialized_qty > 0
+                  - text: Every commissioned unit is packed into a sealed case and every case sits on a sealed pallet.
+              condition_msg: Aggregate every unit into cases and pallets before release.
+              on_done: Allow ship events for this batch's pallets and email the plant the release note.
+            - name: quarantine
+              label: Quarantine
+              from: [in_production, released]
+              to: quarantined
+              roles: [Quality Assurance]
+              tone: danger
+              form: [ { hold_reason: { type: long_text, required: true } } ]
+              on_done: Save hold_reason and block every ship event for this batch's cases and pallets until it is lifted.
+            - { name: lift, label: Lift Quarantine, from: quarantined, to: released, roles: [Quality Assurance] }
+            - { name: recall, label: Recalled, from: [released, quarantined], to: recalled, trigger: system,
+                text: When a recall for this batch is initiated. }
+            - { name: expire, label: Expire, from: [released, quarantined], to: expired, trigger: system,
+                text: Nightly when expiry_date < today. }
+          tags:
+            - { code: short_expiry, label: Short Expiry, color: amber, system: true, text: Set nightly when expiry_date is within 90 days. }
+        table:
+          columns:
+            - batch_no:       { label: Batch, searchable: true, sortable: true, link_to: batch_360 }
+            - product:        { label: Product, display: name, searchable: true, filterable: true }
+            - plant:          { label: Plant, display: legal_name, filterable: true }
+            - mfg_date:       { label: Mfg, sortable: true }
+            - expiry_date:    { label: Expiry, sortable: true }
+            - planned_qty:    { label: Planned }
+            - serialized_qty: { label: Serialized }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: -mfg_date
+          quick_filters:
+            - { label: In production, where: status == in_production }
+            - { label: Quarantined,   where: status == quarantined }
+            - { label: Recalled,      where: status == recalled }
+          row_click: batch_360
+          add_button: New Batch
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == in_production }
+        form:
+          create:
+            roles: [Plant Operator]
+            fields: [batch_no, product, plant, mfg_date, expiry_date, planned_qty]
+            after_create: batch_360
+          edit: { same_as: create, editable_in: [in_production] }
+
+      - code: serial_number
+        name: Serial Number
+        plural: Serial Numbers
+        kind: transactional
+        display: serial_no
+        fields:
+          - serial_no:        { type: text, label: Serial no, required: true, pattern: "^[A-Z0-9]{12}$", pattern_msg: 12 alphanumeric characters. }
+          - product:          { type: link, to: product, required: true, display: name }
+          - batch:            { type: link, to: batch, required: true, display: batch_no }
+          - parent_case:      { type: link, to: aggregation, display: sscc, limit_choices: level == case, help: The case this unit is packed in. }
+          - current_location: { type: link, to: location, display: legal_name }
+          - commissioned_at:  { type: datetime, label: Commissioned, required: true }
+          - decommission_reason: { type: choice, choices: decommission_reason, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [product, serial_no], compare: exact, on_match: block, message: This serial number is already commissioned for this GTIN. }
+        access:
+          Plant Operator:    { actions: [view, export] }
+          Warehouse:         { actions: [view] }
+          Quality Assurance: { actions: [view, export] }
+          Regulatory Viewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: commissioned,   label: Commissioned,   color: gray, initial: true }
+            - { code: packed,         label: Packed,         color: blue }
+            - { code: in_transit,     label: In Transit,     color: indigo }
+            - { code: in_stock,       label: In Stock,       color: teal }
+            - { code: decommissioned, label: Decommissioned, color: red, final: true }
+          transitions:
+            - { name: pack, label: Packed, from: commissioned, to: packed, trigger: system, text: When a pack event puts the unit into a case. }
+            - { name: ship, label: Shipped, from: [packed, in_stock], to: in_transit, trigger: system, text: When a ship event covers its case or pallet. }
+            - { name: receive, label: Received, from: in_transit, to: in_stock, trigger: system, text: When a receive event covers its case or pallet; set current_location to the receiving location. }
+            - name: decommission
+              label: Decommission
+              from: [commissioned, packed, in_stock]
+              to: decommissioned
+              roles: [Plant Operator, Warehouse]
+              tone: danger
+              confirm: Decommission this serial number? It can never be reused.
+              form: [ { decommission_reason: { type: choice, choices: decommission_reason, required: true } } ]
+              on_done: Save the reason, remove the unit from its case and log a decommission event.
+          tags:
+            - { code: suspect, label: Suspect, color: red, system: true, text: Set when a scan of this serial at an unexpected location or after decommissioning raises an exception. }
+        table:
+          columns:
+            - serial_no:        { label: Serial, searchable: true }
+            - product:          { label: Product, display: name, filterable: true }
+            - batch:            { label: Batch, display: batch_no, searchable: true, link_to: batch_360 }
+            - parent_case:      { label: Case SSCC, display: sscc, searchable: true }
+            - current_location: { label: Location, display: legal_name, filterable: true }
+            - commissioned_at:  { label: Commissioned, sortable: true }
+            - status:           { source: status, label: Status, filterable: true }
+            - tags:             { source: tags, label: Flags }
+          default_sort: -commissioned_at
+          quick_filters:
+            - { label: Not yet packed, where: status == commissioned }
+            - { label: Suspect,        where: has_tag suspect }
+          row_click: drawer
+
+  - code: supply_chain
+    name: Aggregation and Movement Events
+    description: Case and pallet hierarchy and every commission, pack, ship and receive event.
+    entities:
+      - code: aggregation
+        name: Aggregation
+        plural: Cases & Pallets
+        kind: transactional
+        display: sscc
+        fields:
+          - sscc:             { type: text, label: SSCC, required: true, unique: true, pattern: "^00890[0-9]{13}$", pattern_msg: 18-digit GS1 SSCC with the 00 prefix. }
+          - level:            { type: choice, required: true, choices: pack_level }
+          - batch:            { type: link, to: batch, required: true, display: batch_no }
+          - parent:           { type: link, to: aggregation, label: Pallet, display: sscc, limit_choices: level == pallet, help: Only for cases; the pallet this case is on. }
+          - unit_count:       { type: integer, label: Units, required: true, min: 1, max: 4000 }
+          - current_location: { type: link, to: location, required: true, display: legal_name }
+          - packed_at:        { type: datetime, label: Packed, required: true }
+        validation:
+          rules:
+            - { when: level == pallet, require_expr: parent is_empty, message: A pallet cannot sit inside another aggregation. }
+        access:
+          Plant Operator: { actions: [view, add, edit] }
+          Warehouse:      { actions: [view, export] }
+          Distributor:    { actions: [view], rows: { own: current_location } }
+          Quality Assurance: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: open,          label: Open,          color: gray, initial: true }
+            - { code: sealed,        label: Sealed,        color: blue }
+            - { code: in_transit,    label: In Transit,    color: indigo }
+            - { code: received,      label: Received,      color: teal }
+            - { code: disaggregated, label: Unpacked,      color: amber, final: true }
+          transitions:
+            - name: seal
+              label: Seal
+              from: open
+              to: sealed
+              roles: [Plant Operator]
+              primary: true
+              condition: { all: [ unit_count > 0, { text: "Case: unit_count equals the product's units_per_case. Pallet: holds at least one case." } ] }
+              condition_msg: The case or pallet is not complete.
+              on_done: Log a pack event and print the SSCC label.
+            - name: ship
+              label: Ship
+              from: [sealed, received]
+              to: in_transit
+              roles: [Warehouse]
+              primary: true
+              condition: { text: "The batch is released, not quarantined or recalled." }
+              condition_msg: This batch is on hold and cannot ship.
+              form:
+                - to_location: { type: link, to: location, required: true }
+                - document_ref: { type: text, label: Invoice / STN no, required: true }
+              on_done: Log a ship event from current_location to the chosen location for this SSCC and every case and unit inside it.
+            - name: receive
+              label: Receive
+              from: in_transit
+              to: received
+              roles: [Warehouse, Distributor]
+              primary: true
+              on_done: Log a receive event, set current_location on the SSCC, its cases and units to the receiver's location.
+            - name: unpack
+              label: Unpack
+              from: [sealed, received]
+              to: disaggregated
+              roles: [Warehouse, Distributor]
+              confirm: Break this case or pallet? Its children become standalone.
+              on_done: Log an unpack event and clear the parent link on every child.
+        table:
+          columns:
+            - sscc:             { label: SSCC, searchable: true }
+            - level:            { label: Level, filterable: true }
+            - batch:            { label: Batch, display: batch_no, searchable: true, link_to: batch_360 }
+            - parent:           { label: Pallet, display: sscc }
+            - unit_count:       { label: Units }
+            - current_location: { label: Location, display: legal_name, filterable: true }
+            - packed_at:        { label: Packed, sortable: true }
+            - status:           { source: status, label: Status, filterable: true }
+          default_sort: -packed_at
+          quick_filters:
+            - { label: Pallets,    where: level == pallet }
+            - { label: To receive, where: status == in_transit, roles: [Warehouse, Distributor] }
+          row_click: drawer
+          add_button: New Case / Pallet
+        form:
+          create: { roles: [Plant Operator], fields: [sscc, level, batch, parent, unit_count, current_location, packed_at] }
+
+      - code: movement_event
+        name: Movement Event
+        plural: Movement Events
+        kind: transactional
+        display: event_ref
+        fields:
+          - event_ref:     { type: text, label: Event ID, readonly: true, unique: true, auto: { sequence: "EVT-{YY}-{000000}" } }
+          - event_type:    { type: choice, label: Event, required: true, choices: event_type }
+          - event_time:    { type: datetime, label: Time, required: true }
+          - batch:         { type: link, to: batch, required: true, display: batch_no }
+          - aggregation:   { type: link, to: aggregation, label: SSCC, display: sscc }
+          - from_location: { type: link, to: location, label: From, display: legal_name }
+          - to_location:   { type: link, to: location, label: At / To, required: true, display: legal_name, help: Where the event happened; for a ship event the destination. }
+          - quantity:      { type: integer, label: Units, min: 1, max: 4000 }
+          - document_ref:  { type: text, label: Document no }
+          - exception_note: { type: long_text, readonly: true }
+        access:
+          Plant Operator:    { actions: [view] }
+          Warehouse:         { actions: [view, export] }
+          Distributor:       { actions: [view], rows: { own: to_location } }
+          Quality Assurance: { actions: [view, export] }
+          Regulatory Viewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: captured,  label: Captured,  color: gray, initial: true }
+            - { code: validated, label: Validated, color: green, final: true }
+            - { code: exception, label: Exception, color: red }
+            - { code: resolved,  label: Resolved,  color: blue, final: true }
+          transitions:
+            - { name: validate, label: Validated, from: captured, to: validated, trigger: system,
+                text: "Right after capture: every serial and SSCC exists, belongs to the batch, and the from-location matches its current location." }
+            - { name: flag, label: Exception, from: captured, to: exception, trigger: system,
+                text: "Right after capture when a check fails: write what failed into exception_note and alert the Warehouse and QA." }
+            - name: resolve
+              label: Resolve
+              from: exception
+              to: resolved
+              roles: [Warehouse, Quality Assurance]
+              primary: true
+              form: [ { resolution: { type: long_text, required: true } } ]
+              on_done: Record the resolution and the user; the original event stays unchanged in the history.
+        table:
+          columns:
+            - event_ref:     { label: Event, searchable: true }
+            - event_type:    { label: Event, filterable: true }
+            - event_time:    { label: Time, sortable: true }
+            - batch:         { label: Batch, display: batch_no, searchable: true, link_to: batch_360 }
+            - aggregation:   { label: SSCC, display: sscc, searchable: true }
+            - from_location: { label: From, display: legal_name, filterable: true }
+            - to_location:   { label: To, display: legal_name, filterable: true }
+            - quantity:      { label: Units }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: -event_time
+          quick_filters:
+            - { label: Exceptions, where: status == exception }
+            - { label: Shipments,  where: event_type == ship }
+          row_click: drawer
+
+  - code: recall
+    name: Recall
+    description: Batch recalls, the locations holding affected stock and their returns.
+    entities:
+      - code: recall
+        name: Recall
+        plural: Recalls
+        kind: transactional
+        display: recall_ref
+        fields:
+          - recall_ref:      { type: text, label: Recall no, readonly: true, unique: true, auto: { sequence: "RCL-{YY}-{000}" } }
+          - batch:           { type: link, to: batch, required: true, display: batch_no, limit_choices: "status in [released, quarantined]" }
+          - recall_class:    { type: choice, label: Class, required: true, choices: recall_class }
+          - reason:          { type: long_text, required: true }
+          - initiated_on:    { type: date, readonly: true }
+          - units_affected:  { type: integer, readonly: true, min: 500, max: 20000, computed: Count of the batch's serial numbers that left the plant and are not decommissioned. }
+          - units_recovered: { type: integer, readonly: true, min: 0, max: 400, computed: Sum of recall_location.units_returned. }
+        access:
+          Quality Assurance: { actions: [view, add, edit, export] }
+          Regulatory Viewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,       color: gray, initial: true }
+            - { code: initiated, label: Initiated,   color: red }
+            - { code: closed,    label: Closed,      color: green, final: true }
+          transitions:
+            - name: initiate
+              label: Initiate Recall
+              from: draft
+              to: initiated
+              roles: [Quality Assurance]
+              primary: true
+              confirm: Recall this batch? Every location holding it is notified now.
+              on_done: Set initiated_on, move the batch to recalled, trace every serial and SSCC to its current location, create a recall notice per location and email each one.
+            - name: close
+              label: Close Recall
+              from: initiated
+              to: closed
+              roles: [Quality Assurance]
+              condition: { text: Every recall notice is confirmed. }
+              condition_msg: Some locations have not confirmed their returns.
+              form: [ { closure_note: { type: long_text, required: true } } ]
+              on_done: Decommission every returned serial with reason recalled and file the closure report.
+        table:
+          columns:
+            - recall_ref:      { label: Recall, searchable: true }
+            - batch:           { label: Batch, display: batch_no, link_to: batch_360 }
+            - recall_class:    { label: Class, filterable: true }
+            - initiated_on:    { label: Initiated, sortable: true }
+            - units_affected:  { label: Affected }
+            - units_recovered: { label: Recovered }
+            - status:          { source: status, label: Status, filterable: true }
+          default_sort: -initiated_on
+          row_click: drawer
+          add_button: New Recall
+        form:
+          create: { roles: [Quality Assurance], fields: [batch, recall_class, reason] }
+          edit:   { same_as: create, editable_in: [draft] }
+
+      - code: recall_location
+        name: Recall Notice
+        plural: Recall Notices
+        kind: child
+        parent: { entity: recall, field: recall }
+        display: location
+        fields:
+          - recall:         { type: link, to: recall, required: true, display: recall_ref, on_delete: cascade }
+          - location:       { type: link, to: location, required: true, display: legal_name }
+          - units_held:     { type: integer, label: Units held, readonly: true, min: 100, max: 2000, computed: Serials of the batch whose current_location is this location. }
+          - units_returned: { type: integer, label: Units returned, min: 0, max: 100 }
+        access:
+          Quality Assurance: { actions: [view, edit, export] }
+          Distributor:       { actions: [view], rows: { own: location } }
+        workflow:
+          statuses:
+            - { code: notified,  label: Notified,  color: amber, initial: true }
+            - { code: confirmed, label: Confirmed, color: green, final: true }
+          transitions:
+            - name: confirm
+              label: Confirm Returns
+              from: notified
+              to: confirmed
+              roles: [Distributor, Quality Assurance]
+              primary: true
+              form: [ { units_returned: { type: integer, required: true, min: 0 } } ]
+              on_done: Save units_returned and log a ship event back to the plant for the returned serials.
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set when still notified 3 days after the recall was initiated. }
+        table:
+          columns:
+            - recall:         { label: Recall, display: recall_ref }
+            - batch:          { source: computed, label: Batch, path: recall.batch.batch_no }
+            - location:       { label: Location, display: legal_name, filterable: true }
+            - units_held:     { label: Held }
+            - units_returned: { label: Returned }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          quick_filters:
+            - { label: Awaiting confirmation, where: status == notified, default: true }
+          row_click: drawer
+
+detail_views:
+  - code: batch_360
+    hero: batch
+    title: "{batch_no}"
+    back_to: batches
+    layout: header_tabs
+    roles: [Plant Operator, Quality Assurance, Regulatory Viewer]
+    header:
+      title: batch_no
+      subtitle: ["{product.name}", "{plant.legal_name}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Product, field: product }
+        - { label: Manufactured, field: mfg_date }
+        - { label: Expiry, field: expiry_date }
+        - { label: Serialized, field: serialized_qty, emphasis: true }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: new_recall, label: Start Recall, type: create_related, entity: recall, prefill: { batch: hero }, roles: [Quality Assurance], show_when: "status in [released, quarantined]" }
+      banners:
+        - { show_when: status == quarantined, tone: warning, text: "Quarantined: {hold_reason}" }
+        - { show_when: status == recalled, tone: danger, text: This batch is under recall; every unit is traced on the Recall tab. }
+    stats:
+      - { label: Serials, value: { count: serial_number, via: batch }, tone: blue, link_to_tab: serials }
+      - { label: Pallets, value: { count: aggregation, via: batch, where: level == pallet }, link_to_tab: aggregations }
+      - { label: Exceptions, value: { count: movement_event, via: batch, where: status == exception }, tone: red, link_to_tab: events }
+    tabs:
+      - code: serials
+        label: Serial Numbers
+        type: related_table
+        entity: serial_number
+        via: batch
+        columns: [serial_no, parent_case, current_location, commissioned_at, status, tags]
+        row_click: drawer
+      - code: aggregations
+        label: Cases & Pallets
+        type: related_table
+        entity: aggregation
+        via: batch
+        count_badge: true
+        columns: [sscc, level, parent, unit_count, current_location, status]
+        row_click: drawer
+      - code: events
+        label: Movement Events
+        type: related_table
+        entity: movement_event
+        via: batch
+        columns: [event_ref, event_type, event_time, aggregation, from_location, to_location, status]
+        row_click: drawer
+      - code: recalls
+        label: Recall
+        type: related_table
+        entity: recall
+        via: batch
+        columns: [recall_ref, recall_class, initiated_on, units_affected, units_recovered, status]
+        roles: [Quality Assurance, Regulatory Viewer]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: batch, events: [created, updated, transition, tag] }
+          - { entity: recall, via: batch, events: [created, transition] }
+    states:
+      not_found: { title: Batch not found, back_to: batches }

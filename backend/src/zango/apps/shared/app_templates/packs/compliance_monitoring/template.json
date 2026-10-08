@@ -1,0 +1,72 @@
+{
+  "slug": "compliance-monitoring",
+  "name": "Compliance Monitoring Workbench",
+  "version": "1.0.0",
+  "category": "Compliance & Quality",
+  "icon": "eye",
+  "is_beta": true,
+  "aka": [
+    "HCP compliance monitoring",
+    "transfer of value monitoring",
+    "field activity surveillance",
+    "compliance case management",
+    "spend monitoring"
+  ],
+  "one_liner": "Rules-based and AI monitoring of HCP interactions, spend and field activity, with case management.",
+  "fits_when": [
+    "HCP interactions and spend must be monitored against internal codes and caps",
+    "field activity comes from a CRM and spend from an expense system",
+    "rules and a risk model should flag activity for an analyst to triage",
+    "flagged activity is investigated as a case with recorded findings",
+    "business heads must agree and complete remediation before a case closes",
+    "auditors expect a complete trail from signal to remediation"
+  ],
+  "gives_you": [
+    "Nightly ingestion of HCP interactions and spend with employee and HCP masters",
+    "Monitoring rules with risk points and an AI risk score per signal",
+    "A signal triage queue that opens cases or dismisses with a reason",
+    "Case investigation with assignment, findings, business review and due-date tracking",
+    "Remediation actions per finding with owners, evidence and analyst verification",
+    "A case file 360 page with signals, findings and an activity timeline"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "A compliance monitoring workbench for life sciences companies: HCP interactions arrive from the CRM and spend from the expense system, monitoring rules and an AI model score them into risk signals, and compliance analysts triage the signals into cases. Investigators work each case and record findings against policy clauses, business reviewers agree remediation for their teams, and analysts verify every action before the case closes.",
+    "packages": [
+      { "name": "workflow", "description": "Signal triage, case investigation and remediation lifecycles" },
+      { "name": "rules", "description": "Monitoring rules with thresholds and risk points, plus AI risk scoring" },
+      { "name": "documents", "description": "Receipts, investigation evidence and remediation proof" },
+      { "name": "reports", "description": "Signals by risk level, open and overdue cases, repeat employees" },
+      { "name": "integrations", "description": "Nightly feeds of interactions from CRM and spend from the expense system" }
+    ],
+    "roles": [
+      { "name": "Compliance analyst", "description": "Triages signals, opens and assigns cases, maintains rules and verifies remediation" },
+      { "name": "Investigator", "description": "Investigates assigned cases and records findings against policy" },
+      { "name": "Business reviewer", "description": "Reviews substantiated cases for their team and completes the agreed remediation" }
+    ],
+    "workflows": [
+      { "name": "Signal ingestion", "description": "Interactions and spend loaded nightly from CRM and the expense system" },
+      { "name": "Rules & AI risk scoring", "description": "Active rules and the risk model raise scored signals with a rationale" },
+      { "name": "Case investigation", "description": "Triage, case opening, investigator assignment, findings and business review" },
+      { "name": "Remediation tracking", "description": "Actions per finding with owners, due dates, evidence and analyst verification" }
+    ],
+    "data_objects": ["Interaction", "Spend record", "Signal", "Case", "Finding", "Monitoring rule", "Field employee", "HCP"],
+    "integrations": ["CRM activity feed", "Expense system"],
+    "compliance": [
+      "Annual transfer-of-value caps per HCP and fair-market-value checks on honoraria",
+      "Investigators see only their assigned cases; reviewers only their team's",
+      "Maker-checker: remediation completed by the business is verified by compliance",
+      "Dismissed signals always carry a recorded reason",
+      "Audit trail of every signal, case transition and remediation step"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Compliance Monitor",
+    "app_prompt_prefill": "Compliance monitoring that ingests field interactions and expenses, scores risk with rules and AI, opens cases for analysts, and tracks remediation to closure."
+  },
+  "changelog": "First version: interaction and spend ingestion, rules and AI risk signals, case investigation and remediation tracking on the Zango app spec v1."
+}

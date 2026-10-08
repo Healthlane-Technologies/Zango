@@ -1,0 +1,72 @@
+{
+  "slug": "adverse-event-intake",
+  "name": "Adverse Event Intake",
+  "version": "1.0.0",
+  "category": "Compliance & Quality",
+  "icon": "alert",
+  "is_beta": false,
+  "aka": [
+    "AE intake",
+    "pharmacovigilance case intake",
+    "safety reporting",
+    "product complaint intake",
+    "ICSR intake"
+  ],
+  "one_liner": "Multi-channel adverse event and product complaint capture with PV routing and SLA timers.",
+  "fits_when": [
+    "adverse events and product complaints arrive by call centre, email, web form and field reps and must land in one queue",
+    "every report must be checked for the four minimum criteria before it counts as a valid case",
+    "duplicates across channels must be caught before PV spends time on a case",
+    "intake must route each case to pharmacovigilance within a fixed SLA, usually 24 hours from awareness",
+    "PV chases reporters for missing information with tracked follow-up attempts",
+    "cases are checked by QA and handed to a safety database, or worked by the PV team in the app"
+  ],
+  "gives_you": [
+    "A case record keyed by a case ID with channel, reporter, suspect product, patient, event and seriousness",
+    "A four minimum criteria check and a duplicate check before PV accepts the case",
+    "A routing SLA clock with at-risk and breached flags, and the 15 / 90-day regulatory due date",
+    "Events coded to MedDRA with seriousness criteria and outcome",
+    "Follow-up requests to reporters with due dates, attempts and responses",
+    "QA review against source documents, with an audit trail and a case 360 page"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "One intake desk for every safety report. Intake agents log adverse events and product complaints from calls, email, web forms and field reps against the four minimum criteria; the duplicate check runs before a PV associate accepts the case within the routing SLA; PV codes the events, assesses seriousness and chases follow-ups; QA checks each case against its source documents before it is closed and exported to the safety database.",
+    "packages": [
+      { "name": "workflow", "description": "Case, follow-up and investigation lifecycles with role-gated steps and SLA flags" },
+      { "name": "forms", "description": "Report intake, event coding, follow-up and QA forms" },
+      { "name": "communication", "description": "PV inbox alerts, reporter follow-up emails and SLA warnings" },
+      { "name": "documents", "description": "Source documents kept with every case for the retention period" },
+      { "name": "reports", "description": "Cases by channel and product, SLA compliance and overdue follow-ups" }
+    ],
+    "roles": [
+      { "name": "Intake agent", "description": "Logs reports from every channel, completes the minimum criteria and submits them to PV" },
+      { "name": "PV associate", "description": "Clears duplicates, triages seriousness, codes events and requests follow-ups within the SLA" },
+      { "name": "QA reviewer", "description": "Checks cases against source documents before export and investigates quality complaints" }
+    ],
+    "workflows": [
+      { "name": "Multi-channel intake", "description": "Calls, email, web forms and field reps captured into one case record with its source documents" },
+      { "name": "Duplicate check", "description": "Matching on product, patient and event flags likely duplicates before PV accepts a case" },
+      { "name": "PV routing with SLA", "description": "A 24-hour routing clock with at-risk and breached flags, then the 15 / 90-day regulatory due date" },
+      { "name": "Follow-up requests", "description": "Questions to the reporter with due dates, up to three attempts and recorded responses" }
+    ],
+    "data_objects": ["Case", "Reporter", "Product", "Event", "Follow-up"],
+    "integrations": ["Safety database export"],
+    "compliance": [
+      "PV SLA timers: 24 hours to route a case, 15 days for serious and 90 days for non-serious reports",
+      "Four minimum criteria check (identifiable patient, reporter, suspect product and event) before a case is valid",
+      "Source document retention with every case",
+      "Audit trail of every change and transition, aligned to GVP Module VI and 21 CFR Part 11 expectations",
+      "Patient identified only by initials, age and sex"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "AE Intake",
+    "app_prompt_prefill": "Adverse event intake that captures AEs and complaints from calls, email and field reps, checks duplicates, routes to PV within the SLA and tracks follow-ups."
+  },
+  "changelog": "First version: multi-channel case intake, four minimum criteria and duplicate checks, PV routing SLA, MedDRA-coded events, follow-ups and QA review on the Zango app spec v1."
+}

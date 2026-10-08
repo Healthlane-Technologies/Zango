@@ -1,0 +1,509 @@
+# Adverse Event Intake: the template's starting point. Multi-channel capture of
+# adverse events and product complaints, the four minimum criteria check, a
+# duplicate check, routing to pharmacovigilance within the SLA, follow-up
+# requests and a QA check before the case leaves intake. The analyst tailors
+# every part of it to your requirement; the preview on the right redraws with
+# each change.
+spec_version: 1
+
+app:
+  code: adverse_event_intake
+  name: Adverse Event Intake
+  description: Capture adverse events and product complaints from every channel, check duplicates, route to PV within the SLA and chase follow-ups.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#BE123C", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: Safety database export
+      text: When a case is closed by QA, export it as an E2B(R3) XML file to the safety database and store the returned safety database case ID on the case.
+    - area: scheduled
+      title: SLA clock
+      text: Every 30 minutes, recompute sla_hours_left for cases in New or Duplicate Check and set the sla_at_risk tag when less than 4 hours remain and sla_breached once the deadline has passed.
+
+choice_sets:
+  channel:
+    - { id: call,      label: Call centre,  color: blue }
+    - { id: email,     label: Email,        color: indigo }
+    - { id: field_rep, label: Field rep,    color: teal }
+    - { id: web_form,  label: Web form,     color: purple }
+    - { id: social,    label: Social media, color: pink }
+  case_type:
+    - { id: ae,           label: Adverse event,       color: red }
+    - { id: complaint,    label: Product complaint,   color: amber }
+    - { id: ae_complaint, label: AE + complaint,      color: purple }
+    - { id: special,      label: Special situation,   color: indigo }
+  reporter_type:
+    - { id: hcp,        label: Healthcare professional }
+    - { id: pharmacist, label: Pharmacist }
+    - { id: patient,    label: Patient }
+    - { id: caregiver,  label: Caregiver }
+    - { id: employee,   label: Company employee }
+  seriousness:
+    - { id: serious,     label: Serious,     color: red }
+    - { id: non_serious, label: Non-serious, color: green }
+    - { id: unknown,     label: Not yet known, color: gray }
+  serious_criteria:
+    - { id: death,           label: Death }
+    - { id: life_threatening, label: Life-threatening }
+    - { id: hospitalisation, label: Hospitalisation }
+    - { id: disability,      label: Disability }
+    - { id: congenital,      label: Congenital anomaly }
+    - { id: medically_important, label: Medically important }
+  event_outcome:
+    - { id: recovered,     label: Recovered,      color: green }
+    - { id: recovering,    label: Recovering,     color: teal }
+    - { id: not_recovered, label: Not recovered,  color: amber }
+    - { id: fatal,         label: Fatal,          color: red }
+    - { id: unknown,       label: Unknown,        color: gray }
+  meddra_pt:
+    - { id: rash,          label: Rash }
+    - { id: pruritus,      label: Pruritus }
+    - { id: nausea,        label: Nausea }
+    - { id: headache,      label: Headache }
+    - { id: dizziness,     label: Dizziness }
+    - { id: diarrhoea,     label: Diarrhoea }
+    - { id: hypoglycaemia, label: Hypoglycaemia }
+    - { id: anaphylaxis,   label: Anaphylactic reaction }
+    - { id: drug_ineffective, label: Drug ineffective }
+    - { id: medication_error, label: Medication error }
+  sex:
+    - { id: female,  label: Female }
+    - { id: male,    label: Male }
+    - { id: unknown, label: Unknown }
+
+roles:
+  - name: Intake Agent
+    description: Logs every report that arrives by call, email, field rep or web form, completes the four minimum criteria and submits the case for the duplicate check.
+    landing: cases
+    menu:
+      - { page: cases,      label: Intake Queue, icon: inbox }
+      - { page: follow_ups, icon: message-square-reply }
+      - { page: reporters,  icon: contact }
+
+  - name: PV Associate
+    description: Confirms or rejects duplicates, triages seriousness, works the case within the SLA and requests follow-up information from reporters.
+    landing: dashboard
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: cases,      icon: shield-alert }
+      - { page: events,     icon: activity }
+      - { page: follow_ups, icon: message-square-reply }
+      - { page: reporters,  icon: contact }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products }
+
+  - name: QA Reviewer
+    description: Checks each case against its source documents before export and investigates product-quality complaints.
+    landing: cases
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: cases,     label: QA Queue, icon: clipboard-check }
+      - { page: products,  icon: pill }
+
+pages:
+  - { code: cases,      type: crud,   entity: case,      route: /app/cases,          title: Cases }
+  - { code: case_360,   type: detail, detail_view: case_360, route: /app/cases/:id }
+  - { code: events,     type: crud,   entity: event,     route: /app/events,         title: Events }
+  - { code: follow_ups, type: crud,   entity: follow_up, route: /app/follow-ups,     title: Follow-ups }
+  - { code: reporters,  type: crud,   entity: reporter,  route: /app/reporters,      title: Reporters }
+  - { code: products,   type: crud,   entity: product,   route: /app/masters/products, title: Products }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Safety Intake Dashboard
+    component: IntakeDashboard
+    roles: [PV Associate, QA Reviewer]
+    text: >
+      KPI row: cases received this month, open cases, cases at risk of breaching the
+      24-hour routing SLA, serious cases awaiting assessment, follow-ups overdue.
+      Below: cases by channel (bar, last 8 weeks), the 10 open cases closest to their
+      SLA deadline, and the share of cases routed to PV within the SLA by week.
+
+modules:
+  - code: masters
+    name: Products & Reporters
+    description: Products covered by the safety programme and the people who report events about them.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:         { type: text, label: Brand name, required: true, max_length: 120 }
+          - generic_name: { type: text, label: Generic name, required: true }
+          - therapy_area: { type: choice, label: Therapy area, choices: [ {id: cardiology, label: Cardiology}, {id: diabetes, label: Diabetes}, {id: oncology, label: Oncology}, {id: respiratory, label: Respiratory}, {id: anti_infectives, label: Anti-infectives} ] }
+          - strength:     { type: text, placeholder: "500 mg" }
+          - dosage_form:  { type: choice, label: Dosage form, choices: [ {id: tablet, label: Tablet}, {id: capsule, label: Capsule}, {id: injection, label: Injection}, {id: syrup, label: Syrup}, {id: inhaler, label: Inhaler} ] }
+          - is_active:    { type: boolean, label: Marketed, default: true }
+        access:
+          PV Associate: { actions: [view, add, edit, export] }
+          QA Reviewer:  { actions: [view] }
+          Intake Agent: { actions: [view] }
+        table:
+          columns:
+            - name:         { label: Brand, searchable: true, sortable: true }
+            - therapy_area: { label: Therapy area, filterable: true }
+            - strength:     { label: Strength }
+            - dosage_form:  { label: Form, filterable: true }
+            - is_active:    { label: Marketed, filterable: true }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, generic_name, therapy_area, strength, dosage_form, is_active] }
+          edit:   { same_as: create }
+
+      - code: reporter
+        name: Reporter
+        plural: Reporters
+        kind: master
+        display: full_name
+        fields:
+          - full_name:     { type: text, label: Name, required: true }
+          - reporter_type: { type: choice, label: Type, choices: reporter_type, required: true }
+          - email:         { type: email }
+          - phone:         { type: phone }
+          - institution:   { type: text, label: Hospital / pharmacy }
+          - city:          { type: text }
+          - contact_consent: { type: boolean, label: Agrees to follow-up contact, default: true }
+        validation:
+          rules:
+            - { text: "When contact_consent is true, an email or a phone number is given.", message: Give an email or phone so PV can follow up. }
+          duplicate_check:
+            rules:
+              - { match: [full_name, phone], compare: normalised, on_match: warn, message: A reporter with this name and phone already exists. }
+        access:
+          Intake Agent: { actions: [view, add, edit] }
+          PV Associate: { actions: [view, edit, export] }
+        table:
+          columns:
+            - full_name:     { label: Reporter, searchable: true, sortable: true }
+            - reporter_type: { label: Type, filterable: true }
+            - institution:   { label: Institution, searchable: true }
+            - city:          { label: City }
+            - phone:         { label: Phone }
+            - contact_consent: { label: Contact OK, filterable: true }
+          default_sort: full_name
+          add_button: Add Reporter
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [full_name, reporter_type, email, phone, institution, city, contact_consent] }
+          edit:   { same_as: create }
+
+  - code: cases
+    name: Case Intake
+    description: The case record, its reported events and source documents, from first report to export.
+    entities:
+      - code: case
+        name: Case
+        plural: Cases
+        kind: hero
+        display: case_ref
+        fields:
+          - case_ref:          { type: text, label: Case ID, readonly: true, unique: true, auto: { sequence: "AE-{YY}-{00000}" } }
+          - case_type:         { type: choice, label: Type, choices: case_type, required: true, default: ae }
+          - channel:           { type: choice, choices: channel, required: true }
+          - received_at:       { type: datetime, label: Received, required: true, help: When the company first became aware of the report (Day 0). }
+          - reporter:          { type: link, to: reporter, display: full_name, required: true }
+          - product:           { type: link, to: product, display: name, required: true }
+          - batch_no:          { type: text, label: Batch / lot }
+          - patient_initials:  { type: text, label: Patient initials, max_length: 5, pattern: "^[A-Z]{2,3}$", pattern_msg: Two or three capital letters. }
+          - patient_age:       { type: integer, label: Age, min: 0, max: 99 }
+          - patient_sex:       { type: choice, label: Sex, choices: sex }
+          - event_summary:     { type: long_text, label: What happened, required: true, help: The reporter's own words. }
+          - onset_date:        { type: date, label: Event onset }
+          - seriousness:       { type: choice, choices: seriousness, default: unknown }
+          - minimum_criteria:  { type: boolean, label: Four criteria met, readonly: true, computed: True when an identifiable patient, an identifiable reporter, a suspect product and an adverse event are all present. }
+          - assigned_to:       { type: link, to: app_user, label: PV associate }
+          - sla_hours_left:    { type: integer, label: SLA hours left, readonly: true, min: -6, max: 24, computed: Hours until received_at + 24 hours (the routing SLA); negative once breached; frozen when PV accepts the case. }
+          - duplicate_of:      { type: link, to: case, label: Duplicate of, display: case_ref }
+          - safety_db_id:      { type: text, label: Safety DB ID, readonly: true }
+        validation:
+          rules:
+            - { when: "case_type in [complaint, ae_complaint]", require: [batch_no], message: A product complaint needs the batch or lot number. }
+          duplicate_check:
+            scope: { where: "status not_in [duplicate, non_case]" }
+            rules:
+              - { match: [product, patient_initials, onset_date], compare: exact, on_match: warn, message: An open case has the same product, patient initials and onset date. }
+              - { match: [reporter, product, event_summary], compare: fuzzy, threshold: 0.85, on_match: warn, message: This reporter already reported a similar event for this product. }
+        access:
+          Intake Agent: { actions: [view, add, edit, detail], rows: created_by_me }
+          PV Associate: { actions: [view, edit, export, detail] }
+          QA Reviewer:  { actions: [view, export, detail], rows: { where: "status in [qa_review, closed]" } }
+        workflow:
+          statuses:
+            - { code: new,           label: New,               color: gray, initial: true }
+            - { code: dup_check,     label: Duplicate Check,   color: blue }
+            - { code: in_assessment, label: In PV Assessment,  color: indigo }
+            - { code: awaiting_info, label: Awaiting Follow-up, color: amber }
+            - { code: qa_review,     label: QA Review,         color: purple }
+            - { code: closed,        label: Closed & Exported, color: green, final: true }
+            - { code: duplicate,     label: Duplicate,         color: teal, final: true }
+            - { code: non_case,      label: Not a Case,        color: red, final: true }
+          transitions:
+            - name: submit
+              label: Submit to PV
+              from: new
+              to: dup_check
+              roles: [Intake Agent]
+              primary: true
+              condition: { text: "The four minimum criteria are present (identifiable patient, identifiable reporter, suspect product, adverse event), or the case is a product complaint only." }
+              condition_msg: Capture the patient, reporter, product and event before submitting.
+              on_done: Run the duplicate check and email the PV inbox the case ID, product, seriousness and SLA deadline.
+            - { name: confirm_duplicate, label: Mark as Duplicate, from: dup_check, to: duplicate, roles: [PV Associate],
+                form: [ { master_case: { type: text, label: Master case ID, required: true } } ],
+                on_done: Link this case to the master case and append its narrative and documents there as follow-up information. }
+            - { name: accept, label: Accept & Assign, from: dup_check, to: in_assessment, roles: [PV Associate], primary: true,
+                form: [ { triage_seriousness: { type: choice, label: Seriousness, choices: seriousness, required: true } } ],
+                on_done: "Set assigned_to to the current user, stop the routing SLA clock and start the regulatory clock: 15 days for serious, 90 days for non-serious." }
+            - { name: request_info, label: Request Follow-up, from: in_assessment, to: awaiting_info, roles: [PV Associate],
+                form: [ { questions: { type: long_text, label: Questions for the reporter, required: true } }, { due_date: { type: date, label: Reply by, required: true } } ],
+                on_done: Create a follow-up for the case's reporter with these questions and due date, and email or call the reporter. }
+            - { name: info_received, label: Info Received, from: awaiting_info, to: in_assessment, roles: [PV Associate, Intake Agent] }
+            - { name: send_to_qa, label: Send to QA, from: in_assessment, to: qa_review, roles: [PV Associate], primary: true,
+                condition: { text: At least one event is coded and every source document is attached. },
+                condition_msg: Code the events and attach the source documents first. }
+            - { name: qa_return, label: Return to PV, from: qa_review, to: in_assessment, roles: [QA Reviewer],
+                form: [ { qa_findings: { type: long_text, label: Findings, required: true } } ],
+                on_done: Email the assigned PV associate the findings. }
+            - { name: qa_approve, label: Approve & Export, from: qa_review, to: closed, roles: [QA Reviewer], primary: true,
+                confirm: "Export this case to the safety database?",
+                on_done: Export the case to the safety database and store the returned ID in safety_db_id. }
+            - { name: not_a_case, label: Not a Case, from: [new, dup_check], to: non_case, roles: [PV Associate], tone: danger,
+                form: [ { reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: serious, label: Serious, color: red, system: true, text: Set when seriousness is serious. }
+            - { code: sla_at_risk, label: SLA at Risk, color: amber, system: true, text: Set when fewer than 4 hours remain on the 24-hour routing SLA and the case is still New or in Duplicate Check. }
+            - { code: sla_breached, label: SLA Breached, color: red, system: true, text: Set when 24 hours passed after received_at before the case was accepted by PV. }
+            - { code: possible_duplicate, label: Possible Duplicate, color: teal, system: true, text: Set when the duplicate check finds a candidate case. }
+        form:
+          create:
+            roles: [Intake Agent]
+            title: Log a Report
+            sections:
+              - { title: Report, fields: [case_type, channel, received_at, reporter] }
+              - { title: Product, fields: [product, batch_no] }
+              - { title: Patient, fields: [patient_initials, patient_age, patient_sex] }
+              - { title: Event, fields: [event_summary, onset_date, seriousness] }
+            after_create: case_360
+          edit:
+            same_as: create
+            roles: [Intake Agent, PV Associate]
+            editable_in: [new, dup_check, in_assessment, awaiting_info]
+        table:
+          columns:
+            - case_ref:     { label: Case, searchable: true, sortable: true, link_to: case_360 }
+            - case_type:    { label: Type, filterable: true }
+            - channel:      { label: Channel, filterable: true }
+            - product:      { label: Product, display: name, filterable: true }
+            - received_at:  { label: Received, sortable: true }
+            - seriousness:  { label: Seriousness, filterable: true }
+            - sla_hours_left: { label: SLA (h), sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: -received_at
+          quick_filters:
+            - { label: Drafts, where: status == new, roles: [Intake Agent], default: true }
+            - { label: Duplicate check, where: status == dup_check, roles: [PV Associate], default: true }
+            - { label: SLA at risk, where: has_tag sla_at_risk, roles: [PV Associate] }
+            - { label: Serious, where: seriousness == serious }
+            - { label: To review, where: status == qa_review, roles: [QA Reviewer], default: true }
+          row_click: case_360
+          add_button: Log a Report
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: "status in [new, dup_check, in_assessment, awaiting_info]" }
+            - { key: open_360, label: Open Case, type: navigate, to: case_360 }
+
+      - code: event
+        name: Event
+        plural: Events
+        kind: child
+        parent: { entity: case, field: case }
+        display: reported_term
+        fields:
+          - case:          { type: link, to: case, required: true, display: case_ref, on_delete: cascade }
+          - reported_term: { type: text, label: Reported term, required: true, help: As the reporter described it. }
+          - meddra_pt:     { type: choice, label: MedDRA PT, choices: meddra_pt, help: Preferred term coded by PV. }
+          - onset_date:    { type: date, label: Onset }
+          - serious:       { type: boolean, default: false }
+          - criteria:      { type: multi_choice, label: Seriousness criteria, choices: serious_criteria }
+          - outcome:       { type: choice, choices: event_outcome, default: unknown }
+        custom_requirements:
+          - area: backend
+            title: MedDRA coding
+            text: meddra_pt options come from the licensed MedDRA dictionary (the version is set by PV), searchable by lowest level term and preferred term; the system organ class is stored with the PT. The short list here is for the preview only.
+        validation:
+          rules:
+            - { when: serious is_true, require: [criteria], message: Pick at least one seriousness criterion. }
+        access:
+          Intake Agent: { actions: [view, add], rows: { text: Events of cases the current user created. } }
+          PV Associate: { actions: [view, add, edit, export] }
+          QA Reviewer:  { actions: [view] }
+        table:
+          columns:
+            - case:          { label: Case, display: case_ref, searchable: true }
+            - meddra_pt:     { label: MedDRA PT, filterable: true }
+            - onset_date:    { label: Onset, sortable: true }
+            - serious:       { label: Serious, filterable: true }
+            - outcome:       { label: Outcome, filterable: true }
+          default_sort: -onset_date
+          quick_filters:
+            - { label: Not coded, where: meddra_pt is_empty, roles: [PV Associate], default: true }
+          add_button: Add Event
+          row_actions:
+            - { key: edit, label: Code / Edit, type: edit }
+        form:
+          create: { fields: [reported_term, meddra_pt, onset_date, serious, criteria, outcome] }
+          edit:   { same_as: create }
+
+      - code: case_document
+        name: Source Document
+        plural: Source Documents
+        kind: child
+        parent: { entity: case, field: case }
+        display: doc_type
+        fields:
+          - case:     { type: link, to: case, required: true, on_delete: protect }
+          - doc_type: { type: choice, label: Document, required: true, choices: [ {id: call_recording, label: Call recording}, {id: email, label: Email}, {id: rep_form, label: Field rep form}, {id: medical_record, label: Medical record}, {id: photo, label: Product photo} ] }
+          - file:     { type: file, required: true, accept: [pdf, jpg, png, mp3, msg, eml], max_size_mb: 25 }
+          - note:     { type: text }
+        access:
+          Intake Agent: { actions: [view, add], rows: { text: Documents of cases the current user created. } }
+          PV Associate: { actions: [view, add] }
+          QA Reviewer:  { actions: [view] }
+        table:
+          columns:
+            - doc_type: { label: Document, filterable: true }
+            - file:     { label: File }
+            - note:     { label: Note }
+            - created_at: { label: Added, sortable: true }
+          default_sort: -created_at
+        form:
+          create: { fields: [doc_type, file, note] }
+
+  - code: follow_ups
+    name: Follow-ups
+    description: Requests for missing information sent to reporters, with due dates and attempts.
+    entities:
+      - code: follow_up
+        name: Follow-up
+        plural: Follow-ups
+        kind: transactional
+        display: follow_up_ref
+        fields:
+          - follow_up_ref: { type: text, label: Follow-up, readonly: true, unique: true, auto: { sequence: "FU-{YY}-{00000}" } }
+          - case:          { type: link, to: case, required: true, display: case_ref, limit_choices: "status in [in_assessment, awaiting_info]" }
+          - reporter:      { type: link, to: reporter, required: true, display: full_name }
+          - questions:     { type: long_text, required: true }
+          - method:        { type: choice, choices: [ {id: email, label: Email}, {id: phone, label: Phone}, {id: letter, label: Letter} ], default: email }
+          - attempt:       { type: integer, label: Attempt, min: 1, max: 3, default: 1 }
+          - due_date:      { type: date, label: Due, required: true }
+          - response:      { type: long_text }
+        access:
+          PV Associate: { actions: [view, add, edit, export] }
+          Intake Agent: { actions: [view, edit] }
+        workflow:
+          statuses:
+            - { code: open,        label: Open,         color: blue, initial: true }
+            - { code: responded,   label: Responded,    color: green, final: true }
+            - { code: overdue,     label: Overdue,      color: amber }
+            - { code: no_response, label: No Response,  color: gray, final: true }
+          transitions:
+            - { name: record_response, label: Record Response, from: [open, overdue], to: responded, roles: [Intake Agent, PV Associate], primary: true,
+                form: [ { response_text: { type: long_text, label: Response, required: true } } ],
+                on_done: Save the response on the follow-up and move the case back to In PV Assessment. }
+            - { name: mark_overdue, label: Mark Overdue, from: open, to: overdue, trigger: system, text: Nightly when due_date < today. }
+            - { name: retry, label: Send Again, from: overdue, to: open, roles: [PV Associate],
+                condition: attempt < 3, condition_msg: Three attempts have been made already.,
+                on_done: Increase attempt by one, push due_date by 7 days and resend the request. }
+            - { name: close_no_response, label: Close — No Response, from: overdue, to: no_response, roles: [PV Associate],
+                on_done: Note on the case that follow-up was attempted and closed without a response. }
+        table:
+          columns:
+            - follow_up_ref: { label: Follow-up, searchable: true, sortable: true }
+            - case:          { label: Case, display: case_ref, searchable: true }
+            - reporter:      { label: Reporter, display: full_name }
+            - method:        { label: Method, filterable: true }
+            - attempt:       { label: Attempt }
+            - due_date:      { label: Due, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: due_date
+          quick_filters:
+            - { label: Open, where: "status in [open, overdue]", default: true }
+            - { label: Overdue, where: status == overdue }
+          add_button: New Follow-up
+        form:
+          create: { roles: [PV Associate], fields: [case, reporter, questions, method, due_date] }
+
+detail_views:
+  - code: case_360
+    hero: case
+    title: "{case_ref}"
+    back_to: cases
+    layout: header_tabs_sidebar
+    roles: [Intake Agent, PV Associate, QA Reviewer]
+    header:
+      title: case_ref
+      subtitle: ["{product.name}", "{channel}"]
+      badges: [ { source: status }, { field: case_type }, { field: seriousness }, { source: tags } ]
+      facts:
+        - { label: Received, field: received_at }
+        - { label: SLA hours left, field: sla_hours_left }
+        - { label: Reporter, path: reporter.full_name }
+        - { label: PV associate, field: assigned_to, fallback: Unassigned }
+      actions: { transitions: true, buttons: [ { key: edit, label: Edit, type: edit, roles: [Intake Agent, PV Associate] } ] }
+      banners:
+        - { show_when: has_tag sla_breached, tone: danger, text: The 24-hour routing SLA was missed. }
+        - { show_when: has_tag possible_duplicate, tone: warning, text: The duplicate check found a similar case; confirm or reject it before accepting. }
+    stats:
+      - { label: Events, value: { count: event, via: case }, tone: red, link_to_tab: events }
+      - { label: Open follow-ups, value: { count: follow_up, via: case, where: "status in [open, overdue]" }, tone: amber, link_to_tab: follow_ups }
+      - { label: Source documents, value: { count: case_document, via: case }, tone: blue, link_to_tab: documents }
+    sidebar:
+      - { type: fields, title: Patient, fields: [patient_initials, patient_age, patient_sex] }
+      - { type: fields, title: Product, fields: [product, batch_no] }
+      - { type: fields, title: Reporter, fields: [reporter, channel] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Report, columns: 2, fields: [event_summary, onset_date, seriousness, minimum_criteria, duplicate_of] }
+          - { title: Safety database, columns: 2, fields: [safety_db_id], show_when: status == closed }
+      - code: events
+        label: Events
+        type: related_table
+        entity: event
+        via: case
+        count_badge: true
+        columns: [meddra_pt, onset_date, serious, criteria, outcome]
+        add: { label: Add Event, prefill: { case: hero } }
+      - code: follow_ups
+        label: Follow-ups
+        type: related_table
+        entity: follow_up
+        via: case
+        count_badge: { where: "status in [open, overdue]", tone: amber }
+        columns: [follow_up_ref, method, attempt, due_date, status]
+      - code: documents
+        label: Source Documents
+        type: related_table
+        entity: case_document
+        via: case
+        add: { label: Attach Document, prefill: { case: hero } }
+        empty_state: { title: No source documents, text: "Attach the call recording, email or field rep form the report came from.", cta: add }
+      - code: activity
+        label: Audit Trail
+        type: timeline
+        sources:
+          - { entity: case, events: [created, updated, transition, tag] }
+          - { entity: follow_up, via: case, events: [created, transition] }
+    states:
+      not_found: { title: Case not found, back_to: cases }

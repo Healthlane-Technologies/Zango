@@ -1,0 +1,9 @@
+[
+  {
+    "id": "ae_intake",
+    "file": "references/ae_intake.yaml",
+    "title": "AE Intake (multi-channel adverse event and complaint intake)",
+    "summary": "Five roles including field reps who see only their own reports, a safety inbox fed by email and web form, cases with the four minimum criteria, a duplicate check and a 24-hour routing SLA, MedDRA-coded events, follow-ups with three attempts, QA review with a complaint investigation, E2B(R3) export with acknowledgements, and case and reporter 360 pages.",
+    "tags": ["pharmacovigilance", "adverse events", "product complaints", "duplicate check", "SLA", "follow-ups", "safety database export", "E2B", "360 page"]
+  }
+]

@@ -1,0 +1,578 @@
+# Compliance Monitoring Workbench: the template's starting point. HCP interactions
+# and spend come in from CRM and the expense system, rules and an AI model score
+# them into risk signals, analysts open cases, investigators record findings and
+# business reviewers agree remediation, which is tracked to closure. The analyst
+# tailors every part of it to your requirement; the preview redraws with each change.
+spec_version: 1
+
+app:
+  code: compliance_monitoring
+  name: Compliance Monitoring Workbench
+  description: Monitor HCP interactions, spend and field activity with rules and AI risk scoring, investigate cases and track remediation to closure.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#4338CA", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: CRM activity feed
+      text: Every night, pull the previous day's HCP interactions (calls, meetings, speaker programs, advisory boards) with their HCP, employee, date, location and attendee count from the CRM into Interaction; upsert on the CRM activity id.
+    - area: integration
+      title: Expense system
+      text: Every night, pull approved expense lines tagged to an HCP or an interaction into Spend Record, with amount, category, claim number and receipt; upsert on the expense line id.
+    - area: scheduled
+      title: Risk scoring run
+      text: After each nightly load, run every active monitoring rule and the AI risk model over new interactions and spend; create one Signal per hit with its score, risk level and a plain-language rationale.
+
+choice_sets:
+  region:
+    - { id: north, label: North }
+    - { id: south, label: South }
+    - { id: east,  label: East }
+    - { id: west,  label: West }
+  interaction_type:
+    - { id: detailing,      label: Detailing call }
+    - { id: speaker_program, label: Speaker program }
+    - { id: advisory_board, label: Advisory board }
+    - { id: hospitality,    label: Meal / hospitality }
+    - { id: sponsorship,    label: Conference sponsorship }
+  spend_category:
+    - { id: meal,        label: Meal }
+    - { id: honorarium,  label: Honorarium }
+    - { id: travel,      label: Travel & stay }
+    - { id: gift,        label: Gift / item }
+    - { id: sponsorship, label: Sponsorship }
+  signal_source:
+    - { id: rule,    label: Rule,          color: blue }
+    - { id: ai,      label: AI model,      color: purple }
+    - { id: hotline, label: Hotline report, color: amber }
+  rule_type:
+    - { id: hcp_cap,       label: Spend above HCP annual cap }
+    - { id: per_head,      label: Meal above per-head limit }
+    - { id: fmv,           label: Honorarium above FMV }
+    - { id: frequency,     label: Same HCP too often in 90 days }
+    - { id: off_hours,     label: Weekend or holiday event }
+    - { id: no_receipt,    label: Spend without receipt }
+    - { id: ai_anomaly,    label: AI anomaly vs peer pattern }
+  risk_level:
+    - { id: low,      label: Low,      color: green }
+    - { id: medium,   label: Medium,   color: amber }
+    - { id: high,     label: High,     color: red }
+    - { id: critical, label: Critical, color: pink }
+  case_category:
+    - { id: excess_spend,   label: Spend above cap }
+    - { id: frequency,      label: Interaction frequency }
+    - { id: off_label,      label: Off-label promotion }
+    - { id: undocumented,   label: Missing documentation }
+    - { id: fmv,            label: Fee above fair market value }
+  severity:
+    - { id: minor,    label: Minor,    color: blue }
+    - { id: major,    label: Major,    color: amber }
+    - { id: critical, label: Critical, color: red }
+  remediation_type:
+    - { id: training,     label: Retraining }
+    - { id: warning,      label: Written warning }
+    - { id: recovery,     label: Spend recovery }
+    - { id: process,      label: Process change }
+    - { id: disciplinary, label: Disciplinary action }
+
+roles:
+  - name: Compliance Analyst
+    description: Triages risk signals, opens cases, assigns investigators, maintains monitoring rules and verifies remediation.
+    landing: signals
+    menu:
+      - { page: dashboard,     icon: layout-dashboard }
+      - { page: signals,       icon: radar }
+      - { page: cases,         icon: folder-search }
+      - { page: findings,      icon: clipboard-check }
+      - group: Monitored Activity
+        icon: activity
+        items:
+          - { page: interactions }
+          - { page: spend_records }
+      - group: Setup
+        icon: settings
+        items:
+          - { page: rules }
+          - { page: employees }
+          - { page: hcps }
+
+  - name: Investigator
+    description: Investigates assigned cases, reviews the underlying interactions and spend, and records findings.
+    landing: cases
+    menu:
+      - { page: cases,         label: My Cases, icon: folder-search }
+      - { page: findings,      icon: clipboard-check }
+      - { page: interactions,  icon: users }
+      - { page: spend_records, icon: receipt }
+
+  - name: Business Reviewer
+    description: Business head who reviews substantiated cases for their team, agrees remediation and owns its completion.
+    landing: cases
+    menu:
+      - { page: cases,    label: Cases for Review, icon: folder-search }
+      - { page: findings, label: Remediation,      icon: clipboard-check }
+      - { page: dashboard, icon: layout-dashboard }
+
+pages:
+  - { code: signals,       type: crud,   entity: signal,           route: /app/signals,        title: Risk Signals }
+  - { code: cases,         type: crud,   entity: compliance_case,  route: /app/cases,          title: Cases }
+  - { code: case_360,      type: detail, detail_view: case_360,    route: /app/cases/:id }
+  - { code: findings,      type: crud,   entity: finding,          route: /app/findings,       title: Findings & Remediation }
+  - { code: interactions,  type: crud,   entity: interaction,      route: /app/interactions,   title: HCP Interactions }
+  - { code: spend_records, type: crud,   entity: spend_record,     route: /app/spend,          title: Spend Records }
+  - { code: rules,         type: crud,   entity: monitoring_rule,  route: /app/setup/rules,    title: Monitoring Rules }
+  - { code: employees,     type: crud,   entity: employee,         route: /app/setup/employees, title: Field Employees }
+  - { code: hcps,          type: crud,   entity: hcp,              route: /app/setup/hcps,     title: HCPs }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Monitoring Dashboard
+    component: ComplianceDashboard
+    roles: [Compliance Analyst, Business Reviewer]
+    text: >
+      KPI row: new signals this week, open cases, cases past due date, open findings past due.
+      Below: signals by risk level (stacked bar, last 8 weeks), open cases by category, and
+      the 10 employees with the most signals in the last 90 days. Business Reviewers see only
+      cases where they are the business reviewer.
+
+modules:
+  - code: masters
+    name: Masters
+    description: Field employees and HCPs that activity is monitored against.
+    entities:
+      - code: employee
+        name: Field Employee
+        plural: Field Employees
+        kind: master
+        display: full_name
+        fields:
+          - employee_code: { type: text, label: Employee ID, required: true, unique: true }
+          - full_name:     { type: text, label: Name, required: true }
+          - designation:   { type: text, placeholder: Medical Representative }
+          - region:        { type: choice, choices: region, required: true }
+          - manager:       { type: link, to: app_user, label: Line manager }
+        access:
+          Compliance Analyst: { actions: [view, add, edit, export] }
+          Investigator:       { actions: [view] }
+        table:
+          columns:
+            - employee_code: { label: ID, searchable: true }
+            - full_name:     { label: Name, searchable: true, sortable: true }
+            - designation:   { label: Designation }
+            - region:        { label: Region, filterable: true }
+          default_sort: full_name
+          add_button: Add Employee
+        form:
+          create: { fields: [employee_code, full_name, designation, region, manager] }
+          edit:   { same_as: create }
+
+      - code: hcp
+        name: HCP
+        plural: HCPs
+        kind: master
+        display: full_name
+        fields:
+          - full_name:   { type: text, label: Name, required: true }
+          - specialty:   { type: choice, required: true, choices: [ {id: cardiology, label: Cardiology}, {id: oncology, label: Oncology}, {id: diabetology, label: Diabetology}, {id: gp, label: General practice} ] }
+          - city:        { type: text }
+          - region:      { type: choice, choices: region }
+          - annual_cap:  { type: money, label: Annual spend cap, help: Maximum transfer of value to this HCP in a calendar year. }
+        access:
+          Compliance Analyst: { actions: [view, add, edit, export] }
+          Investigator:       { actions: [view] }
+        table:
+          columns:
+            - full_name:  { label: HCP, searchable: true, sortable: true }
+            - specialty:  { label: Specialty, filterable: true }
+            - city:       { label: City }
+            - region:     { label: Region, filterable: true }
+            - annual_cap: { label: Annual cap, format: money }
+          default_sort: full_name
+          add_button: Add HCP
+        form:
+          create: { fields: [full_name, specialty, city, region, annual_cap] }
+          edit:   { same_as: create }
+
+  - code: activity
+    name: Monitored Activity
+    description: HCP interactions from CRM and spend from the expense system.
+    entities:
+      - code: interaction
+        name: Interaction
+        plural: Interactions
+        kind: transactional
+        display: interaction_ref
+        fields:
+          - interaction_ref:  { type: text, label: Interaction, readonly: true, unique: true, auto: { sequence: "INT-{YY}-{000000}" } }
+          - interaction_type: { type: choice, label: Type, choices: interaction_type, required: true }
+          - hcp:              { type: link, to: hcp, required: true, display: full_name }
+          - employee:         { type: link, to: employee, required: true, display: full_name }
+          - interaction_date: { type: date, label: Date, required: true }
+          - city:             { type: text, label: Location }
+          - attendees:        { type: integer, min: 1, max: 40 }
+          - risk_level:       { type: choice, label: Risk, choices: risk_level, readonly: true, computed: Highest risk level of the signals raised on this interaction; Low when none. }
+        access:
+          Compliance Analyst: { actions: [view, export] }
+          Investigator:       { actions: [view, export] }
+        table:
+          columns:
+            - interaction_ref:  { label: Ref, searchable: true }
+            - interaction_type: { label: Type, filterable: true }
+            - hcp:              { label: HCP, display: full_name, searchable: true }
+            - employee:         { label: Employee, display: full_name, searchable: true, filterable: true }
+            - interaction_date: { label: Date, sortable: true }
+            - city:             { label: Location }
+            - attendees:        { label: Attendees }
+            - risk_level:       { label: Risk, filterable: true }
+          default_sort: -interaction_date
+          quick_filters:
+            - { label: High risk, where: "risk_level in [high, critical]" }
+
+      - code: spend_record
+        name: Spend Record
+        plural: Spend Records
+        kind: transactional
+        display: spend_ref
+        fields:
+          - spend_ref:   { type: text, label: Spend, readonly: true, unique: true, auto: { sequence: "SPD-{YY}-{000000}" } }
+          - interaction: { type: link, to: interaction, display: interaction_ref }
+          - hcp:         { type: link, to: hcp, required: true, display: full_name }
+          - employee:    { type: link, to: employee, required: true, display: full_name }
+          - category:    { type: choice, choices: spend_category, required: true }
+          - spend_date:  { type: date, label: Date, required: true }
+          - amount:      { type: money, required: true, min: 500, max: 150000 }
+          - claim_no:    { type: text, label: Expense claim }
+          - receipt:     { type: file, accept: [pdf, jpg, png] }
+        access:
+          Compliance Analyst: { actions: [view, export] }
+          Investigator:       { actions: [view, export] }
+        table:
+          columns:
+            - spend_ref:  { label: Ref, searchable: true }
+            - hcp:        { label: HCP, display: full_name, searchable: true }
+            - employee:   { label: Employee, display: full_name, filterable: true }
+            - category:   { label: Category, filterable: true }
+            - spend_date: { label: Date, sortable: true }
+            - amount:     { label: Amount, format: money, sortable: true }
+            - claim_no:   { label: Claim no. }
+          default_sort: -spend_date
+          footer_totals: [amount]
+
+  - code: monitoring
+    name: Rules & Signals
+    description: Monitoring rules, and the risk signals that rules and the AI model raise.
+    entities:
+      - code: monitoring_rule
+        name: Monitoring Rule
+        plural: Monitoring Rules
+        kind: master
+        display: rule_code
+        fields:
+          - rule_code:   { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "RUL-{000}" } }
+          - rule_type:   { type: choice, label: Rule, choices: rule_type, required: true }
+          - applies_to:  { type: choice, required: true, choices: [ {id: interaction, label: Interactions}, {id: spend, label: Spend} ] }
+          - logic:       { type: long_text, required: true, help: Plain-language rule, e.g. more than 4 hospitality events with the same HCP in 90 days. }
+          - threshold:   { type: decimal }
+          - risk_points: { type: integer, label: Risk points, min: 5, max: 60, required: true }
+        access:
+          Compliance Analyst: { actions: [view, add, edit, export] }
+        workflow:
+          statuses:
+            - { code: draft,   label: Draft,   color: gray, initial: true }
+            - { code: active,  label: Active,  color: green }
+            - { code: retired, label: Retired, color: red, final: true }
+          transitions:
+            - { name: activate, label: Activate, from: draft, to: active, roles: [Compliance Analyst], primary: true, on_done: Include the rule in the next nightly scoring run. }
+            - { name: retire, label: Retire, from: active, to: retired, roles: [Compliance Analyst], confirm: Stop running this rule? }
+        table:
+          columns:
+            - rule_code:   { label: Code }
+            - rule_type:   { label: Rule, filterable: true }
+            - applies_to:  { label: Applies to, filterable: true }
+            - risk_points: { label: Points, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+          default_sort: rule_code
+          add_button: New Rule
+        form:
+          create: { fields: [rule_type, applies_to, logic, threshold, risk_points] }
+          edit:   { same_as: create, editable_in: [draft, active] }
+
+      - code: signal
+        name: Signal
+        plural: Signals
+        kind: transactional
+        display: signal_ref
+        fields:
+          - signal_ref:   { type: text, label: Signal, readonly: true, unique: true, auto: { sequence: "SIG-{YY}-{00000}" } }
+          - source:       { type: choice, choices: signal_source, required: true }
+          - trigger:      { type: choice, label: Trigger, choices: rule_type, required: true }
+          - rule:         { type: link, to: monitoring_rule, display: rule_code }
+          - employee:     { type: link, to: employee, required: true, display: full_name }
+          - hcp:          { type: link, to: hcp, display: full_name }
+          - interaction:  { type: link, to: interaction, display: interaction_ref }
+          - spend_record: { type: link, to: spend_record, display: spend_ref }
+          - risk_score:   { type: integer, label: Risk score, readonly: true, min: 20, max: 98, computed: Sum of the risk points of every rule hit, blended with the AI model's score (0-100). }
+          - rationale:    { type: long_text, readonly: true, help: Why the rule or model flagged this activity. }
+          - compliance_case: { type: link, to: compliance_case, label: Case, display: case_ref, readonly: true }
+        access:
+          Compliance Analyst: { actions: [view, add, export] }
+          Investigator:       { actions: [view], rows: { where: compliance_case is_set } }
+        workflow:
+          statuses:
+            - { code: new,       label: New,       color: blue, initial: true }
+            - { code: in_triage, label: In Triage, color: amber }
+            - { code: escalated, label: Case Opened, color: red, final: true }
+            - { code: dismissed, label: Dismissed, color: gray, final: true }
+          transitions:
+            - { name: triage, label: Start Triage, from: new, to: in_triage, roles: [Compliance Analyst], primary: true }
+            - name: open_case
+              label: Open Case
+              from: [new, in_triage]
+              to: escalated
+              roles: [Compliance Analyst]
+              primary: true
+              form:
+                - case_category: { type: choice, choices: case_category, required: true }
+              on_done: Create a Compliance Case for the employee with this signal linked, or add the signal to the employee's open case if one exists.
+            - name: auto_escalate
+              label: Auto-escalate
+              from: new
+              to: escalated
+              trigger: system
+              text: When risk_score is 90 or more, open a case automatically and notify the Compliance Analyst.
+            - { name: dismiss, label: Dismiss, from: [new, in_triage], to: dismissed, roles: [Compliance Analyst],
+                form: [ { dismiss_reason: { type: long_text, required: true } } ] }
+        table:
+          columns:
+            - signal_ref: { label: Signal, searchable: true }
+            - source:     { label: Source, filterable: true }
+            - trigger:    { label: Trigger, filterable: true }
+            - employee:   { label: Employee, display: full_name, searchable: true }
+            - hcp:        { label: HCP, display: full_name }
+            - risk_score: { label: Score, sortable: true }
+            - status:     { source: status, label: Status, filterable: true }
+          default_sort: -risk_score
+          quick_filters:
+            - { label: To triage, where: "status in [new, in_triage]", default: true }
+            - { label: "Score 70+", where: risk_score >= 70 }
+          add_button: Log Hotline Report
+        form:
+          create: { title: Log Hotline Report, fields: [trigger, employee, hcp, interaction, spend_record], on_create: Set source to hotline and score 70. }
+
+  - code: cases
+    name: Cases & Remediation
+    description: Investigation cases, their findings and the remediation agreed for each.
+    entities:
+      - code: compliance_case
+        name: Case
+        plural: Cases
+        kind: hero
+        display: case_ref
+        fields:
+          - case_ref:          { type: text, label: Case, readonly: true, unique: true, auto: { sequence: "CMP-{YY}-{0000}" } }
+          - category:          { type: choice, choices: case_category, required: true }
+          - employee:          { type: link, to: employee, required: true, display: full_name }
+          - region:            { type: choice, choices: region }
+          - risk_level:        { type: choice, label: Risk, choices: risk_level, required: true }
+          - investigator:      { type: link, to: app_user }
+          - business_reviewer: { type: link, to: app_user }
+          - opened_on:         { type: date, default: today, readonly: true }
+          - due_date:          { type: date, required: true }
+          - spend_at_issue:    { type: money, label: Spend at issue, readonly: true, computed: Sum of the spend records linked to the case's signals. }
+          - summary:           { type: long_text }
+          - outcome:           { type: choice, choices: [ {id: substantiated, label: Substantiated, color: red}, {id: partial, label: Partially substantiated, color: amber}, {id: unsubstantiated, label: Unsubstantiated, color: green} ] }
+        access:
+          Compliance Analyst: { actions: [view, add, edit, export, detail] }
+          Investigator:       { actions: [view, edit, detail], rows: { text: Cases whose investigator is the current user. } }
+          Business Reviewer:  { actions: [view, detail], rows: { text: Cases whose business_reviewer is the current user. } }
+        workflow:
+          statuses:
+            - { code: open,          label: Open,                color: blue, initial: true }
+            - { code: investigating, label: Investigating,       color: indigo }
+            - { code: in_review,     label: Business Review,     color: amber }
+            - { code: remediation,   label: Remediation,         color: purple }
+            - { code: closed,        label: Closed,              color: green, final: true }
+            - { code: no_action,     label: Closed – No Action,  color: gray, final: true }
+          transitions:
+            - name: assign
+              label: Assign Investigator
+              from: open
+              to: investigating
+              roles: [Compliance Analyst]
+              primary: true
+              form:
+                - investigator: { type: link, to: app_user, required: true }
+              on_done: Email the investigator the case, its signals and the due date.
+            - name: submit_findings
+              label: Submit Findings
+              from: investigating
+              to: in_review
+              roles: [Investigator]
+              primary: true
+              form:
+                - outcome: { type: choice, required: true, choices: [ {id: substantiated, label: Substantiated}, {id: partial, label: Partially substantiated}, {id: unsubstantiated, label: Unsubstantiated} ] }
+              condition: { text: "At least one finding is recorded, or the outcome is unsubstantiated." }
+              condition_msg: Record at least one finding first.
+              on_done: Notify the business reviewer that the case is ready for review.
+            - { name: send_back, label: Request More Work, from: in_review, to: investigating, roles: [Business Reviewer, Compliance Analyst],
+                form: [ { review_comment: { type: long_text, required: true } } ], on_done: Email the investigator the comment. }
+            - { name: agree_remediation, label: Agree Remediation, from: in_review, to: remediation, roles: [Business Reviewer], primary: true,
+                condition: "outcome in [substantiated, partial]", condition_msg: Unsubstantiated cases close without remediation.,
+                on_done: Move every finding to Action Planned and notify each action owner. }
+            - { name: close_no_action, label: Close – No Action, from: in_review, to: no_action, roles: [Compliance Analyst, Business Reviewer],
+                condition: outcome == unsubstantiated, condition_msg: Only unsubstantiated cases close without action. }
+            - name: close
+              label: Close Case
+              from: remediation
+              to: closed
+              roles: [Compliance Analyst]
+              primary: true
+              condition: { text: Every finding on the case is Verified or Waived. }
+              condition_msg: Some remediation actions are still open.
+              on_done: Record the closure date and add the case to the monthly compliance committee report.
+          tags:
+            - { code: overdue, label: Past Due, color: red, system: true, text: Set nightly when due_date < today and the case is not closed. }
+            - { code: repeat, label: Repeat Employee, color: amber, system: true, text: Set when the employee had a substantiated case in the last 12 months. }
+            - { code: legal_hold, label: Legal Hold, color: purple, enable: { roles: [Compliance Analyst] }, disable: { roles: [Compliance Analyst] } }
+        form:
+          create:
+            roles: [Compliance Analyst]
+            title: Open Case
+            fields: [category, employee, region, risk_level, business_reviewer, due_date, summary]
+            after_create: case_360
+          edit:
+            same_as: create
+            roles: [Compliance Analyst, Investigator]
+            editable_in: [open, investigating]
+        table:
+          columns:
+            - case_ref:     { label: Case, searchable: true, sortable: true, link_to: case_360 }
+            - category:     { label: Category, filterable: true }
+            - employee:     { label: Employee, display: full_name, searchable: true }
+            - risk_level:   { label: Risk, filterable: true }
+            - due_date:     { label: Due, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: due_date
+          quick_filters:
+            - { label: Unassigned, where: status == open, roles: [Compliance Analyst] }
+            - { label: Past due, where: has_tag overdue }
+            - { label: Awaiting my review, where: status == in_review, roles: [Business Reviewer], default: true }
+          row_click: case_360
+          add_button: Open Case
+          row_actions:
+            - { key: open_360, label: Open Case File, type: navigate, to: case_360 }
+
+      - code: finding
+        name: Finding
+        plural: Findings
+        kind: child
+        parent: { entity: compliance_case, field: compliance_case }
+        display: finding_ref
+        fields:
+          - finding_ref:      { type: text, label: Finding, readonly: true, unique: true, auto: { sequence: "FND-{YY}-{00000}" } }
+          - compliance_case:  { type: link, to: compliance_case, label: Case, required: true, display: case_ref, on_delete: cascade }
+          - description:      { type: long_text, required: true }
+          - severity:         { type: choice, choices: severity, required: true }
+          - policy_reference: { type: text, label: Policy clause, placeholder: "HCP Interactions SOP §4.2" }
+          - remediation:      { type: choice, label: Remediation, choices: remediation_type }
+          - action_owner:     { type: link, to: app_user, label: Action owner }
+          - action_due:       { type: date, label: Action due }
+          - evidence:         { type: file, label: Completion evidence, accept: [pdf, jpg, png, docx] }
+        access:
+          Compliance Analyst: { actions: [view, export] }
+          Investigator:       { actions: [view, add, edit], rows: { text: Findings on cases whose investigator is the current user. } }
+          Business Reviewer:  { actions: [view, edit], rows: { text: Findings on cases whose business_reviewer is the current user. } }
+        workflow:
+          statuses:
+            - { code: draft,       label: Draft,         color: gray, initial: true }
+            - { code: planned,     label: Action Planned, color: blue }
+            - { code: in_progress, label: In Progress,   color: amber }
+            - { code: completed,   label: Completed,     color: teal }
+            - { code: verified,    label: Verified,      color: green, final: true }
+            - { code: waived,      label: Waived,        color: purple, final: true }
+          transitions:
+            - { name: plan, label: Plan Action, from: draft, to: planned, trigger: system, text: When the business reviewer agrees remediation on the case. }
+            - { name: start, label: Start, from: planned, to: in_progress, roles: [Business Reviewer], primary: true }
+            - { name: complete, label: Mark Complete, from: in_progress, to: completed, roles: [Business Reviewer], primary: true,
+                condition: evidence is_set, condition_msg: Attach completion evidence first., on_done: Ask the Compliance Analyst to verify. }
+            - { name: verify, label: Verify, from: completed, to: verified, roles: [Compliance Analyst], primary: true }
+            - { name: reopen, label: Reopen, from: completed, to: in_progress, roles: [Compliance Analyst],
+                form: [ { reopen_reason: { type: long_text, required: true } } ], on_done: Email the action owner the reason. }
+            - { name: waive, label: Waive, from: [planned, in_progress], to: waived, roles: [Compliance Analyst], tone: danger,
+                form: [ { waiver_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: action_overdue, label: Overdue, color: red, system: true, text: Set nightly when action_due < today and the finding is not completed. }
+        form:
+          create: { roles: [Investigator], fields: [description, severity, policy_reference, remediation, action_owner, action_due] }
+          edit:   { same_as: create, roles: [Investigator, Business Reviewer], editable_in: [draft, planned, in_progress] }
+        table:
+          columns:
+            - finding_ref:     { label: Finding, searchable: true }
+            - compliance_case: { label: Case, display: case_ref, filterable: true }
+            - severity:        { label: Severity, filterable: true }
+            - remediation:     { label: Remediation, filterable: true }
+            - action_due:      { label: Action due, sortable: true }
+            - status:          { source: status, label: Status, filterable: true }
+            - tags:            { source: tags, label: Flags }
+          default_sort: action_due
+          quick_filters:
+            - { label: Open actions, where: "status in [planned, in_progress]", default: true }
+            - { label: To verify, where: status == completed, roles: [Compliance Analyst] }
+
+detail_views:
+  - code: case_360
+    hero: compliance_case
+    title: "{case_ref}"
+    back_to: cases
+    layout: header_tabs_sidebar
+    roles: [Compliance Analyst, Investigator, Business Reviewer]
+    header:
+      avatar: { fallback_initials: employee.full_name }
+      title: case_ref
+      subtitle: ["{employee.full_name}", "{employee.region}"]
+      badges: [ { source: status }, { source: tags }, { field: risk_level, prefix: "Risk: " } ]
+      facts:
+        - { label: Category, field: category }
+        - { label: Opened, field: opened_on }
+        - { label: Due, field: due_date }
+        - { label: Outcome, field: outcome, fallback: "—" }
+        - { label: Spend at issue, field: spend_at_issue }
+      actions: { transitions: true, tags: true, buttons: [ { key: edit, label: Edit, type: edit, roles: [Compliance Analyst, Investigator] } ] }
+      banners:
+        - { show_when: has_tag overdue, tone: warning, text: This case is past its due date. }
+    stats:
+      - { label: Signals, value: { count: signal, via: compliance_case }, tone: blue, link_to_tab: signals }
+      - { label: Findings, value: { count: finding, via: compliance_case }, tone: indigo, link_to_tab: findings }
+      - { label: Open actions, value: { count: finding, via: compliance_case, where: "status in [planned, in_progress, completed]" }, tone: amber, link_to_tab: findings }
+      - { label: High-risk signals, value: { count: signal, via: compliance_case, where: risk_score >= 70 }, tone: red, link_to_tab: signals }
+    sidebar:
+      - { type: fields, title: Case, fields: [category, employee, region, risk_level] }
+      - { type: fields, title: People, fields: [investigator, business_reviewer] }
+    tabs:
+      - { code: overview, label: Overview, type: summary, sections: [ { title: Summary, columns: 1, fields: [summary, outcome] } ] }
+      - code: signals
+        label: Signals
+        type: related_table
+        entity: signal
+        via: compliance_case
+        count_badge: true
+        columns: [signal_ref, source, trigger, hcp, risk_score, status]
+      - code: findings
+        label: Findings
+        type: related_table
+        entity: finding
+        via: compliance_case
+        count_badge: true
+        columns: [finding_ref, severity, remediation, action_due, status]
+        add: { label: Add Finding, prefill: { compliance_case: hero } }
+        empty_state: { title: No findings yet, text: Record what the investigation established, with the policy clause it breaches., cta: add }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: compliance_case, events: [created, updated, transition, tag] }
+          - { entity: finding, via: compliance_case, events: [created, transition] }
+    states:
+      not_found: { title: Case not found, back_to: cases }

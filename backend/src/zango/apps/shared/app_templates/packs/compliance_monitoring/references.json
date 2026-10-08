@@ -1,0 +1,9 @@
+[
+  {
+    "id": "compliance_monitor",
+    "file": "references/compliance_monitor.yaml",
+    "title": "Compliance Monitor (HCP interactions and spend, India field force)",
+    "summary": "Nightly CRM interaction and expense feeds, a rule library with risk points and an AI risk model, a threshold-driven signal queue, cases with investigator assignment and business review, findings with remediation actions tracked to verified closure, and case and employee 360 pages.",
+    "tags": ["compliance monitoring", "HCP interactions", "transfer of value", "risk scoring", "AI", "case management", "remediation", "360 page"]
+  }
+]

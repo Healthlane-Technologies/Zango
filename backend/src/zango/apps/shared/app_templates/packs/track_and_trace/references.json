@@ -1,0 +1,9 @@
+[
+  {
+    "id": "pack_traceability",
+    "file": "references/pack_traceability.yaml",
+    "title": "Pack Traceability (two plants, 40 warehouses)",
+    "summary": "Packaging lines request GS1 serial ranges and upload commissioned serials and aggregation through the L3 interface; cases and pallets are sealed, shipped and received between plants, warehouses and distributors as EPCIS 2.0 events with exception handling; distributors verify packs on receipt; QA quarantines or recalls a batch and tracks every location's returns to closure. Batch and recall 360 pages.",
+    "tags": ["track and trace", "serialization", "GS1", "EPCIS", "aggregation", "SSCC", "recall", "verification", "external users", "360 page"]
+  }
+]
