@@ -1,0 +1,73 @@
+{
+  "slug": "promotional-review",
+  "name": "Promotional Review (PRC/MLR)",
+  "version": "1.0.0",
+  "category": "Compliance & Quality",
+  "icon": "shield",
+  "is_beta": false,
+  "aka": [
+    "MLR review",
+    "PRC review",
+    "promotional material approval",
+    "copy approval",
+    "medical legal regulatory review"
+  ],
+  "one_liner": "Content review with claims validation, reference checks, fair balance and versioned approvals.",
+  "fits_when": [
+    "brand teams submit detail aids, HCP emails, web pages or patient leaflets for approval before use",
+    "every promotional claim must be substantiated by a reference, down to the page",
+    "medical, legal and regulatory reviewers each sign off, often in parallel and within an SLA",
+    "materials are versioned and a rejected version goes back to the brand with comments",
+    "approved materials carry a job code, an expiry date and need recertification or withdrawal",
+    "reviewers should see only the reviews assigned to them"
+  ],
+  "gives_you": [
+    "Material submissions with type, channel, audience, artwork, fair balance and PI checks",
+    "Claims tied to references, substantiated or rejected claim by claim by the medical reviewer",
+    "Medical, legal and regulatory reviews routed by an MLR coordinator, with outcomes and comments",
+    "Approval with job code and expiry, expiring-soon flags, and withdrawal of expired material",
+    "Reference library with re-review flags when a cited reference is superseded",
+    "Material 360 page with claims, reviews, versions and activity in one place"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "Promotional material review from submission to expiry: brand managers submit materials with their claims and references, an MLR coordinator routes each version to medical, legal and regulatory reviewers, every claim is checked against its reference and for fair balance, and the approved version gets a job code and an expiry date. The app is described in the Zango app spec and previewed live as a clickable app with demo data while the requirement is shaped.",
+    "packages": [
+      { "name": "workflow", "description": "Material, claim and review lifecycles with role-gated transitions" },
+      { "name": "documents", "description": "Artwork, annotated versions and the reference library" },
+      { "name": "forms", "description": "Submission, claim, review outcome and approval forms" },
+      { "name": "reports", "description": "Review cycle times, SLA breaches and expiring materials" }
+    ],
+    "roles": [
+      { "name": "Brand manager", "description": "Submits materials with claims and references and resubmits after changes" },
+      { "name": "MLR coordinator", "description": "Checks submissions are complete, routes them to reviewers and chases the SLA" },
+      { "name": "Medical reviewer", "description": "Substantiates each claim against its reference and checks fair balance" },
+      { "name": "Legal reviewer", "description": "Reviews for legal risk, trademarks and comparative claims" },
+      { "name": "Regulatory reviewer", "description": "Checks code compliance and PI, and approves the final version" }
+    ],
+    "workflows": [
+      { "name": "Submission", "description": "Draft, completeness check and routing, or return as incomplete" },
+      { "name": "Claims & references", "description": "Each claim linked to a reference page and substantiated or rejected" },
+      { "name": "Medical, legal, regulatory review", "description": "Parallel reviews with outcomes, comments and change requests per version" },
+      { "name": "Approval & expiry", "description": "Job code and expiry on approval, expiring-soon flags, recertification or withdrawal" }
+    ],
+    "data_objects": ["Material", "Claim", "Reference", "Review", "Product", "Material version"],
+    "integrations": ["HR directory", "Document management system"],
+    "compliance": [
+      "Every claim substantiated by a referenced source before approval",
+      "Fair balance and abbreviated prescribing information checked on every HCP material",
+      "Versioned approvals with job code, certifier and expiry date",
+      "Pharma promotional codes (UCPMP / OPPI / IFPMA)",
+      "Audit trail of every submission, review outcome and status change"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Cardio-Diabetes PRC",
+    "app_prompt_prefill": "Promotional review app where brand managers submit detail aids, HCP emails and patient leaflets with every claim linked to a reference page. An MLR coordinator routes each version to medical, legal and regulatory reviewers within a 5-working-day SLA, and the medical reviewer substantiates claims one by one. The regulatory head certifies the final version, which gets a job code and a 24-month expiry with annual recertification. Certified PDFs go to our document management system and the reviewer roster syncs from the HR directory."
+  },
+  "changelog": "First version: promotional review (PRC/MLR) on the Zango app spec v1, with submissions, claim substantiation against references, medical, legal and regulatory review, and approval with expiry."
+}

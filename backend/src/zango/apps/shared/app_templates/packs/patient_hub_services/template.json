@@ -1,0 +1,77 @@
+{
+  "slug": "patient-hub-services",
+  "name": "Patient Hub Services",
+  "version": "1.0.0",
+  "category": "Patient Services",
+  "icon": "heart",
+  "is_beta": false,
+  "aka": [
+    "patient support hub",
+    "reimbursement hub",
+    "access and reimbursement services",
+    "benefits verification and prior auth",
+    "specialty pharmacy triage"
+  ],
+  "one_liner": "US-style hub: benefits investigation, prior authorization, co-pay, specialty pharmacy triage and case management.",
+  "fits_when": [
+    "prescriber offices send enrollment forms and prescriptions to a hub by fax, e-referral or a portal",
+    "reimbursement specialists verify each patient's benefits with the payer and run prior authorizations and appeals",
+    "commercially insured patients are enrolled in a co-pay program, others screened for free drug or foundation support",
+    "each patient is triaged to a specialty pharmacy in the payer's network for first fill",
+    "case managers own a case from referral to therapy and keep the office and patient updated",
+    "HCP offices and specialty pharmacies may only see their own patients and referrals"
+  ],
+  "gives_you": [
+    "Referral intake with a review queue, missing-information loop and conversion to a hub case",
+    "Hub case lifecycle from intake through benefits, prior auth, access secured, SP triage and on therapy, with a case 360 page",
+    "Benefits investigations per payer with coverage outcome, PA requirement and patient cost share",
+    "Prior authorizations with submission, payer information requests, approval, denial and appeal",
+    "Co-pay enrollment with eligibility screening and expiry, and specialty pharmacy referrals with sign-off, acceptance and first-fill shipment",
+    "Row-level access so HCP offices and specialty pharmacies see only their own cases and referrals"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "A patient hub for a specialty brand. HCP offices refer patients, case managers open a hub case, reimbursement specialists verify benefits and secure prior authorization, case managers enroll patients in co-pay support and triage them to a specialty pharmacy, and the pharmacy confirms the first fill. Every step is tracked on one case with SLAs, outreach and documents.",
+    "packages": [
+      { "name": "workflow", "description": "Referral, case, benefits, prior auth, co-pay and SP referral lifecycles with role-gated steps" },
+      { "name": "crm", "description": "Patients, HCP offices, payers and specialty pharmacies in one directory" },
+      { "name": "communication", "description": "Office emails and patient SMS or WhatsApp updates at every step" },
+      { "name": "forms", "description": "Enrollment, benefits, prior auth and triage forms" },
+      { "name": "documents", "description": "Enrollment forms, prescriptions, insurance cards, PA letters and HIPAA authorizations" },
+      { "name": "tasks", "description": "Follow-ups and SLA-driven work queues for case managers and specialists" },
+      { "name": "integrations", "description": "SMS gateway and WhatsApp Business for patient outreach" },
+      { "name": "reports", "description": "Time to therapy, PA approval rate and case pipeline" }
+    ],
+    "roles": [
+      { "name": "Case manager", "description": "Owns each patient's case from referral to therapy: reviews referrals, enrolls co-pay support, triages to a specialty pharmacy and keeps the patient and office informed" },
+      { "name": "Reimbursement specialist", "description": "Runs benefits investigations with payers and submits, follows up and appeals prior authorizations" },
+      { "name": "Specialty pharmacy", "description": "Sees only referrals triaged to it, accepts or declines them and confirms the first-fill shipment" },
+      { "name": "HCP office", "description": "Submits referrals and tracks the status of its own patients' cases" }
+    ],
+    "workflows": [
+      { "name": "Referral intake", "description": "Receive, review, request missing information, then accept into a hub case or reject" },
+      { "name": "Benefits investigation", "description": "Verify coverage, PA requirement and cost share with the patient's payer" },
+      { "name": "Prior authorization", "description": "Submit, answer payer information requests, approve or deny, and appeal denials" },
+      { "name": "Co-pay enrollment", "description": "Screen eligibility, enroll the patient in the co-pay program and track expiry" },
+      { "name": "SP triage", "description": "Sign off the referral to an in-network specialty pharmacy, which accepts and ships the first fill" }
+    ],
+    "data_objects": ["Case", "Patient", "Payer", "Prior auth", "Referral", "Benefits investigation", "Co-pay enrollment", "Specialty pharmacy referral", "HCP office"],
+    "integrations": ["SMS gateway", "WhatsApp Business"],
+    "compliance": [
+      "HIPAA: patient health information is minimum-necessary and scoped by role; HCP offices and pharmacies see only their own patients",
+      "HIPAA authorization on file before any payer contact or patient outreach",
+      "Patient consent recorded per channel before SMS or WhatsApp messages",
+      "Anti-kickback safeguards: co-pay support excludes government-insured patients",
+      "Audit trail of every transition, edit and message on the case"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Immunology Hub — Dermatology",
+    "app_prompt_prefill": "A hub for our self-injectable dermatology biologic. About 300 prescriber offices send referrals by fax, e-referral or the HCP portal; reimbursement specialists run the benefits investigation and prior authorization, with appeals. Case managers enroll commercial patients in the co-pay card, screen the rest for free drug, and start a bridge supply when access is delayed. A supervisor signs off every specialty pharmacy triage across our two limited-distribution pharmacies, and patients get SMS and WhatsApp updates at each step."
+  },
+  "changelog": "First version: referral intake, hub case lifecycle, benefits investigation, prior authorization, co-pay enrollment and specialty pharmacy triage on the Zango app spec v1."
+}

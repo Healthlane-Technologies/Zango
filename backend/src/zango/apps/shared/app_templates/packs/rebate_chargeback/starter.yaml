@@ -1,0 +1,548 @@
+# Rebate & Chargeback Management: the template's starting point. Rebate and
+# pricing agreements, rebate claim validation, wholesaler chargebacks and
+# monthly accruals. The analyst tailors every part of it to your requirement;
+# the preview on the right redraws with each change.
+spec_version: 1
+
+app:
+  code: rebate_chargeback
+  name: Rebate & Chargeback Management
+  description: Manage rebate and pricing agreements, validate rebate claims and chargebacks against contract terms, and book accruals.
+  timezone: America/New_York
+  locale: en-US
+  currency: USD
+  theme: { primary: "#4338CA", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: ERP connector
+      text: Pull the product master with WAC prices and the customer master from the ERP nightly; push approved claim payments, chargeback credit memos and posted accrual journals back to the ERP.
+    - area: integration
+      title: Claims data feed
+      text: Receive chargeback submissions and rebate utilisation files from customers as structured files; each file creates chargeback or claim records that run through automatic validation.
+
+choice_sets:
+  customer_type:
+    - { id: wholesaler, label: Wholesaler }
+    - { id: gpo,        label: GPO }
+    - { id: idn,        label: IDN / Health system }
+    - { id: pbm,        label: PBM / Payer }
+    - { id: pharmacy,   label: Pharmacy chain }
+  agreement_type:
+    - { id: commercial_rebate, label: Commercial rebate, color: indigo }
+    - { id: gpo_contract,      label: GPO pricing contract, color: blue }
+    - { id: idn_contract,      label: IDN pricing contract, color: teal }
+    - { id: admin_fee,         label: Admin fee, color: purple }
+  rebate_structure:
+    - { id: flat,         label: Flat %, color: blue }
+    - { id: volume_tiers, label: Volume tiers, color: indigo }
+    - { id: market_share, label: Market-share tiers, color: purple }
+    - { id: price_protection, label: Price protection, color: teal }
+  period:
+    - { id: q1, label: Q1 }
+    - { id: q2, label: Q2 }
+    - { id: q3, label: Q3 }
+    - { id: q4, label: Q4 }
+  reject_reason:
+    - { id: price_mismatch,   label: Contract price mismatch }
+    - { id: ineligible,       label: Customer not eligible }
+    - { id: expired_contract, label: Contract not active on invoice date }
+    - { id: duplicate,        label: Duplicate submission }
+    - { id: unit_variance,    label: Units exceed sales data }
+
+roles:
+  - name: Market Access Lead
+    description: Negotiates and owns rebate and pricing agreements, reviews claim exceptions and watches gross-to-net by customer.
+    landing: dashboard
+    menu:
+      - { page: dashboard,   icon: layout-dashboard }
+      - { page: agreements,  icon: file-signature }
+      - { page: claims,      icon: receipt }
+      - { page: chargebacks, icon: undo-2 }
+      - { page: customers,   icon: building-2 }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products }
+
+  - name: Finance
+    description: Approves agreements for pricing, validates and pays claims, credits chargebacks and books monthly accruals.
+    landing: claims
+    menu:
+      - { page: dashboard,   icon: layout-dashboard }
+      - { page: claims,      label: Claim Validation, icon: receipt }
+      - { page: chargebacks, icon: undo-2 }
+      - { page: accruals,    icon: calculator }
+      - { page: agreements,  icon: file-signature }
+      - { page: customers,   icon: building-2 }
+
+  - name: Customer
+    description: External login for a wholesaler, GPO, IDN or payer; submits claims and chargebacks and sees only its own agreements and payments.
+    landing: claims
+    menu:
+      - { page: claims,      label: My Claims, icon: receipt }
+      - { page: chargebacks, label: My Chargebacks, icon: undo-2 }
+      - { page: agreements,  label: My Agreements, icon: file-signature }
+
+pages:
+  - { code: agreements,    type: crud,   entity: agreement,   route: /app/agreements,  title: Agreements }
+  - { code: agreement_360, type: detail, detail_view: agreement_360, route: /app/agreements/:id }
+  - { code: claims,        type: crud,   entity: rebate_claim, route: /app/claims,     title: Rebate Claims }
+  - { code: chargebacks,   type: crud,   entity: chargeback,  route: /app/chargebacks, title: Chargebacks }
+  - { code: accruals,      type: crud,   entity: accrual,     route: /app/accruals,    title: Accruals }
+  - { code: customers,     type: crud,   entity: customer,    route: /app/customers,   title: Customers }
+  - { code: products,      type: crud,   entity: product,     route: /app/masters/products, title: Products }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Gross-to-Net Dashboard
+    component: GtnDashboard
+    roles: [Market Access Lead, Finance]
+    text: >
+      KPI row: active agreements, open claims value, chargebacks received this month,
+      accrual balance versus paid to date. Below: rebate and chargeback spend by customer
+      type (bar, last 4 quarters), claims in exception older than 15 days, and the
+      agreements expiring in the next 90 days.
+
+modules:
+  - code: masters
+    name: Customers & Products
+    description: Contracted customers and the products they buy, synced from the ERP.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:      { type: text, required: true, max_length: 150 }
+          - ndc:       { type: text, label: NDC, required: true, unique: true, pattern: "^[0-9]{5}-[0-9]{4}-[0-9]{2}$", pattern_msg: "Enter an 11-digit NDC as 5-4-2." }
+          - pack_size: { type: text, placeholder: "30 tablets" }
+          - wac_price: { type: money, label: WAC, required: true, help: Wholesale acquisition cost per pack. }
+          - is_active: { type: boolean, default: true }
+        access:
+          Finance:            { actions: [view, add, edit, export] }
+          Market Access Lead: { actions: [view, export] }
+        table:
+          columns:
+            - name:      { label: Product, searchable: true, sortable: true }
+            - ndc:       { label: NDC, searchable: true }
+            - pack_size: { label: Pack }
+            - wac_price: { label: WAC, format: money, sortable: true }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, ndc, pack_size, wac_price, is_active] }
+          edit:   { same_as: create }
+
+      - code: customer
+        name: Customer
+        plural: Customers
+        kind: master
+        display: name
+        app_user: { role: Customer, name: contact_name, email: email, create_on: is_active == true }
+        fields:
+          - customer_code: { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "CUS-{0000}" } }
+          - name:          { type: text, required: true, max_length: 200 }
+          - customer_type: { type: choice, label: Type, choices: customer_type, required: true }
+          - erp_sold_to:   { type: text, label: ERP sold-to, pattern: "^[0-9]{10}$", pattern_msg: The 10-digit ERP customer number. }
+          - contact_name:  { type: text, label: Contact, required: true }
+          - email:         { type: email, required: true }
+          - is_active:     { type: boolean, label: Portal access, default: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [erp_sold_to], compare: exact, on_match: block, message: A customer with this ERP sold-to already exists. }
+        access:
+          Market Access Lead: { actions: [view, add, edit, export] }
+          Finance:            { actions: [view, export] }
+        table:
+          columns:
+            - customer_code: { label: Code, searchable: true }
+            - name:          { label: Customer, searchable: true, sortable: true }
+            - customer_type: { label: Type, filterable: true }
+            - erp_sold_to:   { label: ERP sold-to }
+            - contact_name:  { label: Contact }
+            - is_active:     { label: Portal, filterable: true }
+          default_sort: name
+          add_button: Add Customer
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, customer_type, erp_sold_to, contact_name, email, is_active] }
+          edit:   { same_as: create }
+
+  - code: agreements
+    name: Agreements
+    description: Rebate and pricing agreements with their product terms.
+    entities:
+      - code: agreement
+        name: Agreement
+        plural: Agreements
+        kind: hero
+        display: contract_no
+        fields:
+          - contract_no:    { type: text, label: Contract, readonly: true, unique: true, auto: { sequence: "AGR-{YY}-{000}" } }
+          - title:          { type: text, label: Agreement name, required: true }
+          - customer:       { type: link, to: customer, required: true, display: name }
+          - agreement_type: { type: choice, label: Type, choices: agreement_type, required: true }
+          - start_date:     { type: date, required: true }
+          - end_date:       { type: date, required: true }
+          - rebate_structure: { type: choice, label: Rebate structure, choices: rebate_structure, required: true, help: How rebate rates are set on the product terms. }
+          - contract_file:  { type: file, label: Signed contract, accept: [pdf] }
+          - owner:          { type: link, to: app_user, label: Owner }
+        validation:
+          rules:
+            - { when: end_date is_set, require_expr: end_date > start_date, message: End date must be after the start date. }
+        access:
+          Market Access Lead: { actions: [view, add, edit, export, detail] }
+          Finance:            { actions: [view, export, detail] }
+          Customer:           { actions: [view, detail], rows: { own: customer } }
+        workflow:
+          statuses:
+            - { code: draft,            label: Draft,            color: gray, initial: true }
+            - { code: pending_approval, label: Pending Approval, color: amber }
+            - { code: active,           label: Active,           color: green }
+            - { code: expired,          label: Expired,          color: blue, final: true }
+            - { code: terminated,       label: Terminated,       color: red, final: true }
+          transitions:
+            - name: submit
+              label: Submit for Approval
+              from: draft
+              to: pending_approval
+              roles: [Market Access Lead]
+              primary: true
+              condition: { text: "At least one product line is added and the signed contract is uploaded." }
+              condition_msg: Add product lines and upload the signed contract first.
+              on_done: Notify Finance that an agreement is waiting for pricing approval.
+            - name: approve
+              label: Approve
+              from: pending_approval
+              to: active
+              roles: [Finance]
+              primary: true
+              on_done: Load contract prices to the ERP and email the customer that the agreement is live.
+            - { name: send_back, label: Send Back, from: pending_approval, to: draft, roles: [Finance],
+                form: [ { send_back_reason: { type: long_text, required: true } } ],
+                on_done: Email the owner the reason. }
+            - { name: expire, label: Expire, from: active, to: expired, trigger: system, text: Nightly when end_date < today. }
+            - { name: terminate, label: Terminate, from: active, to: terminated, roles: [Market Access Lead], tone: danger,
+                confirm: "Terminate this agreement? New claims and chargebacks against it will be rejected.",
+                form: [ { termination_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: expiring, label: Expiring Soon, color: amber, system: true, text: Set when end_date is within 90 days. }
+        form:
+          create:
+            roles: [Market Access Lead]
+            title: New Agreement
+            sections:
+              - { title: Parties, fields: [title, customer, agreement_type, owner] }
+              - { title: Terms, fields: [start_date, end_date, rebate_structure, contract_file] }
+            after_create: agreement_360
+          edit: { same_as: create, editable_in: [draft] }
+        table:
+          columns:
+            - contract_no:    { label: Contract, searchable: true, sortable: true, link_to: agreement_360 }
+            - title:          { label: Agreement, searchable: true }
+            - customer:       { label: Customer, display: name, filterable: true }
+            - agreement_type: { label: Type, filterable: true }
+            - end_date:       { label: Ends, sortable: true }
+            - rebate_structure: { label: Structure, filterable: true }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -start_date
+          quick_filters:
+            - { label: Awaiting approval, where: status == pending_approval, roles: [Finance], default: true }
+            - { label: Expiring soon, where: has_tag expiring }
+          row_click: agreement_360
+          add_button: New Agreement
+
+      - code: agreement_line
+        name: Product Term
+        plural: Product Terms
+        kind: child
+        parent: { entity: agreement, field: agreement }
+        display: product
+        fields:
+          - agreement:      { type: link, to: agreement, required: true, on_delete: cascade }
+          - product:        { type: link, to: product, required: true, display: name }
+          - contract_price: { type: money, label: Contract price, required: true, help: Price the customer pays the wholesaler; drives the chargeback amount. }
+          - rebate_pct:     { type: percent, label: Rebate, min: 0, max: 30 }
+        access:
+          Market Access Lead: { actions: [view, add, edit] }
+          Finance:            { actions: [view] }
+          Customer:           { actions: [view], rows: { own: agreement.customer } }
+        table:
+          columns:
+            - product:        { label: Product, display: name }
+            - contract_price: { label: Contract price, format: money }
+            - rebate_pct:     { label: Rebate, format: percent }
+          default_sort: product
+        form:
+          create: { fields: [product, contract_price, rebate_pct] }
+
+  - code: claims
+    name: Claims & Chargebacks
+    description: Rebate claims and chargebacks submitted by customers and validated against agreement terms.
+    entities:
+      - code: rebate_claim
+        name: Rebate Claim
+        plural: Rebate Claims
+        kind: transactional
+        display: claim_ref
+        fields:
+          - claim_ref:        { type: text, label: Claim, readonly: true, unique: true, auto: { sequence: "RBC-{YY}-{00000}" } }
+          - customer:         { type: link, to: customer, required: true, display: name }
+          - agreement:        { type: link, to: agreement, required: true, display: contract_no, limit_choices: status == active }
+          - period:           { type: choice, label: Quarter, choices: period, required: true }
+          - units:            { type: integer, label: Units claimed, required: true, min: 200, max: 25000 }
+          - claimed_amount:   { type: money, label: Claimed, required: true, min: 0 }
+          - validated_amount: { type: money, label: Validated, readonly: true, computed: "Eligible units x WAC x the agreement's rebate %." }
+          - exception_count:  { type: integer, label: Exceptions, readonly: true, min: 0, max: 9 }
+          - utilisation_file: { type: file, label: Utilisation data, required: true, accept: [csv, xlsx] }
+          - payment_ref:      { type: text, label: Payment ref, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [agreement, period], compare: exact, on_match: block, message: A claim for this agreement and quarter already exists. }
+        access:
+          Customer:           { actions: [view, add], rows: { own: customer } }
+          Market Access Lead: { actions: [view, export] }
+          Finance:            { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: submitted,  label: Submitted,  color: blue, initial: true }
+            - { code: exception,  label: Exception,  color: amber }
+            - { code: validated,  label: Validated,  color: indigo }
+            - { code: approved,   label: Approved,   color: teal }
+            - { code: paid,       label: Paid,       color: green, final: true }
+            - { code: rejected,   label: Rejected,   color: red, final: true }
+          transitions:
+            - { name: flag_exceptions, label: Flag Exceptions, from: submitted, to: exception, trigger: system,
+                text: "After validation, when lines fail eligibility, price or unit checks against the sales data feed." }
+            - { name: auto_validate, label: Validated, from: submitted, to: validated, trigger: system, text: After validation with no exceptions. }
+            - { name: resolve, label: Resolve Exceptions, from: exception, to: validated, roles: [Market Access Lead], primary: true,
+                form: [ { resolution_note: { type: long_text, required: true } } ],
+                on_done: Recalculate validated_amount on the accepted lines. }
+            - name: approve
+              label: Approve Payment
+              from: validated
+              to: approved
+              roles: [Finance]
+              primary: true
+              condition: { text: "The validated amount is within 5% of the accrual for this agreement and quarter, or a note is given." }
+              on_done: Send a payment request to the ERP for the validated amount.
+            - { name: mark_paid, label: Mark Paid, from: approved, to: paid, trigger: system,
+                text: When the ERP returns the payment reference; store it in payment_ref and email the customer the remittance. }
+            - { name: reject, label: Reject, from: [submitted, exception, validated], to: rejected, roles: [Finance, Market Access Lead], tone: danger,
+                form: [ { reason: { type: choice, choices: reject_reason, required: true } }, { note: { type: long_text } } ],
+                on_done: Email the customer the rejection reason. }
+        table:
+          columns:
+            - claim_ref:        { label: Claim, searchable: true, sortable: true }
+            - customer:         { label: Customer, display: name, filterable: true }
+            - agreement:        { label: Agreement, display: contract_no }
+            - period:           { label: Quarter, filterable: true }
+            - claimed_amount:   { label: Claimed, format: money, sortable: true }
+            - validated_amount: { label: Validated, format: money }
+            - exception_count:  { label: Exceptions }
+            - status:           { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Exceptions, where: status == exception, roles: [Market Access Lead], default: true }
+            - { label: To approve, where: status == validated, roles: [Finance], default: true }
+          footer_totals: [claimed_amount, validated_amount]
+          add_button: Submit Claim
+        form:
+          create: { roles: [Customer], title: Submit Rebate Claim, fields: [agreement, period, units, claimed_amount, utilisation_file], on_create: Link the claim to the customer of the logged-in user and start validation. }
+
+      - code: chargeback
+        name: Chargeback
+        plural: Chargebacks
+        kind: transactional
+        display: chargeback_no
+        fields:
+          - chargeback_no:   { type: text, label: Chargeback, readonly: true, unique: true, auto: { sequence: "CB-{YY}-{000000}" } }
+          - wholesaler:      { type: link, to: customer, required: true, display: name, help: The wholesaler submitting the chargeback. }
+          - agreement:       { type: link, to: agreement, required: true, display: contract_no, limit_choices: status == active }
+          - product:         { type: link, to: product, required: true, display: name }
+          - end_customer:    { type: text, label: Contract customer, required: true }
+          - invoice_no:      { type: text, label: Invoice, required: true }
+          - invoice_date:    { type: date, required: true }
+          - units:           { type: integer, required: true, min: 5, max: 600 }
+          - wac_price:       { type: money, label: WAC, readonly: true }
+          - contract_price:  { type: money, label: Contract price, readonly: true }
+          - amount:          { type: money, label: Chargeback amount, readonly: true, computed: "units x (WAC - contract price)." }
+          - reject_reason:   { type: choice, choices: reject_reason, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [wholesaler, invoice_no, product], compare: exact, on_match: block, message: This invoice line was already charged back. }
+        access:
+          Customer:           { actions: [view, add], rows: { own: wholesaler } }
+          Finance:            { actions: [view, export] }
+          Market Access Lead: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: received,  label: Received,  color: blue, initial: true }
+            - { code: validated, label: Validated, color: indigo }
+            - { code: disputed,  label: Disputed,  color: amber }
+            - { code: credited,  label: Credited,  color: green, final: true }
+            - { code: rejected,  label: Rejected,  color: red, final: true }
+          transitions:
+            - { name: validate, label: Validate, from: received, to: validated, trigger: system,
+                text: "Contract active on the invoice date, end customer eligible and contract price matches the agreement line." }
+            - { name: dispute, label: Dispute, from: [received, validated], to: disputed, roles: [Finance],
+                form: [ { reason: { type: choice, choices: reject_reason, required: true } } ],
+                on_done: Email the wholesaler the disputed line. }
+            - { name: resubmit, label: Resubmit, from: disputed, to: received, roles: [Customer], primary: true,
+                form: [ { correction_note: { type: long_text, required: true } } ] }
+            - { name: credit, label: Issue Credit, from: validated, to: credited, roles: [Finance], primary: true,
+                on_done: Post a credit memo to the ERP against the wholesaler. }
+            - { name: reject, label: Reject, from: [received, disputed], to: rejected, roles: [Finance], tone: danger,
+                form: [ { reason: { type: choice, choices: reject_reason, required: true } } ] }
+        table:
+          columns:
+            - chargeback_no: { label: Chargeback, searchable: true, sortable: true }
+            - wholesaler:    { label: Wholesaler, display: name, filterable: true }
+            - agreement:     { label: Contract, display: contract_no }
+            - product:       { label: Product, display: name, filterable: true }
+            - invoice_date:  { label: Invoice date, sortable: true }
+            - units:         { label: Units }
+            - amount:        { label: Amount, format: money, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: -invoice_date
+          quick_filters:
+            - { label: Ready to credit, where: status == validated, roles: [Finance], default: true }
+            - { label: Disputed, where: status == disputed }
+          footer_totals: [amount]
+          add_button: Submit Chargeback
+        form:
+          create: { roles: [Customer], fields: [agreement, product, end_customer, invoice_no, invoice_date, units], on_create: Link to the wholesaler of the logged-in user and copy WAC and contract price from the product and agreement line. }
+
+  - code: accruals
+    name: Accruals
+    description: Monthly rebate and chargeback accruals per agreement, with maker-checker sign-off.
+    entities:
+      - code: accrual
+        name: Accrual
+        plural: Accruals
+        kind: transactional
+        display: accrual_ref
+        fields:
+          - accrual_ref:    { type: text, label: Accrual, readonly: true, unique: true, auto: { sequence: "ACR-{YY}-{0000}" } }
+          - agreement:      { type: link, to: agreement, required: true, display: contract_no }
+          - month:          { type: date, label: Month end, required: true }
+          - accrual_amount: { type: money, label: Accrued, required: true, min: 2000, max: 180000 }
+          - paid_to_date:   { type: money, label: Paid to date, readonly: true, computed: Sum of paid claims and credited chargebacks on the agreement. }
+          - true_up:        { type: money, label: True-up, readonly: true, computed: "Accrued minus paid to date for closed periods." }
+          - basis:          { type: long_text, label: Basis, help: How the accrual was estimated. }
+        access:
+          Finance:            { actions: [view, add, edit, export] }
+          Market Access Lead: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,     color: gray, initial: true }
+            - { code: in_review, label: In Review, color: amber }
+            - { code: posted,    label: Posted,    color: green }
+            - { code: reversed,  label: Reversed,  color: red, final: true }
+          transitions:
+            - { name: submit, label: Submit for Sign-off, from: draft, to: in_review, roles: [Finance], primary: true }
+            - name: post
+              label: Approve & Post
+              from: in_review
+              to: posted
+              roles: [Finance]
+              primary: true
+              condition: { text: The approver is not the person who prepared the accrual (maker-checker). }
+              condition_msg: Another Finance user must approve an accrual you prepared.
+              on_done: Post the accrual journal to the ERP.
+            - { name: send_back, label: Send Back, from: in_review, to: draft, roles: [Finance],
+                form: [ { note: { type: long_text, required: true } } ] }
+            - { name: reverse, label: Reverse, from: posted, to: reversed, roles: [Finance], tone: danger,
+                confirm: "Reverse this accrual? A reversing journal will be posted.",
+                on_done: Post the reversing journal to the ERP. }
+        table:
+          columns:
+            - accrual_ref:    { label: Accrual, searchable: true }
+            - agreement:      { label: Agreement, display: contract_no, filterable: true }
+            - month:          { label: Month end, sortable: true }
+            - accrual_amount: { label: Accrued, format: money, sortable: true }
+            - paid_to_date:   { label: Paid, format: money }
+            - true_up:        { label: True-up, format: money }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -month
+          quick_filters:
+            - { label: Awaiting sign-off, where: status == in_review, default: true }
+          footer_totals: [accrual_amount, paid_to_date]
+          add_button: New Accrual
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft }
+        form:
+          create: { fields: [agreement, month, accrual_amount, basis] }
+          edit:   { same_as: create, editable_in: [draft] }
+
+detail_views:
+  - code: agreement_360
+    hero: agreement
+    title: "{contract_no}"
+    back_to: agreements
+    layout: header_tabs_sidebar
+    roles: [Market Access Lead, Finance, Customer]
+    header:
+      title: title
+      subtitle: ["{contract_no}", "{customer}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Type, field: agreement_type }
+        - { label: Starts, field: start_date }
+        - { label: Ends, field: end_date }
+        - { label: Rebate structure, field: rebate_structure }
+      actions: { transitions: true, buttons: [ { key: edit, label: Edit, type: edit, roles: [Market Access Lead] } ] }
+      banners:
+        - { show_when: has_tag expiring, tone: warning, text: This agreement ends within 90 days. }
+    stats:
+      - { label: Claims paid, value: { sum: rebate_claim.validated_amount, via: agreement, where: status == paid }, format: money, tone: teal, link_to_tab: claims }
+      - { label: Chargebacks credited, value: { sum: chargeback.amount, via: agreement, where: status == credited }, format: money, tone: blue, link_to_tab: chargebacks }
+      - { label: Accrued, value: { sum: accrual.accrual_amount, via: agreement, where: status == posted }, format: money, tone: indigo, link_to_tab: accruals }
+      - { label: Open claims, value: { count: rebate_claim, via: agreement, where: "status in [submitted, exception, validated, approved]" }, tone: amber, link_to_tab: claims }
+    sidebar:
+      - { type: fields, title: Terms, fields: [customer, agreement_type, start_date, end_date, rebate_structure] }
+      - { type: fields, title: Ownership, fields: [owner, contract_file] }
+    tabs:
+      - code: lines
+        label: Product Terms
+        type: related_table
+        entity: agreement_line
+        via: agreement
+        count_badge: true
+        columns: [product, contract_price, rebate_pct]
+        add: { label: Add Product, prefill: { agreement: hero } }
+      - code: claims
+        label: Rebate Claims
+        type: related_table
+        entity: rebate_claim
+        via: agreement
+        count_badge: true
+        columns: [claim_ref, period, claimed_amount, validated_amount, status]
+      - code: chargebacks
+        label: Chargebacks
+        type: related_table
+        entity: chargeback
+        via: agreement
+        columns: [chargeback_no, wholesaler, product, invoice_date, units, amount, status]
+      - code: accruals
+        label: Accruals
+        type: related_table
+        entity: accrual
+        via: agreement
+        columns: [accrual_ref, month, accrual_amount, paid_to_date, true_up, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: agreement, events: [created, updated, transition] }
+          - { entity: rebate_claim, via: agreement, events: [created, transition] }
+    states:
+      not_found: { title: Agreement not found, back_to: agreements }

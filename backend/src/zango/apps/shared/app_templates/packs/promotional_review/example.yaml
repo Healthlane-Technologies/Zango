@@ -1,0 +1,837 @@
+# Cardio-Diabetes PRC (India): a full promotional review app for the
+# cardiology and diabetes brand teams. Brand managers submit detail aids, HCP
+# emails, congress panels and patient leaflets with every claim tied to a page of
+# a reference; the MLR coordinator routes each version to medical, legal and
+# regulatory reviewers within a 5-working-day SLA; the medical reviewer
+# substantiates claims one by one; the regulatory head certifies the final
+# version (maker-checker) and the material gets a job code, a 24-month expiry and
+# an annual recertification. Approved PDFs are pushed to the document
+# management system and the reviewer roster syncs from the HR directory.
+
+spec_version: 1
+
+app:
+  code: cardio_diabetes_prc
+  name: Cardio-Diabetes PRC
+  description: Promotional review for the cardiology and diabetes portfolio in India, with claim substantiation, reference checks, fair balance, versioned MLR review and certification with expiry.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme:
+    primary: "#4F46E5"
+    secondary: "#64748B"
+  custom_requirements:
+    - area: permission
+      title: Single sign-on and reviewer roster
+      text: All users sign in with the company's Azure AD. Every night the reviewer roster (name, email, discipline, line manager, active flag) syncs from the HR directory; leavers are deactivated and their open reviews are flagged to the MLR coordinator for reassignment.
+    - area: integration
+      title: Approved artwork to the DMS
+      text: When a material is certified, push the certified PDF with its job code, version, expiry date and certifier to the document management system, and store the returned document ID on the material. When a material expires or is withdrawn, set the DMS document to "withdrawn" so field teams can no longer download it.
+    - area: report
+      title: Audit export
+      text: Compliance can export, for any date range, every material version with its claims, references, review decisions, comments and certification signatures as one Excel workbook plus a zip of the reviewed PDFs.
+    - area: scheduled
+      title: Review SLA reminders
+      text: Every working day at 9:00 IST email each reviewer their reviews due within 2 working days, and email the MLR coordinator a list of overdue reviews grouped by reviewer.
+
+choice_sets:
+  material_type:
+    - { id: detail_aid,      label: Detail aid }
+    - { id: leave_behind,    label: Leave-behind }
+    - { id: email,           label: HCP email }
+    - { id: web_page,        label: HCP web page }
+    - { id: social_post,     label: Social post }
+    - { id: video,           label: Video }
+    - { id: congress,        label: Congress panel }
+    - { id: patient_leaflet, label: Patient leaflet }
+  channel:
+    - { id: field_force, label: Field force }
+    - { id: digital,     label: Digital }
+    - { id: congress,    label: Congress / CME }
+    - { id: pharmacy,    label: Pharmacy }
+  audience:
+    - { id: hcp,     label: HCP,     color: blue }
+    - { id: patient, label: Patient, color: teal }
+    - { id: trade,   label: Trade,   color: gray }
+  claim_type:
+    - { id: efficacy,    label: Efficacy,    color: blue }
+    - { id: safety,      label: Safety,      color: amber }
+    - { id: comparative, label: Comparative, color: purple }
+    - { id: dosing,      label: Dosing,      color: teal }
+    - { id: economic,    label: Economic,    color: indigo }
+    - { id: quality_of_life, label: Quality of life, color: pink }
+  reference_type:
+    - { id: prescribing_info, label: Prescribing information }
+    - { id: clinical_study,   label: Clinical study report }
+    - { id: publication,      label: Journal publication }
+    - { id: guideline,        label: Treatment guideline }
+    - { id: data_on_file,     label: Data on file }
+  discipline:
+    - { id: medical,    label: Medical,    color: blue }
+    - { id: legal,      label: Legal,      color: purple }
+    - { id: regulatory, label: Regulatory, color: teal }
+  therapy_area:
+    - { id: cardiology,  label: Cardiology }
+    - { id: diabetes,    label: Diabetes }
+    - { id: lipids,      label: Lipids }
+    - { id: renal,       label: Cardio-renal }
+  review_outcome:
+    - { id: approved,              label: Approved,              color: green }
+    - { id: approved_with_changes, label: Approved with changes, color: amber }
+    - { id: changes_required,      label: Changes required,      color: red }
+  fair_balance_check:
+    - { id: adequate,   label: Adequate,   color: green }
+    - { id: inadequate, label: Inadequate, color: red }
+    - { id: not_needed, label: Not needed (reminder ad), color: gray }
+
+roles:
+  - name: Brand Manager
+    description: Creates materials for their brands, lists every claim with its reference page, uploads each new version and answers reviewer comments.
+    landing: materials
+    menu:
+      - { page: dashboard_brand, label: My Pipeline, icon: layout-dashboard }
+      - { page: materials,  label: My Materials, icon: file-text }
+      - { page: claims,     label: My Claims, icon: quote }
+      - { page: references, icon: book-open }
+
+  - name: MLR Coordinator
+    description: Checks submissions are complete, routes each version to reviewers, chases the 5-day SLA, runs recertification and owns the reference library.
+    landing: materials
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: materials,  icon: file-text }
+      - { page: reviews,    icon: clipboard-check }
+      - { page: claims,     icon: quote }
+      - { page: references, icon: book-open }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products,  icon: pill }
+          - { page: reviewers, icon: users }
+
+  - name: Medical Reviewer
+    description: Substantiates every claim against the cited page of its reference and checks fair balance and scientific accuracy.
+    landing: reviews
+    menu:
+      - { page: reviews,    label: My Reviews, icon: clipboard-check }
+      - { page: claims,     label: Claims to verify, icon: quote }
+      - { page: materials,  icon: file-text }
+      - { page: references, icon: book-open }
+
+  - name: Legal Reviewer
+    description: Checks comparative claims, trademarks, copyright, image rights and disclaimers.
+    landing: reviews
+    menu:
+      - { page: reviews,   label: My Reviews, icon: clipboard-check }
+      - { page: materials, icon: file-text }
+
+  - name: Regulatory Reviewer
+    description: Checks the material against the approved prescribing information and the promotional code, and certifies the final version.
+    landing: reviews
+    menu:
+      - { page: reviews,    label: My Reviews, icon: clipboard-check }
+      - { page: materials,  label: To Certify, icon: badge-check }
+      - { page: references, icon: book-open }
+      - { page: products,   icon: pill }
+
+pages:
+  - { code: materials,     type: crud,   entity: material,          route: /app/materials,  title: Materials }
+  - { code: material_360,  type: detail, detail_view: material_360, route: /app/materials/:id }
+  - { code: claims,        type: crud,   entity: claim,             route: /app/claims,     title: Claims }
+  - { code: reviews,       type: crud,   entity: review,            route: /app/reviews,    title: Reviews }
+  - { code: references,    type: crud,   entity: reference,         route: /app/references, title: Reference Library }
+  - { code: reference_360, type: detail, detail_view: reference_360, route: /app/references/:id }
+  - { code: products,      type: crud,   entity: product,           route: /app/masters/products,  title: Products }
+  - { code: reviewers,     type: crud,   entity: reviewer,          route: /app/masters/reviewers, title: Reviewer Roster }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Review Dashboard
+    component: ReviewDashboard
+    roles: [MLR Coordinator]
+    text: >
+      KPI row: materials in review, reviews overdue against the 5-working-day SLA, median
+      submission-to-certification days this quarter, certified materials expiring in 60 days.
+      Below: open reviews by reviewer and discipline (stacked bar, overdue in red), first-pass
+      approval rate by brand for the last 6 months (line), and the 10 oldest materials still in
+      review with their pending reviewers and days waiting.
+  - code: dashboard_brand
+    type: custom
+    route: /app/my-pipeline
+    title: My Pipeline
+    component: BrandPipeline
+    roles: [Brand Manager]
+    text: >
+      For the brand manager's own materials: a kanban with one column per material status
+      (draft, submitted, in review, changes requested, awaiting certification, certified), each
+      card showing material ID, title, version, target go-live and days in the current status.
+      Above it: materials expiring in 60 days with a "Start recertification" link.
+
+modules:
+  - code: library
+    name: Library
+    description: Products, the reference library and the reviewer roster.
+    entities:
+      - code: product
+        name: Product
+        kind: master
+        display: name
+        fields:
+          - name:            { type: text, label: Brand name, required: true, unique: true, max_length: 120 }
+          - generic_name:    { type: text, label: Generic name, required: true }
+          - therapy_area:    { type: choice, choices: therapy_area, required: true }
+          - indication:      { type: long_text, label: Approved indication, required: true }
+          - pi_reference:    { type: link, to: reference, label: Current prescribing information, display: ref_code, limit_choices: reference_type == prescribing_info }
+          - brand_manager:   { type: link, to: app_user, label: Brand manager }
+          - is_active:       { type: boolean, default: true }
+        access:
+          MLR Coordinator:     { actions: [view, add, edit, export] }
+          Regulatory Reviewer: { actions: [view, edit] }
+          Brand Manager:       { actions: [view] }
+          Medical Reviewer:    { actions: [view] }
+        table:
+          columns:
+            - name:          { label: Brand, searchable: true, sortable: true }
+            - generic_name:  { label: Generic name, searchable: true }
+            - therapy_area:  { label: Therapy area, filterable: true }
+            - pi_reference:  { label: Current PI, display: ref_code }
+            - brand_manager: { label: Brand manager }
+            - is_active:     { label: Active, filterable: true }
+          default_sort: name
+          quick_filters:
+            - { label: Active only, where: is_active is_true, default: true }
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, generic_name, therapy_area, indication, pi_reference, brand_manager, is_active] }
+          edit:   { same_as: create, roles: [MLR Coordinator, Regulatory Reviewer] }
+
+      - code: reviewer
+        name: Reviewer
+        kind: master
+        display: full_name
+        fields:
+          - full_name:      { type: text, label: Name, required: true }
+          - email:          { type: email, required: true, unique: true }
+          - user:           { type: link, to: app_user, label: Login }
+          - discipline:     { type: choice, choices: discipline, required: true }
+          - therapy_areas:  { type: multi_choice, choices: therapy_area, label: Therapy areas }
+          - can_certify:    { type: boolean, label: Can certify, help: Only regulatory reviewers named as signatories may certify. }
+          - max_open:       { type: integer, label: Max open reviews, default: 8, min: 1, max: 20 }
+          - is_active:      { type: boolean, default: true, readonly: true, help: Synced from the HR directory. }
+        access:
+          MLR Coordinator: { actions: [view, add, edit, export] }
+        table:
+          columns:
+            - full_name:     { label: Reviewer, searchable: true, sortable: true }
+            - email:         { label: Email }
+            - discipline:    { label: Discipline, filterable: true }
+            - therapy_areas: { label: Therapy areas }
+            - can_certify:   { label: Certifier, filterable: true }
+            - open_reviews:  { source: computed, label: Open reviews, format: integer, shows: Count of assigned and in-progress reviews where reviewer is this user. }
+            - max_open:      { label: Max open }
+            - is_active:     { label: Active, filterable: true }
+          default_sort: discipline
+          group_by: discipline
+          add_button: Add Reviewer
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [full_name, email, user, discipline, therapy_areas, can_certify, max_open] }
+          edit:   { same_as: create }
+        custom_requirements:
+          - area: integration
+            title: HR directory sync
+            text: Nightly, match reviewers to the HR directory by email; set is_active = false for leavers and email the MLR coordinator their open reviews.
+
+      - code: reference
+        name: Reference
+        kind: master
+        display: ref_code
+        fields:
+          - ref_code:       { type: text, label: Reference ID, readonly: true, unique: true, auto: { sequence: "REF-{0000}" } }
+          - title:          { type: text, required: true, max_length: 300 }
+          - reference_type: { type: choice, choices: reference_type, required: true }
+          - citation:       { type: text, help: "Authors, journal, year, volume and pages (Vancouver style)." }
+          - doi:            { type: text, label: DOI, pattern: "^10\\.[0-9]{4,9}/[A-Za-z0-9.()/:_-]+$", pattern_msg: "Enter a DOI such as 10.1056/NEJMoa1504720." }
+          - product:        { type: link, to: product, display: name }
+          - document:       { type: file, required: true, accept: [pdf], max_size_mb: 25 }
+          - annotated:      { type: boolean, label: Annotated copy, help: Cited passages are highlighted in the PDF. }
+          - publication_date: { type: date, label: Published }
+          - valid_until:    { type: date, label: Valid until, help: For prescribing information and data on file. }
+        validation:
+          rules:
+            - when: reference_type in [prescribing_info, data_on_file]
+              require: [valid_until]
+              message: Prescribing information and data on file need a valid-until date.
+          duplicate_check:
+            rules:
+              - { match: [doi], compare: normalised, on_match: block, message: This DOI is already in the library. }
+              - { match: [title], compare: fuzzy, threshold: 0.9, on_match: warn, message: A reference with a very similar title is already in the library. }
+        access:
+          MLR Coordinator:     { actions: [view, add, edit, export, detail] }
+          Medical Reviewer:    { actions: [view, add, edit, detail] }
+          Brand Manager:       { actions: [view, add, detail] }
+          Regulatory Reviewer: { actions: [view, detail] }
+        workflow:
+          statuses:
+            - { code: current,    label: Current,    color: green, initial: true }
+            - { code: superseded, label: Superseded, color: gray, final: true }
+            - { code: lapsed,     label: Lapsed,     color: red, final: true }
+          transitions:
+            - name: supersede
+              label: Supersede
+              from: current
+              to: superseded
+              roles: [Medical Reviewer, MLR Coordinator]
+              tone: danger
+              form:
+                - superseded_by: { type: link, to: reference, required: true, display: ref_code }
+              on_done: Tag every certified material with a claim citing this reference as re-review needed and email each brand manager the affected claims.
+            - { name: lapse, label: Lapse, from: current, to: lapsed, trigger: system, text: Nightly when valid_until < today. }
+          tags:
+            - { code: lapsing_soon, label: Lapsing soon, color: amber, system: true, text: Set when valid_until is within 30 days. }
+        table:
+          columns:
+            - ref_code:       { label: Reference, searchable: true, sortable: true, link_to: reference_360 }
+            - title:          { label: Title, searchable: true }
+            - reference_type: { label: Type, filterable: true }
+            - product:        { label: Product, display: name, filterable: true }
+            - publication_date: { label: Published, sortable: true }
+            - valid_until:    { label: Valid until, sortable: true }
+            - cited_by:       { source: computed, label: Cited by claims, format: integer, shows: Count of claims citing this reference. }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: ref_code
+          quick_filters:
+            - { label: Current, where: status == current, default: true }
+            - { label: Lapsing soon, where: has_tag lapsing_soon, roles: [MLR Coordinator, Medical Reviewer] }
+          row_click: reference_360
+          add_button: Add Reference
+          row_actions:
+            - { key: edit, label: Edit, type: edit, roles: [MLR Coordinator, Medical Reviewer] }
+            - { key: download, label: Download PDF, type: download, text: The reference document (annotated copy when available). }
+        form:
+          create:
+            title: Add Reference
+            sections:
+              - title: Source
+                fields: [title, reference_type, citation, doi, publication_date]
+              - title: File
+                fields: [product, document, annotated, valid_until]
+          edit: { same_as: create, roles: [MLR Coordinator, Medical Reviewer], editable_in: [current] }
+
+  - code: mlr
+    name: Promotional Review
+    description: Materials and their versions, claims, discipline reviews and certification.
+    entities:
+      - code: material
+        name: Material
+        kind: hero
+        display: material_code
+        fields:
+          - material_code:  { type: text, label: Material ID, readonly: true, unique: true, auto: { sequence: "PRC-{YY}-{0000}" } }
+          - title:          { type: text, required: true, max_length: 200 }
+          - product:        { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - material_type:  { type: choice, choices: material_type, required: true }
+          - channel:        { type: choice, choices: channel, required: true }
+          - audience:       { type: choice, choices: audience, required: true }
+          - version:        { type: integer, readonly: true, required: true, default: 1, min: 1, max: 4 }
+          - artwork:        { type: file, required: true, accept: [pdf, jpg, png, mp4], max_size_mb: 200, help: The full layout as the audience will see it; video with a transcript PDF. }
+          - fair_balance:   { type: boolean, label: Fair balance included, help: Indication and key safety information are shown with the same prominence as the benefits. }
+          - pi_included:    { type: boolean, label: Abbreviated PI included }
+          - go_live_date:   { type: date, label: Target go-live, required: true }
+          - urgent:         { type: boolean, label: Fast-track, help: "Congress deadlines only; the reviewers' SLA drops to 2 working days." }
+          - urgent_reason:  { type: text, label: Fast-track reason }
+          - previous_material: { type: link, to: material, label: Replaces, display: material_code, limit_choices: "status in [certified, expired]" }
+          - job_code:       { type: text, label: Job code, readonly: true, unique: true }
+          - certified_by:   { type: link, to: app_user, readonly: true }
+          - certified_on:   { type: date, readonly: true }
+          - expiry_date:    { type: date, readonly: true }
+          - recert_due:     { type: date, label: Recertification due, readonly: true }
+          - dms_document_id: { type: text, label: DMS document ID, readonly: true }
+        validation:
+          rules:
+            - when: audience == hcp
+              require: [fair_balance, pi_included]
+              message: HCP promotional material must include fair balance and the abbreviated prescribing information.
+            - when: urgent is_true
+              require: [urgent_reason]
+              message: Give the congress or deadline that justifies a fast-track.
+            - when: go_live_date is_set
+              require_expr: go_live_date >= today
+              message: The target go-live date cannot be in the past.
+            - text: go_live_date is at least 10 working days after today unless the material is fast-tracked.
+              message: Standard review needs 10 working days; mark the material fast-track or move the go-live date.
+              on_fail: warn
+        access:
+          Brand Manager:       { actions: [view, add, edit, detail], rows: { text: Materials whose product's brand_manager is the current user. } }
+          MLR Coordinator:     { actions: [view, edit, export, detail] }
+          Medical Reviewer:    { actions: [view, detail], rows: { where: "status not_in [draft]" } }
+          Legal Reviewer:      { actions: [view, detail], rows: { where: "status not_in [draft]" } }
+          Regulatory Reviewer: { actions: [view, export, detail], rows: { where: "status not_in [draft]" } }
+        workflow:
+          statuses:
+            - { code: draft,             label: Draft,             color: gray, initial: true }
+            - { code: submitted,         label: Submitted,         color: blue }
+            - { code: in_review,         label: In Review,         color: amber }
+            - { code: changes_requested, label: Changes Requested, color: red }
+            - { code: awaiting_certification, label: Awaiting Certification, color: indigo }
+            - { code: certified,         label: Certified,         color: green }
+            - { code: expired,           label: Expired,           color: gray, final: true }
+            - { code: withdrawn,         label: Withdrawn,         color: purple, final: true }
+          transitions:
+            - name: submit
+              label: Submit for Review
+              from: draft
+              to: submitted
+              roles: [Brand Manager]
+              primary: true
+              condition:
+                all:
+                  - artwork is_set
+                  - text: The material has at least one claim and every claim cites a current reference with a page.
+              condition_msg: Add a current reference and page to every claim before submitting.
+              on_done: Snapshot the artwork as material version 1 and email the MLR coordinator a link to the material.
+            - name: route
+              label: Route to Reviewers
+              from: submitted
+              to: in_review
+              roles: [MLR Coordinator]
+              primary: true
+              form:
+                - medical_reviewer:    { type: link, to: reviewer, required: true, display: full_name, limit_choices: "discipline == medical" }
+                - legal_reviewer:      { type: link, to: reviewer, required: true, display: full_name, limit_choices: "discipline == legal" }
+                - regulatory_reviewer: { type: link, to: reviewer, required: true, display: full_name, limit_choices: "discipline == regulatory" }
+                - review_due:          { type: date, required: true, help: 5 working days from today; 2 when fast-tracked. }
+              condition: { text: None of the chosen reviewers is over their max open reviews. }
+              condition_msg: One of the reviewers is at capacity; choose another.
+              on_done: Create one medical, one legal and one regulatory review for the current version with the due date and email each reviewer a link and the artwork.
+            - { name: return_incomplete, label: Return Incomplete, from: submitted, to: draft, roles: [MLR Coordinator], tone: danger,
+                form: [ { return_reason: { type: long_text, required: true } } ],
+                on_done: Email the brand manager the reason. }
+            - { name: request_changes, label: Request Changes, from: in_review, to: changes_requested, trigger: system,
+                text: When all three reviews of the current version are closed and at least one of them requires changes. }
+            - name: resubmit
+              label: Resubmit New Version
+              from: changes_requested
+              to: submitted
+              roles: [Brand Manager]
+              primary: true
+              form:
+                - artwork:        { type: file, required: true }
+                - change_summary: { type: long_text, required: true, help: How each reviewer comment was addressed. }
+              condition: { text: Every claim marked not substantiated has been edited or removed. }
+              condition_msg: Fix or remove every claim the medical reviewer rejected.
+              on_done: Increase version by 1, save a material version row with the new artwork and change summary, reset the claims to pending, and email the MLR coordinator.
+            - { name: ready_for_certification, label: Ready for Certification, from: in_review, to: awaiting_certification, trigger: system,
+                text: "When the medical, legal and regulatory reviews of the current version are all approved or approved with changes." }
+            - name: certify
+              label: Certify
+              from: awaiting_certification
+              to: certified
+              roles: [Regulatory Reviewer]
+              primary: true
+              confirm: "Certify this version? Your name will be printed on the job bag."
+              form:
+                - certification_statement: { type: boolean, required: true, label: "I have examined the final form of the material and it complies with the code." }
+                - signature_password:      { type: text, required: true, label: Re-enter password }
+              condition:
+                all:
+                  - text: The current user is a reviewer with can_certify set.
+                  - text: The current user did not do the regulatory review of this version (maker-checker).
+              condition_msg: A different certified signatory must certify this version.
+              on_done: "Set certified_by = current user, certified_on = today, expiry_date = today + 24 months and recert_due = today + 12 months; generate job_code as <brand>/<YYMM>/<material_code>/v<version>; stamp the job code on the PDF and push it to the DMS; email the brand manager."
+            - name: send_back
+              label: Send Back
+              from: awaiting_certification
+              to: changes_requested
+              roles: [Regulatory Reviewer]
+              tone: danger
+              form:
+                - certifier_comments: { type: long_text, required: true }
+              on_done: Email the brand manager and the MLR coordinator the comments.
+            - name: recertify
+              label: Recertify
+              from: certified
+              to: certified
+              roles: [Regulatory Reviewer]
+              form:
+                - still_valid: { type: boolean, required: true, label: "Claims, references and PI are unchanged since certification." }
+              condition: { text: No claim on the material cites a superseded or lapsed reference. }
+              condition_msg: A cited reference has changed; withdraw and submit a new version instead.
+              on_done: Set recert_due = today + 12 months and clear the recert_due tag.
+            - { name: expire, label: Expire, from: certified, to: expired, trigger: system, text: Nightly when expiry_date < today; withdraw the PDF in the DMS. }
+            - name: withdraw
+              label: Withdraw
+              from: [draft, submitted, in_review, changes_requested, awaiting_certification, certified]
+              to: withdrawn
+              roles: [Brand Manager, MLR Coordinator]
+              tone: danger
+              form:
+                - withdraw_reason: { type: long_text, required: true }
+              on_done: "Cancel open reviews; if it was certified, withdraw the PDF in the DMS and email the field force managers of the brand to stop using it."
+          tags:
+            - { code: fast_track, label: Fast-track, color: pink, system: true, text: Set while urgent is true. }
+            - { code: expiring_soon, label: Expiring soon, color: amber, system: true, text: Set when certified and expiry_date is within 60 days. }
+            - { code: recert_due, label: Recert due, color: amber, system: true, text: Set when certified and recert_due is within 30 days. }
+            - { code: rereview_needed, label: Re-review needed, color: red, system: true, text: Set when a reference cited by one of its claims is superseded or lapses. }
+        table:
+          columns:
+            - material_code: { label: Material, searchable: true, sortable: true, link_to: material_360 }
+            - title:         { label: Title, searchable: true }
+            - product:       { label: Brand, display: name, filterable: true }
+            - material_type: { label: Type, filterable: true }
+            - audience:      { label: Audience, filterable: true }
+            - version:       { label: Ver. }
+            - go_live_date:  { label: Go-live, sortable: true }
+            - job_code:      { label: Job code, roles: [MLR Coordinator, Regulatory Reviewer] }
+            - expiry_date:   { label: Expires, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+            - tags:          { source: tags, label: Flags }
+          default_sort: -created_at
+          page_size: 25
+          quick_filters:
+            - { label: To route, where: status == submitted, roles: [MLR Coordinator], default: true }
+            - { label: To certify, where: status == awaiting_certification, roles: [Regulatory Reviewer], default: true }
+            - { label: Needs my changes, where: status == changes_requested, roles: [Brand Manager], default: true }
+            - { label: In review, where: "status in [in_review, awaiting_certification]" }
+            - { label: Certified, where: status == certified }
+            - { label: Expiring soon, where: has_tag expiring_soon, roles: [MLR Coordinator, Brand Manager] }
+          row_click: material_360
+          add_button: New Material
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft, roles: [Brand Manager] }
+            - { key: open_360, label: Open 360, type: navigate, to: material_360 }
+            - { key: job_bag, label: Download Job Bag, type: download, show_when: status == certified,
+                text: "A PDF with the certified artwork stamped with the job code, every claim and its reference page, each review decision with comments, and the certification signature." }
+        form:
+          create:
+            roles: [Brand Manager]
+            title: New Material
+            sections:
+              - title: Material
+                fields: [title, product, material_type, channel, audience, previous_material]
+              - title: Content
+                fields: [artwork, fair_balance, pi_included]
+              - title: Timing
+                fields: [go_live_date, urgent, { urgent_reason: { show_when: urgent is_true } }]
+            on_create: Write "Material created" to the activity log.
+            after_create: material_360
+          edit:
+            same_as: create
+            roles: [Brand Manager, MLR Coordinator]
+            editable_in: [draft]
+
+      - code: material_version
+        name: Material Version
+        kind: child
+        parent: { entity: material, field: material }
+        display: version_no
+        fields:
+          - material:       { type: link, to: material, required: true, display: material_code }
+          - version_no:     { type: integer, label: Version, required: true, min: 1, max: 4 }
+          - artwork:        { type: file, required: true }
+          - change_summary: { type: long_text }
+          - submitted_on:   { type: date, required: true }
+          - outcome:        { type: choice, choices: review_outcome, readonly: true }
+        access:
+          Brand Manager:       { actions: [view] }
+          MLR Coordinator:     { actions: [view, export] }
+          Medical Reviewer:    { actions: [view] }
+          Legal Reviewer:      { actions: [view] }
+          Regulatory Reviewer: { actions: [view] }
+        table:
+          columns:
+            - version_no:     { label: Version, sortable: true }
+            - submitted_on:   { label: Submitted, sortable: true }
+            - change_summary: { label: Changes }
+            - outcome:        { label: Outcome }
+            - artwork:        { label: Artwork }
+          default_sort: -version_no
+
+      - code: claim
+        name: Claim
+        kind: transactional
+        display: claim_code
+        fields:
+          - claim_code:     { type: text, label: Claim ID, readonly: true, unique: true, auto: { sequence: "CLM-{00000}" } }
+          - material:       { type: link, to: material, required: true, display: material_code }
+          - claim_text:     { type: long_text, label: Claim, required: true }
+          - claim_type:     { type: choice, choices: claim_type, required: true }
+          - location:       { type: text, label: Page / panel, placeholder: "e.g. Page 2, headline" }
+          - reference:      { type: link, to: reference, required: true, display: ref_code, limit_choices: status == current }
+          - reference_page: { type: text, label: Page / table / figure in reference, required: true }
+          - comparator:     { type: text, label: Comparator product }
+          - fair_balance_check: { type: choice, choices: fair_balance_check, label: Fair balance, readonly: true }
+          - reviewer_note:  { type: long_text, readonly: true }
+        validation:
+          rules:
+            - when: claim_type == comparative
+              require: [comparator]
+              message: Name the comparator for a comparative claim.
+            - text: For a comparative claim the reference must be a head-to-head clinical study or publication.
+              message: Comparative claims need a head-to-head study as the reference.
+              on_fail: warn
+        access:
+          Brand Manager:       { actions: [view, add, edit], rows: created_by_me }
+          MLR Coordinator:     { actions: [view, export] }
+          Medical Reviewer:    { actions: [view, edit, export] }
+          Legal Reviewer:      { actions: [view] }
+          Regulatory Reviewer: { actions: [view] }
+        workflow:
+          statuses:
+            - { code: pending,           label: Pending,           color: blue, initial: true }
+            - { code: substantiated,     label: Substantiated,     color: green }
+            - { code: not_substantiated, label: Not Substantiated, color: red }
+          transitions:
+            - name: substantiate
+              label: Substantiated
+              from: [pending, not_substantiated]
+              to: substantiated
+              roles: [Medical Reviewer]
+              primary: true
+              form:
+                - fair_balance_check: { type: choice, choices: fair_balance_check, required: true }
+              on_done: Record the reviewer, date and fair-balance check on the claim.
+            - name: reject_claim
+              label: Not Substantiated
+              from: [pending, substantiated]
+              to: not_substantiated
+              roles: [Medical Reviewer]
+              tone: danger
+              form:
+                - reviewer_note: { type: long_text, required: true, help: What the reference actually supports. }
+              on_done: Email the brand manager the note and the claim's location.
+            - { name: reopen, label: Reopen, from: [substantiated, not_substantiated], to: pending, trigger: system,
+                text: When the material is resubmitted with a new version. }
+          tags:
+            - { code: off_label, label: Possible off-label, color: red,
+                enable: { roles: [Medical Reviewer, Regulatory Reviewer] }, disable: { roles: [Medical Reviewer, Regulatory Reviewer] } }
+        table:
+          columns:
+            - claim_code:     { label: Claim, searchable: true, sortable: true }
+            - material:       { label: Material, display: material_code, searchable: true, link_to: material_360 }
+            - claim_text:     { label: Claim text, searchable: true }
+            - claim_type:     { label: Type, filterable: true }
+            - location:       { label: Where }
+            - reference:      { label: Reference, display: ref_code }
+            - reference_page: { label: Ref. page }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: To verify, where: status == pending, roles: [Medical Reviewer], default: true }
+            - { label: Not substantiated, where: status == not_substantiated }
+            - { label: Comparative, where: claim_type == comparative, roles: [Medical Reviewer, Legal Reviewer] }
+          add_button: Add Claim
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status != substantiated, roles: [Brand Manager] }
+            - { key: open_reference, label: Open Reference, type: navigate, to: reference_360 }
+        form:
+          create:
+            roles: [Brand Manager]
+            sections:
+              - title: Claim
+                fields: [material, claim_text, claim_type, location, { comparator: { show_when: claim_type == comparative } }]
+              - title: Substantiation
+                fields: [reference, reference_page]
+          edit: { same_as: create, roles: [Brand Manager], editable_in: [pending, not_substantiated] }
+
+      - code: review
+        name: Review
+        kind: transactional
+        display: review_code
+        fields:
+          - review_code:      { type: text, label: Review ID, readonly: true, unique: true, auto: { sequence: "RVW-{YY}-{00000}" } }
+          - material:         { type: link, to: material, required: true, display: material_code }
+          - discipline:       { type: choice, choices: discipline, required: true }
+          - material_version: { type: integer, label: Version, required: true, min: 1, max: 4 }
+          - reviewer:         { type: link, to: reviewer, required: true, display: full_name }
+          - due_date:         { type: date, required: true }
+          - outcome:          { type: choice, choices: review_outcome, readonly: true }
+          - comments:         { type: long_text }
+          - annotated_pdf:    { type: file, label: Annotated PDF, accept: [pdf] }
+          - completed_on:     { type: date, readonly: true }
+          - cycle_days:       { type: integer, label: Working days, readonly: true, min: 1, max: 9, computed: Working days from created_at to completed_on. }
+        validation:
+          duplicate_check:
+            scope: { where: "status not_in [cancelled]" }
+            rules:
+              - { match: [material, discipline, material_version], compare: exact, on_match: block, message: This version already has a review for the discipline. }
+        access:
+          MLR Coordinator:     { actions: [view, add, edit, export] }
+          Medical Reviewer:    { actions: [view, edit], rows: { text: Reviews whose reviewer's user is the current user. } }
+          Legal Reviewer:      { actions: [view, edit], rows: { text: Reviews whose reviewer's user is the current user. } }
+          Regulatory Reviewer: { actions: [view, edit], rows: { text: Reviews whose reviewer's user is the current user. } }
+          Brand Manager:       { actions: [view], rows: { text: Reviews of materials for products where brand_manager is the current user. } }
+        workflow:
+          statuses:
+            - { code: assigned,    label: Assigned,    color: blue, initial: true }
+            - { code: in_progress, label: In Progress, color: amber }
+            - { code: closed,      label: Closed,      color: green, final: true }
+            - { code: cancelled,   label: Cancelled,   color: gray, final: true }
+          transitions:
+            - { name: start, label: Start Review, from: assigned, to: in_progress, roles: [Medical Reviewer, Legal Reviewer, Regulatory Reviewer], primary: true }
+            - name: decide
+              label: Record Decision
+              from: in_progress
+              to: closed
+              roles: [Medical Reviewer, Legal Reviewer, Regulatory Reviewer]
+              primary: true
+              form:
+                - outcome:       { type: choice, choices: review_outcome, required: true }
+                - comments:      { type: long_text, show_when: "outcome in [approved_with_changes, changes_required]" }
+                - annotated_pdf: { type: file }
+              condition:
+                all:
+                  - text: For a medical review, every claim on the material is substantiated or not substantiated (none pending).
+                  - text: When outcome is changes_required or approved_with_changes, comments are given.
+              condition_msg: Decide every claim and add comments before closing the review.
+              on_done: Set completed_on = today and the working-day count; when all three reviews of the version are closed, move the material to awaiting certification or changes requested and email the brand manager the combined comments.
+            - name: reassign
+              label: Reassign
+              from: [assigned, in_progress]
+              to: assigned
+              roles: [MLR Coordinator]
+              form:
+                - reviewer: { type: link, to: reviewer, required: true, display: full_name }
+                - due_date: { type: date, required: true }
+              on_done: Email the new reviewer and tell the previous reviewer the review moved.
+            - { name: cancel, label: Cancel, from: [assigned, in_progress], to: cancelled, trigger: system, text: When the material is withdrawn. }
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set nightly when due_date < today and the review is still open. }
+            - { code: fast_track, label: Fast-track, color: pink, system: true, text: Copied from the material when the review is created. }
+        table:
+          columns:
+            - review_code:      { label: Review, searchable: true, sortable: true }
+            - material:         { label: Material, display: material_code, searchable: true, link_to: material_360 }
+            - brand:            { source: computed, label: Brand, path: material.product.name, filterable: true }
+            - discipline:       { label: Discipline, filterable: true }
+            - material_version: { label: Ver. }
+            - reviewer:         { label: Reviewer, display: full_name }
+            - due_date:         { label: Due, sortable: true, highlight: { when: "due_date < today", tone: red } }
+            - outcome:          { label: Outcome, filterable: true }
+            - status:           { source: status, label: Status, filterable: true }
+            - tags:             { source: tags, label: Flags }
+          default_sort: due_date
+          quick_filters:
+            - { label: Open, where: "status in [assigned, in_progress]", default: true }
+            - { label: Overdue, where: has_tag overdue }
+            - { label: Fast-track, where: has_tag fast_track }
+          add_button: Assign Review
+          row_actions:
+            - { key: open_material, label: Open Material, type: navigate, to: material_360 }
+        form:
+          create: { roles: [MLR Coordinator], fields: [material, discipline, material_version, reviewer, due_date] }
+          edit:   { same_as: create, roles: [MLR Coordinator], editable_in: [assigned] }
+
+detail_views:
+  - code: material_360
+    hero: material
+    title: "{title}"
+    back_to: materials
+    layout: header_tabs_sidebar
+    roles: [Brand Manager, MLR Coordinator, Medical Reviewer, Legal Reviewer, Regulatory Reviewer]
+    header:
+      title: title
+      subtitle: ["{material_code}", "{product.name}", "v{version}"]
+      badges: [ { source: status }, { source: tags }, { field: audience }, { field: material_type } ]
+      facts:
+        - { label: Channel, field: channel }
+        - { label: Target go-live, field: go_live_date }
+        - { label: Job code, field: job_code, copyable: true, fallback: "—" }
+        - { label: Expires, field: expiry_date, fallback: "—" }
+      actions:
+        transitions: true
+        buttons:
+          - { key: add_claim, label: Add Claim, icon: plus, type: create_related, entity: claim, prefill: { material: hero }, roles: [Brand Manager] }
+          - { key: edit, label: Edit, type: edit, roles: [Brand Manager] }
+          - { key: job_bag, row_action: job_bag }
+      banners:
+        - { show_when: status == changes_requested, tone: warning, text: "Reviewers asked for changes to v{version}. Address each comment and resubmit a new version." }
+        - { show_when: has_tag rereview_needed, tone: danger, text: A cited reference was superseded or lapsed. This material must be withdrawn or resubmitted. }
+        - { show_when: has_tag fast_track, tone: info, text: "Fast-track: {urgent_reason}" }
+    stats:
+      - { label: Claims, value: { count: claim, via: material }, tone: blue, link_to_tab: claims }
+      - { label: Not substantiated, value: { count: claim, via: material, where: status == not_substantiated }, tone: red, link_to_tab: claims }
+      - { label: Open reviews, value: { count: review, via: material, where: "status in [assigned, in_progress]" }, tone: amber, link_to_tab: reviews }
+      - { label: Versions, value: { count: material_version, via: material }, tone: indigo, link_to_tab: versions }
+    sidebar:
+      - { type: fields, title: Approval, fields: [job_code, certified_by, certified_on, expiry_date, recert_due, dms_document_id] }
+      - { type: custom, title: Review checklist, text: "Ticks for: every claim referenced, fair balance present (HCP), abbreviated PI present (HCP), medical / legal / regulatory decisions for the current version, certification." }
+    tabs:
+      - { code: overview, label: Overview, type: summary, sections: [ { title: Material, columns: 2, fields: [title, product, material_type, channel, audience, version, previous_material] }, { title: Content, columns: 2, fields: [artwork, fair_balance, pi_included, go_live_date, urgent, urgent_reason] } ] }
+      - code: claims
+        label: Claims
+        type: related_table
+        entity: claim
+        via: material
+        count_badge: true
+        columns: [claim_code, claim_text, claim_type, location, reference, reference_page, status]
+        add: { label: Add Claim, prefill: { material: hero } }
+        row_actions: inherit
+        empty_state: { title: No claims yet, text: List every claim in the material with the reference page that supports it., cta: add }
+      - code: reviews
+        label: Reviews
+        type: related_table
+        entity: review
+        via: material
+        count_badge: true
+        columns: [review_code, discipline, material_version, reviewer, due_date, outcome, status]
+        add: false
+      - code: versions
+        label: Versions
+        type: related_table
+        entity: material_version
+        via: material
+        count_badge: true
+        columns: inherit
+        add: false
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: material, events: [created, updated, transition, tag] }
+          - { entity: claim, via: material, events: [created, transition] }
+          - { entity: review, via: material, events: [created, transition] }
+    states:
+      not_found: { title: Material not found, back_to: materials }
+
+  - code: reference_360
+    hero: reference
+    title: "{ref_code}"
+    back_to: references
+    layout: header_tabs
+    roles: [MLR Coordinator, Medical Reviewer, Brand Manager, Regulatory Reviewer]
+    header:
+      title: title
+      subtitle: ["{ref_code}", "{reference_type}", "{product.name}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Citation, field: citation }
+        - { label: DOI, field: doi, copyable: true, fallback: "—" }
+        - { label: Valid until, field: valid_until, fallback: "—" }
+      actions:
+        transitions: true
+        buttons:
+          - { key: edit, label: Edit, type: edit, roles: [MLR Coordinator, Medical Reviewer] }
+          - { key: download, row_action: download }
+    stats:
+      - { label: Claims citing, value: { count: claim, via: reference }, tone: blue, link_to_tab: claims }
+      - { label: Certified materials, value: { text: Distinct certified materials with a claim citing this reference }, tone: green }
+    tabs:
+      - code: claims
+        label: Claims citing this
+        type: related_table
+        entity: claim
+        via: reference
+        count_badge: true
+        columns: [claim_code, material, claim_text, reference_page, status]
+        add: false
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: reference, events: [created, updated, transition] }

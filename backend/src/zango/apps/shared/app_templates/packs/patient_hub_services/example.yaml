@@ -1,0 +1,956 @@
+# Immunology Hub — Dermatology: a filled-in Patient Hub Services app.
+# The hub for a self-injectable dermatology biologic. About 300 prescriber
+# offices send referrals by fax, e-referral or the HCP portal; reimbursement
+# specialists run benefits investigations and prior authorizations (with
+# appeals); case managers enroll commercial patients in the co-pay card,
+# screen the rest for free drug or a foundation, and start a bridge supply
+# when access is delayed; a hub supervisor signs off every specialty
+# pharmacy triage (maker-checker) across two limited-distribution
+# pharmacies; patients get SMS and WhatsApp updates at every step.
+
+spec_version: 1
+
+app:
+  code: immunology_hub_derm
+  name: Immunology Hub — Dermatology
+  description: Referral-to-first-fill hub for a self-injectable dermatology biologic, with benefits investigation, prior authorization and appeals, co-pay and free-drug support, bridge supply and maker-checker specialty pharmacy triage.
+  timezone: America/New_York
+  locale: en-US
+  currency: USD
+  theme: { primary: "#DB2777", secondary: "#475467" }
+  custom_requirements:
+    - area: permission
+      title: HIPAA authorization before any outreach
+      text: No benefits investigation, payer call or patient SMS/WhatsApp may start until the patient's HIPAA authorization is on file; the case shows a red banner until it is.
+    - area: backend
+      title: Audit trail
+      text: Every create, edit, transition and message is written to an append-only audit log with user, timestamp, old and new values; the Hub Supervisor can export it as CSV per case or per date range.
+    - area: integration
+      title: SMS gateway and WhatsApp Business
+      text: Patient messages go out on the patient's preferred channel (SMS through the SMS gateway, WhatsApp through approved WhatsApp Business templates), only when sms_consent is true; delivery receipts and replies are logged as interactions on the case.
+    - area: backend
+      title: Adverse event and product complaint capture
+      text: Any interaction or note can be flagged as a possible adverse event or product complaint; the flag forwards it to pharmacovigilance within one business day and cannot be removed.
+
+choice_sets:
+  insurance_type:
+    - { id: commercial, label: Commercial,      color: blue }
+    - { id: medicare,   label: Medicare Part D, color: purple }
+    - { id: medicaid,   label: Medicaid,        color: teal }
+    - { id: va_tricare, label: VA / TRICARE,    color: indigo }
+    - { id: uninsured,  label: Uninsured,       color: gray }
+  referral_channel:
+    - { id: fax,    label: Fax }
+    - { id: erx,    label: e-Referral }
+    - { id: portal, label: HCP portal }
+    - { id: phone,  label: Phone }
+  indication:
+    - { id: psoriasis,  label: Plaque psoriasis }
+    - { id: atopic_dermatitis, label: Atopic dermatitis }
+    - { id: psoriatic_arthritis, label: Psoriatic arthritis }
+  coverage_status:
+    - { id: covered,         label: Covered,         color: green }
+    - { id: covered_with_pa, label: Covered with PA, color: amber }
+    - { id: step_therapy,    label: Step therapy required, color: purple }
+    - { id: not_covered,     label: Not covered,     color: red }
+  copay_program:
+    - { id: copay_card, label: Co-pay card,         color: blue }
+    - { id: pap,        label: Free drug (PAP),     color: purple }
+    - { id: foundation, label: Foundation referral, color: teal }
+    - { id: bridge,     label: Bridge supply,       color: amber }
+  denial_reason:
+    - { id: step_therapy,  label: Step therapy not met }
+    - { id: not_medically_necessary, label: Not medically necessary }
+    - { id: missing_docs,  label: Missing documentation }
+    - { id: non_formulary, label: Non-formulary }
+  contact_channel:
+    - { id: phone,    label: Phone,    color: gray }
+    - { id: sms,      label: SMS,      color: blue }
+    - { id: whatsapp, label: WhatsApp, color: green }
+    - { id: email,    label: Email,    color: indigo }
+    - { id: fax,      label: Fax,      color: gray }
+  interaction_purpose:
+    - { id: welcome,     label: Welcome call }
+    - { id: bi_summary,  label: Benefits summary }
+    - { id: pa_update,   label: PA update }
+    - { id: copay_card,  label: Co-pay card details }
+    - { id: injection_training, label: Injection training }
+    - { id: refill_reminder, label: Refill reminder }
+    - { id: other,       label: Other }
+  task_priority:
+    - { id: low,    label: Low,    color: gray }
+    - { id: normal, label: Normal, color: blue }
+    - { id: high,   label: High,   color: red }
+  document_type:
+    - { id: enrollment_form, label: Enrollment form }
+    - { id: prescription,    label: Prescription }
+    - { id: insurance_card,  label: Insurance card (front and back) }
+    - { id: lmn,             label: Letter of medical necessity }
+    - { id: chart_notes,     label: Chart notes }
+    - { id: income_proof,    label: Proof of income }
+    - { id: payer_letter,    label: Payer determination letter }
+
+roles:
+  - name: Case Manager
+    description: Owns each patient case end to end, reviews referrals, keeps the patient informed, runs co-pay and bridge support and prepares specialty pharmacy triage.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: referrals, icon: inbox }
+      - { page: cases,     label: My Cases, icon: briefcase-medical }
+      - { page: tasks,     label: My Tasks, icon: list-checks }
+      - { page: copay_enrollments, label: Co-pay & Free Drug, icon: badge-dollar-sign }
+      - { page: sp_referrals, label: SP Triage, icon: pill }
+      - { page: interactions, label: Outreach Log, icon: message-square }
+      - group: Directory
+        icon: book-user
+        items:
+          - { page: patients }
+          - { page: hcp_offices }
+          - { page: payers }
+          - { page: specialty_pharmacies }
+  - name: Hub Supervisor
+    description: Leads the hub team; signs off specialty pharmacy triage and free-drug approvals (maker-checker), watches SLAs and reassigns cases.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: sp_referrals, label: Triage Sign-off, icon: shield-check }
+      - { page: copay_enrollments, label: Free Drug Approvals, icon: badge-dollar-sign }
+      - { page: cases, icon: briefcase-medical }
+      - { page: tasks, icon: list-checks }
+      - group: Directory
+        icon: book-user
+        items:
+          - { page: hcp_offices }
+          - { page: payers }
+          - { page: specialty_pharmacies }
+  - name: Reimbursement Specialist
+    description: Verifies benefits with the payer and files and tracks prior authorizations and appeals.
+    landing: benefits_investigations
+    menu:
+      - { page: benefits_investigations, label: Benefits Investigations, icon: shield-check }
+      - { page: prior_auths, label: Prior Authorizations, icon: file-check }
+      - { page: tasks, label: My Tasks, icon: list-checks }
+      - { page: cases, icon: briefcase-medical }
+      - { page: payers, icon: landmark }
+  - name: Specialty Pharmacy
+    description: One of the two limited-distribution pharmacies; accepts or declines triaged referrals for its own pharmacy and confirms first fill and refills.
+    landing: sp_referrals
+    menu:
+      - { page: sp_referrals, label: Referrals to Us, icon: pill }
+      - { page: cases, label: Our Patients, icon: briefcase-medical }
+  - name: HCP Office
+    description: Prescriber's office that sends referrals, answers missing-information and payer requests, and tracks its own patients' access status.
+    landing: referrals
+    menu:
+      - { page: referrals, label: My Referrals, icon: inbox }
+      - { page: cases, label: Patient Status, icon: briefcase-medical }
+      - { page: prior_auths, label: Prior Authorizations, icon: file-check }
+
+pages:
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Hub Dashboard
+    component: HubDashboard
+    roles: [Case Manager, Hub Supervisor]
+    text: >
+      KPI row: new referrals this week, cases in benefits investigation, PAs pending payer decision,
+      PA approval rate (last 90 days, first submission vs after appeal), median days referral-to-first-fill,
+      patients on bridge supply. Below: a funnel of open cases by stage, time-to-therapy by payer (median days),
+      and a table of cases breaching SLA (referral not reviewed in 1 business day, BI older than 2 business days,
+      PA submitted more than 10 days ago without decision), oldest first. Case Managers see only their own cases;
+      the Hub Supervisor sees the whole team with a case-manager filter.
+  - { code: referrals,               type: crud,   entity: referral,               route: /app/referrals,               title: Referrals }
+  - { code: cases,                   type: crud,   entity: hub_case,               route: /app/cases,                   title: Cases }
+  - { code: case_360,                type: detail, detail_view: case_360,          route: /app/cases/:id }
+  - { code: tasks,                   type: crud,   entity: hub_task,               route: /app/tasks,                   title: Tasks }
+  - { code: interactions,            type: crud,   entity: interaction,            route: /app/outreach,                title: Outreach Log }
+  - { code: patients,                type: crud,   entity: patient,                route: /app/patients,                title: Patients }
+  - { code: benefits_investigations, type: crud,   entity: benefits_investigation, route: /app/benefits-investigations, title: Benefits Investigations }
+  - { code: prior_auths,             type: crud,   entity: prior_auth,             route: /app/prior-auths,             title: Prior Authorizations }
+  - { code: copay_enrollments,       type: crud,   entity: copay_enrollment,       route: /app/copay,                   title: Co-pay & Free Drug }
+  - { code: sp_referrals,            type: crud,   entity: sp_referral,            route: /app/sp-triage,               title: SP Triage }
+  - { code: hcp_offices,             type: crud,   entity: hcp_office,             route: /app/directory/hcp-offices,   title: HCP Offices }
+  - { code: payers,                  type: crud,   entity: payer,                  route: /app/directory/payers,        title: Payers }
+  - { code: specialty_pharmacies,    type: crud,   entity: specialty_pharmacy,     route: /app/directory/specialty-pharmacies, title: Specialty Pharmacies }
+
+modules:
+  # ===========================================================================
+  - code: directory
+    name: Directory
+    description: Prescriber offices, payers and the limited-distribution pharmacy network.
+    entities:
+      - code: hcp_office
+        name: HCP Office
+        kind: master
+        display: clinic_name
+        app_user: { role: HCP Office, name: contact_name, email: contact_email, create_on: portal_access is_true }
+        fields:
+          - clinic_name:    { type: text, label: Practice, required: true }
+          - prescriber_name: { type: text, label: Prescriber, required: true }
+          - prescriber_npi: { type: text, label: Prescriber NPI, required: true, unique: true, pattern: "^[0-9]{10}$", pattern_msg: NPI is 10 digits. }
+          - specialty:      { type: choice, choices: [ {id: dermatology, label: Dermatology}, {id: rheumatology, label: Rheumatology}, {id: allergy, label: Allergy & Immunology} ], default: dermatology }
+          - state:          { type: text, max_length: 2, pattern: "^[A-Z]{2}$", pattern_msg: Two-letter state code. }
+          - contact_name:   { type: text, label: Office contact, required: true }
+          - contact_email:  { type: email, required: true }
+          - fax:            { type: phone }
+          - portal_access:  { type: boolean, label: HCP portal access, default: true }
+        access:
+          Case Manager:   { actions: [view, add, edit, export] }
+          Hub Supervisor: { actions: [view, add, edit, export] }
+          HCP Office:     { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - clinic_name:     { label: Practice, searchable: true, sortable: true }
+            - prescriber_name: { label: Prescriber, searchable: true }
+            - prescriber_npi:  { label: NPI, searchable: true }
+            - specialty:       { label: Specialty, filterable: true }
+            - state:           { label: State, filterable: true }
+            - open_cases:      { source: computed, label: Open cases, format: integer, shows: Count of this office's cases not Closed. }
+            - portal_access:   { label: Portal, filterable: true }
+          default_sort: clinic_name
+        form:
+          create:
+            sections:
+              - { title: Practice, fields: [clinic_name, prescriber_name, prescriber_npi, specialty, state] }
+              - { title: Office contact, fields: [contact_name, contact_email, fax, portal_access] }
+          edit: { same_as: create }
+
+      - code: payer
+        name: Payer
+        kind: master
+        display: name
+        fields:
+          - name:          { type: text, label: Payer, required: true, unique: true }
+          - payer_type:    { type: choice, label: Line of business, choices: insurance_type, required: true }
+          - pbm:           { type: text, label: PBM }
+          - pa_phone:      { type: phone, label: PA line }
+          - pa_portal:     { type: url, label: ePA portal }
+          - avg_pa_days:   { type: integer, label: Typical PA turnaround (days), min: 1, max: 30 }
+          - step_therapy:  { type: boolean, label: Requires step therapy }
+        access:
+          Case Manager:             { actions: [view] }
+          Hub Supervisor:           { actions: [view, add, edit] }
+          Reimbursement Specialist: { actions: [view, add, edit, export] }
+        table:
+          columns:
+            - name:         { label: Payer, searchable: true, sortable: true }
+            - payer_type:   { label: Line of business, filterable: true }
+            - pbm:          { label: PBM }
+            - avg_pa_days:  { label: PA days, sortable: true }
+            - step_therapy: { label: Step therapy, filterable: true }
+            - approval_rate: { source: computed, label: PA approval rate, format: percent, shows: Approved PAs / decided PAs for this payer in the last 12 months. }
+          default_sort: name
+        form:
+          create: { fields: [name, payer_type, pbm, pa_phone, pa_portal, avg_pa_days, step_therapy] }
+          edit:   { same_as: create }
+
+      - code: specialty_pharmacy
+        name: Specialty Pharmacy
+        plural: Specialty Pharmacies
+        kind: master
+        display: name
+        app_user: { role: Specialty Pharmacy, name: name, email: intake_email }
+        fields:
+          - name:         { type: text, label: Pharmacy, required: true, unique: true }
+          - ncpdp_id:     { type: text, label: NCPDP ID, pattern: "^[0-9]{7}$", pattern_msg: NCPDP ID is 7 digits. }
+          - intake_email: { type: email, required: true }
+          - intake_fax:   { type: phone }
+          - states_served: { type: text, label: States served, help: "Comma-separated codes, e.g. NY, NJ, PA." }
+          - in_network:   { type: boolean, label: In limited-distribution network, default: true }
+        access:
+          Case Manager:       { actions: [view] }
+          Hub Supervisor:     { actions: [view, add, edit] }
+          Specialty Pharmacy: { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - name:          { label: Pharmacy, searchable: true }
+            - ncpdp_id:      { label: NCPDP }
+            - states_served: { label: States }
+            - in_network:    { label: In network, filterable: true }
+            - avg_accept_hours: { source: computed, label: Avg. hours to accept, format: decimal, shows: Mean hours from Sent to Accepted over the last 90 days. }
+        form:
+          create: { fields: [name, ncpdp_id, intake_email, intake_fax, states_served, in_network] }
+          edit:   { same_as: create }
+
+  # ===========================================================================
+  - code: intake
+    name: Referral Intake
+    description: Referrals from HCP offices and the patients they become.
+    entities:
+      - code: referral
+        name: Referral
+        kind: transactional
+        display: referral_ref
+        fields:
+          - referral_ref:   { type: text, label: Referral, readonly: true, unique: true, auto: { sequence: "REF-{YY}{00000}" } }
+          - hcp_office:     { type: link, to: hcp_office, display: clinic_name, required: true }
+          - patient_name:   { type: text, required: true }
+          - date_of_birth:  { type: date, required: true }
+          - indication:     { type: choice, choices: indication, required: true }
+          - channel:        { type: choice, label: Received via, choices: referral_channel, required: true }
+          - diagnosis_code: { type: text, label: ICD-10, required: true, pattern: "^[A-Z][0-9]{2}\\.[0-9]{1,2}$", pattern_msg: "Use an ICD-10 code such as L40.0." }
+          - prior_therapies: { type: long_text, label: Prior therapies tried, help: Needed for step-therapy payers. }
+          - enrollment_form: { type: file, label: Signed enrollment form, accept: [pdf] }
+          - prescription:   { type: file, accept: [pdf, jpg] }
+          - insurance_card: { type: file, label: Insurance card, accept: [pdf, jpg, png] }
+          - missing_items:  { type: long_text, readonly: true }
+          - reject_reason:  { type: long_text, readonly: true }
+        validation:
+          rules:
+            - { when: "channel in [fax, phone]", require: [enrollment_form], message: Attach the faxed or scanned enrollment form. }
+          duplicate_check:
+            scope: { where: "status not_in [rejected]" }
+            rules:
+              - { match: [patient_name, date_of_birth], compare: normalised, on_match: warn, message: A referral for this patient is already open. }
+        access:
+          Case Manager:   { actions: [view, add, edit, export] }
+          Hub Supervisor: { actions: [view, export] }
+          HCP Office:     { actions: [view, add], rows: { own: hcp_office } }
+        workflow:
+          statuses:
+            - { code: received,     label: Received,     color: gray, initial: true }
+            - { code: in_review,    label: In Review,    color: blue }
+            - { code: missing_info, label: Missing Info, color: amber }
+            - { code: accepted,     label: Accepted,     color: green, final: true }
+            - { code: rejected,     label: Rejected,     color: red, final: true }
+          transitions:
+            - { name: review, label: Start Review, from: received, to: in_review, roles: [Case Manager], primary: true }
+            - { name: request_info, label: Request Missing Info, from: in_review, to: missing_info, roles: [Case Manager],
+                form: [ { missing_items: { type: long_text, required: true } } ],
+                on_done: Fax and email the HCP office the list of missing items with a portal link to upload them; remind them after 2 business days. }
+            - { name: info_received, label: Info Provided, from: missing_info, to: in_review, roles: [HCP Office, Case Manager],
+                on_done: Notify the case manager who requested the information. }
+            - name: accept
+              label: Accept and Open Case
+              from: in_review
+              to: accepted
+              roles: [Case Manager]
+              primary: true
+              condition: { all: [ enrollment_form is_set, prescription is_set, { text: "The enrollment form carries both the prescriber and the patient signature, including the HIPAA authorization." } ] }
+              condition_msg: Attach the signed enrollment form and the prescription first.
+              on_done: Create or match the patient, open a hub case in Intake assigned to the current case manager, copy the referral files to the case documents, and email the HCP office the case number.
+            - { name: reject, label: Reject, from: [in_review, missing_info], to: rejected, roles: [Case Manager], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ], on_done: Email the HCP office the reason. }
+        form:
+          create:
+            roles: [HCP Office, Case Manager]
+            title: New Referral
+            sections:
+              - { title: Patient, fields: [patient_name, date_of_birth, indication, diagnosis_code, prior_therapies] }
+              - { title: Referral, fields: [hcp_office, channel] }
+              - { title: Documents, fields: [enrollment_form, prescription, insurance_card] }
+          edit: { same_as: create, roles: [Case Manager], editable_in: [received, in_review, missing_info] }
+        table:
+          columns:
+            - referral_ref:   { label: Referral, searchable: true }
+            - patient_name:   { label: Patient, searchable: true }
+            - hcp_office:     { label: Practice, display: clinic_name, filterable: true }
+            - indication:     { label: Indication, filterable: true }
+            - channel:        { label: Via, filterable: true }
+            - created_at:     { label: Received, sortable: true }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: To review, where: "status in [received, in_review]", roles: [Case Manager], default: true }
+            - { label: Waiting on office, where: status == missing_info }
+          add_button: New Referral
+          row_actions:
+            - { key: resend_request, label: Resend Missing-Info Request, type: confirm, roles: [Case Manager], show_when: status == missing_info,
+                confirm: "Fax and email the missing-items list to the office again?", on_done: "Resend and log it as an outreach interaction." }
+
+      - code: patient
+        name: Patient
+        kind: transactional
+        display: patient_name
+        fields:
+          - patient_name:   { type: text, required: true }
+          - date_of_birth:  { type: date, required: true }
+          - state:          { type: text, max_length: 2, pattern: "^[A-Z]{2}$", pattern_msg: Two-letter state code. }
+          - mobile:         { type: phone, pattern: "^\\+1[2-9][0-9]{9}$", pattern_msg: "US mobile, e.g. +12125550123." }
+          - preferred_channel: { type: choice, choices: contact_channel, default: sms }
+          - preferred_language: { type: choice, choices: [ {id: en, label: English}, {id: es, label: Spanish} ], default: en }
+          - insurance_type: { type: choice, choices: insurance_type, required: true }
+          - primary_payer:  { type: link, to: payer, display: name }
+          - member_id:      { type: text, label: Member ID }
+          - household_income: { type: integer, label: Household income (USD / yr), min: 0, help: Used for free-drug screening. }
+          - household_size: { type: integer, min: 1, max: 12 }
+          - hipaa_authorized: { type: boolean, label: HIPAA authorization on file, required: true }
+          - sms_consent:    { type: boolean, label: Consents to SMS and WhatsApp }
+        validation:
+          rules:
+            - { when: "insurance_type not_in [uninsured]", require: [primary_payer, member_id], message: Enter the payer and member ID for insured patients. }
+        access:
+          Case Manager:             { actions: [view, add, edit, export] }
+          Hub Supervisor:           { actions: [view, export] }
+          Reimbursement Specialist: { actions: [view] }
+        table:
+          columns:
+            - patient_name:     { label: Patient, searchable: true, sortable: true }
+            - date_of_birth:    { label: DOB }
+            - state:            { label: State, filterable: true }
+            - insurance_type:   { label: Insurance, filterable: true }
+            - primary_payer:    { label: Payer, display: name, filterable: true }
+            - preferred_channel: { label: Contact via }
+            - hipaa_authorized: { label: HIPAA auth, filterable: true }
+          default_sort: patient_name
+          quick_filters:
+            - { label: HIPAA auth missing, where: hipaa_authorized is_false }
+        form:
+          create:
+            sections:
+              - { title: Patient, fields: [patient_name, date_of_birth, state, preferred_language] }
+              - { title: Contact, fields: [mobile, preferred_channel, sms_consent] }
+              - { title: Insurance, fields: [insurance_type, primary_payer, member_id] }
+              - { title: Financial screening, fields: [household_income, household_size] }
+              - { title: Consent, fields: [hipaa_authorized] }
+          edit: { same_as: create }
+
+  # ===========================================================================
+  - code: case_management
+    name: Case Management
+    description: The hub case, its access steps, tasks, documents and outreach.
+    entities:
+      - code: hub_case
+        name: Case
+        kind: hero
+        display: case_no
+        description: One patient's journey from referral to first fill and ongoing therapy.
+        fields:
+          - case_no:      { type: text, label: Case, readonly: true, unique: true, auto: { sequence: "HUB-{YY}{00000}" } }
+          - patient:      { type: link, to: patient, display: patient_name, required: true }
+          - hcp_office:   { type: link, to: hcp_office, display: clinic_name, required: true }
+          - referral:     { type: link, to: referral, display: referral_ref }
+          - indication:   { type: choice, choices: indication, required: true }
+          - case_manager: { type: link, to: app_user, label: Case manager, limit_choices: role == Case Manager }
+          - specialty_pharmacy: { type: link, to: specialty_pharmacy, display: name, readonly: true }
+          - bridge_start: { type: date, label: Bridge supply started, readonly: true }
+          - first_fill_date: { type: date, readonly: true }
+          - next_refill_due: { type: date, readonly: true }
+          - hold_reason:  { type: long_text, readonly: true }
+          - close_reason: { type: choice, readonly: true, choices: [ {id: never_started, label: Never started}, {id: discontinued, label: Discontinued}, {id: switched, label: Switched therapy}, {id: lost_contact, label: Lost to contact} ] }
+        access:
+          Case Manager:             { actions: [view, add, edit, export, detail], rows: { where: "case_manager == me" } }
+          Hub Supervisor:           { actions: [view, edit, export, detail] }
+          Reimbursement Specialist: { actions: [view, detail] }
+          Specialty Pharmacy:       { actions: [view], rows: { own: specialty_pharmacy } }
+          HCP Office:               { actions: [view], rows: { own: hcp_office } }
+        workflow:
+          statuses:
+            - { code: intake,          label: Intake,                 color: gray, initial: true }
+            - { code: benefits_review, label: Benefits Investigation, color: blue }
+            - { code: prior_auth,      label: Prior Authorization,    color: amber }
+            - { code: appeal,          label: Appeal,                 color: pink }
+            - { code: access_secured,  label: Access Secured,         color: teal }
+            - { code: sp_triage,       label: SP Triage,              color: indigo }
+            - { code: on_therapy,      label: On Therapy,             color: green }
+            - { code: on_hold,         label: On Hold,                color: pink }
+            - { code: closed,          label: Closed,                 color: red, final: true }
+          transitions:
+            - name: start_bi
+              label: Start Benefits Investigation
+              from: intake
+              to: benefits_review
+              roles: [Case Manager]
+              primary: true
+              condition: patient.hipaa_authorized is_true
+              condition_msg: Record the patient's HIPAA authorization before contacting the payer.
+              on_done: Create a benefits investigation for the patient's payer in the Reimbursement Specialist queue, and send the patient a welcome message on their preferred channel.
+            - { name: pa_needed, label: PA Required, from: benefits_review, to: prior_auth, trigger: system,
+                text: When the benefits investigation completes with coverage Covered with PA or Step therapy required. }
+            - { name: to_appeal, label: Appeal Filed, from: prior_auth, to: appeal, trigger: system,
+                text: When the prior authorization is denied and an appeal is filed. }
+            - { name: covered, label: Access Secured, from: [benefits_review, prior_auth, appeal], to: access_secured, trigger: system,
+                text: "When the benefits investigation completes as Covered, the prior authorization or appeal is approved, or a free-drug enrollment is approved." }
+            - { name: to_sp, label: Send to SP Triage, from: access_secured, to: sp_triage, roles: [Case Manager], primary: true,
+                on_done: Create an SP referral in Triaged for the Hub Supervisor to sign off. }
+            - { name: first_fill, label: First Fill Shipped, from: sp_triage, to: on_therapy, trigger: system,
+                text: When the specialty pharmacy confirms the first fill shipped; copy the ship date to first_fill_date and set next_refill_due 28 days later. }
+            - { name: hold, label: Put on Hold, from: [intake, benefits_review, prior_auth, appeal, access_secured, sp_triage], to: on_hold, roles: [Case Manager, Hub Supervisor],
+                form: [ { hold_reason: { type: long_text, required: true } } ], on_done: "Save hold_reason and message the patient that their case is paused, if they consented." }
+            - { name: resume, label: Resume, from: on_hold, to: intake, roles: [Case Manager, Hub Supervisor], on_done: Clear hold_reason. }
+            - name: close
+              label: Close Case
+              from: [intake, benefits_review, prior_auth, appeal, access_secured, sp_triage, on_therapy, on_hold]
+              to: closed
+              roles: [Case Manager, Hub Supervisor]
+              tone: danger
+              confirm: Close this case? Open tasks will be cancelled.
+              form: [ { close_reason: { type: choice, required: true } }, { close_note: { type: long_text } } ]
+              on_done: Cancel open tasks, end any co-pay or bridge enrollment, and email the HCP office that the case is closed and why.
+          tags:
+            - { code: sla_breach, label: SLA Breach, color: red, system: true, text: "Set nightly when the current step is older than its SLA (review 1 business day, BI 2 business days, PA decision 10 days)." }
+            - { code: on_bridge, label: On Bridge, color: amber, system: true, text: Set while a bridge supply enrollment is Enrolled. }
+            - code: ae_reported
+              label: AE Reported
+              color: purple
+              enable: { roles: [Case Manager, Hub Supervisor] }
+            - code: vip_escalation
+              label: Escalated
+              color: red
+              enable:  { roles: [Hub Supervisor] }
+              disable: { roles: [Hub Supervisor] }
+        form:
+          create: { roles: [Case Manager], title: Open Case, fields: [patient, hcp_office, referral, indication, case_manager], after_create: case_360 }
+          edit:   { same_as: create, roles: [Case Manager, Hub Supervisor], editable_in: [intake, on_hold] }
+        table:
+          columns:
+            - case_no:      { label: Case, searchable: true, sortable: true, link_to: case_360 }
+            - patient:      { label: Patient, display: patient_name, searchable: true }
+            - hcp_office:   { label: Practice, display: clinic_name, filterable: true }
+            - indication:   { label: Indication, filterable: true }
+            - payer:        { source: computed, label: Payer, path: patient.primary_payer.name }
+            - case_manager: { label: Case manager, roles: [Hub Supervisor] }
+            - days_open:    { source: computed, label: Days open, format: integer, shows: Days since the case was opened. }
+            - status:       { source: status, label: Stage, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: In access, where: "status in [benefits_review, prior_auth, appeal]", default: true }
+            - { label: SLA breach, where: has_tag sla_breach, roles: [Case Manager, Hub Supervisor] }
+            - { label: On bridge, where: has_tag on_bridge, roles: [Case Manager, Hub Supervisor] }
+          row_click: case_360
+          add_button: Open Case
+          row_actions:
+            - { key: reassign, label: Reassign, type: form, roles: [Hub Supervisor], form: [ { case_manager: { type: link, to: app_user, required: true } } ],
+                on_done: "Set the case manager, move their open tasks and email both case managers." }
+
+      - code: benefits_investigation
+        name: Benefits Investigation
+        kind: transactional
+        display: bi_ref
+        fields:
+          - bi_ref:          { type: text, label: BI, readonly: true, unique: true, auto: { sequence: "BI-{00000}" } }
+          - hub_case:        { type: link, to: hub_case, label: Case, display: case_no, required: true }
+          - payer:           { type: link, to: payer, display: name, required: true }
+          - coverage_status: { type: choice, label: Coverage, choices: coverage_status, readonly: true }
+          - pa_required:     { type: boolean, label: PA required, readonly: true }
+          - tier:            { type: choice, label: Formulary tier, readonly: true, choices: [ {id: t3, label: Tier 3}, {id: t4, label: Tier 4}, {id: t5, label: Specialty tier}, {id: nf, label: Non-formulary} ] }
+          - deductible_remaining: { type: integer, label: Deductible remaining (USD), min: 0, max: 10000, readonly: true }
+          - copay_estimate:  { type: decimal, label: Patient co-pay (USD), readonly: true }
+          - call_reference:  { type: text, label: Payer call reference, readonly: true }
+          - verified_on:     { type: date, readonly: true }
+        access:
+          Reimbursement Specialist: { actions: [view, add, edit, export] }
+          Case Manager:             { actions: [view] }
+          Hub Supervisor:           { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: pending,          label: Pending,          color: gray, initial: true }
+            - { code: in_progress,      label: In Progress,      color: blue }
+            - { code: completed,        label: Completed,        color: green, final: true }
+            - { code: unable_to_verify, label: Unable to Verify, color: red }
+          transitions:
+            - { name: start, label: Start, from: [pending, unable_to_verify], to: in_progress, roles: [Reimbursement Specialist], primary: true }
+            - name: complete
+              label: Complete BI
+              from: in_progress
+              to: completed
+              roles: [Reimbursement Specialist]
+              primary: true
+              form:
+                - coverage_status:      { type: choice, choices: coverage_status, required: true }
+                - pa_required:          { type: boolean, required: true }
+                - tier:                 { type: choice, required: true }
+                - deductible_remaining: { type: integer, min: 0 }
+                - copay_estimate:       { type: decimal, required: true }
+                - call_reference:       { type: text, required: true }
+              on_done: Set verified_on to today, move the case to Prior Authorization or Access Secured, and send the HCP office and the patient the summary of benefits.
+            - { name: cannot_verify, label: Unable to Verify, from: in_progress, to: unable_to_verify, roles: [Reimbursement Specialist],
+                form: [ { reason: { type: long_text, required: true } } ], on_done: Create a task for the case manager to confirm the patient's insurance details. }
+        form:
+          create: { roles: [Reimbursement Specialist], title: New BI, fields: [hub_case, payer] }
+        table:
+          columns:
+            - bi_ref:          { label: BI, searchable: true }
+            - hub_case:        { label: Case, display: case_no, link_to: case_360 }
+            - payer:           { label: Payer, display: name, filterable: true }
+            - coverage_status: { label: Coverage, filterable: true }
+            - tier:            { label: Tier }
+            - copay_estimate:  { label: Co-pay, format: money }
+            - status:          { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: My queue, where: "status in [pending, in_progress]", default: true }
+
+      - code: prior_auth
+        name: Prior Authorization
+        kind: transactional
+        display: pa_ref
+        fields:
+          - pa_ref:        { type: text, label: PA, readonly: true, unique: true, auto: { sequence: "PA-{00000}" } }
+          - hub_case:      { type: link, to: hub_case, label: Case, display: case_no, required: true }
+          - payer:         { type: link, to: payer, display: name, required: true }
+          - submission_method: { type: choice, label: Submitted via, choices: [ {id: epa, label: ePA}, {id: fax, label: Fax}, {id: phone, label: Phone} ], default: epa }
+          - submitted_on:  { type: date, readonly: true }
+          - decision_due:  { type: date }
+          - lmn:           { type: file, label: Letter of medical necessity, accept: [pdf] }
+          - chart_notes:   { type: file, accept: [pdf] }
+          - auth_number:   { type: text, label: Authorization no., readonly: true }
+          - valid_until:   { type: date, label: Approved until, readonly: true }
+          - denial_reason: { type: choice, choices: denial_reason, readonly: true }
+          - appeal_level:  { type: choice, readonly: true, choices: [ {id: first, label: First-level appeal}, {id: second, label: Second-level appeal}, {id: external, label: External review} ] }
+        validation:
+          rules:
+            - { when: decision_due is_set, require_expr: decision_due >= today, message: The decision due date cannot be in the past. }
+        access:
+          Reimbursement Specialist: { actions: [view, add, edit, export] }
+          Case Manager:             { actions: [view] }
+          Hub Supervisor:           { actions: [view, export] }
+          HCP Office:               { actions: [view], rows: { own: hub_case.hcp_office } }
+        workflow:
+          statuses:
+            - { code: draft,          label: Draft,          color: gray, initial: true }
+            - { code: submitted,      label: Submitted,      color: blue }
+            - { code: info_requested, label: Info Requested, color: amber }
+            - { code: approved,       label: Approved,       color: green, final: true }
+            - { code: denied,         label: Denied,         color: red }
+            - { code: appealed,       label: Appealed,       color: purple }
+            - { code: appeal_denied,  label: Appeal Denied,  color: red, final: true }
+          transitions:
+            - { name: submit, label: Submit to Payer, from: draft, to: submitted, roles: [Reimbursement Specialist], primary: true,
+                condition: lmn is_set, condition_msg: Attach the letter of medical necessity first.,
+                on_done: Set submitted_on to today and decision_due from the payer's typical turnaround; tell the HCP office and patient the PA is filed. }
+            - { name: request_info, label: Payer Requested Info, from: [submitted, appealed], to: info_requested, roles: [Reimbursement Specialist],
+                form: [ { requested: { type: long_text, required: true } }, { respond_by: { type: date, required: true } } ],
+                on_done: Email and fax the HCP office what the payer needs and by when; create a follow-up task due a day before. }
+            - { name: provide_info, label: Info Sent, from: info_requested, to: submitted, roles: [HCP Office, Reimbursement Specialist] }
+            - { name: approve, label: Record Approval, from: [submitted, appealed], to: approved, roles: [Reimbursement Specialist], primary: true,
+                form: [ { auth_number: { type: text, required: true } }, { valid_until: { type: date, required: true } } ],
+                on_done: "Move the case to Access Secured, notify the HCP office and case manager, and schedule a re-authorization task 30 days before valid_until." }
+            - { name: deny, label: Record Denial, from: submitted, to: denied, roles: [Reimbursement Specialist], tone: danger,
+                form: [ { denial_reason: { type: choice, required: true } }, { denial_letter: { type: file, accept: [pdf] } } ],
+                on_done: "Alert the case manager and HCP office, and offer a bridge supply screening while the appeal is prepared." }
+            - { name: appeal, label: File Appeal, from: denied, to: appealed, roles: [Reimbursement Specialist],
+                form: [ { appeal_level: { type: choice, required: true } }, { appeal_letter: { type: file, accept: [pdf], required: true } } ],
+                on_done: Move the case to Appeal and reset decision_due to 30 days from today. }
+            - { name: appeal_denied, label: Appeal Denied, from: appealed, to: appeal_denied, roles: [Reimbursement Specialist], tone: danger,
+                on_done: Create a task for the case manager to screen the patient for free drug (PAP) or a foundation. }
+        form:
+          create: { roles: [Reimbursement Specialist], title: New PA, fields: [hub_case, payer, submission_method, decision_due, lmn, chart_notes] }
+          edit:   { same_as: create, editable_in: [draft, info_requested] }
+        table:
+          columns:
+            - pa_ref:        { label: PA, searchable: true }
+            - hub_case:      { label: Case, display: case_no, link_to: case_360 }
+            - payer:         { label: Payer, display: name, filterable: true }
+            - submission_method: { label: Via }
+            - submitted_on:  { label: Submitted, sortable: true }
+            - decision_due:  { label: Decision due, sortable: true }
+            - denial_reason: { label: Denial reason }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: decision_due
+          quick_filters:
+            - { label: Awaiting payer, where: "status in [submitted, info_requested, appealed]", roles: [Reimbursement Specialist], default: true }
+            - { label: Denied, where: "status in [denied, appeal_denied]" }
+
+      - code: copay_enrollment
+        name: Co-pay Enrollment
+        plural: Co-pay & Free Drug Enrollments
+        kind: transactional
+        display: enrollment_ref
+        fields:
+          - enrollment_ref: { type: text, label: Enrollment, readonly: true, unique: true, auto: { sequence: "CP-{00000}" } }
+          - hub_case:       { type: link, to: hub_case, label: Case, display: case_no, required: true }
+          - program_type:   { type: choice, label: Program, choices: copay_program, required: true }
+          - income_proof:   { type: file, label: Proof of income, accept: [pdf, jpg] }
+          - card_id:        { type: text, label: Card ID / BIN-PCN-Group, readonly: true }
+          - annual_max:     { type: integer, label: Annual max (USD), min: 0, max: 20000, default: 15000 }
+          - used_to_date:   { type: decimal, label: Used to date (USD), readonly: true }
+          - valid_until:    { type: date, readonly: true }
+        validation:
+          rules:
+            - { when: program_type == pap, require: [income_proof], message: Free drug needs proof of income. }
+        access:
+          Case Manager:   { actions: [view, add, edit, export] }
+          Hub Supervisor: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: screening,        label: Screening,        color: gray, initial: true }
+            - { code: pending_approval, label: Pending Approval, color: amber }
+            - { code: enrolled,         label: Enrolled,         color: green }
+            - { code: ineligible,       label: Ineligible,       color: red, final: true }
+            - { code: expired,          label: Expired,          color: gray, final: true }
+          transitions:
+            - name: enroll
+              label: Enroll
+              from: screening
+              to: enrolled
+              roles: [Case Manager]
+              primary: true
+              condition: { all: [ "program_type in [copay_card, bridge]", { any: [ program_type != copay_card, hub_case.patient.insurance_type == commercial ] } ] }
+              condition_msg: Co-pay cards are for commercially insured patients only; free drug needs supervisor approval.
+              on_done: Issue the card ID (or the bridge order) and valid_until (31 December, or 90 days for bridge), then send the details to the patient and the specialty pharmacy.
+            - { name: submit_pap, label: Submit for Approval, from: screening, to: pending_approval, roles: [Case Manager], primary: true,
+                show_when: "program_type in [pap, foundation]",
+                condition: { text: "Household income is at or below 500% of the federal poverty level for the household size, or the foundation's criteria are met." },
+                condition_msg: The patient does not meet the income criteria. }
+            - { name: approve_pap, label: Approve, from: pending_approval, to: enrolled, roles: [Hub Supervisor], primary: true,
+                condition: { text: The approver is not the case manager who submitted it (maker-checker). },
+                condition_msg: Another person must approve a free-drug enrollment you submitted.,
+                on_done: Move the case to Access Secured and send the approval letter to the patient and HCP office. }
+            - { name: ineligible, label: Mark Ineligible, from: [screening, pending_approval], to: ineligible, roles: [Case Manager, Hub Supervisor], tone: danger,
+                form: [ { reason: { type: long_text, required: true } } ], on_done: Tell the patient and suggest a foundation referral where available. }
+            - { name: expire, label: Expire, from: enrolled, to: expired, trigger: system, text: "Nightly when valid_until < today; 30 days before, create a re-enrollment task." }
+        form:
+          create:
+            roles: [Case Manager]
+            title: Screen for Support
+            fields:
+              - hub_case
+              - program_type
+              - annual_max: { show_when: program_type == copay_card }
+              - income_proof: { show_when: "program_type in [pap, foundation]" }
+        table:
+          columns:
+            - enrollment_ref: { label: Enrollment, searchable: true }
+            - hub_case:       { label: Case, display: case_no, link_to: case_360 }
+            - program_type:   { label: Program, filterable: true }
+            - card_id:        { label: Card ID }
+            - used_to_date:   { label: Used, format: money }
+            - valid_until:    { label: Valid until, sortable: true }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Awaiting my approval, where: status == pending_approval, roles: [Hub Supervisor], default: true }
+            - { label: Screening, where: status == screening, roles: [Case Manager], default: true }
+
+      - code: sp_referral
+        name: SP Referral
+        kind: transactional
+        display: sp_ref
+        description: The hand-off of an access-secured case to a limited-distribution specialty pharmacy.
+        fields:
+          - sp_ref:             { type: text, label: SP referral, readonly: true, unique: true, auto: { sequence: "SPR-{00000}" } }
+          - hub_case:           { type: link, to: hub_case, label: Case, display: case_no, required: true }
+          - specialty_pharmacy: { type: link, to: specialty_pharmacy, display: name, required: true, limit_choices: in_network is_true }
+          - triage_note:        { type: long_text, label: Why this pharmacy, help: "Payer network, patient's state and language." }
+          - signed_off_by:      { type: link, to: app_user, readonly: true }
+          - ship_date:          { type: date, readonly: true }
+          - tracking_no:        { type: text, label: Tracking no., readonly: true }
+          - decline_reason:     { type: long_text, readonly: true }
+        access:
+          Case Manager:       { actions: [view, add, edit, export] }
+          Hub Supervisor:     { actions: [view, export] }
+          Specialty Pharmacy: { actions: [view], rows: { own: specialty_pharmacy } }
+        workflow:
+          statuses:
+            - { code: triaged,  label: Awaiting Sign-off, color: gray, initial: true }
+            - { code: sent,     label: Sent to SP, color: blue }
+            - { code: accepted, label: Accepted, color: teal }
+            - { code: shipped,  label: First Fill Shipped, color: green, final: true }
+            - { code: declined, label: Declined, color: red }
+          transitions:
+            - name: sign_off
+              label: Sign Off and Send
+              from: triaged
+              to: sent
+              roles: [Hub Supervisor]
+              primary: true
+              confirm: Send this referral, the prescription and the benefits summary to the pharmacy?
+              condition: { text: The person signing off is not the case manager who triaged it (maker-checker). }
+              condition_msg: A different person must sign off a triage you prepared.
+              on_done: "Record signed_off_by, send the prescription, enrollment form and benefits summary to the pharmacy's intake email and fax, and set the case's specialty pharmacy."
+            - { name: send_back, label: Send Back, from: triaged, to: declined, roles: [Hub Supervisor],
+                form: [ { decline_reason: { type: long_text, required: true } } ], on_done: Return it to the case manager to re-triage. }
+            - { name: accept, label: Accept, from: sent, to: accepted, roles: [Specialty Pharmacy], primary: true,
+                on_done: Tell the case manager; the pharmacy schedules delivery with the patient. }
+            - { name: decline, label: Decline, from: sent, to: declined, roles: [Specialty Pharmacy], tone: danger,
+                form: [ { decline_reason: { type: long_text, required: true } } ], on_done: Email the case manager to re-triage to the other pharmacy. }
+            - { name: retriage, label: Re-triage, from: declined, to: triaged, roles: [Case Manager] }
+            - { name: ship, label: Confirm First Fill, from: accepted, to: shipped, roles: [Specialty Pharmacy], primary: true,
+                form: [ { ship_date: { type: date, required: true } }, { tracking_no: { type: text, required: true } } ],
+                on_done: "Move the case to On Therapy, text the patient the delivery date, and book an injection-training call." }
+        form:
+          create: { roles: [Case Manager], title: Triage to SP, fields: [hub_case, specialty_pharmacy, triage_note] }
+          edit:   { same_as: create, editable_in: [triaged, declined] }
+        table:
+          columns:
+            - sp_ref:             { label: SP referral, searchable: true }
+            - hub_case:           { label: Case, display: case_no }
+            - specialty_pharmacy: { label: Pharmacy, display: name, filterable: true }
+            - signed_off_by:      { label: Signed off by }
+            - ship_date:          { label: Shipped, sortable: true }
+            - status:             { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Needs sign-off, where: status == triaged, roles: [Hub Supervisor], default: true }
+            - { label: Declined, where: status == declined, roles: [Case Manager], default: true }
+            - { label: New for us, where: status == sent, roles: [Specialty Pharmacy], default: true }
+
+      - code: hub_task
+        name: Task
+        kind: transactional
+        display: subject
+        fields:
+          - subject:     { type: text, required: true }
+          - hub_case:    { type: link, to: hub_case, label: Case, display: case_no, required: true }
+          - assigned_to: { type: link, to: app_user, required: true }
+          - due_date:    { type: date, required: true, default: today }
+          - priority:    { type: choice, choices: task_priority, default: normal }
+          - notes:       { type: long_text }
+        access:
+          Case Manager:             { actions: [view, add, edit], rows: { where: "assigned_to == me" } }
+          Reimbursement Specialist: { actions: [view, add, edit], rows: { where: "assigned_to == me" } }
+          Hub Supervisor:           { actions: [view, add, edit, export] }
+        workflow:
+          statuses:
+            - { code: open,      label: Open,      color: blue, initial: true }
+            - { code: done,      label: Done,      color: green, final: true }
+            - { code: cancelled, label: Cancelled, color: gray, final: true }
+          transitions:
+            - { name: complete, label: Mark Done, from: open, to: done, roles: [Case Manager, Reimbursement Specialist, Hub Supervisor], primary: true }
+            - { name: cancel, label: Cancel, from: open, to: cancelled, roles: [Hub Supervisor], tone: danger }
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set nightly when due_date < today and the task is Open. }
+        form:
+          create: { title: New Task, fields: [subject, hub_case, assigned_to, due_date, priority, notes] }
+          edit:   { same_as: create, editable_in: [open] }
+        table:
+          columns:
+            - subject:     { label: Task, searchable: true }
+            - hub_case:    { label: Case, display: case_no, link_to: case_360 }
+            - assigned_to: { label: Assigned to }
+            - due_date:    { label: Due, sortable: true }
+            - priority:    { label: Priority, filterable: true }
+            - status:      { source: status, label: Status, filterable: true }
+            - tags:        { source: tags, label: Flags }
+          default_sort: due_date
+          quick_filters:
+            - { label: Open, where: status == open, default: true }
+            - { label: Overdue, where: has_tag overdue }
+          add_button: New Task
+
+      - code: interaction
+        name: Interaction
+        kind: transactional
+        display: summary
+        description: Every call, SMS, WhatsApp message, email and fax with the patient or the office.
+        fields:
+          - hub_case:  { type: link, to: hub_case, label: Case, display: case_no, required: true }
+          - channel:   { type: choice, choices: contact_channel, required: true }
+          - direction: { type: choice, required: true, choices: [ {id: outbound, label: Outbound, color: blue}, {id: inbound, label: Inbound, color: green} ] }
+          - party:     { type: choice, label: With, required: true, choices: [ {id: patient, label: Patient}, {id: caregiver, label: Caregiver}, {id: hcp_office, label: HCP office}, {id: payer, label: Payer}, {id: pharmacy, label: Pharmacy} ] }
+          - purpose:   { type: choice, choices: interaction_purpose, required: true }
+          - summary:   { type: text, required: true, max_length: 140 }
+          - delivery_status: { type: choice, readonly: true, choices: [ {id: sent, label: Sent, color: gray}, {id: delivered, label: Delivered, color: green}, {id: read, label: Read, color: blue}, {id: failed, label: Failed, color: red} ] }
+          - possible_ae: { type: boolean, label: Possible adverse event or complaint, help: Forwards to pharmacovigilance within one business day. }
+        validation:
+          rules:
+            - { when: "channel in [sms, whatsapp]", require_expr: hub_case.patient.sms_consent is_true, message: The patient has not consented to SMS or WhatsApp. }
+        access:
+          Case Manager:   { actions: [view, add, export] }
+          Hub Supervisor: { actions: [view, export] }
+        form:
+          create:
+            title: Log Interaction
+            sections:
+              - { title: Contact, fields: [hub_case, channel, direction, party] }
+              - { title: Content, fields: [purpose, summary, possible_ae] }
+        table:
+          columns:
+            - created_at: { label: When, sortable: true }
+            - hub_case:   { label: Case, display: case_no, link_to: case_360 }
+            - channel:    { label: Channel, filterable: true }
+            - direction:  { label: Direction, filterable: true }
+            - party:      { label: With }
+            - purpose:    { label: Purpose, filterable: true }
+            - summary:    { label: Summary, searchable: true }
+            - delivery_status: { label: Delivery }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Possible AE, where: possible_ae is_true }
+          add_button: Log Interaction
+        custom_requirements:
+          - { area: integration, title: Two-way messaging, text: "Outbound SMS and WhatsApp messages are sent through the gateways from approved templates in English or Spanish; inbound replies create an Inbound interaction on the case and notify its case manager." }
+
+      - code: case_document
+        name: Case Document
+        plural: Case Documents
+        kind: child
+        parent: { entity: hub_case, field: hub_case }
+        display: doc_type
+        fields:
+          - hub_case: { type: link, to: hub_case, required: true, on_delete: cascade }
+          - doc_type: { type: choice, label: Document, choices: document_type, required: true }
+          - file:     { type: file, required: true, accept: [pdf, jpg, png], max_size_mb: 15 }
+          - received_from: { type: choice, choices: [ {id: hcp_office, label: HCP office}, {id: patient, label: Patient}, {id: payer, label: Payer} ] }
+          - valid_until: { type: date }
+        access:
+          Case Manager:             { actions: [view, add] }
+          Reimbursement Specialist: { actions: [view, add] }
+          Hub Supervisor:           { actions: [view] }
+        table:
+          columns:
+            - doc_type:      { label: Document, filterable: true }
+            - received_from: { label: From }
+            - created_at:    { label: Added, sortable: true }
+            - valid_until:   { label: Valid until }
+          default_sort: -created_at
+        form:
+          create: { fields: [doc_type, file, received_from, valid_until] }
+
+detail_views:
+  - code: case_360
+    hero: hub_case
+    title: "{case_no}"
+    back_to: cases
+    layout: header_tabs_sidebar
+    roles: [Case Manager, Hub Supervisor, Reimbursement Specialist]
+    header:
+      title: case_no
+      subtitle: ["{patient.patient_name}", "{hcp_office.clinic_name}"]
+      badges: [ { source: status }, { source: tags }, { field: indication } ]
+      facts:
+        - { label: Payer, path: patient.primary_payer.name, fallback: "—" }
+        - { label: Insurance, path: patient.insurance_type }
+        - { label: Contact via, path: patient.preferred_channel }
+        - { label: Case manager, field: case_manager }
+        - { label: First fill, field: first_fill_date, fallback: "—" }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: log_call, label: Log Interaction, type: create_related, entity: interaction, prefill: { hub_case: hero }, roles: [Case Manager] }
+          - { key: new_task, label: New Task, type: create_related, entity: hub_task, prefill: { hub_case: hero } }
+      banners:
+        - { show_when: patient.hipaa_authorized is_false, tone: danger, text: No HIPAA authorization on file — do not contact the payer or the patient. }
+        - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}" }
+        - { show_when: has_tag on_bridge, tone: info, text: "Patient on bridge supply since {bridge_start}." }
+    stats:
+      - { label: Benefits checks, value: { count: benefits_investigation, via: hub_case }, link_to_tab: bi, tone: blue }
+      - { label: Prior auths, value: { count: prior_auth, via: hub_case }, link_to_tab: pa, tone: amber }
+      - { label: Open tasks, value: { count: hub_task, via: hub_case, where: status == open }, link_to_tab: tasks, tone: red }
+      - { label: Messages, value: { count: interaction, via: hub_case }, link_to_tab: outreach, tone: indigo }
+    sidebar:
+      - { type: fields, title: Case, fields: [patient, hcp_office, referral, specialty_pharmacy, bridge_start, first_fill_date, next_refill_due] }
+      - { type: custom, title: Access checklist, text: "Ticks for HIPAA authorization, enrollment form, prescription, insurance card, BI complete, PA approved or not needed, co-pay or free-drug enrolled, SP accepted." }
+    tabs:
+      - { code: bi, label: Benefits, type: related_table, entity: benefits_investigation, via: hub_case, columns: inherit, count_badge: true,
+          add: { label: New BI, prefill: { hub_case: hero } } }
+      - { code: pa, label: Prior Auth, type: related_table, entity: prior_auth, via: hub_case, columns: inherit, count_badge: true,
+          add: { label: New PA, prefill: { hub_case: hero } } }
+      - { code: copay, label: Co-pay & Free Drug, type: related_table, entity: copay_enrollment, via: hub_case, columns: inherit,
+          add: { label: Screen for Support, prefill: { hub_case: hero } } }
+      - { code: sp, label: Specialty Pharmacy, type: related_table, entity: sp_referral, via: hub_case, columns: inherit,
+          add: { label: Triage to SP, prefill: { hub_case: hero }, show_when: status == access_secured } }
+      - { code: tasks, label: Tasks, type: related_table, entity: hub_task, via: hub_case, columns: inherit, count_badge: true,
+          add: { label: New Task, prefill: { hub_case: hero } } }
+      - { code: outreach, label: Outreach, type: related_table, entity: interaction, via: hub_case, columns: inherit,
+          add: { label: Log Interaction, prefill: { hub_case: hero } },
+          empty_state: { title: No outreach yet, text: Calls and messages with the patient and office appear here., cta: add } }
+      - { code: documents, label: Documents, type: related_table, entity: case_document, via: hub_case, columns: inherit, count_badge: true,
+          add: { label: Add Document, prefill: { hub_case: hero } } }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: hub_case, events: [created, transition, tag] }
+          - { entity: benefits_investigation, via: hub_case, events: [transition] }
+          - { entity: prior_auth, via: hub_case, events: [transition] }
+          - { entity: copay_enrollment, via: hub_case, events: [transition] }
+          - { entity: sp_referral, via: hub_case, events: [transition] }
+          - { entity: interaction, via: hub_case, events: [created] }
+    states:
+      not_found: { title: Case not found, back_to: cases }

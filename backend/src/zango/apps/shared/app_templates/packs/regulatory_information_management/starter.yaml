@@ -1,0 +1,491 @@
+# Regulatory Information Management: the template's starting point. Products,
+# registrations, submissions and post-approval commitments across markets in
+# one system, with a global regulatory lead, affiliate RA teams per market and
+# a leadership view. The analyst tailors every part of it to your requirement;
+# the preview redraws with each change.
+spec_version: 1
+
+app:
+  code: regulatory_information_management
+  name: Regulatory Information Management
+  description: One register of products, marketing authorisations, health-authority submissions and post-approval commitments across every market.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#0E7490", secondary: "#64748B" }
+  custom_requirements:
+    - area: permission
+      title: Affiliates see their own markets
+      text: An Affiliate RA user sees and edits only the registrations, submissions and commitments of the markets they are assigned to; the Regulatory Lead and Leadership see every market.
+
+choice_sets:
+  region:
+    - { id: apac,  label: Asia Pacific }
+    - { id: emea,  label: "Europe, Middle East and Africa" }
+    - { id: latam, label: Latin America }
+    - { id: na,    label: North America }
+  product_type:
+    - { id: small_molecule, label: Small molecule }
+    - { id: biologic,       label: Biologic }
+    - { id: vaccine,        label: Vaccine }
+    - { id: combination,    label: Drug-device combination }
+  therapeutic_area:
+    - { id: oncology,   label: Oncology }
+    - { id: cardio,     label: Cardiovascular }
+    - { id: diabetes,   label: Diabetes and Metabolic }
+    - { id: respiratory, label: Respiratory }
+    - { id: anti_infective, label: Anti-infectives }
+  dosage_form:
+    - { id: tablet,    label: Film-coated tablet }
+    - { id: capsule,   label: Capsule }
+    - { id: injection, label: Solution for injection }
+    - { id: pfs,       label: Pre-filled syringe }
+    - { id: inhaler,   label: Inhalation powder }
+  procedure:
+    - { id: national,     label: National }
+    - { id: reliance,     label: Reliance / abridged }
+    - { id: centralised,  label: Centralised }
+    - { id: decentralised, label: Decentralised / MRP }
+  submission_type:
+    - { id: new_ma,      label: New marketing authorisation, color: purple }
+    - { id: variation_ia, label: Variation Type IA,  color: gray }
+    - { id: variation_ib, label: Variation Type IB,  color: blue }
+    - { id: variation_ii, label: Variation Type II,  color: indigo }
+    - { id: renewal,     label: Renewal,             color: teal }
+    - { id: psur,        label: PSUR / PBRER,        color: amber }
+    - { id: hq_response, label: Response to HA questions, color: pink }
+  commitment_type:
+    - { id: pass,      label: Post-authorisation safety study, color: red }
+    - { id: cmc,       label: CMC / quality commitment,         color: blue }
+    - { id: labelling, label: Labelling update,                 color: purple }
+    - { id: psur,      label: Periodic safety report,           color: amber }
+    - { id: other,     label: Other condition of approval,      color: gray }
+
+roles:
+  - name: Regulatory Lead
+    description: Global regulatory lead who owns the product registry, plans submissions, approves dossiers for filing and signs off commitments.
+    landing: dashboard
+    menu:
+      - { page: dashboard,     icon: layout-dashboard }
+      - { page: products,      icon: package }
+      - { page: registrations, icon: stamp }
+      - { page: submissions,   icon: send }
+      - { page: commitments,   icon: list-checks }
+      - group: Setup
+        icon: settings
+        items:
+          - { page: markets }
+  - name: Affiliate RA
+    description: Regulatory affairs in one country affiliate; keeps local registrations current, prepares and files submissions and works on local commitments.
+    landing: registrations
+    menu:
+      - { page: registrations, label: My Registrations, icon: stamp }
+      - { page: submissions,   label: My Submissions,   icon: send }
+      - { page: commitments,   label: My Commitments,   icon: list-checks }
+      - { page: products,      label: Product Registry, icon: package }
+  - name: Leadership
+    description: Regulatory and commercial leadership with a read-only portfolio view of approvals, renewals and overdue commitments.
+    landing: dashboard
+    menu:
+      - { page: dashboard,     icon: layout-dashboard }
+      - { page: products,      icon: package }
+      - { page: registrations, icon: stamp }
+      - { page: submissions,   icon: send }
+      - { page: commitments,   icon: list-checks }
+
+pages:
+  - { code: dashboard,     type: custom, route: /app/dashboard, title: Regulatory Portfolio, component: RegulatoryDashboard,
+      roles: [Regulatory Lead, Leadership],
+      text: "KPI row: active registrations, submissions under health-authority review, renewals due in the next 180 days, overdue commitments. Below: a product-by-market matrix coloured by registration status, and a table of submissions with an HA decision due in the next 60 days, earliest first." }
+  - { code: products,      type: crud,   entity: product,      route: /app/products,      title: Products }
+  - { code: product_360,   type: detail, detail_view: product_360, route: /app/products/:id }
+  - { code: registrations, type: crud,   entity: registration, route: /app/registrations, title: Registrations }
+  - { code: submissions,   type: crud,   entity: submission,   route: /app/submissions,   title: Submissions }
+  - { code: commitments,   type: crud,   entity: commitment,   route: /app/commitments,   title: Commitments }
+  - { code: markets,       type: crud,   entity: country,       route: /app/setup/markets, title: Markets }
+
+modules:
+  - code: portfolio
+    name: Product Registry
+    description: Markets and the products the company holds or plans to hold authorisations for.
+    entities:
+      - code: country
+        name: Market
+        kind: master
+        display: name
+        app_user: { role: Affiliate RA, name: affiliate_ra_name, email: affiliate_ra_email, create_on: is_active is_true }
+        fields:
+          - name:               { type: text, label: Country, required: true, unique: true }
+          - region:             { type: choice, choices: region, required: true }
+          - health_authority:   { type: text, label: Health authority, required: true, placeholder: e.g. CDSCO }
+          - affiliate_ra_name:  { type: text, label: Affiliate RA, required: true }
+          - affiliate_ra_email: { type: email, label: Affiliate RA email, required: true }
+          - is_active:          { type: boolean, label: Active market, default: true }
+        access:
+          Regulatory Lead: { actions: [view, add, edit, export] }
+          Affiliate RA:    { actions: [view], rows: { own: id } }
+          Leadership:      { actions: [view] }
+        table:
+          columns:
+            - name:              { label: Country, searchable: true, sortable: true }
+            - region:            { label: Region, filterable: true }
+            - affiliate_ra_name: { label: Affiliate RA }
+            - is_active:         { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Market
+        form:
+          create: { title: Add Market, fields: [name, region, health_authority, affiliate_ra_name, affiliate_ra_email, is_active] }
+          edit:   { same_as: create }
+
+      - code: product
+        name: Product
+        kind: master
+        display: name
+        description: A medicinal product (one active substance, form and strength family) held in the global registry.
+        fields:
+          - product_code:     { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "PRD-{0000}" } }
+          - name:             { type: text, label: Trade name, required: true, unique: true }
+          - active_substance: { type: text, label: Active substance (INN), required: true }
+          - product_type:     { type: choice, choices: product_type, required: true }
+          - therapeutic_area: { type: choice, choices: therapeutic_area, required: true }
+          - dosage_form:      { type: choice, choices: dosage_form, required: true }
+          - strengths:        { type: text, required: true, placeholder: e.g. 5 mg and 10 mg }
+          - atc_code:         { type: text, label: ATC code, pattern: "^[A-Z][0-9]{2}[A-Z]{2}[0-9]{2}$", pattern_msg: "Seven-character ATC code, e.g. A10BK01." }
+          - ccds_version:     { type: text, label: CCDS version, help: Current company core data sheet that local labels must align to. }
+          - discontinue_reason: { type: long_text, readonly: true }
+        access:
+          Regulatory Lead: { actions: [view, add, edit, export, detail] }
+          Affiliate RA:    { actions: [view, detail] }
+          Leadership:      { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: in_development, label: In Development, color: gray, initial: true }
+            - { code: marketed,       label: Marketed,       color: green }
+            - { code: phasing_out,    label: Phasing Out,    color: amber }
+            - { code: discontinued,   label: Discontinued,   color: red, final: true }
+          transitions:
+            - { name: launch, label: Mark Marketed, from: in_development, to: marketed, roles: [Regulatory Lead], primary: true,
+                condition: { text: At least one registration for the product is Approved. },
+                condition_msg: The product needs an approved registration in at least one market first. }
+            - { name: phase_out, label: Phase Out, from: marketed, to: phasing_out, roles: [Regulatory Lead],
+                form: [ { discontinue_reason: { type: long_text, required: true } } ],
+                on_done: Email every Affiliate RA holding an approved registration for the product to plan withdrawal or transfer. }
+            - { name: discontinue, label: Discontinue, from: [in_development, phasing_out], to: discontinued, roles: [Regulatory Lead], tone: danger,
+                confirm: "Discontinue this product in every market?",
+                condition: { text: No registration of the product is still Approved or in renewal. },
+                condition_msg: Withdraw or let lapse every active registration first. }
+        form:
+          create:
+            roles: [Regulatory Lead]
+            title: Add Product
+            sections:
+              - { title: Product, fields: [name, active_substance, product_type, therapeutic_area] }
+              - { title: Presentation, fields: [dosage_form, strengths, atc_code, ccds_version] }
+            after_create: product_360
+          edit: { same_as: create, roles: [Regulatory Lead] }
+        table:
+          columns:
+            - product_code:     { label: Code, searchable: true, sortable: true }
+            - name:             { label: Product, searchable: true, link_to: product_360 }
+            - product_type:     { label: Type, filterable: true }
+            - therapeutic_area: { label: Therapeutic area, filterable: true }
+            - dosage_form:      { label: Form, filterable: true }
+            - status:           { source: status, label: Lifecycle, filterable: true }
+          default_sort: name
+          row_click: product_360
+          add_button: Add Product
+
+  - code: regulatory
+    name: Registrations and Submissions
+    description: Marketing authorisations per product and market, the submissions that create and maintain them, and the commitments they carry.
+    entities:
+      - code: registration
+        name: Registration
+        kind: transactional
+        display: reg_ref
+        description: One marketing authorisation of a product in one market.
+        fields:
+          - reg_ref:        { type: text, label: Registration, readonly: true, unique: true, auto: { sequence: "REG-{00000}" } }
+          - product:        { type: link, to: product, display: name, required: true }
+          - market:         { type: link, to: country, label: Market, display: name, required: true, limit_choices: is_active is_true }
+          - procedure:      { type: choice, choices: procedure, required: true }
+          - holder_company: { type: text, label: Licence holder, required: true }
+          - ma_number:      { type: text, label: MA number, readonly: true }
+          - approval_date:  { type: date, readonly: true }
+          - expiry_date:    { type: date, readonly: true }
+          - local_label_version: { type: text, label: Local label version }
+          - approval_letter: { type: file, readonly: true, accept: [pdf] }
+        validation:
+          duplicate_check:
+            scope: { where: "status not_in [withdrawn, rejected, lapsed]" }
+            rules:
+              - { match: [product, market], compare: exact, on_match: block, message: This product already has a live registration in this market. }
+        access:
+          Regulatory Lead: { actions: [view, add, edit, export] }
+          Affiliate RA:    { actions: [view, add, edit], rows: { own: market } }
+          Leadership:      { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: planned,   label: Planned,   color: gray, initial: true }
+            - { code: filed,     label: Filed,     color: blue }
+            - { code: approved,  label: Approved,  color: green }
+            - { code: in_renewal, label: In Renewal, color: teal }
+            - { code: lapsed,    label: Lapsed,    color: amber, final: true }
+            - { code: rejected,  label: Rejected,  color: red, final: true }
+            - { code: withdrawn, label: Withdrawn, color: red, final: true }
+          transitions:
+            - { name: file, label: Mark Filed, from: planned, to: filed, trigger: system,
+                text: When the new marketing authorisation submission for this registration is Submitted. }
+            - name: approve
+              label: Record Approval
+              from: filed
+              to: approved
+              roles: [Affiliate RA, Regulatory Lead]
+              primary: true
+              form:
+                - ma_number:       { type: text, required: true }
+                - approval_date:   { type: date, required: true }
+                - expiry_date:     { type: date, required: true }
+                - approval_letter: { type: file, required: true, accept: [pdf] }
+              on_done: Save the MA details, close the linked submission as Approved and email the Regulatory Lead.
+            - { name: reject, label: Record Refusal, from: filed, to: rejected, roles: [Affiliate RA, Regulatory Lead], tone: danger,
+                form: [ { refusal_reason: { type: long_text, required: true } } ], on_done: Email the Regulatory Lead the refusal reason. }
+            - { name: start_renewal, label: Start Renewal, from: approved, to: in_renewal, roles: [Affiliate RA, Regulatory Lead],
+                on_done: Create a Renewal submission for this product and market in Planned. }
+            - { name: renew, label: Record Renewal, from: in_renewal, to: approved, roles: [Affiliate RA, Regulatory Lead], primary: true,
+                form: [ { expiry_date: { type: date, label: New expiry date, required: true } } ],
+                condition: { text: The new expiry date is later than the current one. },
+                on_done: Save the new expiry date and clear the Renewal Due tag. }
+            - { name: lapse, label: Lapse, from: [approved, in_renewal], to: lapsed, trigger: system,
+                text: Nightly when expiry_date is past and no renewal was recorded. }
+            - { name: withdraw, label: Withdraw, from: [planned, filed, approved], to: withdrawn, roles: [Regulatory Lead], tone: danger,
+                form: [ { withdrawal_reason: { type: long_text, required: true } } ],
+                on_done: Email the market's Affiliate RA and close any open submissions for this registration. }
+          tags:
+            - { code: renewal_due, label: Renewal Due, color: amber, system: true, text: Set nightly when expiry_date is within 180 days and status is Approved. }
+        form:
+          create:
+            roles: [Regulatory Lead, Affiliate RA]
+            title: Plan Registration
+            fields: [product, market, procedure, holder_company, local_label_version]
+          edit: { same_as: create, editable_in: [planned, filed, approved] }
+        table:
+          columns:
+            - reg_ref:     { label: Registration, searchable: true }
+            - product:     { label: Product, display: name, filterable: true, link_to: product_360 }
+            - market:      { label: Market, display: name, filterable: true }
+            - ma_number:   { label: MA number, searchable: true }
+            - expiry_date: { label: Expires, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+            - tags:        { source: tags, label: Flags }
+          default_sort: expiry_date
+          quick_filters:
+            - { label: Renewal due, where: has_tag renewal_due }
+            - { label: Pending approval, where: status == filed }
+          add_button: Plan Registration
+
+      - code: submission
+        name: Submission
+        kind: transactional
+        display: submission_ref
+        description: One regulatory sequence sent to a health authority, from dossier planning to decision.
+        fields:
+          - submission_ref:  { type: text, label: Submission, readonly: true, unique: true, auto: { sequence: "SUB-{YY}-{0000}" } }
+          - product:         { type: link, to: product, display: name, required: true }
+          - market:          { type: link, to: country, label: Market, display: name, required: true }
+          - registration:    { type: link, to: registration, display: reg_ref, limit_choices: market == form.market }
+          - submission_type: { type: choice, label: Type, choices: submission_type, required: true }
+          - description:     { type: text, required: true, placeholder: e.g. New manufacturing site for drug substance }
+          - ectd_sequence:   { type: text, label: eCTD sequence, pattern: "^[0-9]{4}$", pattern_msg: "Four digits, e.g. 0007." }
+          - planned_date:    { type: date, label: Planned submission, required: true }
+          - submitted_on:    { type: date, readonly: true }
+          - ha_reference:    { type: text, label: HA reference, readonly: true }
+          - decision_due:    { type: date, label: HA decision due, readonly: true }
+          - dossier_link:    { type: url, label: Dossier in DMS }
+        access:
+          Regulatory Lead: { actions: [view, add, edit, export] }
+          Affiliate RA:    { actions: [view, add, edit], rows: { own: market } }
+          Leadership:      { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: planned,         label: Planned,          color: gray, initial: true }
+            - { code: in_preparation,  label: In Preparation,   color: blue }
+            - { code: internal_review, label: Internal Review,  color: amber }
+            - { code: ready,           label: Ready to Submit,  color: purple }
+            - { code: submitted,       label: Under HA Review,  color: indigo }
+            - { code: ha_questions,    label: HA Questions,     color: pink }
+            - { code: approved,        label: Approved,         color: green, final: true }
+            - { code: rejected,        label: Rejected,         color: red, final: true }
+            - { code: withdrawn,       label: Withdrawn,        color: red, final: true }
+          transitions:
+            - { name: start, label: Start Dossier, from: planned, to: in_preparation, roles: [Affiliate RA, Regulatory Lead], primary: true }
+            - { name: send_for_review, label: Send for Review, from: in_preparation, to: internal_review, roles: [Affiliate RA, Regulatory Lead], primary: true,
+                condition: dossier_link is_set, condition_msg: Link the dossier in the document management system first.,
+                on_done: Email the Regulatory Lead that the dossier is ready for review. }
+            - { name: approve_dossier, label: Approve for Submission, from: internal_review, to: ready, roles: [Regulatory Lead], primary: true,
+                condition: { text: The approver is not the user who sent the dossier for review. },
+                condition_msg: Another person must approve a dossier you prepared. }
+            - { name: return, label: Return for Rework, from: internal_review, to: in_preparation, roles: [Regulatory Lead],
+                form: [ { review_comments: { type: long_text, required: true } } ], on_done: Email the comments to whoever sent the dossier for review. }
+            - name: submit
+              label: Record Submission
+              from: ready
+              to: submitted
+              roles: [Affiliate RA, Regulatory Lead]
+              primary: true
+              form:
+                - submitted_on: { type: date, required: true }
+                - ha_reference: { type: text }
+                - decision_due: { type: date, required: true }
+              on_done: Save the dates; for a new marketing authorisation move the registration to Filed; email the Regulatory Lead.
+            - { name: questions, label: HA Questions Received, from: submitted, to: ha_questions, roles: [Affiliate RA, Regulatory Lead],
+                form: [ { response_due: { type: date, required: true } } ], on_done: Email the Regulatory Lead and the market's Affiliate RA the response due date. }
+            - { name: respond, label: Response Sent, from: ha_questions, to: submitted, roles: [Affiliate RA, Regulatory Lead] }
+            - { name: approve, label: Record HA Approval, from: submitted, to: approved, roles: [Affiliate RA, Regulatory Lead], primary: true,
+                form: [ { decision_date: { type: date, required: true } }, { conditions_imposed: { type: boolean, label: Approval carries commitments } } ],
+                on_done: For a variation or renewal update the registration; when conditions were imposed open a draft commitment linked to this submission. }
+            - { name: reject, label: Record HA Rejection, from: [submitted, ha_questions], to: rejected, roles: [Affiliate RA, Regulatory Lead], tone: danger,
+                form: [ { decision_date: { type: date, required: true } } ] }
+            - { name: withdraw, label: Withdraw, from: [planned, in_preparation, internal_review, ready, submitted, ha_questions], to: withdrawn, roles: [Regulatory Lead], tone: danger,
+                form: [ { withdrawal_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: decision_overdue, label: Decision Overdue, color: red, system: true, text: Set nightly when decision_due is past and the submission is still under review. }
+        form:
+          create:
+            roles: [Regulatory Lead, Affiliate RA]
+            title: Plan Submission
+            sections:
+              - { title: Scope, fields: [product, market, registration, submission_type, description] }
+              - { title: Dossier, fields: [ectd_sequence, planned_date, dossier_link] }
+          edit: { same_as: create, editable_in: [planned, in_preparation, internal_review] }
+        table:
+          columns:
+            - submission_ref:  { label: Submission, searchable: true }
+            - product:         { label: Product, display: name, filterable: true }
+            - market:          { label: Market, display: name, filterable: true }
+            - submission_type: { label: Type, filterable: true }
+            - planned_date:    { label: Planned, sortable: true }
+            - decision_due:    { label: Decision due, sortable: true }
+            - status:          { source: status, label: Status, filterable: true }
+            - tags:            { source: tags, label: Flags }
+          default_sort: planned_date
+          quick_filters:
+            - { label: Awaiting my review, where: status == internal_review, roles: [Regulatory Lead], default: true }
+            - { label: With health authority, where: "status in [submitted, ha_questions]" }
+          add_button: Plan Submission
+
+      - code: commitment
+        name: Commitment
+        kind: transactional
+        display: commitment_ref
+        description: An obligation imposed at or after approval that must be fulfilled by a due date.
+        fields:
+          - commitment_ref:    { type: text, label: Commitment, readonly: true, unique: true, auto: { sequence: "CMT-{0000}" } }
+          - product:           { type: link, to: product, display: name, required: true }
+          - market:            { type: link, to: country, label: Market, display: name, required: true }
+          - source_submission: { type: link, to: submission, label: Arising from, display: submission_ref, limit_choices: product == form.product }
+          - commitment_type:   { type: choice, label: Type, choices: commitment_type, required: true }
+          - description:       { type: long_text, required: true }
+          - due_date:          { type: date, required: true }
+          - owner_name:        { type: text, label: Owner, required: true }
+          - evidence:          { type: file, readonly: true, accept: [pdf, docx] }
+          - fulfilled_on:      { type: date, readonly: true }
+        access:
+          Regulatory Lead: { actions: [view, add, edit, export] }
+          Affiliate RA:    { actions: [view, add, edit], rows: { own: market } }
+          Leadership:      { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: open,            label: Open,            color: gray, initial: true }
+            - { code: in_progress,     label: In Progress,     color: blue }
+            - { code: pending_signoff, label: Pending Sign-off, color: amber }
+            - { code: fulfilled,       label: Fulfilled,       color: green, final: true }
+            - { code: waived,          label: Waived,          color: purple, final: true }
+          transitions:
+            - { name: start, label: Start Work, from: open, to: in_progress, roles: [Affiliate RA, Regulatory Lead], primary: true }
+            - name: submit_evidence
+              label: Submit for Sign-off
+              from: in_progress
+              to: pending_signoff
+              roles: [Affiliate RA, Regulatory Lead]
+              primary: true
+              form:
+                - evidence: { type: file, required: true, accept: [pdf, docx] }
+                - evidence_note: { type: long_text, label: What was done }
+              on_done: Email the Regulatory Lead that the commitment awaits sign-off.
+            - name: sign_off
+              label: Sign Off
+              from: pending_signoff
+              to: fulfilled
+              roles: [Regulatory Lead]
+              primary: true
+              confirm: Sign off this commitment as fulfilled?
+              condition: { text: The person signing off is not the person who submitted the evidence. }
+              condition_msg: A second person must sign off a commitment you submitted.
+              on_done: Set fulfilled_on to today, clear the Overdue tag and email the owner.
+            - { name: send_back, label: Send Back, from: pending_signoff, to: in_progress, roles: [Regulatory Lead],
+                form: [ { signoff_comments: { type: long_text, required: true } } ], on_done: Email the comments to the owner. }
+            - { name: waive, label: Waive, from: [open, in_progress], to: waived, roles: [Regulatory Lead],
+                form: [ { waiver_reference: { type: text, label: HA waiver reference, required: true } } ] }
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set nightly when due_date is past and the commitment is not Fulfilled or Waived. }
+        form:
+          create:
+            roles: [Regulatory Lead, Affiliate RA]
+            title: Add Commitment
+            fields: [product, market, source_submission, commitment_type, description, due_date, owner_name]
+          edit: { same_as: create, editable_in: [open, in_progress] }
+        table:
+          columns:
+            - commitment_ref:  { label: Commitment, searchable: true }
+            - product:         { label: Product, display: name, filterable: true }
+            - market:          { label: Market, display: name, filterable: true }
+            - commitment_type: { label: Type, filterable: true }
+            - due_date:        { label: Due, sortable: true }
+            - owner_name:      { label: Owner }
+            - status:          { source: status, label: Status, filterable: true }
+            - tags:            { source: tags, label: Flags }
+          default_sort: due_date
+          quick_filters:
+            - { label: Awaiting sign-off, where: status == pending_signoff, roles: [Regulatory Lead], default: true }
+            - { label: Overdue, where: has_tag overdue }
+          add_button: Add Commitment
+
+detail_views:
+  - code: product_360
+    hero: product
+    title: "{name}"
+    back_to: products
+    layout: header_tabs_sidebar
+    roles: [Regulatory Lead, Affiliate RA, Leadership]
+    header:
+      title: name
+      subtitle: ["{product_code}", "{product_type}", "{dosage_form}"]
+      badges: [ { source: status }, { field: therapeutic_area } ]
+      facts:
+        - { label: Strengths, field: strengths }
+        - { label: ATC, field: atc_code, copyable: true }
+        - { label: CCDS, field: ccds_version }
+      actions: { transitions: true }
+    stats:
+      - { label: Approved markets, value: { count: registration, via: product, where: status == approved }, link_to_tab: registrations, tone: green }
+      - { label: Open submissions, value: { count: submission, via: product, where: "status not_in [approved, rejected, withdrawn]" }, link_to_tab: submissions, tone: indigo }
+      - { label: Open commitments, value: { count: commitment, via: product, where: "status not_in [fulfilled, waived]" }, link_to_tab: commitments, tone: amber }
+    sidebar:
+      - { type: fields, title: Product, fields: [active_substance, product_type, therapeutic_area, dosage_form, strengths] }
+    tabs:
+      - { code: registrations, label: Registrations, type: related_table, entity: registration, via: product, columns: inherit, count_badge: true,
+          add: { label: Plan Registration, prefill: { product: hero } } }
+      - { code: submissions, label: Submissions, type: related_table, entity: submission, via: product, columns: inherit, count_badge: true,
+          add: { label: Plan Submission, prefill: { product: hero } } }
+      - { code: commitments, label: Commitments, type: related_table, entity: commitment, via: product, columns: inherit, count_badge: true }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: product, events: [created, transition] }
+          - { entity: registration, via: product, events: [created, transition] }
+          - { entity: submission, via: product, events: [transition] }
+          - { entity: commitment, via: product, events: [transition] }
+    states:
+      not_found: { title: Product not found, back_to: products }

@@ -1,0 +1,888 @@
+# Pregnancy Prevention REMS — US: a filled-in REMS Compliance app.
+# One teratogenic oral therapy, about 2,400 certified prescribers and 600
+# certified pharmacies. Prescribers certify after training and a knowledge
+# assessment, enroll each patient with a signed patient-prescriber agreement
+# and log monthly pregnancy tests. Pharmacies certify through an authorized
+# representative and need a dispense authorization before every fill, issued
+# only when prescriber, patient and pharmacy are in good standing and the
+# latest negative test is under 7 days old. A call centre takes fax and phone
+# enrollments, and the REMS Coordinator works non-compliance and prepares the
+# FDA assessment reports.
+
+spec_version: 1
+
+app:
+  code: pregnancy_prevention_rems_us
+  name: Pregnancy Prevention REMS — US
+  description: Prescriber and pharmacy certification, patient enrollment with monthly pregnancy testing, dispense authorization before every fill, and non-compliance tracking for one teratogenic oral therapy in the US.
+  timezone: America/New_York
+  locale: en-US
+  currency: USD
+  theme: { primary: "#0F766E", secondary: "#475467" }
+  custom_requirements:
+    - area: backend
+      title: Audit trail
+      text: Every create, edit, transition and authorization decision is written to an append-only audit log with user, timestamp, old and new values; the REMS Coordinator can export it as CSV for any date range.
+    - area: backend
+      title: Electronic signatures
+      text: Prescriber and pharmacy attestations, patient enrollment confirmation and every authorization decision ask for the user's password again and record an e-signature with its meaning (attested, enrolled, authorized, denied).
+    - area: permission
+      title: Patient privacy
+      text: Patient name and year of birth are visible only to the enrolling prescriber, the Call Center Agent and the REMS Coordinator; pharmacies see the REMS patient ID and initials only.
+    - area: integration
+      title: NPI registry check
+      text: When a prescriber submits for certification, look up the NPI in the NPPES registry and store the returned name, taxonomy and state; flag a mismatch for the REMS Coordinator.
+    - area: integration
+      title: Pharmacy switch
+      text: Accept dispense authorization requests from the pharmacy switch (NCPDP telecommunication) as well as the portal, run the same safe-use checks, and return the authorization number or a denial code within 5 seconds.
+    - area: scheduled
+      title: Reminders and lapses
+      text: Daily at 07:00 ET email prescribers whose patients have a pregnancy test due in the next 3 days, warn prescribers and pharmacies 60 and 30 days before recertification is due, and lapse anyone past due.
+    - area: report
+      title: FDA REMS assessment
+      text: A report for any period with counts of certified prescribers and pharmacies, enrolled patients by category, authorizations requested, granted and denied by reason, dispenses outside an authorization, pregnancies reported and non-compliance events by type and outcome, exportable as Excel.
+
+choice_sets:
+  region:
+    - { id: northeast, label: Northeast }
+    - { id: southeast, label: Southeast }
+    - { id: midwest,   label: Midwest }
+    - { id: southwest, label: Southwest }
+    - { id: west,      label: West }
+  specialty:
+    - { id: dermatology,  label: Dermatology }
+    - { id: family_med,   label: Family Medicine }
+    - { id: internal_med, label: Internal Medicine }
+    - { id: pediatrics,   label: Pediatrics }
+    - { id: other,        label: Other }
+  credential:
+    - { id: md, label: MD }
+    - { id: do, label: DO }
+    - { id: np, label: Nurse Practitioner }
+    - { id: pa, label: Physician Assistant }
+  pharmacy_type:
+    - { id: retail,    label: Retail }
+    - { id: specialty, label: Specialty }
+    - { id: mail,      label: Mail order }
+    - { id: hospital,  label: Hospital outpatient }
+  staff_role:
+    - { id: pharmacist,   label: Pharmacist }
+    - { id: technician,   label: Pharmacy technician }
+    - { id: pharmacist_in_charge, label: Pharmacist in charge }
+  enrollment_channel:
+    - { id: portal, label: Portal, color: teal }
+    - { id: fax,    label: Fax,    color: gray }
+    - { id: phone,  label: Phone,  color: blue }
+  patient_category:
+    - { id: frp,  label: Female of reproductive potential, color: pink }
+    - { id: fnrp, label: Female not of reproductive potential, color: purple }
+    - { id: male, label: Male, color: blue }
+  contraception:
+    - { id: iud,        label: IUD }
+    - { id: implant,    label: Implant }
+    - { id: oral,       label: Oral contraceptive }
+    - { id: injection,  label: Injection }
+    - { id: condom,     label: Male condom }
+    - { id: diaphragm,  label: Diaphragm }
+    - { id: abstinence, label: Abstinence commitment }
+  test_type:
+    - { id: urine_hcg, label: Urine pregnancy test }
+    - { id: serum_hcg, label: Serum pregnancy test }
+  test_purpose:
+    - { id: screening,   label: Screening (before first dose) }
+    - { id: confirmation, label: Confirmation }
+    - { id: monthly,     label: Monthly }
+    - { id: end_of_therapy, label: End of therapy }
+  test_result:
+    - { id: negative,      label: Negative,      color: green }
+    - { id: positive,      label: Positive,      color: red }
+    - { id: indeterminate, label: Indeterminate, color: amber }
+  request_channel:
+    - { id: portal, label: Portal, color: teal }
+    - { id: switch, label: Pharmacy switch, color: indigo }
+    - { id: ivr,    label: IVR / phone, color: gray }
+  denial_reason:
+    - { id: prescriber_not_certified, label: Prescriber not certified }
+    - { id: patient_not_enrolled,     label: Patient not enrolled or suspended }
+    - { id: pharmacy_not_certified,   label: Pharmacy not certified }
+    - { id: test_out_of_window,       label: Pregnancy test missing or older than 7 days }
+    - { id: comprehension_missing,    label: Monthly comprehension questions not answered }
+    - { id: days_supply,              label: Days supply over 30 }
+  nc_type:
+    - { id: dispense_no_auth,   label: Dispensed without authorization, color: red }
+    - { id: dispense_expired,   label: Dispensed after authorization expired, color: amber }
+    - { id: missed_test,        label: Missed pregnancy test, color: amber }
+    - { id: over_supply,        label: Days supply over limit, color: amber }
+    - { id: pregnancy_reported, label: Pregnancy reported, color: red }
+    - { id: other,              label: Other, color: gray }
+  nc_party:
+    - { id: prescriber, label: Prescriber }
+    - { id: pharmacy,   label: Pharmacy }
+    - { id: patient,    label: Patient }
+  severity:
+    - { id: minor,    label: Minor,    color: gray }
+    - { id: major,    label: Major,    color: amber }
+    - { id: critical, label: Critical, color: red }
+
+roles:
+  - name: Prescriber
+    description: Certified prescriber who enrolls their own patients, records monthly pregnancy tests and responds to non-compliance findings.
+    landing: patients
+    menu:
+      - { page: patients,       label: My Patients, icon: users }
+      - { page: monitoring,     label: Pregnancy Tests, icon: test-tube }
+      - { page: authorizations, label: Dispense Authorizations, icon: shield-check }
+      - { page: noncompliance,  label: Findings, icon: triangle-alert }
+      - { page: prescribers,    label: My Certification, icon: badge-check }
+  - name: Pharmacy
+    description: Certified pharmacy, represented by its authorized representative, that requests an authorization before every fill and records the dispense.
+    landing: authorizations
+    menu:
+      - { page: authorizations, label: Dispense Authorizations, icon: shield-check }
+      - { page: noncompliance,  label: Findings, icon: triangle-alert }
+      - { page: pharmacies,     label: My Certification, icon: badge-check }
+  - name: Call Center Agent
+    description: REMS call centre agent who keys in fax and phone enrollments and answers prescriber and pharmacy queries.
+    landing: patients
+    menu:
+      - { page: patients,    icon: users }
+      - { page: prescribers, icon: stethoscope }
+      - { page: pharmacies,  icon: store }
+      - { page: authorizations, label: Authorization Lookup, icon: shield-check }
+  - name: REMS Coordinator
+    description: Runs the program; reviews certifications and enrollments, rules on referred authorizations, works non-compliance and prepares assessment reports.
+    landing: dashboard
+    menu:
+      - { page: dashboard,      icon: layout-dashboard }
+      - { page: authorizations, label: Dispense Authorizations, icon: shield-check }
+      - { page: patients,       icon: users }
+      - { page: monitoring,     label: Pregnancy Tests, icon: test-tube }
+      - { page: noncompliance,  label: Non-compliance, icon: triangle-alert }
+      - group: Certification
+        icon: badge-check
+        items:
+          - { page: prescribers }
+          - { page: pharmacies }
+          - { page: pharmacy_staff }
+      - { page: assessment_report, icon: file-bar-chart }
+
+pages:
+  - { code: dashboard,         type: custom, route: /app/dashboard, title: REMS Dashboard, component: RemsDashboard,
+      roles: [REMS Coordinator],
+      text: "KPI row: certified prescribers, certified pharmacies, enrolled patients (and how many are females of reproductive potential), authorizations in the last 7 days with the share granted. Below: a queue of certifications and enrollments awaiting review oldest first; a bar chart of denials by reason for the last 30 days; open critical non-compliance findings; and recertifications due in the next 60 days." }
+  - { code: assessment_report, type: custom, route: /app/reports/assessment, title: REMS Assessment Report, component: AssessmentReport,
+      roles: [REMS Coordinator],
+      text: "Pick a reporting period (default the last 6 months). Shows the FDA REMS assessment metrics: stakeholders certified and decertified, patients enrolled by category and channel, authorizations requested, granted and denied by reason, median time to decision, dispenses outside an authorization, pregnancies reported, and non-compliance events by type, severity and outcome. Export as Excel." }
+  - { code: prescribers,       type: crud,   entity: prescriber,              route: /app/prescribers,        title: Prescribers }
+  - { code: prescriber_360,    type: detail, detail_view: prescriber_360,     route: /app/prescribers/:id }
+  - { code: pharmacies,        type: crud,   entity: pharmacy,                route: /app/pharmacies,         title: Pharmacies }
+  - { code: pharmacy_360,      type: detail, detail_view: pharmacy_360,       route: /app/pharmacies/:id }
+  - { code: pharmacy_staff,    type: crud,   entity: pharmacy_staff,          route: /app/pharmacy-staff,     title: Pharmacy Staff }
+  - { code: patients,          type: crud,   entity: patient,                 route: /app/patients,           title: Patients }
+  - { code: patient_360,       type: detail, detail_view: patient_360,        route: /app/patients/:id }
+  - { code: monitoring,        type: crud,   entity: pregnancy_test,          route: /app/pregnancy-tests,    title: Pregnancy Tests }
+  - { code: authorizations,    type: crud,   entity: dispense_authorization,  route: /app/authorizations,     title: Dispense Authorizations }
+  - { code: noncompliance,     type: crud,   entity: noncompliance_event,     route: /app/non-compliance,     title: Non-compliance }
+
+modules:
+  - code: certification
+    name: Certification
+    description: Prescriber certification, pharmacy qualification and trained pharmacy staff.
+    entities:
+      - code: prescriber
+        name: Prescriber
+        kind: hero
+        display: full_name
+        app_user: { role: Prescriber, name: full_name, email: email, create_on: status == certified }
+        fields:
+          - full_name:       { type: text, label: Prescriber, required: true }
+          - credential:      { type: choice, choices: credential, required: true }
+          - npi:             { type: text, label: NPI, required: true, unique: true, pattern: "^[0-9]{10}$", pattern_msg: NPI is 10 digits. }
+          - dea_number:      { type: text, label: DEA number, pattern: "^[A-Z]{2}[0-9]{7}$", pattern_msg: Two letters and seven digits. }
+          - specialty:       { type: choice, choices: specialty, required: true }
+          - practice_clinic: { type: text, label: Practice }
+          - region:          { type: choice, choices: region, required: true }
+          - email:           { type: email, required: true }
+          - phone:           { type: phone }
+          - enrollment_channel: { type: choice, label: Channel, choices: enrollment_channel, default: portal }
+          - training_completed_on: { type: date, label: Training completed }
+          - assessment_score: { type: percent, label: Knowledge assessment score }
+          - assessment_attempts: { type: integer, label: Assessment attempts, min: 0, max: 5 }
+          - attestation_signed: { type: boolean, label: Prescriber agreement signed }
+          - attestation_file: { type: file, label: Signed prescriber agreement, accept: [pdf] }
+          - npi_verified:    { type: boolean, label: NPI verified in registry, readonly: true }
+          - certified_on:    { type: date, readonly: true }
+          - recert_due:      { type: date, label: Recertification due, readonly: true }
+          - suspension_reason: { type: long_text, readonly: true }
+        validation:
+          rules:
+            - { when: attestation_signed is_true, require: [attestation_file], message: Upload the signed prescriber agreement. }
+            - { when: assessment_attempts > 3, require_expr: assessment_score >= 80, message: "After three failed attempts the prescriber must retake the training before another assessment.", on_fail: warn }
+        access:
+          REMS Coordinator:  { actions: [view, add, edit, export, detail] }
+          Call Center Agent: { actions: [view, add, edit, detail] }
+          Prescriber:        { actions: [view, edit, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: pending_training, label: Pending Training, color: gray, initial: true }
+            - { code: under_review,     label: Under Review,     color: amber }
+            - { code: certified,        label: Certified,        color: green }
+            - { code: suspended,        label: Suspended,        color: red }
+            - { code: lapsed,           label: Lapsed,           color: purple }
+            - { code: decertified,      label: Decertified,      color: gray, final: true }
+          transitions:
+            - name: submit
+              label: Submit for Certification
+              from: [pending_training, lapsed]
+              to: under_review
+              roles: [Prescriber, Call Center Agent]
+              primary: true
+              condition:
+                all:
+                  - training_completed_on is_set
+                  - assessment_score >= 80
+                  - attestation_signed is_true
+              condition_msg: Complete the training, pass the knowledge assessment (80% or more) and sign the prescriber agreement first.
+              on_done: Look up the NPI in the NPPES registry, set npi_verified, and email the REMS Coordinator that a certification is waiting.
+            - name: certify
+              label: Certify
+              from: under_review
+              to: certified
+              roles: [REMS Coordinator]
+              primary: true
+              condition:
+                all:
+                  - npi_verified is_true
+                  - text: The registry name and state match the enrollment form.
+              condition_msg: The NPI could not be verified; request information instead.
+              on_done: Set certified_on to today and recert_due to two years from today; create the prescriber's login and email the certificate and REMS prescriber ID.
+            - { name: request_info, label: Request Information, from: under_review, to: pending_training, roles: [REMS Coordinator],
+                form: [ { info_needed: { type: long_text, required: true } } ], on_done: Email the prescriber what is missing and log a call-centre follow-up. }
+            - { name: suspend, label: Suspend, from: certified, to: suspended, roles: [REMS Coordinator], tone: danger, confirm: "Suspend this prescriber? New authorizations for their patients will be denied.",
+                form: [ { suspension_reason: { type: long_text, required: true } } ],
+                on_done: "Save suspension_reason, deny open authorization requests for this prescriber's patients, and email the prescriber the reason and the corrective steps." }
+            - { name: reinstate, label: Reinstate, from: suspended, to: certified, roles: [REMS Coordinator],
+                condition: { text: Every critical non-compliance finding against this prescriber is closed. } }
+            - { name: lapse, label: Lapse, from: certified, to: lapsed, trigger: system,
+                text: Nightly when recert_due has passed without recertification. }
+            - { name: decertify, label: Decertify, from: [certified, suspended, lapsed], to: decertified, roles: [REMS Coordinator], tone: danger,
+                form: [ { decert_reason: { type: long_text, required: true } } ],
+                on_done: Disable the login and ask the prescriber to transfer each enrolled patient to another certified prescriber. }
+          tags:
+            - { code: recert_due_soon, label: Recertification Due, color: amber, system: true, text: Set when recert_due is within 60 days. }
+            - { code: npi_mismatch, label: NPI Mismatch, color: red, system: true, text: Set when the registry name or state differs from the form. }
+        form:
+          create:
+            roles: [Call Center Agent, REMS Coordinator]
+            title: Enroll Prescriber
+            sections:
+              - { title: Prescriber, fields: [full_name, credential, npi, dea_number, specialty, practice_clinic, region, email, phone, enrollment_channel] }
+              - { title: Certification, fields: [training_completed_on, assessment_score, assessment_attempts, attestation_signed, attestation_file] }
+            after_create: prescriber_360
+          edit:
+            same_as: create
+            roles: [Prescriber, Call Center Agent, REMS Coordinator]
+            editable_in: [pending_training, lapsed]
+        table:
+          columns:
+            - full_name:  { label: Prescriber, searchable: true, sortable: true, link_to: prescriber_360 }
+            - credential: { label: Credential }
+            - npi:        { label: NPI, searchable: true }
+            - specialty:  { label: Specialty, filterable: true }
+            - region:     { label: Region, filterable: true }
+            - patients:   { source: computed, label: Patients, shows: Count of enrolled patients for this prescriber. }
+            - recert_due: { label: Recert due, sortable: true }
+            - status:     { source: status, label: Status, filterable: true }
+            - tags:       { source: tags, label: Flags }
+          default_sort: full_name
+          quick_filters:
+            - { label: Awaiting review, where: status == under_review, roles: [REMS Coordinator], default: true }
+            - { label: Certified, where: status == certified }
+            - { label: Recert due, where: has_tag recert_due_soon, roles: [REMS Coordinator, Call Center Agent] }
+          row_click: prescriber_360
+          add_button: Enroll Prescriber
+          row_actions:
+            - { key: certificate, label: Download Certificate, type: download, show_when: status == certified,
+                text: "A one-page PDF certificate with the prescriber's name, NPI, REMS prescriber ID, certification date and expiry." }
+            - { key: resend_training, label: Resend Training Link, type: confirm, roles: [Call Center Agent, REMS Coordinator], show_when: status == pending_training,
+                confirm: Email the training and assessment link again?, on_done: Email the prescriber a fresh training link valid for 30 days. }
+
+      - code: pharmacy
+        name: Pharmacy
+        plural: Pharmacies
+        kind: hero
+        display: legal_name
+        app_user: { role: Pharmacy, name: authorized_rep_name, email: rep_email, create_on: status == certified }
+        fields:
+          - legal_name:     { type: text, label: Pharmacy, required: true }
+          - ncpdp_id:       { type: text, label: NCPDP ID, required: true, unique: true, pattern: "^[0-9]{7}$", pattern_msg: NCPDP ID is 7 digits. }
+          - pharmacy_type:  { type: choice, label: Type, choices: pharmacy_type, required: true }
+          - chain_name:     { type: text, label: Chain or parent company }
+          - city:           { type: text, required: true }
+          - region:         { type: choice, choices: region, required: true }
+          - authorized_rep_name: { type: text, label: Authorized representative, required: true }
+          - rep_email:      { type: email, label: Representative email, required: true }
+          - rep_phone:      { type: phone, label: Representative phone }
+          - staff_trained_on: { type: date, label: Staff training completed }
+          - sop_attested:   { type: boolean, label: Dispensing SOP attested, help: The pharmacy obtains a dispense authorization before every fill and dispenses no more than a 30-day supply. }
+          - sop_file:       { type: file, label: Signed pharmacy attestation, accept: [pdf] }
+          - certified_on:   { type: date, readonly: true }
+          - recert_due:     { type: date, label: Recertification due, readonly: true }
+        validation:
+          rules:
+            - { when: sop_attested is_true, require: [sop_file], message: Upload the signed pharmacy attestation. }
+            - { text: At least one pharmacist on the staff list has completed REMS training., message: Add a trained pharmacist before submitting. }
+        access:
+          REMS Coordinator:  { actions: [view, add, edit, export, detail] }
+          Call Center Agent: { actions: [view, add, edit, detail] }
+          Pharmacy:          { actions: [view, edit, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: pending_training, label: Pending Training, color: gray, initial: true }
+            - { code: under_review,     label: Under Review,     color: amber }
+            - { code: certified,        label: Certified,        color: green }
+            - { code: suspended,        label: Suspended,        color: red }
+            - { code: lapsed,           label: Lapsed,           color: purple }
+            - { code: decertified,      label: Decertified,      color: gray, final: true }
+          transitions:
+            - { name: submit, label: Submit for Certification, from: [pending_training, lapsed], to: under_review, roles: [Pharmacy, Call Center Agent], primary: true,
+                condition: { all: [staff_trained_on is_set, sop_attested is_true, { text: At least one trained pharmacist is on the staff list. }] },
+                condition_msg: Record staff training and attest to the dispensing SOP first.,
+                on_done: Email the REMS Coordinator that a pharmacy is waiting for review. }
+            - { name: certify, label: Certify, from: under_review, to: certified, roles: [REMS Coordinator], primary: true,
+                on_done: "Set certified_on to today and recert_due to two years from today; create the representative's login, enable the NCPDP ID on the pharmacy switch and email the certificate." }
+            - { name: request_info, label: Request Information, from: under_review, to: pending_training, roles: [REMS Coordinator],
+                form: [ { info_needed: { type: long_text, required: true } } ], on_done: Email the authorized representative what is missing. }
+            - { name: suspend, label: Suspend, from: certified, to: suspended, roles: [REMS Coordinator], tone: danger,
+                form: [ { suspension_reason: { type: long_text, required: true } } ],
+                on_done: Disable the NCPDP ID on the pharmacy switch so new requests are denied and email the representative the reason. }
+            - { name: reinstate, label: Reinstate, from: suspended, to: certified, roles: [REMS Coordinator],
+                condition: { text: Every critical non-compliance finding against this pharmacy is closed. } }
+            - { name: lapse, label: Lapse, from: certified, to: lapsed, trigger: system, text: Nightly when recert_due has passed without recertification. }
+            - { name: decertify, label: Decertify, from: [certified, suspended, lapsed], to: decertified, roles: [REMS Coordinator], tone: danger,
+                form: [ { decert_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: recert_due_soon, label: Recertification Due, color: amber, system: true, text: Set when recert_due is within 60 days. }
+            - code: audit_selected
+              label: Selected for Audit
+              color: indigo
+              enable:  { roles: [REMS Coordinator], condition: status == certified }
+              disable: { roles: [REMS Coordinator] }
+        form:
+          create:
+            roles: [Call Center Agent, REMS Coordinator]
+            title: Enroll Pharmacy
+            sections:
+              - { title: Pharmacy, fields: [legal_name, ncpdp_id, pharmacy_type, chain_name, city, region] }
+              - { title: Authorized representative, fields: [authorized_rep_name, rep_email, rep_phone] }
+              - { title: Qualification, fields: [staff_trained_on, sop_attested, sop_file] }
+            after_create: pharmacy_360
+          edit:
+            same_as: create
+            roles: [Pharmacy, Call Center Agent, REMS Coordinator]
+            editable_in: [pending_training, lapsed]
+        table:
+          columns:
+            - legal_name:     { label: Pharmacy, searchable: true, sortable: true, link_to: pharmacy_360 }
+            - ncpdp_id:       { label: NCPDP ID, searchable: true }
+            - pharmacy_type:  { label: Type, filterable: true }
+            - city:           { label: City }
+            - region:         { label: Region, filterable: true }
+            - authorized_rep_name: { label: Authorized rep }
+            - recert_due:     { label: Recert due, sortable: true }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: legal_name
+          quick_filters:
+            - { label: Awaiting review, where: status == under_review, roles: [REMS Coordinator], default: true }
+            - { label: Selected for audit, where: has_tag audit_selected, roles: [REMS Coordinator] }
+          row_click: pharmacy_360
+          add_button: Enroll Pharmacy
+
+      - code: pharmacy_staff
+        name: Pharmacy Staff Member
+        plural: Pharmacy Staff
+        kind: child
+        parent: { entity: pharmacy, field: pharmacy }
+        display: staff_name
+        fields:
+          - pharmacy:      { type: link, to: pharmacy, display: legal_name, required: true, on_delete: cascade }
+          - staff_name:    { type: text, label: Name, required: true }
+          - staff_role:    { type: choice, label: Role, choices: staff_role, required: true }
+          - license_no:    { type: text, label: License number }
+          - trained_on:    { type: date, label: REMS training completed }
+          - is_active:     { type: boolean, label: Active, default: true }
+        access:
+          REMS Coordinator:  { actions: [view, export] }
+          Call Center Agent: { actions: [view] }
+          Pharmacy:          { actions: [view, add, edit], rows: { own: pharmacy } }
+        form:
+          create: { roles: [Pharmacy], title: Add Staff Member, fields: [staff_name, staff_role, license_no, trained_on, is_active] }
+          edit:   { same_as: create }
+        table:
+          columns:
+            - staff_name: { label: Name, searchable: true }
+            - pharmacy:   { label: Pharmacy, display: legal_name, filterable: true }
+            - staff_role: { label: Role, filterable: true }
+            - license_no: { label: License }
+            - trained_on: { label: Trained on, sortable: true }
+            - is_active:  { label: Active, filterable: true }
+          default_sort: staff_name
+          add_button: Add Staff Member
+
+  - code: patients
+    name: Patients
+    description: Patient enrollment, contraception counseling and monthly pregnancy testing.
+    entities:
+      - code: patient
+        name: Patient
+        kind: hero
+        display: rems_id
+        fields:
+          - rems_id:       { type: text, label: REMS ID, readonly: true, unique: true, auto: { sequence: "RP-{YY}{00000}" } }
+          - patient_name:  { type: text, required: true }
+          - year_of_birth: { type: integer, required: true, min: 1950, max: 2014 }
+          - category:      { type: choice, label: Patient category, choices: patient_category, required: true }
+          - prescriber:    { type: link, to: prescriber, display: full_name, required: true, limit_choices: status == certified }
+          - enrollment_channel: { type: choice, label: Channel, choices: enrollment_channel, default: portal }
+          - agreement_signed: { type: boolean, label: Patient-prescriber agreement signed, required: true }
+          - agreement_file: { type: file, label: Signed agreement, accept: [pdf, jpg] }
+          - counseled_on:   { type: date, label: Contraception counseling }
+          - primary_method: { type: choice, label: Primary contraception, choices: contraception }
+          - secondary_method: { type: choice, label: Secondary contraception, choices: contraception }
+          - comprehension_ok: { type: boolean, label: Monthly comprehension questions answered }
+          - last_test_date: { type: date, label: Last negative test, readonly: true }
+          - next_test_due:  { type: date, label: Next test due, readonly: true }
+          - suspension_reason: { type: long_text, readonly: true }
+        validation:
+          rules:
+            - { when: agreement_signed is_true, require: [agreement_file], message: Upload the signed patient-prescriber agreement. }
+            - { when: category == frp, require: [counseled_on, primary_method, secondary_method], message: "Record counseling and two forms of contraception for a female of reproductive potential." }
+            - { when: category == frp, require_expr: primary_method != secondary_method, message: The two contraception methods must differ. }
+          duplicate_check:
+            scope: { where: "status not_in [discontinued]" }
+            rules:
+              - { match: [patient_name, year_of_birth], compare: fuzzy, threshold: 0.9, on_match: warn, message: A patient with a similar name and year of birth is already enrolled. }
+        access:
+          Prescriber:        { actions: [view, add, edit, detail], rows: { own: prescriber } }
+          Call Center Agent: { actions: [view, add, edit, detail] }
+          REMS Coordinator:  { actions: [view, edit, export, detail] }
+          Pharmacy:          { actions: [view], rows: { text: Only patients named on the pharmacy's own authorization requests. } }
+        workflow:
+          statuses:
+            - { code: pending_review, label: Pending Review, color: amber, initial: true }
+            - { code: enrolled,       label: Enrolled,       color: green }
+            - { code: suspended,      label: Suspended,      color: red }
+            - { code: discontinued,   label: Discontinued,   color: gray, final: true }
+          transitions:
+            - name: enroll
+              label: Confirm Enrollment
+              from: pending_review
+              to: enrolled
+              roles: [REMS Coordinator]
+              primary: true
+              condition:
+                all:
+                  - agreement_signed is_true
+                  - prescriber.status == certified
+                  - text: A female of reproductive potential has a negative screening and confirmation test, the latest within 7 days.
+              condition_msg: The agreement, prescriber certification and pregnancy tests must all be in place.
+              on_done: Email the prescriber the patient's REMS ID and post the welcome kit and medication guide to the patient.
+            - { name: suspend, label: Suspend, from: enrolled, to: suspended, roles: [REMS Coordinator, Prescriber], tone: danger,
+                form: [ { suspension_reason: { type: long_text, required: true } } ],
+                on_done: Save suspension_reason and deny any open authorization requests for this patient. }
+            - { name: reinstate, label: Reinstate, from: suspended, to: enrolled, roles: [REMS Coordinator],
+                condition: { text: For a female of reproductive potential a new negative test is on file within 7 days. } }
+            - { name: transfer, label: Transfer Prescriber, from: [enrolled, suspended], to: enrolled, roles: [REMS Coordinator, Call Center Agent],
+                form: [ { prescriber: { type: link, to: prescriber, required: true, limit_choices: status == certified } } ],
+                on_done: Move the patient to the new prescriber and email both prescribers. }
+            - { name: discontinue, label: Discontinue, from: [pending_review, enrolled, suspended], to: discontinued, roles: [Prescriber, REMS Coordinator], tone: danger,
+                form: [ { discontinue_reason: { type: long_text, required: true } } ],
+                on_done: For a female of reproductive potential remind the prescriber to record the end-of-therapy pregnancy test within 30 days. }
+          tags:
+            - { code: test_due, label: Test Due, color: amber, system: true, text: Set when next_test_due is within 3 days or past. }
+            - { code: pregnancy_reported, label: Pregnancy Reported, color: red, system: true, text: Set when a positive pregnancy test is recorded. }
+        form:
+          create:
+            roles: [Prescriber, Call Center Agent]
+            title: Enroll Patient
+            sections:
+              - { title: Patient, fields: [patient_name, year_of_birth, category, enrollment_channel] }
+              - { title: Agreement, fields: [prescriber, agreement_signed, agreement_file] }
+              - title: Contraception
+                fields:
+                  - counseled_on:     { show_when: category == frp }
+                  - primary_method:   { show_when: category == frp }
+                  - secondary_method: { show_when: category == frp }
+            on_create: Generate the REMS ID and queue the enrollment for coordinator review.
+            after_create: patient_360
+          edit:
+            same_as: create
+            roles: [Prescriber, Call Center Agent, REMS Coordinator]
+            readonly_when:
+              - { when: status == enrolled, fields: [patient_name, year_of_birth, category, prescriber] }
+            editable_in: [pending_review, enrolled]
+        table:
+          columns:
+            - rems_id:       { label: REMS ID, searchable: true, sortable: true, link_to: patient_360 }
+            - patient_name:  { label: Patient, searchable: true }
+            - category:      { label: Category, filterable: true }
+            - prescriber:    { label: Prescriber, display: full_name, filterable: true }
+            - last_test_date: { label: Last negative test, sortable: true }
+            - next_test_due: { label: Next test due, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+            - tags:          { source: tags, label: Flags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Pending review, where: status == pending_review, roles: [REMS Coordinator], default: true }
+            - { label: Test due, where: has_tag test_due }
+            - { label: Reproductive potential, where: category == frp }
+          row_click: patient_360
+          add_button: Enroll Patient
+
+      - code: pregnancy_test
+        name: Pregnancy Test
+        kind: transactional
+        display: test_ref
+        description: A pregnancy test recorded by the prescriber; required before the first dose and every month for a female of reproductive potential.
+        fields:
+          - test_ref:    { type: text, label: Test, readonly: true, unique: true, auto: { sequence: "PT-{YY}{000000}" } }
+          - patient:     { type: link, to: patient, display: rems_id, required: true, on_delete: protect }
+          - purpose:     { type: choice, choices: test_purpose, required: true }
+          - test_type:   { type: choice, choices: test_type, required: true }
+          - sample_date: { type: date, required: true }
+          - result:      { type: choice, choices: test_result, required: true }
+          - lab_facility: { type: text, label: CLIA-certified lab }
+          - report_file: { type: file, label: Lab report, accept: [pdf, jpg] }
+        access:
+          Prescriber:        { actions: [view, add], rows: { own: patient.prescriber } }
+          Call Center Agent: { actions: [view, add] }
+          REMS Coordinator:  { actions: [view, export] }
+        validation:
+          rules:
+            - { when: sample_date is_set, require_expr: sample_date <= today, message: The sample date cannot be in the future. }
+            - { when: test_type == urine_hcg, require: [lab_facility], message: "Name the CLIA-certified lab or clinic that ran the urine test." }
+        form:
+          create:
+            roles: [Prescriber, Call Center Agent]
+            title: Record Pregnancy Test
+            fields: [patient, purpose, test_type, sample_date, result, lab_facility, report_file]
+            on_create: "On a negative result update the patient's last_test_date and set next_test_due 30 days later. On a positive result suspend the patient, tag Pregnancy Reported, open a critical non-compliance finding, and alert the REMS Coordinator and pharmacovigilance within one hour."
+        table:
+          columns:
+            - test_ref:    { label: Test, searchable: true }
+            - patient:     { label: Patient, display: rems_id, link_to: patient_360, searchable: true }
+            - purpose:     { label: Purpose, filterable: true }
+            - test_type:   { label: Type, filterable: true }
+            - sample_date: { label: Sample date, sortable: true }
+            - result:      { label: Result, filterable: true }
+            - lab_facility: { label: Lab }
+          default_sort: -sample_date
+          quick_filters:
+            - { label: Positive or indeterminate, where: "result in [positive, indeterminate]", roles: [REMS Coordinator] }
+          add_button: Record Test
+
+  - code: dispensing
+    name: Dispensing
+    description: Dispense authorizations before every fill and the non-compliance they surface.
+    entities:
+      - code: dispense_authorization
+        name: Dispense Authorization
+        kind: transactional
+        display: auth_no
+        fields:
+          - auth_no:      { type: text, label: Authorization, readonly: true, unique: true, auto: { sequence: "RDA-{YY}{000000}" } }
+          - patient:      { type: link, to: patient, display: rems_id, required: true }
+          - prescriber:   { type: link, to: prescriber, display: full_name, required: true }
+          - pharmacy:     { type: link, to: pharmacy, display: legal_name, required: true, limit_choices: status == certified }
+          - channel:      { type: choice, choices: request_channel, required: true, default: portal }
+          - rx_number:    { type: text, label: Rx number, required: true }
+          - rx_date:      { type: date, label: Rx written, required: true }
+          - strength_mg:  { type: integer, label: Strength (mg), required: true, min: 10, max: 40 }
+          - days_supply:  { type: integer, required: true, min: 1, max: 30 }
+          - authorized_on: { type: date, readonly: true }
+          - expires_on:   { type: date, label: Dispense by, readonly: true }
+          - denial_reason: { type: choice, choices: denial_reason, readonly: true }
+          - dispensed_on: { type: date, readonly: true }
+          - lot_number:   { type: text, label: Lot, readonly: true }
+        validation:
+          rules:
+            - { when: rx_date is_set, require_expr: rx_date <= today, message: The prescription date cannot be in the future. }
+            - { text: "For a female of reproductive potential the prescription was written within 7 days of the latest negative test.", message: The prescription is outside the 7-day window after the test. }
+        access:
+          Pharmacy:          { actions: [view, add], rows: { own: pharmacy } }
+          Prescriber:        { actions: [view], rows: { own: prescriber } }
+          Call Center Agent: { actions: [view, add] }
+          REMS Coordinator:  { actions: [view, edit, export] }
+        workflow:
+          statuses:
+            - { code: requested,  label: Requested,  color: amber, initial: true }
+            - { code: referred,   label: Referred to Coordinator, color: purple }
+            - { code: authorized, label: Authorized, color: green }
+            - { code: denied,     label: Denied,     color: red, final: true }
+            - { code: dispensed,  label: Dispensed,  color: blue, final: true }
+            - { code: expired,    label: Expired,    color: gray, final: true }
+          transitions:
+            - { name: auto_authorize, label: Auto-authorize, from: requested, to: authorized, trigger: system,
+                text: "At once when the prescriber, pharmacy and patient are in good standing, the comprehension questions are answered, and (for a female of reproductive potential) the latest negative test is under 7 days old. Set authorized_on to today and expires_on to 7 days later." }
+            - { name: refer, label: Refer to Coordinator, from: requested, to: referred, trigger: system,
+                text: "When a check cannot be decided automatically, such as a test result received by fax and not yet keyed in." }
+            - name: authorize
+              label: Authorize
+              from: referred
+              to: authorized
+              roles: [REMS Coordinator]
+              primary: true
+              condition:
+                all:
+                  - prescriber.status == certified
+                  - pharmacy.status == certified
+                  - patient.status == enrolled
+                  - text: For a female of reproductive potential the latest negative pregnancy test is no more than 7 days old.
+              condition_msg: The safe-use checks failed; deny the request with a reason.
+              on_done: Set authorized_on to today and expires_on to 7 days later; send the authorization number to the pharmacy by portal or switch response.
+            - { name: deny, label: Deny, from: [requested, referred], to: denied, roles: [REMS Coordinator], tone: danger,
+                form: [ { denial_reason: { type: choice, choices: denial_reason, required: true } } ],
+                on_done: Save denial_reason and email the pharmacy and the prescriber what must be fixed before a new request. }
+            - name: dispense
+              label: Record Dispense
+              from: authorized
+              to: dispensed
+              roles: [Pharmacy]
+              primary: true
+              form:
+                - dispensed_on: { type: date, required: true, default: today }
+                - lot_number:   { type: text, required: true }
+                - counseled:    { type: boolean, label: Patient counseled and medication guide given, required: true }
+              condition: { text: The dispense date is on or before expires_on. }
+              condition_msg: This authorization has expired; request a new one.
+              on_done: Save dispensed_on and lot_number; if the dispense is after expires_on open a major non-compliance finding against the pharmacy.
+            - { name: expire, label: Expire, from: authorized, to: expired, trigger: system, text: Nightly when expires_on has passed without a dispense. }
+            - { name: withdraw, label: Withdraw Request, from: [requested, referred], to: denied, roles: [Pharmacy], confirm: Withdraw this authorization request? }
+          tags:
+            - { code: early_refill, label: Early Refill, color: amber, system: true, text: Set when requested more than 7 days before the previous fill's days supply runs out. }
+        form:
+          create:
+            roles: [Pharmacy, Call Center Agent]
+            title: Request Authorization
+            sections:
+              - { title: Patient and prescriber, fields: [patient, prescriber, pharmacy, channel] }
+              - { title: Prescription, fields: [rx_number, rx_date, strength_mg, days_supply] }
+            on_create: Run the safe-use checks at once and show authorized, referred or denied with the reason on screen.
+        table:
+          columns:
+            - auth_no:      { label: Authorization, searchable: true, sortable: true }
+            - patient:      { label: Patient, display: rems_id, link_to: patient_360, searchable: true }
+            - pharmacy:     { label: Pharmacy, display: legal_name, filterable: true }
+            - prescriber:   { label: Prescriber, display: full_name, filterable: true }
+            - channel:      { label: Channel, filterable: true }
+            - days_supply:  { label: Days supply }
+            - expires_on:   { label: Dispense by, sortable: true }
+            - denial_reason: { label: Denial reason, filterable: true, roles: [REMS Coordinator, Call Center Agent] }
+            - status:       { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Referred to me, where: status == referred, roles: [REMS Coordinator], default: true }
+            - { label: Ready to dispense, where: status == authorized, roles: [Pharmacy], default: true }
+            - { label: Denied, where: status == denied }
+          add_button: Request Authorization
+          row_actions:
+            - { key: auth_slip, label: Print Authorization, type: download, roles: [Pharmacy], show_when: status == authorized,
+                text: "A slip with the authorization number, patient REMS ID, days supply and dispense-by date for the prescription file." }
+
+      - code: noncompliance_event
+        name: Non-compliance Finding
+        kind: transactional
+        display: finding_ref
+        description: A deviation from the REMS found by the coordinator, a system check or an audit.
+        fields:
+          - finding_ref:  { type: text, label: Finding, readonly: true, unique: true, auto: { sequence: "NC-{YY}{0000}" } }
+          - nc_type:      { type: choice, label: Type, choices: nc_type, required: true }
+          - party:        { type: choice, label: Against, choices: nc_party, required: true }
+          - prescriber:   { type: link, to: prescriber, display: full_name }
+          - pharmacy:     { type: link, to: pharmacy, display: legal_name }
+          - patient:      { type: link, to: patient, display: rems_id }
+          - authorization: { type: link, to: dispense_authorization, display: auth_no }
+          - detected_on:  { type: date, required: true, default: today }
+          - severity:     { type: choice, choices: severity, required: true }
+          - description:  { type: long_text, required: true }
+          - response:     { type: long_text, label: Stakeholder response, readonly: true }
+          - corrective_action: { type: long_text, label: Corrective action, readonly: true }
+          - response_due: { type: date, label: Response due }
+        validation:
+          rules:
+            - { when: party == prescriber, require: [prescriber], message: Name the prescriber. }
+            - { when: party == pharmacy, require: [pharmacy], message: Name the pharmacy. }
+            - { when: nc_type == pregnancy_reported, require_expr: severity == critical, message: A reported pregnancy is always critical. }
+        access:
+          REMS Coordinator: { actions: [view, add, edit, export] }
+          Prescriber:       { actions: [view], rows: { own: prescriber } }
+          Pharmacy:         { actions: [view], rows: { own: pharmacy } }
+        workflow:
+          statuses:
+            - { code: open,               label: Open,               color: red, initial: true }
+            - { code: awaiting_response,  label: Awaiting Response,  color: amber }
+            - { code: under_review,       label: Under Review,       color: blue }
+            - { code: capa,               label: Corrective Action,  color: purple }
+            - { code: closed,             label: Closed,             color: green, final: true }
+          transitions:
+            - { name: request_response, label: Request Response, from: open, to: awaiting_response, roles: [REMS Coordinator], primary: true,
+                form: [ { response_due: { type: date, required: true } } ],
+                on_done: Email the prescriber or pharmacy the finding and a response link due by response_due. }
+            - { name: respond, label: Submit Response, from: awaiting_response, to: under_review, roles: [Prescriber, Pharmacy], primary: true,
+                form: [ { response: { type: long_text, required: true } } ], on_done: Save the response and notify the REMS Coordinator. }
+            - { name: require_capa, label: Require Corrective Action, from: under_review, to: capa, roles: [REMS Coordinator],
+                form: [ { corrective_action: { type: long_text, required: true } } ],
+                on_done: "Email the corrective action; for a critical finding suspend the prescriber or pharmacy until it is closed." }
+            - { name: close, label: Close, from: [open, under_review, capa], to: closed, roles: [REMS Coordinator],
+                form: [ { closure_note: { type: long_text, required: true } } ] }
+          tags:
+            - { code: overdue, label: Response Overdue, color: red, system: true, text: Set when response_due has passed while awaiting response. }
+            - { code: reported_to_fda, label: In Assessment Report, color: indigo, enable: { roles: [REMS Coordinator] }, disable: { roles: [REMS Coordinator] } }
+        form:
+          create:
+            roles: [REMS Coordinator]
+            title: Log Finding
+            sections:
+              - { title: Finding, fields: [nc_type, severity, detected_on, description] }
+              - { title: Who and what, fields: [party, prescriber, pharmacy, patient, authorization] }
+          edit: { same_as: create, roles: [REMS Coordinator], editable_in: [open] }
+        table:
+          columns:
+            - finding_ref: { label: Finding, searchable: true }
+            - nc_type:     { label: Type, filterable: true }
+            - party:       { label: Against, filterable: true }
+            - prescriber:  { label: Prescriber, display: full_name }
+            - pharmacy:    { label: Pharmacy, display: legal_name }
+            - severity:    { label: Severity, filterable: true }
+            - detected_on: { label: Detected, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+            - tags:        { source: tags, label: Flags }
+          default_sort: -detected_on
+          quick_filters:
+            - { label: Open, where: "status not_in [closed]", default: true }
+            - { label: Critical, where: severity == critical, roles: [REMS Coordinator] }
+          add_button: Log Finding
+
+detail_views:
+  - code: patient_360
+    hero: patient
+    title: "{rems_id}"
+    back_to: patients
+    layout: header_tabs_sidebar
+    roles: [Prescriber, Call Center Agent, REMS Coordinator]
+    header:
+      title: rems_id
+      subtitle: ["{patient_name}", "{category}", "{prescriber.full_name}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Year of birth, field: year_of_birth }
+        - { label: Last negative test, field: last_test_date }
+        - { label: Next test due, field: next_test_due }
+      actions:
+        transitions: true
+        buttons:
+          - { key: new_test, label: Record Test, type: create_related, entity: pregnancy_test, prefill: { patient: hero } }
+      banners:
+        - { show_when: status == suspended, tone: warning, text: "Suspended: {suspension_reason}" }
+        - { show_when: has_tag pregnancy_reported, tone: danger, text: A pregnancy has been reported for this patient. Do not authorize any dispense. }
+    stats:
+      - { label: Tests, value: { count: pregnancy_test, via: patient }, link_to_tab: tests, tone: teal }
+      - { label: Authorizations, value: { count: dispense_authorization, via: patient }, link_to_tab: authorizations, tone: blue }
+      - { label: Dispensed, value: { count: dispense_authorization, via: patient, where: status == dispensed }, tone: green }
+      - { label: Findings, value: { count: noncompliance_event, via: patient, where: "status not_in [closed]" }, link_to_tab: findings, tone: red }
+    sidebar:
+      - { type: fields, title: Patient, fields: [patient_name, year_of_birth, category, enrollment_channel] }
+      - { type: fields, title: Enrollment, fields: [prescriber, agreement_signed, agreement_file] }
+      - { type: fields, title: Contraception, fields: [counseled_on, primary_method, secondary_method, comprehension_ok], show_when: category == frp }
+    tabs:
+      - { code: tests, label: Pregnancy Tests, type: related_table, entity: pregnancy_test, via: patient, columns: inherit, count_badge: true,
+          add: { label: Record Test, prefill: { patient: hero } } }
+      - { code: authorizations, label: Dispense Authorizations, type: related_table, entity: dispense_authorization, via: patient, columns: inherit, count_badge: true, add: false }
+      - { code: findings, label: Findings, type: related_table, entity: noncompliance_event, via: patient, columns: inherit, add: false, roles: [REMS Coordinator] }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: patient, events: [created, updated, transition, tag] }
+          - { entity: pregnancy_test, via: patient, events: [created] }
+          - { entity: dispense_authorization, via: patient, events: [created, transition] }
+    states:
+      not_found: { title: Patient not found, back_to: patients }
+
+  - code: prescriber_360
+    hero: prescriber
+    title: "{full_name}"
+    back_to: prescribers
+    layout: header_tabs_sidebar
+    roles: [Prescriber, Call Center Agent, REMS Coordinator]
+    header:
+      avatar: { fallback_initials: full_name }
+      title: full_name
+      subtitle: ["{credential}", "{specialty}", "NPI {npi}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: NPI, field: npi, copyable: true }
+        - { label: Certified on, field: certified_on, fallback: "—" }
+        - { label: Recertification due, field: recert_due, fallback: "—" }
+      actions: { transitions: true }
+      banners:
+        - { show_when: status == suspended, tone: warning, text: "Suspended: {suspension_reason}" }
+    stats:
+      - { label: Patients, value: { count: patient, via: prescriber, where: status == enrolled }, link_to_tab: patients, tone: blue }
+      - { label: Authorizations, value: { count: dispense_authorization, via: prescriber }, link_to_tab: authorizations, tone: teal }
+      - { label: Open findings, value: { count: noncompliance_event, via: prescriber, where: "status not_in [closed]" }, link_to_tab: findings, tone: red }
+    sidebar:
+      - { type: fields, title: Practice, fields: [practice_clinic, region, email, phone] }
+      - { type: fields, title: Certification, fields: [training_completed_on, assessment_score, assessment_attempts, attestation_signed, npi_verified] }
+    tabs:
+      - { code: patients, label: Patients, type: related_table, entity: patient, via: prescriber, columns: inherit, count_badge: true,
+          add: { label: Enroll Patient, prefill: { prescriber: hero }, show_when: status == certified } }
+      - { code: authorizations, label: Authorizations, type: related_table, entity: dispense_authorization, via: prescriber, columns: inherit, add: false }
+      - { code: findings, label: Findings, type: related_table, entity: noncompliance_event, via: prescriber, columns: inherit, add: false }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: prescriber, events: [created, updated, transition, tag] }
+          - { entity: patient, via: prescriber, events: [created, transition] }
+    states:
+      not_found: { title: Prescriber not found, back_to: prescribers }
+
+  - code: pharmacy_360
+    hero: pharmacy
+    title: "{legal_name}"
+    back_to: pharmacies
+    layout: header_tabs_sidebar
+    roles: [Pharmacy, Call Center Agent, REMS Coordinator]
+    header:
+      avatar: { fallback_initials: legal_name }
+      title: legal_name
+      subtitle: ["{pharmacy_type}", "{city}", "NCPDP {ncpdp_id}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Authorized rep, field: authorized_rep_name }
+        - { label: Certified on, field: certified_on, fallback: "—" }
+        - { label: Recertification due, field: recert_due, fallback: "—" }
+      actions: { transitions: true, tags: true }
+    stats:
+      - { label: Trained staff, value: { count: pharmacy_staff, via: pharmacy, where: is_active is_true }, link_to_tab: staff, tone: teal }
+      - { label: Authorizations, value: { count: dispense_authorization, via: pharmacy }, link_to_tab: authorizations, tone: blue }
+      - { label: Dispensed, value: { count: dispense_authorization, via: pharmacy, where: status == dispensed }, tone: green }
+      - { label: Open findings, value: { count: noncompliance_event, via: pharmacy, where: "status not_in [closed]" }, link_to_tab: findings, tone: red }
+    sidebar:
+      - { type: fields, title: Pharmacy, fields: [ncpdp_id, pharmacy_type, chain_name, city, region] }
+      - { type: fields, title: Qualification, fields: [authorized_rep_name, rep_email, staff_trained_on, sop_attested, sop_file] }
+    tabs:
+      - { code: staff, label: Staff, type: related_table, entity: pharmacy_staff, via: pharmacy, columns: inherit, count_badge: true,
+          add: { label: Add Staff Member, prefill: { pharmacy: hero } }, row_click: drawer }
+      - { code: authorizations, label: Authorizations, type: related_table, entity: dispense_authorization, via: pharmacy, columns: inherit, add: false }
+      - { code: findings, label: Findings, type: related_table, entity: noncompliance_event, via: pharmacy, columns: inherit, add: false }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: pharmacy, events: [created, updated, transition, tag] }
+          - { entity: dispense_authorization, via: pharmacy, events: [transition] }
+    states:
+      not_found: { title: Pharmacy not found, back_to: pharmacies }

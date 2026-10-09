@@ -1,0 +1,73 @@
+{
+  "slug": "rems-compliance",
+  "name": "REMS Compliance",
+  "version": "1.0.0",
+  "category": "Advanced Therapies",
+  "icon": "dna",
+  "is_beta": false,
+  "aka": [
+    "REMS program management",
+    "ETASU compliance",
+    "risk evaluation and mitigation strategy",
+    "restricted distribution program",
+    "dispense authorization system"
+  ],
+  "one_liner": "Prescriber certification, patient enrollment, pharmacy qualification and dispensing controls.",
+  "fits_when": [
+    "a product carries a REMS with elements to assure safe use, so only certified prescribers may prescribe it",
+    "each patient must be enrolled with a signed patient-prescriber agreement before the first dispense",
+    "only certified pharmacies may dispense, and each fill needs a dispense authorization",
+    "safe-use conditions such as a recent negative pregnancy test or lab value must be checked before dispensing",
+    "certifications expire and prescribers and pharmacies must recertify on a fixed cycle",
+    "the program owes the regulator periodic assessment reports and must track non-compliance"
+  ],
+  "gives_you": [
+    "Prescriber certification from training and knowledge assessment to signed attestation, review and recertification",
+    "Patient enrollment with a signed patient-prescriber agreement, risk category and monitoring results",
+    "Pharmacy qualification with an authorized representative, staff training and dispensing SOP attestation",
+    "Dispense authorizations checked against prescriber, patient, pharmacy and safe-use status, with a 7-day window",
+    "A REMS coordinator dashboard and patient 360 page with every test, authorization and status change",
+    "Row-level access so prescribers see only their patients and pharmacies only their own authorizations"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "Run a REMS with elements to assure safe use. Prescribers train, pass the knowledge assessment and attest to certify; they enroll each patient with a signed agreement and log the required monitoring results. Pharmacies qualify through an authorized representative and request a dispense authorization before every fill, which is granted only when prescriber, patient, pharmacy and the latest safe-use test are all in good standing. The REMS coordinator reviews certifications, rules on authorizations and tracks non-compliance for assessment reports.",
+    "packages": [
+      { "name": "workflow", "description": "Certification, enrollment and dispense authorization lifecycles with role-gated steps" },
+      { "name": "forms", "description": "Prescriber and pharmacy enrollment, patient enrollment and monitoring forms" },
+      { "name": "documents", "description": "Signed attestations, patient-prescriber agreements and training certificates" },
+      { "name": "consent", "description": "Patient-prescriber agreement captured and stored against the enrollment" },
+      { "name": "rules", "description": "Safe-use checks run before every dispense authorization" },
+      { "name": "reports", "description": "Certification status, authorization outcomes and REMS assessment metrics" }
+    ],
+    "roles": [
+      { "name": "Prescriber", "description": "Certifies for the REMS, enrolls their own patients and records the required monitoring results" },
+      { "name": "Pharmacy", "description": "Qualifies through an authorized representative and requests and records dispense authorizations for its own fills" },
+      { "name": "REMS Coordinator", "description": "Reviews certifications and enrollments, rules on dispense authorizations and manages non-compliance" }
+    ],
+    "workflows": [
+      { "name": "Prescriber certification", "description": "Training, knowledge assessment, signed attestation, coordinator review, certification and recertification" },
+      { "name": "Patient enrollment", "description": "Enrollment form with patient-prescriber agreement, verification, suspension and discontinuation" },
+      { "name": "Pharmacy qualification", "description": "Authorized representative training, SOP attestation, certification and recertification" },
+      { "name": "Dispense authorization", "description": "Request, safe-use check, authorize or deny, dispense within the window or expire" }
+    ],
+    "data_objects": ["Prescriber", "Pharmacy", "Patient", "Monitoring result", "Authorization"],
+    "integrations": ["NPI registry lookup", "Pharmacy switch (NCPDP) for dispense checks", "Courier tracking API"],
+    "compliance": [
+      "FDA REMS elements to assure safe use: certified prescribers, certified pharmacies and documented safe-use conditions",
+      "No dispense without a valid authorization issued against current certification and monitoring status",
+      "Patient data visible only to the enrolling prescriber and the REMS coordinator (HIPAA minimum necessary)",
+      "Audit trail and e-signatures on attestations and authorizations, aligned to 21 CFR Part 11",
+      "Non-compliance logged and trended for the REMS assessment report"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Pregnancy Prevention REMS — US",
+    "app_prompt_prefill": "A pregnancy prevention REMS for one teratogenic oral therapy, covering about 2,400 certified prescribers and 600 pharmacies in the US. Prescribers certify after training and a knowledge assessment, enroll each patient with a signed patient-prescriber agreement and log monthly pregnancy tests. Pharmacies certify through an authorized representative and need a dispense authorization before every fill, issued only when prescriber, patient and pharmacy are in good standing and the latest negative test is under 7 days old. The REMS coordinator reviews non-compliance and prepares the FDA assessment reports."
+  },
+  "changelog": "First version: prescriber certification, patient enrollment with monitoring, pharmacy qualification and dispense authorization on the Zango app spec v1."
+}

@@ -1,0 +1,778 @@
+# HCP Event Management (worked example): the oncology franchise for South India
+# runs about 60 HCP events a year: national advisory boards with 8-12 KOLs,
+# regional CMEs for 40-80 oncologists, and sponsored delegates at congresses.
+# Event managers plan events at approved venues, compliance approves agendas
+# and honoraria, HCPs RSVP in their own login, attendance is captured by QR scan
+# per session, advisory board panelists submit a written output before their
+# honorarium is paid, and spend is reported per HCP each quarter under
+# maker-checker sign-off (compliance reviewer prepares, compliance head signs).
+
+spec_version: 1
+
+# -----------------------------------------------------------------------------
+#  APP
+# -----------------------------------------------------------------------------
+app:
+  code: onco_events_south
+  name: Oncology HCP Events — South
+  description: Advisory boards, CMEs and congress sponsorships for the oncology franchise in South India, with RSVP, QR attendance and quarterly transfer-of-value reporting.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#0F766E", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: CRM sync
+      text: >
+        HCP master records (name, speciality, registration no., institution, city) are synced
+        nightly from the CRM, matched on registration no. Accepted invitations and verified
+        attendance are pushed back to the CRM as engagement activities on the HCP.
+    - area: integration
+      title: ERP connector
+      text: >
+        Verified spend lines are posted to the ERP against the event's cost centre and PO number.
+        Honoraria are paid only when the HCP's advisory output is accepted; the ERP returns the
+        payment reference and date the next morning.
+    - area: notification
+      title: QR check-in
+      text: Each accepted invitation gets a QR code by email and SMS two days before the event; scanning it at the registration desk creates an attendance record for that session.
+    - area: permission
+      title: Audit trail
+      text: Every change to events, invitations, attendance, spend and reports is kept with old and new values, user and time, and can be exported by compliance.
+    - area: report
+      title: Transfer-of-value disclosure
+      text: >
+        Quarterly CSV of every reported spend line grouped by recipient HCP: HCP name,
+        registration no., speciality, institution, category, amount and event, with totals per
+        HCP and per event type. Generated on the Disclosure Reports page and attached to the report.
+
+# -----------------------------------------------------------------------------
+#  CHOICE SETS
+# -----------------------------------------------------------------------------
+choice_sets:
+  therapy_area:
+    - { id: breast,  label: Breast cancer,       color: pink }
+    - { id: lung,    label: Lung cancer,         color: blue }
+    - { id: heme,    label: Haematology-oncology, color: red }
+    - { id: gi,      label: GI oncology,         color: amber }
+  region:
+    - { id: ka, label: Karnataka }
+    - { id: tn, label: Tamil Nadu }
+    - { id: kl, label: Kerala }
+    - { id: tg, label: Telangana }
+    - { id: ap, label: Andhra Pradesh }
+  venue_type:
+    - { id: hotel,    label: Hotel }
+    - { id: hospital, label: Hospital auditorium }
+    - { id: congress, label: Congress centre }
+  output_type:
+    - { id: minutes,   label: Advisory minutes }
+    - { id: report,    label: Written recommendations }
+    - { id: slides,    label: Presentation deck }
+  quarter:
+    - { id: q1, label: Q1 (Jan-Mar) }
+    - { id: q2, label: Q2 (Apr-Jun) }
+    - { id: q3, label: Q3 (Jul-Sep) }
+    - { id: q4, label: Q4 (Oct-Dec) }
+  event_type:
+    - { id: advisory_board, label: Advisory board, color: purple }
+    - { id: cme,            label: CME,            color: blue }
+    - { id: congress,       label: Congress,       color: indigo }
+    - { id: round_table,    label: Round table,    color: teal }
+    - { id: webinar,        label: Webinar,        color: pink }
+  event_format:
+    - { id: in_person, label: In person }
+    - { id: virtual,   label: Virtual }
+    - { id: hybrid,    label: Hybrid }
+  hcp_category:
+    - { id: kol_national, label: National KOL, color: purple }
+    - { id: kol_regional, label: Regional KOL, color: indigo }
+    - { id: practitioner, label: Practitioner, color: blue }
+  event_role:
+    - { id: delegate,  label: Delegate }
+    - { id: speaker,   label: Speaker }
+    - { id: chair,     label: Chair }
+    - { id: panelist,  label: Advisory panelist }
+  checkin_method:
+    - { id: qr,        label: QR scan }
+    - { id: sign_in,   label: Sign-in sheet }
+    - { id: virtual,   label: Virtual log }
+  spend_category:
+    - { id: honorarium,    label: Honorarium,       color: purple }
+    - { id: travel,        label: Travel,           color: blue }
+    - { id: accommodation, label: Accommodation,    color: teal }
+    - { id: meals,         label: Meals,            color: amber }
+    - { id: registration,  label: Registration fee, color: indigo }
+    - { id: venue,         label: Venue and AV,     color: gray }
+
+roles:
+  - name: Event Manager
+    description: Plans events, invites HCPs, captures attendance and records spend.
+    landing: events
+    menu:
+      - { page: dashboard,   icon: layout-dashboard }
+      - { page: events,      icon: calendar-days }
+      - { page: invitations, icon: mail }
+      - { page: attendance,  icon: clipboard-check }
+      - { page: outputs,     label: Advisory Outputs, icon: file-text }
+      - { page: spend,       icon: receipt }
+      - { page: hcps,        label: HCPs, icon: stethoscope }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: venues }
+          - { page: specialities }
+  - name: Compliance Reviewer
+    description: Approves events and HCP engagements, verifies attendance and spend, and signs off transparency reporting.
+    landing: events
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: events,     icon: calendar-days }
+      - { page: invitations, icon: mail }
+      - { page: attendance, icon: clipboard-check }
+      - { page: outputs,    label: Advisory Outputs, icon: file-text }
+      - { page: spend,      label: Spend Ledger, icon: indian-rupee }
+      - { page: reports,    label: Disclosure Reports, icon: file-bar-chart }
+      - { page: hcps,       label: HCPs, icon: stethoscope }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: venues }
+  - name: Compliance Head
+    description: Second signatory on quarterly disclosure reports (maker-checker) and approver of advisory boards with KOL honoraria.
+    landing: reports
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: reports,   label: Disclosure Reports, icon: file-bar-chart }
+      - { page: events,    icon: calendar-days }
+      - { page: spend,     label: Spend Ledger, icon: indian-rupee }
+      - { page: hcps,      label: HCPs, icon: stethoscope }
+  - name: HCP
+    description: External login for the invited healthcare professional; sees and answers only their own invitations.
+    landing: invitations
+    menu:
+      - { page: invitations, label: My Invitations, icon: mail }
+      - { page: events,      label: My Events,      icon: calendar-days }
+      - { page: outputs,     label: My Advisory Outputs, icon: file-text }
+      - { page: spend,       label: My Transfers of Value, icon: wallet }
+
+pages:
+  - { code: events,       type: crud,   entity: event,      route: /app/events,       title: Events }
+  - { code: event_360,    type: detail, detail_view: event_360, route: /app/events/:id }
+  - { code: hcps,         type: crud,   entity: hcp,        route: /app/hcps,         title: HCPs }
+  - { code: invitations,  type: crud,   entity: invitation, route: /app/invitations,  title: Invitations }
+  - { code: attendance,   type: crud,   entity: attendance, route: /app/attendance,   title: Attendance }
+  - { code: spend,        type: crud,   entity: spend_line, route: /app/spend,        title: Spend }
+  - { code: hcp_360,      type: detail, detail_view: hcp_360, route: /app/hcps/:id }
+  - { code: outputs,      type: crud,   entity: advisory_output, route: /app/outputs, title: Advisory Outputs }
+  - { code: reports,      type: crud,   entity: disclosure_report, route: /app/reports, title: Disclosure Reports }
+  - { code: venues,       type: crud,   entity: venue,      route: /app/masters/venues, title: Venues }
+  - { code: specialities, type: crud,   entity: speciality, route: /app/masters/specialities, title: Specialities }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Dashboard
+    component: HcpEventDashboard
+    roles: [Event Manager, Compliance Reviewer, Compliance Head]
+    text: >
+      KPI row: events this quarter, events awaiting compliance approval, RSVP acceptance rate,
+      honoraria awaiting advisory output, spend this quarter against the franchise budget.
+      Below: spend by therapy area and event type (stacked bar), spend by state (bar), upcoming
+      events with accepted vs capacity, and HCPs within 10% of their annual transfer-of-value cap.
+
+modules:
+  - code: masters
+    name: Master Data
+    description: Reference lists and the HCP master.
+    entities:
+      - code: speciality
+        name: Speciality
+        plural: Specialities
+        kind: master
+        display: name
+        fields:
+          - name: { type: text, required: true, unique: true }
+        access:
+          Event Manager:       { actions: [view, add, edit] }
+          Compliance Reviewer: { actions: [view] }
+        table:
+          columns:
+            - name: { label: Speciality, searchable: true, sortable: true }
+          default_sort: name
+          add_button: Add Speciality
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name] }
+          edit:   { same_as: create }
+
+      - code: venue
+        name: Venue
+        plural: Venues
+        kind: master
+        display: name
+        fields:
+          - name:        { type: text, required: true, unique: true }
+          - venue_type:  { type: choice, label: Type, choices: venue_type, required: true }
+          - city:        { type: text, required: true }
+          - region:      { type: choice, label: State, choices: region, required: true }
+          - capacity:    { type: integer, required: true, min: 10 }
+          - approved:    { type: boolean, label: Compliance approved, default: false, help: Leisure resorts and venues known for entertainment are not approved. }
+        access:
+          Event Manager:       { actions: [view, add, edit] }
+          Compliance Reviewer: { actions: [view, edit] }
+        table:
+          columns:
+            - name:       { label: Venue, searchable: true, sortable: true }
+            - venue_type: { label: Type, filterable: true }
+            - city:       { label: City, filterable: true }
+            - region:     { label: State, filterable: true }
+            - capacity:   { label: Capacity }
+            - approved:   { label: Approved, filterable: true }
+          default_sort: name
+          add_button: Add Venue
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, venue_type, city, region, capacity, approved] }
+          edit:   { same_as: create }
+
+      - code: hcp
+        name: HCP
+        plural: HCPs
+        kind: master
+        display: full_name
+        app_user: { role: HCP, name: full_name, email: email, mobile: phone, create_on: status == verified }
+        fields:
+          - hcp_ref:         { type: text, label: HCP ID, readonly: true, unique: true, auto: { sequence: "HCP-{00000}" } }
+          - full_name:       { type: text, required: true, max_length: 150 }
+          - speciality:      { type: link, to: speciality, required: true, display: name }
+          - institution:     { type: text, required: true }
+          - city:            { type: text, required: true }
+          - registration_no: { type: text, label: Medical registration no., required: true, unique: true }
+          - category:        { type: choice, choices: hcp_category, required: true, default: practitioner }
+          - email:           { type: email, required: true }
+          - phone:           { type: phone }
+          - government_official: { type: boolean, label: Government employed, default: false, help: Government-employed HCPs need employer permission before any engagement. }
+          - annual_cap:      { type: money, label: Annual ToV cap }
+          - ytd_spend:       { type: money, label: ToV this year, readonly: true, computed: Sum of spend_line.amount for this HCP in the current calendar year. }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [registration_no], compare: exact, on_match: block, message: This HCP is already in the master. }
+              - { match: [full_name, city], compare: fuzzy, on_match: warn, message: A similar HCP exists in this city. }
+        access:
+          Event Manager:       { actions: [view, add, edit, export, detail] }
+          Compliance Reviewer: { actions: [view, edit, export, detail] }
+          Compliance Head:     { actions: [view, export, detail] }
+          HCP:                 { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: pending,  label: Pending Verification, color: amber, initial: true }
+            - { code: verified, label: Verified,             color: green }
+            - { code: inactive, label: Inactive,             color: gray, final: true }
+          transitions:
+            - { name: verify, label: Verify, from: pending, to: verified, roles: [Compliance Reviewer], primary: true, condition: { text: The registration number is valid on the medical council register. }, condition_msg: Check the registration number first., on_done: Create the HCP login and email the welcome link. }
+            - { name: deactivate, label: Deactivate, from: verified, to: inactive, roles: [Compliance Reviewer], tone: danger, form: [ { deactivate_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: cap_near, label: Near annual cap, color: amber, system: true, text: Set when ytd_spend reaches 90% of annual_cap; cleared on 1 January. }
+        form:
+          create:
+            roles: [Event Manager]
+            title: Add HCP
+            sections:
+              - { title: HCP, fields: [full_name, speciality, category, institution, city, registration_no, government_official] }
+              - { title: Contact, fields: [email, phone] }
+          edit:
+            same_as: create
+        table:
+          columns:
+            - hcp_ref:     { label: ID, searchable: true }
+            - full_name:   { label: HCP, searchable: true, sortable: true, link_to: hcp_360 }
+            - speciality:  { label: Speciality, display: name, filterable: true }
+            - institution: { label: Institution }
+            - city:        { label: City, filterable: true }
+            - category:    { label: Category, filterable: true }
+            - ytd_spend:   { label: ToV YTD, format: money, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+            - tags:        { source: tags, label: Tags }
+          default_sort: full_name
+          row_click: hcp_360
+          quick_filters:
+            - { label: To verify, where: status == pending, roles: [Compliance Reviewer] }
+            - { label: KOLs, where: "category in [kol_national, kol_regional]" }
+          add_button: Add HCP
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+
+  - code: events
+    name: Events
+    description: Event planning, invitations, attendance and spend.
+    entities:
+      - code: event
+        name: Event
+        plural: Events
+        kind: hero
+        display: title
+        fields:
+          - event_ref:     { type: text, label: Event ID, readonly: true, unique: true, auto: { sequence: "EVT-{YY}-{000}" } }
+          - title:         { type: text, required: true, max_length: 200 }
+          - event_type:    { type: choice, choices: event_type, required: true }
+          - therapy_area:  { type: choice, choices: therapy_area, required: true }
+          - region:        { type: choice, label: State, choices: region, required: true }
+          - objective:     { type: long_text, required: true, help: The scientific or business need this event answers. }
+          - start_date:    { type: date, required: true }
+          - end_date:      { type: date, required: true }
+          - format:        { type: choice, choices: event_format, required: true, default: in_person }
+          - venue:         { type: link, to: venue, display: name, limit_choices: approved == true }
+          - city:          { type: text, readonly: true, computed: The venue's city. }
+          - capacity:      { type: integer, required: true, min: 2, max: 300 }
+          - budget:        { type: money, required: true }
+          - accepted_count: { type: integer, label: Accepted, readonly: true, computed: Count of invitations for this event with status accepted. }
+          - actual_spend:  { type: money, readonly: true, computed: Sum of spend_line.amount for this event. }
+          - cost_centre:   { type: text, required: true }
+          - po_number:     { type: text, label: PO number }
+          - agenda:        { type: file, accept: [pdf, docx] }
+        validation:
+          rules:
+            - { when: end_date is_set, require_expr: end_date >= start_date, message: End date cannot be before the start date. }
+        access:
+          Event Manager:       { actions: [view, add, edit, export, detail] }
+          Compliance Reviewer: { actions: [view, export, detail] }
+          Compliance Head:     { actions: [view, export, detail] }
+          HCP:                 { actions: [view, detail], rows: { text: Only events the HCP holds an accepted or pending invitation to. } }
+        workflow:
+          statuses:
+            - { code: draft,      label: Draft,               color: gray, initial: true }
+            - { code: review,     label: Compliance Review,   color: amber }
+            - { code: approved,   label: Approved,            color: green }
+            - { code: open,       label: Invitations Open,    color: blue }
+            - { code: completed,  label: Completed,           color: teal }
+            - { code: reported,   label: Reported,            color: indigo, final: true }
+            - { code: cancelled,  label: Cancelled,           color: red, final: true }
+          transitions:
+            - { name: submit, label: Submit for Review, from: draft, to: review, roles: [Event Manager], condition: agenda is_set, condition_msg: Attach the agenda before submitting., on_done: Email the compliance reviewer that an event is waiting. }
+            - name: approve
+              label: Approve Event
+              from: review
+              to: approved
+              roles: [Compliance Reviewer]
+              primary: true
+              condition:
+                all:
+                  - text: The agenda is predominantly scientific and at least 75% of the time is educational content.
+                  - text: The budget per invited HCP is within the per-HCP limit for the event type.
+                  - text: Advisory boards with more than 12 paid panelists also need Compliance Head approval.
+              condition_msg: The agenda or budget per HCP is outside policy.
+              on_done: Email the event manager that invitations can go out.
+            - { name: send_back, label: Send Back, from: review, to: draft, roles: [Compliance Reviewer], form: [ { send_back_reason: { type: long_text, required: true } } ] }
+            - { name: open_invites, label: Open Invitations, from: approved, to: open, roles: [Event Manager], primary: true, on_done: Send every draft invitation for this event. }
+            - { name: complete, label: Mark Completed, from: open, to: completed, roles: [Event Manager], condition: { text: Attendance is recorded for every accepted invitation. }, condition_msg: Capture attendance first. }
+            - { name: report, label: Close Event Spend, from: completed, to: reported, roles: [Compliance Reviewer], primary: true, condition: { text: Every spend line on the event is verified. }, condition_msg: Verify all spend lines first., on_done: Lock the event and include its spend in the next transparency report. }
+            - { name: cancel, label: Cancel Event, from: [draft, review, approved, open], to: cancelled, roles: [Event Manager], tone: danger, form: [ { cancel_reason: { type: long_text, required: true } } ], on_done: Email every invited HCP that the event is cancelled. }
+        form:
+          create:
+            roles: [Event Manager]
+            title: Plan Event
+            sections:
+              - { title: Event, fields: [title, event_type, therapy_area, objective] }
+              - { title: When and where, columns: 2, fields: [region, start_date, end_date, format, venue, capacity] }
+              - { title: Budget, columns: 2, fields: [budget, cost_centre, po_number, agenda] }
+          edit:
+            same_as: create
+            editable_in: [draft, review]
+        table:
+          columns:
+            - event_ref:      { label: Event, searchable: true }
+            - title:          { label: Title, searchable: true, link_to: event_360 }
+            - event_type:     { label: Type, filterable: true }
+            - therapy_area:   { label: Therapy area, filterable: true }
+            - start_date:     { label: Starts, sortable: true }
+            - region:         { label: State, filterable: true }
+            - capacity:       { label: Capacity }
+            - accepted_count: { label: Accepted }
+            - budget:         { label: Budget, format: money }
+            - actual_spend:   { label: Spend, format: money }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -start_date
+          quick_filters:
+            - { label: Awaiting my review, where: status == review, roles: [Compliance Reviewer], default: true }
+            - { label: Upcoming, where: "status in [approved, open]" }
+            - { label: To sign off, where: status == completed, roles: [Compliance Reviewer] }
+          row_click: event_360
+          add_button: Plan Event
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - { key: open_360, label: Open, type: navigate, to: event_360 }
+
+      - code: invitation
+        name: Invitation
+        plural: Invitations
+        kind: transactional
+        display: invitation_ref
+        fields:
+          - invitation_ref: { type: text, label: Invitation, readonly: true, unique: true, auto: { sequence: "INV-{00000}" } }
+          - event:          { type: link, to: event, required: true, display: title, limit_choices: "status in [approved, open]" }
+          - hcp:            { type: link, to: hcp, label: HCP, required: true, display: full_name, limit_choices: status == verified }
+          - event_role:     { type: choice, label: Role at event, choices: event_role, required: true, default: delegate }
+          - honorarium:     { type: money, help: Only for speakers, chairs and advisory panelists. }
+          - travel_needed:  { type: boolean, label: Needs travel, default: false }
+          - stay_needed:    { type: boolean, label: Needs accommodation, default: false }
+          - dietary_note:   { type: text }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [event, hcp], compare: exact, on_match: block, message: This HCP is already invited to this event. }
+          rules:
+            - { when: "event_role == delegate", require_expr: honorarium is_not_set, message: Delegates do not receive an honorarium. }
+        access:
+          Event Manager:       { actions: [view, add, edit, export] }
+          Compliance Reviewer: { actions: [view, export] }
+          HCP:                 { actions: [view], rows: { own: hcp } }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,     color: gray, initial: true }
+            - { code: sent,      label: Sent,      color: blue }
+            - { code: accepted,  label: Accepted,  color: green }
+            - { code: declined,  label: Declined,  color: red }
+            - { code: withdrawn, label: Withdrawn, color: gray, final: true }
+          transitions:
+            - { name: send, label: Send Invitation, from: draft, to: sent, roles: [Event Manager], primary: true, condition: event.status == open, condition_msg: Open invitations on the event first., on_done: Email and SMS the HCP the invitation with RSVP link. }
+            - { name: accept, label: Accept, from: sent, to: accepted, roles: [HCP], primary: true, form: [ { travel_needed: { type: boolean, label: I need travel } }, { stay_needed: { type: boolean, label: I need accommodation } }, { dietary_note: { type: text } } ], on_done: Save the travel and stay needs on the invitation, email the event manager and raise a travel request if needed. }
+            - { name: decline, label: Decline, from: sent, to: declined, roles: [HCP], tone: danger, form: [ { decline_reason: { type: text } } ] }
+            - { name: withdraw, label: Withdraw, from: [draft, sent, accepted], to: withdrawn, roles: [Event Manager], tone: danger, form: [ { withdraw_reason: { type: long_text, required: true } } ] }
+        form:
+          create:
+            roles: [Event Manager]
+            title: Invite HCP
+            fields: [event, hcp, event_role, honorarium, travel_needed, stay_needed]
+          edit:
+            same_as: create
+            editable_in: [draft]
+        table:
+          columns:
+            - invitation_ref: { label: Invitation, searchable: true }
+            - event:          { label: Event, display: title, filterable: true }
+            - hcp:            { label: HCP, display: full_name, searchable: true }
+            - event_role:     { label: Role, filterable: true }
+            - honorarium:     { label: Honorarium, format: money }
+            - travel_needed:  { label: Travel }
+            - status:         { source: status, label: RSVP, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Awaiting RSVP, where: status == sent }
+            - { label: Accepted, where: status == accepted }
+          add_button: Invite HCP
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+
+      - code: attendance
+        name: Attendance
+        plural: Attendance
+        kind: child
+        parent: { entity: event, field: event }
+        display: attendance_ref
+        fields:
+          - attendance_ref:  { type: text, label: Record, readonly: true, unique: true, auto: { sequence: "ATT-{00000}" } }
+          - event:           { type: link, to: event, required: true, display: title, on_delete: cascade }
+          - hcp:             { type: link, to: hcp, label: HCP, required: true, display: full_name }
+          - session_date:    { type: date, required: true }
+          - method:          { type: choice, label: Check-in, choices: checkin_method, required: true, default: qr }
+          - minutes_attended: { type: integer, label: Minutes, min: 0, max: 900 }
+          - sign_in_sheet:   { type: file, accept: [pdf, jpg, png] }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [event, hcp, session_date], compare: exact, on_match: block, message: Attendance is already recorded for this HCP and session. }
+        access:
+          Event Manager:       { actions: [view, add, edit, delete, export] }
+          Compliance Reviewer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: recorded, label: Recorded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: rejected, label: Rejected, color: red }
+          transitions:
+            - { name: verify, label: Verify, from: [recorded, rejected], to: verified, roles: [Compliance Reviewer], primary: true }
+            - { name: reject, label: Reject, from: recorded, to: rejected, roles: [Compliance Reviewer], tone: danger, form: [ { reject_reason: { type: long_text, required: true } } ] }
+        table:
+          columns:
+            - attendance_ref:   { label: Record, searchable: true }
+            - event:            { label: Event, display: title, filterable: true }
+            - hcp:              { label: HCP, display: full_name, searchable: true }
+            - session_date:     { label: Session, sortable: true }
+            - method:           { label: Check-in, filterable: true }
+            - minutes_attended: { label: Minutes }
+            - status:           { source: status, label: Status, filterable: true }
+          default_sort: -session_date
+          quick_filters:
+            - { label: To verify, where: status == recorded, roles: [Compliance Reviewer] }
+          add_button: Record Attendance
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { roles: [Event Manager], fields: [event, hcp, session_date, method, minutes_attended, sign_in_sheet] }
+          edit:   { same_as: create, editable_in: [recorded, rejected] }
+
+      - code: spend_line
+        name: Spend Line
+        plural: Spend
+        kind: transactional
+        display: line_ref
+        fields:
+          - line_ref:    { type: text, label: Line, readonly: true, unique: true, auto: { sequence: "TOV-{00000}" } }
+          - event:       { type: link, to: event, required: true, display: title }
+          - hcp:         { type: link, to: hcp, label: Recipient HCP, display: full_name, help: Leave empty for event-level costs such as the venue. }
+          - category:    { type: choice, choices: spend_category, required: true }
+          - amount:      { type: money, required: true, min: 0 }
+          - incurred_on: { type: date, required: true }
+          - vendor:      { type: text }
+          - erp_payment_ref: { type: text, label: ERP payment ref., readonly: true }
+          - disclosure_report: { type: link, to: disclosure_report, display: report_ref, readonly: true }
+          - invoice:     { type: file, accept: [pdf, jpg, png] }
+        access:
+          Event Manager:       { actions: [view, add, edit, export] }
+          Compliance Reviewer: { actions: [view, edit, export] }
+          Compliance Head:     { actions: [view, export] }
+          HCP:                 { actions: [view], rows: { own: hcp } }
+        workflow:
+          statuses:
+            - { code: recorded, label: Recorded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: disputed, label: Disputed, color: red }
+            - { code: reported, label: Reported, color: indigo, final: true }
+          transitions:
+            - { name: verify, label: Verify, from: [recorded, disputed], to: verified, roles: [Compliance Reviewer], primary: true, condition: { all: [ invoice is_set, { text: "For an honorarium, the HCP's advisory output for this event is accepted." } ] }, condition_msg: Attach the invoice and make sure any advisory output is accepted. }
+            - { name: dispute, label: Dispute, from: recorded, to: disputed, roles: [Compliance Reviewer], form: [ { dispute_reason: { type: long_text, required: true } } ], on_done: Email the event manager the reason. }
+            - { name: report, label: Include in Report, from: verified, to: reported, trigger: system, text: Moved when the quarterly disclosure report that includes it is signed off. }
+        form:
+          create:
+            roles: [Event Manager]
+            fields: [event, hcp, category, amount, incurred_on, vendor, invoice]
+          edit:
+            same_as: create
+            editable_in: [recorded, disputed]
+        table:
+          columns:
+            - line_ref:    { label: Line, searchable: true }
+            - event:       { label: Event, display: title, filterable: true }
+            - hcp:         { label: Recipient HCP, display: full_name, filterable: true }
+            - category:    { label: Category, filterable: true }
+            - amount:      { label: Amount, format: money, sortable: true }
+            - incurred_on: { label: Incurred on, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+          default_sort: -incurred_on
+          footer_totals: [amount]
+          quick_filters:
+            - { label: To verify, where: status == recorded, roles: [Compliance Reviewer], default: true }
+            - { label: Honoraria, where: category == honorarium }
+          add_button: Add Spend
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+
+      - code: advisory_output
+        name: Advisory Output
+        plural: Advisory Outputs
+        kind: transactional
+        display: output_ref
+        fields:
+          - output_ref:   { type: text, label: Output, readonly: true, unique: true, auto: { sequence: "ADV-{00000}" } }
+          - event:        { type: link, to: event, required: true, display: title, limit_choices: event_type == advisory_board }
+          - hcp:          { type: link, to: hcp, label: Panelist, required: true, display: full_name }
+          - output_type:  { type: choice, label: Type, choices: output_type, required: true, default: report }
+          - summary:      { type: long_text, required: true, help: The panelist's recommendations in their own words. }
+          - document:     { type: file, accept: [pdf, docx, pptx], required: true }
+          - submitted_on: { type: date, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [event, hcp], compare: exact, on_match: block, message: This panelist already has an output for this advisory board. }
+        access:
+          Event Manager:       { actions: [view, export] }
+          Compliance Reviewer: { actions: [view, export] }
+          HCP:                 { actions: [view, add, edit], rows: { own: hcp } }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,     color: gray, initial: true }
+            - { code: submitted, label: Submitted, color: blue }
+            - { code: accepted,  label: Accepted,  color: green, final: true }
+            - { code: returned,  label: Returned,  color: amber }
+          transitions:
+            - { name: submit, label: Submit, from: [draft, returned], to: submitted, roles: [HCP], primary: true, on_done: Stamp submitted_on and email the event manager. }
+            - { name: accept, label: Accept Output, from: submitted, to: accepted, roles: [Event Manager], primary: true, condition: { text: The output answers the advisory questions in the agenda. }, condition_msg: The output does not answer the advisory questions., on_done: "Release the panelist's honorarium spend line for compliance verification." }
+            - { name: return, label: Return, from: submitted, to: returned, roles: [Event Manager], form: [ { return_reason: { type: long_text, required: true } } ], on_done: Email the panelist what is missing. }
+        form:
+          create:
+            roles: [HCP]
+            title: Submit Advisory Output
+            fields: [event, output_type, summary, document]
+          edit:
+            same_as: create
+            editable_in: [draft, returned]
+        table:
+          columns:
+            - output_ref:   { label: Output, searchable: true }
+            - event:        { label: Advisory board, display: title, filterable: true }
+            - hcp:          { label: Panelist, display: full_name, searchable: true }
+            - output_type:  { label: Type, filterable: true }
+            - submitted_on: { label: Submitted, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+          default_sort: -submitted_on
+          quick_filters:
+            - { label: To review, where: status == submitted, roles: [Event Manager], default: true }
+            - { label: Returned, where: status == returned }
+          add_button: Submit Output
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+
+  - code: reporting
+    name: Transparency Reporting
+    description: Quarterly transfer-of-value disclosure with maker-checker sign-off.
+    entities:
+      - code: disclosure_report
+        name: Disclosure Report
+        plural: Disclosure Reports
+        kind: transactional
+        display: report_ref
+        fields:
+          - report_ref:   { type: text, label: Report, readonly: true, unique: true, auto: { sequence: "TOV-RPT-{YY}-{00}" } }
+          - year:         { type: integer, required: true, min: 2024, max: 2035 }
+          - quarter:      { type: choice, choices: quarter, required: true }
+          - hcp_count:    { type: integer, label: HCPs, readonly: true, computed: Distinct recipient HCPs on the verified spend lines in the quarter. }
+          - line_count:   { type: integer, label: Spend lines, readonly: true, computed: Verified spend lines dated in the quarter. }
+          - total_amount: { type: money, label: Total ToV, readonly: true, computed: Sum of those spend lines. }
+          - prepared_by:  { type: text, readonly: true }
+          - signed_by:    { type: text, readonly: true }
+          - export_file:  { type: file, label: Disclosure CSV, readonly: true }
+          - notes:        { type: long_text }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [year, quarter], compare: exact, on_match: block, message: A report for this quarter already exists. }
+        access:
+          Compliance Reviewer: { actions: [view, add, edit, export] }
+          Compliance Head:     { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,            color: gray, initial: true }
+            - { code: prepared,  label: Awaiting Sign-off, color: amber }
+            - { code: signed,    label: Signed Off,       color: green }
+            - { code: published, label: Published,        color: indigo, final: true }
+          transitions:
+            - { name: prepare, label: Prepare and Submit, from: draft, to: prepared, roles: [Compliance Reviewer], primary: true, condition: { text: No spend line dated in the quarter is still recorded or disputed. }, condition_msg: Verify or resolve every spend line in the quarter first., on_done: Stamp prepared_by, generate the disclosure CSV and email the compliance head. }
+            - name: sign_off
+              label: Sign Off
+              from: prepared
+              to: signed
+              roles: [Compliance Head]
+              primary: true
+              condition: { text: The signer is not the person who prepared the report. }
+              condition_msg: The preparer cannot sign off their own report.
+              on_done: Stamp signed_by and move every spend line in the report to Reported.
+            - { name: send_back, label: Send Back, from: prepared, to: draft, roles: [Compliance Head], form: [ { send_back_reason: { type: long_text, required: true } } ] }
+            - { name: publish, label: Mark Published, from: signed, to: published, roles: [Compliance Reviewer], form: [ { published_on: { type: date, required: true } } ] }
+        form:
+          create:
+            roles: [Compliance Reviewer]
+            title: New Disclosure Report
+            fields: [year, quarter, notes]
+          edit:
+            same_as: create
+            editable_in: [draft]
+        table:
+          columns:
+            - report_ref:   { label: Report, searchable: true }
+            - year:         { label: Year, filterable: true }
+            - quarter:      { label: Quarter, filterable: true }
+            - hcp_count:    { label: HCPs }
+            - line_count:   { label: Lines }
+            - total_amount: { label: Total ToV, format: money }
+            - status:       { source: status, label: Status, filterable: true }
+          default_sort: -report_ref
+          quick_filters:
+            - { label: Awaiting my sign-off, where: status == prepared, roles: [Compliance Head], default: true }
+          add_button: New Report
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+
+detail_views:
+  - code: event_360
+    hero: event
+    title: "{title}"
+    back_to: events
+    layout: header_tabs
+    roles: [Event Manager, Compliance Reviewer, Compliance Head, HCP]
+    header:
+      title: title
+      subtitle: ["{event_ref}", "{therapy_area}", "{city}"]
+      badges: [ { source: status }, { field: event_type }, { field: format } ]
+      facts:
+        - { label: Dates, field: start_date }
+        - { label: Venue, field: venue }
+        - { label: Capacity, field: capacity }
+        - { label: Budget, field: budget, format: money }
+      actions: { transitions: true }
+      banners:
+        - { show_when: status == review, tone: info, text: "This event is waiting for compliance approval." }
+    stats:
+      - { label: Invited, value: { count: invitation, via: event }, link_to_tab: invitations }
+      - { label: Accepted, value: { count: invitation, via: event, where: status == accepted }, tone: green, link_to_tab: invitations }
+      - { label: Attended, value: { count: attendance, via: event }, tone: blue, link_to_tab: attendance }
+      - { label: Spend, value: { sum: spend_line.amount, via: event }, format: money, tone: amber, link_to_tab: spend }
+    tabs:
+      - { code: overview, label: Overview, type: summary, sections: [ { title: Event, columns: 2, fields: [event_type, therapy_area, start_date, end_date, format, venue, capacity, budget] }, { title: Objective, fields: [objective, agenda] } ] }
+      - { code: invitations, label: Invitations, type: related_table, entity: invitation, via: event, count_badge: true, columns: [invitation_ref, hcp, event_role, honorarium, status], add: { label: Invite HCP, prefill: { event: hero }, show_when: "status in [approved, open]" } }
+      - { code: attendance, label: Attendance, type: related_table, entity: attendance, via: event, count_badge: true, columns: [hcp, session_date, method, minutes_attended, status], add: { label: Record Attendance, prefill: { event: hero }, show_when: status == open } }
+      - { code: outputs, label: Advisory Outputs, type: related_table, entity: advisory_output, via: event, count_badge: true, columns: [output_ref, hcp, output_type, submitted_on, status], show_when: event_type == advisory_board }
+      - { code: spend, label: Spend, type: related_table, entity: spend_line, via: event, columns: [line_ref, hcp, category, amount, incurred_on, status], footer_totals: [amount], group_by: category, add: { label: Add Spend, prefill: { event: hero }, show_when: "status in [open, completed]" } }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: event, events: [created, updated, transition] }
+          - { entity: invitation, via: event, events: [created, transition] }
+    states:
+      not_found: { title: Event not found, back_to: events }
+
+  - code: hcp_360
+    hero: hcp
+    title: "{full_name}"
+    back_to: hcps
+    layout: header_tabs_sidebar
+    roles: [Event Manager, Compliance Reviewer, Compliance Head, HCP]
+    header:
+      avatar: { fallback_initials: full_name }
+      title: full_name
+      subtitle: ["{hcp_ref}", "{speciality.name}", "{institution}, {city}"]
+      badges: [ { source: status }, { source: tags }, { field: category } ]
+      facts:
+        - { label: Registration no., field: registration_no, copyable: true }
+        - { label: ToV this year, field: ytd_spend, format: money, emphasis: true }
+        - { label: Annual cap, field: annual_cap, format: money }
+      actions: { transitions: true, tags: true, buttons: [ { key: invite, label: Invite to Event, type: create_related, entity: invitation, prefill: { hcp: hero }, roles: [Event Manager], show_when: status == verified } ] }
+      banners:
+        - { show_when: has_tag cap_near, tone: warning, text: "Transfers of value this year are close to the annual cap of {annual_cap}." }
+        - { show_when: government_official is_true, tone: info, text: "Government-employed HCP: employer permission must be on file before any engagement." }
+    stats:
+      - { label: Invitations, value: { count: invitation, via: hcp }, link_to_tab: invitations }
+      - { label: Attended, value: { count: attendance, via: hcp, where: status == verified }, tone: teal, link_to_tab: attendance }
+      - { label: ToV YTD, value: { field: ytd_spend }, format: money, tone: amber, link_to_tab: spend }
+      - { label: Cap used, value: { text: ytd_spend / annual_cap }, format: percent, tone: { when: "> 0.9", is: red, else: green } }
+    sidebar:
+      - { type: fields, title: Profile, fields: [speciality, category, institution, city, government_official] }
+      - { type: fields, title: Contact, fields: [email, phone], roles: [Event Manager, Compliance Reviewer] }
+    tabs:
+      - { code: invitations, label: Invitations, type: related_table, entity: invitation, via: hcp, count_badge: true, columns: [invitation_ref, event, event_role, honorarium, status] }
+      - { code: attendance, label: Attendance, type: related_table, entity: attendance, via: hcp, columns: [event, session_date, method, minutes_attended, status] }
+      - { code: outputs, label: Advisory Outputs, type: related_table, entity: advisory_output, via: hcp, columns: [output_ref, event, output_type, submitted_on, status] }
+      - { code: spend, label: Transfers of Value, type: related_table, entity: spend_line, via: hcp, columns: [line_ref, event, category, amount, incurred_on, status], footer_totals: [amount], group_by: category }
+      - code: activity
+        label: Activity
+        type: timeline
+        roles: [Event Manager, Compliance Reviewer, Compliance Head]
+        sources:
+          - { entity: hcp, events: [created, updated, transition, tag] }
+          - { entity: invitation, via: hcp, events: [created, transition] }
+        show_field_changes: true
+    states:
+      not_found: { title: HCP not found, text: It may have been removed or you may not have access., back_to: hcps }

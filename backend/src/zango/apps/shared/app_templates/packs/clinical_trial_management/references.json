@@ -1,0 +1,9 @@
+[
+  {
+    "id": "oncology_trials_india",
+    "file": "references/oncology_trials_india.yaml",
+    "title": "Oncology Trials — India (3 studies, 38 sites)",
+    "summary": "Three Phase II/III oncology studies at 38 Indian sites: a milestone plan from protocol final to CSR, site activation gated on EC approval, CTA, PI CV, GCP and lab normals plus an approved SIV report, weekly enrollment snapshots from the EDC, six-weekly monitoring visits confirmed by the site with five-day report review, and deviations signed off by severity with a Medical Monitor second sign-off for critical ones, eTMF filing, and study and site 360 pages.",
+    "tags": ["clinical trial management", "CTMS", "site activation", "monitoring visits", "protocol deviations", "external users", "EDC", "eTMF", "360 page"]
+  }
+]

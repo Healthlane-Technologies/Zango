@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rim_emerging_markets",
+    "file": "references/rim_emerging_markets.yaml",
+    "title": "RIM — Emerging Markets (36 products, 18 markets)",
+    "summary": "A global regulatory hub with affiliate RA teams scoped to their markets, a Regulatory Operations publishing queue, registrations with renewal alerts, eCTD/ACTD submissions through internal review, publishing and HA review, an HA query log with response deadlines, maker-checker commitment sign-off, and product, market and submission 360 pages.",
+    "tags": ["regulatory affairs", "RIM", "registrations", "renewals", "submissions", "eCTD", "HA queries", "commitments", "maker-checker", "affiliates", "row scoping", "360 page"]
+  }
+]

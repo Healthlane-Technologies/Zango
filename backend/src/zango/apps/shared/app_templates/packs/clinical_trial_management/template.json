@@ -1,0 +1,72 @@
+{
+  "slug": "clinical-trial-management",
+  "name": "Clinical Trial Management",
+  "version": "1.0.0",
+  "category": "Clinical Operations",
+  "icon": "pulse",
+  "is_beta": false,
+  "aka": [
+    "CTMS",
+    "study and site management",
+    "clinical operations tracker",
+    "monitoring visit tracker",
+    "protocol deviation log"
+  ],
+  "one_liner": "Study and site management with milestones, visits, monitoring reports and issues.",
+  "fits_when": [
+    "a sponsor or CRO runs one or more studies across many investigator sites",
+    "start-up milestones and site activation need to be tracked against plan",
+    "CRAs plan and log monitoring visits and submit visit reports for review",
+    "issues and protocol deviations must go to the site for a response and be signed off",
+    "sites need their own login that shows only their own visits and action items",
+    "enrollment comes from an EDC and reports and records must be filed to the eTMF"
+  ],
+  "gives_you": [
+    "Studies with phase, indication, enrollment target and a planning-to-closed lifecycle",
+    "Milestone plans per study with forecast dates and automatic At Risk and Missed flags",
+    "Site activation gated on documents and the SIV, with an auto-created site login",
+    "Monitoring visits from scheduling through visit report submission, return and approval",
+    "Issue and deviation tracking with site responses, CRA verification and severity-based sign-off",
+    "Study and site 360 pages with enrollment, open issues, visits and an activity timeline"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "example.yaml",
+  "references": "references.json",
+  "catalogue": {
+    "description": "A clinical trial management system for sponsors and CROs: set up studies and their start-up milestones, select and activate investigator sites once their documents and initiation visit are in place, track enrollment against target, and let CRAs schedule and log monitoring visits and submit visit reports for study manager approval. Issues and protocol deviations raised at visits go to the site for a response, are verified by the CRA and signed off by severity. Sites sign in to see only their own visits and action items.",
+    "packages": [
+      { "name": "workflow", "description": "Study, site activation, visit report and issue sign-off lifecycles" },
+      { "name": "scheduling", "description": "Monitoring visit planning, visit cadence checks and report due dates" },
+      { "name": "tasks", "description": "Site action items, overdue flags and review queues per role" },
+      { "name": "documents", "description": "Visit reports, site regulatory documents and issue evidence" },
+      { "name": "reports", "description": "Enrollment against target, milestone status and open issues by site" }
+    ],
+    "roles": [
+      { "name": "Study Manager", "description": "Sets up studies and milestones, activates sites, approves visit reports and signs off major and critical issues" },
+      { "name": "CRA", "description": "Monitors assigned sites: schedules and logs visits, writes visit reports, raises and verifies issues" },
+      { "name": "Site", "description": "External login for the site coordinator: sees only its own site, confirms visits and responds to action items" }
+    ],
+    "workflows": [
+      { "name": "Study setup", "description": "Protocol, phase, enrollment target and a milestone plan from protocol final to database lock" },
+      { "name": "Site management", "description": "Site selection, activation gated on documents and the SIV, enrollment tracking, hold and close" },
+      { "name": "Monitoring visits", "description": "Visits scheduled, logged, reported within five working days, reviewed and approved with a follow-up letter" },
+      { "name": "Issue tracking", "description": "Issues and deviations sent to the site, answered, verified by the CRA and signed off by severity" }
+    ],
+    "data_objects": ["Study", "Milestone", "Site", "Monitoring visit", "Issue"],
+    "integrations": ["EDC connector", "eTMF export"],
+    "compliance": [
+      "ICH E6 GCP-style audit trail of every change, transition and upload",
+      "Maker-checker: a visit report is approved by someone other than its author",
+      "Severity-based sign-off before major and critical deviations are closed",
+      "Row-level access: each site sees only its own records; CRAs see their assigned sites",
+      "Approved visit reports and closed issues filed to the eTMF"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Oncology Trials — India",
+    "app_prompt_prefill": "Clinical trial management for our oncology portfolio: three Phase II/III studies running at 38 sites across India. CRAs schedule monitoring visits every six weeks, log them and submit visit reports within five working days for study manager approval. Issues and protocol deviations raised at visits go to the site for a response; the CRA verifies them, major ones need study manager sign-off and critical ones also the medical monitor's. Study managers track start-up milestones, site activation and enrollment against target, with enrollment pulled nightly from the EDC and approved reports filed to the eTMF."
+  },
+  "changelog": "First version: study setup with milestones, site activation and enrollment, monitoring visits with visit reports, and issue and deviation tracking on the Zango app spec v1."
+}

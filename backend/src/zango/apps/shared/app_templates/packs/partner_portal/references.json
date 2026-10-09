@@ -1,0 +1,9 @@
+[
+  {
+    "id": "agency_vendor_portal",
+    "file": "references/agency_vendor_portal.yaml",
+    "title": "Partner Portal — Agencies & Vendors (about 80 partners, India commercial and medical)",
+    "summary": "Creative, media, event, travel, field staffing and research partners onboarding with MSA, NDA, GST, insurance and anti-bribery documents, compliance due diligence for high-risk partners, SOWs issued and accepted in the portal, requests against SOWs with priority SLAs and a comment thread, monthly SLA scorecards with service credits signed off maker-checker, and partner and request 360 pages.",
+    "tags": ["partner portal", "vendor onboarding", "agencies", "documents", "due diligence", "SOW", "requests", "SLA", "scorecards", "external users", "360 page"]
+  }
+]

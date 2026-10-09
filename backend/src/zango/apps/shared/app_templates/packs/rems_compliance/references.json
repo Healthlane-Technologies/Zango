@@ -1,0 +1,9 @@
+[
+  {
+    "id": "pregnancy_prevention_rems_us",
+    "file": "references/pregnancy_prevention_rems_us.yaml",
+    "title": "Pregnancy Prevention REMS — US (teratogen ETASU program)",
+    "summary": "About 2,400 prescribers and 600 pharmacies certified through training, knowledge assessment and attestation with NPI checks and recertification; patients enrolled by portal, fax or phone with two forms of contraception and monthly pregnancy tests; dispense authorizations auto-checked or referred, with a 7-day window; pharmacy staff lists; non-compliance findings with responses and corrective action; prescriber, pharmacy and patient 360 pages and an FDA assessment report.",
+    "tags": ["REMS", "ETASU", "pregnancy prevention", "prescriber certification", "pharmacy certification", "patient enrollment", "dispense authorization", "non-compliance", "call centre", "external users", "360 page"]
+  }
+]

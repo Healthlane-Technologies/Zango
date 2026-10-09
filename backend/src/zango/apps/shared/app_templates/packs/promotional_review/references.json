@@ -1,0 +1,9 @@
+[
+  {
+    "id": "cardio_diabetes_prc",
+    "file": "references/cardio_diabetes_prc.yaml",
+    "title": "Cardio-Diabetes PRC (promotional review with maker-checker certification)",
+    "summary": "Five roles (brand manager, MLR coordinator, medical, legal and regulatory reviewers) with reviewers scoped to their own reviews, a reference library and reviewer roster synced from the HR directory, materials with versions, claims substantiated one by one against a reference page, parallel medical, legal and regulatory reviews within an SLA, regulatory certification with job code, 24-month expiry and recertification, certified PDFs pushed to a document management system, and material and reference 360 pages.",
+    "tags": ["promotional review", "mlr", "prc", "claim substantiation", "references", "fair balance", "versioning", "maker-checker", "job code", "expiry", "dms", "360 page"]
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "onco_events_south",
+    "file": "references/onco_events_south.yaml",
+    "title": "HCP Events (oncology franchise, South India)",
+    "summary": "Four roles including an external HCP login and a Compliance Head, approved venues, advisory boards, CMEs and congresses with compliance approval, RSVP with travel and stay needs, QR attendance per session, advisory outputs gating honoraria, a spend ledger tied to recipient HCPs, quarterly disclosure reports with maker-checker sign-off, and Event and HCP 360 pages.",
+    "tags": ["HCP events", "advisory boards", "CME", "congress", "invitations", "RSVP", "attendance", "transfer of value", "spend transparency", "maker-checker", "external users", "360 page"]
+  }
+]

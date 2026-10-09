@@ -1,0 +1,510 @@
+# Medical Information Requests: the template's starting point. HCPs and patients
+# send medical questions through the portal, phone or email; MI specialists log
+# each inquiry, match an approved standard response or draft a custom one, a
+# medical reviewer approves custom responses, and any adverse event mentioned is
+# captured and forwarded to pharmacovigilance within one business day. The
+# analyst tailors every part of this to the requirement; the preview redraws
+# with each change.
+spec_version: 1
+
+app:
+  code: medical_information
+  name: Medical Information Requests
+  description: HCP and patient medical inquiries with standard responses, medical review of custom answers and adverse event capture.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme:
+    primary: "#1D4ED8"
+    secondary: "#64748B"
+  custom_requirements: []
+
+choice_sets:
+  therapeutic_area:
+    - { id: oncology,    label: Oncology,    color: purple }
+    - { id: diabetes,    label: Diabetes,    color: blue }
+    - { id: cardiology,  label: Cardiology,  color: red }
+    - { id: immunology,  label: Immunology,  color: teal }
+    - { id: respiratory, label: Respiratory, color: indigo }
+  reporter_type:
+    - { id: hcp,        label: HCP,               color: blue }
+    - { id: pharmacist, label: Pharmacist,        color: teal }
+    - { id: patient,    label: Patient,           color: purple }
+    - { id: caregiver,  label: Caregiver,         color: pink }
+  channel:
+    - { id: portal,    label: HCP portal,  color: blue }
+    - { id: phone,     label: Phone,       color: teal }
+    - { id: email,     label: Email,       color: indigo }
+    - { id: field_rep, label: Field rep / MSL, color: purple }
+  inquiry_category:
+    - { id: dosing,        label: Dosing and administration }
+    - { id: safety,        label: Safety and tolerability }
+    - { id: interactions,  label: Drug interactions }
+    - { id: special_pops,  label: Special populations }
+    - { id: stability,     label: Storage and stability }
+    - { id: clinical_data, label: Clinical data }
+    - { id: off_label,     label: Off-label use }
+  priority:
+    - { id: standard, label: Standard, color: gray }
+    - { id: urgent,   label: Urgent,   color: red }
+  delivery_method:
+    - { id: email,  label: Email }
+    - { id: portal, label: Portal }
+    - { id: letter, label: Letter }
+    - { id: phone,  label: Phone call }
+  seriousness:
+    - { id: non_serious, label: Non-serious, color: amber }
+    - { id: serious,     label: Serious,     color: red }
+
+roles:
+  - name: MI Specialist
+    description: Logs inquiries, matches standard responses, drafts custom answers and captures adverse events.
+    landing: inquiries
+    menu:
+      - { page: dashboard,          icon: layout-dashboard }
+      - { page: inquiries,          icon: inbox }
+      - { page: responses,          icon: file-text }
+      - { page: ae_reports,         label: AE Capture, icon: alert-triangle }
+      - { page: reporters,          icon: users }
+      - group: Content
+        icon: library
+        items:
+          - { page: standard_responses, icon: book-open }
+          - { page: products,           icon: pill }
+
+  - name: Medical Reviewer
+    description: Approves custom responses and standard response documents before they are used.
+    landing: responses
+    menu:
+      - { page: responses,          label: Review Queue, icon: clipboard-check }
+      - { page: standard_responses, icon: book-open }
+      - { page: inquiries,          icon: inbox }
+      - { page: ae_reports,         label: AE Capture, icon: alert-triangle }
+
+  - name: HCP
+    description: Asks medical questions through the portal and reads the answers; sees only their own inquiries.
+    landing: inquiries
+    menu:
+      - { page: inquiries, label: My Questions, icon: message-circle-question }
+      - { page: responses, label: My Answers,   icon: mail-open }
+
+pages:
+  - { code: inquiries,          type: crud,   entity: inquiry,           route: /app/inquiries,          title: Inquiries }
+  - { code: inquiry_360,        type: detail, detail_view: inquiry_360,  route: /app/inquiries/:id }
+  - { code: responses,          type: crud,   entity: response,          route: /app/responses,          title: Responses }
+  - { code: ae_reports,         type: crud,   entity: ae_report,         route: /app/ae-reports,         title: Adverse Events }
+  - { code: reporters,          type: crud,   entity: reporter,          route: /app/reporters,          title: Reporters }
+  - { code: standard_responses, type: crud,   entity: standard_response, route: /app/standard-responses, title: Standard Responses }
+  - { code: products,           type: crud,   entity: product,           route: /app/masters/products,   title: Products }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Dashboard
+    component: MiDashboard
+    roles: [MI Specialist]
+    text: >
+      KPI row: open inquiries, inquiries due in the next 2 days, responses awaiting medical review,
+      adverse events not yet forwarded to PV. Below: inquiries by category this month (bar),
+      share answered with a standard response vs custom, and the 10 inquiries closest to their due date.
+
+modules:
+  - code: content
+    name: Content
+    description: Products and the approved standard response library.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:              { type: text, label: Brand name, required: true, unique: true }
+          - generic_name:      { type: text, label: Generic name (INN), required: true }
+          - therapeutic_area:  { type: choice, choices: therapeutic_area, required: true }
+          - is_active:         { type: boolean, default: true }
+        access:
+          MI Specialist:    { actions: [view, add, edit, export] }
+          Medical Reviewer: { actions: [view] }
+          HCP:              { actions: [view] }
+        table:
+          columns:
+            - name:             { label: Brand, searchable: true, sortable: true }
+            - therapeutic_area: { label: Therapeutic area, filterable: true }
+            - is_active:        { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, generic_name, therapeutic_area, is_active] }
+          edit:   { same_as: create }
+
+      - code: standard_response
+        name: Standard Response
+        plural: Standard Responses
+        kind: master
+        display: srd_ref
+        fields:
+          - srd_ref:      { type: text, label: SRD ID, readonly: true, unique: true, auto: { sequence: "SRD-{0000}" } }
+          - title:        { type: text, required: true, max_length: 200 }
+          - product:      { type: link, to: product, required: true, display: name }
+          - category:     { type: choice, choices: inquiry_category, required: true }
+          - version:      { type: text, required: true, default: "1.0" }
+          - body:         { type: long_text, label: Response text, required: true }
+          - references:   { type: long_text, label: Literature references }
+          - document:     { type: file, label: Approved letter (PDF), accept: [pdf], max_size_mb: 10 }
+          - review_due:   { type: date, label: Next review due, required: true }
+        access:
+          MI Specialist:    { actions: [view, add, edit, export] }
+          Medical Reviewer: { actions: [view, edit, export] }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,     color: gray, initial: true }
+            - { code: in_review, label: In Review, color: amber }
+            - { code: approved,  label: Approved,  color: green }
+            - { code: retired,   label: Retired,   color: purple, final: true }
+          transitions:
+            - { name: submit, label: Submit for Review, from: draft, to: in_review, roles: [MI Specialist], primary: true }
+            - { name: approve, label: Approve, from: in_review, to: approved, roles: [Medical Reviewer], primary: true,
+                on_done: "Set the effective date to today and make the SRD available for matching." }
+            - { name: return, label: Return, from: in_review, to: draft, roles: [Medical Reviewer], tone: danger,
+                form: [ { review_comments: { type: long_text, required: true } } ],
+                on_done: Email the author the review comments. }
+            - { name: revise, label: Start Revision, from: approved, to: draft, roles: [MI Specialist],
+                on_done: Increase the version and keep the approved text in history. }
+            - { name: retire, label: Retire, from: approved, to: retired, roles: [Medical Reviewer], tone: danger, confirm: "Retire this standard response?" }
+          tags:
+            - { code: review_overdue, label: Review overdue, color: red, system: true, text: Set nightly when review_due is before today. }
+        table:
+          columns:
+            - srd_ref:    { label: SRD, searchable: true, sortable: true }
+            - product:    { label: Product, display: name, filterable: true }
+            - category:   { label: Category, filterable: true }
+            - version:    { label: Version }
+            - review_due: { label: Review due, sortable: true }
+            - status:     { source: status, label: Status, filterable: true }
+            - tags:       { source: tags, label: Flags }
+          default_sort: srd_ref
+          quick_filters:
+            - { label: Awaiting my review, where: status == in_review, roles: [Medical Reviewer], default: true }
+            - { label: Approved, where: status == approved, roles: [MI Specialist] }
+          add_button: New Standard Response
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft }
+        form:
+          create:
+            roles: [MI Specialist]
+            sections:
+              - { title: Scope, fields: [title, product, category, version, review_due] }
+              - { title: Content, fields: [body, references, document] }
+          edit: { same_as: create, roles: [MI Specialist, Medical Reviewer], editable_in: [draft, in_review] }
+
+  - code: inquiries
+    name: Inquiries
+    description: Reporters, inquiries and the responses sent to them.
+    entities:
+      - code: reporter
+        name: Reporter
+        plural: Reporters
+        kind: master
+        display: full_name
+        app_user: { role: HCP, name: full_name, email: email, mobile: phone, create_on: reporter_type == hcp }
+        fields:
+          - reporter_ref:  { type: text, label: Reporter ID, readonly: true, unique: true, auto: { sequence: "RPT-{00000}" } }
+          - full_name:     { type: text, required: true, max_length: 200 }
+          - reporter_type: { type: choice, choices: reporter_type, required: true }
+          - specialty:     { type: text, help: HCPs only }
+          - institution:   { type: text, label: Hospital / clinic }
+          - email:         { type: email }
+          - phone:         { type: phone }
+          - city:          { type: text }
+          - consent_to_contact: { type: boolean, label: Consents to follow-up contact, default: true }
+        validation:
+          rules:
+            - { text: An email or a phone number is recorded., message: Enter an email or phone so the answer can be delivered. }
+          duplicate_check:
+            rules:
+              - { match: [email], compare: normalised, on_match: warn, message: A reporter with this email already exists. }
+        access:
+          MI Specialist:    { actions: [view, add, edit, export] }
+          Medical Reviewer: { actions: [view] }
+        table:
+          columns:
+            - reporter_ref:  { label: ID, searchable: true, sortable: true }
+            - full_name:     { label: Name, searchable: true, sortable: true }
+            - reporter_type: { label: Type, filterable: true }
+            - specialty:     { label: Specialty }
+            - institution:   { label: Institution }
+            - city:          { label: City, filterable: true }
+          default_sort: name
+          add_button: Add Reporter
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [full_name, reporter_type, specialty, institution, email, phone, city, consent_to_contact] }
+          edit:   { same_as: create }
+
+      - code: inquiry
+        name: Inquiry
+        plural: Inquiries
+        kind: hero
+        display: inquiry_ref
+        fields:
+          - inquiry_ref:  { type: text, label: Inquiry ID, readonly: true, unique: true, auto: { sequence: "MI-{YY}-{00000}" } }
+          - reporter:     { type: link, to: reporter, required: true, display: full_name }
+          - channel:      { type: choice, choices: channel, required: true, default: portal }
+          - received_on:  { type: date, required: true, default: today }
+          - product:      { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - category:     { type: choice, choices: inquiry_category, required: true }
+          - question:     { type: long_text, required: true }
+          - priority:     { type: choice, choices: priority, required: true, default: standard }
+          - due_on:       { type: date, label: Response due, readonly: true, computed: "received_on + 2 business days when urgent, + 5 business days otherwise." }
+          - assigned_to:  { type: link, to: app_user, label: MI specialist }
+          - ae_mentioned: { type: boolean, label: Adverse event mentioned, default: false }
+        access:
+          MI Specialist:    { actions: [view, add, edit, export, detail] }
+          Medical Reviewer: { actions: [view, export, detail] }
+          HCP:              { actions: [view, add, detail], rows: { own: reporter } }
+        workflow:
+          statuses:
+            - { code: new,           label: New,            color: blue, initial: true }
+            - { code: in_progress,   label: In Progress,    color: indigo }
+            - { code: awaiting_info, label: Awaiting Info,  color: amber }
+            - { code: responded,     label: Responded,      color: teal }
+            - { code: closed,        label: Closed,         color: green, final: true }
+            - { code: cancelled,     label: Cancelled,      color: gray,  final: true }
+          transitions:
+            - { name: triage, label: Triage, from: new, to: in_progress, roles: [MI Specialist], primary: true,
+                form: [ { priority: { type: choice, choices: priority, required: true } }, { ae_mentioned: { type: boolean } } ],
+                on_done: Assign the inquiry to the current user and compute due_on from the priority. }
+            - { name: request_info, label: Ask Reporter, from: in_progress, to: awaiting_info, roles: [MI Specialist],
+                form: [ { clarification: { type: long_text, required: true } } ],
+                on_done: Email the reporter the clarification question with a link to reply. }
+            - { name: info_received, label: Info Received, from: awaiting_info, to: in_progress, roles: [MI Specialist] }
+            - { name: mark_responded, label: Mark Responded, from: in_progress, to: responded, trigger: system,
+                text: When a response for this inquiry is sent. }
+            - { name: close, label: Close, from: responded, to: closed, roles: [MI Specialist], primary: true,
+                condition: { text: Every adverse event captured on this inquiry has been forwarded to PV. },
+                condition_msg: Forward the captured adverse events to PV before closing. }
+            - { name: cancel, label: Cancel, from: [new, in_progress, awaiting_info], to: cancelled, roles: [MI Specialist], tone: danger,
+                form: [ { cancel_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: ae_reported, label: AE, color: red, system: true, text: Set when an adverse event is captured on the inquiry. }
+            - { code: overdue, label: Overdue, color: amber, system: true, text: Set nightly when due_on is before today and the inquiry is not responded. }
+        table:
+          columns:
+            - inquiry_ref: { label: Inquiry, searchable: true, sortable: true, link_to: inquiry_360 }
+            - reporter:    { label: Reporter, display: full_name, searchable: true }
+            - product:     { label: Product, display: name, filterable: true }
+            - category:    { label: Category, filterable: true }
+            - channel:     { label: Channel, filterable: true }
+            - priority:    { label: Priority, filterable: true }
+            - due_on:      { label: Due, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+            - tags:        { source: tags, label: Flags }
+          default_sort: due_on
+          row_click: inquiry_360
+          quick_filters:
+            - { label: Open, where: "status in [new, in_progress, awaiting_info]", roles: [MI Specialist], default: true }
+            - { label: With AE, where: has_tag ae_reported, roles: [MI Specialist, Medical Reviewer] }
+          add_button: New Inquiry
+          row_actions:
+            - { key: open_360, label: Open, type: navigate, to: inquiry_360 }
+        form:
+          create:
+            roles: [MI Specialist, HCP]
+            sections:
+              - { title: Who is asking, fields: [reporter, channel, received_on] }
+              - { title: Question, fields: [product, category, question, priority, ae_mentioned] }
+            after_create: inquiry_360
+          edit: { same_as: create, roles: [MI Specialist], editable_in: [new, in_progress, awaiting_info] }
+
+      - code: response
+        name: Response
+        plural: Responses
+        kind: transactional
+        display: response_ref
+        fields:
+          - response_ref:      { type: text, label: Response ID, readonly: true, unique: true, auto: { sequence: "RSP-{YY}-{00000}" } }
+          - inquiry:           { type: link, to: inquiry, required: true, display: inquiry_ref, limit_choices: "status in [in_progress, awaiting_info]" }
+          - response_type:     { type: choice, required: true, default: standard, choices: [ { id: standard, label: Standard, color: green }, { id: custom, label: Custom, color: purple } ] }
+          - standard_response: { type: link, to: standard_response, display: srd_ref, limit_choices: status == approved }
+          - body:              { type: long_text, label: Response text, required: true }
+          - references:        { type: long_text, label: Literature references }
+          - delivery_method:   { type: choice, choices: delivery_method, required: true, default: email }
+          - sent_on:           { type: date, readonly: true }
+        validation:
+          rules:
+            - { when: response_type == standard, require: [standard_response], message: Pick the approved standard response used. }
+        access:
+          MI Specialist:    { actions: [view, add, edit, export] }
+          Medical Reviewer: { actions: [view, edit, export] }
+          HCP:              { actions: [view], rows: { own: inquiry.reporter } }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,     color: gray, initial: true }
+            - { code: in_review, label: In Review, color: amber }
+            - { code: approved,  label: Approved,  color: indigo }
+            - { code: sent,      label: Sent,      color: green, final: true }
+          transitions:
+            - { name: submit, label: Submit for Review, from: draft, to: in_review, roles: [MI Specialist], primary: true,
+                condition: response_type == custom, condition_msg: Standard responses are already approved; send them directly. }
+            - name: approve
+              label: Approve
+              from: in_review
+              to: approved
+              roles: [Medical Reviewer]
+              primary: true
+              condition: { text: The reviewer did not draft this response (maker-checker). }
+              condition_msg: Another reviewer must approve a response you drafted.
+              on_done: Record the reviewer and approval time on the response.
+            - { name: return, label: Return, from: in_review, to: draft, roles: [Medical Reviewer], tone: danger,
+                form: [ { review_comments: { type: long_text, required: true } } ],
+                on_done: Notify the MI specialist with the review comments. }
+            - { name: send, label: Send, from: [draft, approved], to: sent, roles: [MI Specialist], primary: true,
+                condition: { any: [ status == approved, response_type == standard ] },
+                condition_msg: Custom responses need medical approval before sending.,
+                on_done: "Deliver the response by the chosen method, set sent_on = today and move the inquiry to responded." }
+        table:
+          columns:
+            - response_ref:      { label: Response, searchable: true, sortable: true }
+            - inquiry:           { label: Inquiry, display: inquiry_ref, searchable: true, link_to: inquiry_360 }
+            - reporter:          { source: computed, label: Reporter, path: inquiry.reporter.full_name }
+            - response_type:     { label: Type, filterable: true }
+            - standard_response: { label: Standard response, display: srd_ref, roles: [MI Specialist, Medical Reviewer] }
+            - delivery_method:   { label: Via }
+            - sent_on:           { label: Sent, sortable: true }
+            - status:            { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Awaiting my review, where: status == in_review, roles: [Medical Reviewer], default: true }
+            - { label: Ready to send, where: status == approved, roles: [MI Specialist] }
+            - { label: Sent to me, where: status == sent, roles: [HCP], default: true }
+          add_button: New Response
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: "status in [draft, in_review]" }
+            - { key: letter, label: Download Letter, type: download, text: The response letter on letterhead with references and the standard disclaimer. }
+        form:
+          create:
+            roles: [MI Specialist]
+            fields: [inquiry, response_type, standard_response, body, references, delivery_method]
+          edit: { same_as: create, roles: [MI Specialist, Medical Reviewer], editable_in: [draft, in_review] }
+
+  - code: safety
+    name: AE Capture
+    description: Adverse events mentioned in inquiries, forwarded to pharmacovigilance.
+    entities:
+      - code: ae_report
+        name: AE Report
+        plural: AE Reports
+        kind: transactional
+        display: ae_ref
+        fields:
+          - ae_ref:          { type: text, label: AE ID, readonly: true, unique: true, auto: { sequence: "AE-{YY}-{0000}" } }
+          - inquiry:         { type: link, to: inquiry, required: true, display: inquiry_ref }
+          - product:         { type: link, to: product, required: true, display: name }
+          - patient_initials: { type: text, max_length: 5 }
+          - patient_age:     { type: integer, min: 0, max: 120 }
+          - event_description: { type: long_text, required: true }
+          - onset_date:      { type: date }
+          - seriousness:     { type: choice, choices: seriousness, required: true }
+          - awareness_date:  { type: date, label: Awareness date (day 0), required: true, default: today }
+          - safety_case_id:  { type: text, label: Safety case ID, readonly: true }
+        access:
+          MI Specialist:    { actions: [view, add, edit, export] }
+          Medical Reviewer: { actions: [view, edit, export] }
+        workflow:
+          statuses:
+            - { code: captured,     label: Captured,     color: amber, initial: true }
+            - { code: forwarded,    label: Forwarded to PV, color: blue }
+            - { code: acknowledged, label: PV Acknowledged, color: green, final: true }
+          transitions:
+            - name: forward
+              label: Forward to PV
+              from: captured
+              to: forwarded
+              roles: [MI Specialist]
+              primary: true
+              condition: { text: "The four minimum criteria are present: an identifiable reporter, an identifiable patient (initials or age), the product and the event." }
+              condition_msg: Record the patient initials or age before forwarding.
+              on_done: Email the PV safety mailbox the AE form with the inquiry transcript and record the time sent.
+            - { name: acknowledge, label: Record PV Acknowledgement, from: forwarded, to: acknowledged, roles: [MI Specialist, Medical Reviewer],
+                form: [ { safety_case_id: { type: text, required: true } } ] }
+          tags:
+            - { code: day1_breach, label: Over 1 business day, color: red, system: true, text: Set when still captured one business day after the awareness date. }
+        table:
+          columns:
+            - ae_ref:         { label: AE, searchable: true, sortable: true }
+            - inquiry:        { label: Inquiry, display: inquiry_ref, link_to: inquiry_360 }
+            - product:        { label: Product, display: name, filterable: true }
+            - seriousness:    { label: Seriousness, filterable: true }
+            - awareness_date: { label: Day 0, sortable: true }
+            - safety_case_id: { label: Safety case }
+            - status:         { source: status, label: Status, filterable: true }
+            - tags:           { source: tags, label: Flags }
+          default_sort: -awareness_date
+          quick_filters:
+            - { label: Not forwarded, where: status == captured, default: true }
+          add_button: Capture AE
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == captured }
+        form:
+          create:
+            roles: [MI Specialist]
+            sections:
+              - { title: Source, fields: [inquiry, product, awareness_date] }
+              - { title: Event, fields: [patient_initials, patient_age, event_description, onset_date, seriousness] }
+          edit: { same_as: create, editable_in: [captured] }
+
+detail_views:
+  - code: inquiry_360
+    hero: inquiry
+    title: "{inquiry_ref}"
+    back_to: inquiries
+    layout: header_tabs
+    roles: [MI Specialist, Medical Reviewer, HCP]
+    header:
+      title: inquiry_ref
+      subtitle: ["{reporter.full_name}", "{product.name}", "{category}"]
+      badges: [ { source: status }, { source: tags }, { field: priority } ]
+      facts:
+        - { label: Channel, field: channel }
+        - { label: Received, field: received_on }
+        - { label: Due, field: due_on }
+        - { label: MI specialist, field: assigned_to, fallback: "—" }
+      actions:
+        transitions: true
+        buttons:
+          - { key: new_response, label: Draft Response, icon: pen-line, type: create_related, entity: response, prefill: { inquiry: hero }, roles: [MI Specialist] }
+          - { key: capture_ae, label: Capture AE, icon: alert-triangle, type: create_related, entity: ae_report, prefill: { inquiry: hero }, roles: [MI Specialist] }
+      banners:
+        - { show_when: ae_mentioned is_true, tone: warning, text: "An adverse event was mentioned: capture it and forward it to PV within one business day." }
+    stats:
+      - { label: Responses, value: { count: response, via: inquiry }, tone: blue, link_to_tab: responses }
+      - { label: Adverse events, value: { count: ae_report, via: inquiry }, tone: red, link_to_tab: adverse_events }
+    tabs:
+      - { code: question, label: Question, type: summary, sections: [ { title: Inquiry, columns: 2, fields: [reporter, channel, product, category, priority, received_on] }, { title: Question, columns: 1, fields: [question] } ] }
+      - code: responses
+        label: Responses
+        type: related_table
+        entity: response
+        via: inquiry
+        count_badge: true
+        columns: [response_ref, response_type, standard_response, delivery_method, sent_on, status]
+        add: { label: Draft Response, prefill: { inquiry: hero } }
+      - code: adverse_events
+        label: Adverse Events
+        type: related_table
+        entity: ae_report
+        via: inquiry
+        count_badge: true
+        roles: [MI Specialist, Medical Reviewer]
+        columns: [ae_ref, seriousness, awareness_date, safety_case_id, status]
+        add: { label: Capture AE, prefill: { inquiry: hero } }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: inquiry, events: [created, updated, transition] }
+          - { entity: response, via: inquiry, events: [created, transition] }
+          - { entity: ae_report, via: inquiry, events: [created, transition] }

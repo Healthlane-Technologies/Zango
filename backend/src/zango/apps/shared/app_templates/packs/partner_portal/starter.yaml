@@ -1,0 +1,515 @@
+# Partner Portal: the template's starting point. Vendors, agencies and service
+# partners onboard with their compliance documents, raise and track requests
+# against SLAs, and see a monthly SLA scorecard that the partner manager prepares
+# and partner ops signs off. The analyst tailors every part of it to your
+# requirement; the preview on the right redraws with each change.
+spec_version: 1
+
+app:
+  code: partner_portal
+  name: Partner Portal
+  description: Onboard vendors and agencies, collect and verify their documents, run requests against SLAs and sign off monthly SLA scorecards.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#4F46E5", secondary: "#64748B" }
+  custom_requirements:
+    - area: permission
+      title: Single sign-on
+      text: Internal users sign in with the company SSO (SAML / Azure AD); partner users sign in with email and password plus an email OTP.
+    - area: integration
+      title: REST API for partners
+      text: Expose a token-protected REST API so larger partners can create requests, post responses and read request status from their own ticketing tools.
+
+choice_sets:
+  partner_type:
+    - { id: vendor,           label: Vendor }
+    - { id: creative_agency,  label: Creative agency }
+    - { id: media_agency,     label: Media agency }
+    - { id: event_agency,     label: Event agency }
+    - { id: service_provider, label: Service provider }
+    - { id: logistics,        label: Logistics partner }
+  service_line:
+    - { id: creative,     label: Creative & content }
+    - { id: media,        label: Media buying }
+    - { id: events,       label: Events & meetings }
+    - { id: it,           label: IT services }
+    - { id: logistics,    label: Logistics }
+    - { id: field_staff,  label: Field staffing }
+    - { id: research,     label: Market research }
+  risk_rating:
+    - { id: low,    label: Low,    color: green }
+    - { id: medium, label: Medium, color: amber }
+    - { id: high,   label: High,   color: red }
+  request_type:
+    - { id: invoice_query,   label: Invoice / payment query }
+    - { id: change_request,  label: Change request }
+    - { id: deliverable,     label: Deliverable submission }
+    - { id: access_request,  label: Access request }
+    - { id: incident,        label: Service incident }
+    - { id: general,         label: General query }
+  priority:
+    - { id: p1, label: P1 Critical, color: red }
+    - { id: p2, label: P2 High,     color: amber }
+    - { id: p3, label: P3 Normal,   color: blue }
+    - { id: p4, label: P4 Low,      color: gray }
+  sla_state:
+    - { id: on_track, label: On track, color: green }
+    - { id: at_risk,  label: At risk,  color: amber }
+    - { id: breached, label: Breached, color: red }
+    - { id: met,      label: Met,      color: teal }
+
+roles:
+  - name: Partner
+    description: External login for a vendor, agency or service partner; manages its own documents, requests and scorecards only.
+    landing: requests
+    menu:
+      - { page: requests,    label: My Requests,   icon: message-square }
+      - { page: documents,   label: My Documents,  icon: file-text }
+      - { page: scorecards,  label: SLA Scorecards, icon: gauge }
+
+  - name: Partner Manager
+    description: Owns a portfolio of partners; invites and onboards them, resolves their requests and prepares the monthly SLA scorecard.
+    landing: dashboard
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: partners,   icon: handshake }
+      - { page: requests,   icon: message-square }
+      - { page: documents,  icon: file-text }
+      - { page: scorecards, label: SLA Scorecards, icon: gauge }
+
+  - name: Partner Ops
+    description: Verifies partner documents, activates partners, maintains SLA definitions and signs off scorecards (the checker to the partner manager).
+    landing: partners
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: partners,   icon: handshake }
+      - { page: documents,  label: Document Verification, icon: file-check }
+      - { page: requests,   icon: message-square }
+      - { page: scorecards, label: SLA Scorecards, icon: gauge }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: sla_definitions }
+
+pages:
+  - { code: partners,        type: crud,   entity: partner,          route: /app/partners,          title: Partners }
+  - { code: partner_360,     type: detail, detail_view: partner_360, route: /app/partners/:id }
+  - { code: documents,       type: crud,   entity: partner_document, route: /app/documents,         title: Partner Documents }
+  - { code: requests,        type: crud,   entity: partner_request,  route: /app/requests,          title: Requests }
+  - { code: scorecards,      type: crud,   entity: sla_scorecard,    route: /app/sla-scorecards,    title: SLA Scorecards }
+  - { code: sla_definitions, type: crud,   entity: sla_definition,   route: /app/masters/slas,      title: SLA Definitions }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Dashboard
+    component: PartnerDashboard
+    roles: [Partner Manager, Partner Ops]
+    text: >
+      KPI row: active partners, partners in onboarding, open requests, SLA met % this month
+      (with change on last month). Below: open requests by SLA state per partner type
+      (stacked bar), documents expiring in the next 30 days, and the 10 open requests closest
+      to breach. Partner Managers see only their own portfolio.
+
+modules:
+  - code: partners
+    name: Partners
+    description: Partner master, onboarding and compliance documents.
+    entities:
+      - code: partner
+        name: Partner
+        plural: Partners
+        kind: hero
+        display: legal_name
+        app_user: { role: Partner, name: contact_name, email: email, mobile: phone, create_on: "status in [onboarding, under_review, active, suspended]" }
+        fields:
+          - partner_code:     { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "PTR-{0000}" } }
+          - legal_name:       { type: text, label: Legal name, required: true, max_length: 200 }
+          - partner_type:     { type: choice, label: Type, choices: partner_type, required: true }
+          - services:         { type: multi_choice, label: Services, choices: service_line, required: true }
+          - tax_id:           { type: text, label: Tax ID (GSTIN), unique: true }
+          - city:             { type: text, required: true }
+          - contact_name:     { type: text, label: Primary contact, required: true }
+          - email:            { type: email, required: true }
+          - phone:            { type: phone }
+          - partner_manager:  { type: link, to: app_user, label: Partner Manager, required: true }
+          - contract_start:   { type: date, label: Contract start, required: true }
+          - contract_end:     { type: date, label: Contract end, required: true }
+          - risk_rating:      { type: choice, label: Risk, choices: risk_rating, default: low }
+          - sla_met_pct:      { type: percent, label: SLA met (90 days), readonly: true, min: 72, max: 100, computed: Requests resolved within SLA divided by requests resolved in the last 90 days. }
+        validation:
+          rules:
+            - { when: contract_end is_set, require_expr: contract_end > contract_start, message: Contract end must be after the contract start. }
+          duplicate_check:
+            rules:
+              - { match: [tax_id], compare: exact, on_match: block, message: A partner with this tax ID already exists. }
+              - { match: [legal_name, city], compare: fuzzy, threshold: 0.85, on_match: warn, message: A partner with a similar name in this city already exists. }
+        access:
+          Partner Manager: { actions: [view, add, edit, export, detail], rows: { text: Partners whose partner_manager is the current user. } }
+          Partner Ops:     { actions: [view, edit, export, detail] }
+          Partner:         { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: invited,      label: Invited,      color: gray, initial: true }
+            - { code: onboarding,   label: Onboarding,   color: blue }
+            - { code: under_review, label: Under Review, color: amber }
+            - { code: active,       label: Active,       color: green }
+            - { code: suspended,    label: Suspended,    color: purple }
+            - { code: offboarded,   label: Offboarded,   color: red, final: true }
+          transitions:
+            - { name: send_invite, label: Send Invite, from: invited, to: onboarding, roles: [Partner Manager], primary: true,
+                on_done: Create the Partner login and email the contact an invitation with the onboarding checklist. }
+            - name: submit
+              label: Submit for Review
+              from: onboarding
+              to: under_review
+              roles: [Partner, Partner Manager]
+              primary: true
+              condition: { text: "The master services agreement, NDA, tax registration and bank letter documents are uploaded." }
+              condition_msg: Upload the MSA, NDA, tax registration and bank letter first.
+              on_done: Notify Partner Ops that a partner is waiting for review.
+            - name: activate
+              label: Activate
+              from: under_review
+              to: active
+              roles: [Partner Ops]
+              primary: true
+              condition: { text: Every mandatory document is verified and none has expired. }
+              condition_msg: Verify all mandatory documents first.
+              on_done: Email the partner contact and the Partner Manager that the partner is active and can raise requests.
+            - { name: send_back, label: Send Back, from: under_review, to: onboarding, roles: [Partner Ops],
+                form: [ { send_back_reason: { type: long_text, required: true } } ],
+                on_done: Email the partner contact and the Partner Manager the reason. }
+            - { name: suspend, label: Suspend, from: active, to: suspended, roles: [Partner Ops, Partner Manager], tone: danger,
+                form: [ { suspension_reason: { type: long_text, required: true } } ],
+                on_done: Block new requests from the partner and email the contact the reason. }
+            - { name: reinstate, label: Reinstate, from: suspended, to: active, roles: [Partner Ops] }
+            - { name: offboard, label: Offboard, from: [active, suspended], to: offboarded, roles: [Partner Ops], tone: danger,
+                confirm: "Offboard this partner? Their logins will be disabled.",
+                form: [ { offboarding_reason: { type: long_text, required: true } } ],
+                on_done: Disable every login of the partner and close its open requests. }
+          tags:
+            - { code: strategic, label: Strategic, color: indigo, enable: { roles: [Partner Ops] }, disable: { roles: [Partner Ops] } }
+            - { code: doc_expiring, label: Document Expiring, color: amber, system: true, text: Set when any verified document expires within 30 days; cleared when it is replaced. }
+        form:
+          create:
+            roles: [Partner Manager]
+            title: Invite Partner
+            sections:
+              - { title: Company, fields: [legal_name, partner_type, services, tax_id, city] }
+              - { title: Contact, fields: [contact_name, email, phone, partner_manager] }
+              - { title: Contract, fields: [contract_start, contract_end, risk_rating] }
+            after_create: partner_360
+          edit:
+            same_as: create
+            roles: [Partner Manager, Partner Ops]
+            readonly_when:
+              - { when: "status in [active, suspended]", fields: [legal_name, tax_id] }
+            editable_in: [invited, onboarding, under_review, active, suspended]
+        table:
+          columns:
+            - partner_code:    { label: Code, searchable: true, sortable: true }
+            - legal_name:      { label: Partner, searchable: true, sortable: true, link_to: partner_360 }
+            - partner_type:    { label: Type, filterable: true }
+            - city:            { label: City, filterable: true }
+            - partner_manager: { label: Manager }
+            - sla_met_pct:     { label: SLA met, format: percent, sortable: true }
+            - risk_rating:     { label: Risk, filterable: true }
+            - status:          { source: status, label: Status, filterable: true }
+            - tags:            { source: tags, label: Flags }
+          default_sort: legal_name
+          quick_filters:
+            - { label: Awaiting review, where: status == under_review, roles: [Partner Ops], default: true }
+            - { label: Onboarding, where: "status in [invited, onboarding]", roles: [Partner Manager] }
+            - { label: Documents expiring, where: has_tag doc_expiring }
+          row_click: partner_360
+          add_button: Invite Partner
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+            - { key: open_360, label: Open 360, type: navigate, to: partner_360 }
+
+      - code: partner_document
+        name: Document
+        plural: Documents
+        kind: child
+        parent: { entity: partner, field: partner }
+        display: doc_type
+        fields:
+          - partner:     { type: link, to: partner, required: true, display: legal_name, on_delete: cascade }
+          - doc_type:    { type: choice, label: Document, required: true, choices: [ {id: msa, label: Master Services Agreement}, {id: nda, label: NDA}, {id: tax_registration, label: Tax Registration}, {id: bank_letter, label: Bank Letter}, {id: insurance, label: Insurance Certificate}, {id: anti_bribery, label: Anti-bribery Declaration}, {id: data_protection, label: Data Protection Agreement} ] }
+          - file:        { type: file, required: true, accept: [pdf, jpg, png], max_size_mb: 10 }
+          - valid_until: { type: date, label: Valid until }
+        access:
+          Partner:         { actions: [view, add], rows: { own: partner } }
+          Partner Manager: { actions: [view, add], rows: { text: Documents of partners whose partner_manager is the current user. } }
+          Partner Ops:     { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: uploaded, label: Uploaded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: rejected, label: Rejected, color: red }
+            - { code: expired,  label: Expired,  color: gray, final: true }
+          transitions:
+            - { name: verify, label: Verify, from: uploaded, to: verified, roles: [Partner Ops], primary: true }
+            - { name: reject, label: Reject, from: uploaded, to: rejected, roles: [Partner Ops],
+                form: [ { reject_reason: { type: text, required: true } } ],
+                on_done: Email the partner contact the reason and a re-upload link. }
+            - { name: expire, label: Expire, from: verified, to: expired, trigger: system, text: Nightly when valid_until < today; email the partner to upload a renewed document. }
+        table:
+          columns:
+            - partner:     { label: Partner, display: legal_name, searchable: true, filterable: true }
+            - doc_type:    { label: Document, filterable: true }
+            - file:        { label: File }
+            - valid_until: { label: Valid until, sortable: true }
+            - status:      { source: status, label: Status, filterable: true }
+          default_sort: valid_until
+          quick_filters:
+            - { label: To verify, where: status == uploaded, roles: [Partner Ops], default: true }
+            - { label: Rejected, where: status == rejected, roles: [Partner] }
+          add_button: Upload Document
+        form:
+          create: { roles: [Partner, Partner Manager], fields: [doc_type, file, valid_until], on_create: Link the document to the partner of the logged-in partner user. }
+
+  - code: service
+    name: Requests & SLAs
+    description: Requests between partners and the company, the SLA they run against, and monthly SLA scorecards.
+    entities:
+      - code: sla_definition
+        name: SLA
+        plural: SLA Definitions
+        kind: master
+        display: name
+        fields:
+          - name:             { type: text, required: true }
+          - request_type:     { type: choice, label: Request type, choices: request_type, required: true }
+          - priority:         { type: choice, choices: priority, required: true }
+          - response_hours:   { type: integer, label: Response (hours), required: true, min: 1 }
+          - resolution_hours: { type: integer, label: Resolution (hours), required: true, min: 1 }
+          - target_pct:       { type: percent, label: Target met %, default: 95 }
+          - is_active:        { type: boolean, label: Active, default: true }
+        access:
+          Partner Ops:     { actions: [view, add, edit, export] }
+          Partner Manager: { actions: [view] }
+          Partner:         { actions: [view] }
+        table:
+          columns:
+            - name:             { label: SLA, searchable: true }
+            - request_type:     { label: Request type, filterable: true }
+            - priority:         { label: Priority, filterable: true }
+            - response_hours:   { label: Response (h) }
+            - resolution_hours: { label: Resolution (h) }
+            - target_pct:       { label: Target, format: percent }
+            - is_active:        { label: Active }
+          default_sort: priority
+          add_button: Add SLA
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, request_type, priority, response_hours, resolution_hours, target_pct, is_active] }
+          edit:   { same_as: create }
+
+      - code: partner_request
+        name: Request
+        plural: Requests
+        kind: transactional
+        display: request_ref
+        fields:
+          - request_ref:  { type: text, label: Request, readonly: true, unique: true, auto: { sequence: "REQ-{YY}-{00000}" } }
+          - partner:      { type: link, to: partner, required: true, display: legal_name, limit_choices: status == active }
+          - request_type: { type: choice, label: Type, choices: request_type, required: true }
+          - priority:     { type: choice, choices: priority, required: true, default: p3 }
+          - subject:      { type: text, required: true, max_length: 160 }
+          - description:  { type: long_text, required: true }
+          - attachment:   { type: file, accept: [pdf, xlsx, docx, png, jpg, zip], max_size_mb: 25 }
+          - assignee:     { type: link, to: app_user, label: Assigned to }
+          - sla:          { type: link, to: sla_definition, label: SLA, display: name, readonly: true, computed: The active SLA for this request type and priority. }
+          - due_at:       { type: datetime, label: Resolve by, readonly: true, computed: "Created time plus the SLA resolution hours, paused while the request awaits the partner." }
+          - sla_state:    { type: choice, label: SLA, choices: sla_state, readonly: true, computed: "On track; at risk when 80% of the resolution time is used; breached after due_at; met when resolved before due_at." }
+        access:
+          Partner:         { actions: [view, add, detail], rows: { own: partner } }
+          Partner Manager: { actions: [view, add, edit, export], rows: { text: Requests of partners whose partner_manager is the current user. } }
+          Partner Ops:     { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: new,              label: New,              color: blue, initial: true }
+            - { code: in_progress,      label: In Progress,      color: indigo }
+            - { code: awaiting_partner, label: Awaiting Partner, color: amber }
+            - { code: resolved,         label: Resolved,         color: teal }
+            - { code: closed,           label: Closed,           color: green, final: true }
+            - { code: cancelled,        label: Cancelled,        color: gray, final: true }
+          transitions:
+            - { name: acknowledge, label: Acknowledge, from: new, to: in_progress, roles: [Partner Manager], primary: true,
+                on_done: Record the first response time against the SLA and email the partner who is working on it. }
+            - { name: ask_partner, label: Ask Partner, from: in_progress, to: awaiting_partner, roles: [Partner Manager],
+                form: [ { question: { type: long_text, required: true } } ],
+                on_done: Pause the SLA clock and email the partner the question. }
+            - { name: reply, label: Reply, from: awaiting_partner, to: in_progress, roles: [Partner], primary: true,
+                form: [ { reply: { type: long_text, required: true } }, { reply_file: { type: file } } ],
+                on_done: Restart the SLA clock and notify the assignee. }
+            - { name: resolve, label: Resolve, from: in_progress, to: resolved, roles: [Partner Manager], primary: true,
+                form: [ { resolution: { type: long_text, required: true } } ],
+                on_done: "Stop the SLA clock, set sla_state to met or breached and email the partner the resolution." }
+            - { name: reopen, label: Reopen, from: resolved, to: in_progress, roles: [Partner],
+                form: [ { reopen_reason: { type: long_text, required: true } } ] }
+            - { name: close, label: Close, from: resolved, to: closed, roles: [Partner, Partner Manager] }
+            - { name: auto_close, label: Auto-close, from: resolved, to: closed, trigger: system, text: Five working days after resolution when the partner has not reopened it. }
+            - { name: cancel, label: Cancel, from: [new, in_progress, awaiting_partner], to: cancelled, roles: [Partner, Partner Manager], tone: danger,
+                confirm: "Cancel this request?" }
+          tags:
+            - { code: escalated, label: Escalated, color: red, enable: { roles: [Partner, Partner Manager] }, disable: { roles: [Partner Ops] } }
+            - { code: sla_breached, label: SLA Breached, color: red, system: true, text: Set when due_at passes before the request is resolved; email the Partner Manager and Partner Ops. }
+        table:
+          columns:
+            - request_ref:  { label: Request, searchable: true, sortable: true }
+            - partner:      { label: Partner, display: legal_name, searchable: true, filterable: true }
+            - subject:      { label: Subject, searchable: true }
+            - request_type: { label: Type, filterable: true }
+            - priority:     { label: Priority, filterable: true }
+            - due_at:       { label: Resolve by, sortable: true }
+            - sla_state:    { label: SLA, filterable: true }
+            - status:       { source: status, label: Status, filterable: true }
+          default_sort: due_at
+          quick_filters:
+            - { label: Open, where: "status in [new, in_progress, awaiting_partner]", default: true }
+            - { label: At risk or breached, where: "sla_state in [at_risk, breached]", roles: [Partner Manager, Partner Ops] }
+            - { label: Waiting on me, where: status == awaiting_partner, roles: [Partner] }
+          add_button: New Request
+        form:
+          create: { roles: [Partner, Partner Manager], title: New Request, fields: [partner, request_type, priority, subject, description, attachment], on_create: For a partner user set partner to their own partner; attach the matching SLA and compute due_at. }
+          edit:   { roles: [Partner Manager], fields: [priority, assignee], editable_in: [new, in_progress, awaiting_partner] }
+
+      - code: sla_scorecard
+        name: SLA Scorecard
+        plural: SLA Scorecards
+        kind: transactional
+        display: period
+        fields:
+          - partner:           { type: link, to: partner, required: true, display: legal_name, limit_choices: status == active }
+          - period:            { type: text, label: Month, required: true, placeholder: "2026-09" }
+          - requests_resolved: { type: integer, label: Resolved, readonly: true, min: 4, max: 60 }
+          - met_pct:           { type: percent, label: SLA met, readonly: true, min: 78, max: 100, computed: Requests resolved within SLA divided by requests resolved in the month. }
+          - breaches:          { type: integer, readonly: true, min: 0, max: 6 }
+          - service_credit:    { type: money, label: Service credit, min: 0, help: Credit owed by the partner under the contract for missed SLAs. }
+          - manager_comment:   { type: long_text, label: Manager comment }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [partner, period], compare: exact, on_match: block, message: A scorecard for this partner and month already exists. }
+        access:
+          Partner Manager: { actions: [view, add, edit, export], rows: { text: Scorecards of partners whose partner_manager is the current user. } }
+          Partner Ops:     { actions: [view, export] }
+          Partner:         { actions: [view], rows: { own: partner } }
+        workflow:
+          statuses:
+            - { code: draft,        label: Draft,         color: gray, initial: true }
+            - { code: submitted,    label: Submitted,     color: blue }
+            - { code: signed_off,   label: Signed Off,    color: indigo }
+            - { code: acknowledged, label: Acknowledged,  color: green, final: true }
+            - { code: disputed,     label: Disputed,      color: amber }
+          transitions:
+            - { name: submit, label: Submit for Sign-off, from: draft, to: submitted, roles: [Partner Manager], primary: true,
+                on_done: Notify Partner Ops that the scorecard is ready for sign-off. }
+            - name: sign_off
+              label: Sign Off
+              from: submitted
+              to: signed_off
+              roles: [Partner Ops]
+              primary: true
+              condition: { text: The person signing off did not prepare the scorecard (maker-checker). }
+              condition_msg: Another person must sign off a scorecard you prepared.
+              on_done: Share the scorecard with the partner and email the contact to acknowledge it.
+            - { name: return, label: Return, from: submitted, to: draft, roles: [Partner Ops],
+                form: [ { return_note: { type: long_text, required: true } } ] }
+            - { name: acknowledge, label: Acknowledge, from: signed_off, to: acknowledged, roles: [Partner], primary: true,
+                on_done: Record any service credit for finance to offset against the next invoice. }
+            - { name: dispute, label: Dispute, from: signed_off, to: disputed, roles: [Partner],
+                form: [ { dispute_reason: { type: long_text, required: true } } ],
+                on_done: Email the Partner Manager the dispute. }
+            - { name: revise, label: Revise, from: disputed, to: draft, roles: [Partner Manager] }
+        table:
+          columns:
+            - partner:           { label: Partner, display: legal_name, searchable: true, filterable: true }
+            - period:            { label: Month, sortable: true }
+            - requests_resolved: { label: Resolved }
+            - met_pct:           { label: SLA met, format: percent, sortable: true }
+            - breaches:          { label: Breaches }
+            - service_credit:    { label: Service credit, format: money }
+            - status:            { source: status, label: Status, filterable: true }
+          default_sort: -period
+          quick_filters:
+            - { label: To sign off, where: status == submitted, roles: [Partner Ops], default: true }
+            - { label: To acknowledge, where: status == signed_off, roles: [Partner], default: true }
+            - { label: Disputed, where: status == disputed, roles: [Partner Manager] }
+          footer_totals: [service_credit]
+          add_button: New Scorecard
+        form:
+          create: { roles: [Partner Manager], fields: [partner, period, service_credit, manager_comment], on_create: "Fill requests_resolved, met_pct and breaches from the partner's requests resolved in the month." }
+          edit:   { roles: [Partner Manager], fields: [service_credit, manager_comment], editable_in: [draft] }
+
+detail_views:
+  - code: partner_360
+    hero: partner
+    title: "{legal_name}"
+    back_to: partners
+    layout: header_tabs_sidebar
+    roles: [Partner Manager, Partner Ops, Partner]
+    header:
+      avatar: { fallback_initials: legal_name }
+      title: legal_name
+      subtitle: ["{partner_code}", "{partner_type}", "{city}"]
+      badges: [ { source: status }, { source: tags }, { field: risk_rating, prefix: "Risk: " } ]
+      facts:
+        - { label: Primary contact, field: contact_name }
+        - { label: Email, field: email, copyable: true }
+        - { label: Contract end, field: contract_end }
+        - { label: SLA met (90 days), field: sla_met_pct }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: new_request, label: New Request, type: create_related, entity: partner_request, prefill: { partner: hero } }
+          - { key: edit, label: Edit, type: edit, roles: [Partner Manager, Partner Ops] }
+      banners:
+        - { show_when: has_tag doc_expiring, tone: warning, text: A verified document expires within 30 days. }
+        - { show_when: status == suspended, tone: warning, text: "Suspended: {suspension_reason}" }
+    stats:
+      - { label: Open requests, value: { count: partner_request, via: partner, where: "status in [new, in_progress, awaiting_partner]" }, tone: blue, link_to_tab: requests }
+      - { label: Breached, value: { count: partner_request, via: partner, where: sla_state == breached }, tone: amber, link_to_tab: requests }
+      - { label: Documents to verify, value: { count: partner_document, via: partner, where: status == uploaded }, tone: indigo, link_to_tab: documents }
+      - { label: Service credits, value: { sum: sla_scorecard.service_credit, via: partner }, format: money, tone: teal, link_to_tab: scorecards }
+    sidebar:
+      - { type: fields, title: Company, fields: [partner_type, services, tax_id, city] }
+      - { type: fields, title: Relationship, fields: [partner_manager, contract_start, contract_end, risk_rating] }
+    tabs:
+      - code: requests
+        label: Requests
+        type: related_table
+        entity: partner_request
+        via: partner
+        count_badge: true
+        columns: [request_ref, subject, request_type, priority, due_at, sla_state, status]
+        add: { label: New Request, prefill: { partner: hero } }
+      - code: documents
+        label: Documents
+        type: related_table
+        entity: partner_document
+        via: partner
+        count_badge: { where: status == uploaded, tone: amber }
+        columns: [doc_type, file, valid_until, status]
+        add: { label: Upload Document, prefill: { partner: hero } }
+        empty_state: { title: No documents yet, text: "Upload the MSA, NDA, tax registration and bank letter to submit for review.", cta: add }
+      - code: scorecards
+        label: SLA Scorecards
+        type: related_table
+        entity: sla_scorecard
+        via: partner
+        columns: [period, requests_resolved, met_pct, breaches, service_credit, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: partner, events: [created, updated, transition, tag] }
+          - { entity: partner_request, via: partner, events: [created, transition] }
+          - { entity: partner_document, via: partner, events: [created, transition] }
+    states:
+      not_found: { title: Partner not found, back_to: partners }

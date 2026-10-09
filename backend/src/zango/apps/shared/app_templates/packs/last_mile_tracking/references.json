@@ -1,0 +1,9 @@
+[
+  {
+    "id": "specialty_home_delivery",
+    "file": "references/specialty_home_delivery.yaml",
+    "title": "Last-Mile Tracking — Specialty Home Delivery (6 pharmacies, 3 couriers, Maharashtra and Karnataka)",
+    "summary": "About 2,400 specialty and cold-chain home deliveries a month against a 24-hour promise: serial scans at hand-over, at the door and on return checked against packaging line (L3) serials, OTP proof of delivery with door temperature and GPS distance, data-logger readings, route exceptions with ops sign-off and a maker-checker QA sign-off for excursions and damage, returns with QA-approved destruction, courier webhooks, ERP confirmations, a control-tower dashboard and delivery and partner 360 pages.",
+    "tags": ["last mile", "home delivery", "proof of delivery", "serialization", "cold chain", "route exceptions", "returns", "external users", "QA sign-off", "360 page"]
+  }
+]

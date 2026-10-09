@@ -1,0 +1,585 @@
+# Clinical Trial Management: the template's starting point. Study setup with
+# milestones, site activation and enrollment, monitoring visits with visit
+# reports, and issue and protocol deviation tracking through to sign-off.
+# The analyst tailors every part of it to your requirement; the preview on the
+# right redraws with each change.
+spec_version: 1
+
+app:
+  code: clinical_trial_management
+  name: Clinical Trial Management
+  description: Set up studies and milestones, activate and track sites, plan and report monitoring visits, and follow every issue to closure.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#1D4ED8", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: EDC connector
+      text: Nightly, pull screened, randomised and screen-failed subject counts per site from the EDC and update each site's enrollment fields.
+    - area: integration
+      title: eTMF export
+      text: When a visit report is approved or an issue is closed, file the report PDF or the issue record into the eTMF under the study and site, with the TMF reference model artifact code.
+    - area: backend
+      title: Audit trail
+      text: Keep an ICH E6-style audit trail of every create, edit and status change (who, when, old and new value) that cannot be edited or deleted.
+
+choice_sets:
+  phase:
+    - { id: phase_1,  label: Phase I }
+    - { id: phase_2,  label: Phase II }
+    - { id: phase_3,  label: Phase III }
+    - { id: phase_4,  label: Phase IV }
+  therapeutic_area:
+    - { id: oncology,    label: Oncology }
+    - { id: cardiology,  label: Cardiology }
+    - { id: neurology,   label: Neurology }
+    - { id: infectious,  label: Infectious Disease }
+    - { id: metabolic,   label: Metabolic }
+  indication:
+    - { id: nsclc,      label: Non-small cell lung cancer }
+    - { id: breast_ca,  label: Breast cancer }
+    - { id: hf,         label: Heart failure }
+    - { id: t2dm,       label: Type 2 diabetes }
+    - { id: alzheimers, label: Alzheimer's disease }
+    - { id: rsv,        label: RSV infection }
+  visit_type:
+    - { id: psv, label: Pre-study visit,       color: gray }
+    - { id: siv, label: Site initiation visit, color: blue }
+    - { id: imv, label: Interim monitoring,    color: indigo }
+    - { id: cov, label: Close-out visit,       color: purple }
+  visit_mode:
+    - { id: onsite, label: On-site }
+    - { id: remote, label: Remote }
+  issue_category:
+    - { id: protocol_deviation, label: Protocol deviation }
+    - { id: informed_consent,   label: Informed consent }
+    - { id: sdv_discrepancy,    label: SDV discrepancy }
+    - { id: ip_accountability,  label: IP accountability }
+    - { id: safety_reporting,   label: Safety reporting }
+    - { id: regulatory_docs,    label: Regulatory documents }
+  severity:
+    - { id: minor,    label: Minor,    color: gray }
+    - { id: major,    label: Major,    color: amber }
+    - { id: critical, label: Critical, color: red }
+
+roles:
+  - name: Study Manager
+    description: Sets up studies and milestones, selects and activates sites, approves visit reports and signs off major and critical issues.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: studies,   icon: flask-conical }
+      - { page: sites,     icon: hospital }
+      - { page: visits,    label: Monitoring Visits, icon: calendar-check }
+      - { page: issues,    icon: triangle-alert }
+      - { page: milestones, icon: flag }
+
+  - name: CRA
+    description: Monitors assigned sites; plans and logs visits, writes visit reports and raises and verifies issues.
+    landing: visits
+    menu:
+      - { page: visits, label: My Visits, icon: calendar-check }
+      - { page: sites,  label: My Sites,  icon: hospital }
+      - { page: issues, icon: triangle-alert }
+
+  - name: Site
+    description: External login for the site coordinator or investigator; sees only its own site, visits and issues and responds to action items.
+    landing: issues
+    menu:
+      - { page: issues, label: Action Items, icon: triangle-alert }
+      - { page: visits, label: Monitoring Visits, icon: calendar-check }
+      - { page: sites,  label: Our Site, icon: hospital }
+
+pages:
+  - { code: studies,    type: crud,   entity: study,            route: /app/studies,            title: Studies }
+  - { code: study_360,  type: detail, detail_view: study_360,   route: /app/studies/:id }
+  - { code: milestones, type: crud,   entity: milestone,        route: /app/milestones,         title: Milestones }
+  - { code: sites,      type: crud,   entity: site,             route: /app/sites,              title: Sites }
+  - { code: site_360,   type: detail, detail_view: site_360,    route: /app/sites/:id }
+  - { code: visits,     type: crud,   entity: monitoring_visit, route: /app/visits,             title: Monitoring Visits }
+  - { code: issues,     type: crud,   entity: issue,            route: /app/issues,             title: Issues }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Portfolio Dashboard
+    component: StudyDashboard
+    roles: [Study Manager]
+    text: >
+      KPI row: active studies, active sites, subjects randomised against target (with % of
+      target), open issues (critical in red), visit reports overdue. Below: enrollment by
+      study (bar, actual vs target), upcoming milestones in the next 60 days with at-risk
+      ones highlighted, and sites with the most open major or critical issues.
+
+modules:
+  - code: studies
+    name: Studies
+    description: Study master, phase, enrollment targets and the milestone plan.
+    entities:
+      - code: study
+        name: Study
+        plural: Studies
+        kind: hero
+        display: protocol_no
+        fields:
+          - protocol_no:       { type: text, label: Protocol no., required: true, unique: true, pattern: "^[A-Z]{3}-[0-9]{3}$", pattern_msg: "Three letters, a hyphen and three digits, e.g. ABC-301." }
+          - title:             { type: text, label: Study title, required: true, max_length: 250 }
+          - phase:             { type: choice, choices: phase, required: true }
+          - therapeutic_area:  { type: choice, label: Therapeutic area, choices: therapeutic_area, required: true }
+          - indication:        { type: choice, choices: indication, required: true }
+          - study_manager:     { type: link, to: app_user, label: Study manager }
+          - planned_sites:     { type: integer, label: Planned sites, min: 5, max: 60 }
+          - target_enrollment: { type: integer, label: Target subjects, required: true, min: 60, max: 600 }
+          - randomised:        { type: integer, label: Randomised, readonly: true, min: 10, max: 400, computed: Sum of randomised across the study's sites (from EDC). }
+          - fpi_date:          { type: date, label: First patient in }
+          - lpi_planned:       { type: date, label: Last patient in (planned) }
+          - hold_reason:       { type: long_text, label: Hold reason, readonly: true }
+        access:
+          Study Manager: { actions: [view, add, edit, export, detail] }
+          CRA:           { actions: [view, detail] }
+        workflow:
+          statuses:
+            - { code: planning,   label: Planning,   color: gray, initial: true }
+            - { code: start_up,   label: Start-up,   color: blue }
+            - { code: enrolling,  label: Enrolling,  color: green }
+            - { code: follow_up,  label: Follow-up,  color: teal }
+            - { code: close_out,  label: Close-out,  color: purple }
+            - { code: on_hold,    label: On Hold,    color: amber }
+            - { code: closed,     label: Closed,     color: indigo, final: true }
+          transitions:
+            - { name: start_up, label: Start Site Start-up, from: planning, to: start_up, roles: [Study Manager], primary: true,
+                condition: { text: "Protocol approval and Ethics submission milestones are achieved." },
+                condition_msg: Achieve the protocol approval and Ethics submission milestones first. }
+            - { name: open_enrollment, label: Open Enrollment, from: start_up, to: enrolling, roles: [Study Manager], primary: true,
+                condition: { text: At least one site is Active. },
+                condition_msg: Activate at least one site first.,
+                on_done: Set fpi_date when the first subject is randomised and email all CRAs that enrollment is open. }
+            - { name: close_enrollment, label: Close Enrollment, from: enrolling, to: follow_up, roles: [Study Manager],
+                confirm: "Close enrollment for every site in this study?",
+                on_done: Move every Active site of the study to Enrollment Closed. }
+            - { name: begin_close_out, label: Begin Close-out, from: follow_up, to: close_out, roles: [Study Manager] }
+            - { name: hold, label: Put on Hold, from: [start_up, enrolling, follow_up], to: on_hold, roles: [Study Manager], tone: danger,
+                form: [ { hold_reason: { type: long_text, required: true } } ],
+                on_done: Email every CRA and Site user of the study the reason. }
+            - { name: resume, label: Resume, from: on_hold, to: enrolling, roles: [Study Manager] }
+            - { name: close, label: Close Study, from: close_out, to: closed, roles: [Study Manager],
+                condition: { text: "Every site is Closed and no issue of the study is open." },
+                condition_msg: Close all sites and issues first. }
+        form:
+          create:
+            title: New Study
+            sections:
+              - { title: Protocol, fields: [protocol_no, title, phase, therapeutic_area, indication] }
+              - { title: Plan, fields: [study_manager, planned_sites, target_enrollment, lpi_planned] }
+            after_create: study_360
+          edit: { same_as: create, editable_in: [planning, start_up, enrolling, follow_up, on_hold] }
+        table:
+          columns:
+            - protocol_no:       { label: Protocol, searchable: true, sortable: true, link_to: study_360 }
+            - indication:        { label: Indication, filterable: true }
+            - phase:             { label: Phase, filterable: true }
+            - therapeutic_area:  { label: Area, filterable: true }
+            - target_enrollment: { label: Target }
+            - randomised:        { label: Randomised, sortable: true }
+            - status:            { source: status, label: Status, filterable: true }
+          default_sort: protocol_no
+          quick_filters:
+            - { label: Active, where: "status in [start_up, enrolling, follow_up]", default: true }
+          row_click: study_360
+          add_button: New Study
+
+      - code: milestone
+        name: Milestone
+        plural: Milestones
+        kind: child
+        parent: { entity: study, field: study }
+        display: milestone_name
+        fields:
+          - study:          { type: link, to: study, required: true, display: protocol_no, on_delete: cascade }
+          - milestone_name: { type: choice, label: Milestone, required: true, choices: [ {id: protocol_final, label: Protocol final}, {id: ethics_submitted, label: Ethics submitted}, {id: first_site_active, label: First site active}, {id: fpi, label: First patient in}, {id: half_enrolled, label: 50% enrolled}, {id: lpi, label: Last patient in}, {id: db_lock, label: Database lock} ] }
+          - planned_date:   { type: date, label: Planned, required: true }
+          - forecast_date:  { type: date, label: Forecast }
+          - actual_date:    { type: date, label: Actual }
+          - owner:          { type: link, to: app_user }
+        access:
+          Study Manager: { actions: [view, add, edit, export] }
+          CRA:           { actions: [view] }
+        workflow:
+          statuses:
+            - { code: planned,  label: Planned,  color: gray, initial: true }
+            - { code: at_risk,  label: At Risk,  color: amber }
+            - { code: achieved, label: Achieved, color: green, final: true }
+            - { code: missed,   label: Missed,   color: red }
+          transitions:
+            - { name: flag_risk, label: Flag At Risk, from: planned, to: at_risk, roles: [Study Manager],
+                form: [ { risk_note: { type: long_text, required: true } } ] }
+            - { name: auto_risk, label: At Risk, from: planned, to: at_risk, trigger: system, text: Nightly when forecast_date is more than 14 days after planned_date. }
+            - { name: achieve, label: Mark Achieved, from: [planned, at_risk, missed], to: achieved, roles: [Study Manager], primary: true,
+                form: [ { actual_date: { type: date, required: true } } ] }
+            - { name: miss, label: Missed, from: [planned, at_risk], to: missed, trigger: system, text: Nightly when planned_date < today and no actual_date. }
+        table:
+          columns:
+            - study:          { label: Study, display: protocol_no, filterable: true }
+            - milestone_name: { label: Milestone }
+            - planned_date:   { label: Planned, sortable: true }
+            - forecast_date:  { label: Forecast }
+            - actual_date:    { label: Actual }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: planned_date
+          quick_filters:
+            - { label: At risk or missed, where: "status in [at_risk, missed]" }
+          add_button: Add Milestone
+        form:
+          create: { fields: [study, milestone_name, planned_date, forecast_date, owner] }
+          edit:   { fields: [planned_date, forecast_date, owner] }
+
+  - code: sites
+    name: Site Management
+    description: Sites per study, the CRA who monitors them, activation and enrollment.
+    entities:
+      - code: site
+        name: Site
+        plural: Sites
+        kind: hero
+        display: institution
+        app_user: { role: Site, name: coordinator_name, email: coordinator_email, create_on: "status in [active, enr_closed, on_hold]" }
+        fields:
+          - site_no:           { type: text, label: Site no., required: true, pattern: "^[1-9][0-9]{2}$", pattern_msg: Three digits. }
+          - institution:       { type: text, label: Institution, required: true, max_length: 200 }
+          - study:             { type: link, to: study, required: true, display: protocol_no }
+          - city:              { type: text, required: true }
+          - pi_name:           { type: text, label: Principal investigator, required: true }
+          - coordinator_name:  { type: text, label: Study coordinator }
+          - coordinator_email: { type: email, label: Coordinator email, required: true }
+          - cra:               { type: link, to: app_user, label: CRA }
+          - target_enrollment: { type: integer, label: Target, min: 12, max: 30 }
+          - randomised:        { type: integer, label: Randomised, readonly: true, min: 0, max: 14, computed: Randomised subjects at this site (from EDC). }
+          - screen_failures:   { type: integer, label: Screen failures, readonly: true, min: 0, max: 8 }
+          - activated_on:      { type: date, label: Activated on, readonly: true }
+          - last_visit_on:     { type: date, label: Last monitoring visit, readonly: true, computed: Date of the latest completed monitoring visit. }
+          - hold_reason:       { type: long_text, label: Hold reason, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [study, site_no], compare: exact, on_match: block, message: This site number is already used in the study. }
+        access:
+          Study Manager: { actions: [view, add, edit, export, detail] }
+          CRA:           { actions: [view, edit, detail], rows: { text: Sites whose cra is the current user. } }
+          Site:          { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: selected,   label: Selected,          color: gray, initial: true }
+            - { code: activating, label: Activating,        color: blue }
+            - { code: active,     label: Active,            color: green }
+            - { code: enr_closed, label: Enrollment Closed, color: teal }
+            - { code: on_hold,    label: On Hold,           color: amber }
+            - { code: closed,     label: Closed,            color: indigo, final: true }
+          transitions:
+            - { name: start_activation, label: Start Activation, from: selected, to: activating, roles: [Study Manager], primary: true,
+                on_done: Email the CRA to schedule the site initiation visit. }
+            - name: activate
+              label: Activate Site
+              from: activating
+              to: active
+              roles: [Study Manager]
+              primary: true
+              condition: { text: "Ethics approval and the signed clinical trial agreement are on file, and the site initiation visit report is approved." }
+              condition_msg: Ethics approval, the signed CTA and an approved SIV report are needed first.
+              on_done: Set activated_on = today, create the Site login for the coordinator and email the green-light letter.
+            - { name: hold, label: Put on Hold, from: active, to: on_hold, roles: [Study Manager], tone: danger,
+                form: [ { hold_reason: { type: long_text, required: true } } ],
+                on_done: Pause new screening at the site and email the PI and coordinator. }
+            - { name: release, label: Release Hold, from: on_hold, to: active, roles: [Study Manager] }
+            - { name: close_enrollment, label: Close Enrollment, from: active, to: enr_closed, roles: [Study Manager] }
+            - { name: close, label: Close Site, from: [enr_closed, on_hold], to: closed, roles: [Study Manager],
+                condition: { text: The close-out visit report is approved and no issue of the site is open. },
+                condition_msg: Approve the close-out visit report and close all issues first. }
+          tags:
+            - { code: high_risk, label: High Risk, color: red, enable: { roles: [Study Manager, CRA] }, disable: { roles: [Study Manager] } }
+            - { code: low_enroller, label: Low Enroller, color: amber, system: true, text: Set monthly when randomised is below 50% of the pro-rata target for the months since activation. }
+        form:
+          create:
+            title: Add Site
+            sections:
+              - { title: Site, fields: [study, site_no, institution, city] }
+              - { title: People, fields: [pi_name, coordinator_name, coordinator_email, cra] }
+              - { title: Enrollment, fields: [target_enrollment] }
+            after_create: site_360
+          edit:
+            same_as: create
+            roles: [Study Manager]
+            readonly_when:
+              - { when: "status in [active, enr_closed, closed]", fields: [study, site_no] }
+        table:
+          columns:
+            - site_no:      { label: Site, searchable: true, sortable: true }
+            - institution:    { label: Institution, searchable: true, link_to: site_360 }
+            - study:        { label: Study, display: protocol_no, filterable: true }
+            - pi_name:      { label: PI, searchable: true }
+            - randomised:   { label: Randomised, sortable: true }
+            - target_enrollment: { label: Target }
+            - last_visit_on: { label: Last visit, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: site_no
+          quick_filters:
+            - { label: Activating, where: status == activating, roles: [Study Manager] }
+            - { label: High risk, where: has_tag high_risk }
+          row_click: site_360
+          add_button: Add Site
+
+  - code: monitoring
+    name: Monitoring Visits
+    description: Visit planning, visit reports and their review.
+    entities:
+      - code: monitoring_visit
+        name: Monitoring Visit
+        plural: Monitoring Visits
+        kind: transactional
+        display: visit_ref
+        fields:
+          - visit_ref:      { type: text, label: Visit, readonly: true, unique: true, auto: { sequence: "MV-{YY}-{0000}" } }
+          - site:           { type: link, to: site, required: true, display: institution }
+          - visit_type:     { type: choice, label: Type, choices: visit_type, required: true, default: imv }
+          - mode:           { type: choice, choices: visit_mode, required: true, default: onsite }
+          - planned_date:   { type: date, label: Planned, required: true }
+          - visit_date:     { type: date, label: Visit date }
+          - cra:            { type: link, to: app_user, label: CRA }
+          - subjects_sdv:   { type: integer, label: Subjects SDV'd, min: 0, max: 12 }
+          - findings:       { type: integer, label: Findings, readonly: true, min: 0, max: 6, computed: Count of issues raised from this visit. }
+          - report:         { type: file, label: Visit report, accept: [pdf, docx], max_size_mb: 20 }
+          - report_due:     { type: date, label: Report due, readonly: true, computed: visit_date + 5 working days. }
+        validation:
+          rules:
+            - { when: visit_date is_set, require_expr: visit_date <= today, message: The visit date cannot be in the future. }
+        access:
+          CRA:           { actions: [view, add, edit, export], rows: { text: Visits of sites whose cra is the current user. } }
+          Study Manager: { actions: [view, export] }
+          Site:          { actions: [view], rows: { own: site } }
+        workflow:
+          statuses:
+            - { code: scheduled,  label: Scheduled,       color: blue, initial: true }
+            - { code: completed,  label: Visit Done,      color: indigo }
+            - { code: submitted,  label: Report Submitted, color: amber }
+            - { code: returned,   label: Report Returned, color: red }
+            - { code: approved,   label: Report Approved, color: green, final: true }
+            - { code: cancelled,  label: Cancelled,       color: gray, final: true }
+          transitions:
+            - { name: complete, label: Log Visit, from: scheduled, to: completed, roles: [CRA], primary: true,
+                form: [ { visit_date: { type: date, required: true } }, { subjects_sdv: { type: integer } } ],
+                on_done: "Set the site's last_visit_on and start the 5-working-day report clock." }
+            - { name: submit_report, label: Submit Report, from: [completed, returned], to: submitted, roles: [CRA], primary: true,
+                form: [ { report: { type: file, required: true, accept: [pdf, docx] } } ],
+                on_done: Notify the Study Manager that a visit report is waiting for review. }
+            - { name: return, label: Return Report, from: submitted, to: returned, roles: [Study Manager],
+                form: [ { review_comments: { type: long_text, required: true } } ],
+                on_done: Email the CRA the review comments. }
+            - { name: approve, label: Approve Report, from: submitted, to: approved, roles: [Study Manager], primary: true,
+                condition: { text: The reviewer is not the CRA who wrote the report. },
+                condition_msg: A different person must approve the report.,
+                on_done: "Email the follow-up letter with open action items to the site, and file the report in the eTMF." }
+            - { name: cancel, label: Cancel Visit, from: scheduled, to: cancelled, roles: [CRA, Study Manager], tone: danger,
+                form: [ { cancel_reason: { type: text, required: true } } ] }
+          tags:
+            - { code: report_overdue, label: Report Overdue, color: red, system: true, text: Set when report_due < today and the report is not submitted. }
+        table:
+          columns:
+            - visit_ref:    { label: Visit, searchable: true, sortable: true }
+            - site:         { label: Site, display: institution, searchable: true, filterable: true }
+            - study:        { source: computed, label: Study, path: site.study.protocol_no }
+            - visit_type:   { label: Type, filterable: true }
+            - mode:         { label: Mode, filterable: true }
+            - planned_date: { label: Planned, sortable: true }
+            - visit_date:   { label: Visited, sortable: true }
+            - findings:     { label: Findings }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: -planned_date
+          quick_filters:
+            - { label: Upcoming, where: status == scheduled, roles: [CRA, Site], default: true }
+            - { label: Reports to review, where: status == submitted, roles: [Study Manager], default: true }
+            - { label: Report overdue, where: has_tag report_overdue }
+          add_button: Schedule Visit
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == scheduled }
+            - { key: report_pdf, label: Download Report, type: download, show_when: "status in [submitted, approved]", text: The uploaded visit report. }
+        form:
+          create: { roles: [CRA], title: Schedule Monitoring Visit, fields: [site, visit_type, mode, planned_date, cra] }
+          edit:   { fields: [visit_type, mode, planned_date], editable_in: [scheduled] }
+
+  - code: issues
+    name: Issue Tracking
+    description: Issues and protocol deviations raised at visits, their site responses and sign-off.
+    entities:
+      - code: issue
+        name: Issue
+        plural: Issues
+        kind: transactional
+        display: issue_ref
+        fields:
+          - issue_ref:    { type: text, label: Issue, readonly: true, unique: true, auto: { sequence: "ISS-{YY}-{00000}" } }
+          - site:         { type: link, to: site, required: true, display: institution }
+          - visit:        { type: link, to: monitoring_visit, display: visit_ref, limit_choices: site == form.site }
+          - category:     { type: choice, choices: issue_category, required: true }
+          - severity:     { type: choice, choices: severity, required: true, default: minor }
+          - subject_id:   { type: text, label: Subject ID, pattern: "^[1-9][0-9]{2}-[0-9]{3}$", pattern_msg: "Site number, a hyphen and the subject number, e.g. 101-004." }
+          - description:  { type: long_text, required: true }
+          - action_required: { type: long_text, label: Action required, required: true }
+          - due_date:     { type: date, label: Due, required: true }
+          - site_response: { type: long_text, label: Site response, readonly: true }
+          - resolved_on:  { type: date, label: Resolved on, readonly: true }
+        access:
+          CRA:           { actions: [view, add, edit, export], rows: { text: Issues of sites whose cra is the current user. } }
+          Study Manager: { actions: [view, add, export] }
+          Site:          { actions: [view], rows: { own: site } }
+        workflow:
+          statuses:
+            - { code: open,          label: Open,          color: red, initial: true }
+            - { code: site_action,   label: With Site,     color: amber }
+            - { code: responded,     label: Site Responded, color: blue }
+            - { code: pending_signoff, label: Pending Sign-off, color: purple }
+            - { code: closed,        label: Closed,        color: green, final: true }
+          transitions:
+            - { name: send_to_site, label: Send to Site, from: open, to: site_action, roles: [CRA], primary: true,
+                on_done: Email the site coordinator and PI the action required and the due date. }
+            - { name: respond, label: Respond, from: site_action, to: responded, roles: [Site], primary: true,
+                form: [ { site_response: { type: long_text, required: true } }, { evidence: { type: file } } ],
+                on_done: Notify the CRA that the site has responded. }
+            - { name: reopen, label: Not Resolved, from: responded, to: site_action, roles: [CRA],
+                form: [ { cra_comment: { type: long_text, required: true } } ],
+                on_done: Email the site why the response does not resolve the issue. }
+            - { name: verify_minor, label: Verify & Close, from: responded, to: closed, roles: [CRA], primary: true,
+                condition: severity == minor,
+                condition_msg: Major and critical issues need Study Manager sign-off.,
+                on_done: Set resolved_on = today and file the issue record in the eTMF. }
+            - { name: verify, label: Verify Resolution, from: responded, to: pending_signoff, roles: [CRA], primary: true,
+                condition: "severity in [major, critical]",
+                on_done: Notify the Study Manager that a major or critical issue awaits sign-off. }
+            - { name: sign_off, label: Sign Off, from: pending_signoff, to: closed, roles: [Study Manager], primary: true,
+                form: [ { signoff_note: { type: long_text } } ],
+                on_done: Set resolved_on = today and file the issue record in the eTMF. }
+            - { name: send_back, label: Send Back, from: pending_signoff, to: site_action, roles: [Study Manager],
+                form: [ { reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set nightly when due_date < today and the issue is not closed. }
+            - { code: reportable, label: Reportable to EC, color: purple, enable: { roles: [Study Manager] }, disable: { roles: [Study Manager] } }
+        table:
+          columns:
+            - issue_ref:  { label: Issue, searchable: true, sortable: true }
+            - site:       { label: Site, display: institution, searchable: true, filterable: true }
+            - category:   { label: Category, filterable: true }
+            - severity:   { label: Severity, filterable: true }
+            - subject_id: { label: Subject }
+            - due_date:   { label: Due, sortable: true }
+            - status:     { source: status, label: Status, filterable: true }
+            - tags:       { source: tags, label: Flags }
+          default_sort: due_date
+          quick_filters:
+            - { label: Awaiting our response, where: status == site_action, roles: [Site], default: true }
+            - { label: To verify, where: status == responded, roles: [CRA], default: true }
+            - { label: Pending sign-off, where: status == pending_signoff, roles: [Study Manager], default: true }
+            - { label: Major and critical, where: "severity in [major, critical]" }
+          add_button: Raise Issue
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == open }
+        form:
+          create:
+            roles: [CRA, Study Manager]
+            title: Raise Issue
+            sections:
+              - { title: Where, fields: [site, visit, subject_id] }
+              - { title: Issue, fields: [category, severity, description, action_required, due_date] }
+          edit: { fields: [category, severity, description, action_required, due_date], editable_in: [open] }
+
+detail_views:
+  - code: study_360
+    hero: study
+    title: "{protocol_no}"
+    back_to: studies
+    layout: header_tabs_sidebar
+    roles: [Study Manager, CRA]
+    header:
+      avatar: { fallback_initials: protocol_no }
+      title: protocol_no
+      subtitle: ["{phase}", "{indication}"]
+      badges: [ { source: status }, { field: therapeutic_area } ]
+      facts:
+        - { label: Indication, field: indication }
+        - { label: Target subjects, field: target_enrollment }
+        - { label: Randomised, field: randomised }
+        - { label: First patient in, field: fpi_date }
+      actions: { transitions: true, buttons: [ { key: edit, label: Edit, type: edit, roles: [Study Manager] } ] }
+      banners:
+        - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}" }
+    stats:
+      - { label: Active sites, value: { count: site, via: study, where: status == active }, tone: green, link_to_tab: sites }
+      - { label: Open issues, value: { count: issue, via: site.study, where: "status not_in [closed]" }, tone: red, link_to_tab: issues }
+      - { label: Visits to review, value: { count: monitoring_visit, via: site.study, where: status == submitted }, tone: amber, link_to_tab: visits }
+      - { label: Milestones at risk, value: { count: milestone, via: study, where: "status in [at_risk, missed]" }, tone: purple, link_to_tab: milestones }
+    sidebar:
+      - { type: fields, title: Protocol, fields: [phase, therapeutic_area, indication, study_manager] }
+      - { type: fields, title: Plan, fields: [planned_sites, target_enrollment, lpi_planned] }
+    tabs:
+      - { code: milestones, label: Milestones, type: related_table, entity: milestone, via: study, count_badge: true,
+          columns: [milestone_name, planned_date, forecast_date, actual_date, status],
+          add: { label: Add Milestone, prefill: { study: hero } } }
+      - { code: sites, label: Sites, type: related_table, entity: site, via: study, count_badge: true,
+          columns: [site_no, institution, pi_name, randomised, target_enrollment, status] }
+      - { code: visits, label: Visits, type: related_table, entity: monitoring_visit, via: site.study,
+          columns: [visit_ref, site, visit_type, planned_date, visit_date, status] }
+      - { code: issues, label: Issues, type: related_table, entity: issue, via: site.study, count_badge: { where: "status not_in [closed]", tone: red },
+          columns: [issue_ref, site, category, severity, due_date, status] }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: study, events: [created, updated, transition] }
+          - { entity: milestone, via: study, events: [transition] }
+
+  - code: site_360
+    hero: site
+    title: "{institution}"
+    back_to: sites
+    layout: header_tabs_sidebar
+    roles: [Study Manager, CRA, Site]
+    header:
+      avatar: { fallback_initials: institution }
+      title: institution
+      subtitle: ["Site {site_no}", "{study.protocol_no}", "{city}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: PI, field: pi_name }
+        - { label: Randomised, field: randomised }
+        - { label: Target, field: target_enrollment }
+        - { label: Last visit, field: last_visit_on }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: schedule_visit, label: Schedule Visit, type: create_related, entity: monitoring_visit, prefill: { site: hero }, roles: [CRA] }
+          - { key: raise_issue, label: Raise Issue, type: create_related, entity: issue, prefill: { site: hero }, roles: [CRA, Study Manager] }
+      banners:
+        - { show_when: has_tag high_risk, tone: danger, text: This site is flagged high risk; monitor every 4 weeks. }
+        - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}" }
+    stats:
+      - { label: Randomised, value: { field: randomised }, tone: green }
+      - { label: Screen failures, value: { field: screen_failures }, tone: gray }
+      - { label: Open issues, value: { count: issue, via: site, where: "status not_in [closed]" }, tone: red, link_to_tab: issues }
+      - { label: Visits done, value: { count: monitoring_visit, via: site, where: "status in [completed, submitted, returned, approved]" }, tone: blue, link_to_tab: visits }
+    sidebar:
+      - { type: fields, title: Site, fields: [site_no, study, city, activated_on] }
+      - { type: fields, title: People, fields: [pi_name, coordinator_name, coordinator_email, cra] }
+    tabs:
+      - { code: visits, label: Monitoring Visits, type: related_table, entity: monitoring_visit, via: site, count_badge: true,
+          columns: [visit_ref, visit_type, mode, planned_date, visit_date, findings, status] }
+      - { code: issues, label: Issues, type: related_table, entity: issue, via: site, count_badge: { where: "status not_in [closed]", tone: red },
+          columns: [issue_ref, category, severity, subject_id, due_date, status] }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: site, events: [created, updated, transition, tag] }
+          - { entity: monitoring_visit, via: site, events: [created, transition] }
+          - { entity: issue, via: site, events: [created, transition] }
+    states:
+      not_found: { title: Site not found, back_to: sites }

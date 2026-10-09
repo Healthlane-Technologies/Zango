@@ -1,0 +1,511 @@
+# Promotional Review (PRC/MLR): the template's starting point. A brand manager
+# submits a promotional material with its claims and references, the MLR
+# coordinator routes it to medical, legal and regulatory review, every claim is
+# checked against its reference, and the approved version gets a job code and an
+# expiry date. The analyst tailors every part of this to the requirement; the
+# preview redraws with each change.
+spec_version: 1
+
+app:
+  code: promotional_review
+  name: Promotional Review
+  description: Promotional material review with claim substantiation, reference checks, fair balance and versioned medical, legal and regulatory approval.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme:
+    primary: "#4F46E5"
+    secondary: "#64748B"
+  custom_requirements: []
+
+choice_sets:
+  material_type:
+    - { id: detail_aid,   label: Detail aid }
+    - { id: leave_behind, label: Leave-behind }
+    - { id: email,        label: HCP email }
+    - { id: web_page,     label: Web page }
+    - { id: social_post,  label: Social post }
+    - { id: video,        label: Video }
+    - { id: congress,     label: Congress panel }
+  audience:
+    - { id: hcp,     label: HCP,     color: blue }
+    - { id: patient, label: Patient, color: teal }
+    - { id: trade,   label: Trade,   color: gray }
+  claim_type:
+    - { id: efficacy,    label: Efficacy,    color: blue }
+    - { id: safety,      label: Safety,      color: amber }
+    - { id: comparative, label: Comparative, color: purple }
+    - { id: dosing,      label: Dosing,      color: teal }
+    - { id: economic,    label: Economic,    color: indigo }
+  reference_type:
+    - { id: prescribing_info, label: Prescribing information }
+    - { id: clinical_study,   label: Clinical study }
+    - { id: publication,      label: Journal publication }
+    - { id: guideline,        label: Treatment guideline }
+    - { id: data_on_file,     label: Data on file }
+  discipline:
+    - { id: medical,    label: Medical,    color: blue }
+    - { id: legal,      label: Legal,      color: purple }
+    - { id: regulatory, label: Regulatory, color: teal }
+  therapy_area:
+    - { id: cardiology,  label: Cardiology }
+    - { id: diabetes,    label: Diabetes }
+    - { id: oncology,    label: Oncology }
+    - { id: respiratory, label: Respiratory }
+
+roles:
+  - name: Brand Manager
+    description: Creates materials, lists their claims with references and submits each version for review.
+    landing: materials
+    menu:
+      - { page: materials,  label: My Materials, icon: file-text }
+      - { page: claims,     icon: quote }
+      - { page: references, icon: book-open }
+
+  - name: MLR Coordinator
+    description: Checks submissions are complete, routes them to reviewers, chases due dates and issues job codes.
+    landing: materials
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: materials,  icon: file-text }
+      - { page: reviews,    icon: clipboard-check }
+      - { page: references, icon: book-open }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: products, icon: pill }
+
+  - name: Medical Reviewer
+    description: Checks every claim against its reference, fair balance and scientific accuracy.
+    landing: reviews
+    menu:
+      - { page: reviews,    label: My Reviews, icon: clipboard-check }
+      - { page: claims,     label: Claims to verify, icon: quote }
+      - { page: materials,  icon: file-text }
+      - { page: references, icon: book-open }
+
+  - name: Legal Reviewer
+    description: Checks comparative claims, trademarks, copyright and disclaimers.
+    landing: reviews
+    menu:
+      - { page: reviews,   label: My Reviews, icon: clipboard-check }
+      - { page: materials, icon: file-text }
+
+  - name: Regulatory Reviewer
+    description: Checks the material against the approved label and the promotional code, and gives final sign-off.
+    landing: reviews
+    menu:
+      - { page: reviews,    label: My Reviews, icon: clipboard-check }
+      - { page: materials,  icon: file-text }
+      - { page: references, icon: book-open }
+
+pages:
+  - { code: materials,    type: crud,   entity: material,  route: /app/materials,  title: Materials }
+  - { code: material_360, type: detail, detail_view: material_360, route: /app/materials/:id }
+  - { code: claims,       type: crud,   entity: claim,     route: /app/claims,     title: Claims }
+  - { code: reviews,      type: crud,   entity: review,    route: /app/reviews,    title: Reviews }
+  - { code: references,   type: crud,   entity: reference, route: /app/references, title: Reference Library }
+  - { code: products,     type: crud,   entity: product,   route: /app/masters/products, title: Products }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Review Dashboard
+    component: ReviewDashboard
+    roles: [MLR Coordinator]
+    text: >
+      KPI row: materials in review, reviews overdue, average review cycle days this quarter,
+      approved materials expiring in 60 days. Below: open reviews by discipline and due date
+      (stacked bar) and the 10 oldest materials still in review with their pending reviewers.
+
+modules:
+  - code: library
+    name: Library
+    description: Products and the reference library that substantiates claims.
+    entities:
+      - code: product
+        name: Product
+        kind: master
+        display: name
+        fields:
+          - name:         { type: text, required: true, unique: true, max_length: 120 }
+          - generic_name: { type: text, label: Generic name, required: true }
+          - therapy_area: { type: choice, choices: therapy_area, required: true }
+          - indication:   { type: long_text, label: Approved indication, required: true }
+          - is_active:    { type: boolean, default: true }
+        access:
+          MLR Coordinator:     { actions: [view, add, edit, export] }
+          Brand Manager:       { actions: [view] }
+          Medical Reviewer:    { actions: [view] }
+          Regulatory Reviewer: { actions: [view, edit] }
+        table:
+          columns:
+            - name:         { label: Product, searchable: true, sortable: true }
+            - generic_name: { label: Generic name, searchable: true }
+            - therapy_area: { label: Therapy area, filterable: true }
+            - is_active:    { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, generic_name, therapy_area, indication, is_active] }
+          edit:   { same_as: create }
+
+      - code: reference
+        name: Reference
+        kind: master
+        display: ref_code
+        fields:
+          - ref_code:       { type: text, label: Reference ID, readonly: true, unique: true, auto: { sequence: "REF-{0000}" } }
+          - title:          { type: text, required: true, max_length: 300 }
+          - reference_type: { type: choice, choices: reference_type, required: true }
+          - citation:       { type: text, help: "Authors, journal, year, volume and pages." }
+          - product:        { type: link, to: product, display: name }
+          - document:       { type: file, required: true, accept: [pdf], max_size_mb: 25 }
+          - valid_until:    { type: date, label: Valid until, help: For prescribing information and data on file. }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [title], compare: fuzzy, threshold: 0.9, on_match: warn, message: A reference with a very similar title is already in the library. }
+        access:
+          MLR Coordinator:     { actions: [view, add, edit, export] }
+          Brand Manager:       { actions: [view, add] }
+          Medical Reviewer:    { actions: [view, add, edit] }
+          Regulatory Reviewer: { actions: [view] }
+        workflow:
+          statuses:
+            - { code: current,    label: Current,    color: green, initial: true }
+            - { code: superseded, label: Superseded, color: gray, final: true }
+          transitions:
+            - { name: supersede, label: Supersede, from: current, to: superseded, roles: [Medical Reviewer, MLR Coordinator], tone: danger,
+                confirm: "Mark this reference superseded?",
+                on_done: Tag every approved material with a claim citing this reference as needing re-review and email its brand manager. }
+        table:
+          columns:
+            - ref_code:       { label: Reference, searchable: true, sortable: true }
+            - title:          { label: Title, searchable: true }
+            - reference_type: { label: Type, filterable: true }
+            - product:        { label: Product, display: name, filterable: true }
+            - valid_until:    { label: Valid until, sortable: true }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: ref_code
+          quick_filters:
+            - { label: Current, where: status == current, default: true }
+          add_button: Add Reference
+          row_actions:
+            - { key: edit, label: Edit, type: edit, roles: [MLR Coordinator, Medical Reviewer] }
+            - { key: download, label: Download PDF, type: download, text: The reference document. }
+        form:
+          create: { fields: [title, reference_type, citation, product, document, valid_until] }
+          edit:   { same_as: create, roles: [MLR Coordinator, Medical Reviewer], editable_in: [current] }
+
+  - code: mlr
+    name: Promotional Review
+    description: Materials, their claims and the discipline reviews of each version.
+    entities:
+      - code: material
+        name: Material
+        kind: hero
+        display: material_code
+        fields:
+          - material_code:  { type: text, label: Material ID, readonly: true, unique: true, auto: { sequence: "PRC-{YY}-{0000}" } }
+          - title:          { type: text, required: true, max_length: 200 }
+          - product:        { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - material_type:  { type: choice, choices: material_type, required: true }
+          - audience:       { type: choice, choices: audience, required: true }
+          - version:        { type: integer, readonly: true, required: true, default: 1, min: 1, max: 4 }
+          - artwork:        { type: file, required: true, accept: [pdf, jpg, png], max_size_mb: 50, help: The full layout as the audience will see it. }
+          - fair_balance:   { type: boolean, label: Fair balance included, help: Safety information and indication are shown with the same prominence as the benefits. }
+          - go_live_date:   { type: date, label: Target go-live }
+          - job_code:       { type: text, label: Job code, readonly: true, unique: true }
+          - approved_on:    { type: date, readonly: true }
+          - expiry_date:    { type: date, readonly: true }
+        validation:
+          rules:
+            - when: audience == hcp
+              require: [fair_balance]
+              message: HCP promotional material must include fair balance.
+        access:
+          Brand Manager:       { actions: [view, add, edit, detail], rows: created_by_me }
+          MLR Coordinator:     { actions: [view, edit, export, detail] }
+          Medical Reviewer:    { actions: [view, detail], rows: { where: "status not_in [draft]" } }
+          Legal Reviewer:      { actions: [view, detail], rows: { where: "status not_in [draft]" } }
+          Regulatory Reviewer: { actions: [view, export, detail], rows: { where: "status not_in [draft]" } }
+        workflow:
+          statuses:
+            - { code: draft,             label: Draft,             color: gray, initial: true }
+            - { code: submitted,         label: Submitted,         color: blue }
+            - { code: in_review,         label: In Review,         color: amber }
+            - { code: changes_requested, label: Changes Requested, color: red }
+            - { code: approved,          label: Approved,          color: green }
+            - { code: expired,           label: Expired,           color: gray, final: true }
+            - { code: withdrawn,         label: Withdrawn,         color: purple, final: true }
+          transitions:
+            - name: submit
+              label: Submit for Review
+              from: draft
+              to: submitted
+              roles: [Brand Manager]
+              primary: true
+              condition: { text: The material has at least one claim and every claim cites a current reference. }
+              condition_msg: Add a reference to every claim before submitting.
+              on_done: Email the MLR coordinator a link to the material.
+            - name: route
+              label: Route to Reviewers
+              from: submitted
+              to: in_review
+              roles: [MLR Coordinator]
+              primary: true
+              form:
+                - review_due: { type: date, required: true }
+              on_done: Create one medical, one legal and one regulatory review for this version with the due date and email each reviewer.
+            - { name: return_incomplete, label: Return Incomplete, from: submitted, to: draft, roles: [MLR Coordinator], tone: danger,
+                form: [ { return_reason: { type: long_text, required: true } } ],
+                on_done: Email the brand manager the reason. }
+            - { name: request_changes, label: Request Changes, from: in_review, to: changes_requested, trigger: system,
+                text: When any review of the current version is closed with changes required. }
+            - name: resubmit
+              label: Resubmit New Version
+              from: changes_requested
+              to: submitted
+              roles: [Brand Manager]
+              primary: true
+              form:
+                - artwork:        { type: file, required: true }
+                - change_summary: { type: long_text, required: true }
+              on_done: Increase version by 1, keep the previous artwork as version history, and email the MLR coordinator.
+            - name: approve
+              label: Approve & Issue Job Code
+              from: in_review
+              to: approved
+              roles: [MLR Coordinator]
+              primary: true
+              condition: { text: "The medical, legal and regulatory reviews of the current version are all approved." }
+              condition_msg: All three reviews of this version must be approved first.
+              on_done: Set approved_on = today, expiry_date = today + 24 months, generate job_code as <product>-<YYMM>-<material_code>, and email the brand manager.
+            - { name: expire, label: Expire, from: approved, to: expired, trigger: system, text: Nightly when expiry_date < today. }
+            - { name: withdraw, label: Withdraw, from: [draft, submitted, in_review, changes_requested, approved], to: withdrawn,
+                roles: [Brand Manager, MLR Coordinator], tone: danger,
+                form: [ { withdraw_reason: { type: long_text, required: true } } ],
+                on_done: "Cancel open reviews and, if it was approved, email field teams to stop using it." }
+          tags:
+            - { code: expiring_soon, label: Expiring soon, color: amber, system: true, text: Set when approved and expiry_date is within 60 days. }
+            - { code: rereview_needed, label: Re-review needed, color: red, system: true, text: Set when a reference cited by one of its claims is superseded. }
+        table:
+          columns:
+            - material_code: { label: Material, searchable: true, sortable: true, link_to: material_360 }
+            - title:         { label: Title, searchable: true }
+            - product:       { label: Product, display: name, filterable: true }
+            - material_type: { label: Type, filterable: true }
+            - audience:      { label: Audience, filterable: true }
+            - version:       { label: Ver. }
+            - go_live_date:  { label: Go-live, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+            - tags:          { source: tags, label: Flags }
+          default_sort: -created_at
+          quick_filters:
+            - { label: To route, where: status == submitted, roles: [MLR Coordinator], default: true }
+            - { label: In review, where: status == in_review }
+            - { label: Needs my changes, where: status == changes_requested, roles: [Brand Manager] }
+            - { label: Approved, where: status == approved }
+          row_click: material_360
+          add_button: New Material
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft, roles: [Brand Manager] }
+            - { key: open_360, label: Open 360, type: navigate, to: material_360 }
+        form:
+          create:
+            roles: [Brand Manager]
+            title: New Material
+            sections:
+              - title: Material
+                fields: [title, product, material_type, audience]
+              - title: Content
+                fields: [artwork, fair_balance, go_live_date]
+            after_create: material_360
+          edit: { same_as: create, roles: [Brand Manager], editable_in: [draft] }
+
+      - code: claim
+        name: Claim
+        kind: transactional
+        display: claim_code
+        fields:
+          - claim_code:     { type: text, label: Claim ID, readonly: true, unique: true, auto: { sequence: "CLM-{00000}" } }
+          - material:       { type: link, to: material, required: true, display: material_code }
+          - claim_text:     { type: long_text, label: Claim, required: true }
+          - claim_type:     { type: choice, choices: claim_type, required: true }
+          - location:       { type: text, label: Page / panel, placeholder: "e.g. Page 2, headline" }
+          - reference:      { type: link, to: reference, required: true, display: ref_code, limit_choices: status == current }
+          - reference_page: { type: text, label: Page / table / figure in reference }
+          - reviewer_note:  { type: long_text, readonly: true }
+        access:
+          Brand Manager:       { actions: [view, add, edit], rows: created_by_me }
+          MLR Coordinator:     { actions: [view, export] }
+          Medical Reviewer:    { actions: [view, export] }
+          Legal Reviewer:      { actions: [view] }
+          Regulatory Reviewer: { actions: [view] }
+        workflow:
+          statuses:
+            - { code: pending,          label: Pending,          color: blue, initial: true }
+            - { code: substantiated,    label: Substantiated,    color: green }
+            - { code: not_substantiated, label: Not Substantiated, color: red }
+          transitions:
+            - { name: substantiate, label: Substantiated, from: [pending, not_substantiated], to: substantiated, roles: [Medical Reviewer], primary: true,
+                on_done: Record the reviewer and date on the claim. }
+            - name: reject_claim
+              label: Not Substantiated
+              from: [pending, substantiated]
+              to: not_substantiated
+              roles: [Medical Reviewer]
+              tone: danger
+              form:
+                - reviewer_note: { type: long_text, required: true }
+              on_done: Email the brand manager the note and the claim's location.
+            - { name: reopen, label: Reopen, from: [substantiated, not_substantiated], to: pending, trigger: system,
+                text: When the material is resubmitted with a new version. }
+        table:
+          columns:
+            - claim_code:     { label: Claim, searchable: true, sortable: true }
+            - material:       { label: Material, display: material_code, searchable: true, link_to: material_360 }
+            - claim_text:     { label: Claim text, searchable: true }
+            - claim_type:     { label: Type, filterable: true }
+            - reference:      { label: Reference, display: ref_code }
+            - reference_page: { label: Ref. page }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: To verify, where: status == pending, roles: [Medical Reviewer], default: true }
+            - { label: Not substantiated, where: status == not_substantiated }
+          add_button: Add Claim
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status != substantiated, roles: [Brand Manager] }
+        form:
+          create: { roles: [Brand Manager], fields: [material, claim_text, claim_type, location, reference, reference_page] }
+          edit:   { same_as: create, roles: [Brand Manager], editable_in: [pending, not_substantiated] }
+
+      - code: review
+        name: Review
+        kind: transactional
+        display: review_code
+        fields:
+          - review_code:      { type: text, label: Review ID, readonly: true, unique: true, auto: { sequence: "RVW-{YY}-{00000}" } }
+          - material:         { type: link, to: material, required: true, display: material_code }
+          - discipline:       { type: choice, choices: discipline, required: true }
+          - material_version: { type: integer, label: Version, required: true, min: 1, max: 4 }
+          - reviewer:         { type: link, to: app_user, required: true }
+          - due_date:         { type: date, required: true }
+          - comments:         { type: long_text }
+          - completed_on:     { type: date, readonly: true }
+        validation:
+          duplicate_check:
+            scope: { where: "status not_in [cancelled]" }
+            rules:
+              - { match: [material, discipline, material_version], compare: exact, on_match: block, message: This version already has a review for the discipline. }
+        access:
+          MLR Coordinator:     { actions: [view, add, edit, export] }
+          Medical Reviewer:    { actions: [view, edit], rows: { text: Reviews where reviewer is the current user. } }
+          Legal Reviewer:      { actions: [view, edit], rows: { text: Reviews where reviewer is the current user. } }
+          Regulatory Reviewer: { actions: [view, edit], rows: { text: Reviews where reviewer is the current user. } }
+          Brand Manager:       { actions: [view], rows: { text: Reviews of materials the current user created. } }
+        workflow:
+          statuses:
+            - { code: assigned,         label: Assigned,         color: blue, initial: true }
+            - { code: in_progress,      label: In Progress,      color: amber }
+            - { code: approved,         label: Approved,         color: green, final: true }
+            - { code: changes_required, label: Changes Required, color: red, final: true }
+            - { code: cancelled,        label: Cancelled,        color: gray, final: true }
+          transitions:
+            - { name: start, label: Start Review, from: assigned, to: in_progress, roles: [Medical Reviewer, Legal Reviewer, Regulatory Reviewer], primary: true }
+            - name: approve
+              label: Approve
+              from: in_progress
+              to: approved
+              roles: [Medical Reviewer, Legal Reviewer, Regulatory Reviewer]
+              primary: true
+              condition: { text: "For a medical review, every claim on the material is substantiated." }
+              condition_msg: Substantiate or reject every claim before approving.
+              on_done: Set completed_on = today; when all three reviews of the version are approved, email the MLR coordinator to issue the job code.
+            - name: require_changes
+              label: Require Changes
+              from: in_progress
+              to: changes_required
+              roles: [Medical Reviewer, Legal Reviewer, Regulatory Reviewer]
+              tone: danger
+              form:
+                - comments: { type: long_text, required: true }
+              on_done: Set completed_on = today, move the material to changes requested and email the brand manager the comments.
+            - { name: cancel, label: Cancel, from: [assigned, in_progress], to: cancelled, trigger: system, text: When the material is withdrawn. }
+          tags:
+            - { code: overdue, label: Overdue, color: red, system: true, text: Set nightly when due_date < today and the review is still open. }
+        table:
+          columns:
+            - review_code:      { label: Review, searchable: true, sortable: true }
+            - material:         { label: Material, display: material_code, searchable: true, link_to: material_360 }
+            - title:            { source: computed, label: Title, path: material.title }
+            - discipline:       { label: Discipline, filterable: true }
+            - material_version: { label: Ver. }
+            - reviewer:         { label: Reviewer }
+            - due_date:         { label: Due, sortable: true }
+            - status:           { source: status, label: Status, filterable: true }
+            - tags:             { source: tags, label: Flags }
+          default_sort: due_date
+          quick_filters:
+            - { label: Open, where: "status in [assigned, in_progress]", default: true }
+            - { label: Overdue, where: has_tag overdue }
+          add_button: Assign Review
+        form:
+          create: { roles: [MLR Coordinator], fields: [material, discipline, material_version, reviewer, due_date] }
+          edit:   { same_as: create, roles: [MLR Coordinator], editable_in: [assigned, in_progress] }
+
+detail_views:
+  - code: material_360
+    hero: material
+    title: "{title}"
+    back_to: materials
+    layout: header_tabs
+    roles: [Brand Manager, MLR Coordinator, Medical Reviewer, Legal Reviewer, Regulatory Reviewer]
+    header:
+      title: title
+      subtitle: ["{material_code}", "{product.name}", "v{version}"]
+      badges: [ { source: status }, { source: tags }, { field: audience } ]
+      facts:
+        - { label: Type, field: material_type }
+        - { label: Job code, field: job_code, copyable: true, fallback: "—" }
+        - { label: Expires, field: expiry_date, fallback: "—" }
+      actions:
+        transitions: true
+        buttons:
+          - { key: add_claim, label: Add Claim, icon: plus, type: create_related, entity: claim, prefill: { material: hero }, roles: [Brand Manager] }
+          - { key: edit, label: Edit, type: edit, roles: [Brand Manager] }
+      banners:
+        - { show_when: status == changes_requested, tone: warning, text: "Reviewers asked for changes. Update the artwork and resubmit a new version." }
+    stats:
+      - { label: Claims, value: { count: claim, via: material }, tone: blue, link_to_tab: claims }
+      - { label: Not substantiated, value: { count: claim, via: material, where: status == not_substantiated }, tone: red, link_to_tab: claims }
+      - { label: Open reviews, value: { count: review, via: material, where: "status in [assigned, in_progress]" }, tone: amber, link_to_tab: reviews }
+    tabs:
+      - { code: overview, label: Overview, type: summary, sections: [ { title: Material, columns: 2, fields: [title, product, material_type, audience, version, fair_balance, go_live_date, artwork] }, { title: Approval, columns: 2, fields: [job_code, approved_on, expiry_date] } ] }
+      - code: claims
+        label: Claims
+        type: related_table
+        entity: claim
+        via: material
+        count_badge: true
+        columns: [claim_code, claim_text, claim_type, reference, reference_page, status]
+        add: { label: Add Claim, prefill: { material: hero } }
+        empty_state: { title: No claims yet, text: List every claim in the material with the reference that supports it., cta: add }
+      - code: reviews
+        label: Reviews
+        type: related_table
+        entity: review
+        via: material
+        count_badge: true
+        columns: [review_code, discipline, material_version, reviewer, due_date, status]
+        add: false
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: material, events: [created, updated, transition, tag] }
+          - { entity: claim, via: material, events: [created, transition] }
+          - { entity: review, via: material, events: [created, transition] }

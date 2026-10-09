@@ -1,0 +1,9 @@
+[
+  {
+    "id": "immunology_hub_dermatology",
+    "file": "references/immunology_hub_dermatology.yaml",
+    "title": "Immunology Hub — Dermatology (referral to first fill)",
+    "summary": "A hub for a self-injectable dermatology biologic: referrals by fax, e-referral and HCP portal with missing-info loops, benefits investigation per payer, prior authorization with appeals and re-authorization, co-pay card, free drug and bridge supply, maker-checker specialty pharmacy triage across two limited-distribution pharmacies, hub tasks with SLAs, SMS and WhatsApp outreach, case documents and a case 360 page.",
+    "tags": ["patient services", "hub", "benefits investigation", "prior authorization", "appeals", "co-pay", "bridge supply", "specialty pharmacy", "maker-checker", "external users", "360 page", "SMS", "WhatsApp"]
+  }
+]

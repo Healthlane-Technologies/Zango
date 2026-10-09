@@ -1,0 +1,9 @@
+[
+  {
+    "id": "us_specialty_gtn",
+    "file": "references/us_specialty_gtn.yaml",
+    "title": "Rebates & Chargebacks — US Specialty (40 agreements, 3 wholesalers)",
+    "summary": "GPO, IDN and PBM agreements with tiered product terms, daily EDI chargebacks from three national wholesalers validated against contract prices and customer eligibility, quarterly PBM and IDN rebate claims checked against 867 sales data, an exception and dispute queue, monthly accruals with maker-checker posting to SAP, and agreement and customer 360 pages.",
+    "tags": ["rebates", "chargebacks", "gross-to-net", "accruals", "maker-checker", "external users", "SAP", "EDI", "360 page"]
+  }
+]

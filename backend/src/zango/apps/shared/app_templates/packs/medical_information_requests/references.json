@@ -1,0 +1,9 @@
+[
+  {
+    "id": "medinfo_desk",
+    "file": "references/medinfo_desk.yaml",
+    "title": "MedInfo Desk (medical information for an oncology and diabetes portfolio)",
+    "summary": "Five roles including external HCP portal logins and MSLs scoped to their own submissions, a standard response library with maker-checker approval and yearly review, inquiries from portal, toll-free line, mailbox and MSLs with SLA due dates and an unsolicited-request check, standard, adapted and custom responses with medical review before sending, a follow-up log, AE capture forwarded to PV within one business day with safety case IDs, CRM sync and literature search, and inquiry and reporter 360 pages.",
+    "tags": ["medical information", "mi inquiries", "standard response library", "medical review", "maker-checker", "ae capture", "pharmacovigilance", "off-label", "msl", "crm sync", "literature search", "external users", "360 page"]
+  }
+]

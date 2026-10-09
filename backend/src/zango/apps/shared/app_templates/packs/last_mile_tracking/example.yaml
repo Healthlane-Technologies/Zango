@@ -1,0 +1,1058 @@
+# Last-Mile Tracking — Specialty Home Delivery: specialty and cold-chain
+# medicines delivered from 6 dispatch pharmacies to about 2,400 patients' homes
+# a month by 3 courier partners across Maharashtra and Karnataka. The pharmacy
+# scans the serial at hand-over, the courier captures OTP and a serial scan at
+# the door (with the door temperature for cold-chain packs), and supply chain
+# ops watches on-time delivery against a 24-hour promise. Failed attempts and
+# temperature excursions become route exceptions; excursions are also signed
+# off by QA. A filled-in instance of the Last-Mile Tracking template.
+spec_version: 1
+
+# -----------------------------------------------------------------------------
+#  APP
+# -----------------------------------------------------------------------------
+app:
+  code: specialty_home_delivery
+  name: Last-Mile Tracking — Specialty Home Delivery
+  description: Track 2,400 specialty and cold-chain home deliveries a month from 6 dispatch pharmacies through 3 courier partners, with serial-verified proof of delivery, route exceptions with QA sign-off, and returns.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#0E7490", secondary: "#475569" }
+  custom_requirements:
+    - area: integration
+      title: Packaging line (L3) interface
+      text: >
+        Every 30 minutes, pull newly commissioned serials (SGTIN, GTIN, batch, expiry) for the
+        specialty SKUs from the L3 site server and create serial units in status available.
+        Each scan at hand-over, at the door and on return is checked against this list; a scan
+        of an unknown, already shipped or decommissioned serial is refused and raises a
+        serial_mismatch route exception.
+    - area: integration
+      title: ERP connector
+      text: >
+        When a dispatch order for a specialty SKU is released in the ERP, create a delivery in
+        status booked with the ERP order number, pharmacy, product, quantity and pseudonymised
+        patient ID. Post the delivery confirmation (delivered_at, POD reference) back to the
+        order, and post received returns with their disposition as a returns note.
+    - area: integration
+      title: Courier tracking webhooks
+      text: >
+        Each courier partner posts status events (picked up, out for delivery, attempt failed,
+        delivered) and data-logger readings to a token-authenticated webhook; events run the
+        matching delivery transition as the partner's login, readings create temperature
+        readings on the delivery.
+    - area: scheduled
+      title: SLA watch
+      text: >
+        Every 15 minutes, recompute sla_status for open deliveries: at risk inside 4 hours of
+        promised_by, breached after it. On the first breach, set the sla_breach tag and email
+        Supply Chain Ops and the partner's escalation contact.
+    - area: notification
+      title: Patient SMS
+      text: >
+        Text the patient (by the programme's SMS gateway, using only the programme ID) when the
+        pack is out for delivery with a 2-hour window and the OTP, and again after a failed
+        attempt with a link to pick a new slot.
+    - area: report
+      title: Monthly partner scorecard
+      text: >
+        On the 1st of each month, email each partner and Supply Chain Ops a PDF scorecard: deliveries,
+        on-time %, first-attempt success %, excursions, disputed PODs and returns, by city.
+
+# -----------------------------------------------------------------------------
+#  CHOICE SETS
+# -----------------------------------------------------------------------------
+choice_sets:
+  state:
+    - { id: maharashtra, label: Maharashtra }
+    - { id: karnataka,   label: Karnataka }
+  city:
+    - { id: mumbai,    label: Mumbai }
+    - { id: pune,      label: Pune }
+    - { id: nagpur,    label: Nagpur }
+    - { id: bengaluru, label: Bengaluru }
+    - { id: mysuru,    label: Mysuru }
+    - { id: hubballi,  label: Hubballi }
+  delivery_type:
+    - { id: home,   label: Home delivery,   color: blue }
+    - { id: clinic, label: Clinic / infusion centre, color: indigo }
+  delivery_slot:
+    - { id: morning,   label: "Morning (9–12)" }
+    - { id: afternoon, label: "Afternoon (12–4)" }
+    - { id: evening,   label: "Evening (4–8)" }
+  temperature_class:
+    - { id: ambient, label: "Ambient (15–25 °C)", color: gray }
+    - { id: cold,    label: "Cold chain (2–8 °C)", color: blue }
+  therapy_area:
+    - { id: oncology,    label: Oncology }
+    - { id: immunology,  label: Immunology }
+    - { id: haematology, label: Haematology }
+    - { id: rare,        label: Rare disease }
+  sla_status:
+    - { id: on_time,  label: On time,  color: green }
+    - { id: at_risk,  label: At risk,  color: amber }
+    - { id: breached, label: Breached, color: red }
+  pod_method:
+    - { id: otp,         label: OTP from patient }
+    - { id: e_signature, label: E-signature }
+    - { id: photo,       label: Photo at door }
+  recipient_relation:
+    - { id: self,      label: Patient }
+    - { id: caregiver, label: Named caregiver }
+    - { id: clinic,    label: Clinic staff }
+  reading_source:
+    - { id: logger, label: Data logger }
+    - { id: probe,  label: Door probe }
+  exception_type:
+    - { id: delay,            label: Delay,                 color: amber }
+    - { id: temp_excursion,   label: Temperature excursion, color: red }
+    - { id: damaged,          label: Damaged pack,          color: red }
+    - { id: address_issue,    label: Address not found,     color: purple }
+    - { id: recipient_absent, label: Recipient unavailable, color: blue }
+    - { id: serial_mismatch,  label: Serial mismatch,       color: red }
+  severity:
+    - { id: low,    label: Low,    color: gray }
+    - { id: medium, label: Medium, color: amber }
+    - { id: high,   label: High,   color: red }
+  root_cause_category:
+    - { id: partner_process, label: Partner process }
+    - { id: packaging,       label: Packaging / shipper }
+    - { id: address_data,    label: Address data }
+    - { id: patient,         label: Patient availability }
+    - { id: traffic_weather, label: Traffic / weather }
+    - { id: system,          label: System / integration }
+  product_impact:
+    - { id: none,       label: No impact; release,    color: green }
+    - { id: quarantine, label: Quarantine for review, color: amber }
+    - { id: destroy,    label: Destroy,               color: red }
+  return_reason:
+    - { id: failed_delivery, label: Failed delivery }
+    - { id: refused,         label: Refused by patient }
+    - { id: damaged,         label: Damaged in transit }
+    - { id: temp_excursion,  label: Temperature excursion }
+    - { id: therapy_stopped, label: Therapy stopped }
+  disposition:
+    - { id: restock,    label: Return to stock, color: green }
+    - { id: quarantine, label: Quarantine,      color: amber }
+    - { id: destroy,    label: Destroy,         color: red }
+  serial_status:
+    - { id: available,   label: Available,   color: gray }
+    - { id: shipped,     label: Shipped,     color: blue }
+    - { id: delivered,   label: Delivered,   color: green }
+    - { id: returned,    label: Returned,    color: purple }
+    - { id: quarantined, label: Quarantined, color: amber }
+    - { id: destroyed,   label: Destroyed,   color: red }
+
+# -----------------------------------------------------------------------------
+#  ROLES
+# -----------------------------------------------------------------------------
+roles:
+  - name: Logistics Partner
+    description: External login for each of the 3 courier partners; takes packs out for delivery, captures OTP, serial scan and door temperature, reports exceptions and collects returns, for its own deliveries only.
+    landing: deliveries
+    menu:
+      - { page: deliveries, label: My Deliveries, icon: truck }
+      - { page: proofs,     label: Proof of Delivery, icon: clipboard-check }
+      - { page: exceptions, label: Exceptions, icon: shield-alert }
+      - { page: returns,    label: Return Pickups, icon: package }
+      - { page: routes,     label: My Routes, icon: map }
+
+  - name: Pharmacy
+    description: One of the 6 dispatch pharmacies; books deliveries released by the ERP, scans the serial at hand-over, raises returns and scans them back in, for its own deliveries only.
+    landing: deliveries
+    menu:
+      - { page: deliveries, label: Our Deliveries, icon: truck }
+      - { page: returns,    icon: package }
+      - { page: proofs,     label: Proof of Delivery, icon: clipboard-check }
+      - { page: serials,    label: Serial Stock, icon: scan-barcode }
+
+  - name: Supply Chain Ops
+    description: Central team in Mumbai; watches every delivery against the 24-hour promise, verifies proof of delivery, signs off route exceptions, approves and closes returns, and manages partners, pharmacies, routes and products.
+    landing: dashboard
+    menu:
+      - { page: dashboard,  icon: layout-dashboard }
+      - { page: deliveries, icon: truck }
+      - { page: exceptions, label: Route Exceptions, icon: shield-alert }
+      - { page: proofs,     icon: clipboard-check }
+      - { page: returns,    icon: package }
+      - group: Network
+        icon: network
+        items:
+          - { page: partners }
+          - { page: routes }
+          - { page: pharmacies }
+      - group: Products & Serials
+        icon: scan-barcode
+        items:
+          - { page: products }
+          - { page: serials }
+
+  - name: Quality Assurance
+    description: Signs off temperature excursions and damaged-pack exceptions with a product impact decision, and approves destroy dispositions on returns.
+    landing: exceptions
+    menu:
+      - { page: exceptions, label: QA Sign-off, icon: shield-check }
+      - { page: returns,    icon: package }
+      - { page: deliveries, icon: truck }
+      - { page: serials,    icon: scan-barcode }
+
+# -----------------------------------------------------------------------------
+#  PAGES
+# -----------------------------------------------------------------------------
+pages:
+  - { code: deliveries,   type: crud,   entity: delivery,          route: /app/deliveries,         title: Deliveries }
+  - { code: delivery_360, type: detail, detail_view: delivery_360, route: /app/deliveries/:id }
+  - { code: proofs,       type: crud,   entity: proof_of_delivery, route: /app/proof-of-delivery,  title: Proof of Delivery }
+  - { code: exceptions,   type: crud,   entity: route_exception,   route: /app/exceptions,         title: Route Exceptions }
+  - { code: returns,      type: crud,   entity: delivery_return,   route: /app/returns,            title: Returns }
+  - { code: partners,     type: crud,   entity: logistics_partner, route: /app/network/partners,   title: Logistics Partners }
+  - { code: partner_360,  type: detail, detail_view: partner_360,  route: /app/network/partners/:id }
+  - { code: routes,       type: crud,   entity: route,             route: /app/network/routes,     title: Routes }
+  - { code: pharmacies,   type: crud,   entity: pharmacy,          route: /app/network/pharmacies, title: Dispatch Pharmacies }
+  - { code: products,     type: crud,   entity: product,           route: /app/products,           title: Products }
+  - { code: serials,      type: crud,   entity: serial_unit,       route: /app/serials,            title: Serial Units }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Last-Mile Control Tower
+    component: LastMileControlTower
+    roles: [Supply Chain Ops]
+    text: >
+      KPI row: deliveries today (vs same day last week), on-time % against the 24-hour promise
+      (last 30 days, target 95%), first-attempt success %, deliveries at risk or breached now,
+      open temperature excursions awaiting QA, returns in transit. Below, left: on-time % by
+      logistics partner per week for the last 8 weeks (line, one series per partner). Right:
+      open deliveries by status per city (stacked bar). Bottom: a live table of at-risk and
+      breached deliveries with delivery, city, partner, route, promised-by, hours remaining and
+      last event, sorted by hours remaining; clicking a row opens the delivery 360.
+
+# -----------------------------------------------------------------------------
+#  MODULES
+# -----------------------------------------------------------------------------
+modules:
+  # ---------------------------------------------------------------------------
+  - code: network
+    name: Delivery Network
+    description: Courier partners, dispatch pharmacies, the routes that connect them to patients, and the specialty products and serials they carry.
+    entities:
+      - code: logistics_partner
+        name: Logistics Partner
+        plural: Logistics Partners
+        kind: hero
+        display: legal_name
+        app_user: { role: Logistics Partner, name: legal_name, email: email, mobile: phone, create_on: is_active is_true }
+        fields:
+          - partner_code:  { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "LSP-{000}" } }
+          - legal_name: { type: text, label: Partner name, required: true, max_length: 150, placeholder: "SwiftCare Logistics" }
+          - email:         { type: email, required: true, label: Ops email }
+          - phone:         { type: phone, required: true, label: Ops phone }
+          - escalation_contact: { type: email, label: Escalation contact, required: true }
+          - states_served: { type: multi_choice, choices: state, label: States served, required: true }
+          - cold_chain_qualified: { type: boolean, label: Cold-chain qualified, default: false }
+          - qualification_valid_until: { type: date, label: Cold-chain qualification until }
+          - contract_valid_until: { type: date, label: Contract valid until, required: true }
+          - on_time_pct:   { type: percent, label: On-time %, readonly: true, min: 86, max: 99, computed: Deliveries delivered by promised_by in the last 30 days over all deliveries closed in that period. }
+          - first_attempt_pct: { type: percent, label: First-attempt %, readonly: true, min: 80, max: 97, computed: Deliveries delivered with attempts == 0 failed over all delivered in the last 30 days. }
+          - is_active:     { type: boolean, label: Active, default: true }
+        validation:
+          rules:
+            - when: cold_chain_qualified is_true
+              require: [qualification_valid_until]
+              message: Enter the date the cold-chain qualification runs to.
+        access:
+          Supply Chain Ops:  { actions: [view, add, edit, export, detail] }
+          Logistics Partner: { actions: [view, detail], rows: { own: id } }
+        workflow:
+          statuses:
+            - { code: active,    label: Active,    color: green, initial: true }
+            - { code: suspended, label: Suspended, color: red }
+          transitions:
+            - { name: suspend, label: Suspend, from: active, to: suspended, roles: [Supply Chain Ops], tone: danger,
+                form: [ { suspension_reason: { type: long_text, label: Reason, required: true } } ],
+                on_done: "Stop new bookings to this partner's routes and email the partner's escalation contact." }
+            - { name: reinstate, label: Reinstate, from: suspended, to: active, roles: [Supply Chain Ops], primary: true }
+          tags:
+            - { code: qualification_expiring, label: Qualification Expiring, color: amber, system: true, text: Set when qualification_valid_until is within 30 days. }
+            - { code: on_watch, label: On Watch, color: red, enable: { roles: [Supply Chain Ops] }, disable: { roles: [Supply Chain Ops] } }
+        table:
+          columns:
+            - partner_code: { label: Code, searchable: true }
+            - legal_name: { label: Partner, searchable: true, sortable: true, link_to: partner_360 }
+            - states_served: { label: States }
+            - cold_chain_qualified: { label: Cold chain, filterable: true }
+            - on_time_pct:  { label: On-time, format: percent, sortable: true }
+            - first_attempt_pct: { label: First attempt, format: percent, sortable: true }
+            - contract_valid_until: { label: Contract until, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Tags }
+          default_sort: legal_name
+          row_click: partner_360
+          add_button: Add Partner
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create:
+            title: Add Logistics Partner
+            sections:
+              - { title: Partner, fields: [legal_name, email, phone, escalation_contact, states_served] }
+              - { title: Qualification, fields: [cold_chain_qualified, qualification_valid_until, contract_valid_until, is_active] }
+            after_create: partner_360
+          edit: { same_as: create }
+
+      - code: pharmacy
+        name: Dispatch Pharmacy
+        plural: Dispatch Pharmacies
+        kind: master
+        display: name
+        app_user: { role: Pharmacy, name: name, email: email, mobile: phone, create_on: is_active is_true }
+        fields:
+          - pharmacy_code:   { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "PHM-{000}" } }
+          - name:            { type: text, required: true, max_length: 150, placeholder: "Specialty Pharmacy — Andheri" }
+          - city:            { type: choice, choices: city, required: true }
+          - state:           { type: choice, choices: state, required: true }
+          - address:         { type: long_text, required: true }
+          - drug_license_no: { type: text, label: Drug licence no., required: true }
+          - license_valid_until: { type: date, label: Licence valid until, required: true }
+          - pharmacist_in_charge: { type: text, label: Pharmacist in charge, required: true }
+          - email:           { type: email, required: true }
+          - phone:           { type: phone, required: true }
+          - cut_off_time:    { type: time, label: Same-day cut-off, default: "14:00" }
+          - is_active:       { type: boolean, label: Active, default: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [drug_license_no], compare: normalised, on_match: block, message: A pharmacy with this drug licence already exists. }
+        access:
+          Supply Chain Ops: { actions: [view, add, edit, export] }
+          Pharmacy:         { actions: [view], rows: { own: id } }
+        table:
+          columns:
+            - pharmacy_code: { label: Code, searchable: true }
+            - name:          { label: Pharmacy, searchable: true, sortable: true }
+            - city:          { label: City, filterable: true }
+            - state:         { label: State, filterable: true }
+            - pharmacist_in_charge: { label: Pharmacist }
+            - license_valid_until: { label: Licence until, sortable: true }
+            - cut_off_time:  { label: Cut-off }
+            - is_active:     { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Pharmacy
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create:
+            sections:
+              - { title: Pharmacy, fields: [name, city, state, address, cut_off_time] }
+              - { title: Licence, fields: [drug_license_no, license_valid_until, pharmacist_in_charge] }
+              - { title: Contact, fields: [email, phone, is_active] }
+          edit: { same_as: create }
+
+      - code: route
+        name: Route
+        plural: Routes
+        kind: master
+        display: route_code
+        fields:
+          - route_code:  { type: text, label: Route, required: true, unique: true, placeholder: "MH-PUN-03" }
+          - name:        { type: text, required: true, placeholder: "Pune East — Kharadi / Wagholi / Hadapsar" }
+          - city:        { type: choice, choices: city, required: true }
+          - pincodes:    { type: long_text, label: PIN codes covered, required: true, help: Comma-separated 6-digit PIN codes. }
+          - pharmacy:    { type: link, to: pharmacy, required: true, display: name, label: Dispatch pharmacy }
+          - logistics_partner: { type: link, to: logistics_partner, required: true, display: legal_name, label: Partner }
+          - sla_hours:   { type: integer, label: Promise (hours), required: true, default: 24, min: 4, max: 48 }
+          - cold_chain:  { type: boolean, label: Cold-chain route, default: false }
+          - is_active:   { type: boolean, label: Active, default: true }
+        validation:
+          rules:
+            - when: cold_chain is_true
+              require_expr: logistics_partner.cold_chain_qualified == true
+              message: This partner is not qualified for cold-chain routes.
+        access:
+          Supply Chain Ops:  { actions: [view, add, edit, export] }
+          Logistics Partner: { actions: [view], rows: { own: logistics_partner } }
+        table:
+          columns:
+            - route_code: { label: Route, searchable: true, sortable: true }
+            - name:       { label: Area, searchable: true }
+            - city:       { label: City, filterable: true }
+            - pharmacy:   { label: Pharmacy, display: name, filterable: true }
+            - logistics_partner: { label: Partner, display: legal_name, filterable: true }
+            - sla_hours:  { label: Promise (h), sortable: true }
+            - cold_chain: { label: Cold chain, filterable: true }
+          default_sort: route_code
+          quick_filters:
+            - { label: Active only, where: is_active is_true, default: true }
+            - { label: Cold-chain routes, where: cold_chain is_true }
+          add_button: Add Route
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create:
+            sections:
+              - { title: Route, fields: [route_code, name, city, pincodes] }
+              - { title: Service, fields: [pharmacy, logistics_partner, sla_hours, cold_chain, is_active] }
+          edit: { same_as: create }
+
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:          { type: text, required: true, placeholder: "Trastuzumab 440 mg vial" }
+          - gtin:          { type: text, label: GTIN, required: true, unique: true, pattern: "^[0-9]{14}$", pattern_msg: Enter the 14-digit GTIN. }
+          - sku_code:      { type: text, label: ERP SKU, required: true, unique: true }
+          - therapy_area:  { type: choice, choices: therapy_area, required: true }
+          - temperature_class: { type: choice, label: Storage, choices: temperature_class, required: true }
+          - max_excursion_minutes: { type: integer, label: Allowed excursion (min), min: 0, max: 240, help: Cumulative minutes outside range allowed by the stability data. }
+          - is_active:     { type: boolean, label: Active, default: true }
+        validation:
+          rules:
+            - when: temperature_class == cold
+              require: [max_excursion_minutes]
+              message: Enter the allowed excursion for a cold-chain product.
+        access:
+          Supply Chain Ops:  { actions: [view, add, edit, export] }
+          Quality Assurance: { actions: [view, edit] }
+          Pharmacy:          { actions: [view] }
+        table:
+          columns:
+            - name:          { label: Product, searchable: true, sortable: true }
+            - gtin:          { label: GTIN, searchable: true }
+            - sku_code:      { label: SKU }
+            - therapy_area:  { label: Therapy area, filterable: true }
+            - temperature_class: { label: Storage, filterable: true }
+            - max_excursion_minutes: { label: Excursion budget (min) }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, gtin, sku_code, therapy_area, temperature_class, max_excursion_minutes, is_active] }
+          edit:   { same_as: create, roles: [Supply Chain Ops, Quality Assurance] }
+
+      - code: serial_unit
+        name: Serial Unit
+        plural: Serial Units
+        kind: master
+        display: sgtin
+        fields:
+          - sgtin:        { type: text, label: SGTIN, required: true, unique: true }
+          - product:      { type: link, to: product, required: true, display: name }
+          - batch_no:     { type: text, label: Batch, required: true }
+          - expiry_date:  { type: date, label: Expiry, required: true }
+          - pharmacy:     { type: link, to: pharmacy, display: name, label: Held at }
+          - serial_status: { type: choice, label: Serial status, choices: serial_status, readonly: true, default: available }
+          - commissioned_at: { type: datetime, label: Commissioned (L3), readonly: true }
+          - last_scan_at: { type: datetime, label: Last scan, readonly: true }
+        access:
+          Supply Chain Ops:  { actions: [view, export] }
+          Quality Assurance: { actions: [view, export] }
+          Pharmacy:          { actions: [view], rows: { own: pharmacy } }
+        custom_requirements:
+          - area: integration
+            title: Serial status from scans
+            text: Set serial_status to shipped on hand-over, delivered on confirmed delivery, returned when a return is received, and quarantined or destroyed when the return closes with that disposition; set last_scan_at on every scan.
+        table:
+          columns:
+            - sgtin:        { label: SGTIN, searchable: true }
+            - product:      { label: Product, display: name, filterable: true }
+            - batch_no:     { label: Batch, searchable: true }
+            - expiry_date:  { label: Expiry, sortable: true }
+            - pharmacy:     { label: Held at, display: name, filterable: true }
+            - serial_status: { label: Status, filterable: true }
+            - last_scan_at: { label: Last scan, sortable: true }
+          default_sort: -last_scan_at
+          quick_filters:
+            - { label: Available, where: serial_status == available, roles: [Pharmacy], default: true }
+            - { label: Quarantined, where: serial_status == quarantined, roles: [Quality Assurance, Supply Chain Ops] }
+
+  # ---------------------------------------------------------------------------
+  - code: deliveries
+    name: Delivery Tracking
+    description: Every delivery from hand-over at the pharmacy to confirmation at the patient's door, with its proof of delivery and temperature readings.
+    entities:
+      - code: delivery
+        name: Delivery
+        plural: Deliveries
+        kind: hero
+        display: delivery_ref
+        fields:
+          - delivery_ref:  { type: text, label: Delivery, readonly: true, unique: true, auto: { sequence: "DLV-{YY}-{000000}" } }
+          - erp_order_no:  { type: text, label: ERP order no., required: true, pattern: "^SO[0-9]{8}$", pattern_msg: "ERP order numbers look like SO40012345." }
+          - pharmacy:      { type: link, to: pharmacy, required: true, display: name, limit_choices: is_active is_true }
+          - city:          { type: choice, choices: city, required: true }
+          - route:         { type: link, to: route, required: true, display: route_code, limit_choices: form.pharmacy == pharmacy }
+          - logistics_partner: { type: link, to: logistics_partner, required: true, display: legal_name, label: Partner }
+          - delivery_type: { type: choice, choices: delivery_type, required: true, default: home }
+          - patient_ref:   { type: text, label: Patient ID, required: true, pattern: "^PSP-[0-9]{6}$", pattern_msg: "Programme IDs look like PSP-004512.", help: Pseudonymised programme ID; no patient name is stored. }
+          - delivery_address: { type: text, label: Delivery address, required: true }
+          - pincode:       { type: text, label: PIN code, required: true, pattern: "^[1-9][0-9]{5}$", pattern_msg: Enter a 6-digit PIN code. }
+          - preferred_slot: { type: choice, label: Preferred slot, choices: delivery_slot }
+          - product:       { type: link, to: product, required: true, display: name, limit_choices: is_active is_true }
+          - serial_no:     { type: text, label: Serial (SGTIN), required: true, help: Scanned at hand-over; checked against the packaging line serials. }
+          - batch_no:      { type: text, label: Batch }
+          - quantity:      { type: integer, label: Packs, required: true, min: 1, max: 6, default: 1 }
+          - temperature_class: { type: choice, label: Temperature, choices: temperature_class, required: true, default: ambient }
+          - logger_id:     { type: text, label: Data logger ID }
+          - promised_by:   { type: datetime, label: Promised by, required: true }
+          - handed_over_at: { type: datetime, label: Handed over at, readonly: true }
+          - delivered_at:  { type: datetime, label: Delivered at, readonly: true }
+          - attempts:      { type: integer, label: Failed attempts, readonly: true, min: 0, max: 2 }
+          - sla_status:    { type: choice, label: SLA, choices: sla_status, readonly: true, computed: "On time until 4 hours before promised_by, at risk inside 4 hours, breached after it (stops once delivered)." }
+        validation:
+          duplicate_check:
+            scope: { where: "status not_in [delivered, returned, cancelled]" }
+            rules:
+              - { match: [serial_no], compare: exact, on_match: block, message: This serial is already on another open delivery. }
+              - { match: [erp_order_no], compare: exact, on_match: block, message: A delivery for this ERP order already exists. }
+          rules:
+            - when: temperature_class == cold
+              require_expr: route.cold_chain == true
+              message: Cold-chain packs must go on a cold-chain route.
+            - when: temperature_class == cold
+              require: [logger_id]
+              message: Attach a data logger to every cold-chain pack.
+            - text: The serial belongs to the selected product (GTIN) and is available at the selected pharmacy.
+              message: This serial is not available for this product at this pharmacy.
+        access:
+          Supply Chain Ops:  { actions: [view, add, edit, export, detail] }
+          Pharmacy:          { actions: [view, add, edit, detail], rows: { own: pharmacy } }
+          Logistics Partner: { actions: [view, detail], rows: { own: logistics_partner } }
+          Quality Assurance: { actions: [view, detail], rows: { where: "temperature_class == cold" } }
+        workflow:
+          statuses:
+            - { code: booked,           label: Booked,           color: gray, initial: true }
+            - { code: handed_over,      label: Handed Over,      color: blue }
+            - { code: out_for_delivery, label: Out for Delivery, color: indigo }
+            - { code: attempt_failed,   label: Attempt Failed,   color: amber }
+            - { code: on_hold,          label: On Hold (QA),     color: red }
+            - { code: delivered,        label: Delivered,        color: green, final: true }
+            - { code: returning,        label: Returning,        color: purple }
+            - { code: returned,         label: Returned to Pharmacy, color: purple, final: true }
+            - { code: cancelled,        label: Cancelled,        color: gray, final: true }
+          transitions:
+            - name: hand_over
+              label: Hand Over to Partner
+              from: booked
+              to: handed_over
+              roles: [Pharmacy]
+              primary: true
+              form:
+                - scanned_serial: { type: text, label: Scan serial, required: true }
+                - logger_started: { type: boolean, label: Data logger started }
+              condition:
+                all:
+                  - text: The scanned serial equals serial_no and is an available serial in the packaging line data.
+                  - text: For a cold-chain pack, logger_started is ticked.
+              condition_msg: The scanned serial does not match this delivery, or the logger is not started.
+              on_done: Set handed_over_at = now, mark the serial shipped and notify the partner of the pick-up with the pharmacy address and cut-off.
+            - { name: start_route, label: Out for Delivery, from: [handed_over, attempt_failed], to: out_for_delivery, roles: [Logistics Partner], primary: true,
+                on_done: "Text the patient the 2-hour window, the OTP and the partner's contact number." }
+            - name: confirm_delivery
+              label: Confirm Delivery
+              from: out_for_delivery
+              to: delivered
+              roles: [Logistics Partner]
+              primary: true
+              condition: { text: A proof of delivery with a matching serial scan is captured for this delivery. }
+              condition_msg: Capture the proof of delivery first.
+              on_done: Set delivered_at = now, mark the serial delivered, post the confirmation to the ERP and email the pharmacy.
+            - name: fail_attempt
+              label: Attempt Failed
+              from: out_for_delivery
+              to: attempt_failed
+              roles: [Logistics Partner]
+              form:
+                - failure_reason: { type: choice, choices: exception_type, required: true }
+                - failure_note:   { type: long_text }
+              on_done: Add 1 to attempts, raise a route exception with the reason, and text the patient a link to pick a new slot.
+            - name: hold_for_qa
+              label: Hold for QA
+              from: [handed_over, out_for_delivery, attempt_failed]
+              to: on_hold
+              roles: [Supply Chain Ops, Logistics Partner]
+              tone: danger
+              form:
+                - hold_reason: { type: long_text, required: true }
+              on_done: Raise a temperature_excursion route exception with severity high and email Quality Assurance.
+            - { name: release_hold, label: Release, from: on_hold, to: out_for_delivery, roles: [Quality Assurance], primary: true,
+                condition: { text: The linked excursion exception is resolved with product impact none. },
+                condition_msg: QA must sign off the excursion with no product impact first. }
+            - { name: send_back, label: Return to Pharmacy, from: [attempt_failed, on_hold], to: returning, roles: [Supply Chain Ops], tone: danger,
+                condition: { any: [ attempts >= 2, status == on_hold ] },
+                condition_msg: "Make two attempts before sending the pack back.",
+                on_done: Create a return for this delivery with the matching reason and status approved. }
+            - { name: received_back, label: Received Back, from: returning, to: returned, roles: [Pharmacy],
+                form: [ { scanned_serial: { type: text, label: Scan serial, required: true } } ],
+                on_done: Mark the serial returned. }
+            - { name: cancel, label: Cancel, from: booked, to: cancelled, roles: [Pharmacy, Supply Chain Ops], tone: danger,
+                form: [ { cancel_reason: { type: long_text, required: true } } ],
+                on_done: Release the serial back to available and tell the ERP the order is cancelled. }
+          tags:
+            - { code: sla_breach, label: SLA Breached, color: red, system: true, text: Set when the delivery is not delivered by promised_by. }
+            - { code: cold_chain, label: Cold Chain, color: blue, system: true, text: Set when temperature_class is cold. }
+            - { code: excursion,  label: Excursion, color: red, system: true, text: Set when any temperature reading is outside 2–8 °C on a cold-chain pack. }
+            - { code: priority,   label: Priority, color: amber, enable: { roles: [Supply Chain Ops, Pharmacy] }, disable: { roles: [Supply Chain Ops] } }
+        form:
+          create:
+            roles: [Pharmacy, Supply Chain Ops]
+            title: Book Delivery
+            sections:
+              - { title: Order, fields: [erp_order_no, pharmacy, city, route, logistics_partner, delivery_type, promised_by] }
+              - { title: Recipient, fields: [patient_ref, delivery_address, pincode, preferred_slot] }
+              - title: Pack
+                fields:
+                  - product
+                  - serial_no
+                  - batch_no
+                  - quantity
+                  - temperature_class
+                  - logger_id: { show_when: temperature_class == cold }
+            after_create: delivery_360
+          edit:
+            same_as: create
+            roles: [Pharmacy, Supply Chain Ops]
+            editable_in: [booked]
+        table:
+          columns:
+            - delivery_ref:  { label: Delivery, searchable: true, sortable: true, link_to: delivery_360 }
+            - patient_ref:   { label: Patient ID, searchable: true }
+            - city:          { label: City, filterable: true }
+            - route:         { label: Route, display: route_code, filterable: true }
+            - logistics_partner: { label: Partner, display: legal_name, filterable: true, roles: [Supply Chain Ops, Pharmacy, Quality Assurance] }
+            - product:       { label: Product, display: name, filterable: true }
+            - temperature_class: { label: Temp, filterable: true }
+            - promised_by:   { label: Promised by, sortable: true }
+            - sla_status:    { label: SLA, filterable: true }
+            - status:        { source: status, label: Status, filterable: true }
+            - tags:          { source: tags, label: Tags }
+          default_sort: promised_by
+          quick_filters:
+            - { label: In progress, where: "status in [handed_over, out_for_delivery, attempt_failed, on_hold]", default: true }
+            - { label: At risk or breached, where: "sla_status in [at_risk, breached]", roles: [Supply Chain Ops] }
+            - { label: To hand over, where: status == booked, roles: [Pharmacy] }
+            - { label: To deliver today, where: "status in [handed_over, attempt_failed]", roles: [Logistics Partner] }
+            - { label: On hold, where: status == on_hold, roles: [Quality Assurance, Supply Chain Ops] }
+          row_click: delivery_360
+          add_button: Book Delivery
+
+      - code: proof_of_delivery
+        name: Proof of Delivery
+        plural: Proofs of Delivery
+        kind: child
+        parent: { entity: delivery, field: delivery }
+        display: pod_ref
+        fields:
+          - pod_ref:       { type: text, label: POD, readonly: true, unique: true, auto: { sequence: "POD-{YY}-{000000}" } }
+          - delivery:      { type: link, to: delivery, required: true, display: delivery_ref, on_delete: cascade }
+          - method:        { type: choice, choices: pod_method, required: true, default: otp }
+          - otp_verified:  { type: boolean, label: OTP verified, readonly: true }
+          - received_by:   { type: text, label: Received by, required: true, help: Patient or named caregiver; first name only. }
+          - relation:      { type: choice, choices: recipient_relation, required: true, default: self }
+          - scanned_serial: { type: text, label: Serial scanned at door, required: true }
+          - captured_at:   { type: datetime, label: Captured at, required: true }
+          - photo:         { type: image, label: Photo / signature, accept: [jpg, png], max_size_mb: 5 }
+          - temperature_c: { type: decimal, label: Temp at door (°C), min: -5, max: 40 }
+          - gps_location:  { type: text, label: GPS, readonly: true }
+          - distance_m:    { type: integer, label: Distance from address (m), readonly: true, computed: Metres between the GPS fix and the geocoded delivery address. }
+        validation:
+          rules:
+            - text: scanned_serial must equal the delivery's serial_no.
+              message: The serial scanned at the door does not match the pack on this delivery.
+            - when: delivery.temperature_class == cold
+              require: [temperature_c]
+              message: Record the temperature at the door for a cold-chain pack.
+            - when: method == photo
+              require: [photo]
+              message: Attach the photo taken at the door.
+        access:
+          Logistics Partner: { actions: [view, add], rows: { own: delivery.logistics_partner } }
+          Pharmacy:          { actions: [view], rows: { own: delivery.pharmacy } }
+          Supply Chain Ops:  { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: captured, label: Captured, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green, final: true }
+            - { code: disputed, label: Disputed, color: amber }
+            - { code: rejected, label: Rejected, color: red, final: true }
+          transitions:
+            - { name: verify, label: Verify, from: [captured, disputed], to: verified, roles: [Supply Chain Ops], primary: true }
+            - { name: dispute, label: Dispute, from: captured, to: disputed, roles: [Pharmacy, Supply Chain Ops],
+                form: [ { dispute_reason: { type: long_text, required: true } } ],
+                on_done: Email the logistics partner's escalation contact and Supply Chain Ops the dispute. }
+            - { name: reject, label: Reject, from: disputed, to: rejected, roles: [Supply Chain Ops], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ],
+                on_done: Reopen the delivery as out_for_delivery and raise a route exception of type serial_mismatch. }
+            - { name: auto_verify, label: Auto-verify, from: captured, to: verified, trigger: system,
+                text: "Immediately when otp_verified is true, the serial matches, distance_m < 200 and (for cold chain) temperature_c is 2–8 °C." }
+          tags:
+            - { code: far_from_address, label: Far From Address, color: amber, system: true, text: Set when distance_m > 500. }
+        table:
+          columns:
+            - pod_ref:        { label: POD, searchable: true }
+            - delivery:       { label: Delivery, display: delivery_ref, searchable: true }
+            - method:         { label: Method, filterable: true }
+            - relation:       { label: Received by, filterable: true }
+            - captured_at:    { label: Captured, sortable: true }
+            - temperature_c:  { label: Temp °C }
+            - distance_m:     { label: Distance (m) }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -captured_at
+          quick_filters:
+            - { label: To verify, where: "status in [captured, disputed]", roles: [Supply Chain Ops], default: true }
+          add_button: Capture POD
+        form:
+          create: { roles: [Logistics Partner], fields: [method, received_by, relation, scanned_serial, captured_at, photo, temperature_c] }
+
+      - code: temperature_reading
+        name: Temperature Reading
+        plural: Temperature Readings
+        kind: child
+        parent: { entity: delivery, field: delivery }
+        display: reading_at
+        fields:
+          - delivery:      { type: link, to: delivery, required: true, display: delivery_ref, on_delete: cascade }
+          - reading_at:    { type: datetime, label: Reading at, required: true }
+          - temperature_c: { type: decimal, label: Temp (°C), required: true, min: -5, max: 40 }
+          - source:        { type: choice, choices: reading_source, required: true, default: logger }
+          - out_of_range:  { type: boolean, label: Out of range, readonly: true, computed: True when temperature_c is below 2 or above 8 on a cold-chain delivery. }
+        access:
+          Logistics Partner: { actions: [view, add], rows: { own: delivery.logistics_partner } }
+          Supply Chain Ops:  { actions: [view, export] }
+          Quality Assurance: { actions: [view, export] }
+        table:
+          columns:
+            - reading_at:    { label: Time, sortable: true }
+            - temperature_c: { label: Temp °C }
+            - source:        { label: Source, filterable: true }
+            - out_of_range:  { label: Out of range, filterable: true }
+          default_sort: -reading_at
+        form:
+          create: { roles: [Logistics Partner], fields: [reading_at, temperature_c, source] }
+
+  # ---------------------------------------------------------------------------
+  - code: exceptions_returns
+    name: Exceptions & Returns
+    description: Route exceptions raised on the road (with QA sign-off for excursions and damage) and the returns that bring packs back to the pharmacy.
+    entities:
+      - code: route_exception
+        name: Route Exception
+        plural: Route Exceptions
+        kind: transactional
+        display: exception_ref
+        fields:
+          - exception_ref:  { type: text, label: Exception, readonly: true, unique: true, auto: { sequence: "EXC-{YY}-{00000}" } }
+          - delivery:       { type: link, to: delivery, required: true, display: delivery_ref }
+          - exception_type: { type: choice, label: Type, choices: exception_type, required: true }
+          - severity:       { type: choice, choices: severity, required: true, default: medium }
+          - reported_at:    { type: datetime, label: Reported at, required: true }
+          - description:    { type: long_text, required: true }
+          - excursion_minutes: { type: integer, label: Minutes out of range, min: 0, max: 1440 }
+          - max_temp_c:     { type: decimal, label: Peak temp (°C), min: -5, max: 40 }
+          - root_cause_category: { type: choice, label: Root cause, choices: root_cause_category }
+          - root_cause:     { type: long_text, label: Root cause detail }
+          - corrective_action: { type: long_text, label: Corrective action }
+          - ops_signed_off_by: { type: link, to: app_user, label: Ops sign-off, readonly: true }
+          - product_impact: { type: choice, label: Product impact, choices: product_impact, readonly: true }
+          - qa_assessment:  { type: long_text, label: QA assessment, readonly: true }
+        validation:
+          rules:
+            - when: exception_type == temp_excursion
+              require: [excursion_minutes, max_temp_c]
+              message: Enter the minutes out of range and the peak temperature from the logger.
+        access:
+          Logistics Partner: { actions: [view, add], rows: { own: delivery.logistics_partner } }
+          Supply Chain Ops:  { actions: [view, add, edit, export] }
+          Quality Assurance: { actions: [view, export], rows: { where: "exception_type in [temp_excursion, damaged]" } }
+        workflow:
+          statuses:
+            - { code: open,          label: Open,          color: red, initial: true }
+            - { code: investigating, label: Investigating, color: amber }
+            - { code: pending_qa,    label: Pending QA,    color: purple }
+            - { code: resolved,      label: Resolved,      color: green, final: true }
+          transitions:
+            - { name: acknowledge, label: Acknowledge, from: open, to: investigating, roles: [Supply Chain Ops], primary: true,
+                on_done: "Email the partner's escalation contact that the exception is under investigation." }
+            - name: sign_off
+              label: Sign Off
+              from: investigating
+              to: resolved
+              roles: [Supply Chain Ops]
+              primary: true
+              condition: exception_type not_in [temp_excursion, damaged]
+              condition_msg: Excursions and damaged packs go to QA for sign-off.
+              form:
+                - root_cause_category: { type: choice, choices: root_cause_category, required: true }
+                - root_cause:          { type: long_text, required: true }
+                - corrective_action:   { type: long_text, required: true }
+              on_done: Email the logistics partner the root cause and corrective action.
+            - name: send_to_qa
+              label: Send to QA
+              from: investigating
+              to: pending_qa
+              roles: [Supply Chain Ops]
+              primary: true
+              condition: exception_type in [temp_excursion, damaged]
+              form:
+                - root_cause_category: { type: choice, choices: root_cause_category, required: true }
+                - root_cause:          { type: long_text, required: true }
+                - corrective_action:   { type: long_text, required: true }
+              on_done: Set ops_signed_off_by = current user and email Quality Assurance with the logger trace attached.
+            - name: qa_sign_off
+              label: QA Sign Off
+              from: pending_qa
+              to: resolved
+              roles: [Quality Assurance]
+              primary: true
+              form:
+                - product_impact: { type: choice, choices: product_impact, required: true }
+                - qa_assessment:  { type: long_text, required: true }
+              condition: { text: The QA approver is not the user in ops_signed_off_by (maker-checker). }
+              condition_msg: A different person must give the QA sign-off.
+              on_done: "If product_impact is none, release the delivery's hold; otherwise send the delivery back and create a return with reason temp_excursion or damaged. Email Supply Chain Ops the decision."
+            - { name: return_to_ops, label: Back to Ops, from: pending_qa, to: investigating, roles: [Quality Assurance],
+                form: [ { qa_query: { type: long_text, label: Query for ops, required: true } } ] }
+          tags:
+            - { code: escalated, label: Escalated, color: red, enable: { roles: [Supply Chain Ops] }, disable: { roles: [Supply Chain Ops] } }
+            - { code: repeat_route, label: Repeat on Route, color: amber, system: true, text: Set when the delivery's route has 3 or more exceptions of this type in the last 30 days. }
+        table:
+          columns:
+            - exception_ref:  { label: Exception, searchable: true, sortable: true }
+            - delivery:       { label: Delivery, display: delivery_ref, searchable: true }
+            - partner:        { source: computed, label: Partner, path: delivery.logistics_partner.legal_name }
+            - city:           { source: computed, label: City, path: delivery.city }
+            - exception_type: { label: Type, filterable: true }
+            - severity:       { label: Severity, filterable: true }
+            - reported_at:    { label: Reported, sortable: true }
+            - product_impact: { label: Impact, filterable: true, roles: [Quality Assurance, Supply Chain Ops] }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -reported_at
+          quick_filters:
+            - { label: Open, where: "status in [open, investigating, pending_qa]", default: true, roles: [Supply Chain Ops, Logistics Partner] }
+            - { label: Awaiting QA, where: status == pending_qa, roles: [Quality Assurance], default: true }
+            - { label: Excursions, where: exception_type == temp_excursion }
+          add_button: Report Exception
+        form:
+          create:
+            roles: [Logistics Partner, Supply Chain Ops]
+            sections:
+              - { title: Exception, fields: [delivery, exception_type, severity, reported_at, description] }
+              - title: Temperature
+                fields:
+                  - excursion_minutes: { show_when: exception_type == temp_excursion }
+                  - max_temp_c:        { show_when: exception_type == temp_excursion }
+          edit: { fields: [severity, description], roles: [Supply Chain Ops], editable_in: [open, investigating] }
+
+      - code: delivery_return
+        name: Return
+        plural: Returns
+        kind: transactional
+        display: return_ref
+        fields:
+          - return_ref:   { type: text, label: Return, readonly: true, unique: true, auto: { sequence: "RTN-{YY}-{00000}" } }
+          - delivery:     { type: link, to: delivery, required: true, display: delivery_ref }
+          - reason:       { type: choice, choices: return_reason, required: true }
+          - quantity:     { type: integer, label: Packs, required: true, min: 1, max: 6 }
+          - pickup_date:  { type: date, label: Pick-up date }
+          - received_serial: { type: text, label: Serial received, readonly: true }
+          - received_at:  { type: datetime, label: Received at, readonly: true }
+          - disposition:  { type: choice, choices: disposition, readonly: true }
+          - credit_note_no: { type: text, label: ERP returns note, readonly: true }
+          - notes:        { type: long_text }
+        validation:
+          duplicate_check:
+            scope: { where: "status not_in [rejected]" }
+            rules:
+              - { match: [delivery], compare: exact, on_match: block, message: This delivery already has an open return. }
+        access:
+          Pharmacy:          { actions: [view, add], rows: { own: delivery.pharmacy } }
+          Logistics Partner: { actions: [view], rows: { own: delivery.logistics_partner } }
+          Supply Chain Ops:  { actions: [view, add, export] }
+          Quality Assurance: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: requested,   label: Requested,   color: gray, initial: true }
+            - { code: approved,    label: Approved,    color: blue }
+            - { code: in_transit,  label: In Transit,  color: indigo }
+            - { code: received,    label: Received,    color: amber }
+            - { code: pending_qa,  label: Destruction Pending QA, color: purple }
+            - { code: closed,      label: Closed,      color: green, final: true }
+            - { code: rejected,    label: Rejected,    color: red, final: true }
+          transitions:
+            - { name: approve, label: Approve, from: requested, to: approved, roles: [Supply Chain Ops], primary: true,
+                form: [ { pickup_date: { type: date, required: true } } ],
+                on_done: "Book the pick-up with the delivery's logistics partner for pickup_date." }
+            - { name: collect, label: Collected, from: approved, to: in_transit, roles: [Logistics Partner], primary: true }
+            - { name: receive, label: Receive, from: in_transit, to: received, roles: [Pharmacy], primary: true,
+                form: [ { received_serial: { type: text, label: Scan serial, required: true } } ],
+                condition: { text: The scanned serial is the serial that was shipped on the delivery. },
+                condition_msg: This is not the pack that was shipped.,
+                on_done: Set received_at = now and mark the serial returned. }
+            - { name: close, label: Close with Disposition, from: received, to: closed, roles: [Supply Chain Ops], primary: true,
+                form: [ { disposition: { type: choice, choices: disposition, required: true } } ],
+                condition: { text: The disposition is restock or quarantine; destroy goes to QA. },
+                condition_msg: Send a destroy disposition to QA.,
+                on_done: Post the return and its disposition to the ERP and store the returns note number. }
+            - { name: request_destruction, label: Request Destruction, from: received, to: pending_qa, roles: [Supply Chain Ops], tone: danger }
+            - { name: approve_destruction, label: Approve Destruction, from: pending_qa, to: closed, roles: [Quality Assurance], tone: danger,
+                confirm: "Approve destruction of this pack?",
+                on_done: "Set disposition = destroy, mark the serial destroyed (decommissioned in L3) and post to the ERP." }
+            - { name: reject, label: Reject, from: requested, to: rejected, roles: [Supply Chain Ops], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ] }
+        table:
+          columns:
+            - return_ref:  { label: Return, searchable: true, sortable: true }
+            - delivery:    { label: Delivery, display: delivery_ref, searchable: true }
+            - pharmacy:    { source: computed, label: Pharmacy, path: delivery.pharmacy.name }
+            - reason:      { label: Reason, filterable: true }
+            - quantity:    { label: Packs }
+            - pickup_date: { label: Pick-up, sortable: true }
+            - disposition: { label: Disposition, filterable: true }
+            - status:      { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: To approve, where: status == requested, roles: [Supply Chain Ops], default: true }
+            - { label: To collect, where: status == approved, roles: [Logistics Partner], default: true }
+            - { label: To receive, where: status == in_transit, roles: [Pharmacy], default: true }
+            - { label: Destruction pending, where: status == pending_qa, roles: [Quality Assurance], default: true }
+          add_button: Raise Return
+        form:
+          create: { roles: [Pharmacy, Supply Chain Ops], fields: [delivery, reason, quantity, notes] }
+
+# -----------------------------------------------------------------------------
+#  360 PAGES
+# -----------------------------------------------------------------------------
+detail_views:
+  - code: delivery_360
+    hero: delivery
+    title: "{delivery_ref}"
+    back_to: deliveries
+    layout: header_tabs_sidebar
+    roles: [Supply Chain Ops, Pharmacy, Logistics Partner, Quality Assurance]
+    header:
+      title: delivery_ref
+      subtitle: ["{product.name}", "{route.route_code}", "{patient_ref}"]
+      badges: [ { source: status }, { source: tags }, { field: sla_status, prefix: "SLA: " } ]
+      facts:
+        - { label: Promised by, field: promised_by }
+        - { label: Partner, path: logistics_partner.legal_name }
+        - { label: Serial, field: serial_no, copyable: true }
+        - { label: Failed attempts, field: attempts }
+        - { label: Delivered at, field: delivered_at, fallback: "—" }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: report_exception, label: Report Exception, type: create_related, entity: route_exception, prefill: { delivery: hero } }
+      banners:
+        - { show_when: has_tag sla_breach, tone: danger, text: This delivery has breached its promised-by time. }
+        - { show_when: status == on_hold, tone: danger, text: "On hold for QA: the pack must not be delivered until QA releases it." }
+        - { show_when: has_tag cold_chain, tone: info, text: "Cold-chain pack (2–8 °C): record the temperature at the door." }
+    stats:
+      - { label: Failed attempts, value: { count: route_exception, via: delivery, where: "exception_type in [address_issue, recipient_absent]" }, tone: amber, link_to_tab: exceptions }
+      - { label: Open exceptions, value: { count: route_exception, via: delivery, where: "status in [open, investigating, pending_qa]" }, tone: red, link_to_tab: exceptions }
+      - { label: Out-of-range readings, value: { count: temperature_reading, via: delivery, where: out_of_range is_true }, tone: red, link_to_tab: temperature, show_when: has_tag cold_chain }
+      - { label: Returns, value: { count: delivery_return, via: delivery }, tone: purple, link_to_tab: returns }
+    sidebar:
+      - { type: fields, title: Order, fields: [erp_order_no, pharmacy, city, delivery_type, preferred_slot] }
+      - { type: fields, title: Recipient, fields: [patient_ref, delivery_address, pincode] }
+      - { type: fields, title: Pack, fields: [product, serial_no, batch_no, quantity, temperature_class, logger_id] }
+      - { type: custom, title: Journey, text: "A vertical stepper: booked, handed over, out for delivery, each failed attempt, delivered or returned, each with its time and the scan that confirmed it; the current step highlighted and the promised-by time marked." }
+    tabs:
+      - code: pod
+        label: Proof of Delivery
+        type: related_table
+        entity: proof_of_delivery
+        via: delivery
+        count_badge: true
+        columns: [pod_ref, method, relation, captured_at, temperature_c, distance_m, status]
+        add: { label: Capture POD, prefill: { delivery: hero } }
+        empty_state: { title: No proof yet, text: "The courier captures the OTP, the serial scan and (for cold chain) the door temperature.", cta: add }
+      - code: temperature
+        label: Temperature
+        type: related_table
+        entity: temperature_reading
+        via: delivery
+        show_when: has_tag cold_chain
+        columns: [reading_at, temperature_c, source, out_of_range]
+        add: { label: Add Reading, prefill: { delivery: hero } }
+      - code: exceptions
+        label: Exceptions
+        type: related_table
+        entity: route_exception
+        via: delivery
+        count_badge: { where: "status in [open, investigating, pending_qa]", tone: red }
+        columns: [exception_ref, exception_type, severity, reported_at, product_impact, status]
+        add: { label: Report Exception, prefill: { delivery: hero } }
+      - code: returns
+        label: Returns
+        type: related_table
+        entity: delivery_return
+        via: delivery
+        columns: [return_ref, reason, quantity, pickup_date, disposition, status]
+      - code: activity
+        label: Tracking
+        type: timeline
+        sources:
+          - { entity: delivery, events: [created, transition, tag] }
+          - { entity: proof_of_delivery, via: delivery, events: [created, transition] }
+          - { entity: route_exception, via: delivery, events: [created, transition] }
+          - { entity: delivery_return, via: delivery, events: [created, transition] }
+    states:
+      not_found: { title: Delivery not found, back_to: deliveries }
+
+  - code: partner_360
+    hero: logistics_partner
+    title: "{legal_name}"
+    back_to: partners
+    layout: header_tabs
+    roles: [Supply Chain Ops, Logistics Partner]
+    header:
+      avatar: { fallback_initials: legal_name }
+      title: legal_name
+      subtitle: ["{partner_code}", "{states_served}"]
+      badges: [ { source: tags }, { field: cold_chain_qualified, prefix: "Cold chain: " } ]
+      facts:
+        - { label: On-time (30 d), field: on_time_pct }
+        - { label: First attempt (30 d), field: first_attempt_pct }
+        - { label: Contract until, field: contract_valid_until }
+        - { label: Escalation, field: escalation_contact, copyable: true }
+      actions:
+        tags: true
+        buttons:
+          - { key: edit, label: Edit, type: edit, roles: [Supply Chain Ops] }
+      banners:
+        - { show_when: has_tag qualification_expiring, tone: warning, text: "Cold-chain qualification runs out on {qualification_valid_until}." }
+    stats:
+      - { label: Open deliveries, value: { count: delivery, via: logistics_partner, where: "status in [handed_over, out_for_delivery, attempt_failed, on_hold]" }, tone: blue, link_to_tab: deliveries }
+      - { label: Breached now, value: { count: delivery, via: logistics_partner, where: "sla_status == breached" }, tone: red, link_to_tab: deliveries }
+      - { label: Open exceptions, value: { count: route_exception, via: delivery.logistics_partner, where: "status in [open, investigating, pending_qa]" }, tone: amber, link_to_tab: exceptions }
+      - { label: Routes, value: { count: route, via: logistics_partner }, tone: teal, link_to_tab: routes }
+    tabs:
+      - code: deliveries
+        label: Deliveries
+        type: related_table
+        entity: delivery
+        via: logistics_partner
+        columns: [delivery_ref, city, route, promised_by, sla_status, status]
+        row_click: delivery_360
+      - code: exceptions
+        label: Exceptions
+        type: related_table
+        entity: route_exception
+        via: delivery.logistics_partner
+        columns: [exception_ref, delivery, exception_type, severity, reported_at, status]
+      - code: routes
+        label: Routes
+        type: related_table
+        entity: route
+        via: logistics_partner
+        columns: [route_code, name, city, pharmacy, sla_hours, cold_chain]
+      - code: scorecard
+        label: Scorecard
+        type: custom
+        text: "On-time % and first-attempt % per week for the last 12 weeks (line), excursions and disputed PODs per month (bar), and a by-city table of deliveries, on-time %, failed attempts and returns."
+    states:
+      not_found: { title: Partner not found, back_to: partners }
