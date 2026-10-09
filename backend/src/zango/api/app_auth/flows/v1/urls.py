@@ -4,6 +4,7 @@ from .login import AppLoginViewAPIV1
 from .login_with_code import ConfirmLoginCodeViewAPIV1, RequestLoginCodeViewAPIV1
 from .logout import AppLogoutViewAPIV1
 from .mfa import GetMFACodeViewAPIV1, MFAVerifyViewAPIV1
+from .oidc import OIDCLoginInitViewAPIV1, OIDCStatusViewAPIV1, oidc_callback
 from .password import (
     PasswordChangeViewAPIV1,
     RequestResetPasswordViewAPIV1,
@@ -111,6 +112,13 @@ urlpatterns = [
         "sessions/",
         AppSessionsViewAPIV1.as_api_view(client="browser"),
         name="sessions",
+    ),
+    path("oidc/init/", OIDCLoginInitViewAPIV1.as_view(), name="oidc-init"),
+    path("oidc/callback/<slug:slug>/", oidc_callback, name="oidc-callback"),
+    path(
+        "oidc/status/",
+        OIDCStatusViewAPIV1.as_api_view(client="browser"),
+        name="oidc-status",
     ),
     re_path(r"saml/metadata/(?P<saml_client_id>\d+)/$", metadata, name="saml-metadata"),
     re_path(r"saml/acs/(?P<saml_client_id>\d+)/", acs, name="saml-acs"),

@@ -440,6 +440,9 @@ def get_auth_priority(
         )
     except Exception:
         tenant_auth_config = DEFAULT_AUTH_CONFIG
+    # Providers are injected below; never mutate the tenant's stored config or
+    # the module-level default.
+    tenant_auth_config = deepcopy(tenant_auth_config or {})
     user_role_auth_config = filter_user_role_auth_config(
         getattr(user_role, "auth_config", {}) if user_role else {}, tenant_auth_config
     )
@@ -448,17 +451,21 @@ def get_auth_priority(
         user_role_auth_config,
     )
 
-    from zango.apps.appauth.models import SAMLModel
+    from django_tenants.utils import get_public_schema_name
 
-    for saml in SAMLModel.objects.filter(is_active=True):
-        if (
-            not tenant_auth_config.get("login_methods", {})
-            .get("sso", {})
-            .get("providers")
-        ):
-            tenant_auth_config["login_methods"]["sso"]["providers"] = []
-        tenant_auth_config["login_methods"]["sso"]["providers"].append(
+    if connection.schema_name != get_public_schema_name():
+        from zango.apps.appauth.models import SAMLModel
+        from zango.apps.appauth.oidc.utils import public_providers
+
+        login_methods = tenant_auth_config.setdefault("login_methods", {})
+        # Replace rather than append: older configs may have saved a derived
+        # provider list.
+        login_methods.setdefault("sso", {"enabled": False})["providers"] = [
             {"id": saml.id, "label": saml.label}
+            for saml in SAMLModel.objects.filter(is_active=True)
+        ]
+        login_methods.setdefault("oidc", {"enabled": False})["providers"] = (
+            public_providers()
         )
 
     if not config_key and not policy:

@@ -55,10 +55,10 @@ class SSOLoginMethod(TypedDict):
 
 
 class OIDCProvider(TypedDict):
-    id: int
-    provider: str
-    name: str
-    enabled: bool
+    # Injected at read time from OIDCProviderModel; never stored in auth_config.
+    slug: str
+    label: str
+    icon: str
 
 
 class OIDCLoginMethod(TypedDict):

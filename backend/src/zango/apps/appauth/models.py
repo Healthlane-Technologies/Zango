@@ -6,7 +6,10 @@ from datetime import date, timedelta
 from knox.models import AbstractAuthToken
 from knox.settings import knox_settings
 
+from cryptography.fernet import InvalidToken
+
 from django.contrib.auth.hashers import check_password
+from django.core.validators import RegexValidator
 from django.db import connection, models
 from django.utils import timezone
 
@@ -17,6 +20,7 @@ from zango.apps.shared.platformauth.abstract_model import (
     AbstractOldPasswords,
     AbstractZangoUserModel,
 )
+from zango.core.encrypted_fields import EncryptedTextField, ZEncryptedFieldMixin
 from zango.core.model_mixins import FullAuditMixin
 from zango.core.utils import get_app_token_ttl, get_auth_priority
 
@@ -25,6 +29,10 @@ from ..permissions.mixin import PermissionMixin
 # from .perm_mixin import PolicyQsMixin
 from ..permissions.models import PolicyGroupModel, PolicyModel
 from .schema import get_default_app_user_auth_config, get_default_user_role_auth_config
+
+
+def default_oidc_scopes():
+    return ["openid", "email", "profile"]
 
 
 class UserRoleModel(FullAuditMixin, PermissionMixin):
@@ -1023,8 +1031,137 @@ class SAMLRequestId(models.Model):
         return self.request_id
 
 
+OIDC_PROVIDER_ID_PREFIX = "oidc-"
+OIDC_CALLBACK_PATH = "/api/v1/appauth/oidc/callback/{slug}/"
+
+
+class OIDCProviderModel(ZEncryptedFieldMixin, FullAuditMixin):
+    """
+    OpenID Connect identity provider for app user sign-in.
+
+    Each active row is exposed to allauth as an unsaved ``SocialApp`` (see
+    ``as_social_app``) with ``provider_id`` ``oidc-<slug>``; linked identities
+    live in allauth's ``SocialAccount`` with that provider id.
+    """
+
+    ICON_CHOICES = [
+        ("generic", "Generic"),
+        ("okta", "Okta"),
+        ("microsoft", "Microsoft"),
+        ("google", "Google"),
+        ("keycloak", "Keycloak"),
+        ("auth0", "Auth0"),
+        ("ping", "Ping Identity"),
+    ]
+    TOKEN_AUTH_METHOD_CHOICES = [
+        ("client_secret_basic", "client_secret_basic"),
+        ("client_secret_post", "client_secret_post"),
+        ("none", "none (public client)"),
+    ]
+
+    label = models.CharField("Button label", max_length=100)
+    slug = models.SlugField(
+        max_length=40,
+        unique=True,
+        validators=[
+            RegexValidator(
+                r"^[a-z0-9-]{3,40}$",
+                "3 to 40 characters: lowercase letters, digits and hyphens.",
+            )
+        ],
+    )
+    icon = models.CharField(max_length=20, choices=ICON_CHOICES, default="generic")
+    issuer = models.URLField("Issuer URL", max_length=500)
+    discovery = models.JSONField(default=dict, blank=True)
+    discovery_fetched_at = models.DateTimeField(null=True, blank=True)
+    client_id = models.CharField(max_length=255)
+    client_secret = EncryptedTextField(blank=True)
+    token_auth_method = models.CharField(
+        max_length=30,
+        choices=TOKEN_AUTH_METHOD_CHOICES,
+        default="client_secret_basic",
+    )
+    scopes = models.JSONField(default=default_oidc_scopes)
+    extra_auth_params = models.JSONField(default=dict, blank=True)
+    email_claim = models.CharField(max_length=64, default="email")
+    name_claim = models.CharField(max_length=64, default="name")
+    trust_email = models.BooleanField(default=False)
+    allowed_email_domains = models.JSONField(default=list, blank=True)
+    use_pkce = models.BooleanField(default=True)
+    fetch_userinfo = models.BooleanField(default=True)
+    rp_logout = models.BooleanField(default=False)
+    display_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.label
+
+    @property
+    def provider_id(self):
+        return f"{OIDC_PROVIDER_ID_PREFIX}{self.slug}"
+
+    @property
+    def callback_path(self):
+        return OIDC_CALLBACK_PATH.format(slug=self.slug)
+
+    @classmethod
+    def slug_from_provider_id(cls, provider_id):
+        if provider_id and provider_id.startswith(OIDC_PROVIDER_ID_PREFIX):
+            return provider_id[len(OIDC_PROVIDER_ID_PREFIX) :]
+        return None
+
+    def get_client_secret(self):
+        if not self.client_secret:
+            return ""
+        try:
+            return self.decrypter(self.client_secret)
+        except InvalidToken:
+            # Not yet saved: the in-memory value is still plain text.
+            return self.client_secret
+
+    def linked_identities(self):
+        from allauth.socialaccount.models import SocialAccount
+
+        return SocialAccount.objects.filter(provider=self.provider_id)
+
+    def as_social_app(self):
+        from django.conf import settings
+
+        from allauth.socialaccount.models import SocialApp
+
+        token_auth_method = self.token_auth_method
+        if token_auth_method == "none":
+            token_auth_method = "client_secret_post"
+        return SocialApp(
+            provider="openid_connect",
+            provider_id=self.provider_id,
+            name=self.label,
+            client_id=self.client_id,
+            secret=self.get_client_secret(),
+            settings={
+                "server_url": self.issuer,
+                "token_auth_method": token_auth_method,
+                "oauth_pkce_enabled": self.use_pkce,
+                "scope": list(self.scopes),
+                "auth_params": dict(self.extra_auth_params or {}),
+                "callback_path": self.callback_path,
+                "nonce_enabled": True,
+                "require_id_token": True,
+                "fetch_userinfo": self.fetch_userinfo,
+                "id_token_leeway": getattr(settings, "OIDC_CLOCK_SKEW_SECONDS", 120),
+                "discovery_cache_timeout": getattr(
+                    settings, "OIDC_DISCOVERY_CACHE_SECONDS", 3600
+                ),
+                "jwks_cache_timeout": getattr(
+                    settings, "OIDC_JWKS_CACHE_SECONDS", 3600
+                ),
+            },
+        )
+
+
 auditlog.register(AppUserModel, m2m_fields={"policies", "roles", "policy_groups"})
 auditlog.register(OldPasswords)
 auditlog.register(UserRoleModel, m2m_fields={"policy_groups", "policies"})
 auditlog.register(AppUserAuthToken)
 auditlog.register(OTPCode, exclude_fields=["code"])
+auditlog.register(OIDCProviderModel, exclude_fields=["client_secret", "discovery"])
