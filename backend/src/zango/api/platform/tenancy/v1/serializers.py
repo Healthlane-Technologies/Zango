@@ -1,11 +1,17 @@
 import json
+import re
 
 from django_tenants.utils import schema_context
 from rest_framework import serializers
 
 from zango.api.platform.permissions.v1.serializers import PolicySerializer
 from zango.apps.appauth.mixin import UserAuthConfigValidationMixin
-from zango.apps.appauth.models import AppUserModel, SAMLModel, UserRoleModel
+from zango.apps.appauth.models import (
+    AppUserModel,
+    OIDCProviderModel,
+    SAMLModel,
+    UserRoleModel,
+)
 from zango.apps.appauth.schema import UserRoleAuthConfig
 from zango.apps.shared.tenancy.models import Domain, TenantModel, ThemesModel
 from zango.apps.shared.tenancy.schema import AuthConfigSchema as TenantAuthConfigSchema
@@ -44,6 +50,49 @@ def get_platform_token_ttl_seconds():
 
     ttl = knox_settings.TOKEN_TTL
     return 0 if ttl is None else int(ttl.total_seconds())
+
+
+def sso_login_enabled(auth_config):
+    """True when SAML or OpenID Connect sign-in is on in this auth config."""
+    login_methods = (auth_config or {}).get("login_methods", {})
+    return any(
+        login_methods.get(method, {}).get("enabled", False)
+        for method in ("sso", "oidc")
+    )
+
+
+def get_sso_identities(user, tenant=None):
+    """OIDC identities linked to an app user (allauth SocialAccount rows)."""
+    from allauth.socialaccount.models import SocialAccount
+
+    from zango.apps.appauth.models import OIDCProviderModel
+
+    identities = []
+    for account in SocialAccount.objects.filter(user=user).order_by("id"):
+        slug = OIDCProviderModel.slug_from_provider_id(account.provider)
+        if slug is None:
+            continue
+        extra = account.extra_data or {}
+        identities.append(
+            {
+                "id": account.id,
+                "method": "oidc",
+                "provider": slug,
+                "uid": account.uid,
+                "email": extra.get("email"),
+                "linked_at": get_datetime_str_in_tenant_timezone(
+                    account.date_joined, tenant
+                )
+                if tenant
+                else account.date_joined.isoformat(),
+                "last_login_at": get_datetime_str_in_tenant_timezone(
+                    account.last_login, tenant
+                )
+                if tenant
+                else account.last_login.isoformat(),
+            }
+        )
+    return identities
 
 
 def validate_session_policy_token_ttl(auth_config):
@@ -283,14 +332,9 @@ class TenantSerializerModel(serializers.ModelSerializer):
 
         if "auth_config" in validated_data:
             auth_config = validated_data["auth_config"]
-            if (
-                not auth_config.get("login_methods", {})
-                .get("sso", {})
-                .get("enabled", False)
-            ):
+            if not sso_login_enabled(auth_config):
                 with schema_context(instance.schema_name):
                     for role in UserRoleModel.objects.all():
-                        print(role.auth_config)
                         if role.auth_config.get("enforce_sso", False):
                             role.auth_config["enforce_sso"] = False
                             role.save()
@@ -353,15 +397,11 @@ class UserRoleSerializerModel(serializers.ModelSerializer):
                     "Two-factor authentication is required for this user role as it is enabled for the tenant."
                 )
 
-        sso_enabled = (
-            tenant.auth_config.get("login_methods", {})
-            .get("sso", {})
-            .get("enabled", False)
-        )
-
-        if not sso_enabled and value.get("enforce_sso", False):
+        if not sso_login_enabled(tenant.auth_config) and value.get(
+            "enforce_sso", False
+        ):
             raise serializers.ValidationError(
-                "Cannot enforce SSO for this user role as SSO is not enabled for the tenant."
+                "Cannot enforce SSO for this user role as neither SAML nor OpenID Connect sign-in is enabled for the tenant."
             )
         return value
 
@@ -418,6 +458,7 @@ class AppUserModelSerializerModel(
                 twofa_enabled = True
                 break
         auth_config["two_factor_auth"]["required"] = twofa_enabled
+        auth_config["sso_identities"] = get_sso_identities(instance, tenant)
         data["auth_config"] = auth_config
         return data
 
@@ -496,3 +537,220 @@ class SAMLProviderModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = SAMLModel
         fields = "__all__"
+
+
+class OIDCProviderSerializer(serializers.ModelSerializer):
+    """
+    OIDC provider config for the App Panel. ``client_secret`` is write-only;
+    omit it on update to keep the stored value. Saving fetches the discovery
+    document and fails on ``issuer`` when it cannot be loaded or does not match.
+    """
+
+    RESERVED_AUTH_PARAMS = {
+        "state",
+        "nonce",
+        "code_challenge",
+        "code_challenge_method",
+        "redirect_uri",
+        "client_id",
+        "response_type",
+        "scope",
+    }
+    DOMAIN_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9-]{1,63}\.)+[a-z]{2,63}$")
+
+    client_secret = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, trim_whitespace=False
+    )
+    has_client_secret = serializers.SerializerMethodField()
+    client_secret_last4 = serializers.SerializerMethodField()
+    callback_url = serializers.SerializerMethodField()
+    callback_urls = serializers.SerializerMethodField()
+    slug_locked = serializers.SerializerMethodField()
+    linked_users = serializers.SerializerMethodField()
+    last_login_at = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OIDCProviderModel
+        fields = [
+            "id",
+            "slug",
+            "label",
+            "icon",
+            "issuer",
+            "client_id",
+            "client_secret",
+            "has_client_secret",
+            "client_secret_last4",
+            "token_auth_method",
+            "scopes",
+            "extra_auth_params",
+            "email_claim",
+            "name_claim",
+            "trust_email",
+            "allowed_email_domains",
+            "use_pkce",
+            "fetch_userinfo",
+            "rp_logout",
+            "display_order",
+            "is_active",
+            "callback_url",
+            "callback_urls",
+            "slug_locked",
+            "linked_users",
+            "last_login_at",
+            "discovery_fetched_at",
+            "created_at",
+            "modified_at",
+        ]
+        read_only_fields = ["discovery_fetched_at", "created_at", "modified_at"]
+
+    def get_has_client_secret(self, obj):
+        return bool(obj.client_secret)
+
+    def get_client_secret_last4(self, obj):
+        secret = obj.get_client_secret()
+        return secret[-4:] if len(secret) >= 8 else None
+
+    def _domains(self):
+        tenant = self.context.get("tenant")
+        if tenant is None:
+            return []
+        domains = list(tenant.domains.all().order_by("-is_primary", "id"))
+        return [d.domain for d in domains]
+
+    def _scheme(self):
+        from django.conf import settings
+
+        request = self.context.get("request")
+        if settings.DEBUG and request is not None:
+            return request.scheme
+        return "https"
+
+    def get_callback_urls(self, obj):
+        scheme = self._scheme()
+        return [f"{scheme}://{d}{obj.callback_path}" for d in self._domains()]
+
+    def get_callback_url(self, obj):
+        urls = self.get_callback_urls(obj)
+        return urls[0] if urls else obj.callback_path
+
+    def get_slug_locked(self, obj):
+        return obj.pk is not None and obj.linked_identities().exists()
+
+    def get_linked_users(self, obj):
+        return obj.linked_identities().count()
+
+    def get_last_login_at(self, obj):
+        last = obj.linked_identities().order_by("-last_login").first()
+        if last is None:
+            return None
+        tenant = self.context.get("tenant")
+        if tenant is not None:
+            return get_datetime_str_in_tenant_timezone(last.last_login, tenant)
+        return last.last_login.isoformat()
+
+    def validate_slug(self, value):
+        if (
+            self.instance
+            and self.instance.slug != value
+            and self.get_slug_locked(self.instance)
+        ):
+            raise serializers.ValidationError(
+                "The slug cannot change while users are linked to this provider."
+            )
+        return value
+
+    def validate_issuer(self, value):
+        from django.conf import settings
+
+        if not value.startswith("https://") and not settings.DEBUG:
+            raise serializers.ValidationError("Issuer must be an https URL.")
+        return value
+
+    def validate_scopes(self, value):
+        if not isinstance(value, list) or not all(
+            isinstance(s, str) and s.strip() and " " not in s for s in value
+        ):
+            raise serializers.ValidationError("Scopes must be a list of words.")
+        if "openid" not in value:
+            raise serializers.ValidationError("Scopes must include 'openid'.")
+        return list(dict.fromkeys(value))
+
+    def validate_extra_auth_params(self, value):
+        if not isinstance(value, dict) or not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in value.items()
+        ):
+            raise serializers.ValidationError(
+                "Extra parameters must be a flat map of strings."
+            )
+        reserved = sorted(set(value) & self.RESERVED_AUTH_PARAMS)
+        if reserved:
+            raise serializers.ValidationError(
+                f"These parameters are set by Zango and cannot be overridden: {', '.join(reserved)}."
+            )
+        return value
+
+    def validate_allowed_email_domains(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Must be a list of domains.")
+        cleaned = []
+        for domain in value:
+            domain = str(domain).strip().lower()
+            if not self.DOMAIN_RE.match(domain):
+                raise serializers.ValidationError(f"'{domain}' is not a valid domain.")
+            cleaned.append(domain)
+        return list(dict.fromkeys(cleaned))
+
+    def validate(self, attrs):
+        from django.utils import timezone
+
+        from zango.apps.appauth.oidc.fetch import FetchError, fetch_discovery
+
+        def current(field):
+            if field in attrs:
+                return attrs[field]
+            if self.instance is not None:
+                return getattr(self.instance, field)
+            return None
+
+        method = current("token_auth_method") or "client_secret_basic"
+        use_pkce = current("use_pkce")
+        if use_pkce is None:
+            use_pkce = True
+        if "client_secret" in attrs:
+            has_secret = bool(attrs["client_secret"])
+        else:
+            has_secret = bool(self.instance and self.instance.client_secret)
+        if method == "none":
+            if not use_pkce:
+                raise serializers.ValidationError(
+                    {"use_pkce": ["Public clients (no secret) must use PKCE."]}
+                )
+        elif not has_secret:
+            raise serializers.ValidationError(
+                {"client_secret": ["A client secret is required for this method."]}
+            )
+
+        issuer = attrs.get("issuer")
+        if issuer is not None and (
+            self.instance is None
+            or issuer != self.instance.issuer
+            or not self.instance.discovery
+        ):
+            try:
+                attrs["discovery"] = fetch_discovery(issuer)
+            except FetchError as e:
+                raise serializers.ValidationError({"issuer": [str(e)]}) from e
+            attrs["discovery_fetched_at"] = timezone.now()
+        return attrs
+
+    def get_warnings(self, obj):
+        warnings = []
+        if obj.trust_email and not obj.allowed_email_domains:
+            warnings.append(
+                "Emails are trusted without verification and no domain allowlist is set."
+            )
+        supported = (obj.discovery or {}).get("code_challenge_methods_supported")
+        if obj.use_pkce and supported is not None and "S256" not in supported:
+            warnings.append("The provider does not advertise PKCE S256 support.")
+        return warnings

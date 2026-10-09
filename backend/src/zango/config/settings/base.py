@@ -78,6 +78,8 @@ TENANT_APPS = [
     "allauth.headless",
     "allauth.mfa",
     "allauth.usersessions",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
     "django.contrib.humanize",
 ]
 
@@ -343,6 +345,21 @@ TENANT_LIMIT_SET_CALLS = True
 
 ACCOUNT_RATE_LIMITS = {"login_failed": False}
 ACCOUNT_LOGIN_BY_CODE_MAX_ATTEMPTS = float("inf")
+
+# OpenID Connect sign-in for app users (allauth.socialaccount). Providers are
+# configured per app in OIDCProviderModel, never as SocialApp rows.
+SOCIALACCOUNT_ADAPTER = "zango.apps.appauth.oidc.adapter.ZangoSocialAccountAdapter"
+SOCIALACCOUNT_STORE_TOKENS = False
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = False
+SOCIALACCOUNT_AUTO_SIGNUP = False
+SOCIALACCOUNT_LOGIN_ON_GET = False
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+HEADLESS_FRONTEND_URLS = {
+    "socialaccount_login_error": "/app/login/?sso=oidc",
+}
+OIDC_DISCOVERY_CACHE_SECONDS = 3600
+OIDC_JWKS_CACHE_SECONDS = 3600
+OIDC_CLOCK_SKEW_SECONDS = 120
 
 
 def setup_settings(settings, BASE_DIR):
