@@ -150,6 +150,26 @@ class ScaffoldTemplateTests(AppTemplatesTestBase):
         status, _ = self._post({})
         self.assertEqual(status, 400)
 
+    def test_an_app_from_scratch_starts_on_the_generic_template(self):
+        from zango.apps.shared.agent_mode.models import AgentAppScaffold
+        from zango.apps.shared.app_templates.seed import PACKS_DIR
+        from zango.apps.shared.app_templates.services.generic import GENERIC_SLUG
+
+        AppTemplate = self.version.template.__class__
+        AppTemplate.objects.filter(slug=GENERIC_SLUG).delete()
+        status, _ = self._post({"prompt": "manage tasks"})
+        self.assertIn(status, (200, 201))
+        scaffold = AgentAppScaffold.objects.order_by("-created_at").first()
+        self.assertIsNone(scaffold.template_version_id)  # no generic: the classic flow
+
+        generic, _ = import_pack(PACKS_DIR / "zango_app", publish_now=True)
+        status, body = self._post({"prompt": "manage tasks"})
+        self.assertIn(status, (200, 201), body)
+        scaffold = AgentAppScaffold.objects.order_by("-created_at").first()
+        self.assertEqual(scaffold.template_version_id, generic.pk)
+        self.assertEqual(scaffold.prompt, "manage tasks")
+        self.assertEqual(body["response"]["template"]["slug"], GENERIC_SLUG)
+
 
 class TemplateRequirementTests(AppTemplatesTestBase):
     def setUp(self):

@@ -323,6 +323,17 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
             # so a publish during app creation cannot change what was chosen.
             template_version = None
             template_slug = (request.data.get("template_slug") or "").strip().lower()
+            if not template_slug:
+                # An app started from scratch is written in the generic Zango
+                # app spec, so it gets the same live preview as a template app.
+                from zango.apps.shared.app_templates.services.generic import (
+                    generic_version,
+                )
+
+                generic = generic_version()
+                template_version = generic
+                if generic is not None and reference:
+                    reference = ""  # its references are only examples to draft from
             if template_slug:
                 from zango.apps.shared.app_templates.models import (
                     AppTemplate,
@@ -353,7 +364,7 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                     ).strip()
                     if documents:
                         prompt = f"{prompt} The details are in the documents I uploaded."
-            elif documents:
+            elif documents and template_version is None:
                 return get_api_response(
                     False, {"message": "Documents can be used with a template only."}, 400
                 )
