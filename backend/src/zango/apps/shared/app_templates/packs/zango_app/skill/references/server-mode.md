@@ -38,6 +38,15 @@ and `.zas/test_users.json` are yours from the previous build: keep them and rege
    - the `app` module from `assets/templates/app-module/` with the build file name in `app.html`,
      its `app_routes` entry **last**.
    `npm install` (no arguments) is allowed if you need to restore `node_modules`.
+
+   **The `app` module is mandatory whenever the frontend is prepared** — without it nothing serves
+   `/app` and the build has no UI. Before you finish, make sure all of this holds; the platform checks
+   exactly this (`app_shell`) and sends you back if any of it is missing:
+   - `backend/app/` has `urls.py`, `views.py`, `policies.json` and `templates/app.html`;
+   - `settings.json` has `{"name": "app", "path": "backend.app"}` in `modules` and
+     `{"module": "app", "re_path": "^", "url": "urls"}` in `app_routes`;
+   - `app.html` names the real build file (`zango-app.<timestamp>.min.js`, never `{{BUILD_FILE}}`),
+     that file is in `static/js/`, and it was built after your last change to `frontend/src/`.
 4. **Phase 7 step 1**: `.zas/test_fixtures.py` and `.zas/test_scenarios.py` from `.zas/test_plan.md`.
 5. Finish with a summary: modules written, holes and their status, anything you could not do and why.
 
@@ -49,7 +58,7 @@ In this order, each step recorded on the run:
    `ws_migrate`, `zango_platform.py sync`, `schedule`, `users`, `check`, `sync_static` + `collectstatic`,
    `zango_platform.py appbuilder`. It signs in with a short-lived service account that exists only
    for the run.
-2. `spec_check.py --audit-holes`, then the test layers: `design --only lint`, `api`, `ui`, `design`,
+2. The `app_shell` check above, `spec_check.py --audit-holes`, then the test layers: `design --only lint`, `api`, `ui`, `design`,
    `scenarios`, and `report` (`.zas/build_report.html` / `.md`). Layers the platform cannot run in its
    environment (for example no Playwright) are reported as skipped, never as passed.
 

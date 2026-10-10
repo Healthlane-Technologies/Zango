@@ -898,9 +898,14 @@ def _finish_studio(
         for name, layer in outcome.layers.items()
         if layer.status == "skip"
     ]
+    # Skipped checks are never presented as passed: the run says what it could not verify.
+    not_verified = [s["layer"] for s in skipped]
     run.studio_report = {
         "ok": outcome.ok,
         "bring_up_ok": outcome.bring_up_ok,
+        "frontend": studio.frontend_ready,
+        "frontend_reason": "" if studio.frontend_ready else studio.frontend_reason,
+        "not_verified": not_verified,
         "rounds": outcome.rounds,
         "layers": {name: layer.to_dict() for name, layer in outcome.layers.items()},
         "skipped": skipped,
@@ -934,10 +939,27 @@ def _finish_studio(
     if outcome.report.get("html_path"):
         recorder.emit(
             EventKind.SYS,
-            f"Build report: {outcome.report['html_path']}",
+            f"Build report: {outcome.report['html_path']}"
+            + (f" (verdict: {outcome.report['verdict']})" if outcome.report.get("verdict") else ""),
             level=EventLevel.SYS,
         )
+    if not_verified:
+        recorder.emit(
+            EventKind.SYS,
+            "Not verified: " + ", ".join(not_verified)
+            + ". These checks were skipped, not passed — see the reasons above.",
+            level=EventLevel.WARN,
+        )
 
+    if outcome.ok and not studio.frontend_ready:
+        return RunStatus.PARTIAL, {
+            "error_type": "StudioNoFrontend",
+            "error_message": (
+                "Built without a frontend: /app is not served ("
+                + (studio.frontend_reason or "the frontend phase was skipped")
+                + "). Enable AGENT_MODE_ALLOW_FRONTEND_BUILD with Node installed and build again."
+            )[:8000],
+        }
     if outcome.ok:
         return RunStatus.SUCCESS, {}
     if not outcome.bring_up_ok:

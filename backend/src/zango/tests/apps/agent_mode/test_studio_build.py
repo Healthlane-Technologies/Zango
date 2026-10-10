@@ -545,7 +545,7 @@ class FinishStudioTests(StudioTestBase):
 
         saved = []
         run = SimpleNamespace(pk=1, save=lambda update_fields=None: saved.append(update_fields))
-        build = self.build()
+        build = self.build(frontend_ready=outcome.pop("frontend_ready", True))
         build.steps = [StepResult(step="studio:ws_migrate", returncode=0)]
         layers = {n: LayerResult(name=n, **kw) for n, kw in outcome.pop("layers").items()}
         build.finish = mock.Mock(return_value=StudioOutcome(layers=layers, **outcome))
@@ -584,3 +584,134 @@ class FinishStudioTests(StudioTestBase):
         self.assertEqual(extra["error_type"], "StudioChecksFailed")
         self.assertIn("api (1)", extra["error_message"])
         self.assertIn("2 fix round", extra["error_message"])
+
+
+class FrontendPrepTests(StudioTestBase):
+    """The scaffold's own install may fail on a peer conflict; anything else stops the build."""
+
+    def scaffold_files(self, rc):
+        def scaffold(argv):
+            fe = self.ws / "frontend"
+            (fe / "src").mkdir(parents=True, exist_ok=True)
+            (fe / "package.json").write_text(json.dumps({"name": "x", "scripts": {}}))
+            return rc
+
+        return scaffold
+
+    def test_a_failed_scaffold_install_is_recovered_by_the_pinned_install(self):
+        fake = FakeRun(self.ws, {"npx --yes @zango-core/create-zango-app": self.scaffold_files(1)})
+        build = self.build(frontend_allowed=True)
+        with mock.patch.object(studio_build.subprocess, "run", fake):
+            build.prepare()
+        self.assertTrue(build.frontend_ready, build.frontend_reason)
+        scaffold = next(c for c in fake.calls if c[0] == "npx --yes @zango-core/create-zango-app")
+        self.assertEqual(scaffold[2].get("npm_config_legacy_peer_deps"), "true")
+        self.assertTrue(any("@zango-core/crud@2.0.0" in c[1] for c in fake.calls))
+
+    def test_a_scaffold_that_wrote_nothing_stops_the_build(self):
+        fake = FakeRun(self.ws, {"npx --yes @zango-core/create-zango-app": 1})
+        with mock.patch.object(studio_build.subprocess, "run", fake):
+            with self.assertRaises(StudioError) as caught:
+                self.build(frontend_allowed=True).prepare()
+        self.assertEqual(caught.exception.error_type, "FrontendPrepFailed")
+        self.assertIn("/app", str(caught.exception))
+
+    def test_a_failed_pinned_install_stops_the_build_with_npms_reason(self):
+        def pin(argv):
+            return 1
+
+        fake = FakeRun(self.ws, {
+            "npx --yes @zango-core/create-zango-app": self.scaffold_files(0),
+            "npm install --save-exact": pin,
+        })
+        original = FakeRun.__call__
+
+        def call(self_, argv, **kw):
+            result = original(self_, argv, **kw)
+            if argv[:3] == ["npm", "install", "--save-exact"]:
+                result.stderr = "npm error code ERESOLVE\nnpm error /x/_logs/1-eresolve-report.txt"
+            return result
+
+        with mock.patch.object(FakeRun, "__call__", call), mock.patch.object(
+            studio_build.subprocess, "run", fake
+        ):
+            with self.assertRaises(StudioError) as caught:
+                self.build(frontend_allowed=True).prepare()
+        self.assertEqual(caught.exception.error_type, "FrontendPrepFailed")
+        self.assertIn("peer dependencies", str(caught.exception))
+        self.assertIn("eresolve-report.txt", str(caught.exception))
+
+
+class AppShellTests(StudioTestBase):
+    def shell(self, *, route=True, module=True, html=True, build="zango-app.123.min.js", deploy=True):
+        ws = self.ws
+        settings = json.loads((ws / "settings.json").read_text())
+        settings["modules"] = [{"name": "app", "path": "backend.app"}] if module else []
+        settings["app_routes"] = [{"module": "core", "re_path": "^core/", "url": "urls"}]
+        if route:
+            settings["app_routes"].append({"module": "app", "re_path": "^", "url": "urls"})
+        (ws / "settings.json").write_text(json.dumps(settings))
+        app = ws / "backend" / "app"
+        (app / "templates").mkdir(parents=True, exist_ok=True)
+        (app / "urls.py").write_text("urlpatterns = []\n")
+        (app / "views.py").write_text("\n")
+        (ws / "frontend" / "src").mkdir(parents=True, exist_ok=True)
+        (ws / "frontend" / "src" / "App.tsx").write_text("export {}\n")
+        (app / "templates" / "app.html").unlink(missing_ok=True)
+        shutil.rmtree(ws / "static", ignore_errors=True)
+        if html:
+            (app / "templates" / "app.html").write_text(
+                f"<script type=\"module\" src=\"{{% zstatic 'js/{build}' %}}\"></script>"
+            )
+        if deploy:
+            (ws / "static" / "js").mkdir(parents=True, exist_ok=True)
+            (ws / "static" / "js" / build).write_text("// build\n")
+        return self.build(frontend_ready=True)
+
+    def ids(self, layer):
+        return [f["id"] for f in layer.failures]
+
+    def test_a_complete_shell_passes(self):
+        layer = self.shell().check_app_shell()
+        self.assertEqual(layer.status, "pass", layer.failures)
+
+    def test_what_is_missing_is_named(self):
+        self.assertIn("app_shell.route", self.ids(self.shell(route=False).check_app_shell()))
+        self.assertIn("app_shell.module", self.ids(self.shell(module=False).check_app_shell()))
+        self.assertIn("app_shell.file:templates/app.html", self.ids(self.shell(html=False).check_app_shell()))
+        self.assertIn("app_shell.build_file", self.ids(self.shell(deploy=False).check_app_shell()))
+        self.assertIn("app_shell.build_ref", self.ids(self.shell(build="{{BUILD_FILE}}").check_app_shell()))
+
+    def test_a_build_older_than_the_sources_is_stale(self):
+        build = self.shell()
+        old = self.ws / "static" / "js" / "zango-app.123.min.js"
+        os.utime(old, (1_000_000, 1_000_000))
+        self.assertIn("app_shell.stale", self.ids(build.check_app_shell()))
+
+    def test_it_runs_first_and_is_skipped_without_a_frontend(self):
+        build = self.build(frontend_ready=False, frontend_reason="Node tooling is not enabled")
+        with mock.patch.object(studio_build.subprocess, "run", FakeRun(self.ws)), mock.patch.object(
+            StudioBuild, "app_reachable", return_value=(False, "no")
+        ), mock.patch.object(StudioBuild, "has_playwright", return_value=False):
+            layers = build.verify()
+        self.assertEqual(list(layers)[0], "app_shell")
+        self.assertEqual(layers["app_shell"].status, "skip")
+        self.assertIn("Node tooling", layers["app_shell"].reason)
+
+    def test_a_missing_shell_goes_back_to_the_agent(self):
+        build = self.shell(route=False)
+        layers = {"app_shell": build.check_app_shell()}
+        digest = build.digest(True, layers)
+        self.assertIn("app_shell.route", digest)
+
+
+class NoFrontendOutcomeTests(FinishStudioTests):
+    def test_a_build_without_a_frontend_is_partial_and_says_so(self):
+        run, status, extra = self.finish({
+            "ok": True, "bring_up_ok": True, "rounds": 0, "report": {}, "frontend_ready": False,
+            "layers": {"app_shell": {"status": "skip", "reason": "no frontend"}},
+        })
+        self.assertEqual(status, "partial")
+        self.assertEqual(extra["error_type"], "StudioNoFrontend")
+        self.assertIn("/app is not served", extra["error_message"])
+        self.assertEqual(run.studio_report["not_verified"], ["app_shell"])

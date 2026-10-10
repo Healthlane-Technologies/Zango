@@ -1,7 +1,7 @@
 {
   "slug": "zango-app",
   "name": "Custom Zango app",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "category": "General",
   "icon": "blocks",
   "is_beta": true,
@@ -112,7 +112,7 @@
     "app_name_prefill": "",
     "app_prompt_prefill": ""
   },
-  "changelog": "Vendor Hub example replaced by the build skill's corrected sample; schema enums, SCHEMA/DRAFTING/INTERVIEW aligned with the build checker (quoted prose, column formats, no module cycles).",
+  "changelog": "Build skill: the app module that serves /app is mandatory with a frontend, and the platform checks it (app_shell).",
   "builder": {
     "adapter": "builder/adapter.js",
     "html": "builder/app-studio.html"

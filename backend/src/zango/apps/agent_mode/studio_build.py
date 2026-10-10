@@ -65,6 +65,7 @@ BASE_PROXY_ROUTES = ["/api", "/zango", "/appbuilder", "/crud", "/workflow"]
 # Playwright; ``app`` layers sign in to the running app as the test users.
 LAYERS = (
     # name, runner, needs browser, needs the app
+    ("app_shell", "app_shell", False, False),
     ("audit_holes", "audit", False, False),
     ("design_lint", "zas_test.design", False, False),
     ("api", "zas_test.api", False, True),
@@ -537,31 +538,51 @@ class StudioBuild:
         skill = Path(self.skill_dir)
 
         def failed(result) -> bool:
+            """A failed frontend step stops the build: an app without its frontend is not built."""
             if result.returncode == 0:
                 return False
             self.frontend_reason = f"{result.step} failed (exit {result.returncode})"
-            return True
+            raise StudioError("FrontendPrepFailed", _frontend_failure(result))
 
         if not (fe / "package.json").is_file():
-            if failed(self._run("frontend:scaffold", ["npx", "--yes", "@zango-core/create-zango-app", "frontend"],
-                                cwd=str(ws), timeout=NPM_TIMEOUT, emit=emit)):
-                return
+            # The scaffold installs its own pinned packages, whose peer ranges
+            # conflict (crud 1.0.13-rc.11 wants components 0.2.0-rc.3, appbuilder
+            # wants ^0.2.1). The skill re-pins crud with --legacy-peer-deps right
+            # after, so let the scaffold's install resolve the same way.
+            scaffold = self._run(
+                "frontend:scaffold",
+                ["npx", "--yes", "@zango-core/create-zango-app", "frontend"],
+                cwd=str(ws),
+                timeout=NPM_TIMEOUT,
+                extra_env={"npm_config_legacy_peer_deps": "true"},
+                emit=emit,
+            )
+            if scaffold.returncode != 0:
+                if not (fe / "package.json").is_file():
+                    failed(scaffold)
+                if emit:
+                    emit(
+                        "sys",
+                        "The scaffold copied its files but its own npm install failed; "
+                        "the pinned install below installs every dependency.",
+                        level="warn",
+                    )
         self._write_proxy_routes(fe)
         if failed(self._run("frontend:pin", ["npm", "install", "--save-exact", "--legacy-peer-deps",
                                              f"@zango-core/crud@{CRUD_VERSION}", f"lucide-react@{LUCIDE_VERSION}"],
                             cwd=str(fe), timeout=NPM_TIMEOUT, emit=emit)):
-            return
+            return  # (failed() raises)
         (fe / "patches").mkdir(exist_ok=True)
         for patch in (skill / "assets" / "frontend" / "patches").glob("*.patch"):
             shutil.copyfile(patch, fe / "patches" / patch.name)
         if failed(self._run("frontend:patch-package", ["npm", "install", "--save-dev", "--legacy-peer-deps",
                                                        "patch-package"],
                             cwd=str(fe), timeout=NPM_TIMEOUT, emit=emit)):
-            return
+            return  # (failed() raises)
         _set_postinstall(fe / "package.json")
         if failed(self._run("frontend:patch", ["npx", "--no", "patch-package"], cwd=str(fe),
                             timeout=NPM_TIMEOUT, emit=emit)):
-            return
+            return  # (failed() raises)
         if (fe / "src" / "zas").exists():
             shutil.rmtree(fe / "src" / "zas")
         shutil.copytree(skill / "assets" / "frontend" / "zas", fe / "src" / "zas",
@@ -570,7 +591,7 @@ class StudioBuild:
         shutil.copyfile(self.zas_dir / "spec.ui.json", fe / "src" / "custom" / "spec.ui.json")
         shutil.copyfile(skill / "assets" / "templates" / "frontend" / "index.css", fe / "src" / "index.css")
         if failed(self.script("frontend:icons", "lucide_icons.py", "--workspace", self.workspace, emit=emit)):
-            return
+            return  # (failed() raises)
         self.frontend_ready = True
 
     def _write_proxy_routes(self, fe: Path) -> None:
@@ -676,6 +697,8 @@ class StudioBuild:
                 reason = "no test users (.zas/test_users.json)"
             elif name == "ui" and not self.frontend_ready and not (Path(self.workspace) / "frontend").is_dir():
                 reason = "no frontend was built"
+            elif name == "app_shell" and not self.frontend_ready:
+                reason = "the frontend phase was skipped — " + (self.frontend_reason or "no frontend")
             if reason:
                 self.skip(f"test:{name}", reason, emit)
                 layers[name] = LayerResult(name=name, status="skip", reason=reason)
@@ -684,6 +707,8 @@ class StudioBuild:
         return layers
 
     def _run_layer(self, name, runner, groups, emit) -> LayerResult:
+        if runner == "app_shell":
+            return self.check_app_shell(emit)
         if runner == "audit":
             result = self.script("test:audit_holes", "spec_check.py", self.check_spec or self.spec_path,
                                  "--workspace", self.workspace, "--audit-holes", emit=emit)
@@ -733,11 +758,90 @@ class StudioBuild:
             groups=sorted({g for g in (_group_of(name, f["id"]) for f in failures) if g}),
         )
 
+    def check_app_shell(self, emit=None) -> LayerResult:
+        """What serving /app needs: the app module, its route, and a fresh build it loads.
+
+        Phase 6 step 6 of the skill; the agent writes it, the platform checks it,
+        because without it the built frontend is never served.
+        """
+        ws = Path(self.workspace)
+        problems = []
+
+        def problem(pid, title, detail=""):
+            problems.append({"id": f"app_shell.{pid}", "title": title, "detail": detail})
+
+        try:
+            settings = json.loads((ws / "settings.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            settings = {}
+            problem("settings", "settings.json could not be read", str(exc))
+        routes = settings.get("app_routes") or []
+        if not any(r.get("module") == "app" and r.get("re_path") == "^" for r in routes):
+            problem(
+                "route",
+                'settings.json app_routes has no {"module": "app", "re_path": "^", "url": "urls"}',
+                f"app_routes is {json.dumps(routes)[:300]}",
+            )
+        module = next((m for m in settings.get("modules") or [] if m.get("name") == "app"), None)
+        app_dir = ws / (module.get("path", "backend.app") if module else "backend.app").replace(".", "/")
+        if module is None:
+            problem("module", 'settings.json modules has no "app" module', "")
+        for rel in ("urls.py", "views.py", "templates/app.html"):
+            if not (app_dir / rel).is_file():
+                problem(f"file:{rel}", f"the app module is missing {app_dir.relative_to(ws)}/{rel}")
+
+        html_path = app_dir / "templates" / "app.html"
+        build = None
+        if html_path.is_file():
+            html = html_path.read_text(encoding="utf-8", errors="replace")
+            match = re.search(r"zango-app\.[\w.-]+?\.min\.js", html)
+            if "{{BUILD_FILE}}" in html or match is None:
+                problem("build_ref", "app.html does not name the frontend build (zango-app.<ts>.min.js)")
+            else:
+                build = ws / "static" / "js" / match.group(0)
+                if not build.is_file():
+                    problem(
+                        "build_file",
+                        f"app.html loads {match.group(0)}, which is not in static/js",
+                        "Run `npm run build:zango` in frontend/ and deploy it with "
+                        "`cp -r frontend/zango-build/. static/js/`, then point app.html at that file.",
+                    )
+        if build is not None and build.is_file():
+            src = ws / "frontend" / "src"
+            newest = max(
+                (p.stat().st_mtime for p in src.rglob("*") if p.is_file()),
+                default=0,
+            ) if src.is_dir() else 0
+            if newest > build.stat().st_mtime + 1:
+                problem(
+                    "stale",
+                    f"static/js/{build.name} is older than the frontend sources",
+                    "Rebuild (`npm run build:zango`), deploy the new file and update app.html.",
+                )
+
+        if emit:
+            emit(
+                "post_step",
+                "studio:test:app_shell "
+                + ("passed: /app is served by the app module" if not problems
+                   else f"failed: {len(problems)} problem(s) — " + "; ".join(p["title"] for p in problems[:4])),
+                level="err" if problems else "info",
+                is_error=bool(problems),
+            )
+        return LayerResult(
+            name="app_shell",
+            status="fail" if problems else "pass",
+            counts={"pass": 0 if problems else 1, "fail": len(problems), "skip": 0},
+            failures=problems,
+        )
+
     def report(self, emit=None) -> dict:
         result = self.module("report", "zas_test.report", "--workspace", self.workspace, emit=emit)
         md, html = self.zas_dir / "build_report.md", self.zas_dir / "build_report.html"
         summary = md.read_text(encoding="utf-8")[:REPORT_SUMMARY_CHARS] if md.is_file() else ""
+        verdict = re.search(r"\*\*Verdict:\s*([^*]+)\*\*", summary)
         return {
+            "verdict": verdict.group(1).strip() if verdict else "",
             "summary_md": summary,
             "md_path": str(md) if md.is_file() else "",
             "html_path": str(html) if html.is_file() else "",
@@ -827,6 +931,21 @@ class StudioBuild:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _frontend_failure(result) -> str:
+    """Why the frontend could not be prepared, with npm's own explanation when there is one."""
+    tail = (result.stderr_tail or result.stdout_tail or "").strip()[-2000:]
+    message = (
+        f"The frontend could not be prepared: {result.step} failed (exit {result.returncode}). "
+        "The build was stopped before the agent ran, because an app without its frontend "
+        "has nothing to serve at /app."
+    )
+    report = re.search(r"\S+eresolve-report\.txt", tail)
+    if "ERESOLVE" in tail or report:
+        message += " npm could not resolve the packages' peer dependencies"
+        message += f" (details: {report.group(0)})." if report else "."
+    return message + ("\n\n" + tail if tail else "")
 
 
 def register_module(workspace: str, name: str, path: str) -> bool:
