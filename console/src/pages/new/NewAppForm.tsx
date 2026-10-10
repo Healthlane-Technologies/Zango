@@ -104,6 +104,8 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	// A template draft needs material to work from: a detailed brief, documents, or both.
 	const hasInput =
 		source === 'template' ? !!template && (!!trimmed || files.length > 0) : !!trimmed;
+	// From scratch the app is written in the generic template's spec, so documents
+	// (an SOP, an RFP) are welcome there too — alongside a sentence or two.
 	const canStart = !blocked && !checking && hasInput && !tooLong && !create.isPending;
 	const start = () =>
 		canStart &&
@@ -115,7 +117,7 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 						reference: reference || undefined,
 						documents: files,
 					}
-				: { prompt: trimmed },
+				: { prompt: trimmed, documents: files },
 		);
 
 	return (
@@ -201,6 +203,15 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 									/>
 								)}
 							</Field>
+							{source !== 'template' && (
+								<div className="mt-4">
+									<DocumentDrop
+										files={files}
+										onChange={setFiles}
+										disabled={blocked || create.isPending}
+									/>
+								</div>
+							)}
 							{source === 'template' && (
 								<div className="mt-4 grid gap-4">
 									<DocumentDrop
