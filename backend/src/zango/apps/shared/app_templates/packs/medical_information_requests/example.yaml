@@ -344,7 +344,7 @@ modules:
             - specialty:     { label: Specialty, filterable: true }
             - institution:   { label: Institution }
             - city:          { label: City, filterable: true }
-            - open_inquiries: { source: computed, label: Open inquiries, format: integer, shows: Count of this reporter's inquiries not closed or cancelled. }
+            - open_inquiries: { source: computed, label: Open inquiries, format: number, shows: Count of this reporter's inquiries not closed or cancelled. }
           default_sort: full_name
           row_click: reporter_360
           quick_filters:
@@ -530,10 +530,10 @@ modules:
           - response_ref:      { type: text, label: Response ID, readonly: true, unique: true, auto: { sequence: "RSP-{YY}-{00000}" } }
           - inquiry:           { type: link, to: inquiry, required: true, display: inquiry_ref }
           - response_type:     { type: choice, required: true, default: standard, choices: [ { id: standard, label: Standard, color: green }, { id: adapted, label: Adapted standard, color: teal }, { id: custom, label: Custom, color: purple } ] }
-          - standard_response: { type: link, to: standard_response, display: srd_ref, limit_choices: { all: [ status == approved, product == form.inquiry.product ] } }
+          - standard_response: { type: link, to: standard_response, display: srd_ref, limit_choices: "status == approved" }
           - body:              { type: long_text, label: Response text, required: true }
           - references:        { type: long_text, label: Literature references }
-          - enclosures:        { type: file, label: Enclosures (PI, reprints), accept: [pdf], max_size_mb: 20 }
+          - enclosures:        { type: file, label: "Enclosures (PI, reprints)", accept: [pdf], max_size_mb: 20 }
           - delivery_method:   { type: choice, choices: delivery_method, required: true, default: email }
           - reviewed_by:       { type: link, to: app_user, readonly: true }
           - sent_on:           { type: date, readonly: true }
@@ -682,7 +682,7 @@ modules:
           add_button: Capture AE
           row_actions:
             - { key: edit, label: Edit, type: edit, show_when: status == captured, roles: [MI Specialist] }
-            - { key: ae_form, label: Download AE Form, type: download, text: The AE form PDF as sent to PV, with the inquiry transcript. }
+            - { key: ae_form, label: Download AE Form, type: download, text: "The AE form PDF as sent to PV, with the inquiry transcript." }
         form:
           create:
             roles: [MI Specialist]

@@ -272,7 +272,7 @@ modules:
           - rule_code:   { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "RUL-{000}" } }
           - rule_type:   { type: choice, label: Rule, choices: rule_type, required: true }
           - applies_to:  { type: choice, required: true, choices: [ {id: interaction, label: Interactions}, {id: spend, label: Spend} ] }
-          - logic:       { type: long_text, required: true, help: Plain-language rule, e.g. more than 4 hospitality events with the same HCP in 90 days. }
+          - logic:       { type: long_text, required: true, help: "Plain-language rule, e.g. more than 4 hospitality events with the same HCP in 90 days." }
           - threshold:   { type: decimal }
           - risk_points: { type: integer, label: Risk points, min: 5, max: 60, required: true }
         access:
@@ -312,7 +312,7 @@ modules:
           - hcp:          { type: link, to: hcp, display: full_name }
           - interaction:  { type: link, to: interaction, display: interaction_ref }
           - spend_record: { type: link, to: spend_record, display: spend_ref }
-          - risk_score:   { type: integer, label: Risk score, readonly: true, min: 20, max: 98, computed: Sum of the risk points of every rule hit, blended with the AI model's score (0-100). }
+          - risk_score:   { type: integer, label: Risk score, readonly: true, min: 20, max: 98, computed: "Sum of the risk points of every rule hit, blended with the AI model's score (0-100)." }
           - rationale:    { type: long_text, readonly: true, help: Why the rule or model flagged this activity. }
           - compliance_case: { type: link, to: compliance_case, label: Case, display: case_ref, readonly: true }
         access:
@@ -567,7 +567,7 @@ detail_views:
         count_badge: true
         columns: [finding_ref, severity, remediation, action_due, status]
         add: { label: Add Finding, prefill: { compliance_case: hero } }
-        empty_state: { title: No findings yet, text: Record what the investigation established, with the policy clause it breaches., cta: add }
+        empty_state: { title: No findings yet, text: "Record what the investigation established, with the policy clause it breaches.", cta: add }
       - code: activity
         label: Activity
         type: timeline

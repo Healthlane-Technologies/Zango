@@ -90,7 +90,12 @@ def _write(root: Path, rel: str, text: str) -> None:
     if not str(target).startswith(str(root.resolve()) + os.sep):
         raise ValueError(f"refusing to write outside the pack: {rel}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8")
+    if isinstance(text, (bytes, bytearray)):
+        target.write_bytes(bytes(text))
+    else:
+        target.write_text(text, encoding="utf-8")
+    if rel.endswith((".py", ".sh")) and "/scripts/" in f"/{rel}":
+        target.chmod(0o755)  # a skill's scripts are run directly
 
 
 def materialise(version) -> Path:
@@ -120,7 +125,7 @@ def materialise(version) -> Path:
         if skill:
             for row in version.files.all():
                 rel = normalise_pack_path(row.path)
-                _write(tmp, f"skills/{skill}/{rel}", row.content)
+                _write(tmp, f"skills/{skill}/{rel}", row.value)
 
         try:
             os.rename(tmp, dest)

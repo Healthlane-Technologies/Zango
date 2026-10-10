@@ -1,7 +1,7 @@
 {
   "slug": "zango-app",
   "name": "Custom Zango app",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "category": "General",
   "icon": "blocks",
   "is_beta": true,
@@ -41,28 +41,68 @@
   "drafting": "DRAFTING.md",
   "references": "references.json",
   "sections": [
-    { "id": "app", "title": "The app" },
-    { "id": "choice_sets", "title": "Choice lists" },
-    { "id": "roles", "title": "Who uses it" },
-    { "id": "pages", "title": "Pages" },
-    { "id": "modules", "title": "Data and workflows" },
-    { "id": "detail_views", "title": "360 pages" }
+    {
+      "id": "app",
+      "title": "The app"
+    },
+    {
+      "id": "choice_sets",
+      "title": "Choice lists"
+    },
+    {
+      "id": "roles",
+      "title": "Who uses it"
+    },
+    {
+      "id": "pages",
+      "title": "Pages"
+    },
+    {
+      "id": "modules",
+      "title": "Data and workflows"
+    },
+    {
+      "id": "detail_views",
+      "title": "360 pages"
+    }
   ],
   "catalogue": {
     "description": "A generic Zango app described in the Zango app spec (v1): roles and menus, modules and entities with fields, access, workflows, forms and list tables, and 360 detail pages. The spec is previewed live as a clickable app with demo data while the requirement is shaped.",
     "packages": [
-      { "name": "crud", "description": "List screens, forms and row actions" },
-      { "name": "workflow", "description": "Statuses, transitions and tags" },
-      { "name": "appbuilder", "description": "Routes, menus and roles" }
+      {
+        "name": "crud",
+        "description": "List screens, forms and row actions"
+      },
+      {
+        "name": "workflow",
+        "description": "Statuses, transitions and tags"
+      },
+      {
+        "name": "appbuilder",
+        "description": "Routes, menus and roles"
+      }
     ],
     "roles": [
-      { "name": "Your roles", "description": "Defined from the requirement; each gets its own menu and access" }
+      {
+        "name": "Your roles",
+        "description": "Defined from the requirement; each gets its own menu and access"
+      }
     ],
     "workflows": [
-      { "name": "Record lifecycles", "description": "Role-gated status transitions with conditions, forms and follow-ups" },
-      { "name": "Approvals", "description": "Maker-checker approvals, send-back and holds" }
+      {
+        "name": "Record lifecycles",
+        "description": "Role-gated status transitions with conditions, forms and follow-ups"
+      },
+      {
+        "name": "Approvals",
+        "description": "Maker-checker approvals, send-back and holds"
+      }
     ],
-    "data_objects": ["Entities you describe", "Reference lists", "Users and roles"],
+    "data_objects": [
+      "Entities you describe",
+      "Reference lists",
+      "Users and roles"
+    ],
     "integrations": [],
     "compliance": [
       "Role-based access with row-level scoping",
@@ -72,9 +112,11 @@
     "app_name_prefill": "",
     "app_prompt_prefill": ""
   },
-  "changelog": "First version: Zango app spec v1, App Studio preview, interview and one-pass drafting.",
+  "changelog": "Vendor Hub example replaced by the build skill's corrected sample; schema enums, SCHEMA/DRAFTING/INTERVIEW aligned with the build checker (quoted prose, column formats, no module cycles).",
   "builder": {
     "adapter": "builder/adapter.js",
     "html": "builder/app-studio.html"
-  }
+  },
+  "skill_dir": "skill",
+  "build_skill_name": "zango-app-studio"
 }

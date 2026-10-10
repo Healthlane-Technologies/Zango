@@ -207,7 +207,7 @@ modules:
             - prescriber_npi:  { label: NPI, searchable: true }
             - specialty:       { label: Specialty, filterable: true }
             - state:           { label: State, filterable: true }
-            - open_cases:      { source: computed, label: Open cases, format: integer, shows: Count of this office's cases not Closed. }
+            - open_cases:      { source: computed, label: Open cases, format: number, shows: Count of this office's cases not Closed. }
             - portal_access:   { label: Portal, filterable: true }
           default_sort: clinic_name
         form:
@@ -269,7 +269,7 @@ modules:
             - ncpdp_id:      { label: NCPDP }
             - states_served: { label: States }
             - in_network:    { label: In network, filterable: true }
-            - avg_accept_hours: { source: computed, label: Avg. hours to accept, format: decimal, shows: Mean hours from Sent to Accepted over the last 90 days. }
+            - avg_accept_hours: { source: computed, label: Avg. hours to accept, format: number, shows: Mean hours from Sent to Accepted over the last 90 days. }
         form:
           create: { fields: [name, ncpdp_id, intake_email, intake_fax, states_served, in_network] }
           edit:   { same_as: create }
@@ -502,7 +502,7 @@ modules:
             - indication:   { label: Indication, filterable: true }
             - payer:        { source: computed, label: Payer, path: patient.primary_payer.name }
             - case_manager: { label: Case manager, roles: [Hub Supervisor] }
-            - days_open:    { source: computed, label: Days open, format: integer, shows: Days since the case was opened. }
+            - days_open:    { source: computed, label: Days open, format: days, shows: Days since the case was opened. }
             - status:       { source: status, label: Stage, filterable: true }
             - tags:         { source: tags, label: Flags }
           default_sort: -created_at

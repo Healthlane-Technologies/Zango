@@ -1,0 +1,33 @@
+"""Scenario tests for <App>'s plain-language items (references/testing.md §Scenarios).
+Written by Claude in Phase 7 from .zas/test_plan.md "Scenarios to write": one @scenario per hole
+(covered/blocked excepted). Each reads the spec text, sets up data, triggers the rule, asserts.
+
+ctx = zas_test.scenarios.ScenarioCtx: everything in api.Ctx plus
+  call("<module>.tasks.<fn>") / call("<module>.hooks.<fn>", *args)  run backend code now (scheduled jobs)
+  record_payload(e, uuid, role) · field(e, uuid, key) · status(e, uuid) · tags(e, uuid)
+  transitions(e, uuid, role) -> {name: allowed}  ·  detail(hero, uuid, role) -> data.zas (stats, custom, tabs)
+  mark() + outbox(since, event)   messages notify() sent (DEBUG outbox)
+  expect(cond, msg) · skip(reason) · fixtures (test_fixtures.py helpers)
+
+Rules: assert behaviour the spec text names, never implementation details; build data that is on
+BOTH sides of a rule where it is cheap (flagged and not flagged); never weaken an assertion to pass —
+a failing scenario is a finding (fix the hook, or report the spec ambiguity).
+"""
+import datetime
+
+from zas_test.scenarios import scenario
+
+TODAY = datetime.date.today()
+
+
+def d(days=0):
+    return (TODAY + datetime.timedelta(days=days)).isoformat()
+
+
+# @scenario("H-01", "<what the spec text promises, as a sentence>")
+# def short_name(ctx):
+#     rec = ctx.record_in("<entity>", "<status>")
+#     t = ctx.mark()
+#     ok, msg = ctx.run("<entity>", rec, "<transition>", role="<Role>", data={...})
+#     ctx.expect(ok, f"refused: {msg}")
+#     ctx.expect(<outcome>, "<what is wrong>")

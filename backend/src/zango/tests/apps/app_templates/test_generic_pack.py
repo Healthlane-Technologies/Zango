@@ -30,7 +30,7 @@ class GenericPackTests(AppTemplatesTestBase):
         problems = [i for i in lint(self.version) if i["level"] == "error"]
         self.assertEqual(problems, [])
         warnings = [i["message"] for i in lint(self.version) if i["level"] == "warning"]
-        self.assertEqual(warnings, ["The template has no build skill."])
+        self.assertEqual(warnings, [])  # it ships the zango-app-studio build skill
         self.assertTrue(self.version.has_builder)
         self.assertEqual(self.version.spec_root, "app_spec")
         self.assertEqual([r["id"] for r in self.version.references], ["vendor_hub"])
@@ -53,7 +53,16 @@ class GenericPackTests(AppTemplatesTestBase):
             with self.subTest(name):
                 doc, issues = validate_text(text, self.template, strict=True)
                 self.assertIsNotNone(doc)
-                self.assertEqual(issues, [])
+                # The build checker's warnings are advice (missing condition
+                # messages, tabs a role cannot see); its errors still fail.
+                self.assertEqual(
+                    [
+                        i
+                        for i in issues
+                        if not (i.get("code") == "build_check" and i["level"] == "warning")
+                    ],
+                    [],
+                )
 
     def _issues(self, doc):
         return {i["rule"] for i in rules.evaluate(doc, self.template.rules)}

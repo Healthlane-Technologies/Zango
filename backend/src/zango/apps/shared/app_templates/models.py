@@ -272,6 +272,9 @@ class AppTemplateFile(FullAuditMixin):
     )
     path = models.CharField(max_length=255)
     content = models.TextField(blank=True, default="")
+    # "" for text; "base64" for a binary file (an image the skill compares
+    # against, say), whose bytes are kept base64-encoded in ``content``.
+    encoding = models.CharField(max_length=8, blank=True, default="")
     sha256 = models.CharField(max_length=64, blank=True, default="")
     size = models.PositiveIntegerField(default=0)
 
@@ -288,19 +291,51 @@ class AppTemplateFile(FullAuditMixin):
         return f"{self.version} {self.path}"
 
     def save(self, *args, **kwargs):
-        from .services.paths import normalise_pack_path, sha256_text
+        from .services.paths import normalise_pack_path, sha256_file, sha256_text
 
         if not self.version.is_draft:
             raise ImmutableVersionError(
                 f"{self.version} is {self.version.status}; its files cannot change."
             )
         self.path = normalise_pack_path(self.path)
-        encoded = self.content.encode("utf-8")
-        if len(encoded) > MAX_FILE_BYTES:
+        raw = self.raw
+        if len(raw) > MAX_FILE_BYTES:
             raise ValidationError(f"{self.path} is larger than {MAX_FILE_BYTES} bytes.")
-        self.size = len(encoded)
-        self.sha256 = sha256_text(self.content)
+        self.size = len(raw)
+        self.sha256 = sha256_file(raw) if self.is_binary else sha256_text(self.content)
         super().save(*args, **kwargs)
+
+    @property
+    def is_binary(self) -> bool:
+        return self.encoding == "base64"
+
+    @property
+    def raw(self) -> bytes:
+        """The file's bytes."""
+        if self.is_binary:
+            import base64
+
+            return base64.b64decode(self.content or "")
+        return (self.content or "").encode("utf-8")
+
+    @property
+    def value(self):
+        """What a pack holds for this file: text, or bytes for a binary file."""
+        return self.raw if self.is_binary else self.content
+
+    @classmethod
+    def for_value(cls, version, path: str, value):
+        """An unsaved row for ``value`` (text, or bytes for a binary file)."""
+        if isinstance(value, (bytes, bytearray)):
+            import base64
+
+            return cls(
+                version=version,
+                path=path,
+                content=base64.b64encode(bytes(value)).decode("ascii"),
+                encoding="base64",
+            )
+        return cls(version=version, path=path, content=value)
 
     def delete(self, *args, **kwargs):
         if not self.version.is_draft:

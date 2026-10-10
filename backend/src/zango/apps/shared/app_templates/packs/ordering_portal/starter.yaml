@@ -268,7 +268,7 @@ modules:
           - order_date:        { type: date, required: true, default: today }
           - expected_delivery: { type: date }
           - po_number:         { type: text, label: Clinic PO no }
-          - total_amount:      { type: money, readonly: true, computed: Sum of order_line.amount, recalculated on every line change. }
+          - total_amount:      { type: money, readonly: true, computed: "Sum of order_line.amount, recalculated on every line change." }
           - notes:             { type: long_text }
         access:
           Customer Service: { actions: [view, add, edit, export, detail] }
@@ -507,7 +507,7 @@ modules:
           footer_totals: [amount]
           add_button: Raise Invoice
           row_actions:
-            - { key: download, label: Download PDF, type: download, text: The tax invoice PDF with lines, GST and payment details. }
+            - { key: download, label: Download PDF, type: download, text: "The tax invoice PDF with lines, GST and payment details." }
         form:
           create: { roles: [Customer Service], fields: [order, invoice_date, amount] }
 

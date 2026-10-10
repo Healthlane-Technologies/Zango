@@ -1,0 +1,17 @@
+"""
+Hand-written logic for module `<module>` - the spec's plain-language items (see .zas/holes.md).
+
+Rules (references/custom-code.md):
+  * exact function names and signatures from holes.md; one `# zas:hole H-NN` marker above each
+  * generated code imports this module lazily; never import views/tables here
+  * external systems: a typed stub that raises NotImplementedError + status `blocked` in holes.md
+  * re-runs of the spec only APPEND missing functions; never delete one you wrote
+"""
+import datetime
+import logging
+
+from ..zas_core import app_user, notify
+from ..zas_core import expr as zx
+from ..zas_core import records as zr
+
+logger = logging.getLogger(__name__)

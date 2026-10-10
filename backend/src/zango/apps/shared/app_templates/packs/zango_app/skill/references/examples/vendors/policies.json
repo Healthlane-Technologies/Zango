@@ -1,0 +1,46 @@
+{
+    "policies": [
+        {
+            "name": "VendorAccess1",
+            "description": "Vendor list for Procurement Executive (add, export).",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorCrudView", "type": "view", "features": ["add", "download"]}]},
+            "roles": ["Procurement Executive"]
+        },
+        {
+            "name": "VendorAccess2",
+            "description": "Vendor list for Procurement Manager (export).",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorCrudView", "type": "view", "features": ["download"]}]},
+            "roles": ["Procurement Manager"]
+        },
+        {
+            "name": "VendorAccess3",
+            "description": "Vendor view only (rows scoped in tables.py by the spec).",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorCrudView", "type": "view", "features": []}]},
+            "roles": ["Finance", "Vendor User"]
+        },
+        {
+            "name": "VendorContactAccess1",
+            "description": "Contacts for Procurement Executive and Vendor User (add).",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorContactCrudView", "type": "view", "features": ["add"]}]},
+            "roles": ["Procurement Executive", "Vendor User"]
+        },
+        {
+            "name": "VendorContactAccess2",
+            "description": "Contacts view only.",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorContactCrudView", "type": "view", "features": []}]},
+            "roles": ["Procurement Manager"]
+        },
+        {
+            "name": "VendorDocumentAccess1",
+            "description": "Documents for Procurement Executive and Vendor User (add).",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorDocumentCrudView", "type": "view", "features": ["add"]}]},
+            "roles": ["Procurement Executive", "Vendor User"]
+        },
+        {
+            "name": "VendorDocumentAccess2",
+            "description": "Documents view only.",
+            "statement": {"permissions": [{"name": "backend.vendors.views.VendorDocumentCrudView", "type": "view", "features": []}]},
+            "roles": ["Procurement Manager"]
+        }
+    ]
+}

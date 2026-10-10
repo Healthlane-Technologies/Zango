@@ -34,6 +34,13 @@ def sha256_text(text: str) -> str:
     return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
 
 
+def sha256_file(value) -> str:
+    """Hash of a pack file: text as UTF-8, binary files (bytes) as they are."""
+    if isinstance(value, (bytes, bytearray)):
+        return hashlib.sha256(bytes(value)).hexdigest()
+    return sha256_text(value)
+
+
 def content_sha(version, files=None, *, include_workspace: bool = True) -> str:
     """Hash of everything that makes up a version: its content and its files.
 

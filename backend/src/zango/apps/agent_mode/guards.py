@@ -267,6 +267,10 @@ _NPM_ALLOWED = (
     re.compile(r"^ci\s*$", re.I),
     re.compile(rf"^(?:install|i|add)\s+(?:{_NPM_PKG}\s*)+$", re.I),
     re.compile(r"^run\s+build:zango\s*$", re.I),
+    # Type-check before building (App Studio builds). `--no`/`--no-install`
+    # is required: a bare `npx tsc` downloads the unrelated "tsc" package
+    # from the registry when typescript is not installed locally.
+    re.compile(r"^(?:--no|--no-install)\s+tsc\s+--noEmit\s*$", re.I),
     re.compile(r"^run\s+build\s*$", re.I),
     re.compile(r"^-v$|^--version$", re.I),
 )

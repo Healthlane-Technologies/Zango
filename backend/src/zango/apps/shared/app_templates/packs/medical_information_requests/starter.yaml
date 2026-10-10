@@ -236,7 +236,7 @@ modules:
             - specialty:     { label: Specialty }
             - institution:   { label: Institution }
             - city:          { label: City, filterable: true }
-          default_sort: name
+          default_sort: full_name
           add_button: Add Reporter
           row_actions:
             - { key: edit, label: Edit, type: edit }

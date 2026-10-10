@@ -203,7 +203,7 @@ modules:
             - specialty:       { label: Specialty, filterable: true }
             - clinic:          { label: Clinic }
             - territory:       { label: Territory, display: name, filterable: true }
-            - units_this_qtr:  { source: computed, label: Units this quarter, format: integer, shows: Sum of delivered sample_request quantity for this HCP in the current quarter. }
+            - units_this_qtr:  { source: computed, label: Units this quarter, format: number, shows: Sum of delivered sample_request quantity for this HCP in the current quarter. }
           default_sort: name
           row_click: hcp_360
           add_button: Add HCP

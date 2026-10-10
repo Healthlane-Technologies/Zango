@@ -415,7 +415,7 @@ modules:
           - event:          { type: link, to: event, required: true, display: title, limit_choices: "status in [approved, open]" }
           - hcp:            { type: link, to: hcp, label: HCP, required: true, display: full_name, limit_choices: status == verified }
           - event_role:     { type: choice, label: Role at event, choices: event_role, required: true, default: delegate }
-          - honorarium:     { type: money, help: Only for speakers, chairs and advisory panelists. }
+          - honorarium:     { type: money, help: "Only for speakers, chairs and advisory panelists." }
           - travel_needed:  { type: boolean, label: Needs travel, default: false }
           - stay_needed:    { type: boolean, label: Needs accommodation, default: false }
           - dietary_note:   { type: text }
@@ -424,7 +424,7 @@ modules:
             rules:
               - { match: [event, hcp], compare: exact, on_match: block, message: This HCP is already invited to this event. }
           rules:
-            - { when: "event_role == delegate", require_expr: honorarium is_not_set, message: Delegates do not receive an honorarium. }
+            - { when: "event_role == delegate", require_expr: honorarium is_empty, message: Delegates do not receive an honorarium. }
         access:
           Event Manager:       { actions: [view, add, edit, export] }
           Compliance Reviewer: { actions: [view, export] }
@@ -438,7 +438,7 @@ modules:
             - { code: withdrawn, label: Withdrawn, color: gray, final: true }
           transitions:
             - { name: send, label: Send Invitation, from: draft, to: sent, roles: [Event Manager], primary: true, condition: event.status == open, condition_msg: Open invitations on the event first., on_done: Email and SMS the HCP the invitation with RSVP link. }
-            - { name: accept, label: Accept, from: sent, to: accepted, roles: [HCP], primary: true, form: [ { travel_needed: { type: boolean, label: I need travel } }, { stay_needed: { type: boolean, label: I need accommodation } }, { dietary_note: { type: text } } ], on_done: Save the travel and stay needs on the invitation, email the event manager and raise a travel request if needed. }
+            - { name: accept, label: Accept, from: sent, to: accepted, roles: [HCP], primary: true, form: [ { travel_needed: { type: boolean, label: I need travel } }, { stay_needed: { type: boolean, label: I need accommodation } }, { dietary_note: { type: text } } ], on_done: "Save the travel and stay needs on the invitation, email the event manager and raise a travel request if needed." }
             - { name: decline, label: Decline, from: sent, to: declined, roles: [HCP], tone: danger, form: [ { decline_reason: { type: text } } ] }
             - { name: withdraw, label: Withdraw, from: [draft, sent, accepted], to: withdrawn, roles: [Event Manager], tone: danger, form: [ { withdraw_reason: { type: long_text, required: true } } ] }
         form:
@@ -659,7 +659,7 @@ modules:
             - { code: signed,    label: Signed Off,       color: green }
             - { code: published, label: Published,        color: indigo, final: true }
           transitions:
-            - { name: prepare, label: Prepare and Submit, from: draft, to: prepared, roles: [Compliance Reviewer], primary: true, condition: { text: No spend line dated in the quarter is still recorded or disputed. }, condition_msg: Verify or resolve every spend line in the quarter first., on_done: Stamp prepared_by, generate the disclosure CSV and email the compliance head. }
+            - { name: prepare, label: Prepare and Submit, from: draft, to: prepared, roles: [Compliance Reviewer], primary: true, condition: { text: No spend line dated in the quarter is still recorded or disputed. }, condition_msg: Verify or resolve every spend line in the quarter first., on_done: "Stamp prepared_by, generate the disclosure CSV and email the compliance head." }
             - name: sign_off
               label: Sign Off
               from: prepared

@@ -1,0 +1,12 @@
+// zas:hole H-NN · <spec path>
+// <spec text, verbatim>
+import type { SlotProps } from "../../zas";
+import { EmptyState, FieldGrid, Skeleton } from "../../zas";
+
+export default function SlotName({ data, record, refresh, api }: SlotProps) {
+  // `data` = data.zas.custom.<key>, returned by the paired hook in backend/<module>/hooks.py.
+  // Compose from zas components only: no hex colours, no inline colour styles.
+  if (data === undefined) return <Skeleton />;
+  if (!data) return <EmptyState title="Nothing here yet" />;
+  return <div className="zas-cust">{/* … */}</div>;
+}

@@ -229,7 +229,7 @@ modules:
             - discipline:    { label: Discipline, filterable: true }
             - therapy_areas: { label: Therapy areas }
             - can_certify:   { label: Certifier, filterable: true }
-            - open_reviews:  { source: computed, label: Open reviews, format: integer, shows: Count of assigned and in-progress reviews where reviewer is this user. }
+            - open_reviews:  { source: computed, label: Open reviews, format: number, shows: Count of assigned and in-progress reviews where reviewer is this user. }
             - max_open:      { label: Max open }
             - is_active:     { label: Active, filterable: true }
           default_sort: discipline
@@ -300,7 +300,7 @@ modules:
             - product:        { label: Product, display: name, filterable: true }
             - publication_date: { label: Published, sortable: true }
             - valid_until:    { label: Valid until, sortable: true }
-            - cited_by:       { source: computed, label: Cited by claims, format: integer, shows: Count of claims citing this reference. }
+            - cited_by:       { source: computed, label: Cited by claims, format: number, shows: Count of claims citing this reference. }
             - status:         { source: status, label: Status, filterable: true }
             - tags:           { source: tags, label: Flags }
           default_sort: ref_code

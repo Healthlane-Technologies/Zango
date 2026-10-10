@@ -134,7 +134,11 @@ def build_agent_options(
         hook_sink,
         read_roots=[
             SKILL_PLUGIN_DIR,
-            *([template_build.plugin_dir, template_build.spec_dir] if template_build else []),
+            *(
+                [template_build.plugin_dir, template_build.skill_plugin_dir, template_build.spec_dir]
+                if template_build
+                else []
+            ),
         ],
         # curl is for the AppBuilder route/menu API on this app's own domain.
         allowed_hosts=[h for h in [ctx.primary_domain] if h],
@@ -173,7 +177,10 @@ def build_agent_options(
     )
 
     if template_build is not None and template_build.skill:
-        kwargs["plugins"] = [*kwargs["plugins"], {"type": "local", "path": template_build.plugin_dir}]
+        kwargs["plugins"] = [
+            *kwargs["plugins"],
+            {"type": "local", "path": template_build.skill_plugin_dir},
+        ]
         kwargs["skills"] = [*kwargs["skills"], template_build.skill]
         kwargs["add_dirs"] = [template_build.spec_dir]
 

@@ -1,7 +1,7 @@
 {
   "slug": "hcp-event-management",
   "name": "HCP Event Management",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Commercial Operations",
   "icon": "cart",
   "is_beta": false,
@@ -37,26 +37,75 @@
   "catalogue": {
     "description": "An HCP event app for advisory boards, CMEs and congresses: event managers plan events and invite HCPs, compliance approves agendas and budgets, HCPs RSVP in their own login, attendance is captured per session, and every rupee of spend is verified and reported per HCP for transparency. The spec is previewed live as a clickable app with demo data while the requirement is shaped.",
     "packages": [
-      { "name": "workflow", "description": "Event, invitation, attendance and spend lifecycles with role-gated transitions" },
-      { "name": "crm", "description": "HCP master with speciality, category, annual cap and an engagement history" },
-      { "name": "communication", "description": "Invitation emails and SMS with RSVP links, reminders and cancellation notices" },
-      { "name": "forms", "description": "Event planning, invitation, RSVP, attendance and spend forms with validation" },
-      { "name": "documents", "description": "Agendas, sign-in sheets, invoices and advisory outputs" },
-      { "name": "reports", "description": "Spend by event and HCP and the transfer-of-value disclosure" }
+      {
+        "name": "workflow",
+        "description": "Event, invitation, attendance and spend lifecycles with role-gated transitions"
+      },
+      {
+        "name": "crm",
+        "description": "HCP master with speciality, category, annual cap and an engagement history"
+      },
+      {
+        "name": "communication",
+        "description": "Invitation emails and SMS with RSVP links, reminders and cancellation notices"
+      },
+      {
+        "name": "forms",
+        "description": "Event planning, invitation, RSVP, attendance and spend forms with validation"
+      },
+      {
+        "name": "documents",
+        "description": "Agendas, sign-in sheets, invoices and advisory outputs"
+      },
+      {
+        "name": "reports",
+        "description": "Spend by event and HCP and the transfer-of-value disclosure"
+      }
     ],
     "roles": [
-      { "name": "Event manager", "description": "Plans events, invites HCPs, captures attendance and records spend" },
-      { "name": "HCP", "description": "External login that answers invitations and sees only their own events and transfers of value" },
-      { "name": "Compliance reviewer", "description": "Approves events, verifies HCPs, attendance and spend, and signs off spend reporting" }
+      {
+        "name": "Event manager",
+        "description": "Plans events, invites HCPs, captures attendance and records spend"
+      },
+      {
+        "name": "HCP",
+        "description": "External login that answers invitations and sees only their own events and transfers of value"
+      },
+      {
+        "name": "Compliance reviewer",
+        "description": "Approves events, verifies HCPs, attendance and spend, and signs off spend reporting"
+      }
     ],
     "workflows": [
-      { "name": "Event planning", "description": "Draft, compliance review against agenda and per-HCP budget policy, approve or send back" },
-      { "name": "Invitations & RSVP", "description": "Invite verified HCPs, send when invitations open, accept or decline with travel and stay needs" },
-      { "name": "Attendance capture", "description": "Record attendance per session by QR, sign-in sheet or virtual log, verified by compliance" },
-      { "name": "Spend reporting", "description": "Spend lines with invoices verified per event, signed off and reported per recipient HCP" }
+      {
+        "name": "Event planning",
+        "description": "Draft, compliance review against agenda and per-HCP budget policy, approve or send back"
+      },
+      {
+        "name": "Invitations & RSVP",
+        "description": "Invite verified HCPs, send when invitations open, accept or decline with travel and stay needs"
+      },
+      {
+        "name": "Attendance capture",
+        "description": "Record attendance per session by QR, sign-in sheet or virtual log, verified by compliance"
+      },
+      {
+        "name": "Spend reporting",
+        "description": "Spend lines with invoices verified per event, signed off and reported per recipient HCP"
+      }
     ],
-    "data_objects": ["Event", "HCP", "Invitation", "Attendance", "Spend line", "Speciality"],
-    "integrations": ["ERP connector", "CRM sync"],
+    "data_objects": [
+      "Event",
+      "HCP",
+      "Invitation",
+      "Attendance",
+      "Spend line",
+      "Speciality"
+    ],
+    "integrations": [
+      "ERP connector",
+      "CRM sync"
+    ],
     "compliance": [
       "No invitations before compliance approves the agenda, venue and budget per HCP",
       "Honoraria only for speakers, chairs and panelists, never for delegates",
@@ -68,5 +117,5 @@
     "app_name_prefill": "Oncology HCP Events — South",
     "app_prompt_prefill": "HCP event app for our oncology franchise: event managers plan advisory boards, regional CMEs and congress sponsorships, and compliance approves each agenda, venue and budget per HCP before invitations go out. Verified HCPs RSVP in their own login with travel and stay needs, and attendance is captured per session by QR scan. Advisory board honoraria are paid only after the panelist's written output is accepted. Every spend line is verified against an invoice and reported per HCP each quarter, with a compliance reviewer preparing and the compliance head signing off."
   },
-  "changelog": "First version: event planning with compliance approval, invitations with HCP RSVP, per-session attendance, and a verified spend ledger reported per HCP on the Zango app spec v1."
+  "changelog": "Quoted prose values cut at commas; is_empty instead of is_not_set, so the build checker passes."
 }

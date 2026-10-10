@@ -306,3 +306,87 @@ theme: {theme}
 
 {requirement}
 """
+
+
+_STUDIO_RULES = """\
+## Server-mode rules (these override the skill where they conflict)
+
+1. Read `{skill_dir}/references/server-mode.md` FIRST. The platform runs every
+   script of the skill itself, before and after your turn; you write code.
+2. Headless: nobody answers questions. Decide, and list every assumption in
+   your final summary.
+3. Already done for you: the spec was linted and resolved into `.zas/`
+   (`spec.resolved.json`, `plan.md`, `holes.md`, `test_plan.md`, `issues.md`),
+   the `zas_core` runtime is in `backend/zas_core/` and registered.
+   Frontend: {frontend}
+4. You cannot run Python (no `py_compile`, no skill scripts), migrations,
+   `cp`/`mv`/`mkdir`, the zango CLI or the platform API. Use Read, Write, Edit,
+   Glob and Grep for every file. Bash is read-only{npm}.
+5. Never edit `backend/zas_core/`, `packages/` or the spec. Every file you
+   write is inside the workspace (your working directory).
+6. After you finish, the platform runs migrations, roles, policy and task sync,
+   test users, static files, AppBuilder routes and menus, the hole audit and
+   the test layers. If something fails it resumes this session with the
+   failures: fix them at their cause, then stop.
+"""
+
+_STUDIO_BUILD = """\
+## Build this app from its approved App Studio spec
+
+{update}The user approved the spec in the App Studio preview; build exactly
+what it describes. The approved YAML is at `{spec_path}`; the resolved form
+every phase reads is `.zas/spec.resolved.json`. Follow the `{skill}` skill:
+Phase 3 (every module in `.zas/plan.md` order), Phase 4 (every hole in
+`.zas/holes.md`), Phase 6 steps 4-6{frontend_steps}, and Phase 7 step 1 (test
+fixtures and scenarios). Finish with the summary server-mode.md asks for.
+"""
+
+
+def compose_studio_prompt(ctx, template_build, studio) -> str:
+    """The prompt for an App Studio build (see studio_build.py): run context, rules, ask."""
+    skill = template_build.skill
+    if studio.frontend_ready:
+        frontend = (
+            "prepared — `frontend/` is scaffolded, crud 2.0.0 and lucide-react are "
+            "pinned and patched, `src/zas/`, `src/custom/spec.ui.json`, `src/index.css` "
+            "and the icons are in place."
+        )
+        npm = (
+            ", except, from `frontend/`: `npx --no tsc --noEmit`, `npm run build:zango`, "
+            "`npm install`; and the deploy copy `cp -r frontend/zango-build/. static/js/`"
+        )
+        frontend_steps = " (pages index, App.tsx, slots, type-check, build, deploy, app module)"
+    else:
+        frontend = (
+            f"SKIPPED ({studio.frontend_reason or 'not available'}). Do the backend "
+            "phases only and say in your summary that the frontend was not built."
+        )
+        npm = ""
+        frontend_steps = " — skipped this run"
+    update = (
+        "This is an UPDATE build: keep `hooks.py`, `tasks.py`, `slots/` and "
+        "`.zas/holes.md` from the previous build and regenerate everything else.\n\n"
+        if studio.update
+        else ""
+    )
+    rules = _STUDIO_RULES.format(skill_dir=template_build.skill_dir, frontend=frontend, npm=npm)
+    ask = _STUDIO_BUILD.format(
+        update=update,
+        spec_path=template_build.spec_path,
+        skill=skill,
+        frontend_steps=frontend_steps,
+    )
+    return f"""/{skill}
+
+## Run context (authoritative — do not re-discover this)
+
+app_name: {ctx.app_name}
+workspace: {ctx.workspace_path}   <- this is your working directory
+skill_dir: {template_build.skill_dir}
+spec: {template_build.spec_path}
+template: {template_build.template.name} v{template_build.template.version or 'current'}
+primary_domain: {ctx.primary_domain or '(no domain configured)'}
+build: {'update' if studio.update else 'first build'}
+
+{rules}
+{ask}"""

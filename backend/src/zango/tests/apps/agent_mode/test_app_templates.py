@@ -58,7 +58,7 @@ class CatalogueTests(unittest.TestCase):
             if not template.build_skill_name:
                 continue
             skill = (
-                Path(template.plugin_dir)
+                Path(template.build_plugin_dir)
                 / "skills"
                 / template.build_skill_name
                 / "SKILL.md"

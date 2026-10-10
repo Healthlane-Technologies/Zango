@@ -366,7 +366,7 @@ modules:
           - causality:         { type: choice, label: Company causality, choices: causality, default: not_assessed }
           - expected:          { type: boolean, label: Listed in RSI }
           - narrative:         { type: long_text, label: Case narrative }
-          - minimum_criteria:  { type: boolean, label: Four criteria met, readonly: true, computed: True when an identifiable patient, an identifiable reporter, a suspect product and an adverse event are all present. }
+          - minimum_criteria:  { type: boolean, label: Four criteria met, readonly: true, computed: "True when an identifiable patient, an identifiable reporter, a suspect product and an adverse event are all present." }
           - field_rep:         { type: link, to: app_user, label: Reported by rep }
           - region:            { type: choice, choices: region }
           - assigned_to:       { type: link, to: app_user, label: PV associate }
@@ -383,7 +383,7 @@ modules:
           duplicate_check:
             scope: { where: "status not_in [duplicate, non_case]" }
             rules:
-              - { match: [product, patient_initials, onset_date], compare: exact, on_match: warn, message: An open case has the same product, patient initials and onset date. }
+              - { match: [product, patient_initials, onset_date], compare: exact, on_match: warn, message: "An open case has the same product, patient initials and onset date." }
               - { match: [reporter, product, event_summary], compare: fuzzy, threshold: 0.85, on_match: warn, message: This reporter already reported a similar event for this product. }
               - { match: [batch_no, product, patient_age], compare: exact, on_match: warn, message: A case for the same batch and patient age already exists. }
         access:
@@ -423,7 +423,7 @@ modules:
                 on_done: Set assigned_to and email the new associate. }
             - { name: request_info, label: Request Follow-up, from: in_assessment, to: awaiting_info, roles: [PV Associate],
                 form: [ { questions: { type: long_text, label: Questions for the reporter, required: true } }, { due_date: { type: date, label: Reply by, required: true } } ],
-                on_done: Create a follow-up for the case's reporter with these questions and due date, and email or call the reporter. }
+                on_done: "Create a follow-up for the case's reporter with these questions and due date, and email or call the reporter." }
             - { name: info_received, label: Info Received, from: awaiting_info, to: in_assessment, roles: [PV Associate, Intake Agent] }
             - name: send_to_qa
               label: Send to QA
@@ -532,7 +532,7 @@ modules:
             - { when: stop_date is_set, require_expr: stop_date >= onset_date, message: The stop date cannot be before the onset. }
         access:
           Intake Agent: { actions: [view, add] }
-          Field Rep:    { actions: [view, add], rows: { own: case.created_by } }
+          Field Rep:    { actions: [view, add], rows: { where: "case.created_by == current_user" } }
           PV Associate: { actions: [view, add, edit, export] }
           QA Reviewer:  { actions: [view] }
           PV Head:      { actions: [view, export] }
@@ -566,10 +566,10 @@ modules:
           - doc_type: { type: choice, label: Document, required: true, choices: [ {id: call_recording, label: Call recording}, {id: email, label: Email}, {id: rep_form, label: Field rep form}, {id: medical_record, label: Medical record}, {id: lab_report, label: Lab report}, {id: photo, label: Product photo} ] }
           - file:     { type: file, required: true, accept: [pdf, jpg, png, mp3, msg, eml], max_size_mb: 25 }
           - note:     { type: text }
-          - retain_until: { type: date, label: Retain until, readonly: true, computed: Ten years after the case is closed, or the product's licence end plus ten years if later. }
+          - retain_until: { type: date, label: Retain until, readonly: true, computed: "Ten years after the case is closed, or the product's licence end plus ten years if later." }
         access:
           Intake Agent: { actions: [view, add] }
-          Field Rep:    { actions: [view, add], rows: { own: case.created_by } }
+          Field Rep:    { actions: [view, add], rows: { where: "case.created_by == current_user" } }
           PV Associate: { actions: [view, add] }
           QA Reviewer:  { actions: [view] }
           PV Head:      { actions: [view] }
@@ -616,11 +616,11 @@ modules:
           transitions:
             - { name: record_response, label: Record Response, from: [open, overdue], to: responded, roles: [Intake Agent, PV Associate], primary: true,
                 form: [ { response_text: { type: long_text, label: Response, required: true } }, { response_file: { type: file, label: Document } } ],
-                on_done: Save the response on the follow-up, attach any document to the case and move the case back to In PV Assessment. }
+                on_done: "Save the response on the follow-up, attach any document to the case and move the case back to In PV Assessment." }
             - { name: mark_overdue, label: Mark Overdue, from: open, to: overdue, trigger: system, text: Nightly when due_date < today. }
             - { name: retry, label: Send Again, from: overdue, to: open, roles: [PV Associate],
                 condition: attempt < 3, condition_msg: Three attempts have been made already.,
-                on_done: Increase attempt by one, push due_date by 7 days and resend the request; on the third attempt send a letter. }
+                on_done: "Increase attempt by one, push due_date by 7 days and resend the request; on the third attempt send a letter." }
             - { name: close_no_response, label: Close — No Response, from: overdue, to: no_response, roles: [PV Associate],
                 condition: attempt >= 2, condition_msg: Make at least two attempts before closing.,
                 on_done: Note on the case that follow-up was attempted and closed without a response. }

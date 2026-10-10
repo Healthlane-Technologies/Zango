@@ -89,12 +89,30 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
             "tool_use_counts",
             "post_steps",
             "test_users",
+            "report",
             "requires_restart",
             "can_resume",
             "resumed_from",
         )
 
     can_resume = serializers.SerializerMethodField()
+    report = serializers.SerializerMethodField()
+
+    def get_report(self, obj):
+        """An App Studio build's report: summary Markdown, checks, and the HTML's path."""
+        data = obj.studio_report or None
+        if not data:
+            return None
+        report = data.get("report") or {}
+        return {
+            "summary_md": report.get("summary_md", ""),
+            "html_path": report.get("html_path", ""),
+            "md_path": report.get("md_path", ""),
+            "checks": data.get("layers") or {},
+            "skipped": data.get("skipped") or [],
+            "rounds": data.get("rounds", 0),
+            "ok": bool(data.get("ok")),
+        }
 
     def get_can_resume(self, obj):
         # A successful run has nothing to continue; one with no session cannot

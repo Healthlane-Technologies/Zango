@@ -268,18 +268,30 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
     from .models import RUN_PHASE_ORDER, EventKind, EventLevel, RunPhase, RunStatus  # noqa: F401
     from .options import build_agent_options
     from .prompt import QUALIFIED_SKILL, compose_prompt, compose_resume_prompt
-    from .postrun import requires_restart, run_post_steps, run_step
+    from .postrun import requires_restart, run_step
     from .recorder import EventRecorder
-    from .roles import ensure_roles
-    from .users import ensure_users
     from .settings_writer import write_run_settings
     from .snapshot import create_snapshot, diff_manifest, workspace_manifest
     from .stream import AgentStream
+    from .studio_build import StudioBuild, StudioError, fix_rounds, is_studio, service_account
 
     from django.conf import settings as dj
 
     recorder = EventRecorder(run)
     template_build = None
+    studio = None
+    levels = {"sys": EventLevel.SYS, "warn": EventLevel.WARN, "err": EventLevel.ERR}
+
+    def _studio_emit(kind, message, *, level="info", is_error=False, data=None):
+        recorder.emit(
+            kind,
+            message,
+            level=levels.get(level, EventLevel.INFO),
+            is_error=is_error,
+            data=data,
+        )
+        recorder.flush_if_stale(0.5)
+
     state: dict = {}
     baseline_manifest = None
     stream = None
@@ -408,11 +420,25 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
         if baseline_manifest is None:
             baseline_manifest = snapshot.manifest
 
+        # App Studio builds: the platform runs the skill's own scripts first
+        # (spec check, runtime, frontend prep); the agent then writes code.
+        if is_studio(template_build):
+            recorder.set_phase(RunPhase.PREPARING)
+            studio = StudioBuild.for_run(template_build, ctx, run_dir)
+            try:
+                studio.prepare(emit=_studio_emit)
+            finally:
+                run.post_steps = [r.to_dict() for r in studio.steps]
+                run.save(update_fields=["post_steps", "modified_at"])
+            # Re-baseline: the runtime and frontend files are the platform's,
+            # not the agent's.
+            baseline_manifest = workspace_manifest(ctx.workspace_path)
+
         # Create any roles the spec names *before* the agent runs. AppBuilder's
         # create_config resolves a role by primary key, so a role that does not
         # exist yet has no ID for the agent to pass — the first successful run
         # registered routes but no menus for exactly this reason.
-        spec_roles = _roles_from_text(run.prompt)
+        spec_roles = [] if studio is not None else _roles_from_text(run.prompt)
         if spec_roles:
             created = _precreate_roles(spec_roles)
             if created:
@@ -431,13 +457,26 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
                 f"{previous.error_type or previous.status}: "
                 f"{(previous.error_message or '').strip()[:300]}"
             ).strip(": ")
-            prompt = compose_resume_prompt(_build_ask(run, template_build), ctx, reason, skill=skill)
+            if studio is not None:
+                from .prompt import RESUME_PREAMBLE, compose_studio_prompt
+
+                prompt = RESUME_PREAMBLE.format(reason=reason) + compose_studio_prompt(
+                    ctx, template_build, studio
+                )
+            else:
+                prompt = compose_resume_prompt(
+                    _build_ask(run, template_build), ctx, reason, skill=skill
+                )
             recorder.emit(
                 EventKind.SYS,
                 f"Resuming run {str(previous.object_uuid)[:8]} "
                 f"({previous.status}). Continuing, not restarting.",
                 level=EventLevel.SYS,
             )
+        elif studio is not None:
+            from .prompt import compose_studio_prompt
+
+            prompt = compose_studio_prompt(ctx, template_build, studio)
         else:
             prompt = compose_prompt(_build_ask(run, template_build), ctx, skill=skill)
         stream = AgentStream(options=None, prompt=prompt)
@@ -451,53 +490,60 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             template_build=template_build,
         )
 
-        last_abort_check = 0.0
-        for item in stream:
-            if item.kind == "idle":
-                recorder.flush_if_stale()
-            elif item.kind == "hook":
-                payload = item.payload or {}
-                recorder.emit(
-                    EventKind.HOOK_DENY,
-                    payload.get("reason", "blocked by policy"),
-                    level=EventLevel.ERR,
-                    tool_name=payload.get("tool_name", ""),
-                    is_error=True,
-                    data={"tool_input": payload.get("tool_input")},
-                )
-            elif item.kind == "message":
-                recorder.set_phase(_phase_for_message(item.payload, recorder.phase))
-                record_message(item.payload, recorder, state)
-                recorder.flush_if_stale()
-            elif item.kind == "done":
-                break
-            elif item.kind == "error":
-                exc = item.payload
-                extra = {
-                    "error_type": type(exc).__name__[:128],
-                    "error_message": str(exc)[:8000],
-                    "error_traceback": "".join(
-                        traceback.format_exception(type(exc), exc, exc.__traceback__)
-                    )[:20000],
-                }
-                recorder.emit(
-                    EventKind.ERROR,
-                    f"{type(exc).__name__}: {exc}",
-                    level=EventLevel.ERR,
-                    is_error=True,
-                )
-                break
-
-            now = time.monotonic()
-            if now - last_abort_check >= ABORT_POLL_SECONDS:
-                last_abort_check = now
-                if _abort_requested(run.pk):
+        def _drive(agent_stream, run_state) -> dict:
+            """Run one agent stream to its end; returns error fields, or {}."""
+            failure: dict = {}
+            last_abort_check = 0.0
+            for item in agent_stream:
+                if item.kind == "idle":
+                    recorder.flush_if_stale()
+                elif item.kind == "hook":
+                    payload = item.payload or {}
                     recorder.emit(
-                        EventKind.SYS,
-                        "Abort requested — interrupting the agent.",
-                        level=EventLevel.WARN,
+                        EventKind.HOOK_DENY,
+                        payload.get("reason", "blocked by policy"),
+                        level=EventLevel.ERR,
+                        tool_name=payload.get("tool_name", ""),
+                        is_error=True,
+                        data={"tool_input": payload.get("tool_input")},
                     )
-                    stream.request_stop()
+                elif item.kind == "message":
+                    recorder.set_phase(_phase_for_message(item.payload, recorder.phase))
+                    record_message(item.payload, recorder, run_state)
+                    recorder.flush_if_stale()
+                elif item.kind == "done":
+                    break
+                elif item.kind == "error":
+                    exc = item.payload
+                    failure = {
+                        "error_type": type(exc).__name__[:128],
+                        "error_message": str(exc)[:8000],
+                        "error_traceback": "".join(
+                            traceback.format_exception(type(exc), exc, exc.__traceback__)
+                        )[:20000],
+                    }
+                    recorder.emit(
+                        EventKind.ERROR,
+                        f"{type(exc).__name__}: {exc}",
+                        level=EventLevel.ERR,
+                        is_error=True,
+                    )
+                    break
+
+                now = time.monotonic()
+                if now - last_abort_check >= ABORT_POLL_SECONDS:
+                    last_abort_check = now
+                    if _abort_requested(run.pk):
+                        recorder.emit(
+                            EventKind.SYS,
+                            "Abort requested — interrupting the agent.",
+                            level=EventLevel.WARN,
+                        )
+                        agent_stream.request_stop()
+
+            return failure
+
+        extra = _drive(stream, state)
 
         run.agent_ended_at = timezone.now()
         run.save(update_fields=["agent_ended_at", "modified_at"])
@@ -572,85 +618,37 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
                 data=changes.to_dict(),
             )
 
-            recorder.set_phase(RunPhase.USERS)
-            # Roles first: sync_policies_with_roles silently drops policy
-            # roles that do not exist, leaving views nobody can reach.
-            role_results = ensure_roles(
-                ctx.workspace_path,
-                emit=lambda m, is_error=False: recorder.emit(
-                    EventKind.SYS,
-                    m,
-                    level=EventLevel.ERR if is_error else EventLevel.SYS,
-                    is_error=is_error,
-                ),
-            )
-            created = [r.name for r in role_results if r.status == "created"]
-            if created:
-                recorder.emit(
-                    EventKind.SYS,
-                    f"Created {len(created)} app role(s): {', '.join(created)}",
-                    level=EventLevel.SYS,
-                    data={"roles": created},
+            if studio is not None:
+                status, extra = _finish_studio(
+                    run=run,
+                    tenant=tenant,
+                    studio=studio,
+                    state=state,
+                    recorder=recorder,
+                    emit=_studio_emit,
+                    drive=_drive,
+                    new_stream=lambda digest: _resume_stream(
+                        digest, run, ctx, creds, settings_path, template_build, state,
+                        agent_cfg, recorder,
+                    ),
+                    baseline_manifest=baseline_manifest,
+                    service_account=service_account,
+                    rounds=fix_rounds(),
                 )
-
-            # Test users last: they need their roles to exist first.
-            user_results = ensure_users(
-                ctx.workspace_path,
-                emit=lambda m, is_error=False: recorder.emit(
-                    EventKind.SYS,
-                    m,
-                    level=EventLevel.ERR if is_error else EventLevel.SYS,
-                    is_error=is_error,
-                ),
-            )
-            if user_results:
-                run.test_users = [u.to_dict() for u in user_results]
-                run.save(update_fields=["test_users", "modified_at"])
-                made = [u.email for u in user_results if u.status == "created"]
-                if made:
-                    recorder.emit(
-                        EventKind.SYS,
-                        f"Created {len(made)} test user(s): {', '.join(made)}. "
-                        "Passwords are on the run detail.",
-                        level=EventLevel.SYS,
-                    )
-
-            def _emit(kind, message, data=None, is_error=False):
-                recorder.emit(
-                    kind,
-                    message,
-                    level=EventLevel.ERR if is_error else EventLevel.INFO,
-                    is_error=is_error,
-                    data=data,
-                )
-                recorder.flush_if_stale(0.5)
-
-            recorder.set_phase(RunPhase.APPLYING)
-            results = run_post_steps(
-                app_name=tenant.name,
-                base_dir=str(dj.BASE_DIR),
-                changes=changes,
-                emit=_emit,
-            )
-            run.post_steps = [r.to_dict() for r in results]
-            run.save(update_fields=["post_steps", "modified_at"])
-
-            failed = [r for r in results if not r.ok]
-            if failed:
-                status = RunStatus.PARTIAL
-                extra = {
-                    "error_type": "PostRunStepFailed",
-                    "error_message": (
-                        "The agent finished but "
-                        + ", ".join(r.step for r in failed)
-                        + " failed. The files are already written; restore the "
-                        "pre-run snapshot with `manage.py agent_mode_restore` "
-                        "if you need to roll back."
-                    )[:8000],
-                }
             else:
-                status = RunStatus.SUCCESS
+                status, extra = _finish_classic(
+                    run=run, tenant=tenant, ctx=ctx, changes=changes, recorder=recorder
+                )
 
+    except StudioError as exc:
+        status = RunStatus.FAILED
+        extra = {"error_type": exc.error_type[:128], "error_message": str(exc)[:8000]}
+        recorder.emit(
+            EventKind.ERROR,
+            f"{exc.error_type}: {str(exc)[:2000]}",
+            level=EventLevel.ERR,
+            is_error=True,
+        )
     except SoftTimeLimitExceeded:
         status = RunStatus.TIMEOUT
         extra = {
@@ -689,6 +687,280 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
 
     run.finalize(status, **extra)
     return {"status": run.status, "events": recorder.seq}
+
+
+def _finish_classic(*, run, tenant, ctx, changes, recorder):
+    """After a classic build: roles, test users, migrations and sync. (status, extra)."""
+    from django.conf import settings as dj
+
+    from .models import EventKind, EventLevel, RunPhase, RunStatus
+    from .postrun import run_post_steps
+    from .roles import ensure_roles
+    from .users import ensure_users
+
+    extra: dict = {}
+    recorder.set_phase(RunPhase.USERS)
+    # Roles first: sync_policies_with_roles silently drops policy
+    # roles that do not exist, leaving views nobody can reach.
+    role_results = ensure_roles(
+        ctx.workspace_path,
+        emit=lambda m, is_error=False: recorder.emit(
+            EventKind.SYS,
+            m,
+            level=EventLevel.ERR if is_error else EventLevel.SYS,
+            is_error=is_error,
+        ),
+    )
+    created = [r.name for r in role_results if r.status == "created"]
+    if created:
+        recorder.emit(
+            EventKind.SYS,
+            f"Created {len(created)} app role(s): {', '.join(created)}",
+            level=EventLevel.SYS,
+            data={"roles": created},
+        )
+
+    # Test users last: they need their roles to exist first.
+    user_results = ensure_users(
+        ctx.workspace_path,
+        emit=lambda m, is_error=False: recorder.emit(
+            EventKind.SYS,
+            m,
+            level=EventLevel.ERR if is_error else EventLevel.SYS,
+            is_error=is_error,
+        ),
+    )
+    if user_results:
+        run.test_users = [u.to_dict() for u in user_results]
+        run.save(update_fields=["test_users", "modified_at"])
+        made = [u.email for u in user_results if u.status == "created"]
+        if made:
+            recorder.emit(
+                EventKind.SYS,
+                f"Created {len(made)} test user(s): {', '.join(made)}. "
+                "Passwords are on the run detail.",
+                level=EventLevel.SYS,
+            )
+
+    def _emit(kind, message, data=None, is_error=False):
+        recorder.emit(
+            kind,
+            message,
+            level=EventLevel.ERR if is_error else EventLevel.INFO,
+            is_error=is_error,
+            data=data,
+        )
+        recorder.flush_if_stale(0.5)
+
+    recorder.set_phase(RunPhase.APPLYING)
+    results = run_post_steps(
+        app_name=tenant.name,
+        base_dir=str(dj.BASE_DIR),
+        changes=changes,
+        emit=_emit,
+    )
+    run.post_steps = [r.to_dict() for r in results]
+    run.save(update_fields=["post_steps", "modified_at"])
+
+    failed = [r for r in results if not r.ok]
+    if failed:
+        status = RunStatus.PARTIAL
+        extra = {
+            "error_type": "PostRunStepFailed",
+            "error_message": (
+                "The agent finished but "
+                + ", ".join(r.step for r in failed)
+                + " failed. The files are already written; restore the "
+                "pre-run snapshot with `manage.py agent_mode_restore` "
+                "if you need to roll back."
+            )[:8000],
+        }
+    else:
+        status = RunStatus.SUCCESS
+    return status, extra
+
+
+def _merge_state(state: dict, more: dict) -> None:
+    """Add a fix round's usage to the run's totals; the run keeps its first session."""
+    for key in (
+        "total_cost_usd",
+        "num_turns",
+        "input_tokens",
+        "output_tokens",
+        "cache_read_tokens",
+        "cache_creation_tokens",
+        "duration_api_ms",
+    ):
+        if more.get(key) is not None:
+            state[key] = (state.get(key) or 0) + more[key]
+    counts = dict(state.get("tool_use_counts") or {})
+    for name, n in (more.get("tool_use_counts") or {}).items():
+        counts[name] = counts.get(name, 0) + n
+    state["tool_use_counts"] = counts
+    if more.get("session_id") and not state.get("session_id"):
+        state["session_id"] = more["session_id"]
+
+
+def _resume_stream(digest, run, ctx, creds, settings_path, template_build, state, agent_cfg, recorder):
+    """An agent stream resuming the build's session with a fix-round digest, or None.
+
+    None when there is no session to resume or the run's budget is spent: the
+    ceiling covers the build and its fix rounds together.
+    """
+    from .models import EventKind, EventLevel
+    from .options import build_agent_options
+    from .stream import AgentStream
+
+    session_id = state.get("session_id") or ""
+    if not session_id:
+        recorder.emit(EventKind.SYS, "No agent session to resume for a fix round.", level=EventLevel.WARN)
+        return None
+    budget = float(run.max_budget_usd or getattr(agent_cfg, "max_budget_usd", 0) or 0)
+    spent = float(state.get("total_cost_usd") or 0)
+    if budget and spent >= budget:
+        recorder.emit(
+            EventKind.SYS,
+            f"The run's budget (${budget:.2f}) is spent; no fix round.",
+            level=EventLevel.WARN,
+        )
+        return None
+    stream = AgentStream(options=None, prompt=digest)
+    options = build_agent_options(
+        run=run,
+        ctx=ctx,
+        creds=creds,
+        settings_path=settings_path,
+        hook_sink=stream.hook_sink,
+        stderr_sink=recorder.emit_stderr,
+        template_build=template_build,
+    )
+    options.resume = session_id
+    options.fork_session = False
+    if budget:
+        options.max_budget_usd = round(budget - spent, 4)
+    stream.options = options
+    return stream
+
+
+def _finish_studio(
+    *,
+    run,
+    tenant,
+    studio,
+    state,
+    recorder,
+    emit,
+    drive,
+    new_stream,
+    baseline_manifest,
+    service_account,
+    rounds,
+):
+    """After an App Studio build's agent turn: the platform's half of the skill. (status, extra)."""
+    from .models import EventKind, EventLevel, RunPhase, RunStatus
+    from .postrun import requires_restart
+    from .snapshot import diff_manifest, workspace_manifest
+
+    recorder.set_phase(RunPhase.APPLYING)
+
+    def resume_agent(digest: str) -> bool:
+        if _abort_requested(run.pk):
+            return False
+        stream = new_stream(digest)
+        if stream is None:
+            return False
+        recorder.set_phase(RunPhase.BUILDING)
+        fix_state: dict = {}
+        try:
+            failure = drive(stream, fix_state)
+        finally:
+            stream.request_stop()
+            stream.join(timeout=15)
+            _merge_state(state, fix_state)
+            recorder.set_phase(RunPhase.APPLYING)
+        return not failure and not fix_state.get("is_error")
+
+    try:
+        with service_account(tenant) as platform_creds:
+            outcome = studio.finish(
+                platform_creds, resume_agent=resume_agent, rounds=rounds, emit=emit
+            )
+    finally:
+        run.post_steps = [r.to_dict() for r in studio.steps]
+        run.save(update_fields=["post_steps", "modified_at"])
+
+    changes = diff_manifest(baseline_manifest, workspace_manifest(studio.workspace))
+    run.files_changed = changes.to_dict()
+    run.requires_restart = requires_restart(changes)
+    run.test_users = studio.test_users() or None
+    skipped = [
+        {"layer": name, "reason": layer.reason}
+        for name, layer in outcome.layers.items()
+        if layer.status == "skip"
+    ]
+    run.studio_report = {
+        "ok": outcome.ok,
+        "bring_up_ok": outcome.bring_up_ok,
+        "rounds": outcome.rounds,
+        "layers": {name: layer.to_dict() for name, layer in outcome.layers.items()},
+        "skipped": skipped,
+        "report": outcome.report,
+    }
+    run.save(
+        update_fields=[
+            "files_changed",
+            "requires_restart",
+            "test_users",
+            "studio_report",
+            "modified_at",
+        ]
+    )
+
+    def counts(layer):
+        c = layer.counts or {}
+        return f"{c.get('pass', 0)} passed, {c.get('fail', 0)} failed, {c.get('skip', 0)} skipped"
+
+    lines = [
+        f"{name}: " + (f"skipped — {layer.reason}" if layer.status == "skip" else counts(layer))
+        for name, layer in outcome.layers.items()
+    ]
+    recorder.emit(
+        EventKind.SYS,
+        "App Studio checks — " + "; ".join(lines)
+        + (f". Fix rounds: {outcome.rounds}." if outcome.rounds else "."),
+        level=EventLevel.SYS if outcome.ok else EventLevel.WARN,
+        data=run.studio_report,
+    )
+    if outcome.report.get("html_path"):
+        recorder.emit(
+            EventKind.SYS,
+            f"Build report: {outcome.report['html_path']}",
+            level=EventLevel.SYS,
+        )
+
+    if outcome.ok:
+        return RunStatus.SUCCESS, {}
+    if not outcome.bring_up_ok:
+        failed = next((r for r in reversed(studio.steps) if r.ran and not r.ok), None)
+        message = (
+            f"The agent finished but the platform's bring-up step "
+            f"{failed.step if failed else ''} failed"
+            + (f" after {outcome.rounds} fix round(s)" if outcome.rounds else "")
+            + ". The files are already written; restore the pre-run snapshot with "
+            "`manage.py agent_mode_restore` if you need to roll back."
+        )
+        return RunStatus.PARTIAL, {"error_type": "StudioBringUpFailed", "error_message": message[:8000]}
+    failing = outcome.failing
+    message = (
+        "The app was built and brought up, but these checks still fail"
+        + (f" after {outcome.rounds} fix round(s)" if outcome.rounds else "")
+        + ": "
+        + ", ".join(
+            f"{name} ({len(outcome.layers[name].failures)})" for name in failing
+        )
+        + ". See the build report for details."
+    )
+    return RunStatus.PARTIAL, {"error_type": "StudioChecksFailed", "error_message": message[:8000]}
 
 
 @shared_task(name="zango.agent_mode.sweep_stuck_agent_runs")

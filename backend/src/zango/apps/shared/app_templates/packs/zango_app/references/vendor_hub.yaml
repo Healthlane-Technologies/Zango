@@ -588,12 +588,12 @@ modules:
         display: po_ref
         fields:
           - po_ref:        { type: text, label: PO Number, readonly: true, unique: true, auto: { sequence: "PO-{YY}-{00000}" } }
-          - vendor:        { type: link, to: vendor, required: true, display: legal_name, limit_choices: "status == approved and not has_tag on_hold" }
+          - vendor:        { type: link, to: vendor, required: true, display: legal_name, limit_choices: "status == approved" }
           - contract:      { type: link, to: contract, display: contract_ref, limit_choices: "vendor == form.vendor and status == active" }
           - order_date:    { type: date, required: true, default: today }
-          - expected_by:   { type: date }
+          - expected_by:   { type: date, label: Expected By }
           - delivery_city: { type: link, to: city, display: name }
-          - total_amount:  { type: money, readonly: true, computed: Sum of po_line.amount, recalculated on every line save/delete. }
+          - total_amount:  { type: money, readonly: true, computed: "Sum of po_line.amount, recalculated on every line save/delete." }
           - notes:         { type: long_text }
         validation:
           rules:
@@ -663,7 +663,7 @@ modules:
           add_button: New Purchase Order
           row_actions:
             - { key: edit, label: Edit, type: edit, show_when: status == draft }
-            - { key: download_pdf, label: Download PDF, type: download, text: Generate the PO PDF with header, lines and terms. }
+            - { key: download_pdf, label: Download PDF, type: download, text: "Generate the PO PDF with header, lines and terms." }
         form:
           create:
             roles: [Procurement Executive]
@@ -888,7 +888,7 @@ detail_views:
         add: { label: Upload Document, prefill: { vendor: hero } }
         row_actions: inherit                    # verify/reject transitions come along automatically
         row_click: preview                      # row action key | detail_view code | drawer | none
-        empty_state: { title: No documents, text: Upload GST certificate, PAN and a cancelled cheque to submit for approval., cta: add }
+        empty_state: { title: No documents, text: "Upload GST certificate, PAN and a cancelled cheque to submit for approval.", cta: add }
 
       - code: contracts
         label: Contracts

@@ -1,7 +1,7 @@
 {
   "slug": "track-and-trace",
   "name": "Track & Trace",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Traceability & Supply Chain",
   "icon": "barcode",
   "is_beta": false,
@@ -38,27 +38,79 @@
   "catalogue": {
     "description": "Pack-level track and trace for pharma: packaging lines commission GS1 serial numbers, units are aggregated into cases and pallets, every movement between plants, warehouses and distributors is logged as a validated event, and QA can quarantine or recall a batch and trace every unit to the location holding it. Distributors sign in and see only their own stock, receipts and recall notices.",
     "packages": [
-      { "name": "workflow", "description": "Batch, serial, aggregation, event and recall lifecycles" },
-      { "name": "serialization", "description": "GS1 GTIN, SGTIN and SSCC numbering with pack hierarchy" },
-      { "name": "integrations", "description": "Packaging line (L3) interface and EPCIS event export" },
-      { "name": "reports", "description": "Batch genealogy, exception ageing and recall recovery" },
-      { "name": "forms", "description": "Ship, receive, verify and recall-return forms with validation" }
+      {
+        "name": "workflow",
+        "description": "Batch, serial, aggregation, event and recall lifecycles"
+      },
+      {
+        "name": "serialization",
+        "description": "GS1 GTIN, SGTIN and SSCC numbering with pack hierarchy"
+      },
+      {
+        "name": "integrations",
+        "description": "Packaging line (L3) interface and EPCIS event export"
+      },
+      {
+        "name": "reports",
+        "description": "Batch genealogy, exception ageing and recall recovery"
+      },
+      {
+        "name": "forms",
+        "description": "Ship, receive, verify and recall-return forms with validation"
+      }
     ],
     "roles": [
-      { "name": "Plant operator", "description": "Requests serial ranges, checks line uploads and seals cases and pallets" },
-      { "name": "Warehouse", "description": "Ships and receives pallets and cases and resolves event exceptions" },
-      { "name": "Distributor", "description": "Receives at its own location, verifies packs and confirms recall returns" },
-      { "name": "Quality assurance", "description": "Releases and quarantines batches and runs recalls by batch" },
-      { "name": "Regulatory viewer", "description": "Read-only access to batch history, events and recalls for audits" }
+      {
+        "name": "Plant operator",
+        "description": "Requests serial ranges, checks line uploads and seals cases and pallets"
+      },
+      {
+        "name": "Warehouse",
+        "description": "Ships and receives pallets and cases and resolves event exceptions"
+      },
+      {
+        "name": "Distributor",
+        "description": "Receives at its own location, verifies packs and confirms recall returns"
+      },
+      {
+        "name": "Quality assurance",
+        "description": "Releases and quarantines batches and runs recalls by batch"
+      },
+      {
+        "name": "Regulatory viewer",
+        "description": "Read-only access to batch history, events and recalls for audits"
+      }
     ],
     "workflows": [
-      { "name": "Serial number management", "description": "Serial ranges per batch and line, commissioning, decommissioning and reconciliation" },
-      { "name": "Aggregation", "description": "Units into cases and cases onto pallets, sealed with SSCC labels and unpacked downstream" },
-      { "name": "Movement events", "description": "Commission, pack, ship, receive and unpack events, validated with an exception queue" },
-      { "name": "Verification & recall", "description": "Pack verification on receipt, quarantine, recall by batch and return tracking" }
+      {
+        "name": "Serial number management",
+        "description": "Serial ranges per batch and line, commissioning, decommissioning and reconciliation"
+      },
+      {
+        "name": "Aggregation",
+        "description": "Units into cases and cases onto pallets, sealed with SSCC labels and unpacked downstream"
+      },
+      {
+        "name": "Movement events",
+        "description": "Commission, pack, ship, receive and unpack events, validated with an exception queue"
+      },
+      {
+        "name": "Verification & recall",
+        "description": "Pack verification on receipt, quarantine, recall by batch and return tracking"
+      }
     ],
-    "data_objects": ["Product", "Batch", "Serial number", "Aggregation", "Movement event", "Location", "Recall"],
-    "integrations": ["Packaging line (L3) interface"],
+    "data_objects": [
+      "Product",
+      "Batch",
+      "Serial number",
+      "Aggregation",
+      "Movement event",
+      "Location",
+      "Recall"
+    ],
+    "integrations": [
+      "Packaging line (L3) interface"
+    ],
     "compliance": [
       "GS1 and EPCIS conformance",
       "Immutable movement history",
@@ -70,5 +122,5 @@
     "app_name_prefill": "Pack Traceability",
     "app_prompt_prefill": "Track and trace for two plants and 40 warehouses. Receive serial numbers from packaging lines, record case and pallet aggregation, log every movement, and let QA run a recall by batch."
   },
-  "changelog": "First version: Zango app spec v1 starter for pack-level track and trace, with aggregation, validated movement events and recall by batch, and a two-plant reference."
+  "changelog": "Aggregation moved into the serialization module so modules no longer link in a cycle, so the build checker passes."
 }

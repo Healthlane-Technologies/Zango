@@ -181,7 +181,7 @@ modules:
             - region:               { label: Region, filterable: true }
             - coordinator_name:     { label: Coordinator }
             - monthly_quota:        { label: Quota / month }
-            - quota_used:           { source: computed, label: Used this month, format: integer, shows: Count of this site's slots confirmed for an apheresis date in the current month. }
+            - quota_used:           { source: computed, label: Used this month, format: number, shows: Count of this site's slots confirmed for an apheresis date in the current month. }
             - authorisation_expiry: { label: Authorisation expires, sortable: true }
             - is_authorised:        { label: Authorised, filterable: true }
           default_sort: site_code
@@ -613,7 +613,7 @@ modules:
             - manufacturing_site: { label: Site, display: name, filterable: true }
             - material_received_on: { label: Material in, sortable: true }
             - expected_release:   { label: Expected release, sortable: true }
-            - days_in_mfg:        { source: computed, label: Days, format: integer, shows: Days since material_received_on. }
+            - days_in_mfg:        { source: computed, label: Days, format: days, shows: Days since material_received_on. }
             - status:             { source: status, label: Status, filterable: true }
             - tags:               { source: tags, label: Flags }
           default_sort: expected_release

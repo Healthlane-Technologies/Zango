@@ -1,0 +1,13 @@
+diff --git a/node_modules/@zango-core/crud/dist/crud-detail-BrJwMqC9.js b/node_modules/@zango-core/crud/dist/crud-detail-BrJwMqC9.js
+index 7c17e1f..8170058 100644
+--- a/node_modules/@zango-core/crud/dist/crud-detail-BrJwMqC9.js
++++ b/node_modules/@zango-core/crud/dist/crud-detail-BrJwMqC9.js
+@@ -523,7 +523,7 @@ const useTableData = ({
+     });
+     if (sorting.length > 0) {
+       const sortedColumn = sorting[0];
+-      const columnIndex = columns.findIndex((col) => col.accessorKey === sortedColumn.id);
++      const columnIndex = effectiveColumns.findIndex((col) => col.accessorKey === sortedColumn.id);
+       if (columnIndex !== -1) {
+         params.append(`order[0][column]`, String(columnIndex));
+         params.append(`order[0][dir]`, sortedColumn.desc ? "desc" : "asc");

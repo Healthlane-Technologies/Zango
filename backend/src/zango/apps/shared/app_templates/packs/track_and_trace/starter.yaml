@@ -195,8 +195,8 @@ modules:
           edit:   { same_as: create }
 
   - code: serialization
-    name: Batches and Serial Numbers
-    description: Batches made at a plant and the GS1 serial number commissioned on every saleable unit.
+    name: Batches, Serials and Aggregation
+    description: Batches made at a plant, the GS1 serial number commissioned on every saleable unit, and the case and pallet hierarchy they are packed into.
     entities:
       - code: batch
         name: Batch
@@ -340,11 +340,6 @@ modules:
             - { label: Not yet packed, where: status == commissioned }
             - { label: Suspect,        where: has_tag suspect }
           row_click: drawer
-
-  - code: supply_chain
-    name: Aggregation and Movement Events
-    description: Case and pallet hierarchy and every commission, pack, ship and receive event.
-    entities:
       - code: aggregation
         name: Aggregation
         plural: Cases & Pallets
@@ -428,6 +423,10 @@ modules:
         form:
           create: { roles: [Plant Operator], fields: [sscc, level, batch, parent, unit_count, current_location, packed_at] }
 
+  - code: supply_chain
+    name: Movement Events
+    description: Every commission, pack, ship and receive event between locations.
+    entities:
       - code: movement_event
         name: Movement Event
         plural: Movement Events

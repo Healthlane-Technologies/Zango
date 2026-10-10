@@ -666,8 +666,7 @@
             "status",
             "tags",
             "computed",
-            "path",
-            "custom"
+            "path"
           ]
         },
         "searchable": {
@@ -689,7 +688,16 @@
           "type": "string"
         },
         "format": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "money",
+            "percent",
+            "number",
+            "date",
+            "datetime",
+            "days"
+          ],
+          "description": "How a column renders its value (the build only knows these)."
         },
         "shows": {
           "type": "string"
@@ -749,7 +757,8 @@
             "form",
             "confirm",
             "navigate",
-            "download"
+            "download",
+            "delete"
           ]
         },
         "roles": {
@@ -773,9 +782,18 @@
               "type": "string"
             },
             {
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field"
+              ]
             }
-          ]
+          ],
+          "description": "A detail view, page, URL, or {field: <url field>}."
         },
         "text": {
           "type": "string"
@@ -1291,7 +1309,32 @@
           "$ref": "#/$defs/roles"
         },
         "header": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "banners": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "tone": {
+                    "type": "string",
+                    "enum": [
+                      "info",
+                      "warning",
+                      "danger",
+                      "success"
+                    ]
+                  },
+                  "when": {
+                    "$ref": "#/$defs/expr"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         },
         "stats": {
           "type": "array",
@@ -1302,7 +1345,22 @@
         "sidebar": {
           "type": "array",
           "items": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "fields",
+                  "mini_table",
+                  "custom",
+                  "timeline",
+                  "stats"
+                ]
+              },
+              "tone": {
+                "$ref": "#/$defs/color"
+              }
+            }
           }
         },
         "tabs": {

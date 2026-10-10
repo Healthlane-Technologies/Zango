@@ -74,6 +74,10 @@ def validate_doc(doc, template, *, strict: bool = False) -> list:
     for issue in rules_mod.evaluate(doc, template.rules):
         issue["structural"] = False
         issues.append(issue)
+    # What the build itself will stop on (never blocks an individual edit).
+    from .build_check import build_issues
+
+    issues.extend(build_issues(doc, template))
     sections = (template.ui_schema or {}).get("sections") or []
     for issue in issues:
         issue.setdefault("section", section_for(issue["path"], sections))

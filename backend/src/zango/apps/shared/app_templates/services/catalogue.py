@@ -68,6 +68,9 @@ class TemplateView:
     plugin_dir: str = ""  # materialised plugin root (for the build agent)
     references: tuple = ()  # ({id, title, summary, tags, path}, ...)
     borrowed_from: str = ""  # "zango-app@1.0.0" when pieces come from the generic template
+    # Where the build skill lives when it is the generic template's (see generic.py).
+    skill_plugin_slug: str = ""
+    skill_plugin_dir: str = ""
 
     @property
     def is_yaml(self) -> bool:
@@ -83,7 +86,12 @@ class TemplateView:
         """The build skill as Claude Code names it: ``<plugin>:<skill>``."""
         if not self.build_skill_name:
             return ""
-        return f"zango-tpl-{self.slug}:{self.build_skill_name}"
+        return f"zango-tpl-{self.skill_plugin_slug or self.slug}:{self.build_skill_name}"
+
+    @property
+    def build_plugin_dir(self) -> str:
+        """The plugin the build skill is loaded from: this template's, or the generic one's."""
+        return self.skill_plugin_dir or self.plugin_dir
 
 
 def _strings(value, limit: int = 12) -> tuple:
@@ -119,6 +127,11 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
             if (generic_dir / name).is_file():
                 files[key] = str(generic_dir / name)
                 borrowed[attr] = getattr(generic, attr)
+    skill_borrowed = (
+        generic is not None and not version.build_skill_name and generic.build_skill_name
+    )
+    if skill_borrowed:
+        borrowed["build_skill_name"] = generic.build_skill_name
     return TemplateView(
         slug=template.slug,
         name=template.name,
@@ -151,7 +164,9 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         rules=tuple(version.rules or borrowed.get("rules") or ()),
         starter_yaml=version.starter_yaml,
         example_yaml=version.example_yaml,
-        build_skill_name=version.build_skill_name,
+        build_skill_name=version.build_skill_name or borrowed.get("build_skill_name", ""),
+        skill_plugin_slug=generic.template.slug if skill_borrowed else "",
+        skill_plugin_dir=str(materialise(generic)) if skill_borrowed else "",
         plugin_dir=str(plugin_dir),
         references=tuple(
             {

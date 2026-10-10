@@ -250,3 +250,76 @@ class SeedOrderTests(AppTemplatesTestBase):
         slugs = [json.loads((p / "template.json").read_text())["slug"] for p in bundled_packs()]
         self.assertEqual(slugs[0], GENERIC_SLUG)
         self.assertEqual(len(slugs), len(set(slugs)))
+
+
+class StudioSkillTests(AppTemplatesTestBase):
+    """The generic template's build skill, binary files included, and who borrows it."""
+
+    def setUp(self):
+        super().setUp()
+        from zango.apps.shared.app_templates.seed import PACKS_DIR
+
+        self.generic, _ = import_pack(PACKS_DIR / "zango_app", publish_now=True)
+        catalogue.clear_caches()
+
+    def test_binary_skill_files_round_trip_to_disk(self):
+        rows = {r.path: r for r in self.generic.files.all()}
+        self.assertIn("SKILL.md", rows)
+        golden = rows["assets/goldens/badges.png"]
+        self.assertTrue(golden.is_binary)
+        self.assertTrue(golden.raw.startswith(b"\x89PNG"))
+        self.assertFalse(any("__pycache__" in p or p.endswith(".pyc") for p in rows))
+        self.assertEqual([i for i in lint(self.generic) if i["level"] == "error"], [])
+
+        view = catalogue.get_template(GENERIC_SLUG)
+        self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
+        skill = Path(view.plugin_dir) / "skills" / "zango-app-studio"
+        on_disk = (skill / "assets" / "goldens" / "badges.png").read_bytes()
+        self.assertEqual(on_disk, golden.raw)
+        self.assertTrue((skill / "scripts" / "spec_check.py").stat().st_mode & 0o100)
+
+        from zango.apps.shared.app_templates.services.packs import export_pack, read_pack
+
+        again = read_pack(export_pack(self.generic))
+        self.assertEqual(again.skill_files["assets/goldens/badges.png"], golden.raw)
+
+    def test_a_lean_template_is_built_with_the_generic_skill(self):
+        from zango.apps.shared.app_templates.seed import PACKS_DIR
+
+        import_pack(PACKS_DIR / "ordering_portal", publish_now=True)
+        view = catalogue.get_template("ordering-portal")
+        self.assertEqual(view.build_skill_name, "zango-app-studio")
+        self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
+        self.assertIn(f"/{GENERIC_SLUG}/", view.build_plugin_dir)
+        self.assertNotEqual(view.build_plugin_dir, view.plugin_dir)
+
+        from zango.apps.agent_mode.template_build import TemplateBuild
+
+        build = TemplateBuild(template=view, spec_path="/tmp/spec/app_spec.yaml")
+        self.assertTrue(Path(build.skill_dir, "SKILL.md").is_file())
+        self.assertEqual(build.plugin_dir, view.plugin_dir)
+
+
+class BuildCheckTests(StudioSkillTests):
+    def test_the_build_checker_findings_become_issues(self):
+        from zango.apps.shared.app_templates.services.spec import yamlio
+        from zango.apps.shared.app_templates.services.spec.build_check import build_issues
+
+        view = catalogue.get_template(GENERIC_SLUG)
+        doc = yamlio.load(view.example_yaml)
+        found = build_issues(doc, view)
+        self.assertFalse([i for i in found if i["level"] == "error"])
+        warnings = [i for i in found if i["level"] == "warning"]
+        self.assertTrue(warnings)  # lowercase warn/intent lines are read
+        self.assertTrue(any("(fix: " in i["message"] for i in warnings))
+
+        # Prose cut at an unquoted comma is a build error the schema can't see.
+        broken = yamlio.load(
+            view.example_yaml.replace(
+                'computed: "Sum of po_line.amount, recalculated on every line save/delete."',
+                "computed: Sum of po_line.amount, recalculated on every line save/delete.",
+            )
+        )
+        errors = [i for i in build_issues(broken, view) if i["level"] == "error"]
+        self.assertTrue(any("cut at a comma" in i["message"] for i in errors), errors)
+        self.assertTrue(all(i["code"] == "build_check" and not i["structural"] for i in errors))

@@ -525,6 +525,9 @@ class AgentRun(FullAuditMixin):
     post_steps = models.JSONField(null=True, blank=True)
     # Test users created for this run, with one-time temporary passwords.
     test_users = models.JSONField(null=True, blank=True)
+    # App Studio builds (studio_build.py): the test layers' outcome, the fix
+    # rounds, and the skill's build report (summary + where the HTML is).
+    studio_report = models.JSONField(null=True, blank=True)
     requires_restart = models.BooleanField(default=False)
 
     class Meta:

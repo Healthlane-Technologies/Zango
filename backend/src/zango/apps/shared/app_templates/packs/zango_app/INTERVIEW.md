@@ -8,6 +8,11 @@ Read `SCHEMA.md` before your first question and `starter.yaml`, where every
 app begins. `example.yaml` (Vendor Hub) is a complete app; look at it when you
 are unsure how much detail an answer needs.
 
+The build re-checks the spec with its own checker (`build_check` issues in
+`spec_validate`): quote prose values inside `{ }`, use only the listed column
+formats, and keep modules from linking to each other in a cycle — see
+"Writing YAML the build reads the same way" in `SCHEMA.md`.
+
 ## The two rules
 
 **1. The app takes shape on screen as you go.** The user watches a live,

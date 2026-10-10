@@ -59,8 +59,12 @@ earlier ones, and the preview needs roles, pages and entities to agree:
 
 Keep codes snake_case and reuse them exactly: a menu's `page` must be a
 declared page, a transition's `roles` declared role names, `to` a declared
-entity. After the last section call `spec_validate` and fix every **error**
-before you finish.
+entity. Write YAML the build reads the same way (SCHEMA.md, "Writing YAML the
+build reads the same way"): quote every prose value inside `{ }`, use only the
+listed column formats (`number`, not `integer`), and never let modules link to
+each other in a cycle. `spec_validate` includes the build's own checker
+(issues marked `build_check`). After the last section call `spec_validate` and
+fix every **error** before you finish.
 
 ## 3. Flag what you did not read
 

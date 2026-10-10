@@ -1,0 +1,34 @@
+{
+    "policies": [
+        {
+            "name": "AppViewPolicy",
+            "description": "AppView access policy",
+            "statement": {
+                "permissions": [
+                    {
+                        "name": "backend.app.views.AppView",
+                        "type": "view"
+                    }
+                ]
+            },
+            "roles": [
+                "AnonymousUsers"
+            ]
+        },
+        {
+            "name": "RedirectAppViewPolicy",
+            "description": "RedirectAppView access policy",
+            "statement": {
+                "permissions": [
+                    {
+                        "name": "backend.app.views.RedirectAppView",
+                        "type": "view"
+                    }
+                ]
+            },
+            "roles": [
+                "AnonymousUsers"
+            ]
+        }
+    ]
+}

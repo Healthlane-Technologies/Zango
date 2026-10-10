@@ -34,7 +34,19 @@ class TemplateBuild:
 
     @property
     def plugin_dir(self) -> str:
+        """The template's own materialised pack (its requirement documents)."""
         return self.template.plugin_dir
+
+    @property
+    def skill_plugin_dir(self) -> str:
+        """The plugin the build skill comes from (the generic template's when borrowed)."""
+        return self.template.build_plugin_dir
+
+    @property
+    def skill_dir(self) -> str:
+        """The build skill's own directory, or "" without one."""
+        name = self.template.build_skill_name
+        return str(Path(self.skill_plugin_dir) / "skills" / name) if name else ""
 
     @property
     def spec_dir(self) -> str:

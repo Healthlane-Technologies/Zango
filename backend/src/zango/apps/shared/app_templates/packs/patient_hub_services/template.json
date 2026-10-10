@@ -1,7 +1,7 @@
 {
   "slug": "patient-hub-services",
   "name": "Patient Hub Services",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Patient Services",
   "icon": "heart",
   "is_beta": false,
@@ -38,30 +38,94 @@
   "catalogue": {
     "description": "A patient hub for a specialty brand. HCP offices refer patients, case managers open a hub case, reimbursement specialists verify benefits and secure prior authorization, case managers enroll patients in co-pay support and triage them to a specialty pharmacy, and the pharmacy confirms the first fill. Every step is tracked on one case with SLAs, outreach and documents.",
     "packages": [
-      { "name": "workflow", "description": "Referral, case, benefits, prior auth, co-pay and SP referral lifecycles with role-gated steps" },
-      { "name": "crm", "description": "Patients, HCP offices, payers and specialty pharmacies in one directory" },
-      { "name": "communication", "description": "Office emails and patient SMS or WhatsApp updates at every step" },
-      { "name": "forms", "description": "Enrollment, benefits, prior auth and triage forms" },
-      { "name": "documents", "description": "Enrollment forms, prescriptions, insurance cards, PA letters and HIPAA authorizations" },
-      { "name": "tasks", "description": "Follow-ups and SLA-driven work queues for case managers and specialists" },
-      { "name": "integrations", "description": "SMS gateway and WhatsApp Business for patient outreach" },
-      { "name": "reports", "description": "Time to therapy, PA approval rate and case pipeline" }
+      {
+        "name": "workflow",
+        "description": "Referral, case, benefits, prior auth, co-pay and SP referral lifecycles with role-gated steps"
+      },
+      {
+        "name": "crm",
+        "description": "Patients, HCP offices, payers and specialty pharmacies in one directory"
+      },
+      {
+        "name": "communication",
+        "description": "Office emails and patient SMS or WhatsApp updates at every step"
+      },
+      {
+        "name": "forms",
+        "description": "Enrollment, benefits, prior auth and triage forms"
+      },
+      {
+        "name": "documents",
+        "description": "Enrollment forms, prescriptions, insurance cards, PA letters and HIPAA authorizations"
+      },
+      {
+        "name": "tasks",
+        "description": "Follow-ups and SLA-driven work queues for case managers and specialists"
+      },
+      {
+        "name": "integrations",
+        "description": "SMS gateway and WhatsApp Business for patient outreach"
+      },
+      {
+        "name": "reports",
+        "description": "Time to therapy, PA approval rate and case pipeline"
+      }
     ],
     "roles": [
-      { "name": "Case manager", "description": "Owns each patient's case from referral to therapy: reviews referrals, enrolls co-pay support, triages to a specialty pharmacy and keeps the patient and office informed" },
-      { "name": "Reimbursement specialist", "description": "Runs benefits investigations with payers and submits, follows up and appeals prior authorizations" },
-      { "name": "Specialty pharmacy", "description": "Sees only referrals triaged to it, accepts or declines them and confirms the first-fill shipment" },
-      { "name": "HCP office", "description": "Submits referrals and tracks the status of its own patients' cases" }
+      {
+        "name": "Case manager",
+        "description": "Owns each patient's case from referral to therapy: reviews referrals, enrolls co-pay support, triages to a specialty pharmacy and keeps the patient and office informed"
+      },
+      {
+        "name": "Reimbursement specialist",
+        "description": "Runs benefits investigations with payers and submits, follows up and appeals prior authorizations"
+      },
+      {
+        "name": "Specialty pharmacy",
+        "description": "Sees only referrals triaged to it, accepts or declines them and confirms the first-fill shipment"
+      },
+      {
+        "name": "HCP office",
+        "description": "Submits referrals and tracks the status of its own patients' cases"
+      }
     ],
     "workflows": [
-      { "name": "Referral intake", "description": "Receive, review, request missing information, then accept into a hub case or reject" },
-      { "name": "Benefits investigation", "description": "Verify coverage, PA requirement and cost share with the patient's payer" },
-      { "name": "Prior authorization", "description": "Submit, answer payer information requests, approve or deny, and appeal denials" },
-      { "name": "Co-pay enrollment", "description": "Screen eligibility, enroll the patient in the co-pay program and track expiry" },
-      { "name": "SP triage", "description": "Sign off the referral to an in-network specialty pharmacy, which accepts and ships the first fill" }
+      {
+        "name": "Referral intake",
+        "description": "Receive, review, request missing information, then accept into a hub case or reject"
+      },
+      {
+        "name": "Benefits investigation",
+        "description": "Verify coverage, PA requirement and cost share with the patient's payer"
+      },
+      {
+        "name": "Prior authorization",
+        "description": "Submit, answer payer information requests, approve or deny, and appeal denials"
+      },
+      {
+        "name": "Co-pay enrollment",
+        "description": "Screen eligibility, enroll the patient in the co-pay program and track expiry"
+      },
+      {
+        "name": "SP triage",
+        "description": "Sign off the referral to an in-network specialty pharmacy, which accepts and ships the first fill"
+      }
     ],
-    "data_objects": ["Case", "Patient", "Payer", "Prior auth", "Referral", "Benefits investigation", "Co-pay enrollment", "Specialty pharmacy referral", "HCP office"],
-    "integrations": ["SMS gateway", "WhatsApp Business"],
+    "data_objects": [
+      "Case",
+      "Patient",
+      "Payer",
+      "Prior auth",
+      "Referral",
+      "Benefits investigation",
+      "Co-pay enrollment",
+      "Specialty pharmacy referral",
+      "HCP office"
+    ],
+    "integrations": [
+      "SMS gateway",
+      "WhatsApp Business"
+    ],
     "compliance": [
       "HIPAA: patient health information is minimum-necessary and scoped by role; HCP offices and pharmacies see only their own patients",
       "HIPAA authorization on file before any payer contact or patient outreach",
@@ -73,5 +137,5 @@
     "app_name_prefill": "Immunology Hub — Dermatology",
     "app_prompt_prefill": "A hub for our self-injectable dermatology biologic. About 300 prescriber offices send referrals by fax, e-referral or the HCP portal; reimbursement specialists run the benefits investigation and prior authorization, with appeals. Case managers enroll commercial patients in the co-pay card, screen the rest for free drug, and start a bridge supply when access is delayed. A supervisor signs off every specialty pharmacy triage across our two limited-distribution pharmacies, and patients get SMS and WhatsApp updates at each step."
   },
-  "changelog": "First version: referral intake, hub case lifecycle, benefits investigation, prior authorization, co-pay enrollment and specialty pharmacy triage on the Zango app spec v1."
+  "changelog": "Column formats the build knows (number, days), so the build checker passes."
 }

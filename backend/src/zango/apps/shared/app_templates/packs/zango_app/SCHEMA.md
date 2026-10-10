@@ -38,6 +38,26 @@ how deep an answer should go. `starter.yaml` is the smallest valid app.
   these, so make them specific and testable ("email the vendor contact the
   reason and a re-upload link"), never vague ("notify relevant people").
 
+### Writing YAML the build reads the same way
+
+The build skill re-reads the spec with its own checker and stops on anything
+ambiguous, so:
+
+- **Quote every prose value inside `{ }`** — any value with a comma, colon,
+  `?`, `#` or quotes: `computed: "Sum of line amounts, recalculated on save."`.
+  Unquoted, `, recalculated on save.` silently becomes a separate key.
+- **Modules must not link in a cycle.** If `a` has a link into module `b`,
+  nothing in `b` may link back into `a`; put entities that point at each other
+  in the same module.
+- `navigate` row actions go to a detail view, a page, a URL, or
+  `{ field: <url field> }` — nothing else.
+- `limit_choices` compares fields of the **linked** entity with literals or
+  `form.<field of this form>`; it cannot follow a path through `form.`.
+- `rows: { own: <path> }` is only for the role whose users log in as the
+  owning record (an `app_user` link); other roles use
+  `rows: { where: "<path>.<user link> == current_user" }`.
+- `default_sort` names a real field (or `-field`), never a label.
+
 ### Expressions
 
 Used in `condition`, `where`, `show_when`, `limit_choices`, `create_on`,
@@ -46,7 +66,7 @@ Used in `condition`, `where`, `show_when`, `limit_choices`, `create_on`,
 ```
 <path> == | != | > | >= | < | <= <value>
 <path> in [a, b]          <path> not_in [a, b]
-<path> is_set | is_empty | is_true | is_false
+<path> is_set | is_empty | is_true | is_false     (there is no is_not_set: use is_empty)
 status == <code>          has_tag <code>
 current_user.role == "<Role>"
 ```
@@ -68,7 +88,11 @@ condition:
 | `field.type`       | text, long_text, integer, decimal, money, percent, boolean, date, datetime, time, email, phone, url, choice, multi_choice, link, multi_link, file, image, json |
 | `entity.kind`      | hero (centre of a 360 page), transactional (own lifecycle and list page), child (only under a parent), master (reference data) |
 | access `actions`   | view, add, edit, delete, export, detail                                                |
-| `row_action.type`  | edit, form, confirm, navigate, download                                                |
+| `row_action.type`  | edit, form, confirm, navigate, download, delete                                        |
+| column `source`    | field, status, tags, computed, path                                                    |
+| column `format`    | money, percent, number, date, datetime, days (no `integer`/`decimal`: use `number`)    |
+| sidebar section `type` | fields, mini_table, custom, timeline, stats                                        |
+| banner `tone`      | info, warning, danger, success                                                         |
 | `page.type`        | crud, detail, custom                                                                   |
 | `tab.type`         | summary, related_table, timeline, fields, custom                                       |
 | colours            | gray, blue, green, amber, red, purple, teal, indigo, pink                              |
@@ -379,6 +403,14 @@ views; transitions and `editable_in` use statuses of their own workflow; form
 fields and `display` are fields of the entity; `choices: <code>` names a
 declared choice set; link fields have `to`; choice fields have `choices`;
 codes, names and keys are unique in their scope.
+
+Build checks (errors until fixed): the build skill's own checker runs with
+every validation and reports what the build would stop on — prose cut at an
+unquoted comma, unknown formats or expression operators, module link cycles,
+navigate targets and row scoping as described under "Writing YAML the build
+reads the same way". Its warnings are advice: transition conditions without a
+`condition_msg`, required fields missing from the create form, tabs a role
+cannot see.
 
 Completeness (warnings while drafting, errors at approval): `app.code` and
 `name`, at least one role with a menu, at least one page and module, and every

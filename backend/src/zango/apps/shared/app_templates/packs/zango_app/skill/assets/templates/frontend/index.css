@@ -1,0 +1,29 @@
+/* src/index.css for an App Studio app (replaces the scaffold's in Phase 6).
+ *
+ * @zango-core/crud 2.0.0 ships Tailwind class names, not a stylesheet: buttons are
+ * `bg-brand-500 text-base-white`, inputs `border-[var(--zango-border-color-default,…)]`.
+ * Without the @source line those utilities are never generated, so the Add button has no
+ * background and bordered controls fall back to a black `currentColor` border.
+ * The @theme names below only make Tailwind emit the classes; the real values come from
+ * src/zas/tokens.css (unlayered :root), which wins over Tailwind's theme layer.
+ */
+@import "tailwindcss";
+@source "../node_modules/@zango-core/crud/dist";
+
+@theme {
+  --color-brand-25: #f5f8ff; --color-brand-50: #eff4ff; --color-brand-100: #dbe7fe;
+  --color-brand-200: #bfd3fe; --color-brand-300: #93b4fd; --color-brand-400: #608cf9;
+  --color-brand-500: #2563eb; --color-brand-600: #1d4ed8; --color-brand-700: #1d40af;
+  --color-brand-800: #1e368a; --color-brand-900: #1e3070;
+  --color-base-white: #ffffff;
+  --color-base-black: #000000;
+  --color-error-500: #f04438;
+  --color-primary-color: #2563eb;
+  --color-primary-light: #eff4ff;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

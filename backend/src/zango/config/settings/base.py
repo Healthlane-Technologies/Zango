@@ -460,6 +460,10 @@ def setup_settings(settings, BASE_DIR):
         # port are read; the host is always the tenant's own domain. Deploys
         # that serve on https:443 set this to "https://localhost".
         AGENT_MODE_APP_BASE_URL=(str, "http://localhost:8000"),
+        # App Studio builds: where the skill's platform script reaches the
+        # App Panel API, and how many times failing checks go back to the agent.
+        AGENT_MODE_PLATFORM_URL=(str, "http://localhost:8000"),
+        AGENT_MODE_STUDIO_FIX_ROUNDS=(int, 2),
         AGENT_MODE_SNAPSHOT_RETENTION=(int, 5),
         AGENT_MODE_SNAPSHOT_MAX_BYTES=(int, 536870912),
     )
@@ -490,6 +494,8 @@ def setup_settings(settings, BASE_DIR):
     )
     settings.AGENT_MODE_CLAUDE_BIN = env("AGENT_MODE_CLAUDE_BIN")
     settings.AGENT_MODE_APP_BASE_URL = env("AGENT_MODE_APP_BASE_URL")
+    settings.AGENT_MODE_PLATFORM_URL = env("AGENT_MODE_PLATFORM_URL")
+    settings.AGENT_MODE_STUDIO_FIX_ROUNDS = env("AGENT_MODE_STUDIO_FIX_ROUNDS")
     settings.AGENT_MODE_SNAPSHOT_RETENTION = env("AGENT_MODE_SNAPSHOT_RETENTION")
     settings.AGENT_MODE_SNAPSHOT_MAX_BYTES = env("AGENT_MODE_SNAPSHOT_MAX_BYTES")
 

@@ -1,0 +1,52 @@
+"""Test data the generated API tests cannot invent (references/testing.md §Fixtures).
+Written by Claude in Phase 7 from .zas/test_plan.md "Fixture needs". Every hook is optional.
+
+    values(ctx, entity, role, params=None) -> dict    create-form values; explicit test values win over these
+    transition_values(ctx, entity, name, role) -> dict  transition-form values (e.g. a score a later condition checks)
+    before_transition(ctx, entity, name, uuid, role)    make a transition's condition true (upload + verify documents …)
+    record_for(ctx, entity, role) -> uuid | None        the hero a row-scoped role should open (its bound record)
+
+ctx (zas_test.api.Ctx): create(entity, role=None, values=None, params=None) -> uuid, run(entity, uuid, name, role=None,
+data=None) -> (ok, msg), record_in(entity, status) -> uuid, rows(role, entity, **params), record(entity, uuid, role),
+schema(role, entity), status_of(entity, uuid), path_to(entity, status), get/post(role, endpoint, …), sessions.
+"""
+import datetime
+import json
+
+from zas_test import auth
+
+STATE = {}  # cache: user pks, the record bound to the app_user login …
+
+
+def _users(ctx):
+    return {u["roles"][0]: u for u in json.load(open(f"{ctx.ws}/.zas/test_users.json"))["users"]}
+
+
+def _user_pk(ctx, role, entity, field, as_role):
+    """pk of the test <role> user in <entity>.<field>'s options, as <as_role> sees the form."""
+    key = (role, entity, field)
+    if key not in STATE:
+        prop = (ctx.schema(as_role, entity).get("properties") or {}).get(field) or {}
+        name = f"Test {role}"
+        STATE[key] = next((v for v, n in zip(prop.get("enum") or [], prop.get("enumNames") or []) if name in str(n)), None)
+    return STATE[key]
+
+
+def _relogin(ctx, role):
+    ctx.sessions[role] = auth.login(ctx.ws, role)  # bindings (app_objects) are read at login
+
+
+def values(ctx, entity, role, params=None):
+    return {}
+
+
+def transition_values(ctx, entity, name, role):
+    return {}
+
+
+def before_transition(ctx, entity, name, uuid, role):
+    pass
+
+
+def record_for(ctx, entity, role):
+    return None

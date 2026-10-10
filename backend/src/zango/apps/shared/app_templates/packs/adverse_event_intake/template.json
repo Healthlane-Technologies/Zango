@@ -1,7 +1,7 @@
 {
   "slug": "adverse-event-intake",
   "name": "Adverse Event Intake",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Compliance & Quality",
   "icon": "alert",
   "is_beta": false,
@@ -38,25 +38,69 @@
   "catalogue": {
     "description": "One intake desk for every safety report. Intake agents log adverse events and product complaints from calls, email, web forms and field reps against the four minimum criteria; the duplicate check runs before a PV associate accepts the case within the routing SLA; PV codes the events, assesses seriousness and chases follow-ups; QA checks each case against its source documents before it is closed and exported to the safety database.",
     "packages": [
-      { "name": "workflow", "description": "Case, follow-up and investigation lifecycles with role-gated steps and SLA flags" },
-      { "name": "forms", "description": "Report intake, event coding, follow-up and QA forms" },
-      { "name": "communication", "description": "PV inbox alerts, reporter follow-up emails and SLA warnings" },
-      { "name": "documents", "description": "Source documents kept with every case for the retention period" },
-      { "name": "reports", "description": "Cases by channel and product, SLA compliance and overdue follow-ups" }
+      {
+        "name": "workflow",
+        "description": "Case, follow-up and investigation lifecycles with role-gated steps and SLA flags"
+      },
+      {
+        "name": "forms",
+        "description": "Report intake, event coding, follow-up and QA forms"
+      },
+      {
+        "name": "communication",
+        "description": "PV inbox alerts, reporter follow-up emails and SLA warnings"
+      },
+      {
+        "name": "documents",
+        "description": "Source documents kept with every case for the retention period"
+      },
+      {
+        "name": "reports",
+        "description": "Cases by channel and product, SLA compliance and overdue follow-ups"
+      }
     ],
     "roles": [
-      { "name": "Intake agent", "description": "Logs reports from every channel, completes the minimum criteria and submits them to PV" },
-      { "name": "PV associate", "description": "Clears duplicates, triages seriousness, codes events and requests follow-ups within the SLA" },
-      { "name": "QA reviewer", "description": "Checks cases against source documents before export and investigates quality complaints" }
+      {
+        "name": "Intake agent",
+        "description": "Logs reports from every channel, completes the minimum criteria and submits them to PV"
+      },
+      {
+        "name": "PV associate",
+        "description": "Clears duplicates, triages seriousness, codes events and requests follow-ups within the SLA"
+      },
+      {
+        "name": "QA reviewer",
+        "description": "Checks cases against source documents before export and investigates quality complaints"
+      }
     ],
     "workflows": [
-      { "name": "Multi-channel intake", "description": "Calls, email, web forms and field reps captured into one case record with its source documents" },
-      { "name": "Duplicate check", "description": "Matching on product, patient and event flags likely duplicates before PV accepts a case" },
-      { "name": "PV routing with SLA", "description": "A 24-hour routing clock with at-risk and breached flags, then the 15 / 90-day regulatory due date" },
-      { "name": "Follow-up requests", "description": "Questions to the reporter with due dates, up to three attempts and recorded responses" }
+      {
+        "name": "Multi-channel intake",
+        "description": "Calls, email, web forms and field reps captured into one case record with its source documents"
+      },
+      {
+        "name": "Duplicate check",
+        "description": "Matching on product, patient and event flags likely duplicates before PV accepts a case"
+      },
+      {
+        "name": "PV routing with SLA",
+        "description": "A 24-hour routing clock with at-risk and breached flags, then the 15 / 90-day regulatory due date"
+      },
+      {
+        "name": "Follow-up requests",
+        "description": "Questions to the reporter with due dates, up to three attempts and recorded responses"
+      }
     ],
-    "data_objects": ["Case", "Reporter", "Product", "Event", "Follow-up"],
-    "integrations": ["Safety database export"],
+    "data_objects": [
+      "Case",
+      "Reporter",
+      "Product",
+      "Event",
+      "Follow-up"
+    ],
+    "integrations": [
+      "Safety database export"
+    ],
     "compliance": [
       "PV SLA timers: 24 hours to route a case, 15 days for serious and 90 days for non-serious reports",
       "Four minimum criteria check (identifiable patient, reporter, suspect product and event) before a case is valid",
@@ -68,5 +112,5 @@
     "app_name_prefill": "AE Intake",
     "app_prompt_prefill": "Adverse event intake that captures AEs and complaints from calls, email and field reps, checks duplicates, routes to PV within the SLA and tracks follow-ups."
   },
-  "changelog": "First version: multi-channel case intake, four minimum criteria and duplicate checks, PV routing SLA, MedDRA-coded events, follow-ups and QA review on the Zango app spec v1."
+  "changelog": "Quoted prose values cut at commas; Field Rep row scoping via where instead of own, so the build checker passes."
 }

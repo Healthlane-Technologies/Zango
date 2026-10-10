@@ -315,7 +315,7 @@ modules:
             - clinic:         { label: Clinic }
             - territory:      { label: Territory, display: name, filterable: true }
             - rep:            { label: Rep, display: full_name, filterable: true, roles: [Sample Ops, Compliance Reviewer] }
-            - units_this_qtr: { source: computed, label: Units this quarter, format: integer, shows: Sum of delivered sample_request quantity for this HCP in the current quarter. }
+            - units_this_qtr: { source: computed, label: Units this quarter, format: number, shows: Sum of delivered sample_request quantity for this HCP in the current quarter. }
             - status:         { source: status, label: Status, filterable: true }
             - tags:           { source: tags, label: Tags }
           default_sort: name
@@ -623,6 +623,7 @@ modules:
           - batch:          { type: link, to: sample_batch, required: true, display: batch_no, limit_choices: status == released }
           - mode:           { type: choice, required: true, choices: delivery_mode }
           - courier_awb:    { type: text, label: Courier AWB }
+          - tracking_url:   { type: url, label: Tracking link, readonly: true, computed: "The courier's tracking page for courier_awb, from the courier API." }
           - dispatched_on:  { type: date, required: true, default: today }
           - delivered_on:   { type: date, readonly: true }
           - ack_method:     { type: choice, choices: ack_method, readonly: true }
@@ -684,7 +685,7 @@ modules:
           row_actions:
             - { key: resend_otp, label: Send OTP, type: confirm, confirm: "Send a delivery OTP to the HCP's mobile?", roles: [Medical Rep], show_when: status == in_transit,
                 on_done: SMS a 6-digit OTP valid for 10 minutes to the HCP's registered mobile. }
-            - { key: track, label: Track Shipment, type: navigate, to: { text: Courier tracking page for courier_awb }, show_when: mode == courier }
+            - { key: track, label: Track Shipment, type: navigate, to: { field: tracking_url }, show_when: mode == courier }
             - { key: receipt, label: Download Receipt, type: download, show_when: status == acknowledged, text: "Delivery receipt with batch, units, acknowledgement method and signature." }
         form:
           create: { roles: [Sample Ops], fields: [sample_request, batch, mode, courier_awb, dispatched_on] }

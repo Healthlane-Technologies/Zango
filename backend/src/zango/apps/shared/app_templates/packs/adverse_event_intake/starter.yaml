@@ -220,7 +220,7 @@ modules:
           - event_summary:     { type: long_text, label: What happened, required: true, help: The reporter's own words. }
           - onset_date:        { type: date, label: Event onset }
           - seriousness:       { type: choice, choices: seriousness, default: unknown }
-          - minimum_criteria:  { type: boolean, label: Four criteria met, readonly: true, computed: True when an identifiable patient, an identifiable reporter, a suspect product and an adverse event are all present. }
+          - minimum_criteria:  { type: boolean, label: Four criteria met, readonly: true, computed: "True when an identifiable patient, an identifiable reporter, a suspect product and an adverse event are all present." }
           - assigned_to:       { type: link, to: app_user, label: PV associate }
           - sla_hours_left:    { type: integer, label: SLA hours left, readonly: true, min: -6, max: 24, computed: Hours until received_at + 24 hours (the routing SLA); negative once breached; frozen when PV accepts the case. }
           - duplicate_of:      { type: link, to: case, label: Duplicate of, display: case_ref }
@@ -231,7 +231,7 @@ modules:
           duplicate_check:
             scope: { where: "status not_in [duplicate, non_case]" }
             rules:
-              - { match: [product, patient_initials, onset_date], compare: exact, on_match: warn, message: An open case has the same product, patient initials and onset date. }
+              - { match: [product, patient_initials, onset_date], compare: exact, on_match: warn, message: "An open case has the same product, patient initials and onset date." }
               - { match: [reporter, product, event_summary], compare: fuzzy, threshold: 0.85, on_match: warn, message: This reporter already reported a similar event for this product. }
         access:
           Intake Agent: { actions: [view, add, edit, detail], rows: created_by_me }
@@ -265,7 +265,7 @@ modules:
                 on_done: "Set assigned_to to the current user, stop the routing SLA clock and start the regulatory clock: 15 days for serious, 90 days for non-serious." }
             - { name: request_info, label: Request Follow-up, from: in_assessment, to: awaiting_info, roles: [PV Associate],
                 form: [ { questions: { type: long_text, label: Questions for the reporter, required: true } }, { due_date: { type: date, label: Reply by, required: true } } ],
-                on_done: Create a follow-up for the case's reporter with these questions and due date, and email or call the reporter. }
+                on_done: "Create a follow-up for the case's reporter with these questions and due date, and email or call the reporter." }
             - { name: info_received, label: Info Received, from: awaiting_info, to: in_assessment, roles: [PV Associate, Intake Agent] }
             - { name: send_to_qa, label: Send to QA, from: in_assessment, to: qa_review, roles: [PV Associate], primary: true,
                 condition: { text: At least one event is coded and every source document is attached. },
@@ -422,7 +422,7 @@ modules:
             - { name: mark_overdue, label: Mark Overdue, from: open, to: overdue, trigger: system, text: Nightly when due_date < today. }
             - { name: retry, label: Send Again, from: overdue, to: open, roles: [PV Associate],
                 condition: attempt < 3, condition_msg: Three attempts have been made already.,
-                on_done: Increase attempt by one, push due_date by 7 days and resend the request. }
+                on_done: "Increase attempt by one, push due_date by 7 days and resend the request." }
             - { name: close_no_response, label: Close — No Response, from: overdue, to: no_response, roles: [PV Associate],
                 on_done: Note on the case that follow-up was attempted and closed without a response. }
         table:

@@ -324,7 +324,9 @@ def new_draft_from(version, new_version: str):
     draft.workspace_size = version.workspace_size
     draft.save()
     for row in version.files.all():
-        AppTemplateFile(version=draft, path=row.path, content=row.content).save()
+        AppTemplateFile(
+            version=draft, path=row.path, content=row.content, encoding=row.encoding
+        ).save()
     return draft
 
 

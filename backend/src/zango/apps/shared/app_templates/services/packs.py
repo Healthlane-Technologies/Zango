@@ -45,7 +45,7 @@ from ..models import (
     VersionStatus,
 )
 from .catalogue import bump_revision
-from .paths import content_sha, normalise_pack_path, sha256_text
+from .paths import content_sha, normalise_pack_path, sha256_file, sha256_text
 
 
 MANIFEST = "template.json"
@@ -97,26 +97,46 @@ def _read_source(source) -> dict:
                 prefix = tops.pop() + "/"
             for name in names:
                 rel = name[len(prefix) :]
-                if rel.startswith("__MACOSX/") or rel.split("/")[-1].startswith("."):
+                if _skipped(rel):
                     continue
-                files[rel] = zf.read(name).decode("utf-8")
+                files[rel] = _text_or_bytes(zf.read(name))
         return files
 
     root = Path(source)
     if not root.is_dir():
         raise PackError(f"{source} is not a directory or a .zip file.")
     for path in sorted(root.rglob("*")):
-        if path.is_file() and not any(
-            p.startswith(".") for p in path.relative_to(root).parts
-        ):
-            files[path.relative_to(root).as_posix()] = path.read_text(encoding="utf-8")
+        rel = path.relative_to(root).as_posix()
+        if path.is_file() and not _skipped(rel):
+            files[rel] = _text_or_bytes(path.read_bytes())
     return files
 
 
+def _skipped(rel: str) -> bool:
+    """Files a pack never carries: OS litter, hidden files, Python caches."""
+    parts = rel.split("/")
+    return (
+        rel.startswith("__MACOSX/")
+        or any(p.startswith(".") or p == "__pycache__" for p in parts)
+        or rel.endswith((".pyc", ".pyo"))
+    )
+
+
+def _text_or_bytes(data: bytes):
+    """A file's text, or its bytes when it is not UTF-8 (an image, say)."""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+
+
 def read_pack(source) -> Pack:
-    files = _read_source(source)
-    if MANIFEST not in files:
+    raw_files = _read_source(source)
+    if MANIFEST not in raw_files:
         raise PackError(f"The pack has no {MANIFEST}.")
+    # Only the build skill may carry binary files; everything the manifest
+    # names is read as text.
+    files = _TextOnly(raw_files)
     try:
         manifest = json.loads(files[MANIFEST])
     except ValueError as exc:
@@ -193,18 +213,28 @@ def read_pack(source) -> Pack:
     skill_dir = str(manifest.get("skill_dir") or "").strip().strip("/")
     if skill_dir:
         prefix = skill_dir + "/"
-        for rel, text in files.items():
+        for rel, value in raw_files.items():
             if rel.startswith(prefix):
-                skill_files[normalise_pack_path(rel[len(prefix) :])] = text
+                skill_files[normalise_pack_path(rel[len(prefix) :])] = value
     if len(skill_files) > MAX_VERSION_FILES:
         raise PackError(f"The build skill has more than {MAX_VERSION_FILES} files.")
     total = sum(
-        len(t.encode("utf-8"))
+        len(t if isinstance(t, (bytes, bytearray)) else t.encode("utf-8"))
         for t in list(documents.values()) + list(skill_files.values())
     )
     if total > MAX_VERSION_BYTES:
         raise PackError(f"The pack is larger than {MAX_VERSION_BYTES} bytes.")
     return Pack(manifest=manifest, documents=documents, skill_files=skill_files, references=references)
+
+
+class _TextOnly(dict):
+    """The pack's files, refusing a binary one wherever text is expected."""
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        if isinstance(value, (bytes, bytearray)):
+            raise PackError(f"{key} is not a UTF-8 text file.")
+        return value
 
 
 def _json_doc(pack: Pack, key: str, default):
@@ -497,7 +527,7 @@ def lint(version: AppTemplateVersion, files=None) -> list:
         )
 
     if files is None:
-        files = {row.path: row.content for row in version.files.all()}
+        files = {row.path: row.value for row in version.files.all()}
     if version.build_skill_name:
         skill_md = files.get("SKILL.md")
         if skill_md is None:
@@ -523,7 +553,8 @@ def lint(version: AppTemplateVersion, files=None) -> list:
                 "Skill files are present but build_skill_name is not set.",
             )
         )
-    else:
+    elif not (generic is not None and generic.build_skill_name):
+        # (A template on the generic spec is built with the generic template's skill.)
         issues.append(_issue("warning", MANIFEST, "The template has no build skill."))
     return issues
 
@@ -571,7 +602,7 @@ def _pack_sha(
     probe = AppTemplateVersion(template=template, version=version, **fields)
     return content_sha(
         probe,
-        [(p, sha256_text(t)) for p, t in skill_files.items()],
+        [(p, sha256_file(t)) for p, t in skill_files.items()],
         include_workspace=False,
     )
 
@@ -646,8 +677,8 @@ def import_pack(
     draft.save()
 
     draft.files.all().delete()
-    for path, text in pack.skill_files.items():
-        AppTemplateFile(version=draft, path=path, content=text).save()
+    for path, value in pack.skill_files.items():
+        AppTemplateFile.for_value(draft, path, value).save()
 
     if publish_now:
         draft = publish(
@@ -711,5 +742,5 @@ def export_pack(version: AppTemplateVersion) -> bytes:
         ):
             zf.writestr(prefix + name, text or "")
         for row in version.files.all():
-            zf.writestr(f"{prefix}skill/{row.path}", row.content)
+            zf.writestr(f"{prefix}skill/{row.path}", row.value)
     return buf.getvalue()

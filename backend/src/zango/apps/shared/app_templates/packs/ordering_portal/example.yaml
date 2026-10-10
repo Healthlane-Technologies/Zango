@@ -462,7 +462,7 @@ modules:
           - delivery_slot:     { type: choice, choices: delivery_slot }
           - expected_delivery: { type: date }
           - po_number:         { type: text, label: Clinic PO no }
-          - total_amount:      { type: money, readonly: true, computed: Sum of order_line.amount, recalculated on every line change. }
+          - total_amount:      { type: money, readonly: true, computed: "Sum of order_line.amount, recalculated on every line change." }
           - override_reason:   { type: long_text, readonly: true }
           - notes:             { type: long_text, label: Delivery instructions }
         validation:
@@ -801,7 +801,7 @@ modules:
               show_when: status == issued
               confirm: Pay this invoice through the payment gateway?
               on_done: Open the gateway checkout; the callback marks the invoice paid with the gateway reference.
-            - { key: download, label: Download PDF, type: download, text: The tax invoice PDF with lines, batches, GST and payment details. }
+            - { key: download, label: Download PDF, type: download, text: "The tax invoice PDF with lines, batches, GST and payment details." }
         form:
           create: { roles: [Customer Service], fields: [order, invoice_date, amount] }
 

@@ -1,7 +1,7 @@
 {
   "slug": "medical-information-requests",
   "name": "Medical Information Requests",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Medical Affairs",
   "icon": "book",
   "is_beta": false,
@@ -38,25 +38,71 @@
   "catalogue": {
     "description": "A medical information desk from question to closure: HCPs and patients ask through a portal, phone, email or their MSL, MI specialists triage each inquiry and answer it from an approved standard response or a custom, referenced reply, a medical reviewer approves custom answers before they go out, and any adverse event mentioned is captured and forwarded to pharmacovigilance. The app is described in the Zango app spec and previewed live as a clickable app with demo data while the requirement is shaped.",
     "packages": [
-      { "name": "workflow", "description": "Inquiry, response, standard response and AE lifecycles with role-gated approvals" },
-      { "name": "crm", "description": "Reporter master for HCPs, pharmacists and patients, synced with the company CRM" },
-      { "name": "communication", "description": "Acknowledgements, clarification requests, response delivery and PV notifications" },
-      { "name": "documents", "description": "Standard response letters, enclosures and generated response PDFs" },
-      { "name": "reports", "description": "SLA, standard-response use and AE forwarding metrics" }
+      {
+        "name": "workflow",
+        "description": "Inquiry, response, standard response and AE lifecycles with role-gated approvals"
+      },
+      {
+        "name": "crm",
+        "description": "Reporter master for HCPs, pharmacists and patients, synced with the company CRM"
+      },
+      {
+        "name": "communication",
+        "description": "Acknowledgements, clarification requests, response delivery and PV notifications"
+      },
+      {
+        "name": "documents",
+        "description": "Standard response letters, enclosures and generated response PDFs"
+      },
+      {
+        "name": "reports",
+        "description": "SLA, standard-response use and AE forwarding metrics"
+      }
     ],
     "roles": [
-      { "name": "MI specialist", "description": "Logs and triages inquiries, matches standard responses, drafts custom answers and captures adverse events" },
-      { "name": "HCP", "description": "Asks questions through the portal and reads the answers; sees only their own inquiries" },
-      { "name": "Medical reviewer", "description": "Approves custom responses and the standard response library" }
+      {
+        "name": "MI specialist",
+        "description": "Logs and triages inquiries, matches standard responses, drafts custom answers and captures adverse events"
+      },
+      {
+        "name": "HCP",
+        "description": "Asks questions through the portal and reads the answers; sees only their own inquiries"
+      },
+      {
+        "name": "Medical reviewer",
+        "description": "Approves custom responses and the standard response library"
+      }
     ],
     "workflows": [
-      { "name": "Inquiry intake", "description": "Logging, triage, priority-based due date, clarification with the reporter and closure" },
-      { "name": "Standard response match", "description": "Approved standard responses offered by product and category, sent without further review" },
-      { "name": "Response approval", "description": "Custom and adapted answers reviewed and approved by a second, medical person before sending" },
-      { "name": "AE capture", "description": "Adverse events recorded against the inquiry and forwarded to PV within one business day" }
+      {
+        "name": "Inquiry intake",
+        "description": "Logging, triage, priority-based due date, clarification with the reporter and closure"
+      },
+      {
+        "name": "Standard response match",
+        "description": "Approved standard responses offered by product and category, sent without further review"
+      },
+      {
+        "name": "Response approval",
+        "description": "Custom and adapted answers reviewed and approved by a second, medical person before sending"
+      },
+      {
+        "name": "AE capture",
+        "description": "Adverse events recorded against the inquiry and forwarded to PV within one business day"
+      }
     ],
-    "data_objects": ["Inquiry", "Response", "Standard response", "Reporter", "Product", "AE report"],
-    "integrations": ["CRM sync", "Literature database"],
+    "data_objects": [
+      "Inquiry",
+      "Response",
+      "Standard response",
+      "Reporter",
+      "Product",
+      "AE report"
+    ],
+    "integrations": [
+      "CRM sync",
+      "Literature database"
+    ],
     "compliance": [
       "Maker-checker medical review of every custom response",
       "Off-label answers only to unsolicited HCP questions, with balanced referenced content",
@@ -68,5 +114,5 @@
     "app_name_prefill": "MedInfo Desk — Oncology & Diabetes",
     "app_prompt_prefill": "Medical information desk for our oncology and diabetes portfolio in India. HCPs ask through a portal, the toll-free line, the MI mailbox or their MSL; MI specialists answer from an approved standard response library or draft a custom answer with literature references, and a medical reviewer approves every custom answer before it goes out. Any adverse event or product complaint mentioned is captured and forwarded to pharmacovigilance within one business day, and closed inquiries are synced to our CRM."
   },
-  "changelog": "First version: medical information requests on the Zango app spec v1, with inquiry intake, standard response matching, medical review of custom responses and AE capture."
+  "changelog": "Quoted prose values; reporter sort on full_name; column format number; simpler standard-response filter, so the build checker passes."
 }

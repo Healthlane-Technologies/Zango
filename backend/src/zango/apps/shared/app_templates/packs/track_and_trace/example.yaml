@@ -297,8 +297,8 @@ modules:
           edit:   { same_as: create }
 
   - code: serialization
-    name: Batches and Serial Numbers
-    description: Batches packed on a line, the serial ranges requested for them and the serial on every saleable unit.
+    name: Batches, Serials and Aggregation
+    description: Batches packed on a line, the serial ranges requested for them, the serial on every saleable unit and the case and pallet hierarchy they are packed into.
     entities:
       - code: batch
         name: Batch
@@ -524,11 +524,6 @@ modules:
           row_click: drawer
           row_actions:
             - { key: history, label: Event History, type: download, text: "CSV of every event that covered this serial, its case or its pallet, oldest first." }
-
-  - code: supply_chain
-    name: Aggregation and Movement Events
-    description: Case and pallet hierarchy, every EPCIS event between locations and pack verifications.
-    entities:
       - code: aggregation
         name: Aggregation
         plural: Cases & Pallets
@@ -625,6 +620,10 @@ modules:
         form:
           create: { roles: [Plant Operator], fields: [sscc, level, batch, parent, unit_count, current_location, packed_at] }
 
+  - code: supply_chain
+    name: Movement Events
+    description: Every EPCIS event between locations and pack verifications.
+    entities:
       - code: movement_event
         name: Movement Event
         plural: Movement Events
