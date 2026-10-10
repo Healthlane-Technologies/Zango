@@ -127,11 +127,12 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
             if (generic_dir / name).is_file():
                 files[key] = str(generic_dir / name)
                 borrowed[attr] = getattr(generic, attr)
-    skill_borrowed = (
-        generic is not None and not version.build_skill_name and generic.build_skill_name
-    )
+    from .generic import build_skill_source
+
+    skill_source = build_skill_source(version)
+    skill_borrowed = skill_source is not None
     if skill_borrowed:
-        borrowed["build_skill_name"] = generic.build_skill_name
+        borrowed["build_skill_name"] = skill_source.build_skill_name
     return TemplateView(
         slug=template.slug,
         name=template.name,
@@ -165,8 +166,8 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         starter_yaml=version.starter_yaml,
         example_yaml=version.example_yaml,
         build_skill_name=version.build_skill_name or borrowed.get("build_skill_name", ""),
-        skill_plugin_slug=generic.template.slug if skill_borrowed else "",
-        skill_plugin_dir=str(materialise(generic)) if skill_borrowed else "",
+        skill_plugin_slug=skill_source.template.slug if skill_borrowed else "",
+        skill_plugin_dir=str(materialise(skill_source)) if skill_borrowed else "",
         plugin_dir=str(plugin_dir),
         references=tuple(
             {
@@ -179,7 +180,9 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
             for r in version.references or []
         ),
         borrowed_from=(
-            f"{generic.template.slug}@{generic.version}" if borrowed else ""
+            f"{(generic or skill_source).template.slug}@{(generic or skill_source).version}"
+            if borrowed
+            else ""
         ),
     )
 
@@ -206,9 +209,9 @@ def _view_for(version: AppTemplateVersion) -> TemplateView:
     key = (version.object_uuid, version.content_sha)
     if version.spec_dialect:
         # What it borrows follows the generic template's current version.
-        from .generic import fallback_for
+        from .generic import generic_version
 
-        generic = fallback_for(version)
+        generic = generic_version()
         key += (generic.content_sha if generic is not None else "",)
     view = _views.get(key)
     if view is None:

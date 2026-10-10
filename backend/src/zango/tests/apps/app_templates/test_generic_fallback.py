@@ -300,6 +300,30 @@ class StudioSkillTests(AppTemplatesTestBase):
         self.assertEqual(build.plugin_dir, view.plugin_dir)
 
 
+class PinnedGenericTests(StudioSkillTests):
+    def test_an_app_pinned_to_an_old_generic_version_builds_with_the_current_skill(self):
+        from zango.apps.shared.app_templates.models import AppTemplateVersion
+
+        # An older generic version, from before the template had a build skill.
+        old = AppTemplateVersion.objects.create(
+            template=self.generic.template,
+            version="0.9.0",
+            spec_format="yaml",
+            spec_root="app_spec",
+            spec_dialect=GENERIC_DIALECT,
+            json_schema=self.generic.json_schema,
+            starter_yaml=self.generic.starter_yaml,
+        )
+        catalogue.clear_caches()
+        view = catalogue.get_template(GENERIC_SLUG, version_uuid=str(old.object_uuid))
+        self.assertEqual(view.version, "0.9.0")
+        self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
+        self.assertTrue((Path(view.build_plugin_dir) / "skills" / "zango-app-studio" / "SKILL.md").is_file())
+
+        current = catalogue.get_template(GENERIC_SLUG)
+        self.assertEqual(current.build_plugin_dir, current.plugin_dir)  # its own
+
+
 class BuildCheckTests(StudioSkillTests):
     def test_the_build_checker_findings_become_issues(self):
         from zango.apps.shared.app_templates.services.spec import yamlio

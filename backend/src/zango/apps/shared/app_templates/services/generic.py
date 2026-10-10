@@ -55,6 +55,22 @@ def borrows(version) -> bool:
     )
 
 
+def build_skill_source(version):
+    """The generic version whose build skill ``version`` is built with, or None.
+
+    Any version on the generic spec without a build skill of its own is built
+    with the *current* generic template's skill — including older versions
+    of the generic template itself, which an app may be pinned to: the spec
+    they hold is the same language, and the skill is how it gets built.
+    """
+    if version.spec_dialect != GENERIC_DIALECT or version.build_skill_name:
+        return None
+    generic = generic_version()
+    if generic is None or generic.pk == version.pk or not generic.build_skill_name:
+        return None
+    return generic
+
+
 def fallback_for(version):
     """The generic version ``version`` borrows from, or None."""
     return generic_version() if borrows(version) else None
