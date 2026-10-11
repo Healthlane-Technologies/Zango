@@ -316,6 +316,73 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 .toast p{margin:3px 0 0;color:#D0D5DD;font-size:12.5px}
 .toast .od{margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#BDB4FE;line-height:1.45}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* ── list views (kanban · cards · calendar · timeline) ── */
+.z-vsw{display:inline-flex;border:1px solid #D0D5DD;border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.z-vsw button{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;font-size:12.5px;font-weight:600;color:#475467;background:#fff;border-right:1px solid #EAECF0}
+.z-vsw button:last-child{border-right:0}.z-vsw button .lucide{width:15px;height:15px}
+.z-vsw button.on{background:var(--b50);color:var(--b600)}
+.kb{display:flex;gap:12px;padding:14px;overflow-x:auto;align-items:flex-start;min-height:340px}
+.kb-col{flex:0 0 272px;background:#F9FAFB;border:1px solid #EAECF0;border-radius:12px;display:flex;flex-direction:column;max-height:640px;transition:background .12s,opacity .12s,box-shadow .12s}
+.kb-h{display:flex;align-items:center;gap:8px;padding:10px 12px 8px;font-size:12.5px;font-weight:650;color:#344054}
+.kb-h .dot{width:8px;height:8px;border-radius:50%}.kb-h .n{margin-left:auto;font-size:11.5px;font-weight:600;color:#667085;background:#fff;border:1px solid #EAECF0;border-radius:999px;padding:0 7px;height:20px;display:inline-flex;align-items:center}
+.kb-b{padding:4px 8px 10px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:60px}
+.kb-card{background:#fff;border:1px solid #EAECF0;border-radius:10px;padding:10px 11px;box-shadow:0 1px 2px rgba(16,24,40,.04);cursor:pointer;transition:box-shadow .12s,transform .12s}
+.kb-card:hover{box-shadow:0 4px 10px -2px rgba(16,24,40,.08);border-color:#D0D5DD}
+.kb-card[draggable=true]{cursor:grab}.kb-card.drag{opacity:.45;transform:rotate(1deg)}
+.kb-card b{display:block;font-size:13px;font-weight:600;color:#101828;line-height:1.35}
+.kb-card .sub{font-size:12px;color:#667085;margin-top:2px}
+.kb-card .fl{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:12px;color:#475467}
+.kb-card .fl span{display:flex;gap:6px}.kb-card .fl em{font-style:normal;color:#98A2B3;min-width:70px}
+.kb-card .bd{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.kb-empty{font-size:12px;color:#98A2B3;text-align:center;padding:14px 0;border:1px dashed #EAECF0;border-radius:8px}
+.kb.dragging .kb-col.k-no{opacity:.45}
+.kb.dragging .kb-col.k-ok{background:var(--b50);border-color:var(--b100);box-shadow:inset 0 0 0 1px var(--b100)}
+.kb.dragging .kb-col.k-ok.over{box-shadow:inset 0 0 0 2px var(--brand)}
+.vc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:14px}
+.vc-card{border:1px solid #EAECF0;border-radius:12px;background:#fff;overflow:hidden;cursor:pointer;transition:box-shadow .12s}
+.vc-card:hover{box-shadow:0 6px 16px -4px rgba(16,24,40,.1)}
+.vc-img{height:96px;display:grid;place-items:center;color:#fff;font-weight:650;font-size:22px;letter-spacing:.02em}
+.vc-in{padding:11px 12px 12px}.vc-in b{display:block;font-size:13.5px;color:#101828}.vc-in .sub{font-size:12px;color:#667085;margin-top:2px}
+.vc-in .fl{display:flex;flex-direction:column;gap:3px;margin-top:9px;font-size:12px;color:#475467}.vc-in .fl span{display:flex;gap:6px}.vc-in .fl em{font-style:normal;color:#98A2B3;min-width:72px}
+.vc-in .bd{margin-top:9px}
+.cal{display:flex;gap:14px;padding:14px;align-items:flex-start}
+.cal-m{flex:1;min-width:0}
+.cal-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}.cal-h h4{margin:0 6px 0 0;font-size:15px;font-weight:650;color:#101828;min-width:150px}
+.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #EAECF0;border-left:1px solid #EAECF0;border-radius:10px;overflow:hidden}
+.cal-g .dw{font-size:11px;font-weight:650;color:#667085;text-transform:uppercase;letter-spacing:.05em;padding:7px 8px;border-right:1px solid #EAECF0;border-bottom:1px solid #EAECF0;background:#F9FAFB}
+.cal-d{min-height:96px;padding:5px 6px;border-right:1px solid #EAECF0;border-bottom:1px solid #EAECF0;display:flex;flex-direction:column;gap:3px;background:#fff}
+.cal-d.out{background:#FCFCFD}.cal-d.out .dn{color:#D0D5DD}
+.cal-d .dn{font-size:11.5px;font-weight:600;color:#475467}
+.cal-d.today .dn{color:#fff;background:var(--brand);border-radius:999px;width:20px;height:20px;display:inline-grid;place-items:center}
+.cal-e{font-size:11.5px;line-height:1.3;padding:2px 6px;border-radius:5px;border:1px solid;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cal-more{font-size:11px;font-weight:600;color:var(--b600);cursor:pointer;padding-left:4px}
+.cal-side{flex:0 0 220px;border:1px solid #EAECF0;border-radius:10px;padding:10px 12px;background:#F9FAFB}
+.cal-side h5{margin:0 0 6px;font-size:12px;font-weight:650;color:#475467}.cal-side .it{font-size:12.5px;color:#344054;padding:5px 0;border-top:1px solid #EAECF0;cursor:pointer}.cal-side .it:hover{color:var(--brand)}
+.vt{padding:6px 18px 16px}
+.vt-lane{margin-top:12px}.vt-lane>h4{margin:0 0 4px;font-size:12.5px;font-weight:650;color:#344054;display:flex;align-items:center;gap:8px}
+.vt-m{font-size:11px;font-weight:650;color:#98A2B3;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px 20px}
+.vt-i{position:relative;padding:6px 0 10px 20px;border-left:2px solid #EAECF0;margin-left:5px;cursor:pointer}
+.vt-i::before{content:'';position:absolute;left:-6px;top:10px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--brand)}
+.vt-i .dt{font-size:11.5px;color:#667085}.vt-i b{display:block;font-size:13px;color:#101828;font-weight:600;margin-top:1px}
+.vt-i .row2{display:flex;gap:8px;align-items:center;margin-top:4px;font-size:12px;color:#475467;flex-wrap:wrap}
+.vt-i:hover b{color:var(--brand)}
+/* ── agent-written preview components ── */
+.pv-host{min-height:40px}
+.pv-cols{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding:2px 0 6px}
+.pv-col{flex:0 0 250px;background:#F9FAFB;border:1px solid #EAECF0;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.pv-col>h4,.pv-col>h3{margin:0 0 2px;font-size:12.5px;font-weight:650;color:#344054}
+.pv-card{background:#fff;border:1px solid #EAECF0;border-radius:10px;padding:10px 11px;font-size:13px;color:#101828;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:3px}
+.pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.pv-muted{color:#667085;font-size:12px}
+.pv-badge{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--b50);color:var(--b600);border:1px solid var(--b100);width:fit-content}
+.pv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px}
+.pv-kpi{background:#fff;border:1px solid #EAECF0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.pv-kpi span{display:block;font-size:12px;color:#667085}.pv-kpi b{display:block;font-size:22px;font-weight:650;color:#101828;margin-top:2px}
+.pv-bar{height:8px;border-radius:999px;background:#F2F4F7;overflow:hidden}.pv-bar>i,.pv-bar>span{display:block;height:100%;background:var(--brand);border-radius:999px}
+[data-go]{cursor:pointer}
+.pv-err{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid #FECDCA;background:#FEF3F2;color:#B42318;border-radius:10px;font-size:12.5px;line-height:1.5}
+.pv-err b{display:block;font-weight:650}.pv-err code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#912018;white-space:pre-wrap;word-break:break-word}
+.pv-req{margin-top:12px}.pv-req .d-cust{background:#FCFCFD}
 </style>
 </head>
 <body>
@@ -1455,7 +1522,7 @@ const avColor = s => AVC[hash(s) % AVC.length];
 const initials = s => { const p = String(s || '?').trim().split(/\s+/); return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase(); };
 
 /* ═════════════════════════ state ═════════════════════════ */
-const S = { text: '', M: null, parseErr: null, issues: [], role: null, route: null, db: null, audit: [], users: {}, me: {}, seq: {}, ui: { tables: {}, drawer: null }, frame: 'full', builtFor: null };
+const S = { text: '', M: null, parseErr: null, issues: [], role: null, route: null, db: null, audit: [], users: {}, me: {}, seq: {}, ui: { tables: {}, drawer: null }, frame: 'full', builtFor: null, views: {} };
 let MODAL = null;
 
 /* ═════════════════════════ spec normalisation ═════════════════════════ */
@@ -1511,13 +1578,19 @@ function normEntity(e, m, sets){
   E.validation = e.validation || {};
   return E;
 }
+const VIEW_TYPES = { table: 'table', kanban: 'kanban', cards: 'layout-grid', calendar: 'calendar-days', timeline: 'git-commit-vertical' };
+const VIEW_LABEL = { table: 'Table', kanban: 'Board', cards: 'Cards', calendar: 'Calendar', timeline: 'Timeline' };
+function normViews(v){
+  return arr(v).map(x => typeof x === 'string' ? { type: x } : isObj(x) ? { ...x, type: x.type || 'table' } : null).filter(Boolean)
+    .map(x => ({ ...x, card: isObj(x.card) ? { ...x.card, fields: arr(x.card.fields) } : x.type === 'cards' || x.type === 'kanban' ? { fields: [] } : x.card, columns: x.columns ? arr(x.columns) : null }));
+}
 function build(spec){
   const M = { spec, app: spec.app || {}, sets: spec.choice_sets || {}, roles: [], role: {}, pages: {}, ents: {}, entList: [], dvs: {}, mods: [] };
   let roles = spec.roles || [];
   if (isObj(roles)) roles = Object.entries(roles).map(([name, v]) => ({ name, ...(v || {}) }));
   roles.forEach(r => { const RR = { ...r, name: r.name || r.code, menu: arr(r.menu) }; M.roles.push(RR); M.role[RR.name] = RR; });
   arr(spec.modules).forEach(mod => { const m = { ...mod, ents: [] }; M.mods.push(m); arr(mod.entities).forEach(e => { if (!e || !e.code) return; const E = normEntity(e, m, M.sets); M.ents[E.code] = E; M.entList.push(E); m.ents.push(E); }); });
-  arr(spec.pages).forEach(p => { if (!p || !p.code) return; M.pages[p.code] = { ...p, title: p.title || (p.entity && M.ents[p.entity] && M.ents[p.entity].plural) || titleize(p.code) }; });
+  arr(spec.pages).forEach(p => { if (!p || !p.code) return; M.pages[p.code] = { ...p, title: p.title || (p.entity && M.ents[p.entity] && M.ents[p.entity].plural) || titleize(p.code), views: normViews(p.views) }; });
   arr(spec.detail_views).forEach(v => { if (!v || !v.code) return; M.dvs[v.code] = { ...v, tabs: arr(v.tabs) }; });
   Object.values(M.pages).forEach(p => {
     if (p.type === 'detail' && M.dvs[p.detail_view]) M.dvs[p.detail_view].page = p;
@@ -1545,6 +1618,26 @@ function lint(M){
     if (p.type === 'detail' && !M.dvs[p.detail_view]) err(w, `detail_view "${p.detail_view}" not found`);
     if (!['crud', 'detail', 'custom'].includes(p.type)) warn(w, `unknown page type "${p.type}"`);
     if (p.roles) chkRoles(w, p.roles);
+    if (p.views.length){
+      const E = M.ents[p.entity];
+      if (p.type !== 'crud') warn(w + '.views', 'views apply to crud pages only');
+      p.views.forEach((v, i) => {
+        const vw = `${w}.views[${i}]`;
+        if (!VIEW_TYPES[v.type]){ warn(vw, `unknown view type "${v.type}"`); return; }
+        if (!E) return;
+        const path = (x, what) => { if (!x) return; const first = String(x).split('.')[0]; if (!E.fmap[first] && !BUILTIN.includes(first) && !(E.wf && (first === 'status' || first === 'tags'))) warn(vw, `${what} "${x}" is not a field of ${E.code}`); };
+        const grp = (x, what) => { if (!x) return; if (x === 'status'){ if (!E.wf) warn(vw, `${what} "status" needs a workflow`); return; } const f = E.fmap[x]; if (!f) warn(vw, `${what} "${x}" is not a field of ${E.code}`); else if (f.type !== 'choice' && f.type !== 'link' && f.type !== 'boolean') warn(vw, `${what} "${x}" should be status or a choice field`); };
+        if (v.type === 'kanban'){ if (!v.group_by) warn(vw, 'kanban needs group_by'); grp(v.group_by, 'group_by'); if (v.move && !['transitions', 'update', 'none'].includes(v.move)) warn(vw, `move must be transitions, update or none`); if (v.move === 'transitions' && v.group_by !== 'status') warn(vw, 'move: transitions needs group_by: status'); }
+        if (v.type === 'calendar' || v.type === 'timeline'){
+          if (!v.date_field) warn(vw, `${v.type} needs date_field`);
+          [['date_field', v.date_field], ['end_field', v.end_field]].forEach(([k, x]) => { if (!x) return; const f = E.fmap[x] || BUILTIN_F[x]; if (!f) warn(vw, `${k} "${x}" is not a field of ${E.code}`); else if (!['date', 'datetime'].includes(f.type)) warn(vw, `${k} "${x}" is not a date field`); });
+          if (v.type === 'calendar') grp(v.color_by, 'color_by'); else grp(v.group_by, 'group_by');
+        }
+        if (v.card){ path(v.card.title, 'card.title'); path(v.card.subtitle, 'card.subtitle'); v.card.fields.forEach(x => path(x, 'card field')); path(v.card.badge, 'card.badge'); if (v.card.image){ const f = E.fmap[v.card.image]; if (!f) warn(vw, `card.image "${v.card.image}" is not a field`); } }
+        if (v.type === 'cards' && !(v.card && v.card.title)) warn(vw, 'cards: card.title is not set (the display field is used)');
+        path(v.title, 'title');
+      });
+    }
   });
   M.entList.forEach(E => {
     const w = `entity.${E.code}`;
@@ -1777,7 +1870,8 @@ function rp(E, row, path, ctx){
   if (path == null) return { v: undefined };
   const segs = String(path).split('.');
   if (segs[0] === 'current_user'){ if (segs[1] === 'role') return { v: S.role }; if (segs[1] === 'name') return { v: curUser() }; const me = S.me[S.role]; return { v: me && (segs[1] === me.entity || segs[1] === 'id') ? me.id : undefined }; }
-  if (segs[0] === 'form'){ if (!ctx.form) throw UNK; return { v: ctx.form[segs[1]] }; }
+  // `form.x` is a transition form's value — unless the entity has a field called `form`.
+  if (segs[0] === 'form' && (ctx.form || !(E && E.fmap && E.fmap.form))){ if (!ctx.form) throw UNK; return { v: ctx.form[segs[1]] }; }
   if (segs[0] === 'today') return { v: todayISO() };
   let cur = row, CE = E, f = null, v;
   for (let i = 0; i < segs.length; i++){
@@ -2034,6 +2128,8 @@ function renderPage(){
 }
 const stateBox = (i, t, d, extra) => `<div class="z-state"><div class="ei">${ic(i)}</div><b>${esc(t)}</b><div>${esc(d || '')}</div>${extra || ''}</div>`;
 function renderCustom(p){
+  const pv = runPreview(p.preview);
+  if (pv != null) return `<div class="z-ph"><div><h1>${esc(p.title)}</h1><p>Custom page · <span class="mono">${esc(p.component || p.code)}</span> · preview sketch</p></div></div>${pv}${custText(p.text, 'What the build implements')}`;
   return `<div class="z-ph"><div><h1>${esc(p.title)}</h1><p>Custom page · <span class="mono">${esc(p.component || p.code)}</span></p></div></div>
     <div class="d-stats" style="margin-top:0">${[0, 1, 2, 3].map(i => `<div class="d-stat"><div class="si" style="background:${tone(['indigo', 'teal', 'amber', 'pink'][i])[0]};color:${tone(['indigo', 'teal', 'amber', 'pink'][i])[1]}">${ic(['activity', 'trending-up', 'clock', 'target'][i])}</div><div style="flex:1"><span>KPI ${i + 1}</span><b>${ri(12, 980)}</b></div></div>`).join('')}</div>
     <div class="d-panel" style="margin-top:14px"><h3>${ic('puzzle')}Custom component</h3><div class="d-cust"><span class="tg">${ic('code-2')}hand-built</span><div>${esc(p.text || 'No description in the spec.')}</div><div class="z-skel" style="width:90%;margin-top:16px"></div><div class="z-skel" style="width:70%"></div><div class="z-skel" style="width:80%"></div></div></div>`;
@@ -2096,6 +2192,7 @@ function renderTable(cfg){
     ${filt.map(c => `<select class="z-sel" data-ch="${A(v => { st.filters[c.key] = v; st.page = 1; render(); })}"><option value="">${esc(c.label)}: All</option>${filterOpts(E, c).map(([v, l]) => `<option value="${esc(v)}" ${st.filters[c.key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`).join('')}
     ${quick.length ? `<div class="z-chips">${quick.map(q => `<button class="z-qf ${st.qf === q.label ? 'on' : ''}" data-a="${A(() => { st.qf = st.qf === q.label ? null : q.label; st.page = 1; render(); })}">${esc(q.label)}</button>`).join('')}</div>` : ''}
     <span class="sp"></span>${cfg.right || ''}</div>`;
+  if (cfg.view && cfg.view.type !== 'table') return `<div class="z-card">${tb}${viewHTML(cfg, rows)}</div>`;
   const hasActs = pageRows.some(r => rowActions(E, r).length);
   const th = cols.map(c => { const sortable = c.sortable; const k = c.key; const on = st.sort && st.sort.replace(/^-/, '') === k; return `<th>${sortable ? `<button data-a="${A(() => { st.sort = on && st.sort[0] !== '-' ? '-' + k : k; render(); })}">${esc(c.label)}${ic(on ? (st.sort[0] === '-' ? 'arrow-down' : 'arrow-up') : 'chevrons-up-down')}</button>` : esc(c.label)}</th>`; }).join('') + (hasActs ? '<th></th>' : '');
   const rowTr = r => {
@@ -2128,8 +2225,165 @@ function renderCrud(E, p){
   const exp = can(E, 'export') ? `<button class="z-btn sm" data-a="${A(() => toast('Export', `${rows.length} ${E.plural.toLowerCase()} exported to CSV (simulated).`))}">${ic('download')}Export</button>` : '';
   const sc = E.acc && E.acc[S.role] && E.acc[S.role].rows;
   return `<div class="z-ph"><div><h1>${esc(p.title)}</h1><p>${rows.length} records${sc && sc !== 'all' ? ` · scoped to <b>${esc(scopeLabel(sc))}</b>` : ''}</p></div><span class="sp"></span>${addBtn}</div>
-    ${renderTable({ key: 'crud_' + E.code, E, rows, cols: E.cols, rowClick: rowClickFor(E), quick: E.table.quick_filters, right: exp, empty: { cta: 'add' }, addBtn, footer: E.table.footer_totals, group_by: E.table.group_by })}`;
+    ${renderTable({ key: 'crud_' + E.code, E, rows, cols: E.cols, rowClick: rowClickFor(E), quick: E.table.quick_filters, right: viewSwitch(p) + exp, empty: { cta: 'add' }, addBtn, footer: E.table.footer_totals, group_by: E.table.group_by, view: curView(p), page: p })}`;
 }
+
+/* ═════════════════════════ list views ═════════════════════════ */
+function curView(p){ if (!p.views || !p.views.length) return null; const i = S.views[p.code] || 0; return p.views[i] || p.views[0]; }
+function viewSwitch(p){
+  if (!p.views || p.views.length < 2) return '';
+  const cur = S.views[p.code] || 0;
+  return `<div class="z-vsw" role="tablist" aria-label="View">${p.views.map((v, i) => `<button class="${i === cur ? 'on' : ''}" title="${esc(v.label || VIEW_LABEL[v.type] || v.type)}" data-a="${A(() => { S.views[p.code] = i; render(); })}">${ic(VIEW_TYPES[v.type] || 'square')}${esc(v.label || VIEW_LABEL[v.type] || titleize(v.type))}</button>`).join('')}</div>`;
+}
+function viewHTML(cfg, rows){
+  const v = cfg.view;
+  if (v.type === 'kanban') return kanbanHTML(cfg, v, rows);
+  if (v.type === 'cards') return cardsHTML(cfg, v, rows);
+  if (v.type === 'calendar') return calendarHTML(cfg, v, rows);
+  if (v.type === 'timeline') return tlViewHTML(cfg, v, rows);
+  return stateBox('square', 'Unknown view', v.type);
+}
+function cardInner(E, card, row){
+  card = card || {};
+  const title = plain(E, row, card.title || E.display) || `${E.name} #${row.id}`;
+  const sub = card.subtitle ? plain(E, row, card.subtitle) : '';
+  const fl = arr(card.fields).map(k => { const r = rp(E, row, k); const f = r.f || E.fmap[k]; const lab = (f && f.label) || titleize(String(k).split('.').pop()); return `<span><em>${esc(lab)}</em>${fmt(r.f, r.v, { E: r.E || E, link: false })}</span>`; }).join('');
+  let bd = '';
+  if (card.badge){
+    const r = rp(E, row, card.badge); const f = r.f || (card.badge === 'status' ? { type: 'status' } : null);
+    if (!empty(r.v)) bd = `<div class="bd">${f && ['status', 'tags', 'choice'].includes(f.type) ? fmt(f, r.v, { E: r.E || E }) : badge(txt(f, r.v, r.E || E), 'gray')}</div>`;
+  }
+  return `<b>${esc(title)}</b>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}${fl ? `<div class="fl">${fl}</div>` : ''}${bd}`;
+}
+function groupsFor(E, key, rows){
+  if (key === 'status' && E.wf) return E.wf.statuses.map(s => ({ v: s.code, label: s.label, color: s.color }));
+  const f = E.fmap[key];
+  if (f && f.opts) return f.opts.map(o => ({ v: o.id, label: o.label, color: o.color || 'gray' }));
+  if (f && f.type === 'boolean') return [{ v: true, label: 'Yes', color: 'green' }, { v: false, label: 'No', color: 'gray' }];
+  const seen = []; rows.forEach(r => { const x = r[key]; if (!seen.some(g => g.v == x)) seen.push({ v: x, label: x == null ? '—' : txt(f, x, E) || String(x), color: 'gray' }); });
+  return seen;
+}
+function moveMode(E, v){ return v.move || (v.group_by === 'status' ? 'transitions' : 'update'); }
+function kanbanHTML(cfg, v, rows){
+  const E = cfg.E; const key = v.group_by || (E.wf ? 'status' : null);
+  if (!key) return stateBox('kanban', 'Board needs group_by', 'Set group_by to status or a choice field.');
+  let groups = groupsFor(E, key, rows);
+  if (v.columns) groups = v.columns.map(c => groups.find(g => String(g.v) === String(c)) || { v: c, label: titleize(c), color: 'gray' });
+  const mode = moveMode(E, v);
+  const click = cfg.rowClick;
+  const bid = 'kb_' + cfg.key.replace(/\W/g, '_');
+  S.kb = S.kb || {}; S.kb[bid] = { e: E.code, key, mode, view: v };
+  const draggable = r => mode === 'none' ? false : mode === 'transitions' ? !!(E.wf && E.wf.trs.some(t => trAllowed(t, r))) : can(E, 'edit') && editableNow(E, r) !== false;
+  return `<div class="kb" data-kboard="${bid}">${groups.map(g => {
+    const rs = rows.filter(r => String(r[key]) === String(g.v));
+    const c = tone(g.color);
+    return `<div class="kb-col" data-kcol="${esc(String(g.v))}"><div class="kb-h"><i class="dot" style="background:${c[1]}"></i>${esc(g.label)}<span class="n">${rs.length}</span></div>
+      <div class="kb-b">${rs.length ? rs.map(r => `<div class="kb-card" ${draggable(r) ? 'draggable="true"' : ''} data-kcard="${r.id}" ${click ? `data-a="${A(() => click(r))}"` : ''}>${cardInner(E, v.card, r)}</div>`).join('') : '<div class="kb-empty">Nothing here</div>'}</div></div>`;
+  }).join('')}</div>`;
+}
+function kanbanTargets(board, row){
+  const E = S.M.ents[board.e];
+  if (board.mode === 'transitions') return new Set(E.wf.trs.filter(t => trAllowed(t, row) && t.to !== row.status).map(t => String(t.to)));
+  if (board.mode === 'update') return new Set(groupsFor(E, board.key, rowsOf(E.code)).map(g => String(g.v)).filter(x => x !== String(row[board.key])));
+  return new Set();
+}
+function kanbanDrop(board, row, target){
+  const E = S.M.ents[board.e];
+  if (String(row[board.key]) === target) return;
+  if (board.mode === 'transitions'){
+    const t = E.wf.trs.find(x => trAllowed(x, row) && String(x.to) === target);
+    if (!t){
+      const any = E.wf.trs.find(x => x.from.includes(row.status) && String(x.to) === target && !x.system);
+      const to = (E.wf.smap[target] || {}).label || target, from = (E.wf.smap[row.status] || {}).label || row.status;
+      toast('Move not allowed', any ? `${S.role} cannot run "${any.label}" (${from} → ${to}).` : `There is no transition from ${from} to ${to}.`);
+      return;
+    }
+    if (t.form.length || t.condition || t.confirm) { openTransition(E, row, t); return; }
+    applyTransition(E, row, t, {}, []);
+    return;
+  }
+  if (board.mode === 'update'){
+    if (!can(E, 'edit')){ toast('Move not allowed', `${S.role} cannot edit ${E.plural.toLowerCase()}.`); return; }
+    const f = E.fmap[board.key]; const before = row[board.key];
+    row[board.key] = f && f.type === 'boolean' ? target === 'true' : (f && f.type === 'link' ? +target || target : target);
+    row.modified_at = new Date().toISOString();
+    S.audit.unshift({ t: row.modified_at, e: E.code, id: row.id, ev: 'updated', user: curUser(), text: `${(f && f.label) || titleize(board.key)}: ${txt(f, before, E) || '—'} → ${txt(f, row[board.key], E)}` });
+    toast(`${E.name} updated`, `${(f && f.label) || titleize(board.key)} → ${txt(f, row[board.key], E) || target}`);
+    render();
+  }
+}
+function cardsHTML(cfg, v, rows){
+  const E = cfg.E; const click = cfg.rowClick;
+  if (!rows.length) return `<div class="z-empty"><div class="ei">${ic('inbox')}</div><b>No ${esc(E.plural.toLowerCase())}</b></div>`;
+  return `<div class="vc-grid">${rows.map(r => { const t = plain(E, r, (v.card && v.card.title) || E.display) || '#' + r.id; return `<div class="vc-card" ${click ? `data-a="${A(() => click(r))}"` : ''}><div class="vc-img" style="background:${avColor(t)}">${v.card && v.card.image && r[v.card.image] ? ic('image') : esc(initials(t))}</div><div class="vc-in">${cardInner(E, v.card, r)}</div></div>`; }).join('')}</div>`;
+}
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}-${pad(d.getDate(), 2)}`;
+function calendarHTML(cfg, v, rows){
+  const E = cfg.E; const click = cfg.rowClick; const key = 'cal_' + cfg.key;
+  if (!v.date_field) return stateBox('calendar-days', 'Calendar needs date_field', '');
+  const now = new Date(); const ym = S.views[key] || `${now.getFullYear()}-${pad(now.getMonth() + 1, 2)}`;
+  const [Y, Mo] = ym.split('-').map(Number); const first = new Date(Y, Mo - 1, 1);
+  const shift = n => { const d = new Date(Y, Mo - 1 + n, 1); S.views[key] = `${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}`; render(); };
+  const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+  const byDay = {}; const undated = [];
+  const colorOf = r => { if (!v.color_by) return 'indigo'; if (v.color_by === 'status' && E.wf){ const s = E.wf.smap[r.status]; return s ? s.color : 'gray'; } const f = E.fmap[v.color_by]; const o = f && f.opts && f.opts.find(o => o.id == r[v.color_by]); return (o && o.color) || 'gray'; };
+  rows.forEach(r => {
+    const a = r[v.date_field]; if (empty(a)){ undated.push(r); return; }
+    const s0 = new Date(String(a).slice(0, 10) + 'T00:00:00'); let e0 = v.end_field && r[v.end_field] ? new Date(String(r[v.end_field]).slice(0, 10) + 'T00:00:00') : s0;
+    if (isNaN(s0)){ undated.push(r); return; } if (isNaN(e0) || e0 < s0) e0 = s0;
+    const span = Math.round((e0 - s0) / 864e5);
+    if (span > 14){ (byDay[ymd(s0)] = byDay[ymd(s0)] || []).push({ r, edge: 'start' }); (byDay[ymd(e0)] = byDay[ymd(e0)] || []).push({ r, edge: 'end' }); return; }
+    for (let d = new Date(s0), n = 0; d <= e0 && n < 42; d.setDate(d.getDate() + 1), n++) (byDay[ymd(d)] = byDay[ymd(d)] || []).push({ r });
+  });
+  const title = r => plain(E, r, v.title || E.display) || '#' + r.id;
+  const chipFor = ({ r, edge }) => { const c = tone(colorOf(r)); const mark = edge === 'start' ? '▸ ' : edge === 'end' ? '◂ ' : ''; const tip = edge ? `${title(r)} (${edge === 'start' ? 'starts' : 'ends'})` : title(r); return `<div class="cal-e" style="background:${c[0]};color:${c[1]};border-color:${c[2] || c[0]}" title="${esc(tip)}" ${click ? `data-a="${A(e => { e.stopPropagation(); click(r); })}"` : ''}>${mark}${esc(title(r))}</div>`; };
+  const today = ymd(now);
+  let cells = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<div class="dw">${d}</div>`).join('');
+  for (let i = 0; i < 42; i++){
+    const d = new Date(start); d.setDate(start.getDate() + i); const k = ymd(d); const ev = byDay[k] || [];
+    const more = ev.length > 3 ? `<span class="cal-more" data-a="${A((e, el) => { e.stopPropagation(); openPop(el, ev.map(({ r, edge }) => ({ label: (edge === 'start' ? '▸ ' : edge === 'end' ? '◂ ' : '') + title(r), icon: 'calendar', run: () => click && click(r) }))); })}">+${ev.length - 3} more</span>` : '';
+    cells += `<div class="cal-d ${d.getMonth() !== Mo - 1 ? 'out' : ''} ${k === today ? 'today' : ''}"><span class="dn">${d.getDate()}</span>${ev.slice(0, 3).map(chipFor).join('')}${more}</div>`;
+  }
+  const label = first.toLocaleDateString(LOCALE(), { month: 'long', year: 'numeric' });
+  return `<div class="cal"><div class="cal-m"><div class="cal-h"><h4>${esc(label)}</h4><button class="z-btn sm" title="Previous month" data-a="${A(() => shift(-1))}">${ic('chevron-left')}</button><button class="z-btn sm" data-a="${A(() => { delete S.views[key]; render(); })}">Today</button><button class="z-btn sm" title="Next month" data-a="${A(() => shift(1))}">${ic('chevron-right')}</button></div><div class="cal-g">${cells}</div></div>
+    ${undated.length ? `<div class="cal-side"><h5>No ${esc(((E.fmap[v.date_field] || BUILTIN_F[v.date_field] || {}).label || titleize(v.date_field)).toLowerCase())} · ${undated.length}</h5>${undated.slice(0, 20).map(r => `<div class="it" ${click ? `data-a="${A(() => click(r))}"` : ''}>${esc(title(r))}</div>`).join('')}</div>` : ''}</div>`;
+}
+function tlViewHTML(cfg, v, rows){
+  const E = cfg.E; const click = cfg.rowClick;
+  if (!v.date_field) return stateBox('git-commit-vertical', 'Timeline needs date_field', '');
+  const dated = rows.filter(r => !empty(r[v.date_field])).sort((a, b) => String(b[v.date_field]).localeCompare(String(a[v.date_field])));
+  const f = E.fmap[v.date_field] || BUILTIN_F[v.date_field] || { type: 'date' };
+  const item = r => `<div class="vt-i" ${click ? `data-a="${A(() => click(r))}"` : ''}><div class="dt">${esc(txt(f, r[v.date_field]))}</div><b>${esc(plain(E, r, v.title || E.display) || '#' + r.id)}</b><div class="row2">${E.wf ? fmt({ type: 'status' }, r.status, { E }) : ''}${v.card ? arr(v.card.fields).map(k => esc(plain(E, r, k))).filter(Boolean).join(' · ') : ''}</div></div>`;
+  const months = list => { let out = '', last = ''; list.forEach(r => { const d = new Date(String(r[v.date_field]).slice(0, 10)); const m = isNaN(d) ? '' : d.toLocaleDateString(LOCALE(), { month: 'long', year: 'numeric' }); if (m !== last){ out += `<div class="vt-m">${esc(m)}</div>`; last = m; } out += item(r); }); return out; };
+  if (!dated.length) return `<div class="z-empty"><div class="ei">${ic('git-commit-vertical')}</div><b>Nothing dated yet</b></div>`;
+  if (!v.group_by) return `<div class="vt">${months(dated)}</div>`;
+  return `<div class="vt">${groupsFor(E, v.group_by, dated).map(g => { const rs = dated.filter(r => String(r[v.group_by]) === String(g.v)); if (!rs.length) return ''; const c = tone(g.color); return `<div class="vt-lane"><h4><i class="dot" style="width:8px;height:8px;border-radius:50%;background:${c[1]};display:inline-block"></i>${esc(g.label)} <span class="pv-muted">${rs.length}</span></h4>${months(rs)}</div>`; }).join('')}</div>`;
+}
+
+/* ═════════════════════════ agent-written previews ═════════════════════════ */
+const PV_FN = new Map();
+function rowEntity(row){ for (const E of S.M.entList){ if (rowsOf(E.code).includes(row)) return E; } return null; }
+function runPreview(code, extra){
+  if (!code || !String(code).trim()) return null;
+  let fn = PV_FN.get(code);
+  try {
+    if (!fn){ fn = new Function('ctx', '"use strict";\n' + code); PV_FN.set(code, fn); }
+    const record = extra && extra.record;
+    const ctx = Object.freeze({
+      rows: c => { const E = S.M.ents[c]; return E ? visibleRows(E).slice() : []; },
+      entity: c => S.M.ents[c] || null,
+      record: record || null,
+      related: (c, via) => { const T = S.M.ents[c]; return T && record ? relatedRows(T, via, record) : []; },
+      fmt: (row, field) => { if (!row) return ''; const E = rowEntity(row); return E ? plain(E, row, field) : (row[field] == null ? '' : String(row[field])); },
+      esc, icon: n => ic(n), tone: c => tone(c).slice(0, 2), role: S.role, user: curUser(),
+    });
+    const out = fn(ctx);
+    return `<div class="pv-host">${out == null ? '' : String(out)}</div>`;
+  } catch (e){
+    return `<div class="pv-err">${ic('triangle-alert')}<div><b>The agent's preview code failed</b><code>${esc((e && e.message) || String(e))}</code></div></div>`;
+  }
+}
+function custText(text, label){ return text ? `<div class="d-panel pv-req"><h3>${ic('file-text')}${esc(label)}</h3><div class="d-cust"><span class="tg">${ic('code-2')}built from this</span><div>${esc(text)}</div></div></div>` : ''; }
 
 /* ═════════════════════════ actions ═════════════════════════ */
 function editableNow(E, row){ const ed = E.form.edit; if (!ed) return false; if (ed.editable_in && E.wf && !arr(ed.editable_in).includes(row.status)) return false; return true; }
@@ -2484,6 +2738,7 @@ function sectionHTML(sec, E, row){
     const click = rowClickFor(T);
     return `<div class="d-panel">${head(sec.title)}${rows.length ? `<table class="z-t"><tbody>${rows.map(r => `<tr class="${click ? 'click' : ''}" ${click ? `data-a="${A(() => click(r))}"` : ''}>${cols.map(c => `<td>${cellHTML(T, r, c)}</td>`).join('')}</tr>`).join('')}</tbody></table>${sec.see_all_tab ? `<div class="z-pg"><button class="z-link" data-a="${A(() => go(S.route.page, S.route.id, sec.see_all_tab))}">See all ${ic('arrow-right')}</button></div>` : ''}` : `<div class="z-empty" style="padding:22px">No ${esc(T.plural.toLowerCase())} yet</div>`}</div>`;
   }
+  if (sec.type === 'custom' && sec.preview) return `<div class="d-panel">${head(sec.title || 'Custom panel')}<div style="padding:12px 14px">${runPreview(sec.preview, { record: row })}</div></div>`;
   if (sec.type === 'custom') return `<div class="d-panel">${head(sec.title || 'Custom panel')}<div class="d-cust"><span class="tg">${ic('code-2')}custom</span><div>${esc(sec.text || '')}</div></div></div>`;
   if (sec.type === 'timeline') return `<div class="d-panel">${head(sec.title || 'Activity')}${timelineHTML(sec.sources, E, row, sec.limit || 6)}</div>`;
   if (sec.type === 'stats') return '';
@@ -2549,6 +2804,7 @@ function renderTab(t, dv, E, row){
   if (t.type === 'timeline'){
     return `<div class="d-panel"><h3>${ic('history')}${esc(t.label || 'Activity')}</h3>${timelineHTML(t.sources, E, row)}</div>`;
   }
+  if (t.type === 'custom' && t.preview) return `<div class="d-panel"><h3>${ic('puzzle')}${esc(t.label || t.code)}<span class="sp"></span><span class="pv-muted">preview sketch</span></h3><div style="padding:14px">${runPreview(t.preview, { record: row })}</div></div>${custText(t.text, 'What the build implements')}`;
   if (t.type === 'custom') return `<div class="d-panel"><h3>${ic('puzzle')}${esc(t.label || t.code)}</h3><div class="d-cust"><span class="tg">${ic('code-2')}custom tab</span><div>${esc(t.text || 'Described in the spec only.')}</div><div class="z-skel" style="width:85%;margin-top:14px"></div><div class="z-skel" style="width:60%"></div></div></div>`;
   if (t.type === 'related_table'){
     const T = M.ents[t.entity]; if (!T) return stateBox('circle-alert', 'Unknown entity', t.entity);
@@ -2590,12 +2846,28 @@ function toast(title, msg, onDone){
 
 /* ═════════════════════════ wiring ═════════════════════════ */
 document.addEventListener('click', e => {
+  const go2 = e.target.closest('[data-go]');
+  if (go2 && go2.closest('#zapp') && !go2.closest('[data-a]')){ const [pg, id] = String(go2.dataset.go).split(':'); const page = S.M && S.M.pages[pg]; if (page && canPage(page)) go(pg, id || undefined); else toast('Not available', page ? `${S.role} cannot open ${page.title}.` : `No page "${pg}" in the spec.`); return; }
   const el = e.target.closest('[data-a]');
   if (el && !el.disabled){ const fn = ACT[+el.dataset.a]; if (fn){ fn(e, el); return; } }
   if (!e.target.closest('#pop')) closePop();
 });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el){ const fn = ACT[+el.dataset.in]; fn && fn(el.value, el); } });
 document.addEventListener('change', e => { const el = e.target.closest('[data-ch]'); if (el){ const v = el.type === 'checkbox' ? el.checked : el.type === 'file' ? ((el.files[0] || {}).name || '') : el.value; const fn = ACT[+el.dataset.ch]; fn && fn(v, el); } });
+let KD = null;
+document.addEventListener('dragstart', e => {
+  const card = e.target.closest && e.target.closest('[data-kcard]'); if (!card) return;
+  const boardEl = card.closest('[data-kboard]'); const board = S.kb && S.kb[boardEl.dataset.kboard]; if (!board) return;
+  const row = getRow(board.e, card.dataset.kcard); if (!row) return;
+  KD = { board, row, el: boardEl }; card.classList.add('drag');
+  try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(row.id)); } catch (x) {}
+  const ok = kanbanTargets(board, row);
+  boardEl.classList.add('dragging');
+  boardEl.querySelectorAll('[data-kcol]').forEach(c => { const v = c.dataset.kcol; c.classList.toggle('k-ok', ok.has(v)); c.classList.toggle('k-no', !ok.has(v) && v !== String(row[board.key])); });
+});
+document.addEventListener('dragover', e => { if (!KD) return; const col = e.target.closest && e.target.closest('[data-kcol]'); if (col && col.closest('[data-kboard]') === KD.el){ e.preventDefault(); KD.el.querySelectorAll('.over').forEach(x => x !== col && x.classList.remove('over')); col.classList.add('over'); } });
+document.addEventListener('drop', e => { if (!KD) return; const col = e.target.closest && e.target.closest('[data-kcol]'); if (!col || col.closest('[data-kboard]') !== KD.el) return; e.preventDefault(); const d = KD; KD = null; kanbanDrop(d.board, d.row, col.dataset.kcol); });
+document.addEventListener('dragend', () => { if (!KD) { document.querySelectorAll('.kb.dragging').forEach(b => { b.classList.remove('dragging'); b.querySelectorAll('.k-ok,.k-no,.over,.drag').forEach(x => x.classList.remove('k-ok', 'k-no', 'over', 'drag')); }); return; } const b = KD.el; KD = null; b.classList.remove('dragging'); b.querySelectorAll('.k-ok,.k-no,.over,.drag').forEach(x => x.classList.remove('k-ok', 'k-no', 'over', 'drag')); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if ($('#pop')) closePop(); else if (MODAL) closeModal(); else if (S.ui.drawer){ S.ui.drawer = null; render(); } } });
 const src = $('#src'); let tmr;
 src.addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(() => parse(src.value), 350); });

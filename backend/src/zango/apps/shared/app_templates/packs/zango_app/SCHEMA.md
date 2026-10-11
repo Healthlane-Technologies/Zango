@@ -160,6 +160,47 @@ Global routes; menus refer to them by `code`.
 
 Every page has a `route` starting with `/app/` and usually a `title`.
 
+### Other ways to show a list: `views` (crud pages)
+
+A `crud` page may list `views`; the first is the default and a switcher
+appears when there is more than one. Without `views` the page is the table.
+Use them whenever the user asks for a board, cards, a calendar or a timeline
+of the same records — never a custom page for that.
+
+```yaml
+views:
+  - type: kanban
+    group_by: status            # status, or a choice field
+    columns: [todo, in_progress, done]   # optional order / subset
+    card: { title: title, subtitle: project.name, fields: [assignee, due_date], badge: priority }
+    move: transitions           # transitions | update | none
+  - type: table
+```
+
+| `type` | keys |
+|---|---|
+| `table` | — (the entity's `table`) |
+| `kanban` | `group_by` (required), `columns`, `card`, `move` — `transitions` moves a card only along a workflow transition the role may perform |
+| `cards` | `card` (required: `title`; `subtitle`, `fields`, `badge`, `image`) |
+| `calendar` | `date_field` (required), `end_field`, `title`, `color_by` |
+| `timeline` | `date_field` (required), `title`, `group_by` |
+
+### Custom screens with a preview: `preview`
+
+For what nothing above can express — a workload board per person, a seating
+plan, a gantt — keep the `custom` page, tab (`type: custom`) or sidebar
+section (`type: custom`) with its `component` and a precise `text`, and add
+`preview`: the body of a JavaScript function `ctx => html` that sketches it
+from the demo data, so the user sees it. It is preview-only; the build reads
+`text`. `ctx.rows(entity)` (role-scoped demo rows), `ctx.entity(entity)`,
+`ctx.record` and `ctx.related(entity, via)` (on tabs and panels), `ctx.fmt(row, field)`,
+`ctx.esc(text)`, `ctx.icon(name)`, `ctx.tone(color)`, `ctx.role`, `ctx.user`.
+Return a string; synchronous, no network. Style with `pv-cols`, `pv-col`,
+`pv-card`, `pv-grid`, `pv-muted`, `pv-badge`, `pv-kpis`, `pv-kpi`, `pv-bar`;
+`data-go="<page>[:<id>]"` makes an element navigate. Always escape values with
+`ctx.esc`. Write it as a YAML block scalar (`preview: |`). The full contract is
+in `SPEC_EXTENSIONS.md` next to this file.
+
 ## `modules` and entities
 
 A module is one backend folder: `code`, `name`, `description`, `entities`.

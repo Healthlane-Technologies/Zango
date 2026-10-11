@@ -122,3 +122,54 @@ class GenericPackTests(AppTemplatesTestBase):
         self.assertEqual([i["level"] for i in missing], ["warning"])
         _, strict = validate_text(yamlio.dump(doc), self.template, strict=True)
         self.assertTrue(any(i["level"] == "error" for i in strict))
+
+
+class SpecExtensionTests(AppTemplatesTestBase):
+    """views on crud pages and preview on custom pages/tabs/panels (SPEC_EXTENSIONS.md)."""
+
+    def setUp(self):
+        super().setUp()
+        import_pack(PACK, publish_now=True)
+        catalogue.clear_caches()
+        self.view = catalogue.get_template("zango-app")
+
+    def doc(self):
+        return yamlio.to_plain(yamlio.load(self.view.example_yaml))
+
+    def errors(self, doc):
+        from zango.apps.shared.app_templates.services.spec.validate import validate_doc
+
+        # strict: a missing required key (group_by) is an error at commit time.
+        return [i for i in validate_doc(doc, self.view, strict=True) if i["level"] == "error"]
+
+    def test_views_and_previews_are_valid(self):
+        doc = self.doc()
+        pages = {p["code"]: p for p in doc["pages"]}
+        pages["purchase_orders"]["views"] = [
+            {"type": "kanban", "group_by": "status", "columns": ["draft", "submitted"],
+             "card": {"title": "po_number", "subtitle": "vendor.legal_name", "fields": ["expected_by"]},
+             "move": "transitions"},
+            {"type": "table"},
+        ]
+        pages["contracts"]["views"] = [
+            {"type": "calendar", "date_field": "end_date", "color_by": "status"},
+            {"type": "cards", "card": {"title": "title"}},
+            {"type": "timeline", "date_field": "start_date"},
+        ]
+        pages["dashboard"]["preview"] = "return `<div class=\"pv-kpis\"></div>`;"
+        doc["detail_views"][0]["tabs"].append(
+            {"code": "board", "label": "Board", "type": "custom", "preview": "return ''"}
+        )
+        self.assertEqual(self.errors(doc), [])
+
+    def test_bad_views_and_misplaced_keys_are_refused_readably(self):
+        doc = self.doc()
+        pages = {p["code"]: p for p in doc["pages"]}
+        pages["purchase_orders"]["views"] = [{"type": "kanban"}, {"type": "gantt"}]
+        pages["vendors"]["preview"] = "return ''"          # only custom pages have a preview
+        pages["dashboard"]["views"] = [{"type": "table"}]  # only crud pages have views
+        messages = [i["message"] for i in self.errors(doc)]
+        self.assertTrue(any("group_by" in m for m in messages), messages)
+        self.assertTrue(any("gantt" in m for m in messages), messages)
+        self.assertIn("preview is not allowed here.", messages)
+        self.assertIn("views is not allowed here.", messages)

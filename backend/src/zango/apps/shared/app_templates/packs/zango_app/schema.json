@@ -1234,8 +1234,60 @@
         },
         "icon": {
           "type": "string"
+        },
+        "views": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/view"
+          }
+        },
+        "preview": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Preview-only sketch: the body of a JS function(ctx) returning HTML (SPEC_EXTENSIONS.md). Never built."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "crud"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "views"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "preview"
+              ]
+            }
+          }
+        }
+      ]
     },
     "tab": {
       "type": "object",
@@ -1273,6 +1325,11 @@
         },
         "show_when": {
           "$ref": "#/$defs/expr"
+        },
+        "preview": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Preview-only sketch: the body of a JS function(ctx) returning HTML (SPEC_EXTENSIONS.md). Never built."
         }
       }
     },
@@ -1359,6 +1416,11 @@
               },
               "tone": {
                 "$ref": "#/$defs/color"
+              },
+              "preview": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Preview-only sketch: the body of a JS function(ctx) returning HTML (SPEC_EXTENSIONS.md). Never built."
               }
             }
           }
@@ -1488,6 +1550,226 @@
           "$ref": "#/$defs/expr"
         }
       }
+    },
+    "viewCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A field path; dot paths across link fields are allowed."
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A field path; dot paths across link fields are allowed."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A field path; dot paths across link fields are allowed."
+          }
+        },
+        "badge": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A field path; dot paths across link fields are allowed."
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A field path; dot paths across link fields are allowed."
+        }
+      }
+    },
+    "view": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "description": "One way a crud page shows its records (SPEC_EXTENSIONS.md). The first view is the default.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "table",
+            "kanban",
+            "cards",
+            "calendar",
+            "timeline"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "table"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "type": {},
+              "label": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "kanban"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "group_by"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {},
+              "label": {
+                "type": "string"
+              },
+              "group_by": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "card": {
+                "$ref": "#/$defs/viewCard"
+              },
+              "move": {
+                "type": "string",
+                "enum": [
+                  "transitions",
+                  "update",
+                  "none"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cards"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "card"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {},
+              "label": {
+                "type": "string"
+              },
+              "card": {
+                "$ref": "#/$defs/viewCard"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "calendar"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "date_field"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {},
+              "label": {
+                "type": "string"
+              },
+              "date_field": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              },
+              "end_field": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              },
+              "color_by": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "timeline"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "date_field"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {},
+              "label": {
+                "type": "string"
+              },
+              "date_field": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              },
+              "group_by": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field path; dot paths across link fields are allowed."
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

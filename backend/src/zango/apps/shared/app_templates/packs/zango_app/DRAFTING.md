@@ -126,7 +126,17 @@ paste the spec and do not list the flags — the panel shows them.
 ## Later turns
 
 The user will click through the preview and ask for changes in plain words
-("vendors should see their invoices", "add a rejection reason"). Apply each
+("vendors should see their invoices", "add a rejection reason", "the task
+list should be a kanban").
+
+Custom UI requests: first look for a declarative way — a list shown as a
+board, cards, calendar or timeline is `views` on its crud page (SCHEMA.md);
+reorder views so the one they asked for comes first, and keep `table` as a
+second view unless they want it gone. Only when nothing declarative fits, use a
+`custom` page, tab or sidebar section with a precise `text` for the build and a
+`preview` function that sketches it from the demo data, so the user sees it
+right away. Check the preview renders: a broken `preview` shows an error panel
+in its place. Apply each
 with the smallest spec tool that does it, keep every reference consistent so
 the preview keeps rendering, `spec_unflag` anything they have now confirmed,
 and call `spec_open_decisions` again with whatever is still open (an empty

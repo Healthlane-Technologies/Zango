@@ -61,7 +61,9 @@ it. Eight to ten turns is a complete app.
 6. **Screens.** Menus and landing pages per role, list columns, quick filters
    ("Pending my approval"), row actions, and whether the centre record needs a
    360 page (`detail_views`) with related tabs and a timeline. Dashboards and
-   anything bespoke become `custom` pages described in `text`.
+   anything bespoke become `custom` pages described in `text` (with a `preview`
+   sketch, SCHEMA.md); boards, cards, calendars and timelines of a list are
+   `views` on its crud page.
 7. **Rules and the rest.** Validation and duplicate checks, notifications,
    scheduled jobs, integrations, reports — as `validation`, `on_done` and
    `custom_requirements` with specific, testable text.

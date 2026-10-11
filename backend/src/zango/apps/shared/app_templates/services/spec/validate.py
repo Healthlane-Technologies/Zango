@@ -41,6 +41,10 @@ def _validator(schema: dict):
 
 
 def _message(error) -> str:
+    # {"not": {"required": [key]}}: a key that is only allowed in another shape.
+    forbidden = (error.validator_value or {}).get("required") if error.validator == "not" and isinstance(error.validator_value, dict) else None
+    if forbidden:
+        return f"{', '.join(forbidden)} is not allowed here."
     if error.validator in ("anyOf", "oneOf") and error.context:
         inner = best_match(error.context)
         if inner is not None:
